@@ -192,7 +192,8 @@ clean: clean-windows
 	rm -rf dist
 	rm -rf filesystem/included-source
 	rm -rf package
-	# We build felix as part of the node build, so clean it as part of the clean.
+	rm -rf tests/k8st/infra/operator
+	# We build these as part of the node build, so clean them as part of the clean.
 	make -C ../felix clean
 	# Delete images that we built in this repo
 	-docker image rm -f $$(docker images $(NODE_IMAGE) -a -q)
@@ -354,7 +355,11 @@ $(FELIX_GPL_SOURCE): .felix-gpl-source.created
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=cnx-node.tar calico-typha.tar calico-apiserver.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
+K8ST_IMAGE_TARS=calico-node.tar calico-typha.tar calico-apiserver.tar calico-cni.tar pod2daemon.tar csi.tar node-driver-registrar.tar calicoctl.tar kube-controllers.tar operator.tar
+
+# Add in enterprise-only images.
+ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar
+K8ST_IMAGE_TARS += $(ENTERPRISE_IMAGE_TARS)
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
@@ -403,45 +408,78 @@ test_image: .calico_test.created
 	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
 	touch $@
 
-cnx-node.tar: $(NODE_CONTAINER_CREATED)
-	docker save --output $@ $(NODE_IMAGE):latest-$(ARCH)
-	docker tag $(NODE_IMAGE):latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
-	docker save --output cnx-node-retagged.tar gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+chart: ../bin/tigera-operator-$(GIT_VERSION).tgz
+../bin/tigera-operator-$(GIT_VERSION).tgz:
+	make -C ../ bin/tigera-operator-$(GIT_VERSION).tgz
+
+# Tag to use for images built for e2e testing. This must match the image tag used in
+# tests/k8st/infra/calico_versions.yml
+TEST_BUILD_TAG=test-build
+
+operator.tar: $(K8ST_IMAGE_TARS) tests/k8st/infra/calico_versions.yml tests/k8st/infra/enterprise_versions.yml
+	cd tests/k8st/infra/ && BRANCH=$(OPERATOR_BRANCH) ./build-operator.sh
+	docker save --output $@ docker.io/tigera/operator:$(TEST_BUILD_TAG)
+
+calico-node.tar: $(NODE_CONTAINER_CREATED)
+	docker tag $(NODE_IMAGE):latest-$(ARCH) $(NODE_IMAGE):$(TEST_BUILD_TAG)
+	docker save --output $@ $(NODE_IMAGE):$(TEST_BUILD_TAG)
 
 calico-typha.tar: ../go.mod $(shell find ../typha -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../typha image
-	docker save --output $@ tigera/typha:latest-$(ARCH)
+	docker tag tigera/typha:latest-$(ARCH) tigera/typha:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/typha:$(TEST_BUILD_TAG)
 
 calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../apiserver image
-	docker save --output $@ tigera/cnx-apiserver:latest-$(ARCH)
+	docker tag tigera/cnx-apiserver:latest-$(ARCH) tigera/cnx-apiserver:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/cnx-apiserver:$(TEST_BUILD_TAG)
 
 calico-cni.tar: ../go.mod $(shell find ../cni-plugin -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../cni-plugin image
-	docker save --output $@ tigera/cni:latest-$(ARCH)
+	docker tag tigera/cni:latest-$(ARCH) tigera/cni:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/cni:$(TEST_BUILD_TAG)
 
-pod2daemon.tar: ../go.mod $(shell find ../pod2daemon -name '*.go')
+csi.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
 	make -C ../pod2daemon image
-	docker save --output $@ tigera/pod2daemon-flexvol:latest-$(ARCH)
+	docker tag tigera/csi:latest-$(ARCH) tigera/csi:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/csi:$(TEST_BUILD_TAG)
+
+node-driver-registrar.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
+	make -C ../pod2daemon image
+	docker tag tigera/node-driver-registrar:latest-$(ARCH) tigera/node-driver-registrar:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/node-driver-registrar:$(TEST_BUILD_TAG)
+
+pod2daemon.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
+	make -C ../pod2daemon image
+	docker tag tigera/pod2daemon-flexvol:latest-$(ARCH) tigera/pod2daemon-flexvol:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/pod2daemon-flexvol:$(TEST_BUILD_TAG)
 
 calicoctl.tar: ../go.mod $(shell find ../calicoctl -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../calicoctl image
-	docker save --output $@ tigera/calicoctl:latest-$(ARCH)
+	docker tag tigera/calicoctl:latest-$(ARCH) tigera/calicoctl:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/calicoctl:$(TEST_BUILD_TAG)
 
 kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../kube-controllers image
-	docker save --output $@ tigera/kube-controllers:latest-$(ARCH)
+	docker tag tigera/kube-controllers:latest-$(ARCH) tigera/kube-controllers:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/kube-controllers:$(TEST_BUILD_TAG)
+
+# Enterprise-only tar files below here.
+calico-queryserver.tar:
+	make -C ../queryserver image
+	docker tag tigera/cnx-queryserver:latest-$(ARCH) tigera/cnx-queryserver:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/cnx-queryserver:$(TEST_BUILD_TAG)
 
 egress-gateway.tar: ../go.mod $(shell find ../egress-gateway -name '*.go') ../egress-gateway/* $(shell find ../libcalico-go -name '*.go')
 	make -C ../egress-gateway image
-	docker save --output $@ tigera/egress-gateway:latest-$(ARCH)
+	docker tag tigera/egress-gateway:latest-$(ARCH) tigera/egress-gateway:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/egress-gateway:$(TEST_BUILD_TAG)
 
 load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 	# Load the latest tar files onto the currently running kind cluster.
 	KUBECONFIG=$(KIND_KUBECONFIG) ./tests/k8st/load_images_on_kind_cluster.sh
 	# Restart the Calico containers so they launch with the newly loaded code.
-	# TODO: We should be able to do this without restarting everything in kube-system.
-	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) delete pods -n kube-system --all
+	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) delete pods -n calico-system --all
 	# calicoctl is deployed as a pod on the cluster and needs to be recreated.
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) apply -f tests/k8st/infra/calicoctl.yaml
 
@@ -533,23 +571,19 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## on a test environment which doesn't support dual tor, and excludes egress IP tests which
 ## reconfigure the cluster configuration.
 K8ST_TO_RUN ?= -A vanilla
-EGRESS_KIND_CONFIG=./tests/k8st/egress-ip-tests/kind.config
 K8ST_REPORT_FILENAME ?= k8s-tests.xml
-
-.PHONY: egress-ip-test
-egress-ip-test:
-	KIND_CONFIG=$(EGRESS_KIND_CONFIG) $(MAKE) k8s-test
 
 .PHONY: k8s-test
 k8s-test:
+	$(MAKE) kind-k8st-cleanup
 	$(MAKE) kind-k8st-setup
 	$(MAKE) kind-k8st-run-test
-	$(MAKE) kind-k8st-cleanup
+
+TEST_LICENSE=$(SECRETS_PATH)/license.yaml
 
 .PHONY: kind-k8st-setup
-TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
-	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl $(TEST_LICENSE) ../bin/tigera-operator-$(GIT_VERSION).tgz kind-cluster-create
+	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) GIT_VERSION=$(GIT_VERSION) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
 kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
@@ -602,7 +636,7 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -618,7 +652,7 @@ st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar cnx-node.tar workl
 		   -e HOST_CHECKOUT_DIR=$(CURDIR) \
 		   -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 		   -e MY_IP=$(LOCAL_IP_ENV) \
-		   -e NODE_CONTAINER_NAME=$(NODE_IMAGE):latest-$(ARCH) \
+		   -e NODE_CONTAINER_NAME=$(NODE_IMAGE):$(TEST_BUILD_TAG) \
 		   --rm -t \
 		   -v /var/run/docker.sock:/var/run/docker.sock \
 		   $(TEST_CONTAINER_NAME) \

@@ -9,99 +9,6 @@ function cleanup() {
 }
 trap 'cleanup' SIGINT SIGHUP SIGTERM EXIT
 
-# test directory.
-TEST_DIR=./tests/k8st
-ARCH=${ARCH:-amd64}
-
-# Path to Enteprise product license
-: ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
-
-# kubectl binary.
-: ${kubectl:=../hack/test/kind/kubectl}
-
-function checkModule() {
-  MODULE="$1"
-  echo "Checking kernel module $MODULE ..."
-  if lsmod | grep "$MODULE" &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-function enable_dual_stack() {
-  # Based on instructions in http://docs.projectcalico.org/master/networking/dual-stack.md
-  local yaml=$1
-  # add assign_ipv4 and assign_ipv6 to CNI config
-  sed -i -e '/"type": "calico-ipam"/r /dev/stdin' "${yaml}" <<EOF
-              "assign_ipv4": "true",
-              "assign_ipv6": "true"
-EOF
-  sed -i -e 's/"type": "calico-ipam"/"type": "calico-ipam",/' "${yaml}"
-
-	sed -i -e '/"type": "calico"/r /dev/stdin' "${yaml}" <<EOF
-     "feature_control": {
-         "floating_ips": true
-     },
-EOF
-
-  # And add all the IPV6 env vars
-  sed -i '/# Enable IPIP/r /dev/stdin' "${yaml}" <<EOF
-            - name: IP6
-              value: "autodetect"
-            - name: CALICO_IPV6POOL_CIDR
-              value: "fd00:10:244::/64"
-EOF
-  # update FELIX_IPV6SUPPORT=true
-  sed -i '/FELIX_IPV6SUPPORT/!b;n;c\              value: "true"' "${yaml}"
-
-  # update calico/node image
-  sed -i 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' "${yaml}"
-}
-
-echo "Set ipv6 address on each node"
-docker exec kind-control-plane ip -6 addr replace 2001:20::8/64 dev eth0
-docker exec kind-worker ip -6 addr replace 2001:20::1/64 dev eth0
-docker exec kind-worker2 ip -6 addr replace 2001:20::2/64 dev eth0
-docker exec kind-worker3 ip -6 addr replace 2001:20::3/64 dev eth0
-echo
-
-echo "Load calico/node docker images onto each node"
-$TEST_DIR/load_images_on_kind_cluster.sh
-
-for image in calico/cni:master calico/pod2daemon-flexvol:master; do
-    docker pull ${image}
-    rm -f image.tar
-    docker save --output image.tar ${image}
-    for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
-	docker cp image.tar ${node}:/image.tar
-	docker exec -t ${node} ctr -n=k8s.io images import /image.tar
-	docker exec -t ${node} rm /image.tar
-    done
-done
-
-# Install pull secret so we can pull the right calicoctl
-${kubectl} get secret cnx-pull-secret -n kube-system ||
-  ${kubectl} -n kube-system create secret generic cnx-pull-secret \
-   --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
-   --type=kubernetes.io/dockerconfigjson
-
-echo "Install Calico and Calicoctl for dualstack"
-cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml.tmp
-sed -i "s/amd64/${ARCH}/" $TEST_DIR/infra/calico.yaml.tmp
-enable_dual_stack $TEST_DIR/infra/calico.yaml.tmp
-${kubectl} apply -f $TEST_DIR/infra/calico.yaml.tmp
-rm $TEST_DIR/infra/calico.yaml.tmp
-cp $TEST_DIR/infra/calicoctl.yaml $TEST_DIR/infra/calicoctl.yaml.tmp
-sed -i "s/amd64/${ARCH}/" $TEST_DIR/infra/calicoctl.yaml.tmp
-${kubectl} apply -f $TEST_DIR/infra/calicoctl.yaml.tmp
-rm $TEST_DIR/infra/calicoctl.yaml.tmp
-echo
-
-echo "Install additional permissions for BGP password"
-${kubectl} apply -f $TEST_DIR/infra/additional-rbac.yaml
-echo
-
 function wait_pod_ready() {
   args="$@"
 
@@ -132,18 +39,77 @@ function wait_pod_ready() {
     ${kubectl} logs $args
     echo "Pod $args failed to become ready within 300s; diags above ^^"
   fi
-
   set -e
   return $rc
 }
 
+# test directory.
+TEST_DIR=./tests/k8st
+ARCH=${ARCH:-amd64}
+GIT_VERSION=${GIT_VERSION:-`git describe --tags --dirty --always --abbrev=12`}
+HELM=../bin/helm
+CHART=../bin/tigera-operator-$GIT_VERSION.tgz
+
+# Path to Enteprise product license
+: ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
+
+# kubectl binary.
+: ${kubectl:=../hack/test/kind/kubectl}
+
+echo "Set ipv6 address on each node"
+docker exec kind-control-plane ip -6 addr replace 2001:20::8/64 dev eth0
+docker exec kind-worker ip -6 addr replace 2001:20::1/64 dev eth0
+docker exec kind-worker2 ip -6 addr replace 2001:20::2/64 dev eth0
+docker exec kind-worker3 ip -6 addr replace 2001:20::3/64 dev eth0
+
+echo
+
+echo "Load calico/node docker images onto each node"
+$TEST_DIR/load_images_on_kind_cluster.sh
+
+# TODO: Why do this instead of building from the repository?
+for image in calico/cni:master calico/pod2daemon-flexvol:master; do
+    docker pull ${image}
+    rm -f image.tar
+    docker save --output image.tar ${image}
+    for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
+	docker cp image.tar ${node}:/image.tar
+	docker exec -t ${node} ctr -n=k8s.io images import /image.tar
+	docker exec -t ${node} rm /image.tar
+    done
+done
+
+echo "Install additional permissions for BGP password"
+${kubectl} apply -f $TEST_DIR/infra/additional-rbac.yaml
+echo
+
+echo "Install Calico using the helm chart"
+$HELM install calico $CHART -f $TEST_DIR/infra/values.yaml -n tigera-operator --create-namespace
+
+echo "Install calicoctl as a pod"
+${kubectl} apply -f $TEST_DIR/infra/calicoctl.yaml
+echo
+
 echo "Wait for Calico to be ready..."
-wait_pod_ready -l k8s-app=calico-node -n kube-system
-wait_pod_ready -l k8s-app=calico-kube-controllers -n kube-system
+wait_pod_ready -l k8s-app=calico-node -n calico-system
+wait_pod_ready -l k8s-app=tigera-apiserver -n tigera-system
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
+
+# TODO: Re-enable this. These seem to be flaky in enterprise.
+# echo "Wait for tigera status to be ready"
+# ${kubectl} wait --for=condition=Available tigerastatus/calico
+# ${kubectl} wait --for=condition=Available tigerastatus/apiserver
+
 echo "Calico is running."
 echo
+
+# The GCR_IO_PULL_SECRET is not needed to install Calico, as we use locally loaded images. However,
+# it is still needed for some tests. Notably the EGW tests rely on this.
+${kubectl} get secret cnx-pull-secret -n tigera-operator ||
+  ${kubectl} -n tigera-operator create secret generic cnx-pull-secret \
+   --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
+   --type=kubernetes.io/dockerconfigjson
 
 # Apply the enterprise license.
 # FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
@@ -165,19 +131,7 @@ wait_pod_ready -l app=webserver
 echo "client and webserver pods are running."
 echo
 
-echo "Deploy Calico apiserver"
-cp $TEST_DIR/infra/apiserver.yaml $TEST_DIR/infra/apiserver.yaml.tmp
-sed -i "s/amd64/${ARCH}/" $TEST_DIR/infra/apiserver.yaml.tmp
-${kubectl} apply -f ${TEST_DIR}/infra/apiserver.yaml.tmp
-rm $TEST_DIR/infra/apiserver.yaml.tmp
-openssl req -x509 -nodes -newkey rsa:4096 -keyout apiserver.key -out apiserver.crt -days 365 -subj "/" -addext "subjectAltName = DNS:calico-api.calico-apiserver.svc"
-${kubectl} get secret -n calico-apiserver calico-apiserver-certs ||
-  ${kubectl} create secret -n calico-apiserver generic calico-apiserver-certs --from-file=apiserver.key --from-file=apiserver.crt
-${kubectl} patch apiservice v3.projectcalico.org -p \
-  "{\"spec\": {\"caBundle\": \"$(${kubectl} get secret -n calico-apiserver calico-apiserver-certs -o go-template='{{ index .data "apiserver.crt" }}')\"}}"
-wait_pod_ready -l k8s-app=calico-apiserver -n calico-apiserver
-echo "Calico apiserver is running."
-
+# Show all the pods running for diags purposes.
 ${kubectl} get po --all-namespaces -o wide
 ${kubectl} get svc
 
@@ -193,3 +147,8 @@ function test_connection() {
 # Run ipv4 ipv6 connection test
 test_connection 4
 test_connection 6
+
+# At the end of it all, scale down the operator so that it doesn't
+# make changes to the cluster. Some of our tests modify calico/node, etc.
+# We should remove this once we fix up those tests.
+${kubectl} scale deployment -n tigera-operator tigera-operator --replicas=0

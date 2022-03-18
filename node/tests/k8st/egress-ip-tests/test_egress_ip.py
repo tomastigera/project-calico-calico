@@ -71,7 +71,7 @@ class _TestEgressIP(TestBase):
         if wireguard:
             self.disableDefaultDenyTest = True
             newEnv["FELIX_WIREGUARDENABLED"] = "true"
-        update_ds_env("calico-node", "kube-system", newEnv)
+        update_ds_env("calico-node", "calico-system", newEnv)
 
         # Create egress IP pool.
         self.egress_cidr = "10.10.10.0/29"
@@ -88,7 +88,7 @@ spec:
   ipipMode: %s
 EOF
 """ % (self.egress_cidr, modeVxlan, modeIPIP))
-       
+
         # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
         time.sleep(20)
 
@@ -254,7 +254,7 @@ EOF
             # Break one of the gateway's ICMP probes, it should be taken out of service.
             self.server_del_route(servers[0], gw)
             gw.wait_not_ready()
- 
+
             def check_routes(expected):
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
@@ -347,7 +347,7 @@ EOF
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
             # Restart Felix by updating log level.
-            log_level = self.get_ds_env("calico-node", "kube-system", "FELIX_LOGSEVERITYSCREEN")
+            log_level = self.get_ds_env("calico-node", "calico-system", "FELIX_LOGSEVERITYSCREEN")
             if log_level == "Debug":
                 new_log_level = "Info"
             else:
@@ -355,8 +355,8 @@ EOF
             _log.info("--- Start restarting calico/node ---")
             oldEnv = {"FELIX_LOGSEVERITYSCREEN": log_level}
             newEnv = {"FELIX_LOGSEVERITYSCREEN": new_log_level}
-            update_ds_env("calico-node", "kube-system", newEnv)
-            self.add_cleanup(lambda: update_ds_env("calico-node", "kube-system", oldEnv))
+            update_ds_env("calico-node", "calico-system", newEnv)
+            self.add_cleanup(lambda: update_ds_env("calico-node", "calico-system", oldEnv))
 
             # client_red should send egress packets via gw3, gw3_1
             self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
@@ -407,7 +407,7 @@ spec:
 EOF
 """ % (server2.ip, server1.ip))
             self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
-            
+
             client = NetcatClientTCP("default", "test-blue", node="kind-worker3", annotations={
                 "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
             })
@@ -575,7 +575,7 @@ EOF
 
             # Set EgressIPSupport to EnabledPerNamespace.
             newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespace"}
-            update_ds_env("calico-node", "kube-system", newEnv)
+            update_ds_env("calico-node", "calico-system", newEnv)
 
             # Validate egress ip again, pod annotations should be ignored.
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
@@ -1157,10 +1157,10 @@ EOF
             _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
             oldEnv = {"FELIX_ROUTETABLERANGES": "201-250"}
             newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
-            update_ds_env("calico-node", "kube-system", newEnv)
+            update_ds_env("calico-node", "calico-system", newEnv)
 
             def undo_route_table_range():
-                update_ds_env("calico-node", "kube-system", {"FELIX_ROUTETABLERANGES": "1-250"})
+                update_ds_env("calico-node", "calico-system", {"FELIX_ROUTETABLERANGES": "1-250"})
             self.add_cleanup(undo_route_table_range)
 
             # Create 3 egress gateways, with an IP from that pool.
@@ -1238,7 +1238,7 @@ EOF
             run("docker exec %s ip route show table %s" % (node, "211"))
 
             _log.info("--- Restarting calico/node with routeTableRage 201-250 ---")
-            update_ds_env("calico-node", "kube-system", oldEnv)
+            update_ds_env("calico-node", "calico-system", oldEnv)
 
             run("docker exec %s ip rule" % node)
 
@@ -1433,7 +1433,7 @@ EOF
         gateway.wait_ready()
 
         # Route to gw should be ready.
-        # Without waiting for route to be ready, it is possible the traffic hit 
+        # Without waiting for route to be ready, it is possible the traffic hit
         # unreachable route or the transition phrase from unreachable route to a valid route.
         # What we found is that `kubectl exec test 1 -- nc -w 2` sometimes hung. We added
         # `timeout 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
@@ -1444,7 +1444,7 @@ EOF
         return client, server, gateway
 
     def copy_pull_secret(self, ns):
-        out = run("kubectl get secret cnx-pull-secret -n kube-system -o json")
+        out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")
 
         # Remove revision and UID information so we can re-apply cleanly.
         # This used to be done with --export, but that option has been removed from kubectl.

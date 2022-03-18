@@ -28,7 +28,8 @@ spec:
   serviceAccountName: calicoctl
   containers:
     - name: calicoctl
-      image: tigera/calicoctl:latest-amd64
+      image: tigera/calicoctl:test-build
+      imagePullPolicy: Never
       command:
         - calicoctl
       args:
