@@ -755,7 +755,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				for _, felix := range felixes {
 					// N.B. we only support environment with not so strict RPF - can be
 					// strict per iface, but not for all.
-					felix.Exec("sysctl", "-w", "net.ipv4.conf.all.rp_filter=0")
+					felix.Exec("sysctl", "-w", "net.ipv4.conf.all.rp_filter=1")
 					switch testOpts.tunnel {
 					case "none":
 						felix.Exec("sysctl", "-w", "net.ipv4.conf.eth0.rp_filter=2")
