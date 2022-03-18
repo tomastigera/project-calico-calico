@@ -99,7 +99,9 @@ struct bpf_map_def_extended {
 #define CALI_RES_REDIR_IFINDEX	109 /* packet should be sent straight to
 				     * state->ct_result->ifindex_fwd
 				     */
-#if CALI_RES_REDIR_BACK <= TC_ACT_VALUE_MAX
+#define CALI_RES_REDIR_NATIF	110 /* redirect to natif veth */
+
+#if CALI_RES_REDIR_NATIF <= TC_ACT_VALUE_MAX
 #error CALI_RES_ values need to be increased above TC_ACT_VALUE_MAX
 #endif
 
@@ -254,6 +256,7 @@ extern const volatile struct cali_tc_globals __globals;
 
 #define CALI_CONFIGURABLE_DEFINE(name, pattern)
 #define CALI_CONFIGURABLE(name)  __globals.name
+#define CALI_CONFIGURABLE_PTR(name)  CALI_CONFIGURABLE(name)
 
 #else /* loader */
 
@@ -265,6 +268,7 @@ static CALI_BPF_INLINE __be32 cali_configurable_##name()					\
 	return ret;										\
 }
 #define CALI_CONFIGURABLE(name)	cali_configurable_##name()
+#define CALI_CONFIGURABLE_PTR(name)  ((void *)0)
 
 #endif /* loader */
 
@@ -277,6 +281,8 @@ CALI_CONFIGURABLE_DEFINE(psnat_start, 0x53545250) /* be 0x53545250 = ACSII(PRTS)
 CALI_CONFIGURABLE_DEFINE(psnat_len, 0x4c545250) /* be 0x4c545250 = ACSII(PRTL) */
 CALI_CONFIGURABLE_DEFINE(flags, 0x00000001)
 CALI_CONFIGURABLE_DEFINE(host_tunnel_ip, 0x4c4e5554) /* be 0x4c4e5554 = ACSII(TUNL) */
+CALI_CONFIGURABLE_DEFINE(bpfnatout_idx, 0xdeadbeef)
+CALI_CONFIGURABLE_DEFINE(bpfnatin_mac, 0xdeadbeef)
 
 #define HOST_IP		CALI_CONFIGURABLE(host_ip)
 #define TUNNEL_MTU 	CALI_CONFIGURABLE(tunnel_mtu)
@@ -286,6 +292,8 @@ CALI_CONFIGURABLE_DEFINE(host_tunnel_ip, 0x4c4e5554) /* be 0x4c4e5554 = ACSII(TU
 #define PSNAT_START	CALI_CONFIGURABLE(psnat_start)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
 #define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
+#define BPFNATIF_IDX	CALI_CONFIGURABLE(bpfnatout_idx)
+#define BPFNATIF_MAC	CALI_CONFIGURABLE_PTR(bpfnatin_mac)
 
 #ifdef UNITTEST
 CALI_CONFIGURABLE_DEFINE(__skb_mark, 0x4d424b53) /* be 0x4d424b53 = ASCII(SKBM) */

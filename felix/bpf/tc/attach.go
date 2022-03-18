@@ -60,6 +60,8 @@ type AttachPoint struct {
 	PSNATEnd             uint16
 	IPv6Enabled          bool
 	MapSizes             map[string]uint32
+	NATIfIdx             uint32
+	NATIfMAC             [6]byte
 }
 
 var tcLock sync.RWMutex
@@ -621,8 +623,10 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 
 	var flags uint32
 	if ap.IPv6Enabled {
-		flags |= libbpf.GlobalsIPv6Enabled
+		flags |= libbpf.TcGlobalsIPv6Enabled
 	}
+
+	flags |= libbpf.TcGlobalsRedirectNATIf
 
 	hostTunnelIP := hostIP
 
@@ -634,7 +638,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 
 	return libbpf.TcSetGlobals(m, hostIP, intfIP,
-		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, hostTunnelIP, flags)
+		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, hostTunnelIP,
+		flags, ap.NATIfIdx, ap.NATIfMAC)
 }
 
 func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {

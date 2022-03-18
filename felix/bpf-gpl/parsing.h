@@ -40,7 +40,7 @@ static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx) {
 		goto allow_no_fib;
 	case ETH_P_IPV6:
 		// If IPv6 is supported and enabled, handle the packet
-		if (GLOBAL_FLAGS & CALI_GLOBALS_IPV6_ENABLED) {
+		if (GLOBAL_FLAGS & CALI_TC_GLOBALS_IPV6_ENABLED) {
 			CALI_DEBUG("IPv6 packet, continue with parsing it.");
 			goto ipv6_packet;
 		}

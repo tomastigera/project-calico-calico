@@ -758,13 +758,13 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					felix.Exec("sysctl", "-w", "net.ipv4.conf.all.rp_filter=0")
 					switch testOpts.tunnel {
 					case "none":
-						felix.Exec("sysctl", "-w", "net.ipv4.conf.eth0.rp_filter=2")
+						felix.Exec("sysctl", "-w", "net.ipv4.conf.eth0.rp_filter=1")
 					case "ipip":
-						felix.Exec("sysctl", "-w", "net.ipv4.conf.tunl0.rp_filter=2")
+						felix.Exec("sysctl", "-w", "net.ipv4.conf.tunl0.rp_filter=1")
 					case "wireguard":
-						felix.Exec("sysctl", "-w", "net.ipv4.conf.wireguard/cali.rp_filter=2")
+						felix.Exec("sysctl", "-w", "net.ipv4.conf.wireguard/cali.rp_filter=1")
 					case "vxlan":
-						felix.Exec("sysctl", "-w", "net.ipv4.conf.vxlan/calico.rp_filter=2")
+						felix.Exec("sysctl", "-w", "net.ipv4.conf.vxlan/calico.rp_filter=1")
 					}
 				}
 			}

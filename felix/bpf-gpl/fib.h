@@ -94,6 +94,29 @@ skip_redir_ifindex:
 		CALI_DEBUG("Redirect directly to interface (%d) failed.\n", iface);
 		/* fall through to FIB if enabled or the IP stack, don't give up yet. */
 		rc = TC_ACT_UNSPEC;
+	} else if (CALI_F_TO_HOST && rc == CALI_RES_REDIR_NATIF) {
+		__u32 iface = BPFNATIF_IDX;
+
+		/* Revalidate the access to the packet */
+		if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+			ctx->fwd.reason = CALI_REASON_SHORT;
+			CALI_DEBUG("Too short\n");
+			goto deny;
+		}
+
+		/* Patch in the MAC addresses that should be set on the next hop. */
+		struct ethhdr *eth_hdr = ctx->data_start;
+		__builtin_memcpy(&eth_hdr->h_dest, (char *)BPFNATIF_MAC, ETH_ALEN);
+
+		rc = bpf_redirect(iface, 0);
+		if (rc == TC_ACT_REDIRECT) {
+			CALI_DEBUG("Redirect directly to bpfnatout (%d) succeeded.\n", iface);
+			goto skip_fib;
+		}
+
+		CALI_DEBUG("Redirect directly to bpfnatout (%d) failed.\n", iface);
+		/* fall through to FIB if enabled or the IP stack, don't give up yet. */
+		rc = TC_ACT_UNSPEC;
 	}
 
 #if CALI_FIB_ENABLED

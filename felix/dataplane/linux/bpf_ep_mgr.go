@@ -189,6 +189,9 @@ type bpfEndpointManager struct {
 	services      map[serviceKey][]string
 	dirtyServices map[serviceKey][]string
 	tunnelIP      net.IP
+
+	bpfnatOutIdx int
+	bpfnatOutMAC [6]byte
 }
 
 type serviceKey struct {
@@ -1032,6 +1035,9 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 		log.Panicf("Unsupported ifaceName %v", ifaceName)
 	}
 
+	ap.NATIfIdx = uint32(m.bpfnatOutIdx)
+	ap.NATIfMAC = m.bpfnatOutMAC
+
 	if endpointType == tc.EpTypeWorkload {
 		// Policy direction is relative to the workload so, from the host namespace it's flipped.
 		if policyDirection == PolDirnIngress {
@@ -1443,6 +1449,12 @@ func (m *bpfEndpointManager) ensureCtlbDevice() {
 			log.WithError(err).Fatal("Miss bpfnatout after add.")
 		}
 	}
+
+	m.bpfnatOutIdx = bpfout.Attrs().Index
+	if len(bpfout.Attrs().HardwareAddr) != 6 {
+		log.Fatal("bpfnatout MAC %+v incorrect.", bpfout.Attrs().HardwareAddr)
+	}
+	copy(m.bpfnatOutMAC[0:6], bpfout.Attrs().HardwareAddr[0:6])
 
 	// Add a permanent ARP entry to point to the other side of the veth to avoid
 	// ARP requests that would not be proxied if .all.rp_filter == 1

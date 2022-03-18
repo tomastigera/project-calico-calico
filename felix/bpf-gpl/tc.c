@@ -617,7 +617,11 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		if (CALI_F_TO_HOST && !CALI_F_NAT_IF &&
 				state->ct_result.flags & CALI_CT_FLAG_VIA_NAT_IF) {
 			CALI_DEBUG("should skip rpf as the source IP is a service IP\n");
-			seen_mark |= CALI_SKB_MARK_SKIP_RPF;
+			if (GLOBAL_FLAGS & CALI_TC_GLOBALS_REDIRECT_NATIF) {
+				rc = CALI_RES_REDIR_NATIF;
+			} else {
+				seen_mark |= CALI_SKB_MARK_SKIP_RPF;
+			}
 		}
 	}
 
