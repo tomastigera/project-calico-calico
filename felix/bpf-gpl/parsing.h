@@ -34,6 +34,20 @@ static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx) {
 
 	switch (protocol) {
 	case ETH_P_IP:
+		if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_DEBUG) {
+			if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+				ctx->fwd.reason = CALI_REASON_SHORT;
+				CALI_DEBUG("Too short\n");
+				goto deny;
+			}
+			struct ethhdr *eth_hdr = tc_ethhdr(ctx);
+			if (eth_hdr) {
+				CALI_DEBUG("mac 0-2 0x%x 0x%x 0x%x\n",
+						eth_hdr->h_dest[0], eth_hdr->h_dest[1], eth_hdr->h_dest[2]);
+				CALI_DEBUG("mac 3-5 0x%x 0x%x 0x%x\n",
+						eth_hdr->h_dest[3], eth_hdr->h_dest[4], eth_hdr->h_dest[5]);
+			}
+		}
 		break;
 	case ETH_P_ARP:
 		CALI_DEBUG("ARP: allowing packet\n");

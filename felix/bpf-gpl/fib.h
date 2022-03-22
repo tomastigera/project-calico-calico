@@ -106,7 +106,12 @@ skip_redir_ifindex:
 
 		/* Patch in the MAC addresses that should be set on the next hop. */
 		struct ethhdr *eth_hdr = ctx->data_start;
-		__builtin_memcpy(&eth_hdr->h_dest, (char *)BPFNATIF_MAC, ETH_ALEN);
+#ifndef UNITTEST
+		__builtin_memcpy(&eth_hdr->h_dest, (( unsigned char*)__globals.bpfnatin_mac), ETH_ALEN);
+#endif
+
+		CALI_DEBUG("mac 0-2 0x%x 0x%x 0x%x\n", eth_hdr->h_dest[0], eth_hdr->h_dest[1], eth_hdr->h_dest[2]);
+		CALI_DEBUG("mac 3-5 0x%x 0x%x 0x%x\n", eth_hdr->h_dest[3], eth_hdr->h_dest[4], eth_hdr->h_dest[5]);
 
 		rc = bpf_redirect(iface, 0);
 		if (rc == TC_ACT_REDIRECT) {

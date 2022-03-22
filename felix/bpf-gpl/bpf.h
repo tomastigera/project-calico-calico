@@ -256,7 +256,6 @@ extern const volatile struct cali_tc_globals __globals;
 
 #define CALI_CONFIGURABLE_DEFINE(name, pattern)
 #define CALI_CONFIGURABLE(name)  __globals.name
-#define CALI_CONFIGURABLE_PTR(name)  CALI_CONFIGURABLE(name)
 
 #else /* loader */
 
@@ -268,7 +267,6 @@ static CALI_BPF_INLINE __be32 cali_configurable_##name()					\
 	return ret;										\
 }
 #define CALI_CONFIGURABLE(name)	cali_configurable_##name()
-#define CALI_CONFIGURABLE_PTR(name)  ((void *)0)
 
 #endif /* loader */
 
@@ -293,7 +291,6 @@ CALI_CONFIGURABLE_DEFINE(bpfnatin_mac, 0xdeadbeef)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
 #define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
 #define BPFNATIF_IDX	CALI_CONFIGURABLE(bpfnatout_idx)
-#define BPFNATIF_MAC	CALI_CONFIGURABLE_PTR(bpfnatin_mac)
 
 #ifdef UNITTEST
 CALI_CONFIGURABLE_DEFINE(__skb_mark, 0x4d424b53) /* be 0x4d424b53 = ASCII(SKBM) */
