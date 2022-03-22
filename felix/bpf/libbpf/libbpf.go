@@ -270,7 +270,7 @@ func TcSetGlobals(
 		C.uint(hostTunnelIP),
 		C.uint(flags),
 		C.uint(bpfnatout_idx),
-		(*C.char)(unsafe.Pointer(&bpfnatin_mac[0])),
+		(*C.char)(unsafe.Pointer(&(bpfnatin_mac[:])[0])),
 	)
 
 	return err

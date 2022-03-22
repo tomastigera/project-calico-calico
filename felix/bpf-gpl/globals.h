@@ -16,7 +16,9 @@ struct cali_tc_globals {
 	__be32 host_tunnel_ip;
 	__be32 flags;
 	__be32 bpfnatout_idx;
-	unsigned char bpfnatin_mac[6];
+	__be32 bpfnatin_mac0;
+	__be16 bpfnatin_mac1;
+	__be16 __pad0;
 };
 
 enum cali_globals_flags {

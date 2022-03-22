@@ -107,7 +107,8 @@ skip_redir_ifindex:
 		/* Patch in the MAC addresses that should be set on the next hop. */
 		struct ethhdr *eth_hdr = ctx->data_start;
 #ifndef UNITTEST
-		__builtin_memcpy(&eth_hdr->h_dest, (( unsigned char*)__globals.bpfnatin_mac), ETH_ALEN);
+		*((__u32 *)&eth_hdr->h_dest[0]) = __globals.bpfnatin_mac0;
+		*((__u16 *)&eth_hdr->h_dest[4]) = __globals.bpfnatin_mac1;
 #endif
 
 		CALI_DEBUG("mac 0-2 0x%x 0x%x 0x%x\n", eth_hdr->h_dest[0], eth_hdr->h_dest[1], eth_hdr->h_dest[2]);

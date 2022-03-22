@@ -133,7 +133,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.bpfnatout_idx = bpfnatout_idx,
 	};
 
-	memcpy(data.bpfnatin_mac, bpfnatin_mac, 6);
+	memcpy(&data.bpfnatin_mac0, bpfnatin_mac, 6);
 
 	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
 }

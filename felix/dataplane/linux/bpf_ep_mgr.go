@@ -191,7 +191,7 @@ type bpfEndpointManager struct {
 	tunnelIP      net.IP
 
 	bpfnatOutIdx int
-	bpfnatOutMAC [6]byte
+	bpfnatInMAC  [6]byte
 }
 
 type serviceKey struct {
@@ -1036,7 +1036,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	}
 
 	ap.NATIfIdx = uint32(m.bpfnatOutIdx)
-	ap.NATIfMAC = m.bpfnatOutMAC
+	ap.NATIfMAC = m.bpfnatInMAC
 
 	if endpointType == tc.EpTypeWorkload {
 		// Policy direction is relative to the workload so, from the host namespace it's flipped.
@@ -1454,7 +1454,7 @@ func (m *bpfEndpointManager) ensureCtlbDevice() {
 	if len(bpfout.Attrs().HardwareAddr) != 6 {
 		log.Fatal("bpfnatout MAC %+v incorrect.", bpfout.Attrs().HardwareAddr)
 	}
-	copy(m.bpfnatOutMAC[0:6], bpfout.Attrs().HardwareAddr[0:6])
+	copy(m.bpfnatInMAC[0:6], bpfin.Attrs().HardwareAddr[0:6])
 
 	// Add a permanent ARP entry to point to the other side of the veth to avoid
 	// ARP requests that would not be proxied if .all.rp_filter == 1
