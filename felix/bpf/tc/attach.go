@@ -58,7 +58,7 @@ type AttachPoint struct {
 	ExtToServiceConnmark uint32
 	PSNATStart           uint16
 	PSNATEnd             uint16
-	IPv6Enabled          bool
+	Flags                uint32
 	MapSizes             map[string]uint32
 }
 
@@ -188,7 +188,7 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 		isHost = true
 	}
 
-	err = updateJumpMap(obj, isHost, ap.IPv6Enabled)
+	err = updateJumpMap(obj, isHost, (ap.Flags&libbpf.TcGlobalsIPv6Enabled) != 0)
 	if err != nil {
 		return "", fmt.Errorf("error updating jump map %v", err)
 	}
@@ -616,13 +616,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		return err
 	}
 
-	var flags uint32
-	if ap.IPv6Enabled {
-		flags |= libbpf.GlobalsIPv6Enabled
-	}
-
 	return libbpf.TcSetGlobals(m, hostIP, intfIP,
-		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, flags)
+		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, ap.Flags)
 }
 
 func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {

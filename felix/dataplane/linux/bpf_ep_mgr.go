@@ -46,6 +46,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
+	"github.com/projectcalico/calico/felix/bpf/libbpf"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/tc"
 	"github.com/projectcalico/calico/felix/bpf/xdp"
@@ -147,6 +148,7 @@ type bpfEndpointManager struct {
 	dsrEnabled              bool
 	bpfExtToServiceConnmark int
 	psnatPorts              numorstring.Port
+	strictRPF               bool
 	bpfMapContext           *bpf.MapContext
 
 	ruleRenderer        bpfAllowChainRenderer
@@ -216,6 +218,7 @@ func newBPFEndpointManager(
 		dsrEnabled:              config.BPFNodePortDSREnabled,
 		bpfExtToServiceConnmark: config.BPFExtToServiceConnmark,
 		psnatPorts:              config.BPFPSNATPorts,
+		strictRPF:               config.BPFEnforceStrictRPF,
 		bpfMapContext:           bpfMapContext,
 		ruleRenderer:            iptablesRuleRenderer,
 		iptablesFilterTable:     iptablesFilterTable,
@@ -1007,7 +1010,12 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	ap.VXLANPort = m.vxlanPort
 	ap.PSNATStart = m.psnatPorts.MinPort
 	ap.PSNATEnd = m.psnatPorts.MaxPort
-	ap.IPv6Enabled = m.ipv6Enabled
+	if m.ipv6Enabled {
+		ap.Flags |= libbpf.TcGlobalsIPv6Enabled
+	}
+	if m.strictRPF {
+		ap.Flags |= libbpf.TcGlobalsStrictRPF
+	}
 	ap.MapSizes = m.bpfMapContext.MapSizes
 
 	return ap

@@ -88,7 +88,8 @@ func (m *Map) IsMapInternal() bool {
 }
 
 const (
-	GlobalsIPv6Enabled uint32 = 1
+	TcGlobalsIPv6Enabled uint32 = iota
+	TcGlobalsStrictRPF
 )
 
 func TcSetGlobals(_ *Map, _, _, _ uint32, _, _, _, _ uint16, _ uint32) error {

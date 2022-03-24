@@ -16,4 +16,6 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx);
 
 int parse_packet(struct __sk_buff *skb, struct cali_tc_ctx *ctx);
 
+#define ENFORCE_STRICT_RPF_HEP (CALI_F_FROM_HEP && (GLOBAL_FLAGS & CALI_TC_GLOBALS_STRICT_RPF))
+
 #endif /* __CALI_BPF_TC_H__ */

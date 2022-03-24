@@ -232,7 +232,7 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 	/* We are possibly past (D)NAT, but that is ok, we need to let the IP
 	 * stack do the RPF check on the source, dest is not important.
 	 */
-	if (ct_result_rpf_failed(ctx->state->ct_result.rc)) {
+	if (ENFORCE_STRICT_RPF_HEP && ct_result_rpf_failed(ctx->state->ct_result.rc)) {
 		fwd_fib_set(&ctx->fwd, false);
 	}
 
@@ -342,7 +342,7 @@ syn_force_policy:
 	 * from outside of the host. We enforce RPF failed on every new flow.
 	 * This will make it to skip fib in calico_tc_skb_accepted()
 	 */
-	if (CALI_F_FROM_HEP) {
+	if (ENFORCE_STRICT_RPF_HEP) {
 		ct_result_set_flag(ctx->state->ct_result.rc, CALI_CT_RPF_FAILED);
 	}
 
