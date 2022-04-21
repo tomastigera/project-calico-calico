@@ -15,7 +15,6 @@
 package builder
 
 import (
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

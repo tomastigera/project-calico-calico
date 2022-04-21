@@ -15,7 +15,6 @@
 package winupgrade
 
 import (
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

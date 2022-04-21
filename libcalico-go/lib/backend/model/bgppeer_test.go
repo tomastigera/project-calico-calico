@@ -17,7 +17,6 @@ package model_test
 import (
 	"net"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"

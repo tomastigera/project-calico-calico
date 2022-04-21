@@ -21,7 +21,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/libcalico-go/lib/logutils"

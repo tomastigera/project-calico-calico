@@ -18,7 +18,6 @@ import (
 	"path"
 	"runtime"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/typha/pkg/config"

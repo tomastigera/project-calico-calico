@@ -17,7 +17,6 @@ package stringutils_test
 import (
 	. "github.com/projectcalico/calico/felix/stringutils"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

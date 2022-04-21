@@ -18,7 +18,6 @@ import (
 	cnet "net"
 
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

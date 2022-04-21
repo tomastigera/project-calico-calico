@@ -20,7 +20,6 @@ import (
 	"path"
 	"runtime"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

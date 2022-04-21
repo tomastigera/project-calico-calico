@@ -15,7 +15,6 @@
 package names_test
 
 import (
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"

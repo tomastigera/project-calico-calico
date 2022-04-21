@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 
 	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 
