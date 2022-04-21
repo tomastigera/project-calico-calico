@@ -27,6 +27,5 @@ import (
 func TestConversion(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../../report/conversion_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Conversion Suite", []Reporter{junitReporter})
 }

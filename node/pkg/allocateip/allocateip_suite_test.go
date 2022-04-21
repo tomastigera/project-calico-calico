@@ -16,6 +16,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/allocateipaddr_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "AllocateIPAddr Suite", []Reporter{junitReporter})
 }

@@ -18,6 +18,5 @@ func init() {
 
 func TestInstall(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/install_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Install Suite", []Reporter{junitReporter})
 }

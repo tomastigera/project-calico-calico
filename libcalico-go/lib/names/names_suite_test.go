@@ -23,6 +23,5 @@ import (
 
 func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/names_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "names Suite", []Reporter{junitReporter})
 }

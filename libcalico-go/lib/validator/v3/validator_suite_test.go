@@ -27,6 +27,5 @@ import (
 func TestValidator(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/v3_validator_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "v3 Validator Suite", []Reporter{junitReporter})
 }

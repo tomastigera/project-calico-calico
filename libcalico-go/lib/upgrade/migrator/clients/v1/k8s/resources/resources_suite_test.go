@@ -27,6 +27,5 @@ import (
 func TestModel(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../../../../../report/resources_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "calico-upgrade KDD v1 resources Suite", []Reporter{junitReporter})
 }

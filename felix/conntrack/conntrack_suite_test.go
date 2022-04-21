@@ -30,6 +30,5 @@ func init() {
 
 func TestConntrack(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/conntrack_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Conntrack Suite", []Reporter{junitReporter})
 }

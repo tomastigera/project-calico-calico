@@ -24,6 +24,5 @@ import (
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/cache_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Cache Suite", []Reporter{junitReporter})
 }

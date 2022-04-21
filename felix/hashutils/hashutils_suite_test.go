@@ -30,6 +30,5 @@ func init() {
 
 func TestHashutils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/hashutils_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Hashutils Suite", []Reporter{junitReporter})
 }

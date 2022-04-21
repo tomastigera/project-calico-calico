@@ -30,6 +30,5 @@ func init() {
 
 func TestDiscovery(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/discovery_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Discovery Suite", []Reporter{junitReporter})
 }

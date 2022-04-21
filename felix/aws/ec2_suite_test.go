@@ -30,6 +30,5 @@ func init() {
 
 func TestUpdateEC2Instasnce(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/aws_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "AWS Suite", []Reporter{junitReporter})
 }

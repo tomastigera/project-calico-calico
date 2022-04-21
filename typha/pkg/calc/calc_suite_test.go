@@ -29,6 +29,5 @@ func init() {
 
 func TestCalc(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/calc_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Calc Suite", []Reporter{junitReporter})
 }

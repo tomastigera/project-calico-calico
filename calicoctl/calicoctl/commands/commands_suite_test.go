@@ -12,6 +12,5 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/commands_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Commands Suite", []Reporter{junitReporter})
 }

@@ -27,6 +27,5 @@ import (
 func TestEtcd(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/etcd_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Etcd Suite", []Reporter{junitReporter})
 }

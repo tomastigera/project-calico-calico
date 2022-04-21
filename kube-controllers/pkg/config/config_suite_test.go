@@ -24,6 +24,5 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/config_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Config Suite", []Reporter{junitReporter})
 }

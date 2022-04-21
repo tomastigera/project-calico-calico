@@ -12,6 +12,5 @@ import (
 
 func TestResourcemgr(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/resourcemgr_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Resourcemgr Suite", []Reporter{junitReporter})
 }

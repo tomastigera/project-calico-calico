@@ -24,6 +24,5 @@ import (
 
 func TestTokenizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/tokenizer_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Tokenizer Suite", []Reporter{junitReporter})
 }

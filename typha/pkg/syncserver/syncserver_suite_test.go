@@ -29,6 +29,5 @@ func init() {
 
 func TestSyncserver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/syncserver_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Syncserver Suite", []Reporter{junitReporter})
 }

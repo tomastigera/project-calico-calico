@@ -27,6 +27,5 @@ import (
 func TestModel(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../../report/k8s_resources_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "K8s resources Suite", []Reporter{junitReporter})
 }

@@ -23,6 +23,5 @@ import (
 
 func TestNumorstring(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/numorstring_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Numorstring Suite", []Reporter{junitReporter})
 }

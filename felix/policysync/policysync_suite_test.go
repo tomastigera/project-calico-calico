@@ -29,6 +29,5 @@ func init() {
 
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/policysync_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Policysync Suite", []Reporter{junitReporter})
 }

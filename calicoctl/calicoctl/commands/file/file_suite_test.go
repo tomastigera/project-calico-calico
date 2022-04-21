@@ -30,6 +30,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/file_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "File Suite", []Reporter{junitReporter})
 }

@@ -27,6 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/migrate_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "calico-upgrade migration pkg suite", []Reporter{junitReporter})
 }

@@ -30,6 +30,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/upgrade_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Upgrade Suite", []Reporter{junitReporter})
 }

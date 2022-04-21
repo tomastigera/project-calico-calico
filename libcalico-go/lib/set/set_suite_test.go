@@ -27,6 +27,5 @@ import (
 func TestSet(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/set_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Set Suite", []Reporter{junitReporter})
 }

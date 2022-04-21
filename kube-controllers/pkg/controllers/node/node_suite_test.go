@@ -32,6 +32,5 @@ func init() {
 
 func TestConverter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/node_controller_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Node controller Suite", []Reporter{junitReporter})
 }

@@ -12,6 +12,5 @@ import (
 
 func TestYaml(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/yaml_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Yaml Suite", []Reporter{junitReporter})
 }

@@ -30,6 +30,5 @@ func init() {
 
 func TestWindataplane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/windataplane_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Windataplane Suite", []Reporter{junitReporter})
 }

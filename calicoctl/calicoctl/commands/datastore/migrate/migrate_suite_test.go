@@ -24,6 +24,5 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/migrate_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Migrate Suite", []Reporter{junitReporter})
 }

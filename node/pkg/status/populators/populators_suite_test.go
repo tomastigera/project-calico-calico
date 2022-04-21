@@ -16,6 +16,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/statuspopulators_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "StatusPopulators Suite", []Reporter{junitReporter})
 }

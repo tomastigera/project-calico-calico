@@ -27,6 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../../report/syncer_update_proc_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Syncer update processors suite", []Reporter{junitReporter})
 }

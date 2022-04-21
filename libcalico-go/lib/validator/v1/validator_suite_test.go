@@ -30,6 +30,5 @@ func init() {
 
 func TestValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/v1_validator_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "v1 Validator Suite", []Reporter{junitReporter})
 }

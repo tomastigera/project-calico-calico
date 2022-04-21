@@ -24,6 +24,5 @@ import (
 
 func TestV2(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/v3_api_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "v3 API Suite", []Reporter{junitReporter})
 }

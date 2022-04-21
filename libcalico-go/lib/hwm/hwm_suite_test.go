@@ -24,6 +24,5 @@ import (
 
 func TestHwm(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/hwm_tracker_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "HWM Tracker Suite", []Reporter{junitReporter})
 }

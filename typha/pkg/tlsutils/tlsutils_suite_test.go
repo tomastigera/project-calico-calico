@@ -29,6 +29,5 @@ func init() {
 
 func TestTLSUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/tls_utils_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "TLS utils Suite", []Reporter{junitReporter})
 }
