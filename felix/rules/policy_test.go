@@ -18,7 +18,7 @@ import (
 	"github.com/projectcalico/calico/felix/environment"
 	. "github.com/projectcalico/calico/felix/rules"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
