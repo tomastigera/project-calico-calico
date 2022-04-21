@@ -371,7 +371,7 @@ func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *s
 		// Capture data race warnings and log to file.
 		if strings.Contains(line, "WARNING: DATA RACE") {
 			_, err := fmt.Fprintf(dataRaceFile, "Detected data race (in %s) while running test: %s\n",
-				c.Name, ginkgo.CurrentGinkgoTestDescription().FullTestText)
+				c.Name, ginkgo.CurrentSpecReport().FullText())
 			Expect(err).NotTo(HaveOccurred(), "Failed to write to data race log.")
 			foundDataRace = true
 		}

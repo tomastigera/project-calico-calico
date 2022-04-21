@@ -97,7 +97,7 @@ var (
 
 var _ = JustBeforeEach(func() {
 	log.Info(">>> JustBeforeEach <<<")
-	testName = CurrentGinkgoTestDescription().FullTestText
+	testName = CurrentSpecReport().FullText()
 })
 
 var _ = AfterEach(func() {

@@ -47,7 +47,7 @@ func TestFv(t *testing.T) {
 }
 
 var _ = BeforeEach(func() {
-	_, _ = fmt.Fprintf(realStdout, "FV-TEST-START: %s\n", CurrentGinkgoTestDescription().FullTestText)
+	_, _ = fmt.Fprintf(realStdout, "FV-TEST-START: %s\n", CurrentSpecReport().FullText())
 })
 
 var _ = AfterEach(func() {
