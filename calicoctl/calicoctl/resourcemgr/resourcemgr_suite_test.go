@@ -12,5 +12,5 @@ import (
 
 func TestResourcemgr(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Resourcemgr Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Resourcemgr Suite")
 }

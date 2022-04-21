@@ -30,5 +30,5 @@ func init() {
 
 func TestRules(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "RouteTable Suite", []Reporter{junitReporter})
+	RunSpecs(t, "RouteTable Suite")
 }

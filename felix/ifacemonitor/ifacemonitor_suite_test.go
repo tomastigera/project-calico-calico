@@ -30,5 +30,5 @@ func init() {
 
 func TestIfacemonitor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Ifacemonitor Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Ifacemonitor Suite")
 }

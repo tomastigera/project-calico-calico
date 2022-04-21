@@ -30,5 +30,5 @@ func init() {
 
 func TestHashutils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Hashutils Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Hashutils Suite")
 }

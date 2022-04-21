@@ -29,5 +29,5 @@ func init() {
 
 func TestSnapcache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Snapcache Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Snapcache Suite")
 }

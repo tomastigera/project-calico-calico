@@ -24,5 +24,5 @@ import (
 
 func TestHwm(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "HWM Tracker Suite", []Reporter{junitReporter})
+	RunSpecs(t, "HWM Tracker Suite")
 }

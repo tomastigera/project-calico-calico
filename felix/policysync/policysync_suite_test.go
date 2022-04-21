@@ -29,5 +29,5 @@ func init() {
 
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Policysync Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Policysync Suite")
 }

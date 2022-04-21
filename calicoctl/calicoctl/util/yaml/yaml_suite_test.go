@@ -12,5 +12,5 @@ import (
 
 func TestYaml(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Yaml Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Yaml Suite")
 }

@@ -18,5 +18,5 @@ func init() {
 
 func TestCalicoCni(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "CNI suite", []Reporter{junitReporter})
+	RunSpecs(t, "CNI suite")
 }

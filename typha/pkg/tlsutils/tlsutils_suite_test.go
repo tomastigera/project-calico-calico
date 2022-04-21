@@ -29,5 +29,5 @@ func init() {
 
 func TestTLSUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "TLS utils Suite", []Reporter{junitReporter})
+	RunSpecs(t, "TLS utils Suite")
 }

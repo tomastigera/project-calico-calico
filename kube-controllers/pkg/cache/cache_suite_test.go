@@ -24,5 +24,5 @@ import (
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Cache Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Cache Suite")
 }

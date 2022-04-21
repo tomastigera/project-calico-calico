@@ -23,5 +23,5 @@ import (
 
 func TestNumorstring(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Numorstring Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Numorstring Suite")
 }

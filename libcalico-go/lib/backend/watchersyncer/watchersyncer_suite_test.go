@@ -27,5 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Backend multi-watcher/syncer test suite", []Reporter{junitReporter})
+	RunSpecs(t, "Backend multi-watcher/syncer test suite")
 }

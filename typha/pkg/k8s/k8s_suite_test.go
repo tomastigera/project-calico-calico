@@ -30,5 +30,5 @@ func init() {
 
 func TestK8s(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "K8s Suite", []Reporter{junitReporter})
+	RunSpecs(t, "K8s Suite")
 }

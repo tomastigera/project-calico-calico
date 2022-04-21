@@ -24,5 +24,5 @@ import (
 
 func TestTokenizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Tokenizer Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Tokenizer Suite")
 }

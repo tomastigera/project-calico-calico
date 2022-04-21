@@ -30,5 +30,5 @@ func init() {
 
 func TestWindataplane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Windataplane Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Windataplane Suite")
 }

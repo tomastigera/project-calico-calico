@@ -34,5 +34,5 @@ func init() {
 
 func TestCalculationGraph(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "ID allocation graph Suite", []Reporter{junitReporter})
+	RunSpecs(t, "ID allocation graph Suite")
 }

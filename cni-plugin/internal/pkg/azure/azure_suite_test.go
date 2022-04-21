@@ -30,5 +30,5 @@ func init() {
 
 func TestIpam(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Azure Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Azure Suite")
 }

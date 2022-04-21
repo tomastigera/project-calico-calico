@@ -24,5 +24,5 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Config Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Config Suite")
 }

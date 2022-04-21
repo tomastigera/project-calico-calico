@@ -30,5 +30,5 @@ func init() {
 
 func TestStringutils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Stringutils Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Stringutils Suite")
 }

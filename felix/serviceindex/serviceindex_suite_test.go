@@ -30,5 +30,5 @@ func init() {
 
 func TestLabels(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "ServiceIndex Suite", []Reporter{junitReporter})
+	RunSpecs(t, "ServiceIndex Suite")
 }

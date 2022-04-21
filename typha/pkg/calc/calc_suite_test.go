@@ -29,5 +29,5 @@ func init() {
 
 func TestCalc(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Calc Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Calc Suite")
 }

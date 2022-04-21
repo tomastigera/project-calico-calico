@@ -24,5 +24,5 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "flannelmigration Suite", []Reporter{junitReporter})
+	RunSpecs(t, "flannelmigration Suite")
 }

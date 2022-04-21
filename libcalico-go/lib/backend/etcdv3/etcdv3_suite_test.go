@@ -27,5 +27,5 @@ import (
 func TestEtcd(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "EtcdV3 Suite", []Reporter{junitReporter})
+	RunSpecs(t, "EtcdV3 Suite")
 }

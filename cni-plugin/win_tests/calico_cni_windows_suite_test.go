@@ -36,5 +36,5 @@ func TestCalicoCni(t *testing.T) {
 		// Default the report path if not specified.
 		reportPath = "../report/windows_suite.xml"
 	}
-	RunSpecsWithDefaultAndCustomReporters(t, "CNI suite (Windows)", []Reporter{junitReporter})
+	RunSpecs(t, "CNI suite (Windows)")
 }

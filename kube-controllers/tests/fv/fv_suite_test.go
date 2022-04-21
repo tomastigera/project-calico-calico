@@ -32,5 +32,5 @@ func init() {
 
 func TestFv(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Fv Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Fv Suite")
 }

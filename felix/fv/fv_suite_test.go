@@ -43,7 +43,7 @@ func init() {
 
 func TestFv(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "FV Suite", []Reporter{junitReporter})
+	RunSpecs(t, "FV Suite")
 }
 
 var _ = BeforeEach(func() {

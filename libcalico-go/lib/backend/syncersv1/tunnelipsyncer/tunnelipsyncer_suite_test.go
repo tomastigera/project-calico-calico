@@ -27,5 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Tunnel IP syncer test suite", []Reporter{junitReporter})
+	RunSpecs(t, "Tunnel IP syncer test suite")
 }

@@ -27,5 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Felix syncer test Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Felix syncer test Suite")
 }

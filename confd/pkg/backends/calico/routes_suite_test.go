@@ -13,5 +13,5 @@ import (
 func TestCalico(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Calico Backend Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Calico Backend Suite")
 }

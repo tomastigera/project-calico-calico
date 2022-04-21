@@ -30,5 +30,5 @@ func init() {
 
 func TestMultidict(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Multidict Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Multidict Suite")
 }

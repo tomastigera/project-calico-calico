@@ -16,5 +16,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "AllocateIPAddr Suite", []Reporter{junitReporter})
+	RunSpecs(t, "AllocateIPAddr Suite")
 }

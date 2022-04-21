@@ -27,5 +27,5 @@ import (
 func TestModel(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "KDD Suite", []Reporter{junitReporter})
+	RunSpecs(t, "KDD Suite")
 }

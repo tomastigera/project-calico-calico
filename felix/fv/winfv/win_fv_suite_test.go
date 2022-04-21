@@ -30,5 +30,5 @@ func init() {
 
 func TestNetworkingWindows(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Felix windows Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Felix windows Suite")
 }

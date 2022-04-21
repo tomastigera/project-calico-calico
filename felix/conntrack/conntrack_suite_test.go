@@ -30,5 +30,5 @@ func init() {
 
 func TestConntrack(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Conntrack Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Conntrack Suite")
 }

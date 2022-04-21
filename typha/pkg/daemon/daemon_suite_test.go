@@ -29,5 +29,5 @@ func init() {
 
 func TestDaemon(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Daemon Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Daemon Suite")
 }

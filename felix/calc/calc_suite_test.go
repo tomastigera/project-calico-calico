@@ -34,5 +34,5 @@ func init() {
 
 func TestCalculationGraph(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Calculation graph Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Calculation graph Suite")
 }

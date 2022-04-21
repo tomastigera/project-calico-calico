@@ -18,5 +18,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Node Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Node Suite")
 }

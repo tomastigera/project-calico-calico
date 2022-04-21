@@ -24,5 +24,5 @@ import (
 
 func TestConverter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Converter Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Converter Suite")
 }

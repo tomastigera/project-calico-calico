@@ -24,5 +24,5 @@ import (
 
 func TestParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Parser Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Parser Suite")
 }

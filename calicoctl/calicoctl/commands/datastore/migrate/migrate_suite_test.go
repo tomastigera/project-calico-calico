@@ -24,5 +24,5 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Migrate Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Migrate Suite")
 }

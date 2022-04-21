@@ -30,5 +30,5 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "MarkBits Suite", []Reporter{junitReporter})
+	RunSpecs(t, "MarkBits Suite")
 }

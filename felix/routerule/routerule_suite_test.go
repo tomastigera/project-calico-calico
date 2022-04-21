@@ -30,5 +30,5 @@ func init() {
 
 func TestRules(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "RouteRule Suite", []Reporter{junitReporter})
+	RunSpecs(t, "RouteRule Suite")
 }

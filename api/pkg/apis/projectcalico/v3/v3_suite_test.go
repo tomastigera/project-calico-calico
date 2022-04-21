@@ -24,5 +24,5 @@ import (
 
 func TestV2(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "v3 API Suite", []Reporter{junitReporter})
+	RunSpecs(t, "v3 API Suite")
 }

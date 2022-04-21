@@ -34,5 +34,5 @@ func init() {
 
 func TestBPFConntrack(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "BPF Conntrack Suite", []Reporter{junitReporter})
+	RunSpecs(t, "BPF Conntrack Suite")
 }

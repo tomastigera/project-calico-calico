@@ -29,5 +29,5 @@ func init() {
 
 func TestJitter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Jitter Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Jitter Suite")
 }

@@ -18,5 +18,5 @@ func init() {
 
 func TestInstall(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Install Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Install Suite")
 }

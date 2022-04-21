@@ -27,5 +27,5 @@ import (
 func TestConversion(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Conversion Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Conversion Suite")
 }

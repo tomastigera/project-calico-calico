@@ -30,5 +30,5 @@ func init() {
 
 func TestUsagerep(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Usagerep Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Usagerep Suite")
 }

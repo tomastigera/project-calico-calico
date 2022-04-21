@@ -30,5 +30,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Upgrade Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Upgrade Suite")
 }

@@ -27,5 +27,5 @@ import (
 func TestIpam(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "IPAM Suite", []Reporter{junitReporter})
+	RunSpecs(t, "IPAM Suite")
 }

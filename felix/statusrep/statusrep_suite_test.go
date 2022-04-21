@@ -30,5 +30,5 @@ func init() {
 
 func TestStatusrep(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Statusrep Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Statusrep Suite")
 }

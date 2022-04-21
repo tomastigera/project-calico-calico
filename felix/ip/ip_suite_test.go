@@ -28,7 +28,7 @@ import (
 
 func TestIp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "IP Suite", []Reporter{junitReporter})
+	RunSpecs(t, "IP Suite")
 }
 
 func init() {

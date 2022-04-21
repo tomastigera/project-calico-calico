@@ -30,5 +30,5 @@ func init() {
 
 func TestValidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "v1 Validator Suite", []Reporter{junitReporter})
+	RunSpecs(t, "v1 Validator Suite")
 }

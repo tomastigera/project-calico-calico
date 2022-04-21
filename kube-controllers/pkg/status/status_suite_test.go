@@ -32,5 +32,5 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "pkg/status suite", []Reporter{junitReporter})
+	RunSpecs(t, "pkg/status suite")
 }

@@ -43,5 +43,5 @@ func init() {
 func TestMain(t *testing.T) {
 	RegisterFailHandler(Fail)
 	// The run-test script runs this file from k8sfv/output.
-	RunSpecsWithDefaultAndCustomReporters(t, "Felix/KDD FV tests", []Reporter{junitReporter})
+	RunSpecs(t, "Felix/KDD FV tests")
 }

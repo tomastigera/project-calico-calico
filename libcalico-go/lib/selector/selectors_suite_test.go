@@ -27,5 +27,5 @@ import (
 func TestSelectors(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Selectors Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Selectors Suite")
 }

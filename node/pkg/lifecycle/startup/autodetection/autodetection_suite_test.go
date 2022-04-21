@@ -16,5 +16,5 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Autodetection Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Autodetection Suite")
 }

@@ -32,5 +32,5 @@ func init() {
 
 func TestConverter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Node controller Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Node controller Suite")
 }

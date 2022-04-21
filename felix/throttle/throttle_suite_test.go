@@ -30,5 +30,5 @@ func init() {
 
 func TestJitter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Throttle Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Throttle Suite")
 }

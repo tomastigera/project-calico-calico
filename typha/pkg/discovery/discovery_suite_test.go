@@ -30,5 +30,5 @@ func init() {
 
 func TestDiscovery(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Discovery Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Discovery Suite")
 }

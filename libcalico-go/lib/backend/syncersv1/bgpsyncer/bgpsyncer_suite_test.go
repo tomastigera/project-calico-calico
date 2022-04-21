@@ -27,5 +27,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "BGP syncer test suite", []Reporter{junitReporter})
+	RunSpecs(t, "BGP syncer test suite")
 }

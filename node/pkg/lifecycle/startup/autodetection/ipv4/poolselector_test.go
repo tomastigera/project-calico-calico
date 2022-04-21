@@ -35,7 +35,7 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "IPv4 pool selector Suite", []Reporter{junitReporter})
+	RunSpecs(t, "IPv4 pool selector Suite")
 }
 
 var _ = Describe("IPv4 pool selector tests", func() {
