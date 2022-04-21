@@ -281,7 +281,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 		})
 
 		JustAfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
+			if CurrentSpecReport().Failed() {
 				currBpfsvcs, currBpfeps := dumpNATmaps(felixes)
 
 				for i, felix := range felixes {

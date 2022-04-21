@@ -52,7 +52,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	defer connectivity.UnactivatedCheckers.Clear()
-	if CurrentGinkgoTestDescription().Failed {
+	if CurrentSpecReport().Failed() {
 		// If the test has already failed, ignore any connectivity checker leak.
 		return
 	}

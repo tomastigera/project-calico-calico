@@ -149,7 +149,7 @@ func describeNamedPortTests(testSourcePorts bool, protocol string) {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			log.Warn("Test failed, dumping diags...")
 			utils.Run("docker", "logs", felix.Name)
 			utils.Run("docker", "exec", felix.Name, "iptables-save", "-c")
@@ -202,7 +202,7 @@ func describeNamedPortTests(testSourcePorts bool, protocol string) {
 		}
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			utils.Run("docker", "exec", etcd.Name, "etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
@@ -806,7 +806,7 @@ var _ = Describe("TCP: named port with a simulated kubernetes nginx and client",
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			log.Warn("Test failed, dumping diags...")
 			utils.Run("docker", "logs", felix.Name)
 			utils.Run("docker", "exec", felix.Name, "iptables-save", "-c")
@@ -818,7 +818,7 @@ var _ = Describe("TCP: named port with a simulated kubernetes nginx and client",
 		nginxClient.Stop()
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			utils.Run("docker", "exec", etcd.Name, "etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
@@ -913,7 +913,7 @@ func describeNamedPortHostEndpointTests(getInfra infrastructure.InfraFactory, na
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
@@ -1124,7 +1124,7 @@ var _ = Describe("tests with mixed TCP/UDP", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			log.Warn("Test failed, dumping diags...")
 			utils.Run("docker", "logs", felix.Name)
 			utils.Run("docker", "exec", felix.Name, "iptables-save", "-c")
@@ -1137,7 +1137,7 @@ var _ = Describe("tests with mixed TCP/UDP", func() {
 		clientWorkload.Stop()
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			utils.Run("docker", "exec", etcd.Name, "etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

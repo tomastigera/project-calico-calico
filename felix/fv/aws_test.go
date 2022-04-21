@@ -59,7 +59,7 @@ var _ = infrastructure.DatastoreDescribe("AWS-ec2-srcdstcheck", []apiconfig.Data
 
 	AfterEach(func() {
 		felix.Stop()
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			infra.DumpErrorData()
 		}
 		infra.Stop()

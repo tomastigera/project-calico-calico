@@ -111,7 +111,7 @@ var _ = AfterEach(func() {
 
 	// Store the result of each test in a Prometheus metric.
 	result := float64(1)
-	if CurrentGinkgoTestDescription().Failed {
+	if CurrentSpecReport().Failed() {
 		result = 0
 	}
 	gaugeVecTestResult.WithLabelValues(testName, codeLevel).Set(result)

@@ -80,7 +80,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ iptables cleanup tests", []
 	})
 
 	JustAfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
 		}
