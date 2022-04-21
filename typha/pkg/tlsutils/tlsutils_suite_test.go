@@ -16,7 +16,6 @@ package tlsutils_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"

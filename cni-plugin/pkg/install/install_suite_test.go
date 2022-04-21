@@ -10,7 +10,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 
-	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {

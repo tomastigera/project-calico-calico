@@ -10,7 +10,6 @@ import (
 
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {

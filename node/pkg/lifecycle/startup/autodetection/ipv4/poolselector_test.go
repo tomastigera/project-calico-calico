@@ -21,7 +21,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"

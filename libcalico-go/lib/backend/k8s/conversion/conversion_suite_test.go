@@ -22,7 +22,6 @@ import (
 
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestConversion(t *testing.T) {

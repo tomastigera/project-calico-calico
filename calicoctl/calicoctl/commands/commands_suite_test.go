@@ -8,7 +8,6 @@ import (
 
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestCommands(t *testing.T) {

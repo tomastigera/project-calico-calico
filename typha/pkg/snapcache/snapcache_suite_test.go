@@ -16,7 +16,6 @@ package snapcache_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"

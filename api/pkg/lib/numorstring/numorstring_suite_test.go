@@ -19,7 +19,6 @@ import (
 
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestNumorstring(t *testing.T) {
