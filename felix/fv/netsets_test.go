@@ -113,12 +113,12 @@ var _ = Context("_NET_SETS_ Network sets tests with initialized Felix and etcd d
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			felix.Exec("iptables-save", "-c")
 		}
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

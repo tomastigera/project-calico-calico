@@ -20,7 +20,6 @@ import (
 
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -31,6 +30,5 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/daemon_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Daemon Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Daemon Suite")
 }

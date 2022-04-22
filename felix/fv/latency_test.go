@@ -85,12 +85,12 @@ var _ = Context("_BPF-SAFE_ Latency tests with initialized Felix and etcd datast
 			log.WithError(err).Error("Close returned error")
 		}
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			felix.Exec("iptables-save", "-c")
 		}
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

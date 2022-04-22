@@ -129,7 +129,7 @@ var _ = infrastructure.DatastoreDescribe(
 		})
 
 		JustAfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
+			if CurrentSpecReport().Failed() {
 				for _, felix := range felixes {
 					felix.Exec("iptables-save", "-c")
 					felix.Exec("ip", "link")

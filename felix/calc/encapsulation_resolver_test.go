@@ -28,7 +28,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

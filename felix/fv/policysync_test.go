@@ -100,7 +100,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		}
 		felix.Stop()
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

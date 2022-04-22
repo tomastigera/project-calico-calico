@@ -87,7 +87,7 @@ var _ = infrastructure.DatastoreDescribe("pre-dnat with initialized Felix, 2 wor
 
 	AfterEach(func() {
 
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			infra.DumpErrorData()
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")

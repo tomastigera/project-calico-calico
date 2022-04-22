@@ -18,7 +18,6 @@ import (
 	"github.com/projectcalico/calico/felix/environment"
 	. "github.com/projectcalico/calico/felix/iptables"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

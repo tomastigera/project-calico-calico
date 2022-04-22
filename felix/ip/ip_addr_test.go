@@ -19,7 +19,6 @@ import (
 
 	. "github.com/projectcalico/calico/felix/ip"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

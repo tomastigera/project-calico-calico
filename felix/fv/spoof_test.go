@@ -36,7 +36,7 @@ var _ = Describe("Spoof tests", func() {
 	)
 
 	teardownInfra := func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ip6tables-save", "-c")
@@ -53,7 +53,7 @@ var _ = Describe("Spoof tests", func() {
 		for _, felix := range felixes {
 			felix.Stop()
 		}
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			infra.DumpErrorData()
 		}
 		infra.Stop()
