@@ -20,9 +20,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Parser Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/parser_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Parser Suite", []Reporter{junitReporter})
 }

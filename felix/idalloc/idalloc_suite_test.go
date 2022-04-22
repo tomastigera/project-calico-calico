@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -34,5 +35,6 @@ func init() {
 
 func TestCalculationGraph(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ID allocation graph Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/idalloc_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "ID allocation graph Suite", []Reporter{junitReporter})
 }

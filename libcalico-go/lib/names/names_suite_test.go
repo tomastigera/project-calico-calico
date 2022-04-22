@@ -18,10 +18,12 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 )
 
 func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "names Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/names_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "names Suite", []Reporter{junitReporter})
 }

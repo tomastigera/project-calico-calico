@@ -87,7 +87,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
@@ -106,7 +106,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()

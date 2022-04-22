@@ -22,10 +22,12 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestModel(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "calico-upgrade KDD v1 resources Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../../../../../report/resources_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "calico-upgrade KDD v1 resources Suite", []Reporter{junitReporter})
 }

@@ -23,6 +23,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {
@@ -32,5 +33,6 @@ func init() {
 
 func TestConverter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Node controller Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/node_controller_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Node controller Suite", []Reporter{junitReporter})
 }

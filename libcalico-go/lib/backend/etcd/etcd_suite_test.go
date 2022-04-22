@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestEtcd(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Etcd Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/etcd_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Etcd Suite", []Reporter{junitReporter})
 }

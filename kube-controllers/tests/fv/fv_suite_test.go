@@ -23,6 +23,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {
@@ -32,5 +33,6 @@ func init() {
 
 func TestFv(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Fv Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/fv_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Fv Suite", []Reporter{junitReporter})
 }

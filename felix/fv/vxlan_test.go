@@ -118,7 +118,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 				})
 
 				AfterEach(func() {
-					if CurrentSpecReport().Failed() {
+					if CurrentGinkgoTestDescription().Failed {
 						for _, felix := range felixes {
 							felix.Exec("iptables-save", "-c")
 							felix.Exec("ipset", "list")
@@ -137,7 +137,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 						felix.Stop()
 					}
 
-					if CurrentSpecReport().Failed() {
+					if CurrentGinkgoTestDescription().Failed {
 						infra.DumpErrorData()
 					}
 					infra.Stop()

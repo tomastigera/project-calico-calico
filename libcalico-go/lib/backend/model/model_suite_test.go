@@ -22,10 +22,12 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestModel(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Model Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/model_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Model Suite", []Reporter{junitReporter})
 }

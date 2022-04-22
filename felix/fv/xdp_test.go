@@ -107,7 +107,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 

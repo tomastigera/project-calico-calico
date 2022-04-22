@@ -16,6 +16,7 @@ package snapcache_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -29,5 +30,6 @@ func init() {
 
 func TestSnapcache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Snapcache Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/snapcache_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Snapcache Suite", []Reporter{junitReporter})
 }

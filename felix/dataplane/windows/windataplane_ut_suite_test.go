@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestWindataplane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Windataplane Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/windataplane_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Windataplane Suite", []Reporter{junitReporter})
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	. "github.com/onsi/ginkgo/extensions/table"
 
 	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 

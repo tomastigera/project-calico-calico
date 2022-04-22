@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestIpam(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "IPAM Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/ipam_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "IPAM Suite", []Reporter{junitReporter})
 }

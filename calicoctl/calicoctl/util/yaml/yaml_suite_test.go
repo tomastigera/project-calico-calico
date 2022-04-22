@@ -8,9 +8,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestYaml(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Yaml Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/yaml_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Yaml Suite", []Reporter{junitReporter})
 }

@@ -19,6 +19,7 @@ import (
 
 	"strings"
 
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 

@@ -15,6 +15,7 @@
 package errors_test
 
 import (
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	networkingv1 "k8s.io/api/networking/v1"

@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestJitter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jitter Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/jitter_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Jitter Suite", []Reporter{junitReporter})
 }

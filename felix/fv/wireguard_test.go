@@ -144,7 +144,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 			log.Infof("Captured dmesg log:\n%v", dmesgBuf.String())
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("ip", "addr")
 				felix.Exec("ip", "rule", "list")
@@ -165,7 +165,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()
@@ -666,14 +666,14 @@ var _ = infrastructure.DatastoreDescribe("WireGuard-Unsupported", []apiconfig.Da
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			felixes[0].Exec("ip", "link")
 			felixes[0].Exec("wg")
 		}
 
 		felixes[0].Stop()
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()
@@ -759,7 +759,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("ip", "addr")
 				felix.Exec("ip", "rule", "list")
@@ -781,7 +781,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()
@@ -1085,7 +1085,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("ip", "addr")
 				felix.Exec("ip", "rule", "list")
@@ -1114,7 +1114,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()

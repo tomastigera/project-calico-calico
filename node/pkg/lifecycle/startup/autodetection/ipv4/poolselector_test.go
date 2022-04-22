@@ -21,6 +21,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -35,7 +36,8 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "IPv4 pool selector Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../../report/autodetection_ipv4_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "IPv4 pool selector Suite", []Reporter{junitReporter})
 }
 
 var _ = Describe("IPv4 pool selector tests", func() {

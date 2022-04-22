@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/calico/typha/pkg/logutils"
@@ -32,5 +33,6 @@ func init() {
 
 func TestFvTests(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "FV Tests Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/fv_tests_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "FV Tests Suite", []Reporter{junitReporter})
 }

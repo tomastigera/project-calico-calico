@@ -82,7 +82,7 @@ var _ = Context("etcd connection interruption", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
@@ -97,7 +97,7 @@ var _ = Context("etcd connection interruption", func() {
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

@@ -22,10 +22,12 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestConverter(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Converter Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/converter_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Converter Suite", []Reporter{junitReporter})
 }

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Felix syncer test Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../../report/felix_syncer_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Felix syncer test Suite", []Reporter{junitReporter})
 }

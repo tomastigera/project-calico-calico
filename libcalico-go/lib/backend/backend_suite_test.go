@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestBackend(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Backend Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/backend_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Backend Suite", []Reporter{junitReporter})
 }

@@ -8,9 +8,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestResourcemgr(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Resourcemgr Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/resourcemgr_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Resourcemgr Suite", []Reporter{junitReporter})
 }

@@ -81,7 +81,7 @@ func describeConnCheckTests(protocol string) bool {
 					felix.Stop()
 				}
 
-				if CurrentSpecReport().Failed() {
+				if CurrentGinkgoTestDescription().Failed {
 					infra.DumpErrorData()
 				}
 				infra.Stop()
@@ -168,7 +168,7 @@ var _ = infrastructure.DatastoreDescribe("Container self tests",
 			for _, felix := range felixes {
 				felix.Stop()
 			}
-			if CurrentSpecReport().Failed() {
+			if CurrentGinkgoTestDescription().Failed {
 				infra.DumpErrorData()
 			}
 			infra.Stop()

@@ -6,6 +6,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -16,5 +17,6 @@ func init() {
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CalicoNodeStatus Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/caliconodestatus_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "CalicoNodeStatus Suite", []Reporter{junitReporter})
 }

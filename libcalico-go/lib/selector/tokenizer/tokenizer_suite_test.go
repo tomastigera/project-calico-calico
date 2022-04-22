@@ -20,9 +20,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestTokenizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Tokenizer Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/tokenizer_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Tokenizer Suite", []Reporter{junitReporter})
 }

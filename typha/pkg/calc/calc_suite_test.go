@@ -16,6 +16,7 @@ package calc_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -29,5 +30,6 @@ func init() {
 
 func TestCalc(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Calc Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/calc_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Calc Suite", []Reporter{junitReporter})
 }

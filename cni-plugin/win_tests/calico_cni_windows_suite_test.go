@@ -23,6 +23,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {
@@ -36,5 +37,6 @@ func TestCalicoCni(t *testing.T) {
 		// Default the report path if not specified.
 		reportPath = "../report/windows_suite.xml"
 	}
-	RunSpecs(t, "CNI suite (Windows)")
+	junitReporter := reporters.NewJUnitReporter(reportPath)
+	RunSpecsWithDefaultAndCustomReporters(t, "CNI suite (Windows)", []Reporter{junitReporter})
 }

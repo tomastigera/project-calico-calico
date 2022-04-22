@@ -53,7 +53,7 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
@@ -64,7 +64,7 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 		for _, felix := range felixes {
 			felix.Stop()
 		}
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()

@@ -10,6 +10,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {
@@ -18,5 +19,6 @@ func init() {
 
 func TestCalicoCni(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CNI suite")
+	junitReporter := reporters.NewJUnitReporter("../report/cni_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "CNI suite", []Reporter{junitReporter})
 }

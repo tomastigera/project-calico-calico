@@ -20,9 +20,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Cache Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/cache_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Cache Suite", []Reporter{junitReporter})
 }

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestIpam(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Azure Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/azure_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Azure Suite", []Reporter{junitReporter})
 }

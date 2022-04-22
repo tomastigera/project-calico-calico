@@ -60,7 +60,7 @@ var _ = Context("Config update tests, after starting felix", func() {
 
 	AfterEach(func() {
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
 		}
@@ -70,7 +70,7 @@ var _ = Context("Config update tests, after starting felix", func() {
 		}
 		felix.Stop()
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()

@@ -9,6 +9,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	uuid "github.com/satori/go.uuid"
 

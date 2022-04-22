@@ -20,9 +20,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "flannelmigration Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/flannelmigration_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "flannelmigration Suite", []Reporter{junitReporter})
 }

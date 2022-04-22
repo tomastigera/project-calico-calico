@@ -27,6 +27,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"

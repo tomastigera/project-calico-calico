@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestValidator(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "v3 Validator Suite")
+	junitReporter := reporters.NewJUnitReporter("../../../report/v3_validator_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "v3 Validator Suite", []Reporter{junitReporter})
 }

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,5 +28,6 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Syncer update processors suite")
+	junitReporter := reporters.NewJUnitReporter("../../../../report/syncer_update_proc_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Syncer update processors suite", []Reporter{junitReporter})
 }

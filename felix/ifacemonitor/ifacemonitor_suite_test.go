@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestIfacemonitor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Ifacemonitor Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/ifacemonitor_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Ifacemonitor Suite", []Reporter{junitReporter})
 }

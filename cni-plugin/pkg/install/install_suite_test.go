@@ -10,6 +10,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func init() {
@@ -18,5 +19,6 @@ func init() {
 
 func TestInstall(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Install Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/install_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Install Suite", []Reporter{junitReporter})
 }

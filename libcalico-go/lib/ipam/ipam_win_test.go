@@ -20,6 +20,7 @@ import (
 	"net"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"

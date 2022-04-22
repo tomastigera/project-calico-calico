@@ -62,7 +62,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test configurable
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 

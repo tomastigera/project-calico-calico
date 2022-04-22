@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/onsi/ginkgo/reporters"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -32,5 +33,6 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/status suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/status_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "pkg/status suite", []Reporter{junitReporter})
 }

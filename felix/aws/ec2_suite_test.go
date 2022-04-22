@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestUpdateEC2Instasnce(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AWS Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/aws_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "AWS Suite", []Reporter{junitReporter})
 }

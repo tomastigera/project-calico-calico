@@ -20,9 +20,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestHwm(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HWM Tracker Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/hwm_tracker_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "HWM Tracker Suite", []Reporter{junitReporter})
 }

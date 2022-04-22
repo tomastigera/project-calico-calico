@@ -16,6 +16,7 @@ package tlsutils_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -29,5 +30,6 @@ func init() {
 
 func TestTLSUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TLS utils Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/tls_utils_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "TLS utils Suite", []Reporter{junitReporter})
 }

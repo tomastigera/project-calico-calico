@@ -98,7 +98,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ host-port tests", []apiconf
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")

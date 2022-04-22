@@ -16,6 +16,7 @@ package jitter
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -29,5 +30,6 @@ func init() {
 
 func TestJitter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jitter Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/jitter_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Jitter Suite", []Reporter{junitReporter})
 }

@@ -19,9 +19,11 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 )
 
 func TestNumorstring(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Numorstring Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/numorstring_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Numorstring Suite", []Reporter{junitReporter})
 }

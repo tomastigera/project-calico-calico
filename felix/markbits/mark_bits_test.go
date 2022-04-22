@@ -17,6 +17,7 @@ package markbits_test
 import (
 	"errors"
 
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/markbits"

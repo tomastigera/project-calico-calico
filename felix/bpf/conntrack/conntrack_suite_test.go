@@ -17,6 +17,7 @@ package conntrack_test
 import (
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -34,5 +35,6 @@ func init() {
 
 func TestBPFConntrack(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BPF Conntrack Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/bpf_conntrack_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "BPF Conntrack Suite", []Reporter{junitReporter})
 }

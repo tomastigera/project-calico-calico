@@ -74,7 +74,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ apply on forward tests; wit
 	})
 
 	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
@@ -93,7 +93,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ apply on forward tests; wit
 			felix.Stop()
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
 		infra.Stop()

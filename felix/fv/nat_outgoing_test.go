@@ -67,7 +67,7 @@ var _ = infrastructure.DatastoreDescribe("NAT-outgoing rule rendering test", []a
 	// AfterEach() to dump diags before the test is torn down.  Only the first call for a given
 	// test has any effect.
 	dumpDiags := func() {
-		if !CurrentSpecReport().Failed() || dumpedDiags {
+		if !CurrentGinkgoTestDescription().Failed || dumpedDiags {
 			return
 		}
 		iptSave, err := felix.ExecOutput("iptables-save", "-c")

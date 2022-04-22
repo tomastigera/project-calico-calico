@@ -20,6 +20,7 @@ import (
 
 	"testing"
 
+	"github.com/onsi/ginkgo/reporters"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -30,5 +31,6 @@ func init() {
 
 func TestNetworkingWindows(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Felix windows Suite")
+	junitReporter := reporters.NewJUnitReporter("../report/fv_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Felix windows Suite", []Reporter{junitReporter})
 }

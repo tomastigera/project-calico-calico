@@ -16,6 +16,7 @@ package daemon_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -29,5 +30,6 @@ func init() {
 
 func TestDaemon(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Daemon Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/daemon_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Daemon Suite", []Reporter{junitReporter})
 }

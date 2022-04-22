@@ -19,6 +19,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
