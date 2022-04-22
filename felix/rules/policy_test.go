@@ -26,6 +26,15 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
+func describeTable(s string, f interface{}, entries ...TableEntry) {
+	tmp := []interface{}{Offset(1), f}
+	for _, e := range entries {
+		tmp = append(tmp, e)
+	}
+
+	DescribeTable(s, tmp...)
+}
+
 var ruleTestData = []TableEntry{
 	Entry("Empty rule", 4, proto.Rule{}, ""),
 
@@ -196,7 +205,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		IptablesLogPrefix:    "calico-packet",
 	}
 
-	DescribeTable(
+	describeTable(
 		"Allow rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
@@ -219,7 +228,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		ruleTestData...,
 	)
 
-	DescribeTable(
+	describeTable(
 		"pass rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			for _, action := range []string{"next-tier", "pass"} {
@@ -241,7 +250,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		ruleTestData...,
 	)
 
-	DescribeTable(
+	describeTable(
 		"Log rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
@@ -256,7 +265,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		ruleTestData...,
 	)
 
-	DescribeTable(
+	describeTable(
 		"Log rules should be correctly rendered with non-default prefix",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			rrConfigPrefix := rrConfigNormal
@@ -273,7 +282,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		ruleTestData...,
 	)
 
-	DescribeTable(
+	describeTable(
 		"Deny rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
