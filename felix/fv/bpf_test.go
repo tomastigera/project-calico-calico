@@ -315,6 +315,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					felix.Exec("ip", "addr")
 					felix.Exec("ip", "rule")
 					felix.Exec("ip", "route")
+					felix.Exec("ip", "route", "show", "table", "0")
 					felix.Exec("ip", "neigh")
 					felix.Exec("arp")
 					felix.Exec("calico-bpf", "ipsets", "dump")
@@ -3663,6 +3664,37 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					verifyConnectivityWhileEnablingBPF(hostW[0], w[0][0])
 				})
 			}
+		})
+
+		Describe("with host service listening to any IP", func() {
+			// https://github.com/projectcalico/calico/issues/7049
+
+			// We do not use tunnel in such environments, no need to test.
+			if testOpts.tunnel == "none" && !testOpts.connTimeEnabled {
+				return
+			}
+
+			BeforeEach(func() {
+				// To mimic 3rd party CNI, we do not install IPPools and set the source to
+				// learn routes to WorkloadIPs as IPAM/CNI is not going to provide either.
+				setupCluster()
+
+				workload.Run(
+					felixes[0],
+					"test-host",
+					"default",
+					felixes[0].IP, // Same IP as felix means "run in the host's namespace"
+					"8666",
+					testOpts.protocol)
+
+				externalClient.Exec("ip", "route", "add", "10.123.0.1", "via", felixes[0].IP)
+				felixes[0].Exec("ip", "addr", "add", "10.123.0.111/16", "dev", "lo")
+			})
+
+			It("should not establish connection to the service on VIP", func() {
+				cc.Expect(None, externalClient, TargetIP("10.123.0.1"), ExpectWithPorts(8666))
+				cc.CheckConnectivity()
+			})
 		})
 
 		Describe("3rd party CNI", func() {
