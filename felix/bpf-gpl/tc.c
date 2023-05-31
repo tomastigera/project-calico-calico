@@ -1068,7 +1068,6 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 			.reason = CALI_REASON_UNKNOWN,
 			.mark = CALI_SKB_MARK_SEEN,
 		},
-		.ipheader_len = IP_SIZE,
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
 
@@ -1429,14 +1428,13 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 			.res = TC_ACT_UNSPEC,
 			.reason = CALI_REASON_UNKNOWN,
 		},
-		.ipheader_len = IP_SIZE,
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
 
 	struct cali_tc_state *state = ctx->state;
 	bool ct_related = ct_result_is_related(state->ct_result.rc);
 	int ct_rc = ct_result_rc(state->ct_result.rc);
-	
+
 	CALI_DEBUG("Entering calico_tc_skb_icmp_inner_nat\n");
 
 	if (!ct_related) {
@@ -1467,7 +1465,7 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 	}
 
 	ctx->ip_header = (struct iphdr*)pkt;
-	ctx->ipheader_len = ip_hdr(ctx)->ihl * 4;
+	ctx->ipheader_len = ctx->state->ihl = ip_hdr(ctx)->ihl * 4;
 	if (ctx->ipheader_len > 60) {
 		CALI_DEBUG("this cannot be!\n");
 		goto deny;
@@ -1540,7 +1538,6 @@ int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 			.res = TC_ACT_UNSPEC,
 			.reason = CALI_REASON_UNKNOWN,
 		},
-		.ipheader_len = IP_SIZE,
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
 
@@ -1589,7 +1586,6 @@ int calico_tc_host_ct_conflict(struct __sk_buff *skb)
 			.res = TC_ACT_UNSPEC,
 			.reason = CALI_REASON_UNKNOWN,
 		},
-		.ipheader_len = IP_SIZE,
 	);
 
 	struct cali_tc_ctx *ctx = &_ctx;
@@ -1649,7 +1645,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 {
 	DECLARE_TC_CTX(_ctx,
 		.skb = skb,
-		.ipheader_len = IP_SIZE,
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
 
