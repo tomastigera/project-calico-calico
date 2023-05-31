@@ -48,6 +48,7 @@ LD := llc-12
 
 UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
+UT_OBJS+=ut/ip_parse_test_v6.o
 
 OBJS:=$(shell ./list-objs)
 OBJS+=bin/tc_preamble.o
@@ -72,7 +73,7 @@ UT_CFLAGS=\
 	-I .
 
 # Mini-UT programs that test one or two functions.  These are each in their own files.
-ut/%.ll: ut/%.c ut/ut.h tc.c tc.d
+ut/%.ll: ut/%.c ut/ut.h
 	$(CC) $(UT_CFLAGS) $(CFLAGS) -c $< -o $@
 
 tc_preamble.ll: tc_preamble.c tc_preamble.d
@@ -127,6 +128,10 @@ bin/connect_time_%v4_co-re.o: connect_time_%v4.ll | bin
 bin/connect_time_%v6_co-re.o: connect_time_%v6.ll | bin
 	$(LINK)
 ut/%.o: ut/%.ll
+	$(LINK)
+ut/ip_parse_test_v6.ll: ut/ip_parse_test.c
+	$(CC) $(UT_CFLAGS) $(CFLAGS) -DIPVER6 -c $< -o $@
+ut/ip_parse_test_v6.o: ut/ip_parse_test_v6.ll
 	$(LINK)
 
 bin:

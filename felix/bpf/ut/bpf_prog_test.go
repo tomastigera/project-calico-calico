@@ -924,7 +924,12 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(bpfFsDir)
 
-	objFname := "../../bpf-gpl/ut/" + strings.TrimSuffix(source, path.Ext(source)) + ".o"
+	vExt := ""
+	if topts.ipv6 {
+		vExt = "_v6"
+	}
+
+	objFname := "../../bpf-gpl/ut/" + strings.TrimSuffix(source, path.Ext(source)) + vExt + ".o"
 
 	obj, err := objUTLoad(objFname, bpfFsDir, "IPv4", topts, true, false)
 	Expect(err).NotTo(HaveOccurred())
@@ -1228,11 +1233,28 @@ func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payl
 	p := gopacket.NewPacket(pkt.bytes, layers.LayerTypeEthernet, gopacket.Default)
 
 	e := p.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
-	ip := p.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+
+	var (
+		ipv4  *layers.IPv4
+		ipv6  *layers.IPv6
+		proto layers.IPProtocol
+	)
+
+	ipv4L := p.Layer(layers.LayerTypeIPv4)
+	if ipv4L != nil {
+		ipv4 = ipv4L.(*layers.IPv4)
+		proto = ipv4.Protocol
+	} else {
+		ipv6L := p.Layer(layers.LayerTypeIPv6)
+		if ipv6L != nil {
+			ipv6 = ipv6L.(*layers.IPv6)
+			proto = ipv6.NextHeader
+		}
+	}
 
 	var l gopacket.Layer
 
-	switch ip.Protocol {
+	switch proto {
 	case layers.IPProtocolUDP:
 		l = p.Layer(layers.LayerTypeUDP)
 	case layers.IPProtocolTCP:
@@ -1241,7 +1263,7 @@ func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payl
 		l = p.Layer(layers.LayerTypeICMPv4)
 	}
 
-	return e, ip, l, pkt.payload, pkt.bytes, err
+	return e, ipv4, l, pkt.payload, pkt.bytes, err
 }
 
 type Packet struct {

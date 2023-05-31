@@ -8,7 +8,11 @@
 #include <linux/types.h>
 #include <linux/bpf.h>
 #include <linux/pkt_cls.h>
+#ifdef IPVER6
+#include <linux/ipv6.h>
+#else
 #include <linux/ip.h>
+#endif
 #include <linux/tcp.h>
 #include <linux/icmp.h>
 #include <linux/in.h>
@@ -23,8 +27,11 @@
 #define ETH_IPV4_UDP_SIZE	(sizeof(struct ethhdr) + IPV4_UDP_SIZE)
 
 #define ETH_SIZE (sizeof(struct ethhdr))
+#ifdef IPVER6
+#define IP_SIZE (sizeof(struct ipv6hdr))
+#else
 #define IP_SIZE (sizeof(struct iphdr))
-#define IPv6_SIZE (sizeof(struct ipv6hdr))
+#endif
 #define UDP_SIZE (sizeof(struct udphdr))
 #define TCP_SIZE (sizeof(struct tcphdr))
 #define ICMP_SIZE (sizeof(struct icmphdr))
@@ -201,10 +208,17 @@ struct cali_tc_ctx {
 			x;							\
 	})									\
 
+#ifdef IPVER6
+static CALI_BPF_INLINE struct ipv6hdr* ip_hdr(struct cali_tc_ctx *ctx)
+{
+	return (struct ipv6hdr *)ctx->ip_header;
+}
+#else
 static CALI_BPF_INLINE struct iphdr* ip_hdr(struct cali_tc_ctx *ctx)
 {
 	return (struct iphdr *)ctx->ip_header;
 }
+#endif
 
 static CALI_BPF_INLINE struct ethhdr* eth_hdr(struct cali_tc_ctx *ctx)
 {
@@ -248,6 +262,10 @@ static CALI_BPF_INLINE int l4_hdr_len(struct cali_tc_ctx *ctx)
 
 	return 0;
 }
+
+#define IP_VOID 0
+#define IP_EQ(ip1, ip2) ((ip1) == (ip2))
+#define IP_SET(var, val) ((var) = (val))
 
 
 #endif /* __CALI_BPF_TYPES_H__ */
