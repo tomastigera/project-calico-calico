@@ -1220,17 +1220,22 @@ var udpDefault = &layers.UDP{
 	DstPort: 5678,
 }
 
-func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payload []byte) (
+func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payload []byte, ipv6ext ...gopacket.SerializableLayer) (
 	*layers.Ethernet, *layers.IPv4, gopacket.Layer, []byte, []byte, error) {
 	pkt := Packet{
 		eth:     eth,
 		l3:      l3,
 		l4:      l4,
 		payload: payload,
+		ipv6ext: ipv6ext,
 	}
 	err := pkt.Generate()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 
 	p := gopacket.NewPacket(pkt.bytes, layers.LayerTypeEthernet, gopacket.Default)
+	fmt.Printf("p = %+v\n", p)
 
 	e := p.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
 
@@ -1282,6 +1287,7 @@ type Packet struct {
 	length     int
 	l4Protocol layers.IPProtocol
 	l3Protocol layers.EthernetType
+	ipv6ext    []gopacket.SerializableLayer
 }
 
 func (pkt *Packet) handlePayload() {
@@ -1325,6 +1331,57 @@ func (pkt *Packet) handleL4() error {
 	return nil
 }
 
+func (pkt *Packet) handleIPv6Ext() error {
+	exts := gopacket.NewSerializeBuffer()
+	err := gopacket.SerializeLayers(exts, gopacket.SerializeOptions{FixLengths: true}, pkt.ipv6ext...)
+	if err != nil {
+		return err
+	}
+
+	pkt.length += len(exts.Bytes())
+
+	return nil
+}
+
+func nextHdrIPProto(nh gopacket.Layer) layers.IPProtocol {
+	switch nh.(type) {
+	case *layers.IPv6HopByHop:
+		return layers.IPProtocolIPv6HopByHop
+	case *layers.ICMPv4:
+		return layers.IPProtocolICMPv4
+	case *layers.IGMP:
+		return layers.IPProtocolIGMP
+	case *layers.IPv4:
+		return layers.IPProtocolIPv4
+	case *layers.TCP:
+		return layers.IPProtocolTCP
+	case *layers.UDP:
+		return layers.IPProtocolUDP
+	case *layers.RUDP:
+		return layers.IPProtocolRUDP
+	case *layers.IPv6:
+		return layers.IPProtocolIPv6
+	case *layers.IPv6Routing:
+		return layers.IPProtocolIPv6Routing
+	case *layers.IPv6Fragment:
+		return layers.IPProtocolIPv6Fragment
+	case *layers.GRE:
+		return layers.IPProtocolGRE
+	case *layers.ICMPv6:
+		return layers.IPProtocolICMPv6
+	case *layers.IPv6Destination:
+		return layers.IPProtocolIPv6Destination
+	case *layers.EtherIP:
+		return layers.IPProtocolEtherIP
+	case *layers.SCTP:
+		return layers.IPProtocolSCTP
+	case *layers.UDPLite:
+		return layers.IPProtocolUDPLite
+	}
+
+	panic("unknown next layer")
+}
+
 func (pkt *Packet) handleL3() error {
 	if pkt.l3 == nil {
 		pkt.l3 = ipv4Default
@@ -1341,7 +1398,17 @@ func (pkt *Packet) handleL3() error {
 	case *layers.IPv6:
 		pkt.ipv6 = v
 		pkt.l3Protocol = layers.EthernetTypeIPv6
-		pkt.ipv6.NextHeader = pkt.l4Protocol
+		if len(pkt.ipv6ext) > 0 {
+			if err := pkt.handleIPv6Ext(); err != nil {
+				return fmt.Errorf("handling ipv6 extensions: %w", err)
+			}
+			pkt.ipv6.NextHeader = nextHdrIPProto(pkt.ipv6ext[0].(gopacket.Layer))
+			for i := len(pkt.ipv6ext); i > 0; i-- {
+				pkt.layers = append(pkt.layers, pkt.ipv6ext[i-1])
+			}
+		} else {
+			pkt.ipv6.NextHeader = pkt.l4Protocol
+		}
 		pkt.ipv6.Length = uint16(pkt.length)
 		pkt.layers = append(pkt.layers, pkt.ipv6)
 	default:

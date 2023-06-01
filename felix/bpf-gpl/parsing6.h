@@ -1,9 +1,20 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #ifndef __CALI_PARSING6_H__
 #define __CALI_PARSING6_H__
+
+#define NEXTHDR_HOP		0
+#define NEXTHDR_ROUTING		43
+#define NEXTHDR_FRAGMENT	44
+#define NEXTHDR_GRE		47
+#define NEXTHDR_ESP		50
+#define NEXTHDR_AUTH		51
+#define NEXTHDR_NONE		59
+#define NEXTHDR_DEST		60
+#define NEXTHDR_MOBILITY	135
+
 
 static CALI_BPF_INLINE int parse_packet_ip_v6(struct cali_tc_ctx *ctx) {
 	__u16 protocol = 0;
@@ -51,23 +62,6 @@ static CALI_BPF_INLINE int parse_packet_ip_v6(struct cali_tc_ctx *ctx) {
 		}
 	}
 
-#if 0
-	CALI_DEBUG("IP id=%d\n",bpf_ntohs(ip_hdr(ctx)->id));
-	CALI_DEBUG("IP s=%x d=%x\n", bpf_ntohl(ip_hdr(ctx)->saddr), bpf_ntohl(ip_hdr(ctx)->daddr));
-	// Drop malformed IP packets
-	if (ip_hdr(ctx)->ihl < 5) {
-		CALI_DEBUG("Drop malformed IP packets\n");
-		deny_reason(ctx, CALI_REASON_IP_MALFORMED);
-		goto deny;
-	} else if (ip_hdr(ctx)->ihl > 5) {
-		/* Drop packets with IP options from/to WEP.
-		 * Also drop packets with IP options if the dest IP is not host IP
-		 */
-		ctx->ipheader_len = 4 * ip_hdr(ctx)->ihl;
-	}
-	CALI_DEBUG("IP ihl=%d bytes\n", ctx->ipheader_len);
-#endif
-
 	return PARSING_OK_V6;
 
 allow_no_fib:
@@ -75,6 +69,24 @@ allow_no_fib:
 
 deny:
 	return PARSING_ERROR;
+}
+
+static CALI_BPF_INLINE bool ipv6_hexthdr_is_opt(int nexthdr)
+{
+	switch(nexthdr) {
+	case NEXTHDR_HOP:
+	case NEXTHDR_ROUTING:
+	case NEXTHDR_FRAGMENT:
+	case NEXTHDR_GRE:
+	case NEXTHDR_ESP:
+	case NEXTHDR_AUTH:
+	case NEXTHDR_NONE:
+	case NEXTHDR_DEST:
+	case NEXTHDR_MOBILITY:
+		return true;
+	}
+
+	return false;
 }
 
 static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v6(struct cali_tc_ctx *ctx)
@@ -95,8 +107,79 @@ static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v6(struct cali_tc_ctx *ctx)
 	ctx->state->pre_nat_ip_dst2 = ip_hdr(ctx)->daddr.in6_u.u6_addr32[2];
 	ctx->state->pre_nat_ip_dst3 = ip_hdr(ctx)->daddr.in6_u.u6_addr32[3];
 	// Fill in other information
-	ctx->state->ip_proto = ip_hdr(ctx)->nexthdr;
 	ctx->state->ip_size = ip_hdr(ctx)->payload_len;
+
+	int hdr;
+
+	switch (ip_hdr(ctx)->nexthdr) {
+	case IPPROTO_TCP:
+	case IPPROTO_UDP:
+	case IPPROTO_ICMPV6:
+		ctx->ipheader_len = ctx->state->ihl = IP_SIZE;
+		ctx->state->ip_proto = ip_hdr(ctx)->nexthdr;
+		goto out;
+	case NEXTHDR_NONE:
+		goto deny;
+	default:
+		hdr = ip_hdr(ctx)->nexthdr;
+	}
+
+	CALI_DEBUG("ip->nexthdr %d IPv6 options!\n", ip_hdr(ctx)->nexthdr);
+
+	int i;
+	int ipoff = skb_iphdr_offset(ctx);
+	int len = IP_SIZE;
+
+	for (i = 0; i < 32; i++) {
+		struct ipv6_opt_hdr opt;
+
+		CALI_DEBUG("loading extension at offset %d\n", ipoff + len);
+		if (bpf_load_bytes(ctx, ipoff + len, &opt, sizeof(opt))) {
+			CALI_DEBUG("Too short\n");
+			goto deny;
+		}
+
+		CALI_DEBUG("ext nexthdr %d hdrlen %d\n", opt.nexthdr, opt.hdrlen);
+
+		switch(hdr) {
+		case NEXTHDR_FRAGMENT:
+			len += 16;
+			break;
+		case NEXTHDR_HOP:
+		case NEXTHDR_ROUTING:
+		case NEXTHDR_DEST:
+		case NEXTHDR_GRE:
+		case NEXTHDR_ESP:
+		case NEXTHDR_AUTH:
+		case NEXTHDR_MOBILITY:
+			len += (opt.hdrlen + 1) * 8;
+			break;
+		}
+
+		switch(opt.nexthdr) {
+			case IPPROTO_TCP:
+			case IPPROTO_UDP:
+			case IPPROTO_ICMPV6:
+				ctx->ipheader_len = ctx->state->ihl = len;
+				ctx->state->ip_proto = opt.nexthdr;
+				goto out;
+			case NEXTHDR_NONE:
+				goto deny;
+		}
+
+
+	}
+
+out:
+	CALI_DEBUG("IP ihl=%d bytes\n", ctx->ipheader_len);
+	return;
+
+deny:
+	if (CALI_F_XDP) {
+		bpf_exit(XDP_DROP);
+	} else {
+		bpf_exit(TC_ACT_SHOT);
+	}
 }
 
 #endif /* __CALI_PARSING6_H__ */

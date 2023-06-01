@@ -54,3 +54,25 @@ func TestIPv6Parse(t *testing.T) {
 		Expect(res.Retval).To(Equal(6))
 	}, withIPv6())
 }
+
+func TestIPv6ParseOptsOne(t *testing.T) {
+	RegisterTestingT(t)
+
+	hop := &layers.IPv6HopByHop{}
+	hop.NextHeader = layers.IPProtocolUDP
+
+	/* from gopacket ip6_test.go */
+	tlv := &layers.IPv6HopByHopOption{}
+	tlv.OptionType = 0x01 //PadN
+	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	hop.Options = append(hop.Options, tlv)
+
+	_, _, _, _, pktBytes, err := testPacket(nil, ipv6Default, nil, nil, hop)
+	Expect(err).NotTo(HaveOccurred())
+
+	runBpfUnitTest(t, "ip_parse_test.c", func(bpfrun bpfProgRunFn) {
+		res, err := bpfrun(pktBytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Retval).To(Equal(6))
+	}, withIPv6())
+}
