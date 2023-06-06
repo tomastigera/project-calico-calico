@@ -22,6 +22,8 @@ enum cali_metadata_flags {
 // Set metadata to be received by TC programs
 static CALI_BPF_INLINE int xdp2tc_set_metadata(struct cali_tc_ctx *ctx, __u32 flags)
 {
+#ifndef IPVER6
+		/* XXX */
 #ifndef UNITTEST
 		struct cali_metadata *metadata;
 		// Reserve space in-front of xdp_md.meta for metadata.
@@ -55,6 +57,7 @@ static CALI_BPF_INLINE int xdp2tc_set_metadata(struct cali_tc_ctx *ctx, __u32 fl
 	CALI_DEBUG("Set IP TOS: %d\n", ip_hdr(ctx)->tos);
 	goto metadata_ok;
 #endif
+#endif
 
 error:
 	return -1;
@@ -66,6 +69,8 @@ metadata_ok:
 
 // Fetch metadata set by XDP program. If not set or on error return 0.
 static CALI_BPF_INLINE __u32 xdp2tc_get_metadata(struct __sk_buff *skb) {
+#ifndef IPVER6
+		/* XXX */
 	struct cali_metadata *metadata;
 	if (CALI_F_FROM_HEP && !CALI_F_XDP) {
 #ifndef UNITTEST
@@ -106,6 +111,9 @@ no_metadata:
 
 metadata_ok:
 	return metadata->flags;
+#else
+	return 0;
+#endif
 }
 
 #endif /* __CALI_METADATA_H__ */

@@ -12,7 +12,7 @@ struct sendrecv4_key {
 };
 
 struct sendrecv4_val {
-	__u32 ip;
+	ipv46_addr_t ip;
 	__u32 port; /* because bpf_sock_addr uses 32bit and we would need padding */
 };
 
@@ -23,7 +23,7 @@ CALI_MAP_V1(cali_v4_srmsg,
 
 struct ct_nats_key {
 	__u64 cookie;
-	__u32 ip;
+	ipv46_addr_t ip;
 	__u32 port; /* because bpf_sock_addr uses 32bit */
 	__u8 proto;
 	__u8 pad[7];

@@ -2,6 +2,8 @@
 // Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
+#undef IPVER6 /* XXX */
+
 #include <linux/bpf.h>
 
 // socket_type.h contains the definition of SOCK_XXX constants that we need

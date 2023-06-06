@@ -32,28 +32,21 @@ static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 
 	int ver;
 
-#ifdef IPVER6
-	switch (parse_packet_ip_v6(ctx)) {
-	case PARSING_OK_V6:
-		ver = 6;
-		break;
-	default:
-		return TC_ACT_UNSPEC;
-	}
-	tc_state_fill_from_iphdr_v6(ctx);
-#else
 	switch (parse_packet_ip(ctx)) {
+#ifdef IPVER6
 	case PARSING_OK_V6:
 		ver = 6;
 		break;
+#else
 	case PARSING_OK:
 		ver = 4;
 		break;
+#endif
 	default:
 		return TC_ACT_UNSPEC;
 	}
+
 	tc_state_fill_from_iphdr(ctx);
-#endif
 
 	switch (tc_state_fill_from_nexthdr(ctx, true)) {
 	case PARSING_ERROR:

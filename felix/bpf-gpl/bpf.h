@@ -12,9 +12,13 @@
 #include <bpf_core_read.h>
 #include <stddef.h>
 #include <linux/ip.h>
-#include "globals.h"
 
+/* CALI_BPF_INLINE must be deined before we include any of our headers. They
+ * assume it exists!
+ */
 #define CALI_BPF_INLINE inline __attribute__((always_inline))
+
+#include "globals.h"
 
 #define BPF_REDIR_EGRESS 0
 #define BPF_REDIR_INGRESS 1
@@ -109,7 +113,12 @@ struct bpf_map_def_extended {
 #define CALI_FIB_LOOKUP_ENABLED true
 #endif
 
+#ifdef IPVER6
+#undef CALI_FIB_LOOKUP_ENABLED
+#define CALI_FIB_LOOKUP_ENABLED false
+#else
 #define CALI_FIB_ENABLED (!CALI_F_L3 && CALI_FIB_LOOKUP_ENABLED && (CALI_F_TO_HOST || CALI_F_TO_HEP))
+#endif
 
 #define COMPILE_TIME_ASSERT(expr) {typedef char array[(expr) ? 1 : -1];}
 static CALI_BPF_INLINE void __compile_asserts(void) {
@@ -226,8 +235,18 @@ static CALI_BPF_INLINE __attribute__((noreturn)) void bpf_exit(int rc) {
 }
 #pragma clang diagnostic pop
 
+#ifdef IPVER6
+
+#define debug_ip(ip) 0xdeadbeef
+#define ip_is_dnf(ip) (true)
+
+#else
+
+#define debug_ip(ip) bpf_htonl(ip)
+
 #define ip_is_dnf(ip) ((ip)->frag_off & bpf_htons(0x4000))
 #define ip_frag_no(ip) ((ip)->frag_off & bpf_htons(0x1fff))
+#endif
 
 static CALI_BPF_INLINE void ip_dec_ttl(struct iphdr *ip)
 {
@@ -240,7 +259,11 @@ static CALI_BPF_INLINE void ip_dec_ttl(struct iphdr *ip)
 	ip->check = (__be16) (sum + (sum >> 16));
 }
 
+#ifdef IPVER6
+#define ip_ttl_exceeded(ip) (CALI_F_TO_HOST && !CALI_F_TUNNEL && (ip)->hop_limit <= 1)
+#else
 #define ip_ttl_exceeded(ip) (CALI_F_TO_HOST && !CALI_F_TUNNEL && (ip)->ttl <= 1)
+#endif
 
 #if CALI_F_XDP
 

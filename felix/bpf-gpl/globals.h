@@ -5,15 +5,17 @@
 #ifndef __CALI_GLOBALS_H__
 #define __CALI_GLOBALS_H__
 
+#include "ip_addr.h"
+
 struct cali_tc_globals {
-	__be32 host_ip;
+	ipv46_addr_t host_ip;
 	__be16 tunnel_mtu;
 	__be16 vxlan_port;
 	__be32 intf_ip;
 	__be32 ext_to_svc_mark;
 	__be16 psnat_start;
 	__be16 psnat_len;
-	__be32 host_tunnel_ip;
+	ipv46_addr_t host_tunnel_ip;
 	__be32 flags;
 	__be16 wg_port;
 	__be16 __pad;

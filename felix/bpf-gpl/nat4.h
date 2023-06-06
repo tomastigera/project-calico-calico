@@ -15,14 +15,6 @@
 #include "routes.h"
 #include "nat_types.h"
 
-#ifndef CALI_VXLAN_VNI
-#define CALI_VXLAN_VNI 0xca11c0
-#endif
-
-#define dnat_should_encap() (CALI_F_FROM_HEP && !CALI_F_TUNNEL && !CALI_F_L3_DEV && !CALI_F_NAT_IF)
-#define dnat_return_should_encap() (CALI_F_FROM_WEP && !CALI_F_TUNNEL && !CALI_F_L3_DEV && !CALI_F_NAT_IF)
-#define dnat_should_decap() (CALI_F_FROM_HEP && !CALI_F_TUNNEL && !CALI_F_L3_DEV && !CALI_F_NAT_IF)
-
 /* Number of bytes we add to a packet when we do encap. */
 #define VXLAN_ENCAP_SIZE	(sizeof(struct ethhdr) + sizeof(struct iphdr) + \
 				sizeof(struct udphdr) + sizeof(struct vxlanhdr))
@@ -181,14 +173,6 @@ static CALI_BPF_INLINE int vxlan_v4_decap(struct __sk_buff *skb)
 	return ret;
 }
 
-static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip, __u16 vxlanport)
-{
-	struct udphdr *udp = (struct udphdr *)(ip +1);
-
-	return ip->protocol == IPPROTO_UDP &&
-		udp->dest == bpf_htons(vxlanport);
-}
-
 static CALI_BPF_INLINE bool vxlan_size_ok(struct cali_tc_ctx *ctx)
 {
 	return !skb_refresh_validate_ptrs(ctx, UDP_SIZE + sizeof(struct vxlanhdr));
@@ -212,32 +196,14 @@ static CALI_BPF_INLINE bool vxlan_vni_is_valid(struct cali_tc_ctx *ctx)
 	return *((__u8*)&vxlan->flags) & (1 << 3);
 }
 
-#define vxlan_udp_csum_ok(udp) ((udp)->check == 0)
-
-static CALI_BPF_INLINE bool vxlan_v4_encap_too_big(struct cali_tc_ctx *ctx)
-{
-	__u32 mtu = TUNNEL_MTU;
-
-	/* RFC-1191: MTU is the size in octets of the largest datagram that
-	 * could be forwarded, along the path of the original datagram, without
-	 * being fragmented at this router.  The size includes the IP header and
-	 * IP data, and does not include any lower-level headers.
-	 */
-	if (ctx->skb->len > sizeof(struct ethhdr) + mtu) {
-		CALI_DEBUG("SKB too long (len=%d) vs limit=%d\n", ctx->skb->len, mtu);
-		return true;
-	}
-	return false;
-}
-
-/* vxlan_attempt_decap tries to decode the packet as VXLAN and, if it is a BPF-to-BPF
+/* vxlan_attempt_decap_v4 tries to decode the packet as VXLAN and, if it is a BPF-to-BPF
  * program VXLAN packet, does the decap. Returns:
  *
  * 0:  on success (either a packet that doesn't need decap or decap was successful).
  * -1: if the packet was invalid (e.g. too short)
  * -2: if the packet is VXLAN from a Calico host, to this node, but it is not the right VNI.
  */
-static CALI_BPF_INLINE int vxlan_attempt_decap(struct cali_tc_ctx *ctx)
+static CALI_BPF_INLINE int vxlan_attempt_decap_v4(struct cali_tc_ctx *ctx)
 {
 	/* decap on host ep only if directly for the node */
 	CALI_DEBUG("VXLAN tunnel packet to %x (host IP=%x)\n",

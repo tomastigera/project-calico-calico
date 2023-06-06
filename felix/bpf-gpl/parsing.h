@@ -9,6 +9,7 @@
 #include <linux/udp.h>
 #include <linux/icmp.h>
 
+#include "types.h"
 #include "skb.h"
 #include "routes.h"
 
@@ -16,6 +17,36 @@
 #define PARSING_OK_V6 1
 #define PARSING_ALLOW_WITHOUT_ENFORCING_POLICY 2
 #define PARSING_ERROR -1
+
+static CALI_BPF_INLINE int bpf_load_bytes(struct cali_tc_ctx *ctx, __u32 offset, void *buf, __u32 len);
+
+#ifdef IPVER6
+#include "parsing6.h"
+#else
+#include "parsing4.h"
+#endif
+
+#ifdef IPVER6
+static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx)
+{
+	return parse_packet_ip_v6(ctx);
+}
+
+static CALI_BPF_INLINE void tc_state_fill_from_iphdr(struct cali_tc_ctx *ctx)
+{
+	return tc_state_fill_from_iphdr_v6(ctx);
+}
+#else
+static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx)
+{
+	return parse_packet_ip_v4(ctx);
+}
+
+static CALI_BPF_INLINE void tc_state_fill_from_iphdr(struct cali_tc_ctx *ctx)
+{
+	return tc_state_fill_from_iphdr_v4(ctx);
+}
+#endif
 
 static CALI_BPF_INLINE int bpf_load_bytes(struct cali_tc_ctx *ctx, __u32 offset, void *buf, __u32 len)
 {
@@ -36,12 +67,6 @@ static CALI_BPF_INLINE int bpf_load_bytes(struct cali_tc_ctx *ctx, __u32 offset,
 
 	return ret;
 }
-
-#ifdef IPVER6
-#include "parsing6.h"
-#else
-#include "parsing4.h"
-#endif
 
 /* Continue parsing packet based on the IP protocol and fill in relevant fields
  * in the state (struct cali_tc_state). */

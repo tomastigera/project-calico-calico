@@ -73,7 +73,7 @@ struct calico_nat_secondary_v4_key {
 };
 
 struct calico_nat_dest {
-	__u32 addr;
+	ipv46_addr_t addr;
 	__u16 port;
 	__u8 pad[2];
 };

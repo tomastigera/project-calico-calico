@@ -45,36 +45,21 @@
 struct cali_tc_state {
 	/* Initial IP read from the packet, updated to host's IP when doing NAT encap/ICMP error.
 	 * updated when doing CALI_CT_ESTABLISHED_SNAT handling. Used for FIB lookup. */
-	__be32 ip_src;
-	__be32 ip_src1;
-	__be32 ip_src2;
-	__be32 ip_src3;
+	DECLARE_IP_ADDR(ip_src);
 	/* Initial IP read from packet. Updated when doing encap and ICMP errors or CALI_CT_ESTABLISHED_DNAT.
 	 * If connect-time load balancing is enabled, this will be the post-NAT IP because the connect-time
 	 * load balancer gets in before TC. */
-	__be32 ip_dst;
-	__be32 ip_dst1;
-	__be32 ip_dst2;
-	__be32 ip_dst3;
+	DECLARE_IP_ADDR(ip_dst);
 	/* Set when invoking the policy program; if no NAT, ip_dst; otherwise, the pre-DNAT IP.  If the connect
 	 * time load balancer is enabled, this may be different from ip_dst. */
-	__be32 pre_nat_ip_dst;
-	__be32 pre_nat_ip_dst1;
-	__be32 pre_nat_ip_dst2;
-	__be32 pre_nat_ip_dst3;
+	DECLARE_IP_ADDR(pre_nat_ip_dst);
 	/* If no NAT, ip_dst.  Otherwise the NAT dest that we look up from the NAT maps or the conntrack entry
 	 * for CALI_CT_ESTABLISHED_DNAT. */
-	__be32 post_nat_ip_dst;
-	__be32 post_nat_ip_dst1;
-	__be32 post_nat_ip_dst2;
-	__be32 post_nat_ip_dst3;
+	DECLARE_IP_ADDR(post_nat_ip_dst);
 	/* For packets that arrived over our VXLAN tunnel, the source IP of the tunnel packet.
 	 * Zeroed out when we decide to respond with an ICMP error.
 	 * Also used to stash the ICMP MTU when calling the ICMP response program. */
-	__be32 tun_ip;
-	__be32 tun_ip1;
-	__be32 tun_ip2;
-	__be32 tun_ip3;
+	DECLARE_IP_ADDR(tun_ip);
 	__u16 ihl;
 	__u16 unused;
 	/* Return code from the policy program CALI_POL_DENY/ALLOW etc. */
@@ -213,11 +198,26 @@ static CALI_BPF_INLINE struct ipv6hdr* ip_hdr(struct cali_tc_ctx *ctx)
 {
 	return (struct ipv6hdr *)ctx->ip_header;
 }
+
+#define ip_hdr_set_ip(ctx, field, ip)	do {					\
+	struct in6_addr *addr = &(ip_hdr(ctx)->field);				\
+	addr->in6_u.u6_addr32[0] = ip.a;					\
+	addr->in6_u.u6_addr32[1] = ip.b;					\
+	addr->in6_u.u6_addr32[2] = ip.c;					\
+	addr->in6_u.u6_addr32[3] = ip.d;					\
+} while(0)
+
 #else
+
 static CALI_BPF_INLINE struct iphdr* ip_hdr(struct cali_tc_ctx *ctx)
 {
 	return (struct iphdr *)ctx->ip_header;
 }
+
+#define ip_hdr_set_ip(ctx, field, ip)	do {					\
+	ip_hdr(ctx)->field = ip;						\
+} while (0)
+
 #endif
 
 static CALI_BPF_INLINE struct ethhdr* eth_hdr(struct cali_tc_ctx *ctx)

@@ -5,7 +5,8 @@
 #ifndef __CALI_PARSING4_H__
 #define __CALI_PARSING4_H__
 
-static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx) {
+static CALI_BPF_INLINE int parse_packet_ip_v4(struct cali_tc_ctx *ctx)
+{
 	__u16 protocol = 0;
 
 	/* We need to make a decision based on Ethernet protocol, however,
@@ -90,7 +91,7 @@ deny:
 	return PARSING_ERROR;
 }
 
-static CALI_BPF_INLINE void tc_state_fill_from_iphdr(struct cali_tc_ctx *ctx)
+static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v4(struct cali_tc_ctx *ctx)
 {
 	ctx->state->ip_src = ip_hdr(ctx)->saddr;
 	ctx->state->ip_dst = ip_hdr(ctx)->daddr;

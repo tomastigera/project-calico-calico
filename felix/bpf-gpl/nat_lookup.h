@@ -14,19 +14,23 @@
 #include "routes.h"
 #include "nat_types.h"
 
-static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup(__be32 ip_src,
-								    __be32 ip_dst,
-								    __u8 ip_proto,
-								    __u16 dport,
-								    bool from_tun,
-								    nat_lookup_result *res,
-								    int affinity_always_timeo,
-								    bool affinity_tmr_update
+static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip_src,
+								 ipv46_addr_t ip_dst,
+								 __u8 ip_proto,
+								 __u16 dport,
+								 bool from_tun,
+								 nat_lookup_result *res,
+								 int affinity_always_timeo,
+								 bool affinity_tmr_update
 #if !(CALI_F_XDP) && !(CALI_F_CGROUP)
-								  , struct cali_tc_ctx *ctx
+							  	 , struct cali_tc_ctx *ctx
 #endif
-								    )
+								)
 {
+#ifdef IPVER6
+	/* XXX */
+	return NULL;
+#else
 	struct calico_nat_v4_key nat_key = {
 		.prefixlen = NAT_PREFIX_LEN_WITH_SRC_MATCH_IN_BITS,
 		.addr = ip_dst,
@@ -208,16 +212,17 @@ skip_affinity:
 	}
 
 	return nat_lv2_val;
+#endif /* IPVER6 */
 }
 
 #if !(CALI_F_XDP) && !(CALI_F_CGROUP)
-static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup_tc(struct cali_tc_ctx *ctx,
-								       __be32 ip_src, __be32 ip_dst,
-								       __u8 ip_proto, __u16 dport,
-								       bool from_tun,
-								       nat_lookup_result *res)
+static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup_tc(struct cali_tc_ctx *ctx,
+								    ipv46_addr_t ip_src, ipv46_addr_t ip_dst,
+								    __u8 ip_proto, __u16 dport,
+								    bool from_tun,
+								    nat_lookup_result *res)
 {
-	return calico_v4_nat_lookup(ip_src, ip_dst, ip_proto, dport, from_tun, res, 0, false, ctx);
+	return calico_nat_lookup(ip_src, ip_dst, ip_proto, dport, from_tun, res, 0, false, ctx);
 }
 #endif
 
