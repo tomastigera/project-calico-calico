@@ -17,16 +17,16 @@ static CALI_BPF_INLINE int parse_packet_ip_v4(struct cali_tc_ctx *ctx)
 	 * an initial decision based on Ethernet protocol before parsing packet
 	 * for more headers.
 	 */
-	if (CALI_F_XDP) {
-		if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
-			deny_reason(ctx, CALI_REASON_SHORT);
-			CALI_DEBUG("Too short\n");
-			goto deny;
-		}
-		protocol = bpf_ntohs(eth_hdr(ctx)->h_proto);
-	} else {
-		protocol = bpf_ntohs(ctx->skb->protocol);
+#if CALI_F_XDP
+	if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+		deny_reason(ctx, CALI_REASON_SHORT);
+		CALI_DEBUG("Too short\n");
+		goto deny;
 	}
+	protocol = bpf_ntohs(eth_hdr(ctx)->h_proto);
+#else
+	protocol = bpf_ntohs(ctx->skb->protocol);
+#endif
 
 	switch (protocol) {
 	case ETH_P_IP:
@@ -61,13 +61,13 @@ static CALI_BPF_INLINE int parse_packet_ip_v4(struct cali_tc_ctx *ctx)
 
 	// In TC programs, parse packet and validate its size. This is
 	// already done for XDP programs at the beginning of the function.
-	if (!CALI_F_XDP) {
-		if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
-			deny_reason(ctx, CALI_REASON_SHORT);
-			CALI_DEBUG("Too short\n");
-			goto deny;
-		}
+#if !CALI_F_XDP
+	if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+		deny_reason(ctx, CALI_REASON_SHORT);
+		CALI_DEBUG("Too short\n");
+		goto deny;
 	}
+#endif
 
 	CALI_DEBUG("IP id=%d\n",bpf_ntohs(ip_hdr(ctx)->id));
 	CALI_DEBUG("IP s=%x d=%x\n", bpf_ntohl(ip_hdr(ctx)->saddr), bpf_ntohl(ip_hdr(ctx)->daddr));

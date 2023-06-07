@@ -52,18 +52,18 @@ static CALI_BPF_INLINE int bpf_load_bytes(struct cali_tc_ctx *ctx, __u32 offset,
 {
 	int ret;
 
-	if (CALI_F_XDP) {
+#if CALI_F_XDP
 #ifdef BPF_CORE_SUPPORTED
-		if (bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_xdp_load_bytes)) {
-			ret = bpf_xdp_load_bytes(ctx->xdp, offset, buf, len);
-		} else
+	if (bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_xdp_load_bytes)) {
+		ret = bpf_xdp_load_bytes(ctx->xdp, offset, buf, len);
+	} else
 #endif
-		{
-			return -22 /* EINVAL */;
-		}
-	} else {
-		ret = bpf_skb_load_bytes(ctx->skb, offset, buf, len);
+	{
+		return -22 /* EINVAL */;
 	}
+#else /* CALI_F_XDP */
+	ret = bpf_skb_load_bytes(ctx->skb, offset, buf, len);
+#endif /* CALI_F_XDP */
 
 	return ret;
 }

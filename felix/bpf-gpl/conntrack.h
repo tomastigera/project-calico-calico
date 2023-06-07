@@ -42,19 +42,23 @@ static CALI_BPF_INLINE bool  src_lt_dest(ipv6_addr_t ip_src, ipv6_addr_t ip_dst,
 
 #endif /* IPVER6 */
 
-#define __ct_make_key(proto, ipa, ipb, porta, portb) 		\
-		(struct calico_ct_key) {			\
-			.protocol = proto,			\
-			.addr_a = ipa, .port_a = porta,		\
-			.addr_b = ipb, .port_b = portb,		\
-		}
+static CALI_BPF_INLINE void fill_ct_key(struct calico_ct_key *k, bool sltd, __u8 proto,
+					ipv46_addr_t *ipa, ipv46_addr_t *ipb, __u16 pta, __u16 ptb)
+{
+	k->protocol = proto;
 
-#define ct_make_key(sltd, p, ipa, ipb, pta, ptb) ({						\
-	struct calico_ct_key k;									\
-	k = sltd ? __ct_make_key(p, ipa, ipb, pta, ptb) : __ct_make_key(p, ipb, ipa, ptb, pta);	\
-	dump_ct_key(ctx, &k);									\
-	k;											\
-})
+	if (sltd) {
+		k->addr_a = *ipa;
+		k->addr_b = *ipb;
+		k->port_a = pta;
+		k->port_b = ptb;
+	} else {
+		k->addr_a = *ipb;
+		k->addr_b = *ipa;
+		k->port_a = ptb;
+		k->port_b = pta;
+	}
+}
 
 #define ct_result_np_node(res)		((res).flags & CALI_CT_FLAG_NP_FWD)
 
@@ -92,10 +96,10 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 		 * have created a conntrack entry.  Look that one up instead of
 		 * creating one.
 		 */
-		CALI_DEBUG("CT-ALL Asked to create entry but packet is marked as "
+		CALI_VERB("CT-ALL Asked to create entry but packet is marked as "
 				"from another endpoint, doing lookup\n");
 		bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
-		*k = ct_make_key(srcLTDest, ct_ctx->proto, ip_src, ip_dst, sport, dport);
+		fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 		struct calico_ct_value *ct_value = cali_v4_ct_lookup_elem(k);
 		if (!ct_value) {
 			CALI_VERB("CT Packet marked as from workload but got a conntrack miss!\n");
@@ -163,21 +167,12 @@ create:
 	struct calico_ct_leg *src_to_dst, *dst_to_src;
 	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
 
+	fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 	if (srcLTDest) {
-		*k = (struct calico_ct_key) {
-			.protocol = ct_ctx->proto,
-			.addr_a = ip_src, .port_a = sport,
-			.addr_b = ip_dst, .port_b = dport,
-		};
 		CALI_VERB("CT-ALL src_to_dst A->B\n");
 		src_to_dst = &ct_value.a_to_b;
 		dst_to_src = &ct_value.b_to_a;
 	} else  {
-		*k = (struct calico_ct_key) {
-			.protocol = ct_ctx->proto,
-			.addr_a = ip_dst, .port_a = dport,
-			.addr_b = ip_src, .port_b = sport,
-		};
 		CALI_VERB("CT-ALL src_to_dst B->A\n");
 		src_to_dst = &ct_value.b_to_a;
 		dst_to_src = &ct_value.a_to_b;
@@ -200,7 +195,6 @@ create:
 	if (CALI_F_FROM_WEP) {
 		/* src is the from the WEP, policy approved this side */
 		src_to_dst->approved = 1;
-		CALI_DEBUG("CT-ALL approved source side - from WEP\n");
 	} else if (CALI_F_FROM_HEP) {
 		/* src is the from the HEP, policy approved this side */
 		src_to_dst->approved = 1;
@@ -250,7 +244,7 @@ create:
 				src_lt_dst = sport < dport;
 			}
 
-			*k = ct_make_key(src_lt_dst, ct_ctx->proto, ip_src, ip_dst, sport, dport);
+			fill_ct_key(k, src_lt_dst, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
 			if (!(err = cali_v4_ct_update_elem(k, &ct_value, BPF_NOEXIST))) {
 				ct_ctx->sport = sport;
@@ -294,21 +288,27 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 
 	CALI_DEBUG("CT-%d Creating FWD entry at %llu.\n", ip_proto, now);
 	CALI_DEBUG("FWD %x -> %x\n", debug_ip(ip_src), debug_ip(ip_dst));
-	struct calico_ct_value ct_value = {
-		.type = CALI_CT_TYPE_NAT_FWD,
-		.last_seen = now,
-		.created = now,
-	};
+	struct calico_ct_value *ct_value = &ctx->scratch->ct_val;
 
-	struct calico_ct_key k;
+	ct_value->type = CALI_CT_TYPE_NAT_FWD;
+	ct_value->last_seen = now;
+	ct_value->created = now;
+
+	ct_value->nat_rev_key = *rk;
+
+	/* We do not need rk anymore, we can reause it for the new key.
+	 *
+	 * N.B. calico_ct_create_nat_fwd() is called _after_ calico_ct_v4_create_tracking()
+	 * which also uses the rk!
+	 */
+	struct calico_ct_key *k = rk;
 	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
-	k = ct_make_key(srcLTDest, ct_ctx->proto, ip_src, ip_dst, sport, dport);
+	fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
-	ct_value.nat_rev_key = *rk;
 	if (ct_ctx->orig_sport != ct_ctx->sport) {
-		ct_value.nat_sport = ct_ctx->sport;
+		ct_value->nat_sport = ct_ctx->sport;
 	}
-	int err = cali_v4_ct_update_elem(&k, &ct_value, 0);
+	int err = cali_v4_ct_update_elem(&k, ct_value, 0);
 	CALI_VERB("CT-%d Create result: %d.\n", ip_proto, err);
 	return err;
 }
@@ -531,8 +531,10 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 	};
 
 	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
-	struct calico_ct_key k = ct_make_key(srcLTDest, ct_ctx->proto, ip_src, ip_dst, sport, dport);
+	struct calico_ct_key k;
 	bool syn = tcp_header && tcp_header->syn && !tcp_header->ack;
+
+	fill_ct_key(&k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
 	struct calico_ct_value *v = cali_v4_ct_lookup_elem(&k);
 	if (!v) {
@@ -589,7 +591,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		CALI_CT_DEBUG("related lookup to   %x:%d\n", debug_ip(ct_ctx->dst), ct_ctx->dport);
 
 		srcLTDest = src_lt_dest(ct_ctx->src, ct_ctx->dst, ct_ctx->sport, ct_ctx->dport);
-		k = ct_make_key(srcLTDest, ct_ctx->proto, ct_ctx->src, ct_ctx->dst, ct_ctx->sport, ct_ctx->dport);
+		fill_ct_key(&k, srcLTDest, ct_ctx->proto, &ct_ctx->src, &ct_ctx->dst, ct_ctx->sport, ct_ctx->dport);
 		v = cali_v4_ct_lookup_elem(&k);
 		if (!v) {
 			if (CALI_F_FROM_HOST &&
@@ -977,7 +979,7 @@ out_invalid:
 /* creates connection tracking for tracked protocols */
 static CALI_BPF_INLINE int conntrack_create(struct cali_tc_ctx *ctx, struct ct_create_ctx *ct_ctx)
 {
-	struct calico_ct_key k;
+	struct calico_ct_key *k = &ctx->scratch->ct_key;
 	int err;
 
 	if (ctx->state->flags & CALI_ST_SUPPRESS_CT_STATE) {
@@ -988,14 +990,14 @@ static CALI_BPF_INLINE int conntrack_create(struct cali_tc_ctx *ctx, struct ct_c
 	// Workaround for verifier; make sure verifier sees the skb on all code paths.
 	ct_ctx->skb = ctx->skb;
 
-	err = calico_ct_v4_create_tracking(ctx, ct_ctx, &k);
+	err = calico_ct_v4_create_tracking(ctx, ct_ctx, k);
 	if (err) {
 		CALI_DEBUG("calico_ct_v4_create_tracking err %d\n", err);
 		return err;
 	}
 
 	if (ct_ctx->type == CALI_CT_TYPE_NAT_REV) {
-		err = calico_ct_create_nat_fwd(ctx, ct_ctx, &k);
+		err = calico_ct_create_nat_fwd(ctx, ct_ctx, k);
 		if (err) {
 			/* XXX we should clean up the tracking entry */
 		}

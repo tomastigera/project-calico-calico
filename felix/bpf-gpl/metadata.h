@@ -65,24 +65,23 @@ error:
 metadata_ok:
 	return 0;
 }
-#endif /* CALI_F_XDP */
+#else /* CALI_F_XDP */
 
 // Fetch metadata set by XDP program. If not set or on error return 0.
 static CALI_BPF_INLINE __u32 xdp2tc_get_metadata(struct __sk_buff *skb) {
 #ifndef IPVER6
 		/* XXX */
 	struct cali_metadata *metadata;
-	if (CALI_F_FROM_HEP && !CALI_F_XDP) {
 #ifndef UNITTEST
-		metadata = (void *)(unsigned long)skb->data_meta;
+	metadata = (void *)(unsigned long)skb->data_meta;
 
-		if (skb->data_meta + sizeof(struct cali_metadata) > skb->data) {
-			CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "No metadata is shared by XDP\n");
-			goto no_metadata;
-		}
+	if (skb->data_meta + sizeof(struct cali_metadata) > skb->data) {
+		CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "No metadata is shared by XDP\n");
+		goto no_metadata;
+	}
 
-		CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "Received metadata from XDP: %d\n", metadata->flags);
-		goto metadata_ok;
+	CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "Received metadata from XDP: %d\n", metadata->flags);
+	goto metadata_ok;
 #else
 	struct cali_tc_ctx ctx = {
 		.skb = skb,
@@ -102,9 +101,6 @@ static CALI_BPF_INLINE __u32 xdp2tc_get_metadata(struct __sk_buff *skb) {
 	CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "Set IP TOS: %d\n", ip_hdr(&ctx)->tos);
 	goto metadata_ok;
 #endif /* UNITTEST */
-	} else {
-		CALI_LOG_IF(CALI_LOG_LEVEL_DEBUG, "Fetching metadata from XDP not supported in this hook\n");
-	}
 
 no_metadata:
 	return 0;
@@ -115,5 +111,7 @@ metadata_ok:
 	return 0;
 #endif
 }
+
+#endif /* CALI_F_XDP */
 
 #endif /* __CALI_METADATA_H__ */

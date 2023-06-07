@@ -103,6 +103,9 @@ struct cali_tc_state {
 
 struct pkt_scratch {
 	__u8 l4[20]; /* 20 bytes to fit udp, icmp, tcp w/o options */
+	struct ct_create_ctx ct_ctx_nat;
+	struct calico_ct_key ct_key;
+	struct calico_ct_value ct_val;
 };
 
 enum cali_state_flags {
@@ -142,8 +145,11 @@ struct fwd {
 };
 
 struct cali_tc_ctx {
+#if !CALI_F_XDP
   struct __sk_buff *skb;
+#else
   struct xdp_md *xdp;
+#endif
 
   /* Our single copies of the data start/end pointers loaded from the skb. */
   void *data_start;
@@ -152,10 +158,15 @@ struct cali_tc_ctx {
   long ipheader_len;
 
   struct cali_tc_state *state;
+#if !CALI_F_XDP
   const volatile struct cali_tc_globals *globals;
+#else
   const volatile struct cali_xdp_globals *xdp_globals; /* XXX we must split the state between tc/xdp */
+#endif
   struct calico_nat_dest *nat_dest;
+#ifndef IPVER6
   struct arp_key arpk;
+#endif
   struct fwd fwd;
   void *counters;
   struct pkt_scratch *scratch;
