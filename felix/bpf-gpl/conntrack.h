@@ -85,13 +85,13 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 	bool syn = false;
 	__u64 now;
 
-	if (ct_ctx->tcp) {
-		seq = ct_ctx->tcp->seq;
-		syn = ct_ctx->tcp->syn;
+	if (ct_ctx->proto == IPPROTO_TCP) {
+		seq = tcp_hdr(ctx)->seq;
+		syn = tcp_hdr(ctx)->syn;
 	}
 
-	CALI_DEBUG("CT-ALL packet mark is: 0x%x\n", ct_ctx->skb->mark);
-	if (skb_seen(ct_ctx->skb)) {
+	CALI_DEBUG("CT-ALL packet mark is: 0x%x\n", ctx->skb->mark);
+	if (skb_seen(ctx->skb)) {
 		/* Packet already marked as being from another workload, which will
 		 * have created a conntrack entry.  Look that one up instead of
 		 * creating one.
@@ -185,7 +185,7 @@ create:
 	src_to_dst->syn_seen = syn;
 	src_to_dst->opener = 1;
 	if (CALI_F_TO_HOST) {
-		src_to_dst->ifindex = skb_ingress_ifindex(ct_ctx->skb);
+		src_to_dst->ifindex = skb_ingress_ifindex(ctx->skb);
 	} else {
 		src_to_dst->ifindex = CT_INVALID_IFINDEX;
 	}
@@ -208,7 +208,7 @@ create:
 		}
 		CALI_DEBUG("CT-ALL approved source side - from HEP tun allow_return=%d\n",
 				ct_ctx->allow_return);
-	} else if (CALI_F_TO_HEP && !skb_seen(ct_ctx->skb) && (ct_ctx->type == CALI_CT_TYPE_NAT_REV)) {
+	} else if (CALI_F_TO_HEP && !skb_seen(ctx->skb) && (ct_ctx->type == CALI_CT_TYPE_NAT_REV)) {
 		src_to_dst->approved = 1;
 		dst_to_src->approved = 1;
 		CALI_DEBUG("CT-ALL approved both due to host source port conflict resolution.\n");
@@ -275,7 +275,7 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 	__u16 dport = ct_ctx->orig_dport;
 
 	if (CALI_F_TO_HEP && !CALI_F_NAT_IF && sport != ct_ctx->sport &&
-			!(ct_ctx->skb->mark & (CALI_SKB_MARK_FROM_NAT_IFACE_OUT | CALI_SKB_MARK_SEEN))) {
+			!(ctx->skb->mark & (CALI_SKB_MARK_FROM_NAT_IFACE_OUT | CALI_SKB_MARK_SEEN))) {
 		/* This entry is being created because we have a source port
 		 * conflict on a connection from host. We did psnat so we mark
 		 * such an entry with a 0 sport.
@@ -477,12 +477,14 @@ static CALI_BPF_INLINE bool tcp_recycled(bool syn, struct calico_ct_value *v)
 
 static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_tc_ctx *ctx)
 {
+	__u8 proto = ctx->state->ip_proto;
+
 	// TODO: refactor the conntrack code to simply use the ctx instead of its own.  This
 	// code is a direct translation of the pre-ctx code so it has some duplication (but it
 	// needs a bit more analysis to sort out because the ct_ctx gets modified in place in
 	// ways that might not make sense to expose through the ctx.
 	struct ct_lookup_ctx ct_lookup_ctx = {
-		.proto	= ctx->state->ip_proto,
+		.proto	= proto,
 		.src	= ctx->state->ip_src,
 		.sport	= ctx->state->sport,
 		.dst	= ctx->state->ip_dst,
@@ -490,7 +492,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 	};
 	struct ct_lookup_ctx *ct_ctx = &ct_lookup_ctx;
 
-	switch (ctx->state->ip_proto) {
+	switch (proto) {
 	case IPPROTO_TCP:
 		if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
 			deny_reason(ctx, CALI_REASON_SHORT);
@@ -511,7 +513,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 	ipv46_addr_t ip_dst = ct_ctx->dst;
 	__u16 sport = ct_ctx->sport;
 	__u16 dport = ct_ctx->dport;
-	struct tcphdr *tcp_header = ct_ctx->tcp;
+	struct tcphdr *tcp_header = proto == IPPROTO_TCP ? tcp_hdr(ctx) : NULL;
 	bool related = false;
 
 	CALI_CT_DEBUG("lookup from %x:%d\n", debug_ip(ip_src), sport);
@@ -621,7 +623,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		ip_dst = ct_ctx->dst;
 		sport = ct_ctx->sport;
 		dport = ct_ctx->dport;
-		tcp_header = ct_ctx->tcp;
+		tcp_header = proto == IPPROTO_TCP ? tcp_hdr(ctx) : NULL;
 
 		related = true;
 
@@ -986,9 +988,6 @@ static CALI_BPF_INLINE int conntrack_create(struct cali_tc_ctx *ctx, struct ct_c
 		// CT state creation is suppressed.
 		return 0;
 	}
-
-	// Workaround for verifier; make sure verifier sees the skb on all code paths.
-	ct_ctx->skb = ctx->skb;
 
 	err = calico_ct_v4_create_tracking(ctx, ct_ctx, k);
 	if (err) {

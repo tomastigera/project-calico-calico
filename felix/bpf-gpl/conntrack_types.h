@@ -134,8 +134,6 @@ struct ct_lookup_ctx {
 };
 
 struct ct_create_ctx {
-	struct __sk_buff *skb;
-	__u8 proto;
 	ipv46_addr_t orig_src;
 	ipv46_addr_t src;
 	ipv46_addr_t orig_dst;
@@ -149,6 +147,8 @@ struct ct_create_ctx {
 			* It is also set on the first node when we create the
 			* initial CT entry for the tunneled traffic. */
 	__u16 flags;
+	__u8 proto;
+	__u8 __pad;
 	enum cali_ct_type type;
 	bool allow_return;
 };

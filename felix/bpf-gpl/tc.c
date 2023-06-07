@@ -1276,7 +1276,6 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 			goto deny;
 		}
 
-		ct_ctx_nat->skb = ctx->skb;
 		ct_ctx_nat->proto = state->ip_proto;
 		ct_ctx_nat->src = state->ip_src;
 		ct_ctx_nat->sport = state->sport;
@@ -1507,7 +1506,7 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 		goto deny;
 	}
 
-	ctx->scratch = (void *)(pkt + ctx->ipheader_len);
+	ctx->nh = (void *)(pkt + ctx->ipheader_len);
 
 	/* Flip the direction, we need to reverse the original packet. */
 	switch (ct_rc) {
@@ -1537,8 +1536,9 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 	enum do_nat_res nat_res = NAT_ALLOW;
 	__u32 seen_mark = ctx->fwd.mark;
 	bool fib = true;
+	struct ct_create_ctx ct_ctx_nat = {};
 
-	nat_res = do_nat(ctx, l3_csum_off, 0, false, ct_rc, &ctx->scratch->ct_ctx_nat, &is_dnat, &seen_mark, false);
+	nat_res = do_nat(ctx, l3_csum_off, 0, false, ct_rc, &ct_ctx_nat, &is_dnat, &seen_mark, false);
 	ctx->fwd = post_nat(ctx, nat_res, fib, seen_mark, is_dnat);
 
 allow:

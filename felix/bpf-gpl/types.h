@@ -102,10 +102,10 @@ struct cali_tc_state {
 };
 
 struct pkt_scratch {
-	__u8 l4[20]; /* 20 bytes to fit udp, icmp, tcp w/o options */
+	__u8 l4[24]; /* 20 bytes to fit udp, icmp, tcp w/o options and 24 to make 8-aligned */
+	struct calico_ct_value ct_val;
 	struct ct_create_ctx ct_ctx_nat;
 	struct calico_ct_key ct_key;
-	struct calico_ct_value ct_val;
 };
 
 enum cali_state_flags {
@@ -156,6 +156,7 @@ struct cali_tc_ctx {
   void *data_end;
   void *ip_header;
   long ipheader_len;
+  void *nh;
 
   struct cali_tc_state *state;
 #if !CALI_F_XDP
@@ -195,6 +196,7 @@ struct cali_tc_ctx {
 				.counters = counters,				\
 				.globals = gl,					\
 				.scratch = scratch,				\
+				.nh = &scratch->l4,				\
 				__VA_ARGS__					\
 			};							\
 			if (x.ipheader_len == 0) {				\
@@ -238,17 +240,17 @@ static CALI_BPF_INLINE struct ethhdr* eth_hdr(struct cali_tc_ctx *ctx)
 
 static CALI_BPF_INLINE struct tcphdr* tcp_hdr(struct cali_tc_ctx *ctx)
 {
-	return (struct tcphdr *)ctx->scratch->l4;
+	return (struct tcphdr *)ctx->nh;
 }
 
 static CALI_BPF_INLINE struct udphdr* udp_hdr(struct cali_tc_ctx *ctx)
 {
-	return (struct udphdr *)ctx->scratch->l4;
+	return (struct udphdr *)ctx->nh;
 }
 
 static CALI_BPF_INLINE struct icmphdr* icmp_hdr(struct cali_tc_ctx *ctx)
 {
-	return (struct icmphdr *)ctx->scratch->l4;
+	return (struct icmphdr *)ctx->nh;
 }
 
 static CALI_BPF_INLINE __u32 ctx_ifindex(struct cali_tc_ctx *ctx)
