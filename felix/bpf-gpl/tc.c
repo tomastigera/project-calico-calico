@@ -757,7 +757,7 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 
 			offset += ctx->ipheader_len;
 
-			if (bpf_skb_store_bytes(ctx->skb, offset, ctx->scratch->l4, 8, 0)) {
+			if (bpf_skb_store_bytes(ctx->skb, offset, ctx->nh, 8, 0)) {
 				CALI_DEBUG("Too short\n");
 				deny_reason(ctx, CALI_REASON_SHORT);
 				goto deny;
@@ -1493,7 +1493,7 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 	}
 
 	ctx->ip_header = (struct iphdr*)pkt;
-	ctx->ipheader_len = ctx->state->ihl = ip_hdr(ctx)->ihl * 4;
+	tc_state_fill_from_iphdr(ctx);
 	if (ctx->ipheader_len > 60) {
 		CALI_DEBUG("this cannot be!\n");
 		goto deny;
@@ -1538,7 +1538,7 @@ int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 	enum do_nat_res nat_res = NAT_ALLOW;
 	__u32 seen_mark = ctx->fwd.mark;
 	bool fib = true;
-	struct ct_create_ctx ct_ctx_nat = {};
+	struct ct_create_ctx ct_ctx_nat = {}; /* CT_NEW is not the option so pass an empty one. */
 
 	nat_res = do_nat(ctx, l3_csum_off, 0, false, ct_rc, &ct_ctx_nat, &is_dnat, &seen_mark, false);
 	ctx->fwd = post_nat(ctx, nat_res, fib, seen_mark, is_dnat);
