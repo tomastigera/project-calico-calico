@@ -103,7 +103,6 @@ struct cali_tc_state {
 
 struct pkt_scratch {
 	__u8 l4[24]; /* 20 bytes to fit udp, icmp, tcp w/o options and 24 to make 8-aligned */
-	struct calico_ct_value ct_val;
 	struct ct_create_ctx ct_ctx_nat;
 	struct calico_ct_key ct_key;
 };

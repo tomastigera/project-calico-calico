@@ -288,15 +288,13 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 
 	CALI_DEBUG("CT-%d Creating FWD entry at %llu.\n", ip_proto, now);
 	CALI_DEBUG("FWD %x -> %x\n", debug_ip(ip_src), debug_ip(ip_dst));
-	struct calico_ct_value *ct_value = &ctx->scratch->ct_val;
-
-	*ct_value = (struct calico_ct_value) {
+	struct calico_ct_value ct_value = {
 		.type = CALI_CT_TYPE_NAT_FWD,
 		.last_seen = now,
 		.created = now,
 	};
 
-	ct_value->nat_rev_key = *rk;
+	ct_value.nat_rev_key = *rk;
 
 	/* We do not need rk anymore, we can reause it for the new key.
 	 *
@@ -308,9 +306,9 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 	fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
 	if (ct_ctx->orig_sport != ct_ctx->sport) {
-		ct_value->nat_sport = ct_ctx->sport;
+		ct_value.nat_sport = ct_ctx->sport;
 	}
-	int err = cali_v4_ct_update_elem(k, ct_value, 0);
+	int err = cali_v4_ct_update_elem(k, &ct_value, 0);
 	CALI_VERB("CT-%d Create result: %d.\n", ip_proto, err);
 	return err;
 }
