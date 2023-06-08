@@ -23,7 +23,7 @@
 static CALI_BPF_INLINE int is_vxlan_tunnel(struct cali_tc_ctx *ctx, __u16 vxlanport)
 {
 	return ctx->state->ip_proto == IPPROTO_UDP &&
-		ctx->state->dport == bpf_htons(vxlanport);
+		ctx->state->dport == vxlanport;
 }
 
 #ifdef IPVER6
