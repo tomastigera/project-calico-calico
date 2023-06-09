@@ -309,25 +309,25 @@ CALI_PATCH_DEFINE(__skb_mark, 0x4d424b53) /* be 0x4d424b53 = ASCII(SKBM) */
 
 #define map_symbol(name, ver) name##ver
 
-#define MAP_LOOKUP_FN(name, ver) \
-static CALI_BPF_INLINE void * name##_lookup_elem(const void* key)	\
+#define MAP_LOOKUP_FN(fname, name, ver) \
+static CALI_BPF_INLINE void * fname##_lookup_elem(const void* key)	\
 {									\
 	return bpf_map_lookup_elem(&map_symbol(name, ver), key);	\
 }
 
-#define MAP_UPDATE_FN(name, ver) \
-static CALI_BPF_INLINE int name##_update_elem(const void* key, const void* value, __u64 flags)\
+#define MAP_UPDATE_FN(fname, name, ver) \
+static CALI_BPF_INLINE int fname##_update_elem(const void* key, const void* value, __u64 flags)\
 {										\
 	return bpf_map_update_elem(&map_symbol(name, ver), key, value, flags);	\
 }
 
-#define MAP_DELETE_FN(name, ver) \
-static CALI_BPF_INLINE int name##_delete_elem(const void* key)	\
+#define MAP_DELETE_FN(fname, name, ver) \
+static CALI_BPF_INLINE int fname##_delete_elem(const void* key)	\
 {									\
 	return bpf_map_delete_elem(&map_symbol(name, ver), key);	\
 }
 
-#define CALI_MAP(name, ver,  map_type, key_type, val_type, size, flags)			\
+#define CALI_MAP_NAMED(name, fname, ver,  map_type, key_type, val_type, size, flags)		\
 struct {										\
 	__uint(type, map_type);								\
 	__type(key, key_type);								\
@@ -335,9 +335,12 @@ struct {										\
 	__uint(max_entries, size);							\
 	__uint(map_flags, flags);							\
 }map_symbol(name, ver) SEC(".maps");							\
-	MAP_LOOKUP_FN(name, ver)							\
-	MAP_UPDATE_FN(name, ver)							\
-	MAP_DELETE_FN(name, ver)
+	MAP_LOOKUP_FN(fname, name, ver)							\
+	MAP_UPDATE_FN(fname, name, ver)							\
+	MAP_DELETE_FN(fname, name, ver)
+
+#define CALI_MAP(name, ver, map_type, key_type, val_type, size, flags)			\
+		CALI_MAP_NAMED(name, name, ver,  map_type, key_type, val_type, size, flags)
 
 #define CALI_MAP_V1(name, map_type, key_type, val_type, size, flags)			\
 		CALI_MAP(name,, map_type, key_type, val_type, size, flags)

@@ -252,7 +252,7 @@ static CALI_BPF_INLINE int vxlan_attempt_decap_v4(struct cali_tc_ctx *ctx)
 	 * dst:src but the value is src:dst so it flips it automatically
 	 * when we use it on xmit.
 	 */
-	cali_v4_arp_update_elem(&ctx->arpk, eth_hdr(ctx), 0);
+	cali_arp_update_elem(&ctx->arpk, eth_hdr(ctx), 0);
 	CALI_DEBUG("ARP update for ifindex %d ip %x\n", ctx->arpk.ifindex, bpf_ntohl(ctx->arpk.ip));
 
 	ctx->state->tun_ip = ip_hdr(ctx)->saddr;

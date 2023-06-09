@@ -31,20 +31,20 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 	/* XXX */
 	return NULL;
 #else
-	struct calico_nat_v4_key nat_key = {
+	struct calico_nat_key nat_key = {
 		.prefixlen = NAT_PREFIX_LEN_WITH_SRC_MATCH_IN_BITS,
 		.addr = ip_dst,
 		.port = dport,
 		.protocol = ip_proto,
 		.saddr = ip_src,
 	};
-	struct calico_nat_v4_value *nat_lv1_val;
-	struct calico_nat_secondary_v4_key nat_lv2_key;
+	struct calico_nat_value *nat_lv1_val;
+	struct calico_nat_secondary_key nat_lv2_key;
 	struct calico_nat_dest *nat_lv2_val;
-	struct calico_nat_v4_affinity_key affkey = {};
+	struct calico_nat_affinity_key affkey = {};
 	__u64 now = 0;
 
-	nat_lv1_val = cali_v4_nat_fe_lookup_elem(&nat_key);
+	nat_lv1_val = cali_nat_fe_lookup_elem(&nat_key);
 
 	switch (nat_key.protocol) {
 	case IPPROTO_UDP:
@@ -101,7 +101,7 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		}
 
 		nat_key.addr = 0xffffffff;
-		nat_lv1_val = cali_v4_nat_fe_lookup_elem(&nat_key);
+		nat_lv1_val = cali_nat_fe_lookup_elem(&nat_key);
 		if (!nat_lv1_val) {
 			CALI_DEBUG("NAT: nodeport miss\n");
 			return NULL;
@@ -151,7 +151,7 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		goto skip_affinity;
 	}
 
-	struct calico_nat_v4 nat_data = {
+	struct calico_nat nat_data = {
 		.addr = ip_dst,
 		.port = dport,
 		.protocol = ip_proto,
@@ -161,10 +161,10 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 
 	CALI_DEBUG("NAT: backend affinity %d seconds\n", nat_lv1_val->affinity_timeo ? : affinity_always_timeo);
 
-	struct calico_nat_v4_affinity_val *affval;
+	struct calico_nat_affinity_val *affval;
 
 	now = bpf_ktime_get_ns();
-	affval = cali_v4_nat_aff_lookup_elem(&affkey);
+	affval = cali_nat_aff_lookup_elem(&affkey);
 	if (affval) {
 		int timeo = (affinity_always_timeo ? : nat_lv1_val->affinity_timeo);
 		if (now - affval->ts <= timeo  * 1000000000ULL) {
@@ -189,7 +189,7 @@ skip_affinity:
 
 	CALI_DEBUG("NAT: 1st level hit; id=%d ordinal=%d\n", nat_lv2_key.id, nat_lv2_key.ordinal);
 
-	if (!(nat_lv2_val = cali_v4_nat_be_lookup_elem(&nat_lv2_key))) {
+	if (!(nat_lv2_val = cali_nat_be_lookup_elem(&nat_lv2_key))) {
 		CALI_DEBUG("NAT: backend miss\n");
 		*res = NAT_NO_BACKEND;
 		return NULL;
@@ -199,13 +199,13 @@ skip_affinity:
 
 	if (nat_lv1_val->affinity_timeo != 0 || affinity_always_timeo) {
 		int err;
-		struct calico_nat_v4_affinity_val val = {
+		struct calico_nat_affinity_val val = {
 			.ts = now,
 			.nat_dest = *nat_lv2_val,
 		};
 
 		CALI_DEBUG("NAT: updating affinity for client %x\n", bpf_ntohl(ip_src));
-		if ((err = cali_v4_nat_aff_update_elem(&affkey, &val, BPF_ANY))) {
+		if ((err = cali_nat_aff_update_elem(&affkey, &val, BPF_ANY))) {
 			CALI_INFO("NAT: failed to update affinity table: %d\n", err);
 			/* we do carry on, we have a good nat_lv2_val */
 		}

@@ -469,9 +469,9 @@ syn_force_policy:
 		// If we didn't find a CTLB NAT entry then use the packet's own IP/port for the
 		// pre-DNAT values that's set by tc_state_fill_from_iphdr() and
 		// tc_state_fill_from_nextheader().
-		struct sendrecv4_val *revnat = cali_v4_ct_nats_lookup_elem(&ct_nkey);
+		struct sendrec_val *revnat = cali_ct_nats_lookup_elem(&ct_nkey);
 		if (revnat) {
-			CALI_DEBUG("Got cali_v4_ct_nats entry; flow was NATted by CTLB.\n");
+			CALI_DEBUG("Got cali_ct_nats entry; flow was NATted by CTLB.\n");
 			ctx->state->pre_nat_ip_dst = revnat->ip;
 			ctx->state->pre_nat_dport = ctx_port_to_host(revnat->port);
 		}
@@ -963,7 +963,7 @@ nat_encap:
 			.ifindex = ctx->skb->ifindex,
 		};
 
-		arpv = cali_v4_arp_lookup_elem(&arpk);
+		arpv = cali_arp_lookup_elem(&arpk);
 		if (!arpv) {
 			CALI_DEBUG("ARP lookup failed for %x dev %d at HEP\n",
 					debug_ip(state->ip_dst), arpk.ifindex);

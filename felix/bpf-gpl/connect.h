@@ -49,11 +49,11 @@ static CALI_BPF_INLINE int do_nat_common(struct bpf_sock_addr *ctx, __u8 proto, 
 		.port = dport_be,
 		.proto = proto,
 	};
-	struct sendrecv4_val val = {
+	struct sendrec_val val = {
 		.ip	= *dst,
 		.port	= ctx->user_port,
 	};
-	int rc = cali_v4_ct_nats_update_elem(&natk, &val, 0);
+	int rc = cali_ct_nats_update_elem(&natk, &val, 0);
 	if (rc) {
 		/* if this happens things are really bad! report */
 		CALI_INFO("Failed to update ct_nats map rc=%d\n", rc);
@@ -65,13 +65,13 @@ static CALI_BPF_INLINE int do_nat_common(struct bpf_sock_addr *ctx, __u8 proto, 
 		__u64 cookie = bpf_get_socket_cookie(ctx);
 		CALI_DEBUG("Store: ip=%x port=%d cookie=%x\n",
 				bpf_ntohl(nat_dest->addr), bpf_ntohs((__u16)dport_be), cookie);
-		struct sendrecv4_key key = {
+		struct sendrec_key key = {
 			.ip	= nat_dest->addr,
 			.port	= dport_be,
 			.cookie	= cookie,
 		};
 
-		if (cali_v4_srmsg_update_elem(&key, &val, 0)) {
+		if (cali_srmsg_update_elem(&key, &val, 0)) {
 			/* if this happens things are really bad! report */
 			CALI_INFO("Failed to update map\n");
 			goto out;

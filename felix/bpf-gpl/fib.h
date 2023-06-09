@@ -109,7 +109,7 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 			.ifindex = iface,
 		};
 
-		arpv = cali_v4_arp_lookup_elem(&arpk);
+		arpv = cali_arp_lookup_elem(&arpk);
 		if (!arpv) {
 			CALI_DEBUG("ARP lookup failed for %x dev %d\n",
 					bpf_ntohl(state->ip_dst), iface);
@@ -267,7 +267,7 @@ cancel_fib:
 				.ifindex = iface,
 			};
 
-			struct arp_value *arpv = cali_v4_arp_lookup_elem(&arpk);
+			struct arp_value *arpv = cali_arp_lookup_elem(&arpk);
 			if (!arpv) {
 				ctx->fwd.reason = CALI_REASON_NATIFACE;
 				CALI_DEBUG("ARP lookup failed for %x dev %d\n",

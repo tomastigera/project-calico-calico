@@ -100,13 +100,13 @@ v4:
 		goto out;
 	}
 
-	struct sendrecv4_key key = {
+	struct sendrec_key key = {
 		.ip	= ipv4,
 		.port	= ctx->user_port,
 		.cookie	= bpf_get_socket_cookie(ctx),
 	};
 
-	struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
+	struct sendrec_val *revnat = cali_srmsg_lookup_elem(&key);
 
 	if (revnat == NULL) {
 		CALI_DEBUG("revnat miss for %x:%d\n",
