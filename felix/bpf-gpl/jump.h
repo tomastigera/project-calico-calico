@@ -5,7 +5,7 @@
 #ifndef __CALI_BPF_JUMP_H__
 #define __CALI_BPF_JUMP_H__
 
-CALI_MAP(cali_state, 3,
+CALI_MAP(cali_state, 4,
 		BPF_MAP_TYPE_PERCPU_ARRAY,
 		__u32, struct cali_tc_state,
 		2, 0)
@@ -47,7 +47,8 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump_map = {
 };
 
 #define CALI_JUMP_TO(ctx, index) bpf_tail_call((ctx)->xdp, &cali_jump_map, (ctx)->xdp_globals->jumps[PROG_PATH(index)])
-#else
+
+#else /* CALI_F_XDP */
 
 #define cali_jump_map map_symbol(cali_progs, 2)
 
@@ -58,10 +59,17 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump_map = {
 	.max_entries = 200,
 };
 
-#define CALI_JUMP_TO(ctx, index) do {	\
+#define __CALI_JUMP_TO(ctx, index) do {	\
 	CALI_DEBUG("jump to idx %d prog at %d\n", index, (ctx)->globals->jumps[PROG_PATH(index)]);	\
 	bpf_tail_call((ctx)->skb, &cali_jump_map, (ctx)->globals->jumps[PROG_PATH(index)]);	\
 } while (0)
+
+#ifdef IPVER6
+#define CALI_JUMP_TO(ctx, index) __CALI_JUMP_TO(ctx, index ## _V6)
+#else
+#define CALI_JUMP_TO(ctx, index) __CALI_JUMP_TO(ctx, index)
+#endif
+
 #endif
 
 /* Add new values to the end as these are program indices */
@@ -82,17 +90,21 @@ enum cali_jump_index {
 	PROG_INDEX_HOST_CT_CONFLICT_DEBUG,
 	PROG_INDEX_ICMP_INNER_NAT_DEBUG,
 
-	PROG_INDEX_V6_PROLOGUE,
-	PROG_INDEX_V6_POLICY,
-	PROG_INDEX_V6_ALLOWED,
-	PROG_INDEX_V6_ICMP,
-	PROG_INDEX_V6_DROP,
+	PROG_INDEX_MAIN_V6,
+	PROG_INDEX_POLICY_V6,
+	PROG_INDEX_ALLOWED_V6,
+	PROG_INDEX_ICMP_V6,
+	PROG_INDEX_DROP_V6,
+	PROG_INDEX_HOST_CT_CONFLICT_V6,
+	PROG_INDEX_ICMP_INNER_NAT_V6,
 
-	PROG_INDEX_V6_PROLOGUE_DEBUG,
-	PROG_INDEX_V6_POLICY_DEBUG,
-	PROG_INDEX_V6_ALLOWED_DEBUG,
-	PROG_INDEX_V6_ICMP_DEBUG,
-	PROG_INDEX_V6_DROP_DEBUG,
+	PROG_INDEX_MAIN_V6_DEBUG,
+	PROG_INDEX_POLICY_V6_DEBUG,
+	PROG_INDEX_ALLOWED_V6_DEBUG,
+	PROG_INDEX_ICMP_V6_DEBUG,
+	PROG_INDEX_DROP_V6_DEBUG,
+	PROG_INDEX_HOST_CT_CONFLICT_V6_DEBUG,
+	PROG_INDEX_ICMP_INNER_NAT_V6_DEBUG,
 };
 
 #if CALI_F_XDP
@@ -111,7 +123,7 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump_prog_map 
  */
 #define CALI_JUMP_TO_POLICY(ctx) \
 	bpf_tail_call((ctx)->xdp, &cali_jump_prog_map, (ctx)->xdp_globals->jumps[PROG_INDEX_POLICY])
-#else
+#else /* CALI_F_XDP */
 
 #define cali_jump_prog_map map_symbol(cali_jump, 2)
 

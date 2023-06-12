@@ -153,7 +153,11 @@ struct ct_create_ctx {
 	bool allow_return;
 };
 
-CALI_MAP(cali_v4_ct, 3,
+#ifdef IPVER6
+CALI_MAP_NAMED(cali_v6_ct, cali_ct, 3,
+#else
+CALI_MAP_NAMED(cali_v4_ct, cali_ct, 3,
+#endif
 		BPF_MAP_TYPE_HASH,
 		struct calico_ct_key, struct calico_ct_value,
 		512000, BPF_F_NO_PREALLOC)

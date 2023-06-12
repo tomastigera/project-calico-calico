@@ -100,7 +100,7 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 				"from another endpoint, doing lookup\n");
 		bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
 		fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
-		struct calico_ct_value *ct_value = cali_v4_ct_lookup_elem(k);
+		struct calico_ct_value *ct_value = cali_ct_lookup_elem(k);
 		if (!ct_value) {
 			CALI_VERB("CT Packet marked as from workload but got a conntrack miss!\n");
 			goto create;
@@ -225,7 +225,7 @@ create:
 		}
 	}
 
-	err = cali_v4_ct_update_elem(k, &ct_value, BPF_NOEXIST);
+	err = cali_ct_update_elem(k, &ct_value, BPF_NOEXIST);
 
 	if (CALI_F_HEP && err == -17 /* EEXIST */) {
 		int i;
@@ -246,7 +246,7 @@ create:
 
 			fill_ct_key(k, src_lt_dst, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
-			if (!(err = cali_v4_ct_update_elem(k, &ct_value, BPF_NOEXIST))) {
+			if (!(err = cali_ct_update_elem(k, &ct_value, BPF_NOEXIST))) {
 				ct_ctx->sport = sport;
 				break;
 			}
@@ -308,7 +308,7 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 	if (ct_ctx->orig_sport != ct_ctx->sport) {
 		ct_value.nat_sport = ct_ctx->sport;
 	}
-	int err = cali_v4_ct_update_elem(k, &ct_value, 0);
+	int err = cali_ct_update_elem(k, &ct_value, 0);
 	CALI_VERB("CT-%d Create result: %d.\n", ip_proto, err);
 	return err;
 }
@@ -538,7 +538,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 
 	fill_ct_key(&k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
 
-	struct calico_ct_value *v = cali_v4_ct_lookup_elem(&k);
+	struct calico_ct_value *v = cali_ct_lookup_elem(&k);
 	if (!v) {
 		if (syn) {
 			// SYN packet (new flow); send it to policy.
@@ -594,7 +594,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 
 		srcLTDest = src_lt_dest(ct_ctx->src, ct_ctx->dst, ct_ctx->sport, ct_ctx->dport);
 		fill_ct_key(&k, srcLTDest, ct_ctx->proto, &ct_ctx->src, &ct_ctx->dst, ct_ctx->sport, ct_ctx->dport);
-		v = cali_v4_ct_lookup_elem(&k);
+		v = cali_ct_lookup_elem(&k);
 		if (!v) {
 			if (CALI_F_FROM_HOST &&
 				ct_ctx->proto == IPPROTO_TCP &&
@@ -652,15 +652,15 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		// This is a forward NAT entry; since we do the bookkeeping on the
 		// reverse entry, we need to do a second lookup.
 		CALI_CT_DEBUG("Hit! NAT FWD entry, doing secondary lookup.\n");
-		tracking_v = cali_v4_ct_lookup_elem(&v->nat_rev_key);
+		tracking_v = cali_ct_lookup_elem(&v->nat_rev_key);
 		if (!tracking_v) {
 			CALI_CT_DEBUG("Miss when looking for secondary entry.\n");
 			goto out_lookup_fail;
 		}
 		if (tcp_recycled(syn, tracking_v)) {
 			CALI_CT_DEBUG("TCP SYN recycles entry, NEW flow.\n");
-			cali_v4_ct_delete_elem(&k);
-			cali_v4_ct_delete_elem(&v->nat_rev_key);
+			cali_ct_delete_elem(&k);
+			cali_ct_delete_elem(&v->nat_rev_key);
 			goto out_lookup_fail;
 		}
 
@@ -798,7 +798,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		CALI_CT_DEBUG("Hit! NORMAL entry.\n");
 		if (tcp_recycled(syn, v)) {
 			CALI_CT_DEBUG("TCP SYN recycles entry, NEW flow.\n");
-			cali_v4_ct_delete_elem(&k);
+			cali_ct_delete_elem(&k);
 			goto out_lookup_fail;
 		}
 		CALI_CT_VERB("Created: %llu.\n", v->created);

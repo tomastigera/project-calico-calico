@@ -1443,11 +1443,13 @@ deny:
 	goto do_post_nat;
 }
 
-#ifndef IPVER6
-
 SEC("classifier/tc/icmp_inner_nat")
 int calico_tc_skb_icmp_inner_nat(struct __sk_buff *skb)
 {
+#ifdef IPVER6
+	return TC_ACT_SHOT;
+#else
+
 	/* Initialise the context, which is stored on the stack, and the state, which
 	 * we use to pass data from one program to the next via tail calls. */
 	DECLARE_TC_CTX(_ctx,
@@ -1550,12 +1552,16 @@ allow:
 
 deny:
 	return TC_ACT_SHOT;
+#endif /* IPVER6 */
 }
 
 
 SEC("classifier/tc/icmp")
 int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 {
+#ifdef IPVER6
+	return TC_ACT_SHOT;
+#else
 	__u32 fib_flags = 0;
 
 	/* Initialise the context, which is stored on the stack, and the state, which
@@ -1600,9 +1606,8 @@ int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 	return forward_or_drop(ctx);
 deny:
 	return TC_ACT_SHOT;
-}
-
 #endif /* IPVER6 */
+}
 
 #if HAS_HOST_CONFLICT_PROG
 SEC("classifier/tc/host_ct_conflict")

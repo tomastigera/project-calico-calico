@@ -99,6 +99,9 @@ struct cali_tc_state {
 	struct calico_nat_dest nat_dest; /* 8 bytes */
 	__u64 prog_start_time;
 	__u64 flags;
+#ifndef IPVER6
+	__u8 __pad_ipv4[48];
+#endif
 };
 
 struct pkt_scratch {

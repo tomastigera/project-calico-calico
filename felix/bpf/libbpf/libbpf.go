@@ -66,6 +66,10 @@ func (m *Map) ValueSize() int {
 	return int(C.bpf_map__value_size(m.bpfMap))
 }
 
+func (m *Map) KeySize() int {
+	return int(C.bpf_map__key_size(m.bpfMap))
+}
+
 func (m *Map) SetPinPath(path string) error {
 	cPath := C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))

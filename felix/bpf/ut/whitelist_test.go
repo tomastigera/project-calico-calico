@@ -308,3 +308,72 @@ func TestAllowFromHostExitHost(t *testing.T) {
 		Expect(ctr.Data().B2A.Approved).To(BeTrue())
 	})
 }
+
+func TestAllowEnterHostToWorkloadV6(t *testing.T) {
+	RegisterTestingT(t)
+
+	bpfIfaceName = "HWwl"
+	defer func() { bpfIfaceName = "" }()
+
+	_, _, l4, _, pktBytes, err := testPacket(nil, ipv6Default, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
+	udp := l4.(*layers.UDP)
+
+	resetMap(ctMapV6) // ensure it is clean
+
+	hostIP = node1ip
+
+	// Insert a reverse route for the source workload.
+	rtKey := routes.NewKeyV6(srcV6CIDR).AsBytes()
+	rtVal := routes.NewValueV6(routes.FlagsRemoteWorkload | routes.FlagInIPAMPool).AsBytes()
+	err = rtMapV6.Update(rtKey, rtVal)
+	Expect(err).NotTo(HaveOccurred())
+	rtKey = routes.NewKeyV6(dstV6CIDR).AsBytes()
+	rtVal = routes.NewValueV6WithIfIndex(routes.FlagsRemoteWorkload|routes.FlagInIPAMPool, 1).AsBytes()
+	err = rtMapV6.Update(rtKey, rtVal)
+	Expect(err).NotTo(HaveOccurred())
+	defer resetRTMap(rtMapV6)
+
+	dumpRTMapV6(rtMapV6)
+
+	ctKey := conntrack.NewKeyV6(17, /* UDP */
+		ipv6Default.SrcIP, uint16(udp.SrcPort), ipv6Default.DstIP, uint16(udp.DstPort))
+
+	skbMark = 0
+	runBpfTest(t, "calico_from_host_ep", nil, func(bpfrun bpfProgRunFn) {
+		res, err := bpfrun(pktBytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+
+		ct, err := conntrack.LoadMapMemV6(ctMapV6)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ct).Should(HaveKey(ctKey))
+
+		ctr := ct[ctKey]
+
+		// Approved by HEP
+		Expect(ctr.Data().A2B.Approved).To(BeTrue())
+		// NOt approved by WEP yet
+		Expect(ctr.Data().B2A.Approved).NotTo(BeTrue())
+	}, withIPv6())
+
+	expectMark(tcdefs.MarkSeen)
+
+	dumpCTMapV6(ctMapV6)
+
+	runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		res, err := bpfrun(pktBytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+
+		ct, err := conntrack.LoadMapMemV6(ctMapV6)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ct).Should(HaveKey(ctKey))
+
+		ctr := ct[ctKey]
+
+		// Still approved both by HEP and WEP
+		Expect(ctr.Data().B2A.Approved).To(BeTrue())
+		Expect(ctr.Data().A2B.Approved).To(BeTrue())
+	}, withIPv6())
+}
