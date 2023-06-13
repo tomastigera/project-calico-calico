@@ -330,9 +330,11 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 	}
 
 	ipFamily := "IPv4"
+	policyIdx := tcdefs.ProgIndexPolicy
 	if topts.ipv6 {
 		ipFamily = "IPv6"
 		obj += "_v6"
+		policyIdx = tcdefs.ProgIndexV6Policy
 	}
 
 	if topts.xdp {
@@ -396,7 +398,7 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 		}
 		Expect(err).NotTo(HaveOccurred(), "Failed to load rules program.")
 		defer func() { _ = polProgFD.Close() }()
-		err = jumpMapUpdate(polMap, tcdefs.ProgIndexPolicy, int(polProgFD))
+		err = jumpMapUpdate(polMap, policyIdx, int(polProgFD))
 		Expect(err).NotTo(HaveOccurred())
 		log.WithField("rules", rules).Debug("set policy")
 	}

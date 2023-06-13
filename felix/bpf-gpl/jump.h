@@ -134,14 +134,22 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump_prog_map 
 	.max_entries = 10000,
 };
 
-#define CALI_JUMP_TO_POLICY(ctx) do {	\
-	(ctx)->skb->cb[0] = (ctx)->globals->jumps[PROG_PATH(PROG_INDEX_ALLOWED)];			\
-	(ctx)->skb->cb[1] = (ctx)->globals->jumps[PROG_PATH(PROG_INDEX_DROP)];				\
-	CALI_DEBUG("policy allow prog at %d\n", (ctx)->globals->jumps[PROG_PATH(PROG_INDEX_ALLOWED)]);	\
-	CALI_DEBUG("policy deny prog at %d\n", (ctx)->globals->jumps[PROG_PATH(PROG_INDEX_DROP)]);	\
-	CALI_DEBUG("jump to policy prog at %d\n", (ctx)->globals->jumps[PROG_INDEX_POLICY]);		\
-	bpf_tail_call((ctx)->skb, &cali_jump_prog_map, (ctx)->globals->jumps[PROG_INDEX_POLICY]);	\
+#define __CALI_JUMP_TO_POLICY(ctx, allow, deny, pol) do {	\
+	(ctx)->skb->cb[0] = (ctx)->globals->jumps[PROG_PATH(allow)];			\
+	(ctx)->skb->cb[1] = (ctx)->globals->jumps[PROG_PATH(deny)];				\
+	CALI_DEBUG("policy allow prog at %d\n", (ctx)->globals->jumps[PROG_PATH(allow)]);	\
+	CALI_DEBUG("policy deny prog at %d\n", (ctx)->globals->jumps[PROG_PATH(deny)]);	\
+	CALI_DEBUG("jump to policy prog at %d\n", (ctx)->globals->jumps[pol]);		\
+	bpf_tail_call((ctx)->skb, &cali_jump_prog_map, (ctx)->globals->jumps[pol]);	\
 } while (0)
+
+#ifdef IPVER6
+#define CALI_JUMP_TO_POLICY(ctx) \
+	__CALI_JUMP_TO_POLICY(ctx, PROG_INDEX_ALLOWED_V6, PROG_INDEX_DROP_V6, PROG_INDEX_POLICY_V6)
+#else
+#define CALI_JUMP_TO_POLICY(ctx) \
+	__CALI_JUMP_TO_POLICY(ctx, PROG_INDEX_ALLOWED, PROG_INDEX_DROP, PROG_INDEX_POLICY)
+#endif
 
 #endif
 
