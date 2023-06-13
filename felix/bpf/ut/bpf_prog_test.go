@@ -1360,6 +1360,10 @@ func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payl
 			ipv6 = ipv6L.(*layers.IPv6)
 			proto = ipv6.NextHeader
 		}
+		if proto == layers.IPProtocolIPv6HopByHop {
+			l := p.Layer(layers.LayerTypeIPv6HopByHop)
+			proto = l.(*layers.IPv6HopByHop).NextHeader
+		}
 	}
 
 	var l gopacket.Layer
