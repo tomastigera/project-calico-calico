@@ -46,6 +46,7 @@ static CALI_BPF_INLINE int ipv6_addr_t_cmp(ipv6_addr_t x, ipv6_addr_t y)
 
 #define ip_void(ip)	((ip).a == 0 && (ip).b == 0 && (ip).c == 0 && (ip).d == 0)
 #define VOID_IP		({ipv6_addr_t x = {}; x;})
+#define NP_SPECIAL_IP	({ipv6_addr_t x = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }; x;})
 #define ip_equal(a, b)	ipv6_addr_t_eq(a, b)
 #define ip_lt(a, b)	(ipv6_addr_t_cmp(a, b) < 0)
 
@@ -56,6 +57,7 @@ typedef ipv6_addr_t ipv46_addr_t;
 
 #define ip_void(ip)	((ip) == 0)
 #define VOID_IP		0
+#define NP_SPECIAL_IP	0xffffffff
 #define ip_equal(a, b)	((a) == (b))
 #define ip_lt(a, b)	((a) < (b))
 

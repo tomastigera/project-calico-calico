@@ -213,7 +213,7 @@ func TestFailsafes(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, test := range failsafeTests {
-		_, _, _, _, pktBytes, err := testPacket(nil, test.IPHeaderIPv4, test.IPHeaderUDP, nil)
+		_, _, _, _, pktBytes, err := testPacketV4(nil, test.IPHeaderIPv4, test.IPHeaderUDP, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		prog := "calico_from_host_ep"

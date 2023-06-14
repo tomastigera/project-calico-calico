@@ -104,6 +104,20 @@ var (
 		IP:   node2ip,
 		Mask: net.IPv4Mask(255, 255, 255, 255),
 	}
+
+	node1ipV6    = net.ParseIP("::ffff:10.10.0.1").To16()
+	node1ip2V6   = net.ParseIP("::ffff:10.10.2.1").To16()
+	node1tunIPV6 = net.ParseIP("::ffff:11.11.0.1").To16()
+	node2ipV6    = net.ParseIP("::ffff:10.10.0.2").To16()
+	intfIPV6     = net.ParseIP("::ffff:10.10.0.3").To16()
+	node1CIDRV6  = net.IPNet{
+		IP:   node1ipV6,
+		Mask: net.CIDRMask(128, 128),
+	}
+	node2CIDRV6 = net.IPNet{
+		IP:   node2ipV6,
+		Mask: net.CIDRMask(128, 128),
+	}
 )
 
 // Globals that we use to configure the next test run.
@@ -507,7 +521,7 @@ var (
 	mapInitOnce sync.Once
 
 	natMap, natBEMap, ctMap, rtMap, ipsMap, testStateMap, affinityMap, arpMap, fsafeMap maps.Map
-	ctMapV6, rtMapV6                                                                    maps.Map
+	natMapV6, natBEMapV6, ctMapV6, rtMapV6, affinityMapV6                               maps.Map
 	stateMap, countersMap, ifstateMap, progMap, progMapXDP, jumpMap, jumpMapXDP         maps.Map
 	allMaps                                                                             []maps.Map
 )
@@ -516,6 +530,8 @@ func initMapsOnce() {
 	mapInitOnce.Do(func() {
 		natMap = nat.FrontendMap()
 		natBEMap = nat.BackendMap()
+		natMapV6 = nat.FrontendMapV6()
+		natBEMapV6 = nat.BackendMapV6()
 		ctMap = conntrack.Map()
 		ctMapV6 = conntrack.MapV6()
 		rtMap = routes.Map()
@@ -524,13 +540,14 @@ func initMapsOnce() {
 		stateMap = state.Map()
 		testStateMap = state.MapForTest()
 		affinityMap = nat.AffinityMap()
+		affinityMapV6 = nat.AffinityMapV6()
 		arpMap = arp.Map()
 		fsafeMap = failsafes.Map()
 		countersMap = counters.Map()
 		ifstateMap = ifstate.Map()
 
-		allMaps = []maps.Map{natMap, natBEMap, ctMap, ctMapV6, rtMap, rtMapV6, ipsMap, stateMap, testStateMap,
-			affinityMap, arpMap, fsafeMap, countersMap, ifstateMap}
+		allMaps = []maps.Map{natMap, natBEMap, natMapV6, natBEMapV6, ctMap, ctMapV6, rtMap, rtMapV6, ipsMap,
+			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, fsafeMap, countersMap, ifstateMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -1174,6 +1191,14 @@ func dumpNATMap(natMap maps.Map) {
 	}
 }
 
+func dumpNATMapV6(natMap maps.Map) {
+	nt, err := nat.LoadFrontendMapV6(natMap)
+	Expect(err).NotTo(HaveOccurred())
+	for k, v := range nt {
+		fmt.Printf("%s : %s\n", k, v)
+	}
+}
+
 func resetMap(m maps.Map) {
 	err := m.Iter(func(_, _ []byte) maps.IteratorAction {
 		return maps.IterDelete
@@ -1325,9 +1350,11 @@ var udpDefault = &layers.UDP{
 	DstPort: 5678,
 }
 
-func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payload []byte, ipv6ext ...gopacket.SerializableLayer) (
-	*layers.Ethernet, *layers.IPv4, gopacket.Layer, []byte, []byte, error) {
+func testPacket(family int, eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer,
+	payload []byte, ipv6ext ...gopacket.SerializableLayer) (
+	*layers.Ethernet, gopacket.Layer, gopacket.Layer, []byte, []byte, error) {
 	pkt := Packet{
+		family:  family,
 		eth:     eth,
 		l3:      l3,
 		l4:      l4,
@@ -1345,25 +1372,26 @@ func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payl
 	e := p.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
 
 	var (
-		ipv4  *layers.IPv4
-		ipv6  *layers.IPv6
+		ipl   gopacket.Layer
 		proto layers.IPProtocol
 	)
 
 	ipv4L := p.Layer(layers.LayerTypeIPv4)
 	if ipv4L != nil {
-		ipv4 = ipv4L.(*layers.IPv4)
+		ipv4 := ipv4L.(*layers.IPv4)
 		proto = ipv4.Protocol
+		ipl = ipv4L
 	} else {
 		ipv6L := p.Layer(layers.LayerTypeIPv6)
 		if ipv6L != nil {
-			ipv6 = ipv6L.(*layers.IPv6)
+			ipv6 := ipv6L.(*layers.IPv6)
 			proto = ipv6.NextHeader
 		}
 		if proto == layers.IPProtocolIPv6HopByHop {
 			l := p.Layer(layers.LayerTypeIPv6HopByHop)
 			proto = l.(*layers.IPv6HopByHop).NextHeader
 		}
+		ipl = ipv6L
 	}
 
 	var l gopacket.Layer
@@ -1377,10 +1405,23 @@ func testPacket(eth *layers.Ethernet, l3 gopacket.Layer, l4 gopacket.Layer, payl
 		l = p.Layer(layers.LayerTypeICMPv4)
 	}
 
-	return e, ipv4, l, pkt.payload, pkt.bytes, err
+	return e, ipl, l, pkt.payload, pkt.bytes, err
+}
+
+func testPacketV4(eth *layers.Ethernet, ipv4 *layers.IPv4, l4 gopacket.Layer, payload []byte) (
+	*layers.Ethernet, *layers.IPv4, gopacket.Layer, []byte, []byte, error) {
+	e, ip4, l4, p, b, err := testPacket(4, eth, ipv4, l4, payload)
+	return e, ip4.(*layers.IPv4), l4, p, b, err
+}
+
+func testPacketV6(eth *layers.Ethernet, ipv6 *layers.IPv6, l4 gopacket.Layer, payload []byte, ipv6ext ...gopacket.SerializableLayer) (
+	*layers.Ethernet, *layers.IPv6, gopacket.Layer, []byte, []byte, error) {
+	e, ip6, l4, p, b, err := testPacket(6, eth, ipv6, l4, payload, ipv6ext...)
+	return e, ip6.(*layers.IPv6), l4, p, b, err
 }
 
 type Packet struct {
+	family     int
 	eth        *layers.Ethernet
 	l3         gopacket.Layer
 	ipv4       *layers.IPv4
@@ -1493,7 +1534,11 @@ func nextHdrIPProto(nh gopacket.Layer) layers.IPProtocol {
 
 func (pkt *Packet) handleL3() error {
 	if pkt.l3 == nil {
-		pkt.l3 = ipv4Default
+		if pkt.family == 4 {
+			pkt.l3 = ipv4Default
+		} else {
+			pkt.l3 = ipv6Default
+		}
 	}
 
 	switch v := pkt.l3.(type) {
@@ -1598,7 +1643,9 @@ func testPacketUDPDefault() (*layers.Ethernet, *layers.IPv4, gopacket.Layer, []b
 		OptionData:   []byte{0xde, 0xad, 0xbe, 0xef},
 	}}
 	ip.IHL += 2
-	return testPacket(nil, &ip, nil, nil)
+
+	e, ip4, l4, p, b, err := testPacket(4, nil, &ip, nil, nil)
+	return e, ip4.(*layers.IPv4), l4, p, b, err
 }
 
 func testPacketUDPDefaultNP(destIP net.IP) (*layers.Ethernet, *layers.IPv4, gopacket.Layer, []byte, []byte, error) {
@@ -1615,7 +1662,29 @@ func testPacketUDPDefaultNP(destIP net.IP) (*layers.Ethernet, *layers.IPv4, gopa
 	}}
 	ip.IHL += 2
 
-	return testPacket(nil, &ip, nil, nil)
+	e, ip4, l4, p, b, err := testPacket(4, nil, &ip, nil, nil)
+	return e, ip4.(*layers.IPv4), l4, p, b, err
+}
+
+func testPacketUDPDefaultNPV6(destIP net.IP) (*layers.Ethernet, *layers.IPv6, gopacket.Layer, []byte, []byte, error) {
+	if destIP == nil {
+		return testPacketV6(nil, nil, nil, nil)
+	}
+
+	ip := *ipv6Default
+	ip.DstIP = destIP
+
+	hop := &layers.IPv6HopByHop{}
+	hop.NextHeader = layers.IPProtocolUDP
+
+	/* from gopacket ip6_test.go */
+	tlv := &layers.IPv6HopByHopOption{}
+	tlv.OptionType = 0x01 //PadN
+	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	hop.Options = append(hop.Options, tlv)
+
+	e, ip6, l4, p, b, err := testPacketV6(nil, &ip, nil, nil, hop)
+	return e, ip6, l4, p, b, err
 }
 
 func resetBPFMaps() {

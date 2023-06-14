@@ -240,7 +240,7 @@ func TestAllowFromHostExitHost(t *testing.T) {
 	ipHdr.SrcIP = node1ip
 	ipHdr.DstIP = node2ip
 
-	_, ipv4, l4, _, pktBytes, err := testPacket(nil, ipHdr, nil, nil)
+	_, ipv4, l4, _, pktBytes, err := testPacketV4(nil, ipHdr, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 
@@ -324,7 +324,7 @@ func TestAllowEnterHostToWorkloadV6(t *testing.T) {
 	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
 	hop.Options = append(hop.Options, tlv)
 
-	_, _, l4, _, pktBytes, err := testPacket(nil, ipv6Default, nil, nil, hop)
+	_, _, l4, _, pktBytes, err := testPacketV6(nil, ipv6Default, nil, nil, hop)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 

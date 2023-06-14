@@ -99,6 +99,9 @@ struct calico_nat_affinity_key {
 
 struct calico_nat_affinity_val {
 	struct calico_nat_dest nat_dest;
+#ifdef IPVER6
+	__u32 __pad;
+#endif
 	__u64 ts;
 };
 

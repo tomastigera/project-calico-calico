@@ -32,7 +32,7 @@ func TestIPv4Parse(t *testing.T) {
 	}}
 	ipHdr.IHL += 2
 
-	_, _, _, _, pktBytes, err := testPacket(nil, &ipHdr, nil, nil)
+	_, _, _, _, pktBytes, err := testPacketV4(nil, &ipHdr, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	runBpfUnitTest(t, "ip_parse_test.c", func(bpfrun bpfProgRunFn) {
@@ -45,7 +45,7 @@ func TestIPv4Parse(t *testing.T) {
 func TestIPv6Parse(t *testing.T) {
 	RegisterTestingT(t)
 
-	_, _, _, _, pktBytes, err := testPacket(nil, ipv6Default, nil, nil)
+	_, _, _, _, pktBytes, err := testPacketV6(nil, ipv6Default, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	runBpfUnitTest(t, "ip_parse_test.c", func(bpfrun bpfProgRunFn) {
@@ -67,7 +67,7 @@ func TestIPv6ParseOptsOne(t *testing.T) {
 	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
 	hop.Options = append(hop.Options, tlv)
 
-	_, _, _, _, pktBytes, err := testPacket(nil, ipv6Default, nil, nil, hop)
+	_, _, _, _, pktBytes, err := testPacketV6(nil, ipv6Default, nil, nil, hop)
 	Expect(err).NotTo(HaveOccurred())
 
 	runBpfUnitTest(t, "ip_parse_test.c", func(bpfrun bpfProgRunFn) {
