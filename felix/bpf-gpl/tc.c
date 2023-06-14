@@ -584,9 +584,7 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 					      __u32 *seen_mark,
 					      bool in_place)
 {
-#ifndef IPVER6
 	int res = 0;
-#endif
 	bool encap_needed = false;
 	struct cali_tc_state *state = ctx->state;
 
@@ -727,10 +725,8 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 
 		CALI_DEBUG("L3 csum at %d L4 csum at %d\n", l3_csum_off, l4_csum_off);
 
-#ifndef IPVER6
-		/* XXX */
 		if (l4_csum_off) {
-			res = skb_nat_l4_csum_ipv4(ctx, l4_csum_off,
+			res = skb_nat_l4_csum(ctx, l4_csum_off,
 					state->ip_src,
 					state->ct_result.nat_sip,
 					state->ip_dst,
@@ -739,7 +735,7 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 					bpf_htons(state->post_nat_dport),
 					bpf_htons(state->sport),
 					bpf_htons(state->ct_result.nat_sport ? : state->sport),
-					ip_hdr(ctx)->protocol == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
+					ctx->state->ip_proto == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
 		}
 
 		if (!in_place) {
@@ -764,10 +760,12 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 			}
 		}
 
+#ifndef IPVER6
 		res |= bpf_l3_csum_replace(ctx->skb, l3_csum_off, state->ip_src, state->ct_result.nat_sip, 4);
 		res |= bpf_l3_csum_replace(ctx->skb, l3_csum_off, state->ip_dst, state->post_nat_ip_dst, 4);
+#endif
 		/* From now on, the packet has a new source IP */
-		if (state->ct_result.nat_sip) {
+		if (!ip_void(state->ct_result.nat_sip)) {
 			state->ip_src = state->ct_result.nat_sip;
 		}
 
@@ -775,7 +773,6 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 			deny_reason(ctx, CALI_REASON_CSUM_FAIL);
 			goto deny;
 		}
-#endif
 
 		/* Handle returning ICMP related to tunnel
 		 *
@@ -853,17 +850,16 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 			break;
 		}
 
-#ifndef IPVER6
 		/* XXX */
 		CALI_DEBUG("L3 csum at %d L4 csum at %d\n", l3_csum_off, l4_csum_off);
 
 		if (l4_csum_off) {
-			res = skb_nat_l4_csum_ipv4(ctx, l4_csum_off,
+			res = skb_nat_l4_csum(ctx, l4_csum_off,
 				state->ip_src, state->ct_result.nat_ip,
 				state->ip_dst, state->ct_result.nat_sip,
 				bpf_htons(state->dport), bpf_htons(state->ct_result.nat_sport ? : state->dport),
 				bpf_htons(state->sport), bpf_htons(state->ct_result.nat_port),
-				ip_hdr(ctx)->protocol == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
+				ctx->state->ip_proto == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
 		}
 
 		if (!in_place) {
@@ -891,18 +887,19 @@ static CALI_BPF_INLINE enum do_nat_res do_nat(struct cali_tc_ctx *ctx,
 		CALI_VERB("L3 checksum update (csum is at %d) port from %x to %x\n",
 				l3_csum_off, state->ip_src, state->ct_result.nat_ip);
 
+#ifndef IPVER6
 		int csum_rc = bpf_l3_csum_replace(ctx->skb, l3_csum_off,
 						  state->ip_src, state->ct_result.nat_ip, 4);
 		csum_rc |= bpf_l3_csum_replace(ctx->skb, l3_csum_off,
 						  state->ip_dst, state->ct_result.nat_sip, 4);
 		CALI_VERB("bpf_l3_csum_replace(IP): %d\n", csum_rc);
 		res |= csum_rc;
+#endif
 
 		if (res) {
 			deny_reason(ctx, CALI_REASON_CSUM_FAIL);
 			goto deny;
 		}
-#endif
 
 		/* In addition to dnat_return_should_encap() we also need to encap on the
 		 * host endpoint for egress traffic, when we hit an SNAT rule. This is the

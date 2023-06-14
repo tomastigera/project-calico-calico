@@ -55,5 +55,88 @@ static CALI_BPF_INLINE bool vxlan_encap_too_big(struct cali_tc_ctx *ctx)
 	return false;
 }
 
+#define EFAULT	14
+
+static CALI_BPF_INLINE int skb_nat_l4_csum(struct cali_tc_ctx *ctx, size_t off,
+					   ipv46_addr_t ip_src_from, ipv46_addr_t ip_src_to,
+					   ipv46_addr_t ip_dst_from, ipv46_addr_t ip_dst_to,
+					   __u16 dport_from, __u16 dport_to,
+					   __u16 sport_from, __u16 sport_to,
+					   __u64 flags)
+{
+	int ret = 0;
+	struct __sk_buff *skb = ctx->skb;
+
+	/* Write back L4 header. */
+	if (ctx->ipheader_len == IP_SIZE) {
+		if (ctx->state->ip_proto == IPPROTO_TCP) {
+			if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
+				deny_reason(ctx, CALI_REASON_SHORT);
+				CALI_DEBUG("Too short\n");
+				return -EFAULT;
+			}
+			__builtin_memcpy(((void*)ip_hdr(ctx))+IP_SIZE, ctx->scratch->l4, TCP_SIZE);
+		} else {
+			if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+				deny_reason(ctx, CALI_REASON_SHORT);
+				CALI_DEBUG("Too short\n");
+				return -EFAULT;
+			}
+			__builtin_memcpy(((void*)ip_hdr(ctx))+IP_SIZE, ctx->scratch->l4, UDP_SIZE);
+		}
+	} else {
+		int size = l4_hdr_len(ctx);
+		int offset = skb_l4hdr_offset(ctx);
+
+		if (size == 0) {
+			CALI_DEBUG("Bad L4 proto\n");
+			return -EFAULT;
+		}
+		if (bpf_skb_store_bytes(ctx->skb, offset, ctx->scratch->l4, size, 0)) {
+			CALI_DEBUG("Too short\n");
+			return -EFAULT;
+		}
+	}
+
+	__wsum csum = tcp_hdr(ctx)->check;
+	bool csum_update = false;
+
+	if (!ip_equal(ip_src_from, ip_src_to)) {
+		CALI_DEBUG("L4 checksum update src IP from %x to %x\n",
+				debug_ip(ip_src_from), debug_ip(ip_src_to));
+
+		csum = bpf_csum_diff((__u32*)&ip_src_from, sizeof(ip_src_from), (__u32*)&ip_src_to, sizeof(ip_src_to), csum);
+		CALI_DEBUG("bpf_l4_csum_replace(IP): 0x%x\n", csum);
+		csum_update = true;
+	}
+	if (!ip_equal(ip_dst_from, ip_dst_to)) {
+		CALI_DEBUG("L4 checksum update dst IP from %x to %x\n",
+				debug_ip(ip_dst_from), debug_ip(ip_dst_to));
+		csum = bpf_csum_diff((__u32*)&ip_dst_from, sizeof(ip_dst_from), (__u32*)&ip_dst_to, sizeof(ip_dst_to), csum);
+		CALI_DEBUG("bpf_l4_csum_replace(IP): 0x%x\n", csum);
+		csum_update = true;
+	}
+
+	if (csum_update) {
+		ret = bpf_l4_csum_replace(skb, off, 0, csum, flags | 0);
+	}
+
+	if (sport_from != sport_to) {
+		CALI_DEBUG("L4 checksum update sport from %d to %d\n",
+				bpf_ntohs(sport_from), bpf_ntohs(sport_to));
+		int rc = bpf_l4_csum_replace(skb, off, sport_from, sport_to, flags | 2);
+		CALI_DEBUG("bpf_l4_csum_replace(sport): %d\n", rc);
+		ret |= rc;
+	}
+	if (dport_from != dport_to) {
+		CALI_DEBUG("L4 checksum update dport from %d to %d\n",
+				bpf_ntohs(dport_from), bpf_ntohs(dport_to));
+		int rc = bpf_l4_csum_replace(skb, off, dport_from, dport_to, flags | 2);
+		CALI_DEBUG("bpf_l4_csum_replace(dport): %d\n", rc);
+		ret |= rc;
+	}
+
+	return ret;
+}
 
 #endif /* __CALI_NAT_H__ */

@@ -105,11 +105,11 @@ var (
 		Mask: net.IPv4Mask(255, 255, 255, 255),
 	}
 
-	node1ipV6    = net.ParseIP("::ffff:10.10.0.1").To16()
-	node1ip2V6   = net.ParseIP("::ffff:10.10.2.1").To16()
-	node1tunIPV6 = net.ParseIP("::ffff:11.11.0.1").To16()
-	node2ipV6    = net.ParseIP("::ffff:10.10.0.2").To16()
-	intfIPV6     = net.ParseIP("::ffff:10.10.0.3").To16()
+	node1ipV6    = net.ParseIP("abcd::ffff:0b0a:0001").To16()
+	node1ip2V6   = net.ParseIP("abcd::ffff:0c0a:0201").To16()
+	node1tunIPV6 = net.ParseIP("abcd::ffff:0b0b:0001").To16()
+	node2ipV6    = net.ParseIP("abcd::ffff:0a0a:0002").To16()
+	intfIPV6     = net.ParseIP("abcd::ffff:0a0a:0003").To16()
 	node1CIDRV6  = net.IPNet{
 		IP:   node1ipV6,
 		Mask: net.CIDRMask(128, 128),
@@ -334,8 +334,13 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 			topts.progLog = "WEP"
 		}
 
-		log.WithField("hostIP", hostIP).Info("Host IP")
-		log.WithField("intfIP", intfIP).Info("Intf IP")
+		if topts.ipv6 {
+			log.WithField("hostIP", hostIP).Info("Host IP")
+			log.WithField("intfIP", intfIPV6).Info("Intf IP")
+		} else {
+			log.WithField("hostIP", hostIP).Info("Host IP")
+			log.WithField("intfIP", intfIP).Info("Intf IP")
+		}
 		obj += fmt.Sprintf("fib_%s", loglevel)
 
 		if strings.Contains(section, "_dsr") {
@@ -699,9 +704,9 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 					LogFilterJmp: 0xffffffff,
 				}
 
-				copy(globals.HostTunnelIP[:], node1tunIP.To16())
+				copy(globals.HostTunnelIP[:], node1tunIPV6.To16())
 				copy(globals.HostIP[:], hostIP.To16())
-				copy(globals.IntfIP[:], intfIP.To16())
+				copy(globals.IntfIP[:], intfIPV6.To16())
 
 				for i := 0; i < tcdefs.ProgIndexEnd; i++ {
 					globals.Jumps[i] = uint32(i)
@@ -839,9 +844,9 @@ func objUTLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHos
 					Flags:      libbpf.GlobalsIPv6Enabled | libbpf.GlobalsNoDSRCidrs,
 				}
 
-				copy(globals.HostTunnelIP[:], node1tunIP.To16())
+				copy(globals.HostTunnelIP[:], node1tunIPV6.To16())
 				copy(globals.HostIP[:], hostIP.To16())
-				copy(globals.IntfIP[:], intfIP.To16())
+				copy(globals.IntfIP[:], intfIPV6.To16())
 
 				if err := tc.ConfigureProgramV6(m, ifaceLog, &globals); err != nil {
 					return nil, fmt.Errorf("failed to configure v6 tc program: %w", err)
@@ -1155,6 +1160,38 @@ func udpResponseRaw(in []byte) []byte {
 	return out.Bytes()
 }
 
+func udpResponseRawV6(in []byte) []byte {
+	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
+	ethL := pkt.Layer(layers.LayerTypeEthernet)
+	ethR := ethL.(*layers.Ethernet)
+	ethR.SrcMAC, ethR.DstMAC = ethR.DstMAC, ethR.SrcMAC
+
+	ipv6L := pkt.Layer(layers.LayerTypeIPv6)
+	ipv6R := ipv6L.(*layers.IPv6)
+	ipv6R.SrcIP, ipv6R.DstIP = ipv6R.DstIP, ipv6R.SrcIP
+
+	lrs := []gopacket.SerializableLayer{ethR, ipv6R}
+
+	if ipv6R.NextHeader == layers.IPProtocolIPv6HopByHop {
+		l := pkt.Layer(layers.LayerTypeIPv6HopByHop)
+		lrs = append(lrs, l.(*layers.IPv6HopByHop))
+	}
+
+	udpL := pkt.Layer(layers.LayerTypeUDP)
+	udpR := udpL.(*layers.UDP)
+	udpR.SrcPort, udpR.DstPort = udpR.DstPort, udpR.SrcPort
+
+	_ = udpR.SetNetworkLayerForChecksum(ipv6R)
+
+	lrs = append(lrs, udpR, gopacket.Payload(pkt.ApplicationLayer().Payload()))
+
+	out := gopacket.NewSerializeBuffer()
+	err := gopacket.SerializeLayers(out, gopacket.SerializeOptions{ComputeChecksums: true}, lrs...)
+	Expect(err).NotTo(HaveOccurred())
+
+	return out.Bytes()
+}
+
 func tcpResponseRaw(in []byte) []byte {
 	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
 	ethL := pkt.Layer(layers.LayerTypeEthernet)
@@ -1277,6 +1314,10 @@ func dumpRTMapV6(rtMap maps.Map) {
 }
 
 func resetRTMap(rtMap maps.Map) {
+	resetMap(rtMap)
+}
+
+func resetRTMapV6(rtMap maps.Map) {
 	resetMap(rtMap)
 }
 
@@ -1664,6 +1705,19 @@ func testPacketUDPDefaultNP(destIP net.IP) (*layers.Ethernet, *layers.IPv4, gopa
 
 	e, ip4, l4, p, b, err := testPacket(4, nil, &ip, nil, nil)
 	return e, ip4.(*layers.IPv4), l4, p, b, err
+}
+
+func ipv6HopByHopExt() gopacket.SerializableLayer {
+	hop := &layers.IPv6HopByHop{}
+	hop.NextHeader = layers.IPProtocolUDP
+
+	/* from gopacket ip6_test.go */
+	tlv := &layers.IPv6HopByHopOption{}
+	tlv.OptionType = 0x01 //PadN
+	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	hop.Options = append(hop.Options, tlv)
+
+	return hop
 }
 
 func testPacketUDPDefaultNPV6(destIP net.IP) (*layers.Ethernet, *layers.IPv6, gopacket.Layer, []byte, []byte, error) {

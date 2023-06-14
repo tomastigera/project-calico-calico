@@ -2616,33 +2616,22 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 
-	natMap := nat.FrontendMapV6()
-	err = natMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-
-	natBEMap := nat.BackendMapV6()
-	err = natBEMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-
-	err = natMap.Update(
+	err = natMapV6.Update(
 		nat.NewNATKeyV6(ipv6.DstIP, uint16(udp.DstPort), uint8(17)).AsBytes(),
 		nat.NewNATValueV6(0, 1, 0, 0).AsBytes(),
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	natIP := net.ParseIP("::ffff:8.8.8.8")
+	natIP := net.ParseIP("abcd::ffff:0808:0808")
 	natPort := uint16(666)
 
-	err = natBEMap.Update(
+	err = natBEMapV6.Update(
 		nat.NewNATBackendKeyV6(0, 0).AsBytes(),
 		nat.NewNATBackendValueV6(natIP, natPort).AsBytes(),
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.MapV6()
-	err = ctMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-	resetCTMapV6(ctMap) // ensure it is clean
+	resetCTMapV6(ctMapV6) // ensure it is clean
 
 	var natedPkt []byte
 
@@ -2655,7 +2644,7 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 	err = rtMapV6.Update(rtKey, rtVal)
 	Expect(err).NotTo(HaveOccurred())
 	dumpRTMapV6(rtMapV6)
-	dumpNATMapV6(natMap)
+	dumpNATMapV6(natMapV6)
 
 	skbMark = 0
 	// Leaving workloada test for fc711b192f */
@@ -2667,14 +2656,14 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
 		fmt.Printf("pktR = %+v\n", pktR)
 
-		ipv6Nat := *ipv6
+		ipv6Nat := *ipv6Default
 		ipv6Nat.DstIP = natIP
 
 		udpNat := *udp
 		udpNat.DstPort = layers.UDPPort(natPort)
 
 		// created the expected packet after NAT, with recalculated csums
-		_, _, _, _, resPktBytes, err := testPacketV6(eth, &ipv6Nat, &udpNat, payload)
+		_, _, _, _, resPktBytes, err := testPacketV6(eth, &ipv6Nat, &udpNat, payload, ipv6HopByHopExt())
 		Expect(err).NotTo(HaveOccurred())
 
 		// expect them to be the same
@@ -2684,11 +2673,11 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 	}, withIPv6())
 	expectMark(tcdefs.MarkSeenSkipFIB)
 
-	resetCTMapV6(ctMap)
+	resetCTMapV6(ctMapV6)
 
 	// Insert a reverse route for the source workload that is in pool.
-	rtVal = routes.NewValueWithIfIndex(routes.FlagsLocalWorkload|routes.FlagInIPAMPool, 1).AsBytes()
-	err = rtMap.Update(rtKey, rtVal)
+	rtVal = routes.NewValueV6WithIfIndex(routes.FlagsLocalWorkload|routes.FlagInIPAMPool, 1).AsBytes()
+	err = rtMapV6.Update(rtKey, rtVal)
 	Expect(err).NotTo(HaveOccurred())
 
 	skbMark = 0
@@ -2701,21 +2690,21 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
 		fmt.Printf("pktR = %+v\n", pktR)
 
-		ipv6Nat := *ipv6
+		ipv6Nat := *ipv6Default
 		ipv6Nat.DstIP = natIP
 
 		udpNat := *udp
 		udpNat.DstPort = layers.UDPPort(natPort)
 
 		// created the expected packet after NAT, with recalculated csums
-		_, _, _, _, resPktBytes, err := testPacketV6(eth, &ipv6Nat, &udpNat, payload)
+		_, _, _, _, resPktBytes, err := testPacketV6(eth, &ipv6Nat, &udpNat, payload, ipv6HopByHopExt())
 		Expect(err).NotTo(HaveOccurred())
 
 		// expect them to be the same
 		Expect(res.dataOut).To(Equal(resPktBytes))
 
 		natedPkt = res.dataOut
-	})
+	}, withIPv6())
 
 	// Leaving node 1
 	expectMark(tcdefs.MarkSeen)
@@ -2729,24 +2718,24 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(natedPkt))
-	})
+	}, withIPv6())
 
-	dumpCTMap(ctMap)
-	fromHostCT := saveCTMap(ctMap)
-	resetCTMap(ctMap)
+	dumpCTMapV6(ctMapV6)
+	fromHostCT := saveCTMapV6(ctMapV6)
+	resetCTMapV6(ctMapV6)
 
 	var recvPkt []byte
 
-	hostIP = node2ip
+	hostIP = node2ipV6
 
 	skbMark = 0
 
 	// Insert the reverse route for backend for RPF check.
-	resetRTMap(rtMap)
-	beV4CIDR := ip.CIDRFromNetIP(natIP).(ip.V4CIDR)
-	bertKey := routes.NewKey(beV4CIDR).AsBytes()
-	bertVal := routes.NewValueWithIfIndex(routes.FlagsLocalWorkload|routes.FlagInIPAMPool, 1).AsBytes()
-	err = rtMap.Update(bertKey, bertVal)
+	resetRTMapV6(rtMapV6)
+	beV6CIDR := ip.CIDRFromNetIP(natIP).(ip.V6CIDR)
+	bertKey := routes.NewKeyV6(beV6CIDR).AsBytes()
+	bertVal := routes.NewValueV6WithIfIndex(routes.FlagsLocalWorkload|routes.FlagInIPAMPool, 1).AsBytes()
+	err = rtMapV6.Update(bertKey, bertVal)
 	Expect(err).NotTo(HaveOccurred())
 
 	bpfIfaceName = "NAT2"
@@ -2760,11 +2749,11 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(natedPkt))
-	})
+	}, withIPv6())
 
-	ct, err := conntrack.LoadMapMem(ctMap)
+	ct, err := conntrack.LoadMapMemV6(ctMapV6)
 	Expect(err).NotTo(HaveOccurred())
-	v, ok := ct[conntrack.NewKey(uint8(17), ipv6.SrcIP, uint16(udp.SrcPort), natIP.To4(), natPort)]
+	v, ok := ct[conntrack.NewKeyV6(uint8(17), ipv6.SrcIP, uint16(udp.SrcPort), natIP, natPort)]
 	Expect(ok).To(BeTrue())
 	// No NATing, service already resolved
 	Expect(v.Type()).To(Equal(conntrack.TypeNormal))
@@ -2783,16 +2772,16 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		Expect(res.dataOut).To(Equal(natedPkt))
 
 		recvPkt = res.dataOut
-	})
+	}, withIPv6())
 
-	dumpCTMap(ctMap)
+	dumpCTMapV6(ctMapV6)
 
 	var respPkt []byte
 
 	// Response leaving workload at node 2
 	skbMark = 0
 	runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
-		respPkt = udpResponseRaw(recvPkt)
+		respPkt = udpResponseRawV6(recvPkt)
 		res, err := bpfrun(respPkt)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -2800,7 +2789,7 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(respPkt))
-	})
+	}, withIPv6())
 
 	// Response leaving node 2
 	expectMark(tcdefs.MarkSeenBypass)
@@ -2813,14 +2802,14 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(respPkt))
-	})
+	}, withIPv6())
 
-	dumpCTMap(ctMap)
-	resetCTMap(ctMap)
-	restoreCTMap(ctMap, fromHostCT)
-	dumpCTMap(ctMap)
+	dumpCTMapV6(ctMapV6)
+	resetCTMapV6(ctMapV6)
+	restoreCTMapV6(ctMapV6, fromHostCT)
+	dumpCTMapV6(ctMapV6)
 
-	hostIP = node1ip
+	hostIP = node1ipV6
 
 	// Response arriving at node 1
 	bpfIfaceName = "NAT1"
@@ -2834,9 +2823,9 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(respPkt))
-	})
+	}, withIPv6())
 
-	dumpCTMap(ctMap)
+	dumpCTMapV6(ctMapV6)
 
 	// Response arriving at workload at node 1
 	expectMark(tcdefs.MarkSeen)
@@ -2865,12 +2854,12 @@ func TestNATPodPodXNodeV6(t *testing.T) {
 		fmt.Printf("pktR = %+v\n", pktR)
 
 		Expect(res.dataOut).To(Equal(pktExpSer.Bytes()))
-	})
+	}, withIPv6())
 
-	dumpCTMap(ctMap)
+	dumpCTMapV6(ctMapV6)
 
 	// Response leaving to original source
 
 	// clean up
-	resetCTMap(ctMap)
+	resetCTMapV6(ctMapV6)
 }

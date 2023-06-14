@@ -79,27 +79,27 @@ func NewNATKeyV6(addr net.IP, port uint16, protocol uint8) FrontendKeyV6 {
 
 func NewNATKeyV6Src(addr net.IP, port uint16, protocol uint8, cidr ip.V6CIDR) FrontendKeyV6 {
 	var k FrontendKeyV6
-	prefixlen := ZeroCIDRPrefixLen
+	prefixlen := ZeroCIDRV6PrefixLen
 	addr = addr.To16()
 	binary.LittleEndian.PutUint32(k[:4], uint32(prefixlen)+uint32(cidr.Prefix()))
 	copy(k[4:20], addr)
 	binary.LittleEndian.PutUint16(k[20:22], port)
-	k[23] = protocol
-	copy(k[24:40], cidr.Addr().AsNetIP().To16())
+	k[22] = protocol
+	copy(k[23:39], cidr.Addr().AsNetIP().To16())
 	return k
 }
 
 func (k FrontendKeyV6) Proto() uint8 {
-	return k[10]
+	return k[22]
 }
 
 func (k FrontendKeyV6) Addr() net.IP {
-	return k[4:8]
+	return k[4:20]
 }
 
 func (k FrontendKeyV6) srcAddr() ip.Addr {
-	var addr ip.V4Addr
-	copy(addr[:], k[11:15])
+	var addr ip.V6Addr
+	copy(addr[:], k[23:39])
 	return addr
 }
 
@@ -117,7 +117,7 @@ func (k FrontendKeyV6) PrefixLen() uint32 {
 }
 
 func (k FrontendKeyV6) Port() uint16 {
-	return binary.LittleEndian.Uint16(k[8:10])
+	return binary.LittleEndian.Uint16(k[20:22])
 }
 
 func (k FrontendKeyV6) AsBytes() []byte {

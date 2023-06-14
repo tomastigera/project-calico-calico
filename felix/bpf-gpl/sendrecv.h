@@ -17,7 +17,7 @@ struct sendrec_val {
 };
 
 #ifdef IPVER6
-CALI_MAP_NAMED(cali_v4_srmsg, cali_srmsg,,
+CALI_MAP_NAMED(cali_v6_srmsg, cali_srmsg,,
 #else
 CALI_MAP_NAMED(cali_v4_srmsg, cali_srmsg,,
 #endif
