@@ -72,11 +72,8 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 							struct ct_create_ctx *ct_ctx,
 							struct calico_ct_key *k)
 {
-	ipv46_addr_t ip_src = ct_ctx->src;
-	ipv46_addr_t ip_dst = ct_ctx->dst;
 	__u16 sport = ct_ctx->sport;
 	__u16 dport = ct_ctx->dport;
-	ipv46_addr_t orig_dst = ct_ctx->orig_dst;
 	__u16 orig_dport = ct_ctx->orig_dport;
 	int err = 0;
 
@@ -98,8 +95,8 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 		 */
 		CALI_VERB("CT-ALL Asked to create entry but packet is marked as "
 				"from another endpoint, doing lookup\n");
-		bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
-		fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
+		bool srcLTDest = src_lt_dest(ct_ctx->src, ct_ctx->dst, sport, dport);
+		fill_ct_key(k, srcLTDest, ct_ctx->proto, &ct_ctx->src, &ct_ctx->dst, sport, dport);
 		struct calico_ct_value *ct_value = cali_ct_lookup_elem(k);
 		if (!ct_value) {
 			CALI_VERB("CT Packet marked as from workload but got a conntrack miss!\n");
@@ -137,7 +134,7 @@ create:
 		.created=now,
 		.last_seen=now,
 		.type = ct_ctx->type,
-		.orig_ip = orig_dst,
+		.orig_ip = ct_ctx->orig_dst,
 		.orig_port = orig_dport,
 	};
 
@@ -165,9 +162,9 @@ create:
 	}
 
 	struct calico_ct_leg *src_to_dst, *dst_to_src;
-	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
+	bool srcLTDest = src_lt_dest(ct_ctx->src, ct_ctx->dst, sport, dport);
 
-	fill_ct_key(k, srcLTDest, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
+	fill_ct_key(k, srcLTDest, ct_ctx->proto, &ct_ctx->src, &ct_ctx->dst, sport, dport);
 	if (srcLTDest) {
 		CALI_VERB("CT-ALL src_to_dst A->B\n");
 		src_to_dst = &ct_value.a_to_b;
@@ -230,21 +227,21 @@ create:
 	if (CALI_F_HEP && err == -17 /* EEXIST */) {
 		int i;
 
-		CALI_DEBUG("Source collision for 0x%x:%d\n", debug_ip(ip_src), sport);
+		CALI_DEBUG("Source collision for 0x%x:%d\n", debug_ip(ct_ctx->src), sport);
 
 		ct_value.orig_sport = sport;
 
-		bool src_lt_dst = ip_lt(ip_src, ip_dst);
+		bool src_lt_dst = ip_lt(ct_ctx->src, ct_ctx->dst);
 
 		for (i = 0; i < PSNAT_RETRIES; i++) {
 			sport = psnat_get_port(ctx);
 			CALI_DEBUG("New sport %d\n", sport);
 
-			if (ip_equal(ip_src, ip_dst)) {
+			if (ip_equal(ct_ctx->src, ct_ctx->dst)) {
 				src_lt_dst = sport < dport;
 			}
 
-			fill_ct_key(k, src_lt_dst, ct_ctx->proto, &ip_src, &ip_dst, sport, dport);
+			fill_ct_key(k, src_lt_dst, ct_ctx->proto, &ct_ctx->src, &ct_ctx->dst, sport, dport);
 
 			if (!(err = cali_ct_update_elem(k, &ct_value, BPF_NOEXIST))) {
 				ct_ctx->sport = sport;
@@ -254,7 +251,7 @@ create:
 
 		if (i == PSNAT_RETRIES) {
 			CALI_INFO("Source collision unresolved 0x%x:%d\n",
-					debug_ip(ip_src), ct_value.orig_sport);
+					debug_ip(ct_ctx->src), ct_value.orig_sport);
 			err = -17; /* EEXIST */
 		}
 	}
