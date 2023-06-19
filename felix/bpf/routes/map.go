@@ -33,6 +33,7 @@ func init() {
 
 func SetMapSize(size int) {
 	maps.SetSize(MapParameters.VersionedName(), size)
+	maps.SetSize(MapV6Parameters.VersionedName(), size)
 }
 
 // struct cali_rt_key {

@@ -92,15 +92,9 @@ static CALI_BPF_INLINE bool ipv6_hexthdr_is_opt(int nexthdr)
 static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v6(struct cali_tc_ctx *ctx)
 {
 	// Fill in source ip
-	ctx->state->ip_src.a  = ip_hdr(ctx)->saddr.in6_u.u6_addr32[0];
-	ctx->state->ip_src.b = ip_hdr(ctx)->saddr.in6_u.u6_addr32[1];
-	ctx->state->ip_src.c = ip_hdr(ctx)->saddr.in6_u.u6_addr32[2];
-	ctx->state->ip_src.d = ip_hdr(ctx)->saddr.in6_u.u6_addr32[3];
+	ipv6hdr_ip_to_ipv6_addr_t(&ctx->state->ip_src, &ip_hdr(ctx)->saddr);
 	// Fill in dst ip
-	ctx->state->ip_dst.a  = ip_hdr(ctx)->daddr.in6_u.u6_addr32[0];
-	ctx->state->ip_dst.b = ip_hdr(ctx)->daddr.in6_u.u6_addr32[1];
-	ctx->state->ip_dst.c = ip_hdr(ctx)->daddr.in6_u.u6_addr32[2];
-	ctx->state->ip_dst.d = ip_hdr(ctx)->daddr.in6_u.u6_addr32[3];
+	ipv6hdr_ip_to_ipv6_addr_t(&ctx->state->ip_dst, &ip_hdr(ctx)->saddr);
 	// Fill in pre nat ip
 	ctx->state->pre_nat_ip_dst = ctx->state->ip_dst;
 	// Fill in other information

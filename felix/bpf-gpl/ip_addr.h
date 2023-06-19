@@ -16,6 +16,8 @@ typedef __be32 ipv4_addr_t;
 
 #ifdef IPVER6
 
+#include <linux/in6.h>
+
 static CALI_BPF_INLINE bool ipv6_addr_t_eq(ipv6_addr_t x, ipv6_addr_t y)
 {
 	return x.a == y.a && x.b == y.b && x.c == y.c && x.d == y.d;
@@ -46,9 +48,31 @@ static CALI_BPF_INLINE int ipv6_addr_t_cmp(ipv6_addr_t x, ipv6_addr_t y)
 
 #define ip_void(ip)	((ip).a == 0 && (ip).b == 0 && (ip).c == 0 && (ip).d == 0)
 #define VOID_IP		({ipv6_addr_t x = {}; x;})
+#define ip_set_void(ip)	do {	\
+	(ip).a = 0;		\
+	(ip).b = 0;		\
+	(ip).c = 0;		\
+	(ip).d = 0;		\
+} while(0)
 #define NP_SPECIAL_IP	({ipv6_addr_t x = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }; x;})
 #define ip_equal(a, b)	ipv6_addr_t_eq(a, b)
 #define ip_lt(a, b)	(ipv6_addr_t_cmp(a, b) < 0)
+
+static CALI_BPF_INLINE void ipv6hdr_ip_to_ipv6_addr_t(ipv6_addr_t *us, struct in6_addr *lnx)
+{
+	us->a = lnx->in6_u.u6_addr32[0];
+	us->b = lnx->in6_u.u6_addr32[1];
+	us->c = lnx->in6_u.u6_addr32[2];
+	us->d = lnx->in6_u.u6_addr32[3];
+}
+
+static CALI_BPF_INLINE void ipv6_addr_t_to_ipv6hdr_ip(struct in6_addr *lnx, ipv6_addr_t *us)
+{
+	lnx->in6_u.u6_addr32[0] = us->a;
+	lnx->in6_u.u6_addr32[1] = us->b;
+	lnx->in6_u.u6_addr32[2] = us->c;
+	lnx->in6_u.u6_addr32[3] = us->d;
+}
 
 typedef ipv6_addr_t ipv46_addr_t;
 
@@ -57,6 +81,7 @@ typedef ipv6_addr_t ipv46_addr_t;
 
 #define ip_void(ip)	((ip) == 0)
 #define VOID_IP		0
+#define ip_set_void(ip)	((ip) = 0)
 #define NP_SPECIAL_IP	0xffffffff
 #define ip_equal(a, b)	((a) == (b))
 #define ip_lt(a, b)	((a) < (b))

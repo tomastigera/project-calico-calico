@@ -167,9 +167,6 @@ struct cali_tc_ctx {
   const volatile struct cali_xdp_globals *xdp_globals; /* XXX we must split the state between tc/xdp */
 #endif
   struct calico_nat_dest *nat_dest;
-#ifndef IPVER6
-  struct arp_key arpk;
-#endif
   struct fwd fwd;
   void *counters;
   struct pkt_scratch *scratch;

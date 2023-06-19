@@ -5,8 +5,10 @@
 #ifndef __CALI_ARP_H__
 #define __CALI_ARP_H__
 
+#include "ip_addr.h"
+
 struct arp_key {
-	__u32 ip;
+	ipv46_addr_t ip;
 	__u32 ifindex;
 };
 

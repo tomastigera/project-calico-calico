@@ -73,7 +73,7 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		/* XXX replace the following with a nodeport cidrs lookup once
 		 * XXX we have it.
 		 */
-		rt = cali_rt_lookup(ip_dst);
+		rt = cali_rt_lookup(&ip_dst);
 		if (!rt) {
 			CALI_DEBUG("NAT: route miss\n");
 			if (!from_tun) {
@@ -120,7 +120,7 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		bool local_traffic = true;
 
 		if (CALI_F_FROM_HEP) {
-			struct cali_rt *rt = cali_rt_lookup(ip_src);
+			struct cali_rt *rt = cali_rt_lookup(&ip_src);
 
 			if (!rt || (!cali_rt_is_host(rt) && !cali_rt_is_workload(rt))) {
 				local_traffic = false;

@@ -263,9 +263,10 @@ cancel_fib:
 			__u32 iface = NATIN_IFACE;
 
 			struct arp_key arpk = {
-				.ip = 0 /* 0.0.0.0 */,
 				.ifindex = iface,
 			};
+
+			ip_set_void(arpk.ip); 
 
 			struct arp_value *arpv = cali_arp_lookup_elem(&arpk);
 			if (!arpv) {

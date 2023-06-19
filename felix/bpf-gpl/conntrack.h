@@ -150,7 +150,7 @@ create:
 		if (ct_ctx->flags & CALI_CT_FLAG_NP_FWD) {
 			CALI_DEBUG("CT-ALL nat tunneled to %x\n", debug_ip(ct_ctx->tun_ip));
 		} else {
-			struct cali_rt *rt = cali_rt_lookup(ct_ctx->tun_ip);
+			struct cali_rt *rt = cali_rt_lookup(&ct_ctx->tun_ip);
 			if (!rt || !cali_rt_is_host(rt)) {
 				CALI_DEBUG("CT-ALL nat tunnel IP not a host %x\n", debug_ip(ct_ctx->tun_ip));
 				err = -1;
@@ -265,7 +265,6 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 						    struct ct_create_ctx *ct_ctx,
 						    struct calico_ct_key *rk)
 {
-	__u8 ip_proto = ct_ctx->proto;
 	ipv46_addr_t ip_src = ct_ctx->orig_src;
 	ipv46_addr_t ip_dst = ct_ctx->orig_dst;
 	__u16 sport = ct_ctx->orig_sport;
@@ -283,7 +282,7 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 
 	__u64 now = bpf_ktime_get_ns();
 
-	CALI_DEBUG("CT-%d Creating FWD entry at %llu.\n", ip_proto, now);
+	CALI_DEBUG("CT-%d Creating FWD entry at %llu.\n", ct_ctx->proto, now);
 	CALI_DEBUG("FWD %x -> %x\n", debug_ip(ip_src), debug_ip(ip_dst));
 	struct calico_ct_value ct_value = {
 		.type = CALI_CT_TYPE_NAT_FWD,
@@ -306,7 +305,7 @@ static CALI_BPF_INLINE int calico_ct_create_nat_fwd(struct cali_tc_ctx *ctx,
 		ct_value.nat_sport = ct_ctx->sport;
 	}
 	int err = cali_ct_update_elem(k, &ct_value, 0);
-	CALI_VERB("CT-%d Create result: %d.\n", ip_proto, err);
+	CALI_VERB("CT-%d Create result: %d.\n", ctx->state->ip_proto, err);
 	return err;
 }
 

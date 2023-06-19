@@ -161,8 +161,8 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx, b
 			/* CALI_F_FROM_HEP case is handled in vxlan_attempt_decap above since it already decoded
 			 * the header. */
 			if (CALI_F_TO_HEP) {
-				if (rt_addr_is_remote_host(ctx->state->ip_dst) &&
-						rt_addr_is_local_host(ctx->state->ip_src)) {
+				if (rt_addr_is_remote_host(&ctx->state->ip_dst) &&
+						rt_addr_is_local_host(&ctx->state->ip_src)) {
 					CALI_DEBUG("VXLAN packet to known Calico host, allow.\n");
 					goto allow;
 				} else {
@@ -188,7 +188,7 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx, b
 			goto deny;
 		}
 		if (CALI_F_FROM_HEP) {
-			if (rt_addr_is_remote_host(ctx->state->ip_src)) {
+			if (rt_addr_is_remote_host(&ctx->state->ip_src)) {
 				CALI_DEBUG("IPIP packet from known Calico host, allow.\n");
 				goto allow;
 			} else {
@@ -197,7 +197,7 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx, b
 				goto deny;
 			}
 		} else if (CALI_F_TO_HEP && !CALI_F_TUNNEL && !CALI_F_L3_DEV) {
-			if (rt_addr_is_remote_host(ctx->state->ip_dst)) {
+			if (rt_addr_is_remote_host(&ctx->state->ip_dst)) {
 				CALI_DEBUG("IPIP packet to known Calico host, allow.\n");
 				goto allow;
 			} else {

@@ -76,7 +76,7 @@ func TestNatEncap(t *testing.T) {
 	})
 }
 
-func checkVxlanEncap(pktR gopacket.Packet, NATed bool, ipv4 *layers.IPv4,
+func checkVxlanEncap(pktR gopacket.Packet, NATed bool, ipv4 gopacket.Layer,
 	transport gopacket.Layer, payload []byte) {
 
 	inner := checkVxlan(pktR)
@@ -178,17 +178,23 @@ func getVxlanVNI(pktR gopacket.Packet) uint32 {
 	return vxlanL.(*layers.VXLAN).VNI
 }
 
-func checkInnerIP(ip gopacket.Packet, NATed bool, ipv4 *layers.IPv4,
+func checkInnerIP(ip gopacket.Packet, NATed bool, iphdr gopacket.Layer,
 	transport gopacket.Layer, payload []byte) {
-	ipv4L := ip.Layer(layers.LayerTypeIPv4)
-	Expect(ipv4L).NotTo(BeNil())
-	if NATed {
-		Expect(ipv4L).To(layersMatchFields(ipv4, "Checksum", "TTL", "Options", "Padding"))
-	} else {
-		Expect(ipv4L).To(layersMatchFields(ipv4, "DstIP", "Checksum", "TTL", "Options", "Padding"))
-	}
 
-	Expect(ipv4L.(*layers.IPv4).TTL).To(Equal(ipv4.TTL - 1))
+	switch t := iphdr.(type) {
+	case *layers.IPv4:
+		ipv4L := ip.Layer(layers.LayerTypeIPv4)
+		Expect(ipv4L).NotTo(BeNil())
+		if NATed {
+			Expect(ipv4L).To(layersMatchFields(iphdr, "Checksum", "TTL", "Options", "Padding"))
+		} else {
+			Expect(ipv4L).To(layersMatchFields(iphdr, "DstIP", "Checksum", "TTL", "Options", "Padding"))
+		}
+
+		Expect(ipv4L.(*layers.IPv4).TTL).To(Equal(t.TTL - 1))
+	default:
+		panic("xxx")
+	}
 
 	transportL := ip.Layer(transport.LayerType())
 	Expect(transportL).NotTo(BeNil())

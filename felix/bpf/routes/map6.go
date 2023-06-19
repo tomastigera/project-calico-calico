@@ -27,10 +27,6 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 )
 
-func init() {
-	SetMapSize(MapParameters.MaxEntries)
-}
-
 const KeyV6Size = 20
 
 type KeyV6 [KeyV6Size]byte
@@ -157,7 +153,7 @@ func NewValueV6WithIfIndex(flags Flags, ifIndex int) ValueV6 {
 	return v
 }
 
-var MapParametersV6 = maps.MapParameters{
+var MapV6Parameters = maps.MapParameters{
 	Type:       "lpm_trie",
 	KeySize:    KeyV6Size,
 	ValueSize:  ValueV6Size,
@@ -167,7 +163,7 @@ var MapParametersV6 = maps.MapParameters{
 }
 
 func MapV6() maps.Map {
-	return maps.NewPinnedMap(MapParametersV6)
+	return maps.NewPinnedMap(MapV6Parameters)
 }
 
 type MapMemV6 map[KeyV6]ValueV6

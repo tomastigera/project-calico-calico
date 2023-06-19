@@ -92,7 +92,8 @@ static CALI_BPF_INLINE long skb_iphdr_offset(struct cali_tc_ctx *ctx)
  * - ctx->ip_header
  * - ctx->nh/tcp_header/udp_header/icmp_header.
  */
-static CALI_BPF_INLINE int skb_refresh_validate_ptrs(struct cali_tc_ctx *ctx, long nh_len) {
+static CALI_BPF_INLINE int skb_refresh_validate_ptrs(struct cali_tc_ctx *ctx, long nh_len)
+{
 	int min_size = skb_iphdr_offset(ctx) + IP_SIZE;
 	skb_refresh_start_end(ctx);
 	if (ctx->data_start + (min_size + nh_len) > ctx->data_end) {
@@ -120,6 +121,7 @@ static CALI_BPF_INLINE int skb_refresh_validate_ptrs(struct cali_tc_ctx *ctx, lo
 	}
 	// Success, refresh the ip_header/nh fields in the context.
 	ctx->ip_header =  ctx->data_start + skb_iphdr_offset(ctx);
+
 	return 0;
 }
 

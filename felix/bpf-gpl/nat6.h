@@ -19,36 +19,29 @@
 #define VXLAN_ENCAP_SIZE	(sizeof(struct ethhdr) + sizeof(struct iphdr) + \
 				sizeof(struct udphdr) + sizeof(struct vxlanhdr))
 
-static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, __be32 ip_dst)
+static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx, ipv6_addr_t ip_src, ipv6_addr_t ip_dst)
 {
-	int ret;
-	__wsum csum;
-
-	__u32 new_hdrsz = sizeof(struct ethhdr) + sizeof(struct iphdr) +
+	__u32 new_hdrsz = sizeof(struct ethhdr) + sizeof(struct ipv6hdr) +
 			sizeof(struct udphdr) + sizeof(struct vxlanhdr);
 
-	ret = bpf_skb_adjust_room(ctx->skb, new_hdrsz, BPF_ADJ_ROOM_MAC,
+	if (bpf_skb_adjust_room(ctx->skb, new_hdrsz, BPF_ADJ_ROOM_MAC,
 						  BPF_F_ADJ_ROOM_ENCAP_L4_UDP |
-						  BPF_F_ADJ_ROOM_ENCAP_L3_IPV4 |
-						  BPF_F_ADJ_ROOM_ENCAP_L2(sizeof(struct ethhdr)));
-
-	if (ret) {
-		goto out;
+						  BPF_F_ADJ_ROOM_ENCAP_L3_IPV6 |
+						  BPF_F_ADJ_ROOM_ENCAP_L2(sizeof(struct ethhdr)))) {
+		return -1;
 	}
-
-	ret = -1;
 
 	if (skb_refresh_validate_ptrs(ctx, new_hdrsz)) {
 		deny_reason(ctx, CALI_REASON_SHORT);
 		CALI_DEBUG("Too short VXLAN encap\n");
-		goto out;
+		return -1;
 	}
 
 	// Note: assuming L2 packet here so this code can't be used on an L3 device.
 	struct udphdr *udp = (struct udphdr*) ((void *)ip_hdr(ctx) + IP_SIZE);
 	struct vxlanhdr *vxlan = (void *)(udp + 1);
 	struct ethhdr *eth_inner = (void *)(vxlan+1);
-	struct iphdr *ip_inner = (void*)(eth_inner+1);
+	struct ipv6hdr *ip_inner = (void*)(eth_inner+1);
 
 	/* Copy the original IP header. Since it is already DNATed, the dest IP is
 	 * already set. All we need to do is to change the source IP
@@ -56,17 +49,18 @@ static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, 
 	*ip_hdr(ctx) = *ip_inner;
 
 	/* decrement TTL for the inner IP header. TTL must be > 1 to get here */
-	ip_dec_ttl(ip_inner);
+	ip_inner->hop_limit--;
 
-	ip_hdr(ctx)->saddr = ip_src;
-	ip_hdr(ctx)->daddr = ip_dst;
-	ip_hdr(ctx)->tot_len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->tot_len) + new_hdrsz);
-	ip_hdr(ctx)->ihl = 5; /* in case there were options in ip_inner */
-	ip_hdr(ctx)->check = 0;
-	ip_hdr(ctx)->protocol = IPPROTO_UDP;
+	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->saddr, &ip_src);
+	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->daddr, &ip_dst);
+	ip_hdr(ctx)->payload_len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->payload_len) + new_hdrsz);
+	ip_hdr(ctx)->nexthdr = IPPROTO_UDP;
 
 	udp->source = udp->dest = bpf_htons(VXLAN_PORT);
-	udp->len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->tot_len) - sizeof(struct iphdr));
+	udp->len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->payload_len) - sizeof(struct iphdr));
+	/* XXX we leave udp->check == 0 which is not legal in IPv6, but we are
+	 * the only ones parsing that packet!
+	 */
 
 	*((__u8*)&vxlan->flags) = 1 << 3; /* set the I flag to make the VNI valid */
 	vxlan->vni = bpf_htonl(CALI_VXLAN_VNI) >> 8; /* it is actually 24-bit, last 8 reserved */
@@ -74,16 +68,10 @@ static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, 
 	/* keep eth_inner MACs zeroed, it is useless after decap */
 	eth_inner->h_proto = eth_hdr(ctx)->h_proto;
 
-	CALI_DEBUG("vxlan encap %x : %x\n", bpf_ntohl(ip_hdr(ctx)->saddr), bpf_ntohl(ip_hdr(ctx)->daddr));
+	CALI_DEBUG("vxlan encap %x : %x\n",
+		bpf_ntohl(ip_hdr(ctx)->saddr.in6_u.u6_addr32[0]), bpf_ntohl(ip_hdr(ctx)->daddr.in6_u.u6_addr32[0]));
 
-	/* change the checksums last to avoid pointer access revalidation */
-
-	csum = bpf_csum_diff(0, 0, ctx->ip_header, sizeof(struct iphdr), 0);
-	ret = bpf_l3_csum_replace(ctx->skb, ((long) ctx->ip_header) - ((long) skb_start_ptr(ctx->skb)) +
-				  offsetof(struct iphdr, check), 0, csum, 0);
-
-out:
-	return ret;
+	return 0;
 }
 
 static CALI_BPF_INLINE int vxlan_decap(struct __sk_buff *skb)

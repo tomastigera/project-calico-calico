@@ -51,7 +51,7 @@ CALI_MAP_NAMED(cali_v4_routes, cali_routes,,
 		union cali_rt_lpm_key, struct cali_rt,
 		256*1024, BPF_F_NO_PREALLOC)
 
-static CALI_BPF_INLINE struct cali_rt *cali_rt_lookup(ipv46_addr_t addr)
+static CALI_BPF_INLINE struct cali_rt *cali_rt_lookup(ipv46_addr_t *addr)
 {
 	union cali_rt_lpm_key k;
 #ifdef IPVER6
@@ -59,11 +59,11 @@ static CALI_BPF_INLINE struct cali_rt *cali_rt_lookup(ipv46_addr_t addr)
 #else
 	k.key.prefixlen = 32;
 #endif
-	k.key.addr = addr;
+	k.key.addr = *addr;
 	return cali_routes_lookup_elem(&k);
 }
 
-static CALI_BPF_INLINE enum cali_rt_flags cali_rt_lookup_flags(ipv46_addr_t addr)
+static CALI_BPF_INLINE enum cali_rt_flags cali_rt_lookup_flags(ipv46_addr_t *addr)
 {
 	struct cali_rt *rt = cali_rt_lookup(addr);
 	if (!rt) {
@@ -85,22 +85,22 @@ static CALI_BPF_INLINE enum cali_rt_flags cali_rt_lookup_flags(ipv46_addr_t addr
 #define cali_rt_flags_remote_tunneled_host(t) (((t) & (CALI_RT_LOCAL | CALI_RT_HOST | CALI_RT_TUNNELED)) == (CALI_RT_HOST | CALI_RT_TUNNELED))
 #define cali_rt_flags_local_tunneled_host(t) (((t) & (CALI_RT_LOCAL | CALI_RT_HOST | CALI_RT_TUNNELED)) == (CALI_RT_LOCAL | CALI_RT_HOST | CALI_RT_TUNNELED))
 
-static CALI_BPF_INLINE bool rt_addr_is_local_host(ipv46_addr_t addr)
+static CALI_BPF_INLINE bool rt_addr_is_local_host(ipv46_addr_t *addr)
 {
 	return  cali_rt_flags_local_host(cali_rt_lookup_flags(addr));
 }
 
-static CALI_BPF_INLINE bool rt_addr_is_remote_host(ipv46_addr_t addr)
+static CALI_BPF_INLINE bool rt_addr_is_remote_host(ipv46_addr_t *addr)
 {
 	return  cali_rt_flags_remote_host(cali_rt_lookup_flags(addr));
 }
 
-static CALI_BPF_INLINE bool rt_addr_is_remote_tunneled_host(ipv46_addr_t addr)
+static CALI_BPF_INLINE bool rt_addr_is_remote_tunneled_host(ipv46_addr_t *addr)
 {
 	return cali_rt_flags_remote_tunneled_host(cali_rt_lookup_flags(addr));
 }
 
-static CALI_BPF_INLINE bool rt_addr_is_local_tunneled_host(ipv46_addr_t addr)
+static CALI_BPF_INLINE bool rt_addr_is_local_tunneled_host(ipv46_addr_t *addr)
 {
 	return cali_rt_flags_local_tunneled_host(cali_rt_lookup_flags(addr));
 }
