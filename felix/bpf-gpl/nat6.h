@@ -19,7 +19,7 @@
 #define VXLAN_ENCAP_SIZE	(sizeof(struct ethhdr) + sizeof(struct iphdr) + \
 				sizeof(struct udphdr) + sizeof(struct vxlanhdr))
 
-static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx, ipv6_addr_t ip_src, ipv6_addr_t ip_dst)
+static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx, ipv6_addr_t *ip_src, ipv6_addr_t *ip_dst)
 {
 	__u32 new_hdrsz = sizeof(struct ethhdr) + sizeof(struct ipv6hdr) +
 			sizeof(struct udphdr) + sizeof(struct vxlanhdr);
@@ -51,8 +51,8 @@ static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx, ipv6_addr_t ip_s
 	/* decrement TTL for the inner IP header. TTL must be > 1 to get here */
 	ip_inner->hop_limit--;
 
-	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->saddr, &ip_src);
-	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->daddr, &ip_dst);
+	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->saddr, ip_src);
+	ipv6_addr_t_to_ipv6hdr_ip(&ip_hdr(ctx)->daddr, ip_dst);
 	ip_hdr(ctx)->payload_len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->payload_len) + new_hdrsz);
 	ip_hdr(ctx)->nexthdr = IPPROTO_UDP;
 

@@ -19,7 +19,7 @@
 #define VXLAN_ENCAP_SIZE	(sizeof(struct ethhdr) + sizeof(struct iphdr) + \
 				sizeof(struct udphdr) + sizeof(struct vxlanhdr))
 
-static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, __be32 ip_dst)
+static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 *ip_src, __be32 *ip_dst)
 {
 	int ret;
 	__wsum csum;
@@ -58,8 +58,8 @@ static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, 
 	/* decrement TTL for the inner IP header. TTL must be > 1 to get here */
 	ip_dec_ttl(ip_inner);
 
-	ip_hdr(ctx)->saddr = ip_src;
-	ip_hdr(ctx)->daddr = ip_dst;
+	ip_hdr(ctx)->saddr = *ip_src;
+	ip_hdr(ctx)->daddr = *ip_dst;
 	ip_hdr(ctx)->tot_len = bpf_htons(bpf_ntohs(ip_hdr(ctx)->tot_len) + new_hdrsz);
 	ip_hdr(ctx)->ihl = 5; /* in case there were options in ip_inner */
 	ip_hdr(ctx)->check = 0;

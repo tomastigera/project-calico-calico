@@ -977,7 +977,7 @@ nat_encap:
 		}
 	}
 
-	if (vxlan_encap(ctx, STATE->ip_src, STATE->ip_dst)) {
+	if (vxlan_encap(ctx, &STATE->ip_src, &STATE->ip_dst)) {
 		deny_reason(ctx, CALI_REASON_ENCAP_FAIL);
 		goto  deny;
 	}
