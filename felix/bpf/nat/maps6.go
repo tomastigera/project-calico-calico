@@ -105,7 +105,7 @@ func (k FrontendKeyV6) srcAddr() ip.Addr {
 
 // This function returns the Prefix length of the source CIDR
 func (k FrontendKeyV6) SrcPrefixLen() uint32 {
-	return k.PrefixLen() - ZeroCIDRPrefixLen
+	return k.PrefixLen() - ZeroCIDRV6PrefixLen
 }
 
 func (k FrontendKeyV6) SrcCIDR() ip.CIDR {
@@ -129,7 +129,7 @@ func (k FrontendKeyV6) Affinitykey() []byte {
 }
 
 func (k FrontendKeyV6) String() string {
-	return fmt.Sprintf("NATKey{Proto:%v Addr:%v Port:%v SrcAddr:%v}", k.Proto(), k.Addr(), k.Port(), k.SrcCIDR())
+	return fmt.Sprintf("NATKeyV6{Proto:%v Addr:%v Port:%v SrcAddr:%v}", k.Proto(), k.Addr(), k.Port(), k.SrcCIDR())
 }
 
 func FrontendKeyV6FromBytes(b []byte) FrontendKeyV6 {
@@ -187,7 +187,7 @@ func (k BackendValueV6) Port() uint16 {
 }
 
 func (k BackendValueV6) String() string {
-	return fmt.Sprintf("NATBackendValue{Addr:%v Port:%v}", k.Addr(), k.Port())
+	return fmt.Sprintf("NATBackendValueV6{Addr:%v Port:%v}", k.Addr(), k.Port())
 }
 
 func (k BackendValueV6) AsBytes() []byte {
