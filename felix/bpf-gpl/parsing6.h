@@ -94,7 +94,7 @@ static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v6(struct cali_tc_ctx *ctx)
 	// Fill in source ip
 	ipv6hdr_ip_to_ipv6_addr_t(&ctx->state->ip_src, &ip_hdr(ctx)->saddr);
 	// Fill in dst ip
-	ipv6hdr_ip_to_ipv6_addr_t(&ctx->state->ip_dst, &ip_hdr(ctx)->saddr);
+	ipv6hdr_ip_to_ipv6_addr_t(&ctx->state->ip_dst, &ip_hdr(ctx)->daddr);
 	// Fill in pre nat ip
 	ctx->state->pre_nat_ip_dst = ctx->state->ip_dst;
 	// Fill in other information
@@ -121,7 +121,7 @@ static CALI_BPF_INLINE void tc_state_fill_from_iphdr_v6(struct cali_tc_ctx *ctx)
 	int ipoff = skb_iphdr_offset(ctx);
 	int len = IP_SIZE;
 
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < 8; i++) {
 		struct ipv6_opt_hdr opt;
 
 		CALI_DEBUG("loading extension at offset %d\n", ipoff + len);

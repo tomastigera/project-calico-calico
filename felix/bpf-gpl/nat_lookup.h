@@ -14,8 +14,8 @@
 #include "routes.h"
 #include "nat_types.h"
 
-static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip_src,
-								 ipv46_addr_t ip_dst,
+static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t *ip_src,
+								 ipv46_addr_t *ip_dst,
 								 __u8 ip_proto,
 								 __u16 dport,
 								 bool from_tun,
@@ -29,10 +29,10 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 {
 	struct calico_nat_key nat_key = {
 		.prefixlen = NAT_PREFIX_LEN_WITH_SRC_MATCH_IN_BITS,
-		.addr = ip_dst,
+		.addr = *ip_dst,
 		.port = dport,
 		.protocol = ip_proto,
-		.saddr = ip_src,
+		.saddr = *ip_src,
 	};
 	struct calico_nat_value *nat_lv1_val;
 	struct calico_nat_secondary_key nat_lv2_key;
@@ -66,14 +66,14 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		 * straight NAT and avoid a possible extra hop.
 		 */
 		if (!(CALI_F_FROM_WEP || CALI_F_TO_HEP || CALI_F_CGROUP ||
-					(CALI_F_FROM_HEP && from_tun)) || ip_equal(ip_dst, NP_SPECIAL_IP)) {
+					(CALI_F_FROM_HEP && from_tun)) || ip_equal(*ip_dst, NP_SPECIAL_IP)) {
 			return NULL;
 		}
 
 		/* XXX replace the following with a nodeport cidrs lookup once
 		 * XXX we have it.
 		 */
-		rt = cali_rt_lookup(&ip_dst);
+		rt = cali_rt_lookup(ip_dst);
 		if (!rt) {
 			CALI_DEBUG("NAT: route miss\n");
 			if (!from_tun) {
@@ -120,7 +120,7 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 		bool local_traffic = true;
 
 		if (CALI_F_FROM_HEP) {
-			struct cali_rt *rt = cali_rt_lookup(&ip_src);
+			struct cali_rt *rt = cali_rt_lookup(ip_src);
 
 			if (!rt || (!cali_rt_is_host(rt) && !cali_rt_is_workload(rt))) {
 				local_traffic = false;
@@ -148,12 +148,12 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 	}
 
 	struct calico_nat nat_data = {
-		.addr = ip_dst,
+		.addr = *ip_dst,
 		.port = dport,
 		.protocol = ip_proto,
 	};
 	affkey.nat_key = nat_data;
-	affkey.client_ip = ip_src;
+	affkey.client_ip = *ip_src;
 
 	CALI_DEBUG("NAT: backend affinity %d seconds\n", nat_lv1_val->affinity_timeo ? : affinity_always_timeo);
 
@@ -172,9 +172,9 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup(ipv46_addr_t ip
 
 			return &affval->nat_dest;
 		}
-		CALI_DEBUG("NAT: affinity expired for %x:%d\n", debug_ip(ip_dst), dport);
+		CALI_DEBUG("NAT: affinity expired for %x:%d\n", debug_ip(*ip_dst), dport);
 	} else {
-		CALI_DEBUG("no previous affinity for %x:%d", debug_ip(ip_dst), dport);
+		CALI_DEBUG("no previous affinity for %x:%d", debug_ip(*ip_dst), dport);
 	}
 	/* To be k8s conformant, fall through to pick a random backend. */
 
@@ -200,7 +200,7 @@ skip_affinity:
 			.nat_dest = *nat_lv2_val,
 		};
 
-		CALI_DEBUG("NAT: updating affinity for client %x\n", debug_ip(ip_src));
+		CALI_DEBUG("NAT: updating affinity for client %x\n", debug_ip(*ip_src));
 		if ((err = cali_nat_aff_update_elem(&affkey, &val, BPF_ANY))) {
 			CALI_INFO("NAT: failed to update affinity table: %d\n", err);
 			/* we do carry on, we have a good nat_lv2_val */
@@ -212,7 +212,7 @@ skip_affinity:
 
 #if !(CALI_F_XDP) && !(CALI_F_CGROUP)
 static CALI_BPF_INLINE struct calico_nat_dest* calico_nat_lookup_tc(struct cali_tc_ctx *ctx,
-								    ipv46_addr_t ip_src, ipv46_addr_t ip_dst,
+								    ipv46_addr_t *ip_src, ipv46_addr_t *ip_dst,
 								    __u8 ip_proto, __u16 dport,
 								    bool from_tun,
 								    nat_lookup_result *res)

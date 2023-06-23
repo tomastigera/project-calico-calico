@@ -139,7 +139,7 @@ static CALI_BPF_INLINE int vxlan_attempt_decap(struct cali_tc_ctx *ctx)
 	/* decap on host ep only if directly for the node */
 	CALI_DEBUG("VXLAN tunnel packet to %x (host IP=%x)\n",
 #ifdef IPVER6
-		bpf_ntohl(ip_hdr(ctx)->daddr.in6_u.u6_addr32[0]),
+		bpf_ntohl(ip_hdr(ctx)->daddr.in6_u.u6_addr32[3]),
 #else
 		bpf_ntohl(ip_hdr(ctx)->daddr),
 #endif

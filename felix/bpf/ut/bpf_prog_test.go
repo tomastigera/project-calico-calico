@@ -105,8 +105,8 @@ var (
 		Mask: net.IPv4Mask(255, 255, 255, 255),
 	}
 
-	node1ipV6    = net.ParseIP("abcd::ffff:0b0a:0001").To16()
-	node1ip2V6   = net.ParseIP("abcd::ffff:0c0a:0201").To16()
+	node1ipV6    = net.ParseIP("abcd::ffff:0a0a:0001").To16()
+	node1ip2V6   = net.ParseIP("abcd::ffff:0a0a:0201").To16()
 	node1tunIPV6 = net.ParseIP("abcd::ffff:0b0b:0001").To16()
 	node2ipV6    = net.ParseIP("abcd::ffff:0a0a:0002").To16()
 	intfIPV6     = net.ParseIP("abcd::ffff:0a0a:0003").To16()
@@ -526,7 +526,7 @@ var (
 	mapInitOnce sync.Once
 
 	natMap, natBEMap, ctMap, rtMap, ipsMap, testStateMap, affinityMap, arpMap, fsafeMap maps.Map
-	natMapV6, natBEMapV6, ctMapV6, rtMapV6, affinityMapV6                               maps.Map
+	natMapV6, natBEMapV6, ctMapV6, rtMapV6, affinityMapV6, arpMapV6                     maps.Map
 	stateMap, countersMap, ifstateMap, progMap, progMapXDP, jumpMap, jumpMapXDP         maps.Map
 	allMaps                                                                             []maps.Map
 )
@@ -547,12 +547,13 @@ func initMapsOnce() {
 		affinityMap = nat.AffinityMap()
 		affinityMapV6 = nat.AffinityMapV6()
 		arpMap = arp.Map()
+		arpMapV6 = arp.MapV6()
 		fsafeMap = failsafes.Map()
 		countersMap = counters.Map()
 		ifstateMap = ifstate.Map()
 
 		allMaps = []maps.Map{natMap, natBEMap, natMapV6, natBEMapV6, ctMap, ctMapV6, rtMap, rtMapV6, ipsMap,
-			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, fsafeMap, countersMap, ifstateMap}
+			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, arpMapV6, fsafeMap, countersMap, ifstateMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -1327,7 +1328,20 @@ func saveRTMap(rtMap maps.Map) routes.MapMem {
 	return rt
 }
 
+func saveRTMapV6(rtMap maps.Map) routes.MapMemV6 {
+	rt, err := routes.LoadMapV6(rtMap)
+	Expect(err).NotTo(HaveOccurred())
+	return rt
+}
+
 func restoreRTMap(rtMap maps.Map, m routes.MapMem) {
+	for k, v := range m {
+		err := rtMap.Update(k[:], v[:])
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func restoreRTMapV6(rtMap maps.Map, m routes.MapMemV6) {
 	for k, v := range m {
 		err := rtMap.Update(k[:], v[:])
 		Expect(err).NotTo(HaveOccurred())
@@ -1344,8 +1358,24 @@ func dumpARPMap(arpMap maps.Map) {
 	fmt.Printf("\n")
 }
 
-func saveARPMap(ctMap maps.Map) arp.MapMem {
-	m, err := arp.LoadMapMem(arpMap)
+func dumpARPMapV6(arpMap maps.Map) {
+	ct, err := arp.LoadMapMemV6(arpMap)
+	Expect(err).NotTo(HaveOccurred())
+	fmt.Printf("ARP dump:\n")
+	for k, v := range ct {
+		fmt.Printf("- %s : %s\n", k, v)
+	}
+	fmt.Printf("\n")
+}
+
+func saveARPMap(am maps.Map) arp.MapMem {
+	m, err := arp.LoadMapMem(am)
+	Expect(err).NotTo(HaveOccurred())
+	return m
+}
+
+func saveARPMapV6(am maps.Map) arp.MapMemV6 {
+	m, err := arp.LoadMapMemV6(am)
 	Expect(err).NotTo(HaveOccurred())
 	return m
 }
@@ -1604,6 +1634,7 @@ func (pkt *Packet) handleL3() error {
 		} else {
 			pkt.ipv6.NextHeader = pkt.l4Protocol
 		}
+		pkt.length += 40
 		pkt.ipv6.Length = uint16(pkt.length)
 		pkt.layers = append(pkt.layers, pkt.ipv6)
 	default:

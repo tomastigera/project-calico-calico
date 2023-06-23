@@ -237,7 +237,7 @@ static CALI_BPF_INLINE __attribute__((noreturn)) void bpf_exit(int rc) {
 
 #ifdef IPVER6
 
-#define debug_ip(ip) (bpf_htonl(ip.d))
+#define debug_ip(ip) (bpf_htonl((ip).d))
 #define ip_is_dnf(ip) (true)
 
 #else

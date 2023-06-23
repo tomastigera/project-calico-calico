@@ -100,19 +100,18 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		goto deny;
 	} else if (rc == CALI_RES_REDIR_IFINDEX) {
 		__u32 iface = state->ct_result.ifindex_fwd;
-#ifndef IPVER6
 
 		struct arp_value *arpv;
 
 		struct arp_key arpk = {
-			.ip = iface != NATIN_IFACE ? state->ip_dst : 0 /* 0.0.0.0 */,
+			.ip = iface != NATIN_IFACE ? state->ip_dst : VOID_IP,
 			.ifindex = iface,
 		};
 
 		arpv = cali_arp_lookup_elem(&arpk);
 		if (!arpv) {
 			CALI_DEBUG("ARP lookup failed for %x dev %d\n",
-					bpf_ntohl(state->ip_dst), iface);
+					debug_ip(state->ip_dst), iface);
 			goto skip_redir_ifindex;
 		}
 
@@ -136,7 +135,6 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		}
 
 skip_redir_ifindex:
-#endif
 		CALI_DEBUG("Redirect directly to interface (%d) failed.\n", iface);
 		/* fall through to FIB if enabled or the IP stack, don't give up yet. */
 		rc = TC_ACT_UNSPEC;
@@ -266,7 +264,7 @@ cancel_fib:
 				.ifindex = iface,
 			};
 
-			ip_set_void(arpk.ip); 
+			ip_set_void(arpk.ip);
 
 			struct arp_value *arpv = cali_arp_lookup_elem(&arpk);
 			if (!arpv) {

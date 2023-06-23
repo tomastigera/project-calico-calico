@@ -69,7 +69,7 @@ static CALI_BPF_INLINE int vxlan_encap(struct cali_tc_ctx *ctx, ipv6_addr_t *ip_
 	eth_inner->h_proto = eth_hdr(ctx)->h_proto;
 
 	CALI_DEBUG("vxlan encap %x : %x\n",
-		bpf_ntohl(ip_hdr(ctx)->saddr.in6_u.u6_addr32[0]), bpf_ntohl(ip_hdr(ctx)->daddr.in6_u.u6_addr32[0]));
+		bpf_ntohl(ip_hdr(ctx)->saddr.in6_u.u6_addr32[3]), bpf_ntohl(ip_hdr(ctx)->daddr.in6_u.u6_addr32[3]));
 
 	return 0;
 }
@@ -79,7 +79,7 @@ static CALI_BPF_INLINE int vxlan_decap(struct __sk_buff *skb)
 	__u32 extra_hdrsz;
 	int ret = -1;
 
-	extra_hdrsz = sizeof(struct ethhdr) + sizeof(struct iphdr) +
+	extra_hdrsz = sizeof(struct ethhdr) + sizeof(struct ipv6hdr) +
 		sizeof(struct udphdr) + sizeof(struct vxlanhdr);
 
 	ret = bpf_skb_adjust_room(skb, -extra_hdrsz, BPF_ADJ_ROOM_MAC | BPF_F_ADJ_ROOM_FIXED_GSO, 0);
