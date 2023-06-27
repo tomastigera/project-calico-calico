@@ -77,7 +77,7 @@ func NewNATKeyV6(addr net.IP, port uint16, protocol uint8) FrontendKeyV6 {
 	return NewNATKeyV6Src(addr, port, protocol, ZeroCIDRV6)
 }
 
-func NewNATKeyV6Src(addr net.IP, port uint16, protocol uint8, cidr ip.V6CIDR) FrontendKeyV6 {
+func NewNATKeyV6Src(addr net.IP, port uint16, protocol uint8, cidr ip.CIDR) FrontendKeyV6 {
 	var k FrontendKeyV6
 	prefixlen := ZeroCIDRV6PrefixLen
 	addr = addr.To16()
@@ -126,6 +126,12 @@ func (k FrontendKeyV6) AsBytes() []byte {
 
 func (k FrontendKeyV6) Affinitykey() []byte {
 	return k[4:12]
+}
+
+func (k FrontendKeyV6) AffinitykeyCopy() FrontEndAffinityKeyV6 {
+	var affkey FrontEndAffinityKeyV6
+	copy(affkey[:], k.Affinitykey())
+	return affkey
 }
 
 func (k FrontendKeyV6) String() string {
@@ -406,6 +412,12 @@ func (k AffinityKeyV6) AsBytes() []byte {
 	return k[:]
 }
 
+func AffinityKeyV6FromBytes(b []byte) AffinityKeyV6 {
+	var v AffinityKeyV6
+	copy(v[:], b)
+	return v
+}
+
 // struct calico_nat_v4_affinity_val {
 //    struct calico_nat_dest;
 //    uint64_t ts;
@@ -452,6 +464,12 @@ func (v AffinityValueV6) String() string {
 // AsBytes returns the value as []byte
 func (v AffinityValueV6) AsBytes() []byte {
 	return v[:]
+}
+
+func AffinityValueV6FromBytes(b []byte) AffinityValueV6 {
+	var v AffinityValueV6
+	copy(v[:], b)
+	return v
 }
 
 // AffinityMapParameters describe the AffinityMap

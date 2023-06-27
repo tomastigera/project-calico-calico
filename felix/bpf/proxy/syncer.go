@@ -104,9 +104,12 @@ type stickyFrontend struct {
 
 // Syncer is an implementation of DPSyncer interface. It is not thread safe and
 // should be called only once at a time
-type Syncer struct {
-	bpfSvcs *cachingmap.CachingMap[nat.FrontendKey, nat.FrontendValue]
-	bpfEps  *cachingmap.CachingMap[nat.BackendKey, nat.BackendValue]
+type Syncer[
+	FEK nat.FrontendKeyInterface[FAFK], BEV nat.BackendValueInterface,
+	FAFK nat.FrontEndAffinityKeyInterface, AFK nat.AffinityKeyInterface[FAFK], AFV nat.AffinityValueInterface[BEV],
+] struct {
+	bpfSvcs *cachingmap.CachingMap[FEK, nat.FrontendValue]
+	bpfEps  *cachingmap.CachingMap[nat.BackendKey, BEV]
 	bpfAff  maps.Map
 
 	nextSvcID uint32
@@ -137,12 +140,18 @@ type Syncer struct {
 	stop     chan struct{}
 	stopOnce sync.Once
 
-	stickySvcs map[nat.FrontEndAffinityKey]stickyFrontend
-	stickyEps  map[uint32]map[nat.BackendValue]struct{}
+	stickySvcs map[FAFK]stickyFrontend
+	stickyEps  map[uint32]map[BEV]struct{}
 
 	// triggerFn is called when one of the syncer's background threads needs to trigger an Apply().
 	// The proxy sets this to the runner's Run() method.  We assume that the method doesn't block.
 	triggerFn func()
+
+	newFEK       func(addr net.IP, port uint16, protocol uint8) FEK
+	newFEKSrc    func(addr net.IP, port uint16, protocol uint8, cidr ip.CIDR) FEK
+	newBEV       func(addr net.IP, port uint16) BEV
+	fromBytesAFK func([]byte) AFK
+	fromBytesAFV func([]byte) AFV
 }
 
 type ipPort struct {
@@ -193,12 +202,21 @@ func uniqueIPs(ips []net.IP) []net.IP {
 }
 
 // NewSyncer returns a new Syncer
-func NewSyncer(nodePortIPs []net.IP,
-	svcsmap *cachingmap.CachingMap[nat.FrontendKey, nat.FrontendValue],
-	epsmap *cachingmap.CachingMap[nat.BackendKey, nat.BackendValue],
-	affmap maps.Map, rt Routes) (*Syncer, error) {
+func NewSyncer[
+	FEK nat.FrontendKeyInterface[FAFK], BEV nat.BackendValueInterface,
+	FAFK nat.FrontEndAffinityKeyInterface, AFK nat.AffinityKeyInterface[FAFK], AFV nat.AffinityValueInterface[BEV],
+](nodePortIPs []net.IP,
+	svcsmap *cachingmap.CachingMap[FEK, nat.FrontendValue],
+	epsmap *cachingmap.CachingMap[nat.BackendKey, BEV],
+	affmap maps.Map, rt Routes,
+	newFEK func(addr net.IP, port uint16, protocol uint8) FEK,
+	newFEKSrc func(addr net.IP, port uint16, protocol uint8, cidr ip.CIDR) FEK,
+	newBEV func(addr net.IP, port uint16) BEV,
+	fromBytesAFK func([]byte) AFK,
+	fromBytesAFV func([]byte) AFV,
+) (*Syncer[FEK, BEV, FAFK, AFK, AFV], error) {
 
-	s := &Syncer{
+	s := &Syncer[FEK, BEV, FAFK, AFK, AFV]{
 		bpfSvcs:     svcsmap,
 		bpfEps:      epsmap,
 		bpfAff:      affmap,
@@ -207,6 +225,12 @@ func NewSyncer(nodePortIPs []net.IP,
 		prevSvcMap:  make(map[svcKey]svcInfo),
 		prevEpsMap:  make(k8sp.EndpointsMap),
 		stop:        make(chan struct{}),
+
+		newFEK:       newFEK,
+		newFEKSrc:    newFEKSrc,
+		newBEV:       newBEV,
+		fromBytesAFK: fromBytesAFK,
+		fromBytesAFV: fromBytesAFV,
 	}
 
 	if err := s.loadOrigs(); err != nil {
@@ -216,7 +240,7 @@ func NewSyncer(nodePortIPs []net.IP,
 	return s, nil
 }
 
-func (s *Syncer) loadOrigs() error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) loadOrigs() error {
 	err := s.bpfEps.LoadCacheFromDataplane()
 	if err != nil {
 		return err
@@ -235,8 +259,8 @@ type syncRef struct {
 
 // svcMapToIPPortProtoMap takes the kubernetes service representation and makes an index
 // so we can cross reference with the values we learn from the dataplane.
-func (s *Syncer) svcMapToIPPortProtoMap(svcs k8sp.ServicePortMap) map[nat.FrontendKey]syncRef {
-	ref := make(map[nat.FrontendKey]syncRef, len(svcs))
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) svcMapToIPPortProtoMap(svcs k8sp.ServicePortMap) map[FEK]syncRef {
+	ref := make(map[FEK]syncRef, len(svcs))
 
 	for key, svc := range svcs {
 		clusterIP := svc.ClusterIP()
@@ -245,29 +269,29 @@ func (s *Syncer) svcMapToIPPortProtoMap(svcs k8sp.ServicePortMap) map[nat.Fronte
 
 		xref := syncRef{key, svc}
 
-		ref[nat.NewNATKey(clusterIP, port, proto)] = xref
+		ref[s.newFEK(clusterIP, port, proto)] = xref
 
 		np := uint16(0)
 
 		if svc.NodePort() != 0 {
 			np = uint16(svc.NodePort())
 
-			ref[nat.NewNATKey(clusterIP, np, proto)] = xref
+			ref[s.newFEK(clusterIP, np, proto)] = xref
 
 			for _, npIP := range s.nodePortIPs {
-				ref[nat.NewNATKey(npIP, np, proto)] = xref
+				ref[s.newFEK(npIP, np, proto)] = xref
 			}
 		}
 
 		for _, extIP := range svc.ExternalIPStrings() {
-			ref[nat.NewNATKey(net.ParseIP(extIP), port, proto)] = xref
+			ref[s.newFEK(net.ParseIP(extIP), port, proto)] = xref
 		}
 	}
 
 	return ref
 }
 
-func (s *Syncer) startupBuildPrev(state DPSyncerState) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) startupBuildPrev(state DPSyncerState) error {
 	// Build a map keyed by nat.FrontendKey of services to be generated from the
 	// state. The map values contains references to both ServicePortName keys of
 	// the state map as well as the ServicePort values.
@@ -277,7 +301,7 @@ func (s *Syncer) startupBuildPrev(state DPSyncerState) error {
 
 	// Walk the frontend bpf map that was read into memory and match it against the
 	// references build from the state
-	s.bpfSvcs.IterDataplaneCache(func(svck nat.FrontendKey, svcv nat.FrontendValue) {
+	s.bpfSvcs.IterDataplaneCache(func(svck FEK, svcv nat.FrontendValue) {
 		xref, ok := svcRef[svck]
 		if !ok {
 			return
@@ -335,7 +359,7 @@ func (s *Syncer) startupBuildPrev(state DPSyncerState) error {
 	return nil
 }
 
-func (s *Syncer) startupSync(state DPSyncerState) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) startupSync(state DPSyncerState) error {
 	// Try to build the previous maps based on the current state and what is in bpf maps.
 	// Once we have the previous map, we can apply the the current state as if we never
 	// restarted and apply only the diff using the regular code path.
@@ -346,7 +370,7 @@ func (s *Syncer) startupSync(state DPSyncerState) error {
 	return nil
 }
 
-func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoint) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoint) error {
 	var id uint32
 
 	old, exists := s.prevSvcMap[skey]
@@ -374,7 +398,7 @@ func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoi
 	return nil
 }
 
-func (s *Syncer) addActiveEps(id uint32, svc k8sp.ServicePort, eps []k8sp.Endpoint) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) addActiveEps(id uint32, svc k8sp.ServicePort, eps []k8sp.Endpoint) {
 	svcKey := servicePortToIPPortProto(svc)
 
 	s.activeSvcsMap[svcKey] = id
@@ -394,7 +418,7 @@ func (s *Syncer) addActiveEps(id uint32, svc k8sp.ServicePort, eps []k8sp.Endpoi
 	}
 }
 
-func (s *Syncer) applyExpandedNP(sname k8sp.ServicePortName, sinfo k8sp.ServicePort,
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) applyExpandedNP(sname k8sp.ServicePortName, sinfo k8sp.ServicePort,
 	eps []k8sp.Endpoint, node ip.V4Addr, nport int) error {
 	skey := getSvcKey(sname, getSvcKeyExtra(svcTypeNodePortRemote, node.String()))
 	si := serviceInfoFromK8sServicePort(sinfo)
@@ -415,7 +439,7 @@ type expandMiss struct {
 	nport int
 }
 
-func (s *Syncer) expandAndApplyNodePorts(sname k8sp.ServicePortName, sinfo k8sp.ServicePort,
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) expandAndApplyNodePorts(sname k8sp.ServicePortName, sinfo k8sp.ServicePort,
 	eps []k8sp.Endpoint, nport int, rtLookup func(addr ip.Addr) (routes.ValueInterface, bool)) *expandMiss {
 
 	ipToEp, miss := s.expandNodePorts(sname, sinfo, eps, nport, rtLookup)
@@ -429,7 +453,7 @@ func (s *Syncer) expandAndApplyNodePorts(sname k8sp.ServicePortName, sinfo k8sp.
 	return miss
 }
 
-func (s *Syncer) expandNodePorts(
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) expandNodePorts(
 	sname k8sp.ServicePortName,
 	sinfo k8sp.ServicePort,
 	eps []k8sp.Endpoint,
@@ -469,7 +493,7 @@ func (s *Syncer) expandNodePorts(
 	return ipToEp, miss
 }
 
-func (s *Syncer) applyDerived(
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) applyDerived(
 	sname k8sp.ServicePortName,
 	t svcType,
 	sinfo k8sp.ServicePort,
@@ -523,7 +547,7 @@ func (s *Syncer) applyDerived(
 	return nil
 }
 
-func (s *Syncer) apply(state DPSyncerState) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) apply(state DPSyncerState) error {
 	log.Infof("Applying new state, %d service", len(state.SvcMap))
 	log.Debugf("Applying new state, %v", state)
 
@@ -646,7 +670,7 @@ func (s *Syncer) apply(state DPSyncerState) error {
 }
 
 // Apply applies the new state
-func (s *Syncer) Apply(state DPSyncerState) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) Apply(state DPSyncerState) error {
 	if !s.synced {
 		log.Infof("Loading BPF map state from dataplane")
 		if err := s.startupSync(state); err != nil {
@@ -666,8 +690,8 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 	defer s.mapsLck.Unlock()
 
 	// preallocate maps to track sticky services for cleanup
-	s.stickySvcs = make(map[nat.FrontEndAffinityKey]stickyFrontend)
-	s.stickyEps = make(map[uint32]map[nat.BackendValue]struct{})
+	s.stickySvcs = make(map[FAFK]stickyFrontend)
+	s.stickyEps = make(map[uint32]map[BEV]struct{})
 
 	defer func() {
 		// not needed anymore
@@ -691,7 +715,7 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 	return s.cleanupSticky()
 }
 
-func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, eps []k8sp.Endpoint) (int, int, error) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, eps []k8sp.Endpoint) (int, int, error) {
 	cpEps := make([]k8sp.Endpoint, 0, len(eps))
 
 	cnt := 0
@@ -700,7 +724,7 @@ func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, e
 	if sinfo.SessionAffinityType() == v1.ServiceAffinityClientIP {
 		// since we write the backend before we write the frontend, we need to
 		// preallocate the map for it
-		s.stickyEps[id] = make(map[nat.BackendValue]struct{})
+		s.stickyEps[id] = make(map[BEV]struct{})
 	}
 
 	for _, ep := range eps {
@@ -755,7 +779,7 @@ func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, e
 	return cnt, local, nil
 }
 
-func (s *Syncer) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) error {
 	if log.GetLevel() >= log.DebugLevel {
 		log.WithFields(log.Fields{
 			"svcID": svcID,
@@ -771,7 +795,7 @@ func (s *Syncer) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) err
 	if err != nil {
 		return errors.Errorf("no port for endpoint %q: %s", ep, err)
 	}
-	val := nat.NewNATBackendValue(ip, uint16(tgtPort))
+	val := s.newBEV(ip, uint16(tgtPort))
 	s.bpfEps.SetDesired(key, val)
 
 	if s.stickyEps[svcID] != nil {
@@ -781,19 +805,19 @@ func (s *Syncer) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) err
 	return nil
 }
 
-func getSvcNATKey(svc k8sp.ServicePort) (nat.FrontendKey, error) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) getSvcNATKey(svc k8sp.ServicePort) (FEK, error) {
 	ip := svc.ClusterIP()
 	port := svc.Port()
 	proto, err := ProtoV1ToInt(svc.Protocol())
 	if err != nil {
-		return nat.FrontendKey{}, err
+		return s.newFEK(ip, uint16(port), proto), err
 	}
 
-	key := nat.NewNATKey(ip, uint16(port), proto)
+	key := s.newFEK(ip, uint16(port), proto)
 	return key, nil
 }
 
-func getSvcNATKeyLBSrcRange(svc k8sp.ServicePort) ([]nat.FrontendKey, error) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) getSvcNATKeyLBSrcRange(svc k8sp.ServicePort) ([]FEK, error) {
 	ipaddr := svc.ClusterIP()
 	port := svc.Port()
 	loadBalancerSourceRanges := svc.LoadBalancerSourceRanges()
@@ -805,21 +829,21 @@ func getSvcNATKeyLBSrcRange(svc k8sp.ServicePort) ([]nat.FrontendKey, error) {
 		return nil, err
 	}
 
-	keys := make([]nat.FrontendKey, 0, len(loadBalancerSourceRanges))
+	keys := make([]FEK, 0, len(loadBalancerSourceRanges))
 
 	for _, src := range loadBalancerSourceRanges {
 		// Ignore IPv6 addresses
 		if strings.Contains(src, ":") {
 			continue
 		}
-		key := nat.NewNATKeySrc(ipaddr, uint16(port), proto, ip.MustParseCIDROrIP(src).(ip.V4CIDR))
+		key := s.newFEKSrc(ipaddr, uint16(port), proto, ip.MustParseCIDROrIP(src).(ip.V4CIDR))
 		keys = append(keys, key)
 	}
 	return keys, nil
 }
 
-func (s *Syncer) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, count, local int, flags uint32) error {
-	var key nat.FrontendKey
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, count, local int, flags uint32) error {
+	var key FEK
 	affinityTimeo := uint32(0)
 	if svc.SessionAffinityType() == v1.ServiceAffinityClientIP {
 		affinityTimeo = uint32(svc.StickyMaxAgeSeconds())
@@ -828,7 +852,7 @@ func (s *Syncer) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, c
 	if len(svc.LoadBalancerSourceRanges()) == 0 {
 		return nil
 	}
-	keys, err := getSvcNATKeyLBSrcRange(svc)
+	keys, err := s.getSvcNATKeyLBSrcRange(svc)
 	if err != nil {
 		return err
 	}
@@ -839,7 +863,7 @@ func (s *Syncer) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, c
 		}
 		s.bpfSvcs.SetDesired(key, val)
 	}
-	key, err = getSvcNATKey(svc)
+	key, err = s.getSvcNATKey(svc)
 	if err != nil {
 		return err
 	}
@@ -848,8 +872,8 @@ func (s *Syncer) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, c
 	return nil
 }
 
-func (s *Syncer) writeSvc(svc k8sp.ServicePort, svcID uint32, count, local int, flags uint32) error {
-	key, err := getSvcNATKey(svc)
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) writeSvc(svc k8sp.ServicePort, svcID uint32, count, local int, flags uint32) error {
+	key, err := s.getSvcNATKey(svc)
 	if err != nil {
 		return err
 	}
@@ -866,10 +890,9 @@ func (s *Syncer) writeSvc(svc k8sp.ServicePort, svcID uint32, count, local int, 
 	}
 	s.bpfSvcs.SetDesired(key, val)
 
-	var affkey nat.FrontEndAffinityKey
-	copy(affkey[:], key.Affinitykey())
 	// we must have written the backends by now so the map exists
 	if s.stickyEps[svcID] != nil {
+		affkey := key.AffinitykeyCopy()
 		s.stickySvcs[affkey] = stickyFrontend{
 			id:    svcID,
 			timeo: time.Duration(affinityTimeo) * time.Second,
@@ -904,14 +927,14 @@ func ProtoV1ToIntPanic(p v1.Protocol) uint8 {
 	return pn
 }
 
-func (s *Syncer) newSvcID() uint32 {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) newSvcID() uint32 {
 	// TODO we may run out of IDs unless we restart to recycle
 	id := s.nextSvcID
 	s.nextSvcID++
 	return id
 }
 
-func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName, k8sInfo k8sp.ServicePort) *svcKey {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) matchBpfSvc(bpfSvc FEK, k8sSvc k8sp.ServicePortName, k8sInfo k8sp.ServicePort) *svcKey {
 	matchNP := func() *svcKey {
 		if bpfSvc.Port() == uint16(k8sInfo.NodePort()) {
 			for _, nip := range s.nodePortIPs {
@@ -1010,7 +1033,7 @@ func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName
 	return nil
 }
 
-func (s *Syncer) runExpandNPFixup(misses []*expandMiss) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) runExpandNPFixup(misses []*expandMiss) {
 	if len(misses) == 0 {
 		return
 	}
@@ -1084,11 +1107,11 @@ func (s *Syncer) runExpandNPFixup(misses []*expandMiss) {
 	}()
 }
 
-func (s *Syncer) SetTriggerFn(f func()) {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) SetTriggerFn(f func()) {
 	s.triggerFn = f
 }
 
-func (s *Syncer) StopExpandNPFixup() {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) StopExpandNPFixup() {
 	// If there was an error before we started ExpandNPFixup, there is nothing to stop
 	if s.expFixupStop != nil {
 		close(s.expFixupStop)
@@ -1098,7 +1121,7 @@ func (s *Syncer) StopExpandNPFixup() {
 }
 
 // Stop stops the syncer
-func (s *Syncer) Stop() {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) Stop() {
 	s.stopOnce.Do(func() {
 		log.Info("Syncer stopping")
 		close(s.stop)
@@ -1107,23 +1130,15 @@ func (s *Syncer) Stop() {
 	})
 }
 
-func (s *Syncer) cleanupSticky() error {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) cleanupSticky() error {
 	debug := log.GetLevel() >= log.DebugLevel
 	_ = debug // Work around linter false-positive.
-
-	var (
-		key nat.AffinityKey
-		val nat.AffinityValue
-	)
-
-	ks := len(nat.AffinityKey{})
-	vs := len(nat.AffinityValue{})
 
 	now := time.Duration(bpf.KTimeNanos())
 
 	err := s.bpfAff.Iter(func(k, v []byte) maps.IteratorAction {
-		copy(key[:], k[:ks])
-		copy(val[:], v[:vs])
+		key := s.fromBytesAFK(k)
+		val := s.fromBytesAFV(v)
 
 		fend, ok := s.stickySvcs[key.FrontendAffinityKey()]
 		if !ok {
@@ -1158,7 +1173,7 @@ func (s *Syncer) cleanupSticky() error {
 }
 
 // ConntrackFrontendHasBackend returns true if the given front-backend pair exists
-func (s *Syncer) ConntrackFrontendHasBackend(ip net.IP, port uint16,
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) ConntrackFrontendHasBackend(ip net.IP, port uint16,
 	backendIP net.IP, backendPort uint16, proto uint8) (ret bool) {
 
 	if log.GetLevel() >= log.DebugLevel {
@@ -1190,7 +1205,7 @@ func (s *Syncer) ConntrackFrontendHasBackend(ip net.IP, port uint16,
 
 // ConntrackScanStart excludes Apply from running and builds the active maps from
 // ConntrackFrontendHasBackend
-func (s *Syncer) ConntrackScanStart() {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) ConntrackScanStart() {
 	log.Debug("ConntrackScanStart")
 	s.mapsLck.Lock()
 
@@ -1212,7 +1227,7 @@ func (s *Syncer) ConntrackScanStart() {
 }
 
 // ConntrackScanEnd enables Apply and frees active maps
-func (s *Syncer) ConntrackScanEnd() {
+func (s *Syncer[FEK, BEV, FAFK, AFK, AFV]) ConntrackScanEnd() {
 	// free the maps when the iteration is complete
 	s.activeSvcsMap = nil
 	s.activeEpsMap = nil

@@ -55,7 +55,15 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 	beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
 		maps.NewTypedMap[nat.BackendKey, nat.BackendValue](eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-	s, _ := proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+	s, _ := proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+		nat.AffinityKey, nat.AffinityValue,
+	](nodeIPs, feCache, beCache, aff, rt,
+		nat.NewNATKey,
+		nat.NewNATKeySrc,
+		nat.NewNATBackendValue,
+		nat.AffinityKeyFromBytes,
+		nat.AffinityValueFromBytes,
+	)
 
 	svcKey := k8sp.ServicePortName{
 		NamespacedName: types.NamespacedName{
@@ -214,7 +222,15 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 			beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
 				maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 					eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
-			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(svcs.m).To(HaveLen(3))
@@ -233,7 +249,15 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 			beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
 				maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 					eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
-			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(svcs.m).To(HaveLen(2))

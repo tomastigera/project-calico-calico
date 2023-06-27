@@ -119,11 +119,16 @@ func benchmarkStartupSync(b *testing.B, svcCnt, epCnt int) {
 		b.StopTimer()
 		for n := 0; n < b.N; n++ {
 			origSvcs, origEps := stateToBPFMaps(state)
-			s := &Syncer{
+			s := &Syncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey, nat.AffinityKey, nat.AffinityValue]{
 				prevSvcMap: make(map[svcKey]svcInfo),
 				prevEpsMap: make(k8sp.EndpointsMap),
 				bpfSvcs:    origSvcs,
 				bpfEps:     origEps,
+
+				newFEK:       nat.NewNATKey,
+				newFEKSrc:    nat.NewNATKeySrc,
+				fromBytesAFK: nat.AffinityKeyFromBytes,
+				fromBytesAFV: nat.AffinityValueFromBytes,
 			}
 			Expect(origSvcs.LoadCacheFromDataplane()).NotTo(HaveOccurred())
 			Expect(origEps.LoadCacheFromDataplane()).NotTo(HaveOccurred())
@@ -171,12 +176,19 @@ func runBenchmarkServiceUpdate(b *testing.B, svcCnt, epCnt int, mockMaps bool, o
 			maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 				&mock.DummyMap{}, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-		syncer, err = NewSyncer(
+		syncer, err = NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+			nat.AffinityKey, nat.AffinityValue,
+		](
 			[]net.IP{net.IPv4(1, 1, 1, 1)},
 			feCache,
 			beCache,
 			&mock.DummyMap{},
 			NewRTCache(),
+			nat.NewNATKey,
+			nat.NewNATKeySrc,
+			nat.NewNATBackendValue,
+			nat.AffinityKeyFromBytes,
+			nat.AffinityValueFromBytes,
 		)
 		Expect(err).ShouldNot(HaveOccurred())
 	} else {
@@ -194,12 +206,19 @@ func runBenchmarkServiceUpdate(b *testing.B, svcCnt, epCnt int, mockMaps bool, o
 			maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 				beMap, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-		syncer, err = NewSyncer(
+		syncer, err = NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+			nat.AffinityKey, nat.AffinityValue,
+		](
 			[]net.IP{net.IPv4(1, 1, 1, 1)},
 			feCache,
 			beCache,
 			&mock.DummyMap{},
 			NewRTCache(),
+			nat.NewNATKey,
+			nat.NewNATKeySrc,
+			nat.NewNATBackendValue,
+			nat.AffinityKeyFromBytes,
+			nat.AffinityValueFromBytes,
 		)
 		Expect(err).ShouldNot(HaveOccurred())
 	}

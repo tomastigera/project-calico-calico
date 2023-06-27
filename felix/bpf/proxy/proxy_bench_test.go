@@ -53,12 +53,19 @@ func benchmarkProxyUpdates(b *testing.B, svcN, epsN int) {
 			maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 				&mock.DummyMap{}, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-		syncer, err := proxy.NewSyncer(
+		syncer, err := proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+			nat.AffinityKey, nat.AffinityValue,
+		](
 			[]net.IP{net.IPv4(1, 1, 1, 1)},
 			feCache,
 			beCache,
 			&mock.DummyMap{},
 			proxy.NewRTCache(),
+			nat.NewNATKey,
+			nat.NewNATKeySrc,
+			nat.NewNATBackendValue,
+			nat.AffinityKeyFromBytes,
+			nat.AffinityValueFromBytes,
 		)
 		Expect(err).ShouldNot(HaveOccurred())
 

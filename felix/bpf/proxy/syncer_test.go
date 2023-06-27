@@ -64,7 +64,15 @@ var _ = Describe("BPF Syncer", func() {
 		maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
 			eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-	s, _ := proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+	s, _ := proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+		nat.AffinityKey, nat.AffinityValue,
+	](nodeIPs, feCache, beCache, aff, rt,
+		nat.NewNATKey,
+		nat.NewNATKeySrc,
+		nat.NewNATBackendValue,
+		nat.AffinityKeyFromBytes,
+		nat.AffinityValueFromBytes,
+	)
 
 	svcKey := k8sp.ServicePortName{
 		NamespacedName: types.NamespacedName{
@@ -402,7 +410,15 @@ var _ = Describe("BPF Syncer", func() {
 		}))
 
 		By("resyncing after creating a new syncer with the same result", makestep(func() {
-			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			checkAfterResync()
 		}))
 
@@ -410,7 +426,15 @@ var _ = Describe("BPF Syncer", func() {
 			svcs.m[nat.NewNATKey(net.IPv4(5, 5, 5, 5), 1111, 6)] = nat.NewNATValue(0xdeadbeef, 2, 2, 0)
 			eps.m[nat.NewNATBackendKey(0xdeadbeef, 0)] = nat.NewNATBackendValue(net.IPv4(6, 6, 6, 6), 666)
 			eps.m[nat.NewNATBackendKey(0xdeadbeef, 1)] = nat.NewNATBackendValue(net.IPv4(7, 7, 7, 7), 777)
-			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			checkAfterResync()
 		}))
 
@@ -558,7 +582,15 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("inserting non-local eps for a NodePort - no route", makestep(func() {
 			// use the meta node IP for nodeports as well
-			s, _ = proxy.NewSyncer(append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			state.SvcMap[svcKey2] = proxy.NewK8sServicePort(
 				net.IPv4(10, 0, 0, 2),
 				2222,
@@ -711,7 +743,15 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("inserting only non-local eps for a NodePort - multiple nodes & pods/node", makestep(func() {
 			// use the meta node IP for nodeports as well
-			s, _ = proxy.NewSyncer(append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			state.SvcMap[svcKey2] = proxy.NewK8sServicePort(
 				net.IPv4(10, 0, 0, 2),
 				2222,
@@ -791,7 +831,15 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("restarting Syncer to check if NodePortRemotes are picked up correctly", makestep(func() {
 			// use the meta node IP for nodeports as well
-			s, _ = proxy.NewSyncer(append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt)
+			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
+				nat.AffinityKey, nat.AffinityValue,
+			](append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt,
+				nat.NewNATKey,
+				nat.NewNATKeySrc,
+				nat.NewNATBackendValue,
+				nat.AffinityKeyFromBytes,
+				nat.AffinityValueFromBytes,
+			)
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())
 
