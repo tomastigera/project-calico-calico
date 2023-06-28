@@ -50,19 +50,17 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 	externalIP := makeIPs([]string{"35.0.0.2"})
 	twoExternalIPs := makeIPs([]string{"35.0.0.2", "45.0.1.2"})
 
-	feCache := cachingmap.New[nat.FrontendKey, nat.FrontendValue](nat.FrontendMapParameters.Name,
-		maps.NewTypedMap[nat.FrontendKey, nat.FrontendValue](svcs, nat.FrontendKeyFromBytes, nat.FrontendValueFromBytes))
-	beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
-		maps.NewTypedMap[nat.BackendKey, nat.BackendValue](eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
+	feCache := cachingmap.New[nat.FrontendKeyInterface, nat.FrontendValue](nat.FrontendMapParameters.Name,
+		maps.NewTypedMap[nat.FrontendKeyInterface, nat.FrontendValue](svcs, nat.FrontendKeyFromBytes, nat.FrontendValueFromBytes))
+	beCache := cachingmap.New[nat.BackendKey, nat.BackendValueInterface](nat.BackendMapParameters.Name,
+		maps.NewTypedMap[nat.BackendKey, nat.BackendValueInterface](eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
 
-	s, _ := proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
-		nat.AffinityKey, nat.AffinityValue,
-	](nodeIPs, feCache, beCache, aff, rt,
-		nat.NewNATKey,
-		nat.NewNATKeySrc,
-		nat.NewNATBackendValue,
-		nat.AffinityKeyFromBytes,
-		nat.AffinityValueFromBytes,
+	s, _ := proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt,
+		nat.NewNATKeyIntf,
+		nat.NewNATKeySrcIntf,
+		nat.NewNATBackendValueIntf,
+		nat.AffinityKeyIntfFromBytes,
+		nat.AffinityValueIntfFromBytes,
 	)
 
 	svcKey := k8sp.ServicePortName{
@@ -216,20 +214,18 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 				externalIP,
 				proxy.K8sSvcWithLBSourceRangeIPs([]string{"35.0.1.2/24"}),
 			)
-			feCache := cachingmap.New[nat.FrontendKey, nat.FrontendValue](nat.FrontendMapParameters.Name,
-				maps.NewTypedMap[nat.FrontendKey, nat.FrontendValue](
+			feCache := cachingmap.New[nat.FrontendKeyInterface, nat.FrontendValue](nat.FrontendMapParameters.Name,
+				maps.NewTypedMap[nat.FrontendKeyInterface, nat.FrontendValue](
 					svcs, nat.FrontendKeyFromBytes, nat.FrontendValueFromBytes))
-			beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
-				maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
+			beCache := cachingmap.New[nat.BackendKey, nat.BackendValueInterface](nat.BackendMapParameters.Name,
+				maps.NewTypedMap[nat.BackendKey, nat.BackendValueInterface](
 					eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
-			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
-				nat.AffinityKey, nat.AffinityValue,
-			](nodeIPs, feCache, beCache, aff, rt,
-				nat.NewNATKey,
-				nat.NewNATKeySrc,
-				nat.NewNATBackendValue,
-				nat.AffinityKeyFromBytes,
-				nat.AffinityValueFromBytes,
+			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKeyIntf,
+				nat.NewNATKeySrcIntf,
+				nat.NewNATBackendValueIntf,
+				nat.AffinityKeyIntfFromBytes,
+				nat.AffinityValueIntfFromBytes,
 			)
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())
@@ -243,20 +239,18 @@ func testfn(makeIPs func(ips []string) proxy.K8sServicePortOption) {
 				v1.ProtocolTCP,
 				externalIP,
 			)
-			feCache := cachingmap.New[nat.FrontendKey, nat.FrontendValue](nat.FrontendMapParameters.Name,
-				maps.NewTypedMap[nat.FrontendKey, nat.FrontendValue](
+			feCache := cachingmap.New[nat.FrontendKeyInterface, nat.FrontendValue](nat.FrontendMapParameters.Name,
+				maps.NewTypedMap[nat.FrontendKeyInterface, nat.FrontendValue](
 					svcs, nat.FrontendKeyFromBytes, nat.FrontendValueFromBytes))
-			beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
-				maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
+			beCache := cachingmap.New[nat.BackendKey, nat.BackendValueInterface](nat.BackendMapParameters.Name,
+				maps.NewTypedMap[nat.BackendKey, nat.BackendValueInterface](
 					eps, nat.BackendKeyFromBytes, nat.BackendValueFromBytes))
-			s, _ = proxy.NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
-				nat.AffinityKey, nat.AffinityValue,
-			](nodeIPs, feCache, beCache, aff, rt,
-				nat.NewNATKey,
-				nat.NewNATKeySrc,
-				nat.NewNATBackendValue,
-				nat.AffinityKeyFromBytes,
-				nat.AffinityValueFromBytes,
+			s, _ = proxy.NewSyncer(nodeIPs, feCache, beCache, aff, rt,
+				nat.NewNATKeyIntf,
+				nat.NewNATKeySrcIntf,
+				nat.NewNATBackendValueIntf,
+				nat.AffinityKeyIntfFromBytes,
+				nat.AffinityValueIntfFromBytes,
 			)
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())

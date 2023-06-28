@@ -124,40 +124,38 @@ func (kp *KubeProxy) run(hostIPs []net.IP) error {
 	var syncer DPSyncer
 
 	if kp.ipFamily == 4 {
-		feCache := cachingmap.New[nat.FrontendKey, nat.FrontendValue](nat.FrontendMapParameters.Name,
-			maps.NewTypedMap[nat.FrontendKey, nat.FrontendValue](
+		feCache := cachingmap.New[nat.FrontendKeyInterface, nat.FrontendValue](nat.FrontendMapParameters.Name,
+			maps.NewTypedMap[nat.FrontendKeyInterface, nat.FrontendValue](
 				kp.frontendMap, nat.FrontendKeyFromBytes, nat.FrontendValueFromBytes,
 			))
-		beCache := cachingmap.New[nat.BackendKey, nat.BackendValue](nat.BackendMapParameters.Name,
-			maps.NewTypedMap[nat.BackendKey, nat.BackendValue](
+		beCache := cachingmap.New[nat.BackendKey, nat.BackendValueInterface](nat.BackendMapParameters.Name,
+			maps.NewTypedMap[nat.BackendKey, nat.BackendValueInterface](
 				kp.backendMap, nat.BackendKeyFromBytes, nat.BackendValueFromBytes,
 			))
 
 		var err error
-		syncer, err = NewSyncer[nat.FrontendKey, nat.BackendValue, nat.FrontEndAffinityKey,
-			nat.AffinityKey, nat.AffinityValue,
-		](
+		syncer, err = NewSyncer(
 			withLocalNP, feCache, beCache, kp.affinityMap, kp.rt,
-			nat.NewNATKey, nat.NewNATKeySrc, nat.NewNATBackendValue, nat.AffinityKeyFromBytes, nat.AffinityValueFromBytes)
+			nat.NewNATKeyIntf, nat.NewNATKeySrcIntf, nat.NewNATBackendValueIntf,
+			nat.AffinityKeyIntfFromBytes, nat.AffinityValueIntfFromBytes)
 		if err != nil {
 			return errors.WithMessage(err, "new bpf syncer")
 		}
 	} else {
-		feCache := cachingmap.New[nat.FrontendKeyV6, nat.FrontendValue](nat.FrontendMapParameters.Name,
-			maps.NewTypedMap[nat.FrontendKeyV6, nat.FrontendValue](
+		feCache := cachingmap.New[nat.FrontendKeyInterface, nat.FrontendValue](nat.FrontendMapParameters.Name,
+			maps.NewTypedMap[nat.FrontendKeyInterface, nat.FrontendValue](
 				kp.frontendMap, nat.FrontendKeyV6FromBytes, nat.FrontendValueFromBytes,
 			))
-		beCache := cachingmap.New[nat.BackendKey, nat.BackendValueV6](nat.BackendMapParameters.Name,
-			maps.NewTypedMap[nat.BackendKey, nat.BackendValueV6](
+		beCache := cachingmap.New[nat.BackendKey, nat.BackendValueInterface](nat.BackendMapParameters.Name,
+			maps.NewTypedMap[nat.BackendKey, nat.BackendValueInterface](
 				kp.backendMap, nat.BackendKeyFromBytes, nat.BackendValueV6FromBytes,
 			))
 
 		var err error
-		syncer, err = NewSyncer[nat.FrontendKeyV6, nat.BackendValueV6, nat.FrontEndAffinityKeyV6,
-			nat.AffinityKeyV6, nat.AffinityValueV6,
-		](
+		syncer, err = NewSyncer(
 			withLocalNP, feCache, beCache, kp.affinityMap, kp.rt,
-			nat.NewNATKeyV6, nat.NewNATKeyV6Src, nat.NewNATBackendValueV6, nat.AffinityKeyV6FromBytes, nat.AffinityValueV6FromBytes)
+			nat.NewNATKeyV6Intf, nat.NewNATKeyV6SrcIntf,
+			nat.NewNATBackendValueV6Intf, nat.AffinityKeyV6IntfFromBytes, nat.AffinityValueV6IntfFromBytes)
 		if err != nil {
 			return errors.WithMessage(err, "new bpf syncer")
 		}
