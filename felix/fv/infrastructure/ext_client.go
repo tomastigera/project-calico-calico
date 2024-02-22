@@ -24,9 +24,13 @@ import (
 )
 
 func RunExtClient(namePrefix string) *containers.Container {
+	return RunExtNode(namePrefix)
+}
+
+func RunExtNode(namePrefix string) *containers.Container {
 	wd, err := os.Getwd()
 	Expect(err).NotTo(HaveOccurred(), "failed to get working directory")
-	externalClient := containers.Run(
+	externalNode := containers.Run(
 		namePrefix,
 		containers.RunOpts{
 			AutoRemove: true,
@@ -35,5 +39,5 @@ func RunExtClient(namePrefix string) *containers.Container {
 		"-v", wd+"/../bin:/usr/local/bin", // Map in the test-connectivity binary etc.
 		utils.Config.BusyboxImage,
 		"/bin/sh", "-c", "sleep 1000")
-	return externalClient
+	return externalNode
 }

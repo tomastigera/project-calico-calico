@@ -793,6 +793,108 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						Expect(checkServiceRoute(tc.Felixes[0], tcpsvc.Spec.ClusterIP)).To(BeFalse())
 					})
+
+					It("should have connectivity from host via service to external workload", func() {
+						By("running external workload")
+
+						ext := workload.NewExternal("ext-workload", "8066", testOpts.protocol)
+						ext.Start()
+						defer ext.Stop()
+
+						By("creating service with external endpoint")
+
+						clusterIP := "10.101.0.254"
+						family := 4
+						addrType := discovery.AddressTypeIPv4
+						if testOpts.ipv6 {
+							clusterIP = "dead:beef::abcd:0:0:254"
+							family = 6
+							addrType = discovery.AddressTypeIPv6
+						}
+
+						k8sProto := v1.ProtocolTCP
+						if testOpts.protocol == "udp" {
+							k8sProto = v1.ProtocolUDP
+						}
+
+						svc := &v1.Service{
+							TypeMeta:   typeMetaV1("Service"),
+							ObjectMeta: objectMetaV1("ext-service"),
+							Spec: v1.ServiceSpec{
+								ClusterIP: clusterIP,
+								Type:      "ClusterIP",
+								Ports: []v1.ServicePort{
+									{
+										Protocol: k8sProto,
+										Port:     int32(8066),
+									},
+								},
+							},
+						}
+
+						k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
+						_, err := k8sClient.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
+						Expect(err).NotTo(HaveOccurred())
+
+						portName := ""
+						portProto := k8sProto
+						portPort := int32(8066)
+						truePtr := new(bool)
+						*truePtr = true
+
+						eps := &discovery.EndpointSlice{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "EndpointSlice",
+								APIVersion: "discovery.k8s.io/v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "ext-service-eps",
+								Namespace: "default",
+								Labels: map[string]string{
+									"kubernetes.io/service-name": "ext-service",
+								},
+							},
+							AddressType: addrType,
+							Endpoints: []discovery.Endpoint{
+								{
+									Addresses: []string{ext.IP},
+									Conditions: discovery.EndpointConditions{
+										Ready: truePtr,
+									},
+								},
+							},
+							Ports: []discovery.EndpointPort{{
+								Name:     &portName,
+								Protocol: &portProto,
+								Port:     &portPort,
+							}},
+						}
+
+						_, err = k8sClient.DiscoveryV1().EndpointSlices("default").
+							Create(context.Background(), eps, metav1.CreateOptions{})
+						Expect(err).NotTo(HaveOccurred())
+
+						var natK nat.FrontendKeyInterface
+						if testOpts.ipv6 {
+							natK = nat.NewNATKeyV6(net.ParseIP(clusterIP), 8066, numericProto)
+						} else {
+							natK = nat.NewNATKey(net.ParseIP(clusterIP), 8066, numericProto)
+						}
+
+						Eventually(func(g Gomega) {
+							natmap, natbe := dumpNATMapsAny(family, tc.Felixes[0])
+							g.Expect(natmap).To(HaveKey(natK))
+							g.Expect(natmap[natK].Count()).To(Equal(uint32(1)))
+							svc := natmap[natK]
+							bckID := svc.ID()
+							g.Expect(natbe).To(HaveKey(nat.NewNATBackendKey(bckID, 0)))
+						}, "5s").Should(Succeed(), "service or backedns didn't show up")
+
+						By("testing connectivity")
+
+						cc.Expect(Some, hostW, TargetIP(clusterIP), ExpectWithPorts(8066))
+						cc.CheckConnectivity()
+					})
 				})
 			}
 

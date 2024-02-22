@@ -816,3 +816,22 @@ func (w *Workload) InterfaceIndex() int {
 	log.Infof("%v is ifindex %v", w.InterfaceName, ifIndex)
 	return ifIndex
 }
+
+func NewExternal(name, ports, protocol string, opts ...Opt) *Workload {
+	c := infrastructure.RunExtNode(name)
+
+	workload := &Workload{
+		C:        c,
+		Name:     name,
+		IP:       c.IP, // host networked, no concept of pod on the external node
+		Ports:    ports,
+		Protocol: protocol,
+		MTU:      defaultMTU,
+	}
+
+	for _, o := range opts {
+		o(workload)
+	}
+
+	return workload
+}
