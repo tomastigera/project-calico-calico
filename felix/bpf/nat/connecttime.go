@@ -120,7 +120,7 @@ func RemoveConnectTimeLoadBalancer(cgroupv2 string) error {
 func loadProgram(logLevel, ipver string, udpNotSeen time.Duration, excludeUDP bool) (*libbpf.Obj, error) {
 	filename := path.Join(bpfdefs.ObjectDir, ProgFileName(logLevel, ipver))
 
-	log.WithField("filename", filename).Debug("Loading object file")
+	log.WithField("filename", filename).Info("Loading object file")
 	obj, err := libbpf.OpenObject(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load %s: %w", filename, err)
@@ -132,7 +132,7 @@ func loadProgram(logLevel, ipver string, udpNotSeen time.Duration, excludeUDP bo
 		// userspace before the program is loaded.
 		mapName := m.Name()
 		if m.IsMapInternal() {
-			if strings.HasPrefix(mapName, ".rodata") {
+			if strings.Contains(mapName, ".rodata") {
 				continue
 			}
 			if err := libbpf.CTLBSetGlobals(m, udpNotSeen, excludeUDP); err != nil {
