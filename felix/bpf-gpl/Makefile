@@ -155,12 +155,6 @@ bin/connect_time_%v46.o: connect_time_%v46.ll | bin
 	$(LINK)
 bin/connect_time_%v6.o: connect_time_%v6.ll | bin
 	$(LINK)
-bin/connect_time_%v4_co-re.o: connect_time_%v4.ll | bin
-	$(LINK)
-bin/connect_time_%v46_co-re.o: connect_time_%v46.ll | bin
-	$(LINK)
-bin/connect_time_%v6_co-re.o: connect_time_%v6.ll | bin
-	$(LINK)
 ut/%.o: ut/%.ll
 	$(LINK)
 ut/ip_parse_test_v6.ll: ut/ip_parse_test.c
