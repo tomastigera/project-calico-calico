@@ -6,9 +6,45 @@ spec:
   entrypoint: main
   templateDefaults:
     script:
+      image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.84
+      imagePullPolicy: Always
+      command: ["bash", "-e"]
+      workingDir: "/src"
+      securityContext:
+        runAsUser: 1000
+        privileged: true
       envFrom:
         - secretRef:
             name: marvin-github-ssh-private-key
+        - secretRef:
+            name: banzai-secrets
+      env:
+        - name: DOCKER_HOST
+          value: tcp://127.0.0.1:2375
+        - name: GOPROXY
+          value: http://proxy.athens.svc
+      volumeMounts:
+        - name: src
+          mountPath: /src
+        - name: home
+          mountPath: /root
+        - name: tmp
+          mountPath: /tmp
+        - name: go
+          mountPath: /go
+    sidecars:
+      - name: dind
+        image: docker:20.10.17-dind
+        command:
+        - dockerd-entrypoint.sh
+        - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
+        - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
+        env:
+          - name: DOCKER_TLS_CERTDIR
+            value: ""
+        securityContext:
+          privileged: true
+        mirrorVolumeMounts: true
     volumes:
       - name: src
         emptyDir: {}
@@ -24,46 +60,30 @@ spec:
       dag:
         tasks:
           - name: build-images
+            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'PR'"
             template: build-images
+          - name: push-dev-images
+            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
+            template: push-dev-images
 
     - name: build-images
       script:
-        image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.84
-        imagePullPolicy: Always
-        command: ["bash", "-e"]
-        workingDir: "/src"
-        securityContext:
-          runAsUser: 1000
-          privileged: true
-        env:
-          - name: DOCKER_HOST
-            value: tcp://127.0.0.1:2375
-          - name: GOPROXY
-            value: http://proxy.athens.svc
         source: |
           source checkout
           cd cc-dashboard-query-api
           until docker ps; do sleep 5; done
           make docker-build
-        volumeMounts:
-          - name: src
-            mountPath: /src
-          - name: home
-            mountPath: /root
-          - name: tmp
-            mountPath: /tmp
-          - name: go
-            mountPath: /go
-      sidecars:
-        - name: dind
-          image: docker:20.10.17-dind
-          command:
-          - dockerd-entrypoint.sh
-          - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
-          - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
-          env:
-            - name: DOCKER_TLS_CERTDIR
-              value: ""
-          securityContext:
-            privileged: true
-          mirrorVolumeMounts: true
+
+    - name: push-dev-images
+      script:
+        env:
+          - name: GCP_PROJECT
+            value: tigera-cc-dev
+        source: |
+          source checkout
+          createLocalSecret "banzai-google-service-account.json" "${HOME}/secrets/banzai-google-service-account.json"
+          gcloud auth activate-service-account --key-file="${HOME}/secrets/banzai-google-service-account.json"
+          gcloud auth configure-docker -q
+          cd cc-dashboard-query-api
+          until docker ps; do sleep 5; done
+          make docker-push
