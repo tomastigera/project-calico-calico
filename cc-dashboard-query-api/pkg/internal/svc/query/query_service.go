@@ -267,7 +267,7 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 	getCollectionField := func(fieldName string) (collections.CollectionField, error) {
 		field, found := queryCollection.Field(collections.FieldName(fieldName))
 		if !found {
-			return collections.CollectionField{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection field name '%s'", fieldName))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("unknown collection field name '%s'", fieldName))
 		}
 		return field, nil
 	}

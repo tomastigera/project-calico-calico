@@ -14,6 +14,8 @@ type Collection struct {
 }
 
 type CollectionField struct {
-	Type CollectionFieldType `json:"type"`
-	Name CollectionFieldName `json:"name"`
+	Type         CollectionFieldType `json:"type"`
+	Name         CollectionFieldName `json:"name"`
+	Values       []string            `json:"values,omitempty"`
+	DefaultValue string              `json:"defaultValue,omitempty"`
 }

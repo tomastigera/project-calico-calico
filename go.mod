@@ -19,10 +19,10 @@ require (
 	github.com/tigera/tds-apiserver/lib v0.0.0-20241107114339-895c99d984d5
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	k8s.io/api v0.28.12
-	k8s.io/apimachinery v0.29.2
-	k8s.io/apiserver v0.28.12
-	k8s.io/client-go v0.28.12
+	k8s.io/api v0.29.10
+	k8s.io/apimachinery v0.29.10
+	k8s.io/apiserver v0.29.10
+	k8s.io/client-go v0.29.10
 )
 
 require (
@@ -111,20 +111,25 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.28.12 // indirect
+	k8s.io/component-base v0.29.10 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232 // indirect
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	sigs.k8s.io/network-policy-api v0.1.5 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20240822082915-1750bc98a164
+	// github.com/tigera/calico-private@v3.20.0-2.0
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20241101222323-0d90db0e812a
 
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.28.12
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.28.12
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.28.12
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.28.12
+	// github.com/tigera/calico-private@v3.20.0-2.0
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20241101222323-0d90db0e812a
+
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.10
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.10
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.29.10
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.10
 )

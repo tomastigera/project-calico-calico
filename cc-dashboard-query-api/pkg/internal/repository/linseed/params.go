@@ -11,12 +11,14 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/filters"
+	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 type queryParams struct {
 	lsv1.QueryParams
 
 	selector      string
+	policyMatches []lsv1.PolicyMatch
 	domainMatches map[lsv1.DomainMatchType][]string
 }
 
@@ -97,6 +99,25 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 				p.domainMatches[lsv1.DomainMatchRRData] = append(p.domainMatches[lsv1.DomainMatchRRData], domain)
 			}
 			return "", nil
+		case collections.FieldTypeEnum:
+			if c.Field().Name() == collections.FieldNamePolicyType {
+				collectionFieldEnum, ok := c.Field().(collections.CollectionFieldEnum)
+				if !ok {
+					return "", fmt.Errorf("incorrect collection field type '%s' for field '%s'", c.Field().Type(), c.Field().Name())
+				}
+
+				value, ok := c.Value().(string)
+				if !ok || !slices.Contains(collectionFieldEnum.Values(), value) {
+					return "", fmt.Errorf("invalid collection field '%s' value: '%v'", c.Field().Name(), c.Value())
+				}
+
+				if (value == collections.FieldPolicyStaged && !c.Negate()) ||
+					(value != collections.FieldPolicyStaged && c.Negate()) {
+					p.policyMatches = append(p.policyMatches, lsv1.PolicyMatch{Staged: true})
+				}
+				return "", nil
+			}
+			return "", fmt.Errorf("unknown collection enum field '%s'", c.Field().Name())
 		}
 		return selectorEquals(c)
 	case *filters.CriterionOr:

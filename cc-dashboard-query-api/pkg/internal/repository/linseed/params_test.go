@@ -31,6 +31,9 @@ func TestParams(t *testing.T) {
 	clientIPField, found := collectionsMap[collections.CollectionNameDNS].Field("client_ip")
 	require.True(t, found)
 
+	policyTypeField, found := collectionsMap[collections.CollectionNameFlows].Field(collections.FieldNamePolicyType)
+	require.True(t, found)
+
 	t.Run("filter criterion", func(t *testing.T) {
 		t.Run("in", func(t *testing.T) {
 			subject := newQueryParams(0)
@@ -117,6 +120,53 @@ func TestParams(t *testing.T) {
 					lsv1.DomainMatchRRData: nil,
 				},
 			}, subject)
+
+			t.Run("unknown enum field", func(t *testing.T) {
+				subject := newQueryParams(0)
+
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewEquals(collections.NewCollectionFieldEnum("invalid-field", nil, ""), "test-value", false),
+				}, time.Time{})
+				require.ErrorContains(t, err, "unknown collection enum field 'invalid-field'")
+			})
+
+			t.Run("policy match", func(t *testing.T) {
+				subject := newQueryParams(0)
+
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewEquals(policyTypeField, "staged", false),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, &queryParams{
+					policyMatches: []lsv1.PolicyMatch{
+						{Staged: true},
+					},
+					domainMatches: map[lsv1.DomainMatchType][]string{
+						lsv1.DomainMatchQname:  nil,
+						lsv1.DomainMatchRRSet:  nil,
+						lsv1.DomainMatchRRData: nil,
+					},
+				}, subject)
+
+				t.Run("negated", func(t *testing.T) {
+					subject := newQueryParams(0)
+
+					err := subject.setCriteria(filters.Criteria{
+						filters.NewEquals(policyTypeField, "staged", true),
+					}, time.Time{})
+					require.NoError(t, err)
+
+					require.Equal(t, &queryParams{
+						policyMatches: nil,
+						domainMatches: map[lsv1.DomainMatchType][]string{
+							lsv1.DomainMatchQname:  nil,
+							lsv1.DomainMatchRRSet:  nil,
+							lsv1.DomainMatchRRData: nil,
+						},
+					}, subject)
+				})
+			})
 		})
 
 		t.Run("exists", func(t *testing.T) {

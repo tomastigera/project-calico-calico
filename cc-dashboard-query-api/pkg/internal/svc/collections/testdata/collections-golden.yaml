@@ -1,0 +1,245 @@
+- defaultTimeFieldName: '@timestamp'
+  fields:
+  - name: '@timestamp'
+    type: date
+  - name: client_ip
+    type: ip
+  - name: client_name
+    type: text
+  - name: client_name_aggr
+    type: text
+  - name: client_namespace
+    type: text
+  - name: count
+    type: number
+  - name: dns.question.class
+    type: text
+  - name: dns.question.name
+    type: text
+  - name: dns.question.registered_domain
+    type: text
+  - name: dns.question.type
+    type: text
+  - name: dns.response_code
+    type: text
+  - name: end_time
+    type: date
+  - name: generated_time
+    type: date
+  - name: host
+    type: text
+  - name: latency_count
+    type: number
+  - name: latency_max
+    type: number
+  - name: latency_mean
+    type: number
+  - name: qclass
+    type: text
+  - name: qname
+    type: text
+  - name: qtype
+    type: text
+  - name: rcode
+    type: text
+  - name: rrsets.name
+    type: text
+  - name: rrsets.rdata
+    type: text
+  - name: servers.ip
+    type: ip
+  - name: servers.name
+    type: text
+  - name: servers.name_aggr
+    type: text
+  - name: servers.namespace
+    type: text
+  - name: source.ip
+    type: ip
+  - name: start_time
+    type: date
+  - name: type
+    type: text
+  name: dns
+- defaultTimeFieldName: '@timestamp'
+  fields:
+  - name: _index
+    type: text
+  - name: '@timestamp'
+    type: date
+  - name: action
+    type: text
+  - name: bytes_in
+    type: number
+  - name: bytes_out
+    type: number
+  - name: dest_domains
+    type: text
+  - name: dest_ip
+    type: ip
+  - name: dest_labels.labels
+    type: text
+  - name: dest_name
+    type: text
+  - name: dest_name_aggr
+    type: text
+  - name: dest_namespace
+    type: text
+  - name: dest_port
+    type: number
+  - name: dest_port_num
+    type: number
+  - name: dest_service_name
+    type: text
+  - name: dest_service_namespace
+    type: text
+  - name: dest_service_port
+    type: text
+  - name: dest_service_port_name
+    type: text
+  - name: dest_service_port_num
+    type: number
+  - name: dest_type
+    type: text
+  - name: destination.bytes
+    type: number
+  - name: destination.ip
+    type: ip
+  - name: destination.packets
+    type: number
+  - name: destination.port
+    type: number
+  - name: end_time
+    type: date
+  - name: event.action
+    type: text
+  - name: host
+    type: text
+  - name: http_requests_allowed_in
+    type: number
+  - name: http_requests_denied_in
+    type: number
+  - name: nat_outgoing_ports
+    type: number
+  - name: network.protocol
+    type: text
+  - name: num_flows
+    type: number
+  - name: num_flows_completed
+    type: number
+  - name: num_flows_started
+    type: number
+  - name: num_original_source_ips
+    type: number
+  - name: num_process_args
+    type: number
+  - name: num_process_ids
+    type: number
+  - name: num_process_names
+    type: number
+  - name: original_source_ips
+    type: ip
+  - name: packets_in
+    type: number
+  - name: packets_out
+    type: number
+  - defaultValue: enforced
+    name: policy.type
+    type: enum
+    values:
+    - staged
+    - enforced
+  - name: policies.all_policies
+    type: text
+  - name: process_args
+    type: text
+  - name: process_id
+    type: text
+  - name: process_name
+    type: text
+  - name: proto
+    type: text
+  - name: reporter
+    type: text
+  - name: source.bytes
+    type: number
+  - name: source.ip
+    type: ip
+  - name: source.packets
+    type: number
+  - name: source_ip
+    type: ip
+  - name: source_labels.labels
+    type: text
+  - name: source_name
+    type: text
+  - name: source_name_aggr
+    type: text
+  - name: source_namespace
+    type: text
+  - name: source_port
+    type: number
+  - name: source_port_num
+    type: number
+  - name: source_type
+    type: text
+  - name: start_time
+    type: date
+  - name: tcp_lost_packets
+    type: number
+  - name: tcp_max_min_rtt
+    type: number
+  - name: tcp_max_smooth_rtt
+    type: number
+  - name: tcp_mean_min_rtt
+    type: number
+  - name: tcp_mean_mss
+    type: number
+  - name: tcp_mean_send_congestion_window
+    type: number
+  - name: tcp_mean_smooth_rtt
+    type: number
+  - name: tcp_min_mss
+    type: number
+  - name: tcp_min_send_congestion_window
+    type: number
+  - name: tcp_total_retransmissions
+    type: number
+  - name: tcp_unrecovered_to
+    type: number
+  name: flows
+- defaultTimeFieldName: '@timestamp'
+  fields:
+  - name: '@timestamp'
+    type: date
+  - name: bytes_in
+    type: number
+  - name: bytes_out
+    type: number
+  - name: dest_name
+    type: text
+  - name: dest_name_aggr
+    type: text
+  - name: dest_namespace
+    type: text
+  - name: dest_port_num
+    type: number
+  - name: dest_service_name
+    type: text
+  - name: dest_service_namespace
+    type: text
+  - name: dest_service_port
+    type: text
+  - name: dest_service_port_name
+    type: text
+  - name: dest_service_port
+    type: number
+  - name: host
+    type: text
+  - name: method
+    type: text
+  - name: url
+    type: text
+  - name: user_agent
+    type: text
+  name: l7

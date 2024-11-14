@@ -53,10 +53,16 @@ components:
       type: object
     CollectionField:
       properties:
+        defaultValue:
+          type: string
         name:
           type: string
         type:
           type: string
+        values:
+          items:
+            type: string
+          type: array
       type: object
     QueryRequest:
       properties:

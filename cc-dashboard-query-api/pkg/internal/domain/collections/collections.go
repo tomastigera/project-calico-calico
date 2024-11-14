@@ -14,11 +14,17 @@ const (
 	FieldTypeIP     = FieldType("ip")
 	FieldTypeText   = FieldType("text")
 	FieldTypeDate   = FieldType("date")
+	FieldTypeEnum   = FieldType("enum")
 	FieldTypeNumber = FieldType("number")
 
 	FieldTypeQName      = FieldType("qname")
 	FieldTypeRRSetsData = FieldType("rrsets.data")
 	FieldTypeRRSetsName = FieldType("rrsets.name")
+
+	FieldNamePolicyType = FieldName("policy.type")
+
+	FieldPolicyStaged   = "staged"
+	FieldPolicyEnforced = "enforced"
 )
 
 // Collection A document collection
@@ -26,17 +32,6 @@ type Collection struct {
 	name                 CollectionName
 	fields               []CollectionField
 	defaultTimeFieldName FieldType
-}
-
-type CollectionField struct {
-	// Type The collection field internal type
-	fieldType FieldType
-
-	// displayFieldType The collection field public type
-	displayFieldType FieldType
-
-	// Name The collection field name
-	fieldName FieldName
 }
 
 var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7}
@@ -59,25 +54,10 @@ func (c Collection) DefaultTimeFieldName() FieldType {
 
 func (c Collection) Field(fieldName FieldName) (CollectionField, bool) {
 	return slices.Find(c.fields, func(field CollectionField) bool {
-		return field.fieldName == fieldName
+		return field.Name() == fieldName
 	})
 }
 
 func (t FieldType) Is(fieldType FieldType) bool {
 	return t == fieldType
-}
-
-func (cf CollectionField) Name() FieldName {
-	return cf.fieldName
-}
-
-func (cf CollectionField) Type() FieldType {
-	return cf.fieldType
-}
-
-func (cf CollectionField) DisplayType() FieldType {
-	if cf.displayFieldType != "" {
-		return cf.displayFieldType
-	}
-	return cf.fieldType
 }

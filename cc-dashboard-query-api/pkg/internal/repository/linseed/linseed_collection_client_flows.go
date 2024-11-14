@@ -42,6 +42,7 @@ func (c *collectionClientFlows) Params(params *queryParams, aggregations map[str
 		LogSelectionParams: lsv1.LogSelectionParams{
 			Selector: params.selector,
 		},
+		PolicyMatches: params.policyMatches,
 	}
 
 	if len(aggregations) > 0 {

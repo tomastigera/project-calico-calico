@@ -67,9 +67,14 @@ fi
 
 kubectl create token --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} cc-dashboard-query-api --duration=1h >${FILES_DIR}/token
 
-kubectl get --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} secret tigera-ca-private-tenant -o 'jsonpath={.data.tls\.crt}' >${FILES_DIR}/tigera-ca.crt
-kubectl get --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} secret cc-dashboard-query-api-linseed-access-cert-pair -o 'jsonpath={.data.tls\.crt}' >${FILES_DIR}/linseed-client.crt
-kubectl get --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} secret cc-dashboard-query-api-linseed-access-cert-pair -o 'jsonpath={.data.tls\.key}' >${FILES_DIR}/linseed-client.key
+if [[ -n "${TENANT}" ]]; then
+	kubectl get --namespace ${TENANT_NAMESPACE} secret tigera-ca-private-tenant -o 'jsonpath={.data.tls\.crt}' | base64 -d >${FILES_DIR}/tigera-ca.crt
+else
+	kubectl get --namespace tigera-operator secret tigera-ca-private -o 'jsonpath={.data.tls\.crt}' | base64 -d >${FILES_DIR}/tigera-ca.crt
+fi
+
+kubectl get --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} secret cc-dashboard-query-api-linseed-access-cert-pair -o 'jsonpath={.data.tls\.crt}' | base64 -d >${FILES_DIR}/linseed-client.crt
+kubectl get --namespace ${TENANT_NAMESPACE:-cc-dashboard-query-api} secret cc-dashboard-query-api-linseed-access-cert-pair -o 'jsonpath={.data.tls\.key}' | base64 -d >${FILES_DIR}/linseed-client.key
 
 # Port forward the tigera-linseed service
 kubectl port-forward -n ${TENANT_NAMESPACE:-tigera-elasticsearch} svc/tigera-linseed 9443:443
