@@ -19,6 +19,9 @@ $(BINDIR)/$(PROJECT_NAME): $(shell find . -name '*.go') ../go.mod
 	sh -c '$(GIT_CONFIG_SSH) \
 	CGO_ENABLED=0 go build -v -o $@ ./pkg/internal/cmd/api-server/main.go'
 
+docker-push: docker-build
+	docker push "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)"
+
 .PHONY: fmt-vet
 fmt-vet: ## Run go fmt and go vet against code.
 		$(CONTAINERIZED) $(CALICO_BUILD) \
