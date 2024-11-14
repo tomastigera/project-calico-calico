@@ -26,3 +26,6 @@ go.work.sum
 
 # exclude all .idea files
 .idea/
+
+bin/
+.go-pkg-cache/

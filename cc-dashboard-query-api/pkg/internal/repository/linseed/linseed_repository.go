@@ -1,0 +1,225 @@
+package linseed
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/olivere/elastic/v7"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository"
+	"github.com/tigera/tds-apiserver/pkg/httpreply"
+	"github.com/tigera/tds-apiserver/pkg/logging"
+)
+
+type LinseedRepository struct {
+	url     string
+	client  lsclient.Client
+	clients map[collections.CollectionName]linseedCollectionClient
+
+	logger logging.Logger
+}
+
+var _ repository.Repository = &LinseedRepository{}
+
+func NewLinseedRepository(logger logging.Logger, tenantID, url, caCertPath, clientCert, clientKey, tokenPath string) (*LinseedRepository, error) {
+	linseedClient, err := lsclient.NewClient(tenantID, rest.Config{
+		URL:            url,
+		CACertPath:     caCertPath,
+		ClientKeyPath:  clientKey,
+		ClientCertPath: clientCert,
+	}, rest.WithTokenPath(tokenPath))
+	if err != nil {
+		return nil, err
+	}
+
+	return NewLinseedRepositoryWithClient(logger, url, linseedClient), nil
+}
+
+func NewLinseedRepositoryWithClient(logger logging.Logger, url string, linseedClient lsclient.Client) *LinseedRepository {
+	return &LinseedRepository{
+		url:    url,
+		logger: logger,
+		clients: map[collections.CollectionName]linseedCollectionClient{
+			collections.CollectionNameL7:    newLinseedCollectionClientL7(logger, linseedClient),
+			collections.CollectionNameDNS:   newLinseedCollectionClientDNS(logger, linseedClient),
+			collections.CollectionNameFlows: newLinseedCollectionClientFlows(logger, linseedClient),
+		},
+	}
+}
+
+func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) result.QueryResult {
+	collectionClient, found := r.clients[req.CollectionName]
+	if !found {
+		return result.QueryResultWithError(httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName)))
+	}
+
+	repositoryAggregations := make(map[string]json.RawMessage)
+	if len(req.Groups) > 0 {
+		elasticAggregation, err := queryGroupsToElastic(0, req.Groups, req.Aggregations)
+		if err != nil {
+			return result.QueryResultWithError(err)
+		}
+
+		aggJson, err := elasticAggregationToJSON(elasticAggregation)
+		if err != nil {
+			return result.QueryResultWithError(err)
+		}
+
+		/* Each elastic group aggregation must be identified by an arbitrary key that does not conflict with existing
+		 * aggregations. For groups, this key is the group numeric index in the req.Groups slice, prefixed with "g".
+		 *
+		 * Only the elastic aggregation for the group at index 0 ("g0") must be set in repositoryAggregations because
+		 * each subsequent group is set as an elastic subaggregation of the previous-index group, so groups beyond
+		 * index 0 are already included in aggJson.
+		 */
+		repositoryAggregations["g0"] = aggJson
+	}
+
+	for aggKey, agg := range req.Aggregations {
+		elasticAggregation, err := queryAggregationToElastic(agg)
+		if err != nil {
+			return result.QueryResultWithError(err)
+		}
+
+		if elasticAggregation != nil {
+			aggJson, err := elasticAggregationToJSON(elasticAggregation)
+			if err != nil {
+				return result.QueryResultWithError(err)
+			}
+
+			repositoryAggregations["a_"+string(aggKey)] = aggJson
+		}
+	}
+
+	linseedQueryParams := newQueryParams(req.MaxDocuments)
+
+	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
+	if err != nil {
+		return result.QueryResultWithError(err)
+	}
+
+	params, err := collectionClient.Params(
+		linseedQueryParams,
+		repositoryAggregations)
+	if err != nil {
+		return result.QueryResultWithError(err)
+	}
+
+	var queryResult result.QueryResult
+	if len(repositoryAggregations) > 0 {
+		resultAggregations, err := collectionClient.Aggregations(ctx, req.ClusterID, params)
+		if err != nil {
+			return result.QueryResultWithError(err)
+		}
+
+		queryResult.Aggregations = make(aggregations.AggregationValues)
+		for aggKey, agg := range req.Aggregations {
+			err := elasticAggregationToQueryResult(string(aggKey), agg, 0, queryResult.Aggregations, resultAggregations)
+			if err != nil {
+				return result.QueryResultWithError(err)
+			}
+		}
+
+		if len(req.Groups) > 0 {
+			if err := queryGroupsFromElastic(0, req.Groups, req.Aggregations, resultAggregations, &queryResult); err != nil {
+				return result.QueryResultWithError(err)
+			}
+
+			for _, groupValue := range queryResult.GroupValues {
+				queryResult.Hits += groupValue.DocCount
+			}
+		}
+
+	} else {
+		queryResult, err = collectionClient.List(ctx, req.ClusterID, params)
+		if err != nil {
+			return result.QueryResultWithError(err)
+		}
+	}
+
+	return queryResult
+}
+
+func queryAggregationToElastic(queryAggregation aggregations.Aggregation) (elastic.Aggregation, error) {
+	var elasticAggregation elastic.Aggregation
+
+	switch agg := queryAggregation.(type) {
+	case aggregations.AggregationSum:
+		elasticAggregation = elastic.NewSumAggregation().Field(agg.FieldName())
+	case aggregations.AggregationAvg:
+		elasticAggregation = elastic.NewAvgAggregation().Field(agg.FieldName())
+	case aggregations.AggregationMin:
+		elasticAggregation = elastic.NewMinAggregation().Field(agg.FieldName())
+	case aggregations.AggregationMax:
+		elasticAggregation = elastic.NewMaxAggregation().Field(agg.FieldName())
+	case aggregations.AggregationPercentile:
+		elasticAggregation = elastic.NewPercentilesAggregation().Field(agg.FieldName()).Percentiles(agg.Percentile())
+	case aggregations.AggregationCount:
+		// count has no elastic aggregation because it returns the total document count
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("unknown aggregation type %T", agg)
+	}
+
+	return elasticAggregation, nil
+}
+
+func elasticAggregationToQueryResult(aggKey string, aggregation aggregations.Aggregation, docCount int64, resultAggregations aggregations.AggregationValues, elasticAggregations elastic.Aggregations) error {
+	var found bool
+	var value *elastic.AggregationValueMetric
+
+	elasticKey := "a_" + string(aggKey)
+
+	switch agg := aggregation.(type) {
+	case aggregations.AggregationCount:
+		resultAggregations[aggKey] = aggregations.NewAggregationValue(&docCount, agg)
+		return nil
+	case aggregations.AggregationSum:
+		value, found = elasticAggregations.Sum(elasticKey)
+	case aggregations.AggregationAvg:
+		value, found = elasticAggregations.Avg(elasticKey)
+	case aggregations.AggregationMin:
+		value, found = elasticAggregations.Min(elasticKey)
+	case aggregations.AggregationMax:
+		value, found = elasticAggregations.Max(elasticKey)
+	case aggregations.AggregationPercentile:
+		var percentiles *elastic.AggregationPercentilesMetric
+		percentiles, found = elasticAggregations.Percentiles(elasticKey)
+		if found {
+			value = &elastic.AggregationValueMetric{}
+			if floatValue, ok := percentiles.Values[aggKey]; ok {
+				value.Value = &floatValue
+			}
+		}
+	default:
+		return fmt.Errorf("unknown aggregation type %T", agg)
+	}
+
+	if found {
+		resultAggregations[aggKey] = aggregations.NewAggregationValue(value.Value, aggregation)
+	}
+	return nil
+}
+
+func elasticAggregationToJSON(elasticAggregation elastic.Aggregation) (json.RawMessage, error) {
+	aggSource, err := elasticAggregation.Source()
+	if err != nil {
+		return nil, err
+	}
+
+	aggJson, err := json.Marshal(aggSource)
+	if err != nil {
+		return nil, err
+	}
+
+	return aggJson, nil
+}

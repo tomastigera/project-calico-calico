@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: cc-dashboard-query-api-ci-
+spec:
+  entrypoint: main
+  templateDefaults:
+    script:
+      envFrom:
+        - secretRef:
+            name: marvin-github-ssh-private-key
+    volumes:
+      - name: src
+        emptyDir: {}
+      - name: home
+        emptyDir: {}
+      - name: go
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: build-images
+            template: build-images
+
+    - name: build-images
+      script:
+        image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.84
+        imagePullPolicy: Always
+        command: ["bash", "-e"]
+        workingDir: "/src"
+        securityContext:
+          runAsUser: 1000
+          privileged: true
+        env:
+          - name: DOCKER_HOST
+            value: tcp://127.0.0.1:2375
+          - name: GOPROXY
+            value: http://proxy.athens.svc
+        source: |
+          source checkout
+          cd cc-dashboard-query-api
+          until docker ps; do sleep 5; done
+          make docker-build
+        volumeMounts:
+          - name: src
+            mountPath: /src
+          - name: home
+            mountPath: /root
+          - name: tmp
+            mountPath: /tmp
+          - name: go
+            mountPath: /go
+      sidecars:
+        - name: dind
+          image: docker:20.10.17-dind
+          command:
+          - dockerd-entrypoint.sh
+          - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
+          - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          securityContext:
+            privileged: true
+          mirrorVolumeMounts: true

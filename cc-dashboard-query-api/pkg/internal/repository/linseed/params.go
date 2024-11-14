@@ -1,0 +1,231 @@
+package linseed
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/filters"
+)
+
+type queryParams struct {
+	lsv1.QueryParams
+
+	selector      string
+	domainMatches map[lsv1.DomainMatchType][]string
+}
+
+func newQueryParams(maxDocuments int) *queryParams {
+	return &queryParams{
+		QueryParams: lsv1.QueryParams{MaxPageSize: maxDocuments},
+		domainMatches: map[lsv1.DomainMatchType][]string{
+			lsv1.DomainMatchQname:  nil,
+			lsv1.DomainMatchRRSet:  nil,
+			lsv1.DomainMatchRRData: nil,
+		},
+	}
+}
+
+func (p *queryParams) setCriteria(criteria filters.Criteria, now time.Time) error {
+	selectors, err := p.getSelectors(criteria, now)
+	if err != nil {
+		return err
+	}
+
+	p.selector = strings.Join(selectors, " AND ")
+	return nil
+}
+
+func (p *queryParams) getSelectors(criteria filters.Criteria, now time.Time) ([]string, error) {
+	var selectors []string
+	for _, criterion := range criteria {
+		sel, err := p.getSelector(criterion, now)
+		if err != nil {
+			return nil, err
+		}
+		if sel != "" {
+			selectors = append(selectors, sel)
+		}
+	}
+	return selectors, nil
+}
+
+func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (string, error) {
+	switch c := criterion.(type) {
+	case *filters.CriterionRelativeTimeRange:
+		if c.Negate() {
+			return "", fmt.Errorf("negated relativeTimeRange criterion is not supported")
+		}
+
+		p.SetTimeRange(&lmav1.TimeRange{
+			From: now.Add(-c.Gte()),
+			To:   now.Add(-c.Lte()),
+			Now:  &now,
+		})
+		return "", nil
+	case *filters.CriterionDateRange:
+		if c.Negate() {
+			return "", fmt.Errorf("negated dateRange criterion is not supported")
+		}
+
+		p.SetTimeRange(&lmav1.TimeRange{
+			From: c.Gte(),
+			To:   c.Lte(),
+			Now:  &now,
+		})
+		return "", nil
+	case *filters.CriterionEquals:
+		// handle linseed client special params
+		switch c.Field().Type() {
+		case collections.FieldTypeQName:
+			if domain, ok := c.Value().(string); ok {
+				p.domainMatches[lsv1.DomainMatchQname] = append(p.domainMatches[lsv1.DomainMatchQname], domain)
+			}
+			return "", nil
+		case collections.FieldTypeRRSetsName:
+			if domain, ok := c.Value().(string); ok {
+				p.domainMatches[lsv1.DomainMatchRRSet] = append(p.domainMatches[lsv1.DomainMatchRRSet], domain)
+			}
+			return "", nil
+		case collections.FieldTypeRRSetsData:
+			if domain, ok := c.Value().(string); ok {
+				p.domainMatches[lsv1.DomainMatchRRData] = append(p.domainMatches[lsv1.DomainMatchRRData], domain)
+			}
+			return "", nil
+		}
+		return selectorEquals(c)
+	case *filters.CriterionOr:
+		selectors, err := p.getSelectors(c.SubCriteria(), now)
+		if err != nil {
+			return "", err
+		}
+
+		prefix := ""
+		if c.Negate() {
+			prefix = "NOT "
+		}
+
+		return prefix + "( " + strings.Join(selectors, " OR ") + " )", nil
+	case *filters.CriterionRange:
+		field := c.Field()
+		if c.Negate() {
+			return fmt.Sprintf(`%s < %d AND %s > %d`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
+		}
+		return fmt.Sprintf(`%s >= %d AND %s <= %d`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
+	case *filters.CriterionExists:
+		// This selector does not match ES' exists exactly. TODO: Implement a linseed exists selector
+		field := c.Field()
+		if c.Negate() {
+			return fmt.Sprintf(`%s NOTIN {"*"}`, field.Name()), nil
+		} else {
+			return fmt.Sprintf(`%s IN {"*"}`, field.Name()), nil
+		}
+	case *filters.CriterionIn:
+		var selectors []string
+		for _, value := range c.Values() {
+			// TODO: this is only handling string values for now. If it will handle any, refactor selectorEquals
+			selector, err := selectorEqualsString(c, c.Field().Name(), value)
+			if err != nil {
+				return "", err
+			}
+			selectors = append(selectors, selector)
+		}
+
+		if c.Negate() {
+			return "( " + strings.Join(selectors, " AND ") + " )", nil
+		}
+		return "( " + strings.Join(selectors, " OR ") + " )", nil
+	case *filters.CriterionIPRange:
+		from, err := escapeSelectorValue(c.From())
+		if err != nil {
+			return "", err
+		}
+
+		to, err := escapeSelectorValue(c.To())
+		if err != nil {
+			return "", err
+		}
+
+		field := c.Field()
+		if c.Negate() {
+			return fmt.Sprintf(`%s < %s AND %s > %s`, field.Name(), from, field.Name(), to), nil
+		}
+		return fmt.Sprintf(`%s >= %s AND %s <= %s`, field.Name(), from, field.Name(), to), nil
+	case *filters.CriterionStartsWith:
+		return selectorWildcard(c, c.Field().Name(), c.Value()+"*")
+	case *filters.CriterionWildcard:
+		return selectorWildcard(c, c.Field().Name(), c.Pattern())
+	}
+
+	return "", fmt.Errorf("invalid criterion %T", criterion)
+
+}
+
+func selectorEquals(c *filters.CriterionEquals) (string, error) {
+	value := reflect.ValueOf(c.Value())
+	if c.Field().Type().Is(collections.FieldTypeNumber) {
+		if value.CanInt() {
+			v := value.Int()
+			if c.Negate() {
+				return fmt.Sprintf(`%s != %d`, c.Field().Name(), v), nil
+			}
+			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
+		} else if value.CanFloat() {
+			v := int64(value.Float()) // TODO: investigate if we need to support float64 querying with getSelectorFloat64
+			/*
+				if c.Negate() {
+					return fmt.Sprintf(`%s != %f`, c.Field().Name(), v), nil
+				}
+				return fmt.Sprintf(`%s = %f`, c.Field().Name(), v), nil
+			*/
+			if c.Negate() {
+				return fmt.Sprintf(`%s != %d`, c.Field().Name(), v), nil
+			}
+			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
+		}
+		return "", fmt.Errorf("equals criterion value is not a number: %v %T", c.Value(), c.Value())
+	}
+
+	if valueString, ok := c.Value().(string); ok {
+		return selectorEqualsString(c, c.Field().Name(), valueString)
+	}
+
+	return "", fmt.Errorf("equals criterion value '%v' is not a string", c.Value())
+}
+
+func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, value string) (string, error) {
+	value, err := escapeSelectorValue(value)
+	if err != nil {
+		return "", err
+	}
+
+	if c.Negate() {
+		return fmt.Sprintf(`%s != %s`, fieldName, value), nil
+	}
+	return fmt.Sprintf(`%s = %s`, fieldName, value), nil
+}
+
+func selectorWildcard(c filters.Criterion, fieldName collections.FieldName, pattern string) (string, error) {
+	value, err := escapeSelectorValue(pattern)
+	if err != nil {
+		return "", err
+	}
+
+	if c.Negate() {
+		return fmt.Sprintf(`%s NOTIN {%s}`, fieldName, value), nil
+	}
+	return fmt.Sprintf(`%s IN {%s}`, fieldName, value), nil
+}
+
+func escapeSelectorValue(value string) (string, error) {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}

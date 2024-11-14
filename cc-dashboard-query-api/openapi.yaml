@@ -1,0 +1,165 @@
+openapi: 3.0.0
+info:
+  description: Dashboard Query API for Calico Cloud
+  title: Dashboard Query API
+  version: ""
+paths:
+  /api/collections:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Collection'
+                type: array
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Collections
+  /api/query:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Query
+components:
+  schemas:
+    Collection:
+      properties:
+        defaultTimeFieldName:
+          type: string
+        fields:
+          items:
+            $ref: '#/components/schemas/CollectionField'
+          type: array
+        name:
+          type: string
+      type: object
+    CollectionField:
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+      type: object
+    QueryRequest:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        clusterFilter:
+          items:
+            type: string
+          type: array
+        collectionName:
+          type: string
+        filters:
+          items:
+            $ref: '#/components/schemas/QueryRequestFilter'
+          type: array
+        groupBys:
+          items:
+            $ref: '#/components/schemas/QueryRequestGroup'
+          type: array
+        maxDocs:
+          format: int
+          type: string
+      type: object
+    QueryRequestFilter:
+      properties:
+        criterion:
+          $ref: '#/components/schemas/QueryRequestFilterCriterion'
+        negate:
+          type: boolean
+      type: object
+    QueryRequestFilterCriterion:
+      properties:
+        field:
+          type: string
+        from:
+          type: string
+        gte:
+          type: string
+        lte:
+          type: string
+        pattern:
+          type: string
+        to:
+          type: string
+        type:
+          type: string
+        values:
+          items:
+            type: string
+          type: array
+      type: object
+    QueryRequestGroup:
+      properties:
+        fieldName:
+          type: string
+        interval:
+          type: string
+        maxValues:
+          format: int
+          type: string
+        orderBy:
+          $ref: '#/components/schemas/QueryRequestGroupOrder'
+        type:
+          type: string
+      type: object
+    QueryRequestGroupOrder:
+      properties:
+        aggKey:
+          type: string
+        sortAsc:
+          type: boolean
+      type: object
+    QueryResponse:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        groupValues:
+          items:
+            $ref: '#/components/schemas/QueryResponseGroupValue'
+          type: array
+        totals:
+          $ref: '#/components/schemas/QueryResponseTotals'
+      type: object
+    QueryResponseGroupValue:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        key:
+          type: string
+      type: object
+    QueryResponseTotals:
+      properties:
+        type:
+          type: string
+        value:
+          format: int64
+          type: string
+      type: object
+  securitySchemes:
+    bearer_jwt:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

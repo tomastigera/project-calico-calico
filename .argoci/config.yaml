@@ -1,0 +1,9 @@
+version: v2
+workflows:
+  - name: cc-dashboard-query-api-ci
+    workflowFile: cc-dashboard-query-api/.argoci/ciworkflow.yaml
+    runWhen:
+      changes:
+        in:
+          - cc-dashboard-query-api\/.*
+
