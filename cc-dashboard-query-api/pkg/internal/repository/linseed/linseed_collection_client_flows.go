@@ -38,11 +38,12 @@ func newLinseedCollectionClientFlows(logger logging.Logger, client lsclient.Clie
 
 func (c *collectionClientFlows) Params(params *queryParams, aggregations map[string]json.RawMessage) (lsv1.Params, error) {
 	flowLogsLogParams := &lsv1.FlowLogParams{
-		QueryParams: params.QueryParams,
+		QueryParams: params.linseedQueryParams,
 		LogSelectionParams: lsv1.LogSelectionParams{
 			Selector: params.selector,
 		},
-		PolicyMatches: params.policyMatches,
+		PolicyMatches:   params.policyMatches,
+		QuerySortParams: params.linseedQuerySortParams,
 	}
 
 	if len(aggregations) > 0 {

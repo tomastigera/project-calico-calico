@@ -23,6 +23,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
+	"github.com/tigera/tds-apiserver/lib/comparators"
 	"github.com/tigera/tds-apiserver/lib/slices"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
 	"github.com/tigera/tds-apiserver/pkg/logging"
@@ -153,20 +154,23 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		Totals: client.QueryResponseTotals{
 			Value: aggregatedQueryResult.Hits,
 		},
+		GroupValues:  mapResultGroupValues(0, repositoryRequest.Groups, aggregatedQueryResult.GroupValues),
 		Aggregations: mapResultAggregations(aggregatedQueryResult.Aggregations),
 	}
 
-	queryResponse.GroupValues, err = slices.MapOrError(aggregatedQueryResult.GroupValues, mapResultGroupValue)
-	if err != nil {
-		return client.QueryResponse{}, err
-	}
-
-	queryResponse.Documents = slices.Map(slices.SortBy(aggregatedQueryResult.Documents, func(doc result.QueryResultDocument) int64 {
-		// TODO: use sort order from client request
-		return doc.Timestamp.UnixMicro()
-	}), func(doc result.QueryResultDocument) any {
-		return doc.Content
-	})
+	queryResponse.Documents = slices.Map(
+		slices.SortByComparing( // sort desc by @timestamp
+			aggregatedQueryResult.Documents,
+			comparators.Func[result.QueryResultDocument](func(doc1, doc2 result.QueryResultDocument) int {
+				if doc1.Timestamp.UnixMicro() == doc2.Timestamp.UnixMicro() {
+					return 0
+				} else if doc1.Timestamp.UnixMicro() > doc2.Timestamp.UnixMicro() {
+					return -1
+				}
+				return 1
+			})), func(doc result.QueryResultDocument) any {
+			return doc.Content
+		})
 
 	if len(queryResponse.Documents) > maxDocuments {
 		queryResponse.Documents = queryResponse.Documents[:maxDocuments]
@@ -367,11 +371,27 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 }
 
 func mapClientGroup(from client.QueryRequestGroup) (groups.Group, error) {
+	sortOrder := groups.GroupSortOrder{
+		Asc: true,
+	}
+
+	if from.Order != nil {
+		sortOrder.Type = groups.GroupSortOrderType(from.Order.Type)
+		sortOrder.Asc = from.Order.SortAsc
+		sortOrder.AggregationKey = from.Order.AggKey
+	}
+
 	switch groups.GroupType(from.Type) {
 	case groups.GroupTypeDiscrete:
-		return groups.NewGroupDiscrete(from.FieldName, from.MaxValues), nil
+		if sortOrder.Type == "" {
+			sortOrder.Type = groups.GroupSortOrderTypeCount // default discrete group sort order is by count
+		}
+		return groups.NewGroupDiscrete(from.FieldName, from.MaxValues, sortOrder), nil
 	case groups.GroupTypeTime:
-		return groups.NewGroupTime(from.FieldName, from.Interval), nil
+		if sortOrder.Type == "" {
+			sortOrder.Type = groups.GroupSortOrderTypeSelf // default time group sort order is by key
+		}
+		return groups.NewGroupTime(from.FieldName, from.Interval, from.MaxValues, sortOrder), nil
 	}
 	return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid group type: %s", from.Type))
 }
@@ -395,19 +415,64 @@ func mapClientAggregation(from client.QueryRequestAggregation) (aggregations.Agg
 	return nil, fmt.Errorf("unknown aggregation type '%s'", from.Function.Type)
 }
 
-func mapResultGroupValue(from *groups.GroupValue) (client.QueryResponseGroupValue, error) {
-	nestedValues, err := slices.MapOrError(from.SubGroupValues, func(groupValue *groups.GroupValue) (any, error) {
-		return mapResultGroupValue(groupValue)
-	})
-	if err != nil {
-		return client.QueryResponseGroupValue{}, err
+func sortGroupValues(groupIndex int, repositoryRequestGroups groups.Groups, groupValues groups.GroupValues) groups.GroupValues {
+	if groupIndex >= len(repositoryRequestGroups) {
+		return nil
 	}
 
-	return client.QueryResponseGroupValue{
-		Key:          from.Key,
-		Aggregations: mapResultAggregations(from.Aggregations),
-		NestedValues: nestedValues,
-	}, nil
+	group := repositoryRequestGroups[groupIndex]
+
+	sortOrder := group.SortOrder()
+	return slices.SortByComparing(groupValues, comparators.Func[*groups.GroupValue](func(g1, g2 *groups.GroupValue) int {
+		sortValue := -1
+		if sortOrder.Asc {
+			sortValue = 1
+		}
+		if sortOrder.Type == groups.GroupSortOrderTypeSelf {
+			return strings.Compare(g1.Key, g2.Key) * sortValue
+
+			/* Phase 2: see GroupSortOrderTypeAggregation in cc-dashboard-query-api/pkg/internal/domain/groups/groups.go
+			} else if sortOrder.Type == groups.GroupSortOrderTypeAggregation {
+			*/
+		}
+
+		if group.Type() == groups.GroupTypeDiscrete {
+			if g1.DocCount == g2.DocCount {
+				return 0
+			} else if g1.DocCount > g2.DocCount {
+				return sortValue
+			}
+			return -sortValue
+		}
+
+		return strings.Compare(g1.Key, g2.Key) * sortValue
+	}))
+}
+
+func mapResultGroupValues(groupIndex int, repositoryRequestGroups groups.Groups, groupValues groups.GroupValues) []client.QueryResponseGroupValue {
+	values := slices.Map(sortGroupValues(groupIndex, repositoryRequestGroups, groupValues), func(from *groups.GroupValue) client.QueryResponseGroupValue {
+		var nestedValues []any
+		if from.SubGroupValues != nil {
+			nestedValues = slices.Map(
+				mapResultGroupValues(groupIndex+1, repositoryRequestGroups, from.SubGroupValues),
+				func(from client.QueryResponseGroupValue) any {
+					return from
+				})
+		}
+		return client.QueryResponseGroupValue{
+			Key:          from.Key,
+			Aggregations: mapResultAggregations(from.Aggregations),
+			NestedValues: nestedValues,
+		}
+	})
+
+	if groupIndex < len(repositoryRequestGroups) {
+		maxValues := repositoryRequestGroups[groupIndex].MaxValues()
+		if maxValues > 0 && len(values) > maxValues { // NOTE: the max number of group results may be limited here
+			values = values[:maxValues]
+		}
+	}
+	return values
 }
 
 func mapResultAggregations(resultAggregations aggregations.AggregationValues) client.QueryResponseAggregations {

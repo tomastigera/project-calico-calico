@@ -99,10 +99,13 @@ type QueryRequestGroup struct {
 	Order     *QueryRequestGroupOrder `json:"orderBy"`
 }
 
-// TODO: GroupOrdering is not implemented yet
+type QueryRequestGroupOrderType string
+
+// QueryRequestGroupOrder Group results sort order
 type QueryRequestGroupOrder struct {
-	SortAsc bool   `json:"sortAsc"`
-	AggKey  string `json:"aggKey"`
+	SortAsc bool                       `json:"sortAsc"`
+	Type    QueryRequestGroupOrderType `json:"type"`
+	AggKey  string                     `json:"aggKey"`
 }
 
 type QueryRequestAggregations map[string]QueryRequestAggregation

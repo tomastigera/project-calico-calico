@@ -38,10 +38,11 @@ func newLinseedCollectionClientL7(logger logging.Logger, client lsclient.Client)
 
 func (c *collectionClientL7) Params(params *queryParams, aggregations map[string]json.RawMessage) (lsv1.Params, error) {
 	l7LogParams := &lsv1.L7LogParams{
-		QueryParams: params.QueryParams,
+		QueryParams: params.linseedQueryParams,
 		LogSelectionParams: lsv1.LogSelectionParams{
 			Selector: params.selector,
 		},
+		QuerySortParams: params.linseedQuerySortParams,
 	}
 
 	if len(aggregations) > 0 {

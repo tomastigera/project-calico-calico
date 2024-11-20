@@ -47,7 +47,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `( client_name = "test-value1" OR client_name = "test-value2" OR client_name = "test-value3" ) AND ( client_name != "test-value4" AND client_name != "test-value5" AND client_name != "test-value6" )`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 		})
 
@@ -69,7 +70,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `( client_name = "test-value1" OR client_name != "test-value2" ) AND NOT ( client_name = "test-value3" OR client_name != "test-value4" )`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 		})
 
@@ -84,7 +86,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `count >= 10 AND count <= 20`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -98,7 +101,8 @@ func TestParams(t *testing.T) {
 				require.Equal(t, &queryParams{
 					selector: `count < 10 AND count > 20`,
 
-					domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 				}, subject)
 			})
 		})
@@ -119,6 +123,7 @@ func TestParams(t *testing.T) {
 					lsv1.DomainMatchRRSet:  nil,
 					lsv1.DomainMatchRRData: nil,
 				},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
 			t.Run("unknown enum field", func(t *testing.T) {
@@ -147,6 +152,11 @@ func TestParams(t *testing.T) {
 						lsv1.DomainMatchRRSet:  nil,
 						lsv1.DomainMatchRRData: nil,
 					},
+					linseedQuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "@timestamp", Descending: true},
+						},
+					},
 				}, subject)
 
 				t.Run("negated", func(t *testing.T) {
@@ -164,6 +174,11 @@ func TestParams(t *testing.T) {
 							lsv1.DomainMatchRRSet:  nil,
 							lsv1.DomainMatchRRData: nil,
 						},
+						linseedQuerySortParams: lsv1.QuerySortParams{
+							Sort: []lsv1.SearchRequestSortBy{
+								{Field: "@timestamp", Descending: true},
+							},
+						},
 					}, subject)
 				})
 			})
@@ -180,7 +195,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `client_name IN {"*"}`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -194,7 +210,8 @@ func TestParams(t *testing.T) {
 				require.Equal(t, &queryParams{
 					selector: `client_name NOTIN {"*"}`,
 
-					domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 				}, subject)
 			})
 
@@ -210,7 +227,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `client_ip >= "10.0.0.1" AND client_ip <= "10.0.0.255"`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -224,7 +242,8 @@ func TestParams(t *testing.T) {
 				require.Equal(t, &queryParams{
 					selector: `client_ip < "10.0.0.1" AND client_ip > "10.0.0.255"`,
 
-					domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 				}, subject)
 			})
 		})
@@ -242,7 +261,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `qname IN {"*test-domain1.com"} AND qname NOTIN {"test-domain2.com*"} AND qname NOTIN {"test-domain*.com"}`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 		})
 
@@ -258,12 +278,10 @@ func TestParams(t *testing.T) {
 			}, now)
 			require.NoError(t, err)
 
-			require.Equal(t, &queryParams{
-				QueryParams: lsv1.QueryParams{
-					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now},
-				},
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-			}, subject)
+			require.Empty(t, subject.selector)
+			require.Equal(t, lsv1.QueryParams{
+				TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now},
+			}, subject.linseedQueryParams)
 
 			t.Run("negated", func(t *testing.T) {
 				subject := newQueryParams(0)
@@ -287,7 +305,8 @@ func TestParams(t *testing.T) {
 			require.Equal(t, &queryParams{
 				selector: `qname IN {"test-domain1.*"} AND qname NOTIN {"test-domain2.*"} AND qname NOTIN {"test-domain3.*"}`,
 
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
 		})
@@ -302,15 +321,14 @@ func TestParams(t *testing.T) {
 			err = subject.setCriteria(filters.Criteria{criterion}, now)
 			require.NoError(t, err)
 
-			require.Equal(t, &queryParams{
-				QueryParams: lsv1.QueryParams{
-					TimeRange: &lmav1.TimeRange{
-						To:   time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
-						From: time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
-						Now:  &now},
+			require.Empty(t, subject.selector)
+			require.Equal(t, lsv1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					To:   time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
+					From: time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
+					Now:  &now,
 				},
-				domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-			}, subject)
+			}, subject.linseedQueryParams)
 
 			t.Run("negated", func(t *testing.T) {
 				subject = &queryParams{}
@@ -325,6 +343,15 @@ func TestParams(t *testing.T) {
 
 	})
 
+	t.Run("sort documents by timestamp", func(t *testing.T) {
+		subject := newQueryParams(0)
+		require.Equal(t, lsv1.QuerySortParams{
+			Sort: []lsv1.SearchRequestSortBy{
+				{Field: "@timestamp", Descending: true},
+			},
+		}, subject.linseedQuerySortParams)
+	})
+
 	t.Run("value escaping", func(t *testing.T) {
 		subject := newQueryParams(0)
 
@@ -335,11 +362,9 @@ func TestParams(t *testing.T) {
 		}, time.Time{})
 		require.NoError(t, err)
 
-		require.Equal(t, &queryParams{
-			selector: `client_name = "test-name1\" AND false" AND client_name != "\"test-name2\"OR 123" AND client_name != "test-name3' NOT 1=1\""`,
-
-			domainMatches: map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-		}, subject)
+		require.Equal(t,
+			`client_name = "test-name1\" AND false" AND client_name != "\"test-name2\"OR 123" AND client_name != "test-name3' NOT 1=1\""`,
+			subject.selector)
 	})
 
 }

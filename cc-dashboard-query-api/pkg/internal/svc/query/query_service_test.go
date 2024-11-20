@@ -6,15 +6,17 @@ import (
 	"golang.org/x/exp/maps"
 	"reflect"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
@@ -29,6 +31,13 @@ import (
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
 	"github.com/tigera/tds-apiserver/pkg/logging"
 )
+
+// Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead
+type bucketItem map[string]any
+
+type bucketItems struct {
+	Buckets []bucketItem `json:"buckets,omitempty"`
+}
 
 func TestQueryService(t *testing.T) {
 
@@ -46,7 +55,11 @@ func TestQueryService(t *testing.T) {
 
 	tenantID := "fake-tenant"
 
-	mockClient := lsclient.NewMockClient(tenantID)
+	mockClient := &concurrentMockClient{
+		t:      t,
+		m:      sync.Mutex{},
+		client: lsclient.NewMockClient(tenantID),
+	}
 	repository := linseed.NewLinseedRepositoryWithClient(logger, "", mockClient)
 
 	managedClusterLister := managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
@@ -65,8 +78,8 @@ func TestQueryService(t *testing.T) {
 		t.Run("authorized", func(t *testing.T) {
 
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{})},
-				rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{})},
+				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 			)
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
@@ -115,7 +128,7 @@ func TestQueryService(t *testing.T) {
 			)
 
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{})},
+				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 			)
 
 			_, err := subject.Query(ctx, client.QueryRequest{
@@ -226,10 +239,10 @@ func TestQueryService(t *testing.T) {
 		t.Run("clusterFilter", func(t *testing.T) {
 			t.Run("query all clusters when empty", func(t *testing.T) {
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 1, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 1, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 					}})},
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 1, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 1, Items: []lsv1.FlowLog{
 						{ID: "flow-log2"},
 					}})},
 				)
@@ -257,7 +270,7 @@ func TestQueryService(t *testing.T) {
 
 			t.Run("filters out managed clusters", func(t *testing.T) {
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 1, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 1, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 					}})},
 				)
@@ -286,7 +299,7 @@ func TestQueryService(t *testing.T) {
 			setMockResult := func() {
 				t.Helper()
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 11, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 11, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 						{ID: "flow-log2"},
 						{ID: "flow-log3"},
@@ -338,9 +351,9 @@ func TestQueryService(t *testing.T) {
 			})
 
 			t.Run("limit", func(t *testing.T) {
-				mockResult := v1.List[v1.FlowLog]{TotalHits: 1000}
+				mockResult := lsv1.List[lsv1.FlowLog]{TotalHits: 1000}
 				for i := int64(0); i < mockResult.TotalHits; i++ {
-					mockResult.Items = append(mockResult.Items, v1.FlowLog{ID: "flow-log" + strconv.FormatInt(i, 10)})
+					mockResult.Items = append(mockResult.Items, lsv1.FlowLog{ID: "flow-log" + strconv.FormatInt(i, 10)})
 				}
 				mockClient.SetResults(rest.MockResult{Body: jsonMarshal(t, mockResult)})
 
@@ -363,12 +376,12 @@ func TestQueryService(t *testing.T) {
 		t.Run("single-tenant", func(t *testing.T) {
 			t.Run("query", func(t *testing.T) {
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 3, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 						{ID: "flow-log2"},
 						{ID: "flow-log3"},
 					}})},
-					rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 2, Items: []v1.FlowLog{
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
 						{ID: "flow-log4"},
 						{ID: "flow-log5"},
 					}})},
@@ -402,7 +415,7 @@ func TestQueryService(t *testing.T) {
 				}
 			})
 
-			t.Run("result aggregation", func(t *testing.T) {
+			t.Run("result", func(t *testing.T) {
 				defineAggregations := func(vSum, vAvg, vMin, vMax, vPercentile float64, vCount int64) aggregations.AggregationValues {
 					return aggregations.AggregationValues{
 						"agg1": aggregations.NewAggregationValue(&vSum, aggregations.NewAggregationSum("f1")),
@@ -555,6 +568,385 @@ func TestQueryService(t *testing.T) {
 					requireAggregationsEqual(t, defineAggregations(101, 102, 103, 104, 105, 106), aggregatedResult.GroupValues[1].SubGroupValues[1].Aggregations)
 
 					requireAggregationsEqual(t, defineAggregations(121, 122, 123, 124, 125, 126), aggregatedResult.GroupValues[2].SubGroupValues[0].Aggregations)
+
+					t.Run("max values", func(t *testing.T) {
+						t.Run("discrete group", func(t *testing.T) {
+
+							groupResults := []bucketItems{
+								{
+									Buckets: []bucketItem{
+										{"key": "1"}, {"key": "2"}, {"key": "3"}, {"key": "4"},
+										{"key": "5"}, {"key": "6"}, {"key": "7"}, {"key": "8"},
+									},
+								},
+								{
+									Buckets: []bucketItem{
+										{"key": "9"}, {"key": "10"}, {"key": "11"}, {"key": "12"},
+									},
+								},
+							}
+
+							t.Run("defaults to 10", func(t *testing.T) {
+								// see defaultMaxValue in cc-dashboard-query-api/pkg/internal/domain/groups/group_discrete.go
+
+								mockClient.SetResults(
+									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+										"g0": jsonMarshal(t, groupResults[0]),
+									})},
+									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+										"g0": jsonMarshal(t, groupResults[1]),
+									})},
+								)
+
+								resp, err := subject.Query(ctx, client.QueryRequest{
+									CollectionName: "flows",
+									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+									Filters: []client.QueryRequestFilter{
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+									},
+									GroupBys: []client.QueryRequestGroup{
+										{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 0},
+									},
+								})
+
+								require.NoError(t, err)
+								require.Empty(t, resp.Aggregations)
+
+								require.Len(t, resp.GroupValues, 10)
+							})
+
+							mockClient.SetResults(
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[0]),
+								})},
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[1]),
+								})},
+							)
+
+							resp, err := subject.Query(ctx, client.QueryRequest{
+								CollectionName: "flows",
+								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+								Filters: []client.QueryRequestFilter{
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+								},
+								GroupBys: []client.QueryRequestGroup{
+									{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 11},
+								},
+							})
+
+							require.NoError(t, err)
+							require.Empty(t, resp.Aggregations)
+
+							require.Len(t, resp.GroupValues, 11)
+						})
+
+						t.Run("time group", func(t *testing.T) {
+
+							t.Run("no defaults", func(t *testing.T) {
+								// Note that time group requests are limited in the elastic request by
+								// maxGroupTimeAggregationResults
+
+								groupResults := make([]bucketItems, 2)
+
+								for i := 0; i < 1000; i++ {
+									strIndex := strconv.FormatInt(int64(i), 10)
+									groupResults[0].Buckets = append(groupResults[0].Buckets, bucketItem{"key_as_string": "gbi-0-" + strIndex})
+									groupResults[1].Buckets = append(groupResults[1].Buckets, bucketItem{"key_as_string": "gbi-1-" + strIndex})
+								}
+
+								mockClient.SetResults(
+									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+										"g0": jsonMarshal(t, groupResults[0]),
+									})},
+									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+										"g0": jsonMarshal(t, groupResults[1]),
+									})},
+								)
+
+								resp, err := subject.Query(ctx, client.QueryRequest{
+									CollectionName: "flows",
+									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+									Filters: []client.QueryRequestFilter{
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+									},
+									GroupBys: []client.QueryRequestGroup{
+										{Type: client.GroupType(groups.GroupTypeTime)},
+									},
+								})
+
+								require.NoError(t, err)
+								require.Empty(t, resp.Aggregations)
+								require.Len(t, resp.GroupValues, 2000)
+							})
+
+							groupResults := []bucketItems{
+								{
+									Buckets: []bucketItem{
+										{"key_as_string": "1500"},
+										{"key_as_string": "1600"},
+										{"key_as_string": "1150"},
+										{"key_as_string": "1800"},
+									},
+								},
+								{
+									Buckets: []bucketItem{
+										{"key_as_string": "1400"},
+										{"key_as_string": "1200"},
+										{"key_as_string": "1900"},
+									},
+								},
+								{
+									Buckets: []bucketItem{
+										{"key_as_string": "1300"},
+										{"key_as_string": "1950"},
+									},
+								},
+							}
+
+							mockClient.SetResults(
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[0]),
+								})},
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[1]),
+								})},
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[2]),
+								})},
+							)
+
+							// Create a query service with 3 managed clusters
+							subject := NewQueryService(
+								logger,
+								repository,
+								managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
+									return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
+								}),
+								2*time.Minute,
+								"",
+							)
+
+							resp, err := subject.Query(ctx, client.QueryRequest{
+								CollectionName: "flows",
+								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2", "cluster3"},
+								Filters: []client.QueryRequestFilter{
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+								},
+								GroupBys: []client.QueryRequestGroup{
+									{Type: client.GroupType(groups.GroupTypeTime), MaxValues: 3},
+								},
+							})
+							require.NoError(t, err)
+							require.Empty(t, resp.Aggregations)
+
+							require.Equal(t, []client.QueryResponseGroupValue{
+								{Key: "1150", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1200", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1300", Aggregations: client.QueryResponseAggregations{}},
+							}, resp.GroupValues)
+						})
+					})
+				})
+
+				t.Run("results sort order", func(t *testing.T) {
+					t.Run("defaults", func(t *testing.T) {
+						g, err := mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeDiscrete)})
+						require.NoError(t, err)
+						require.True(t, g.SortOrder().Asc)
+						require.Equal(t, groups.GroupSortOrderTypeCount, g.SortOrder().Type)
+
+						g, err = mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeTime)})
+						require.NoError(t, err)
+						require.True(t, g.SortOrder().Asc)
+						require.Equal(t, groups.GroupSortOrderTypeSelf, g.SortOrder().Type)
+					})
+
+					t.Run("documents", func(t *testing.T) {
+						mockClient.SetResults(
+							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+								{ID: "flow-log1", Timestamp: 500},
+								{ID: "flow-log2", Timestamp: 200},
+								{ID: "flow-log3", Timestamp: 150},
+							}})},
+							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+								{ID: "flow-log4", Timestamp: 600},
+								{ID: "flow-log5", Timestamp: 300},
+								{ID: "flow-log5", Timestamp: 400},
+							}})},
+						)
+
+						resp, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+							},
+						})
+
+						require.NoError(t, err)
+						require.Len(t, resp.Documents, 6)
+						require.Equal(t, client.QueryResponseTotals{Value: 6}, resp.Totals)
+						require.Empty(t, resp.GroupValues)
+						require.Empty(t, resp.Aggregations)
+
+						require.Equal(t,
+							[]int64{600, 500, 400, 300, 200, 150},
+							slices.Map(resp.Documents, func(d any) int64 {
+								var document struct {
+									Timestamp int64 `json:"@timestamp"`
+								}
+								documentsJSON, err := json.Marshal(d)
+								require.NoError(t, err)
+								require.NoError(t, json.Unmarshal(documentsJSON, &document))
+								return document.Timestamp
+							}),
+						)
+					})
+
+					t.Run("groups", func(t *testing.T) {
+
+						groupResults := []bucketItems{
+							{
+								Buckets: []bucketItem{
+									{
+										"key":           "1500",
+										"key_as_string": "1500",
+										"g1": bucketItem{
+											"buckets": []bucketItem{
+												{"key": "g1-3", "doc_count": 3},
+												{"key": "g1-9", "doc_count": 9},
+												{"key": "g1-1", "doc_count": 1},
+											},
+										},
+									},
+									{"key_as_string": "1200"},
+									{"key_as_string": "1150"},
+								},
+							},
+							{
+								Buckets: []bucketItem{
+									{"key_as_string": "1600"},
+									{"key_as_string": "1300"},
+									{
+										"key_as_string": "1400",
+										"g1": bucketItem{
+											"buckets": []bucketItem{
+												{"key": "g1-30", "doc_count": 30},
+												{"key": "g1-90", "doc_count": 90},
+												{"key": "g1-10", "doc_count": 10},
+											},
+										},
+									},
+									{
+										"key_as_string": "1500",
+										"g1": bucketItem{
+											"buckets": []bucketItem{
+												{"key": "g1-7", "doc_count": 7},
+												{"key": "g1-11", "doc_count": 11},
+												{"key": "g1-2", "doc_count": 2},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						t.Run("desc", func(t *testing.T) {
+
+							mockClient.SetResults(
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[0]),
+								})},
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[1]),
+								})},
+							)
+
+							resp, err := subject.Query(ctx, client.QueryRequest{
+								CollectionName: "flows",
+								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+								Filters: []client.QueryRequestFilter{
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+								},
+								GroupBys: []client.QueryRequestGroup{
+									{Type: client.GroupType(groups.GroupTypeTime), Order: &client.QueryRequestGroupOrder{SortAsc: false}},
+									{Type: client.GroupType(groups.GroupTypeDiscrete), Order: &client.QueryRequestGroupOrder{SortAsc: false}},
+								},
+							})
+
+							require.NoError(t, err)
+							require.Empty(t, resp.Aggregations)
+
+							require.Equal(t, []client.QueryResponseGroupValue{
+								{Key: "1600", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1500", Aggregations: client.QueryResponseAggregations{}, NestedValues: []any{
+									client.QueryResponseGroupValue{Key: "g1-11", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-9", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-7", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-3", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-2", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-1", Aggregations: client.QueryResponseAggregations{}},
+								}},
+								{Key: "1400", Aggregations: client.QueryResponseAggregations{}, NestedValues: []any{
+									client.QueryResponseGroupValue{Key: "g1-90", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-30", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-10", Aggregations: client.QueryResponseAggregations{}},
+								}},
+								{Key: "1300", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1200", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1150", Aggregations: client.QueryResponseAggregations{}},
+							}, resp.GroupValues)
+
+						})
+
+						t.Run("asc", func(t *testing.T) {
+
+							mockClient.SetResults(
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[0]),
+								})},
+								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									"g0": jsonMarshal(t, groupResults[1]),
+								})},
+							)
+
+							resp, err := subject.Query(ctx, client.QueryRequest{
+								CollectionName: "flows",
+								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+								Filters: []client.QueryRequestFilter{
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+								},
+								GroupBys: []client.QueryRequestGroup{
+									{Type: client.GroupType(groups.GroupTypeTime), Order: &client.QueryRequestGroupOrder{SortAsc: true}},
+									{Type: client.GroupType(groups.GroupTypeDiscrete), Order: &client.QueryRequestGroupOrder{SortAsc: true}},
+								},
+							})
+
+							require.NoError(t, err)
+							require.Empty(t, resp.Aggregations)
+
+							require.Equal(t, []client.QueryResponseGroupValue{
+								{Key: "1150", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1200", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1300", Aggregations: client.QueryResponseAggregations{}},
+								{Key: "1400", Aggregations: client.QueryResponseAggregations{}, NestedValues: []any{
+									client.QueryResponseGroupValue{Key: "g1-10", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-30", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-90", Aggregations: client.QueryResponseAggregations{}},
+								}},
+								{Key: "1500", Aggregations: client.QueryResponseAggregations{}, NestedValues: []any{
+									client.QueryResponseGroupValue{Key: "g1-1", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-2", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-3", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-7", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-9", Aggregations: client.QueryResponseAggregations{}},
+									client.QueryResponseGroupValue{Key: "g1-11", Aggregations: client.QueryResponseAggregations{}},
+								}},
+								{Key: "1600", Aggregations: client.QueryResponseAggregations{}},
+							}, resp.GroupValues)
+						})
+					})
 				})
 			})
 		})
@@ -563,12 +955,12 @@ func TestQueryService(t *testing.T) {
 			subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
 
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 3, Items: []v1.FlowLog{
+				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
 					{ID: "flow-log1"},
 					{ID: "flow-log2"},
 					{ID: "flow-log3"},
 				}})},
-				rest.MockResult{Body: jsonMarshal(t, v1.List[v1.FlowLog]{TotalHits: 2, Items: []v1.FlowLog{
+				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
 					{ID: "flow-log4"},
 					{ID: "flow-log5"},
 				}})},
@@ -631,4 +1023,212 @@ func jsonMarshal(t *testing.T, v interface{}) []byte {
 	require.NoError(t, err)
 
 	return bytes
+}
+
+// Linseed MockClient implementation uses a non-exported restClient that does not handle concurrent results correctly
+// so multi-cluster results will sometimes incorrectly contain the same MockResult with it
+// Workaround: Implement a local mock client that handles concurrency
+// TODO: phase 2: update linseed mock client to handle concurrency (see https://tigera.atlassian.net/browse/TSLA-8187 )
+type concurrentMockClient struct {
+	client lsclient.MockClient
+
+	t *testing.T
+	m sync.Mutex
+}
+
+var _ lsclient.MockClient = (*concurrentMockClient)(nil)
+
+func (c *concurrentMockClient) RESTClient() rest.RESTClient {
+	return c.client.RESTClient()
+}
+
+func (c *concurrentMockClient) L3Flows(cluster string) lsclient.L3FlowsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) L7Flows(cluster string) lsclient.L7FlowsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) DNSFlows(cluster string) lsclient.DNSFlowsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) Events(cluster string) lsclient.EventsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) AuditLogs(cluster string) lsclient.AuditLogsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) BGPLogs(cluster string) lsclient.BGPLogsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) Processes(cluster string) lsclient.ProcessesInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) WAFLogs(cluster string) lsclient.WAFLogsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) Compliance(cluster string) lsclient.ComplianceInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) RuntimeReports(cluster string) lsclient.RuntimeReportsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) ThreatFeeds(cluster string) lsclient.ThreatFeedsInterface {
+	c.t.Fatal("should not be called")
+	return nil
+}
+
+func (c *concurrentMockClient) SetResults(results ...rest.MockResult) {
+	c.client.SetResults(results...)
+}
+
+func (c *concurrentMockClient) Requests() []*rest.MockRequest {
+	return c.client.Requests()
+}
+
+func (c *concurrentMockClient) FlowLogs(cluster string) lsclient.FlowLogsInterface {
+	return &concurrentMockFlowLogs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
+}
+
+func (c *concurrentMockClient) DNSLogs(cluster string) lsclient.DNSLogsInterface {
+	return &concurrentMockDNSLogs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
+}
+
+func (c *concurrentMockClient) L7Logs(cluster string) lsclient.L7LogsInterface {
+	return &concurrentMockL7Logs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
+}
+
+/* concurrentMockDNSLogs */
+type concurrentMockDNSLogs struct {
+	client  lsclient.MockClient
+	cluster string
+
+	t *testing.T
+	m *sync.Mutex
+}
+
+var _ lsclient.DNSLogsInterface = concurrentMockDNSLogs{}
+
+func (c concurrentMockDNSLogs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.DNSLog], error) {
+	dnsLogs := lsv1.List[lsv1.DNSLog]{}
+	err := c.ListInto(ctx, params, &dnsLogs)
+	if err != nil {
+		return nil, err
+	}
+	return &dnsLogs, err
+}
+
+func (c concurrentMockDNSLogs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.client.DNSLogs(c.cluster).ListInto(ctx, params, listable)
+}
+
+func (c concurrentMockDNSLogs) Create(ctx context.Context, logs []lsv1.DNSLog) (*lsv1.BulkResponse, error) {
+	c.t.Fatal("should not be called")
+	return nil, nil
+}
+
+func (c concurrentMockDNSLogs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.client.DNSLogs(c.cluster).Aggregations(ctx, params)
+}
+
+/* concurrentMockFlowLogs */
+type concurrentMockFlowLogs struct {
+	client  lsclient.MockClient
+	cluster string
+
+	t *testing.T
+	m *sync.Mutex
+}
+
+var _ lsclient.FlowLogsInterface = concurrentMockFlowLogs{}
+
+func (c concurrentMockFlowLogs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.FlowLog], error) {
+	flowLogs := lsv1.List[lsv1.FlowLog]{}
+	err := c.ListInto(ctx, params, &flowLogs)
+	if err != nil {
+		return nil, err
+	}
+	return &flowLogs, err
+}
+
+func (c concurrentMockFlowLogs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.client.FlowLogs(c.cluster).ListInto(ctx, params, listable)
+}
+
+func (c concurrentMockFlowLogs) Create(ctx context.Context, logs []lsv1.FlowLog) (*lsv1.BulkResponse, error) {
+	c.t.Fatal("should not be called")
+	return nil, nil
+}
+
+func (c concurrentMockFlowLogs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.client.FlowLogs(c.cluster).Aggregations(ctx, params)
+}
+
+/* concurrentMockL7Logs */
+type concurrentMockL7Logs struct {
+	client  lsclient.MockClient
+	cluster string
+
+	t *testing.T
+	m *sync.Mutex
+}
+
+var _ lsclient.L7LogsInterface = concurrentMockL7Logs{}
+
+func (c concurrentMockL7Logs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.L7Log], error) {
+	l7Logs := lsv1.List[lsv1.L7Log]{}
+	err := c.ListInto(ctx, params, &l7Logs)
+	if err != nil {
+		return nil, err
+	}
+	return &l7Logs, err
+}
+
+func (c concurrentMockL7Logs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.client.L7Logs(c.cluster).ListInto(ctx, params, listable)
+}
+
+func (c concurrentMockL7Logs) Create(ctx context.Context, logs []lsv1.L7Log) (*lsv1.BulkResponse, error) {
+	c.t.Fatal("should not be called")
+	return nil, nil
+}
+
+func (c concurrentMockL7Logs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.client.L7Logs(c.cluster).Aggregations(ctx, params)
 }

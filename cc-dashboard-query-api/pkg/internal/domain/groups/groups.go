@@ -5,10 +5,15 @@ import (
 )
 
 type GroupType string
+type GroupSortOrderType string
 
 const (
 	GroupTypeTime     = GroupType("time")
 	GroupTypeDiscrete = GroupType("discrete")
+
+	GroupSortOrderTypeSelf  = GroupSortOrderType("self")
+	GroupSortOrderTypeCount = GroupSortOrderType("count")
+	// GroupSortOrderTypeAggregation = GroupSortOrderType("aggregation") // TODO: implement during phase 2
 )
 
 type Group interface {
@@ -16,6 +21,13 @@ type Group interface {
 	Interval() string
 	MaxValues() int
 	FieldName() string
+	SortOrder() GroupSortOrder
+}
+
+type GroupSortOrder struct {
+	Asc            bool
+	Type           GroupSortOrderType
+	AggregationKey string
 }
 
 type AppendableGroupValue interface {

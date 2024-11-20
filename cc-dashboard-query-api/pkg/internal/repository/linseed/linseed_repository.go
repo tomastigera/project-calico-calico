@@ -61,9 +61,16 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) r
 		return result.QueryResultWithError(httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName)))
 	}
 
+	linseedQueryParams := newQueryParams(req.MaxDocuments)
+
+	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
+	if err != nil {
+		return result.QueryResultWithError(err)
+	}
+
 	repositoryAggregations := make(map[string]json.RawMessage)
 	if len(req.Groups) > 0 {
-		elasticAggregation, err := queryGroupsToElastic(0, req.Groups, req.Aggregations)
+		elasticAggregation, err := queryGroupsToElastic(0, req.Groups, req.Aggregations, linseedQueryParams.requestedPeriod)
 		if err != nil {
 			return result.QueryResultWithError(err)
 		}
@@ -97,13 +104,6 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) r
 
 			repositoryAggregations["a_"+string(aggKey)] = aggJson
 		}
-	}
-
-	linseedQueryParams := newQueryParams(req.MaxDocuments)
-
-	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
-	if err != nil {
-		return result.QueryResultWithError(err)
 	}
 
 	params, err := collectionClient.Params(

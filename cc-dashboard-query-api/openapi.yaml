@@ -135,6 +135,8 @@ components:
           type: string
         sortAsc:
           type: boolean
+        type:
+          type: string
       type: object
     QueryResponse:
       properties:

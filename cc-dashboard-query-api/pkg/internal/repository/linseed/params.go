@@ -15,20 +15,27 @@ import (
 )
 
 type queryParams struct {
-	lsv1.QueryParams
+	linseedQueryParams     lsv1.QueryParams
+	linseedQuerySortParams lsv1.QuerySortParams
 
-	selector      string
-	policyMatches []lsv1.PolicyMatch
-	domainMatches map[lsv1.DomainMatchType][]string
+	selector        string
+	domainMatches   map[lsv1.DomainMatchType][]string
+	policyMatches   []lsv1.PolicyMatch
+	requestedPeriod time.Duration
 }
 
 func newQueryParams(maxDocuments int) *queryParams {
 	return &queryParams{
-		QueryParams: lsv1.QueryParams{MaxPageSize: maxDocuments},
+		linseedQueryParams: lsv1.QueryParams{MaxPageSize: maxDocuments},
 		domainMatches: map[lsv1.DomainMatchType][]string{
 			lsv1.DomainMatchQname:  nil,
 			lsv1.DomainMatchRRSet:  nil,
 			lsv1.DomainMatchRRData: nil,
+		},
+		linseedQuerySortParams: lsv1.QuerySortParams{
+			Sort: []lsv1.SearchRequestSortBy{
+				{Field: "@timestamp", Descending: true},
+			},
 		},
 	}
 }
@@ -64,7 +71,8 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			return "", fmt.Errorf("negated relativeTimeRange criterion is not supported")
 		}
 
-		p.SetTimeRange(&lmav1.TimeRange{
+		p.requestedPeriod = c.Gte() - c.Lte()
+		p.linseedQueryParams.SetTimeRange(&lmav1.TimeRange{
 			From: now.Add(-c.Gte()),
 			To:   now.Add(-c.Lte()),
 			Now:  &now,
@@ -75,7 +83,8 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			return "", fmt.Errorf("negated dateRange criterion is not supported")
 		}
 
-		p.SetTimeRange(&lmav1.TimeRange{
+		p.requestedPeriod = c.Gte().Sub(c.Lte())
+		p.linseedQueryParams.SetTimeRange(&lmav1.TimeRange{
 			From: c.Gte(),
 			To:   c.Lte(),
 			Now:  &now,

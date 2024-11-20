@@ -3,14 +3,18 @@ package groups
 type groupTime struct {
 	interval  string
 	fieldName string
+	maxValues int
+	sortOrder GroupSortOrder
 }
 
 var _ Group = &groupTime{}
 
-func NewGroupTime(fieldName string, interval string) Group {
+func NewGroupTime(fieldName string, interval string, maxValues int, sortOrder GroupSortOrder) Group {
 	return &groupTime{
 		interval:  interval,
 		fieldName: fieldName,
+		maxValues: maxValues,
+		sortOrder: sortOrder,
 	}
 }
 
@@ -19,7 +23,7 @@ func (g *groupTime) FieldName() string {
 }
 
 func (g *groupTime) MaxValues() int {
-	return 0
+	return g.maxValues
 }
 
 func (g *groupTime) Interval() string {
@@ -28,4 +32,8 @@ func (g *groupTime) Interval() string {
 
 func (g *groupTime) Type() GroupType {
 	return GroupTypeTime
+}
+
+func (g *groupTime) SortOrder() GroupSortOrder {
+	return g.sortOrder
 }

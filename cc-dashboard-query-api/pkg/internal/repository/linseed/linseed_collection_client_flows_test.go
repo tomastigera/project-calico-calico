@@ -31,23 +31,28 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			t.Run("params", func(t *testing.T) {
 				now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
-				linseedQueryParams := newQueryParams(0)
-				linseedQueryParams.QueryParams.TimeRange = &lmav1.TimeRange{
+				repositoryQueryParams := newQueryParams(0)
+				repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 					From: time.Date(2023, 1, 2, 3, 4, 5, 0, time.UTC),
 					To:   time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
 					Now:  &now,
 				}
 
-				linseedQueryParams.selector = "sel1 = sel1"
+				repositoryQueryParams.selector = "sel1 = sel1"
 				// domain matches should be ignored for non-DNS collections
-				linseedQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
+				repositoryQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
 
-				params, err := subject.Params(linseedQueryParams, nil)
+				params, err := subject.Params(repositoryQueryParams, nil)
 				require.NoError(t, err)
 				require.Equal(t, &lsv1.FlowLogParams{
-					QueryParams: linseedQueryParams.QueryParams,
+					QueryParams: repositoryQueryParams.linseedQueryParams,
 					LogSelectionParams: lsv1.LogSelectionParams{
 						Selector: "sel1 = sel1",
+					},
+					QuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "@timestamp", Descending: true},
+						},
 					},
 				}, params)
 			})
@@ -112,23 +117,28 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 			aggregations := map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
 
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			linseedQueryParams := newQueryParams(0)
-			linseedQueryParams.QueryParams.TimeRange = &lmav1.TimeRange{
+			repositoryQueryParams := newQueryParams(0)
+			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
 				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
 				Now:  &now,
 			}
-			linseedQueryParams.selector = "sel2 = sel2"
+			repositoryQueryParams.selector = "sel2 = sel2"
 			// domain matches should be ignored for non-DNS collections
-			linseedQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
+			repositoryQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
 
-			params, err := subject.Params(linseedQueryParams, aggregations)
+			params, err := subject.Params(repositoryQueryParams, aggregations)
 			require.NoError(t, err)
 			require.Equal(t, &lsv1.FlowLogAggregationParams{
 				FlowLogParams: lsv1.FlowLogParams{
-					QueryParams: linseedQueryParams.QueryParams,
+					QueryParams: repositoryQueryParams.linseedQueryParams,
 					LogSelectionParams: lsv1.LogSelectionParams{
 						Selector: "sel2 = sel2",
+					},
+					QuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "@timestamp", Descending: true},
+						},
 					},
 				},
 				Aggregations: map[string]json.RawMessage{
