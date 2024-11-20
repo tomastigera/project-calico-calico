@@ -42,7 +42,7 @@ clean:
 helm-pr:
 	git clone git@github.com:tigera/helm-charts.git helm-charts-$(ENV) && cd helm-charts-$(ENV) && \
 	/usr/bin/yq write -i charts/cc-dashboard-query-api/values.mgmt-$(ENV).yaml --tag '!!str' apiImageTag ${TAG_NAME} && \
-	/usr/bin/yq write -i charts/cc-dashboard-query-api/values.values.gcp-us-$(ENV)-01.yaml --tag '!!str' ccDashboardQueryApi.apiImageTag ${TAG_NAME} && \
+	/usr/bin/yq write -i charts/cc-dashboard-query-api/values.gcp-us-$(ENV)-01.yaml --tag '!!str' ccDashboardQueryApi.apiImageTag ${TAG_NAME} && \
 	git checkout -B ${TAG_NAME}-$(ENV)-release && \
 	git add . && \
 	git commit -am "Release ${TAG_NAME} to $(ENV) environment" && \
