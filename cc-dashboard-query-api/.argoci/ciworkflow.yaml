@@ -87,3 +87,5 @@ spec:
           cd cc-dashboard-query-api
           until docker ps; do sleep 5; done
           make docker-push
+          export GITHUB_TOKEN="${GITHUB_ACCESS_TOKEN}"
+          ENV=dev PR_OPTS=" -l autoupdate,automerge,dev,cc-dashboard-query-api" make helm-pr
