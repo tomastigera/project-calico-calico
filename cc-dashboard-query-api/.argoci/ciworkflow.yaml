@@ -81,11 +81,7 @@ spec:
             value: tigera-cc-dev
         source: |
           source checkout
-          createLocalSecret "banzai-google-service-account.json" "${HOME}/secrets/banzai-google-service-account.json"
-          gcloud auth activate-service-account --key-file="${HOME}/secrets/banzai-google-service-account.json"
-          gcloud auth configure-docker -q
           cd cc-dashboard-query-api
-          until docker ps; do sleep 5; done
+          source .argoci/scripts/cd_prologue.sh
           make docker-push
-          export GITHUB_TOKEN="${GITHUB_ACCESS_TOKEN}"
           ENV=dev PR_OPTS=" -l autoupdate,automerge,dev,cc-dashboard-query-api" make helm-pr
