@@ -45,7 +45,6 @@ var collectionFlows = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "packets_in"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "packets_out"},
 		CollectionFieldEnum{fieldName: FieldNamePolicyType, fieldValues: []string{FieldPolicyStaged, FieldPolicyEnforced}, defaultValue: FieldPolicyEnforced},
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "policies.all_policies"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_args"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_id"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_name"},

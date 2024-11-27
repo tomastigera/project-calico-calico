@@ -149,8 +149,6 @@
     values:
     - staged
     - enforced
-  - name: policies.all_policies
-    type: text
   - name: process_args
     type: text
   - name: process_id
