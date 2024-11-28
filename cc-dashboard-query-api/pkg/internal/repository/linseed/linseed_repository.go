@@ -55,29 +55,29 @@ func NewLinseedRepositoryWithClient(logger logging.Logger, url string, linseedCl
 	}
 }
 
-func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) result.QueryResult {
+func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (result.QueryResult, error) {
 	collectionClient, found := r.clients[req.CollectionName]
 	if !found {
-		return result.QueryResultWithError(httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName)))
+		return result.QueryResult{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName))
 	}
 
 	linseedQueryParams := newQueryParams(req.MaxDocuments)
 
 	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
 	if err != nil {
-		return result.QueryResultWithError(err)
+		return result.QueryResult{}, err
 	}
 
 	repositoryAggregations := make(map[string]json.RawMessage)
 	if len(req.Groups) > 0 {
 		elasticAggregation, err := queryGroupsToElastic(0, req.Groups, req.Aggregations, linseedQueryParams.requestedPeriod)
 		if err != nil {
-			return result.QueryResultWithError(err)
+			return result.QueryResult{}, err
 		}
 
 		aggJson, err := elasticAggregationToJSON(elasticAggregation)
 		if err != nil {
-			return result.QueryResultWithError(err)
+			return result.QueryResult{}, err
 		}
 
 		/* Each elastic group aggregation must be identified by an arbitrary key that does not conflict with existing
@@ -93,13 +93,13 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) r
 	for aggKey, agg := range req.Aggregations {
 		elasticAggregation, err := queryAggregationToElastic(agg)
 		if err != nil {
-			return result.QueryResultWithError(err)
+			return result.QueryResult{}, err
 		}
 
 		if elasticAggregation != nil {
 			aggJson, err := elasticAggregationToJSON(elasticAggregation)
 			if err != nil {
-				return result.QueryResultWithError(err)
+				return result.QueryResult{}, err
 			}
 
 			repositoryAggregations["a_"+string(aggKey)] = aggJson
@@ -110,27 +110,27 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) r
 		linseedQueryParams,
 		repositoryAggregations)
 	if err != nil {
-		return result.QueryResultWithError(err)
+		return result.QueryResult{}, err
 	}
 
 	var queryResult result.QueryResult
 	if len(repositoryAggregations) > 0 {
 		resultAggregations, err := collectionClient.Aggregations(ctx, req.ClusterID, params)
 		if err != nil {
-			return result.QueryResultWithError(err)
+			return result.QueryResult{}, err
 		}
 
 		queryResult.Aggregations = make(aggregations.AggregationValues)
 		for aggKey, agg := range req.Aggregations {
 			err := elasticAggregationToQueryResult(string(aggKey), agg, 0, queryResult.Aggregations, resultAggregations)
 			if err != nil {
-				return result.QueryResultWithError(err)
+				return result.QueryResult{}, err
 			}
 		}
 
 		if len(req.Groups) > 0 {
 			if err := queryGroupsFromElastic(0, req.Groups, req.Aggregations, resultAggregations, &queryResult); err != nil {
-				return result.QueryResultWithError(err)
+				return result.QueryResult{}, err
 			}
 
 			for _, groupValue := range queryResult.GroupValues {
@@ -141,11 +141,11 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) r
 	} else {
 		queryResult, err = collectionClient.List(ctx, req.ClusterID, params)
 		if err != nil {
-			return result.QueryResultWithError(err)
+			return result.QueryResult{}, err
 		}
 	}
 
-	return queryResult
+	return queryResult, nil
 }
 
 func queryAggregationToElastic(queryAggregation aggregations.Aggregation) (elastic.Aggregation, error) {
@@ -181,7 +181,7 @@ func elasticAggregationToQueryResult(aggKey string, aggregation aggregations.Agg
 
 	switch agg := aggregation.(type) {
 	case aggregations.AggregationCount:
-		resultAggregations[aggKey] = aggregations.NewAggregationValue(&docCount, agg)
+		resultAggregations[aggKey] = aggregations.NewAggregationValue(&docCount)
 		return nil
 	case aggregations.AggregationSum:
 		value, found = elasticAggregations.Sum(elasticKey)
@@ -205,7 +205,7 @@ func elasticAggregationToQueryResult(aggKey string, aggregation aggregations.Agg
 	}
 
 	if found {
-		resultAggregations[aggKey] = aggregations.NewAggregationValue(value.Value, aggregation)
+		resultAggregations[aggKey] = aggregations.NewAggregationValue(value.Value)
 	}
 	return nil
 }

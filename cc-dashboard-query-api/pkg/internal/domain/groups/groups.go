@@ -50,16 +50,3 @@ type GroupValues []*GroupValue
 func (g *GroupValue) AppendGroupValue(groupValue *GroupValue) {
 	g.SubGroupValues = append(g.SubGroupValues, groupValue)
 }
-
-func (g GroupValues) Calculate() error {
-	for _, groupValue := range g {
-		if err := groupValue.Aggregations.Calculate(); err != nil {
-			return err
-		}
-
-		if err := groupValue.SubGroupValues.Calculate(); err != nil {
-			return err
-		}
-	}
-	return nil
-}

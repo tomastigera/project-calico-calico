@@ -34,11 +34,11 @@ func TestLinseedRepository(t *testing.T) {
 		t.Run("empty result", func(t *testing.T) {
 			mockClient.SetResults(rest.MockResult{})
 
-			queryResult := subject.Query(ctx, query.QueryRequest{
+			queryResult, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
 				ClusterID:      "fake-cluster",
 			})
-			require.NoError(t, queryResult.Err)
+			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
 				Documents: []result.QueryResultDocument{},
 			}, queryResult)
@@ -49,11 +49,11 @@ func TestLinseedRepository(t *testing.T) {
 				Body: json.RawMessage(`{"items": null}`),
 			})
 
-			queryResult := subject.Query(ctx, query.QueryRequest{
+			queryResult, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
 				ClusterID:      "fake-cluster",
 			})
-			require.NoError(t, queryResult.Err)
+			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
 				Documents: []result.QueryResultDocument{},
 			}, queryResult)

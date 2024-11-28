@@ -227,15 +227,12 @@ func TestLinseedGroups(t *testing.T) {
 
 			aggValue1 := int64(99)
 			aggValue2 := int64(11)
-			expectedAggregationValue1 := aggregations.NewAggregationValue[int64](&aggValue1, nil)
-			expectedAggregationValue2 := aggregations.NewAggregationValue[int64](&aggValue2, nil)
-			require.NoError(t, expectedAggregationValue1.Calculate())
-			require.NoError(t, expectedAggregationValue2.Calculate())
+			expectedAggregationValue1 := aggregations.NewAggregationValue[int64](&aggValue1)
+			expectedAggregationValue2 := aggregations.NewAggregationValue[int64](&aggValue2)
 
 			err := queryGroupsFromElastic(0, groups.Groups{groupDiscrete, groupTime}, queryRequestAggregations, elasticResult, groupValue)
 			require.NoError(t, err)
 
-			require.NoError(t, groupValue.SubGroupValues.Calculate())
 			require.Equal(t, &groups.GroupValue{
 				SubGroupValues: groups.GroupValues{
 					&groups.GroupValue{

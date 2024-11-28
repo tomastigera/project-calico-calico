@@ -25,6 +25,7 @@ func TestCollectionsService(t *testing.T) {
 			return true, nil
 		}),
 		"",
+		"tigera-labs",
 	)
 
 	logger := logging.New("TestCollectionsService")

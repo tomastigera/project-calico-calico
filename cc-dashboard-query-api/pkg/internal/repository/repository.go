@@ -8,5 +8,5 @@ import (
 )
 
 type Repository interface {
-	Query(ctx context.Context, req query.QueryRequest) result.QueryResult
+	Query(ctx context.Context, req query.QueryRequest) (result.QueryResult, error)
 }

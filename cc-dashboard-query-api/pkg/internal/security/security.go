@@ -14,6 +14,7 @@ import (
 
 type AuthContext interface {
 	context.Context
+	ClusterID() string // Temporary cluster-id. TODO: Remove once linseed supports multi-cluster queries
 	UserInfo() user.Info
 	TenantNamespace() string
 	IsResourcePermitted(logger logging.Logger, apiGroup, resource, resourceName string) (bool, error)
@@ -21,18 +22,20 @@ type AuthContext interface {
 
 type userAuthContext struct {
 	context.Context
+	clusterID       string
 	userInfo        user.Info
 	rbacAuthorizer  lmaauth.RBACAuthorizer
 	tenantNamespace string
 }
 
-func NewUserAuthContext(parent context.Context, userInfo user.Info, rbacAuthorizer lmaauth.RBACAuthorizer, tenantNamespace string) AuthContext {
+func NewUserAuthContext(parent context.Context, userInfo user.Info, rbacAuthorizer lmaauth.RBACAuthorizer, tenantNamespace, clusterID string) AuthContext {
 	if parent == nil {
 		parent = context.Background()
 	}
 
 	return &userAuthContext{
 		Context:         parent,
+		clusterID:       clusterID,
 		userInfo:        userInfo,
 		rbacAuthorizer:  rbacAuthorizer,
 		tenantNamespace: tenantNamespace,
@@ -45,6 +48,10 @@ func (u *userAuthContext) UserInfo() user.Info {
 
 func (u *userAuthContext) TenantNamespace() string {
 	return u.tenantNamespace
+}
+
+func (u *userAuthContext) ClusterID() string {
+	return u.clusterID
 }
 
 func (u *userAuthContext) IsResourcePermitted(logger logging.Logger, apiGroup, resource, resourceName string) (bool, error) {

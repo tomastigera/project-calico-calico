@@ -3,7 +3,6 @@ package query
 import (
 	"context"
 	"fmt"
-	"iter"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -90,6 +89,7 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		return client.QueryResponse{}, err
 	}
 
+	/* TODO: enable this code once linseed supports multi-cluster queries
 	if len(req.ClusterFilter) > 0 {
 		// filter out non-existing ManagedCluster names.
 		// Note that an empty req.ClusterFilter means we'll query all managed clusters logs
@@ -98,12 +98,20 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		})
 	}
 
+	req.Clusters = managedClusterNames
+	*/
+	clusterID := domain.ManagedClusterName(ctx.ClusterID())
+	if !slices.Contains(managedClusterNames, clusterID) {
+		return client.QueryResponse{}, httpreply.ToBadRequest(fmt.Sprintf("cluster '%s' not found", clusterID))
+	}
+
 	maxDocuments := MaxQueryDocumentsDefault
 	if req.MaxDocs > 0 {
 		maxDocuments = min(req.MaxDocs, MaxQueryDocumentsLimit)
 	}
 
 	repositoryRequest := domain.QueryRequest{
+		ClusterID:      clusterID,
 		Aggregations:   make(aggregations.Aggregations),
 		MaxDocuments:   maxDocuments,
 		CollectionName: queryCollection.Name(),
@@ -133,34 +141,22 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 	ctxTimeout, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	aggregatedQueryResult := result.QueryResult{
-		Aggregations: make(aggregations.AggregationValues),
-	}
-
-	// Execute a query for each managed cluster to get results for phase 1
-	// TODO: Have a single query executed for multiple managed clusters. (see cc-dashboard-query-api/pkg/internal/domain/aggregations/aggregation_value.go)
-	for queryResult := range s.queryClusters(ctxTimeout, managedClusterNames, repositoryRequest) {
-		if queryResult.Err != nil {
-			return client.QueryResponse{}, queryResult.Err
-		}
-		s.aggregateSingleClusterResult(&aggregatedQueryResult, queryResult)
-	}
-
-	if err := aggregatedQueryResult.Calculate(); err != nil {
+	queryResult, err := s.repository.Query(ctxTimeout, repositoryRequest)
+	if err != nil {
 		return client.QueryResponse{}, err
 	}
 
 	queryResponse := client.QueryResponse{
 		Totals: client.QueryResponseTotals{
-			Value: aggregatedQueryResult.Hits,
+			Value: queryResult.Hits,
 		},
-		GroupValues:  mapResultGroupValues(0, repositoryRequest.Groups, aggregatedQueryResult.GroupValues),
-		Aggregations: mapResultAggregations(aggregatedQueryResult.Aggregations),
+		GroupValues:  mapResultGroupValues(0, repositoryRequest.Groups, queryResult.GroupValues),
+		Aggregations: mapResultAggregations(queryResult.Aggregations),
 	}
 
 	queryResponse.Documents = slices.Map(
 		slices.SortByComparing( // sort desc by @timestamp
-			aggregatedQueryResult.Documents,
+			queryResult.Documents,
 			comparators.Func[result.QueryResultDocument](func(doc1, doc2 result.QueryResultDocument) int {
 				if doc1.Timestamp.UnixMicro() == doc2.Timestamp.UnixMicro() {
 					return 0
@@ -177,65 +173,6 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 	}
 
 	return queryResponse, nil
-}
-
-// queryClusters This is a temporary phase 1 quickfix solution for multi cluster queries that will be replaced on
-// phase 2 with a linseed/ES multi-cluster aggregation
-func (s *QueryService) queryClusters(ctx context.Context, managedClusterNames []domain.ManagedClusterName, req domain.QueryRequest) iter.Seq[result.QueryResult] {
-	return func(yield func(result.QueryResult) bool) {
-
-		ch := make(chan result.QueryResult, len(managedClusterNames))
-		for _, clusterName := range managedClusterNames {
-			go func(req domain.QueryRequest, clusterName domain.ManagedClusterName) {
-				req.ClusterID = clusterName
-				ch <- s.repository.Query(ctx, req)
-			}(req, clusterName)
-		}
-
-		for i := 0; i < len(managedClusterNames); i++ {
-			if !yield(<-ch) {
-				return
-			}
-		}
-	}
-}
-
-func (s *QueryService) aggregateSingleClusterResult(aggregatedQueryResult *result.QueryResult, singleClusterResult result.QueryResult) {
-	aggregatedQueryResult.Hits += singleClusterResult.Hits
-	aggregatedQueryResult.Documents = append(aggregatedQueryResult.Documents, singleClusterResult.Documents...)
-	aggregatedQueryResult.GroupValues = s.aggregateSingleClusterResultGroup(aggregatedQueryResult.GroupValues, singleClusterResult.GroupValues)
-
-	for key, agg := range singleClusterResult.Aggregations {
-		if _, found := aggregatedQueryResult.Aggregations[key]; !found {
-			aggregatedQueryResult.Aggregations[key] = agg
-		} else {
-			aggregatedQueryResult.Aggregations[key].Append(agg)
-		}
-	}
-}
-
-func (s *QueryService) aggregateSingleClusterResultGroup(aggregatedGroupValues groups.GroupValues, resultGroupValues groups.GroupValues) groups.GroupValues {
-
-	for _, groupValue := range resultGroupValues {
-		aggregatedGroup, found := slices.Find(aggregatedGroupValues, func(g *groups.GroupValue) bool {
-			return g.Key == groupValue.Key
-		})
-		if !found {
-			aggregatedGroupValues = append(aggregatedGroupValues, groupValue)
-		} else {
-			aggregatedGroup.DocCount += groupValue.DocCount
-			aggregatedGroup.SubGroupValues = s.aggregateSingleClusterResultGroup(aggregatedGroup.SubGroupValues, groupValue.SubGroupValues)
-			for key, agg := range groupValue.Aggregations {
-				if _, found := aggregatedGroup.Aggregations[key]; !found {
-					aggregatedGroup.Aggregations[key] = agg
-				} else {
-					aggregatedGroup.Aggregations[key].Append(agg)
-				}
-			}
-		}
-	}
-
-	return aggregatedGroupValues
 }
 
 func (s *QueryService) validateRequest(req client.QueryRequest) (collections.Collection, error) {
@@ -290,7 +227,7 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		if err != nil {
 			return nil, err
 		}
-		return filters.NewStartsWith(field, from.Value.(string), negate), nil //TODO: validate this
+		return filters.NewStartsWith(field, from.Value.(string), negate), nil
 	case client.CriterionTypeExists:
 		field, err := getCollectionField(from.Field)
 		if err != nil {
@@ -415,42 +352,8 @@ func mapClientAggregation(from client.QueryRequestAggregation) (aggregations.Agg
 	return nil, fmt.Errorf("unknown aggregation type '%s'", from.Function.Type)
 }
 
-func sortGroupValues(groupIndex int, repositoryRequestGroups groups.Groups, groupValues groups.GroupValues) groups.GroupValues {
-	if groupIndex >= len(repositoryRequestGroups) {
-		return nil
-	}
-
-	group := repositoryRequestGroups[groupIndex]
-
-	sortOrder := group.SortOrder()
-	return slices.SortByComparing(groupValues, comparators.Func[*groups.GroupValue](func(g1, g2 *groups.GroupValue) int {
-		sortValue := -1
-		if sortOrder.Asc {
-			sortValue = 1
-		}
-		if sortOrder.Type == groups.GroupSortOrderTypeSelf {
-			return strings.Compare(g1.Key, g2.Key) * sortValue
-
-			/* Phase 2: see GroupSortOrderTypeAggregation in cc-dashboard-query-api/pkg/internal/domain/groups/groups.go
-			} else if sortOrder.Type == groups.GroupSortOrderTypeAggregation {
-			*/
-		}
-
-		if group.Type() == groups.GroupTypeDiscrete {
-			if g1.DocCount == g2.DocCount {
-				return 0
-			} else if g1.DocCount > g2.DocCount {
-				return sortValue
-			}
-			return -sortValue
-		}
-
-		return strings.Compare(g1.Key, g2.Key) * sortValue
-	}))
-}
-
 func mapResultGroupValues(groupIndex int, repositoryRequestGroups groups.Groups, groupValues groups.GroupValues) []client.QueryResponseGroupValue {
-	values := slices.Map(sortGroupValues(groupIndex, repositoryRequestGroups, groupValues), func(from *groups.GroupValue) client.QueryResponseGroupValue {
+	values := slices.Map(groupValues, func(from *groups.GroupValue) client.QueryResponseGroupValue {
 		var nestedValues []any
 		if from.SubGroupValues != nil {
 			nestedValues = slices.Map(
@@ -468,7 +371,7 @@ func mapResultGroupValues(groupIndex int, repositoryRequestGroups groups.Groups,
 
 	if groupIndex < len(repositoryRequestGroups) {
 		maxValues := repositoryRequestGroups[groupIndex].MaxValues()
-		if maxValues > 0 && len(values) > maxValues { // NOTE: the max number of group results may be limited here
+		if maxValues > 0 && len(values) > maxValues { // NOTE: a max number of group results limit could be implemented here
 			values = values[:maxValues]
 		}
 	}
