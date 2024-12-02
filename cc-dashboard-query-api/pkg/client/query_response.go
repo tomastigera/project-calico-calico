@@ -22,7 +22,7 @@ type QueryResponseValueAsString struct {
 }
 
 type QueryResponseGroupValue struct {
-	Key          string                    `json:"key,omitempty"`
+	Key          string                    `json:"key"`
 	Aggregations QueryResponseAggregations `json:"aggregations,omitempty"`
 
 	// TODO: set type to []QueryResponseGroupValue once tds-apiserver/pkg/http/handleradapters/openapi.go gets
