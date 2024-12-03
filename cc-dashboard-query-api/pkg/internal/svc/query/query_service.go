@@ -63,7 +63,7 @@ func NewQueryService(
 
 func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) (client.QueryResponse, error) {
 	s.logger.DebugC(ctx, "Query",
-		zap.Int("maxDocs", req.MaxDocs),
+		zap.Intp("maxDocs", req.MaxDocs),
 		zap.String("collectionName", string(req.CollectionName)),
 		zap.Any("clusterFilter", req.ClusterFilter),
 		zap.Any("filters", req.Filters),
@@ -106,8 +106,9 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 	}
 
 	maxDocuments := MaxQueryDocumentsDefault
-	if req.MaxDocs > 0 {
-		maxDocuments = min(req.MaxDocs, MaxQueryDocumentsLimit)
+
+	if req.MaxDocs != nil && *req.MaxDocs >= 0 {
+		maxDocuments = min(*req.MaxDocs, MaxQueryDocumentsLimit)
 	}
 
 	repositoryRequest := domain.QueryRequest{
@@ -152,6 +153,21 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		},
 		GroupValues:  mapResultGroupValues(0, repositoryRequest.Groups, queryResult.GroupValues),
 		Aggregations: mapResultAggregations(queryResult.Aggregations),
+	}
+
+	if len(queryResponse.GroupValues) == 0 && len(req.Aggregations) > 0 {
+		// Handle the special case of a count aggregation with no groups set, which results in no elastic aggregations
+		// being queried (since the count aggregation relies on document/hit count)
+		for aggKey, agg := range req.Aggregations {
+			switch agg.Function.Type {
+			case client.AggregationFunctionTypeCount:
+				if _, found := queryResponse.Aggregations[aggKey]; !found {
+					queryResponse.Aggregations[aggKey] = client.QueryResponseValueAsString{
+						AsString: strconv.FormatInt(queryResult.Hits, 10),
+					}
+				}
+			}
+		}
 	}
 
 	queryResponse.Documents = slices.Map(

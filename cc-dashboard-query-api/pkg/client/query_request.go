@@ -9,7 +9,7 @@ import (
 // QueryRequest A query request
 type QueryRequest struct {
 	// MaxDocs maximum number of documents in the response of non-aggregated requests
-	MaxDocs int `json:"maxDocs"`
+	MaxDocs *int `json:"maxDocs"`
 
 	// CollectionName The collection being queried
 	CollectionName CollectionName `json:"collectionName"`

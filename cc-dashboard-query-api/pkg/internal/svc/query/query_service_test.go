@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -51,11 +50,7 @@ func TestQueryService(t *testing.T) {
 
 	tenantID := "fake-tenant"
 
-	mockClient := &concurrentMockClient{
-		t:      t,
-		m:      sync.Mutex{},
-		client: lsclient.NewMockClient(tenantID),
-	}
+	mockClient := lsclient.NewMockClient(tenantID)
 	repository := linseed.NewLinseedRepositoryWithClient(logger, "", mockClient)
 
 	managedClusterLister := managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
@@ -278,7 +273,7 @@ func TestQueryService(t *testing.T) {
 			t.Run("value is honoured", func(t *testing.T) {
 				setMockResult()
 				resp, err := subject.Query(ctx, client.QueryRequest{
-					MaxDocs:        2,
+					MaxDocs:        intp(2),
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
@@ -298,7 +293,7 @@ func TestQueryService(t *testing.T) {
 			t.Run("default value", func(t *testing.T) {
 				setMockResult()
 				resp, err := subject.Query(ctx, client.QueryRequest{
-					MaxDocs:        0,
+					MaxDocs:        nil,
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
@@ -318,7 +313,7 @@ func TestQueryService(t *testing.T) {
 				mockClient.SetResults(rest.MockResult{Body: jsonMarshal(t, mockResult)})
 
 				resp, err := subject.Query(ctx, client.QueryRequest{
-					MaxDocs:        1000,
+					MaxDocs:        intp(1000),
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
@@ -550,6 +545,43 @@ func TestQueryService(t *testing.T) {
 					})
 				})
 
+				t.Run("count aggregation with no groups", func(t *testing.T) {
+					subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
+
+					mockClient.SetResults(
+						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+							{ID: "flow-log1"},
+							{ID: "flow-log2"},
+							{ID: "flow-log3"},
+						}})},
+					)
+
+					resp, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						MaxDocs:        intp(0),
+						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+						},
+						Aggregations: client.QueryRequestAggregations{
+							"a-count-aggregation": {
+								FieldName: "_count",
+								Function: client.QueryRequestAggregationFunction{
+									Type: client.AggregationFunctionTypeCount,
+								},
+							},
+						},
+					})
+
+					require.NoError(t, err)
+					require.Empty(t, resp.Documents)
+					require.Equal(t, client.QueryResponseTotals{Value: 3}, resp.Totals)
+					require.Empty(t, resp.GroupValues)
+					require.Equal(t, client.QueryResponseAggregations{
+						"a-count-aggregation": {AsString: "3"},
+					}, resp.Aggregations)
+				})
+
 				t.Run("sort order", func(t *testing.T) {
 					t.Run("defaults", func(t *testing.T) {
 						g, err := mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeDiscrete)})
@@ -650,210 +682,6 @@ func jsonMarshal(t *testing.T, v interface{}) []byte {
 	return bytes
 }
 
-// Linseed MockClient implementation uses a non-exported restClient that does not handle concurrent results correctly
-// so multi-cluster results will sometimes incorrectly contain the same MockResult with it
-// Workaround: Implement a local mock client that handles concurrency
-// TODO: phase 2: update linseed mock client to handle concurrency (see https://tigera.atlassian.net/browse/TSLA-8187 )
-type concurrentMockClient struct {
-	client lsclient.MockClient
-
-	t *testing.T
-	m sync.Mutex
-}
-
-var _ lsclient.MockClient = (*concurrentMockClient)(nil)
-
-func (c *concurrentMockClient) RESTClient() rest.RESTClient {
-	return c.client.RESTClient()
-}
-
-func (c *concurrentMockClient) L3Flows(cluster string) lsclient.L3FlowsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) L7Flows(cluster string) lsclient.L7FlowsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) DNSFlows(cluster string) lsclient.DNSFlowsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) Events(cluster string) lsclient.EventsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) AuditLogs(cluster string) lsclient.AuditLogsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) BGPLogs(cluster string) lsclient.BGPLogsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) Processes(cluster string) lsclient.ProcessesInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) WAFLogs(cluster string) lsclient.WAFLogsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) Compliance(cluster string) lsclient.ComplianceInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) RuntimeReports(cluster string) lsclient.RuntimeReportsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) ThreatFeeds(cluster string) lsclient.ThreatFeedsInterface {
-	c.t.Fatal("should not be called")
-	return nil
-}
-
-func (c *concurrentMockClient) SetResults(results ...rest.MockResult) {
-	c.client.SetResults(results...)
-}
-
-func (c *concurrentMockClient) Requests() []*rest.MockRequest {
-	return c.client.Requests()
-}
-
-func (c *concurrentMockClient) FlowLogs(cluster string) lsclient.FlowLogsInterface {
-	return &concurrentMockFlowLogs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
-}
-
-func (c *concurrentMockClient) DNSLogs(cluster string) lsclient.DNSLogsInterface {
-	return &concurrentMockDNSLogs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
-}
-
-func (c *concurrentMockClient) L7Logs(cluster string) lsclient.L7LogsInterface {
-	return &concurrentMockL7Logs{t: c.t, m: &c.m, cluster: cluster, client: c.client}
-}
-
-/* concurrentMockDNSLogs */
-type concurrentMockDNSLogs struct {
-	client  lsclient.MockClient
-	cluster string
-
-	t *testing.T
-	m *sync.Mutex
-}
-
-var _ lsclient.DNSLogsInterface = concurrentMockDNSLogs{}
-
-func (c concurrentMockDNSLogs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.DNSLog], error) {
-	dnsLogs := lsv1.List[lsv1.DNSLog]{}
-	err := c.ListInto(ctx, params, &dnsLogs)
-	if err != nil {
-		return nil, err
-	}
-	return &dnsLogs, err
-}
-
-func (c concurrentMockDNSLogs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.client.DNSLogs(c.cluster).ListInto(ctx, params, listable)
-}
-
-func (c concurrentMockDNSLogs) Create(ctx context.Context, logs []lsv1.DNSLog) (*lsv1.BulkResponse, error) {
-	c.t.Fatal("should not be called")
-	return nil, nil
-}
-
-func (c concurrentMockDNSLogs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
-	return c.client.DNSLogs(c.cluster).Aggregations(ctx, params)
-}
-
-/* concurrentMockFlowLogs */
-type concurrentMockFlowLogs struct {
-	client  lsclient.MockClient
-	cluster string
-
-	t *testing.T
-	m *sync.Mutex
-}
-
-var _ lsclient.FlowLogsInterface = concurrentMockFlowLogs{}
-
-func (c concurrentMockFlowLogs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.FlowLog], error) {
-	flowLogs := lsv1.List[lsv1.FlowLog]{}
-	err := c.ListInto(ctx, params, &flowLogs)
-	if err != nil {
-		return nil, err
-	}
-	return &flowLogs, err
-}
-
-func (c concurrentMockFlowLogs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.client.FlowLogs(c.cluster).ListInto(ctx, params, listable)
-}
-
-func (c concurrentMockFlowLogs) Create(ctx context.Context, logs []lsv1.FlowLog) (*lsv1.BulkResponse, error) {
-	c.t.Fatal("should not be called")
-	return nil, nil
-}
-
-func (c concurrentMockFlowLogs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.client.FlowLogs(c.cluster).Aggregations(ctx, params)
-}
-
-/* concurrentMockL7Logs */
-type concurrentMockL7Logs struct {
-	client  lsclient.MockClient
-	cluster string
-
-	t *testing.T
-	m *sync.Mutex
-}
-
-var _ lsclient.L7LogsInterface = concurrentMockL7Logs{}
-
-func (c concurrentMockL7Logs) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.L7Log], error) {
-	l7Logs := lsv1.List[lsv1.L7Log]{}
-	err := c.ListInto(ctx, params, &l7Logs)
-	if err != nil {
-		return nil, err
-	}
-	return &l7Logs, err
-}
-
-func (c concurrentMockL7Logs) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.client.L7Logs(c.cluster).ListInto(ctx, params, listable)
-}
-
-func (c concurrentMockL7Logs) Create(ctx context.Context, logs []lsv1.L7Log) (*lsv1.BulkResponse, error) {
-	c.t.Fatal("should not be called")
-	return nil, nil
-}
-
-func (c concurrentMockL7Logs) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	return c.client.L7Logs(c.cluster).Aggregations(ctx, params)
+func intp(i int) *int {
+	return &i
 }
