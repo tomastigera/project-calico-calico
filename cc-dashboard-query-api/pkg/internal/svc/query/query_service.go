@@ -161,8 +161,8 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		for aggKey, agg := range req.Aggregations {
 			switch agg.Function.Type {
 			case client.AggregationFunctionTypeCount:
-				if _, found := queryResponse.Aggregations[aggKey]; !found {
-					queryResponse.Aggregations[aggKey] = client.QueryResponseValueAsString{
+				if _, found := queryResponse.Aggregations[string(aggKey)]; !found {
+					queryResponse.Aggregations[string(aggKey)] = client.QueryResponseValueAsString{
 						AsString: strconv.FormatInt(queryResult.Hits, 10),
 					}
 				}

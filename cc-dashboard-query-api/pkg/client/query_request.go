@@ -108,7 +108,8 @@ type QueryRequestGroupOrder struct {
 	AggKey  string                     `json:"aggKey"`
 }
 
-type QueryRequestAggregations map[string]QueryRequestAggregation
+type QueryRequestAggregationKey string
+type QueryRequestAggregations map[QueryRequestAggregationKey]QueryRequestAggregation
 
 type QueryRequestAggregation struct {
 	FieldName string                          `json:"fieldName"`

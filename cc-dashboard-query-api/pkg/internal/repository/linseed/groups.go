@@ -127,7 +127,7 @@ func queryGroupToElasticAggregation(queryGroup groups.Group, elasticAggregations
 	return elasticGroupAggregation, nil
 }
 
-func queryGroupsToElastic(groupIndex int, queryGroups groups.Groups, groupAggregations aggregations.Aggregations, requestedPeriod time.Duration) (elastic.Aggregation, error) {
+func queryGroupsToElastic(groupIndex int, queryGroups groups.Groups, elasticAggregations map[string]elastic.Aggregation, requestedPeriod time.Duration) (elastic.Aggregation, error) {
 	var subGroupAggregation *subAggregation
 
 	if len(queryGroups) > 1 {
@@ -135,22 +135,14 @@ func queryGroupsToElastic(groupIndex int, queryGroups groups.Groups, groupAggreg
 		subGroupAggregation = &subAggregation{
 			key: fmt.Sprintf("g%d", groupIndex+1),
 		}
-		subGroupAggregation.aggregation, err = queryGroupsToElastic(groupIndex+1, queryGroups[1:], groupAggregations, requestedPeriod)
+		subGroupAggregation.aggregation, err = queryGroupsToElastic(groupIndex+1, queryGroups[1:], elasticAggregations, requestedPeriod)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	elasticAggregations := make(map[string]elastic.Aggregation)
-	for aggName, agg := range groupAggregations {
-		elasticAggregation, err := queryAggregationToElastic(agg)
-		if err != nil {
-			return nil, err
-		}
-
-		if elasticAggregation != nil {
-			elasticAggregations["a_"+string(aggName)] = elasticAggregation
-		}
+	if len(queryGroups) != 1 {
+		elasticAggregations = nil
 	}
 
 	return queryGroupToElasticAggregation(queryGroups[0], elasticAggregations, subGroupAggregation, requestedPeriod)

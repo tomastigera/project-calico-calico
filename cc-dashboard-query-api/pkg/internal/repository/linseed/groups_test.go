@@ -168,13 +168,12 @@ func TestLinseedGroups(t *testing.T) {
 					SubAggregation("a_a2", elastic.NewSumAggregation().Field("f1")).
 					SubAggregation("a_a3", elastic.NewPercentilesAggregation().Field("f2").Percentiles(95))
 
-				domainAggregations := aggregations.Aggregations{
-					"a1": aggregations.NewAggregationCount(),
-					"a2": aggregations.NewAggregationSum("f1"),
-					"a3": aggregations.NewAggregationPercentile("f2", 95),
+				elasticAggregations := map[string]elastic.Aggregation{
+					"a_a2": elastic.NewSumAggregation().Field("f1"),
+					"a_a3": elastic.NewPercentilesAggregation().Field("f2").Percentiles(95),
 				}
 
-				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, domainAggregations, 0)
+				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, elasticAggregations, 0)
 				require.NoError(t, err)
 				require.Equal(t, expectedElasticAggregation, elasticAggregation)
 			})
