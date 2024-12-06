@@ -146,5 +146,67 @@ func TestLinseedRepository(t *testing.T) {
 				},
 			}, requests[0].GetParams())
 		})
+
+		t.Run("percentiles are returned with the correct key", func(t *testing.T) {
+
+			type testCase struct {
+				key           string
+				agg           aggregations.Aggregation
+				elasticValue  map[string]float64
+				expectedValue aggregations.AggregationValue
+			}
+
+			testPercentileAggregationValue := func(tc testCase) {
+
+				// Note: marshalling elastic.AggregationPercentilesMetric results in incorrect keys since the struct
+				// does not have json tags defined, so marshal it from a map[string]any instead
+				elasticValuesBytes, err := json.Marshal(map[string]any{
+					"values": tc.elasticValue,
+				})
+				require.NoError(t, err)
+
+				resultAggregations := make(aggregations.AggregationValues)
+				err = elasticAggregationToQueryResult(tc.key, tc.agg, 0, resultAggregations, elastic.Aggregations{
+					"a_" + tc.key: elasticValuesBytes,
+				})
+				require.NoError(t, err)
+
+				require.Equal(t, aggregations.AggregationValues{
+					tc.key: tc.expectedValue,
+				}, resultAggregations)
+			}
+
+			testPercentileAggregationValue(testCase{
+				key:           "agg0",
+				agg:           aggregations.NewAggregationPercentile("f1", 100),
+				elasticValue:  map[string]float64{"100.0": 10100},
+				expectedValue: aggregations.NewAggregationValue(floatp(10100)),
+			})
+
+			testPercentileAggregationValue(testCase{
+				key:           "agg1",
+				agg:           aggregations.NewAggregationPercentile("f1", 95),
+				elasticValue:  map[string]float64{"95.0": 10095},
+				expectedValue: aggregations.NewAggregationValue(floatp(10095)),
+			})
+
+			testPercentileAggregationValue(testCase{
+				key:           "agg2",
+				agg:           aggregations.NewAggregationPercentile("f1", 84.357),
+				elasticValue:  map[string]float64{"84.357": 184357.33},
+				expectedValue: aggregations.NewAggregationValue(floatp(184357.33)),
+			})
+
+			testPercentileAggregationValue(testCase{
+				key:           "agg3",
+				agg:           aggregations.NewAggregationPercentile("f1", 1),
+				elasticValue:  map[string]float64{"1.0": 10001.4},
+				expectedValue: aggregations.NewAggregationValue(floatp(10001.4)),
+			})
+		})
 	})
+}
+
+func floatp(f float64) *float64 {
+	return &f
 }

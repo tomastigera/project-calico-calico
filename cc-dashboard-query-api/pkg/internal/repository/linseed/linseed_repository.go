@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -205,7 +207,11 @@ func elasticAggregationToQueryResult(aggKey string, aggregation aggregations.Agg
 		percentiles, found = elasticAggregations.Percentiles(elasticKey)
 		if found {
 			value = &elastic.AggregationValueMetric{}
-			if floatValue, ok := percentiles.Values[aggKey]; ok {
+			key := strconv.FormatFloat(agg.Percentile(), 'f', -1, 64)
+			if !strings.Contains(key, ".") {
+				key += ".0" // elastic returns "N.0" for a percentile "N" key with 0 decimals
+			}
+			if floatValue, ok := percentiles.Values[key]; ok {
 				value.Value = &floatValue
 			}
 		}
