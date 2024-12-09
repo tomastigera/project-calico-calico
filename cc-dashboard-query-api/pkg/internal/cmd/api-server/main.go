@@ -5,8 +5,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
-	"go.uber.org/zap/zapcore"
-
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -33,12 +31,11 @@ func main() {
 
 	// Setup logging
 	// Main logger
-	logLevelZapcore, err := zapcore.ParseLevel(cfg.LogLevel)
+	err := logging.SetCurrentLevel(cfg.LogLevel)
 	if err != nil {
 		logger.ErrorC(ctx, "failed to parse log level. Using INFO", logging.Error(err))
-		logLevelZapcore = zapcore.InfoLevel
+		_ = logging.SetCurrentLevel("INFO")
 	}
-	logger = logger.WithEventLevel(logLevelZapcore)
 
 	// Library logger
 	// The calico lma auth library uses logrus std
