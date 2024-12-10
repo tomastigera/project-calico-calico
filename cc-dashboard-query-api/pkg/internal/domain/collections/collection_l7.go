@@ -2,7 +2,7 @@ package collections
 
 var collectionL7 = Collection{
 	name:                 CollectionNameL7,
-	defaultTimeFieldName: "@timestamp",
+	defaultTimeFieldName: "start_time",
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},
@@ -20,5 +20,6 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "method"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "url"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "user_agent"},
+		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "start_time"},
 	},
 }

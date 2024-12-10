@@ -1,4 +1,4 @@
-- defaultTimeFieldName: '@timestamp'
+- defaultTimeFieldName: start_time
   fields:
   - name: '@timestamp'
     type: date
@@ -61,7 +61,7 @@
   - name: type
     type: text
   name: dns
-- defaultTimeFieldName: '@timestamp'
+- defaultTimeFieldName: start_time
   fields:
   - name: '@timestamp'
     type: date
@@ -204,7 +204,7 @@
   - name: tcp_unrecovered_to
     type: number
   name: flows
-- defaultTimeFieldName: '@timestamp'
+- defaultTimeFieldName: start_time
   fields:
   - name: '@timestamp'
     type: date
@@ -238,4 +238,6 @@
     type: text
   - name: user_agent
     type: text
+  - name: start_time
+    type: date
   name: l7

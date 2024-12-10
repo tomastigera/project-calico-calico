@@ -2,7 +2,7 @@ package collections
 
 var collectionFlows = Collection{
 	name:                 CollectionNameFlows,
-	defaultTimeFieldName: "@timestamp",
+	defaultTimeFieldName: "start_time",
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "action"},

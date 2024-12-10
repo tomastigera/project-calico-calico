@@ -2,7 +2,7 @@ package collections
 
 var collectionDNS = Collection{
 	name:                 CollectionNameDNS,
-	defaultTimeFieldName: "@timestamp",
+	defaultTimeFieldName: "start_time",
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"},
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "client_ip"},
