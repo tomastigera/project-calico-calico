@@ -101,16 +101,12 @@
     type: text
   - name: destination.bytes
     type: number
-  - name: destination.ip
-    type: ip
   - name: destination.packets
     type: number
   - name: destination.port
     type: number
   - name: end_time
     type: date
-  - name: event.action
-    type: text
   - name: host
     type: text
   - name: http_requests_allowed_in
@@ -159,8 +155,6 @@
     type: text
   - name: source.bytes
     type: number
-  - name: source.ip
-    type: ip
   - name: source.packets
     type: number
   - name: source_ip
