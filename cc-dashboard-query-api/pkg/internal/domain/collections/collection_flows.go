@@ -4,7 +4,6 @@ var collectionFlows = Collection{
 	name:                 CollectionNameFlows,
 	defaultTimeFieldName: "@timestamp",
 	fields: []CollectionField{
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "_index"},
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "action"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},

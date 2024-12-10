@@ -63,8 +63,6 @@
   name: dns
 - defaultTimeFieldName: '@timestamp'
   fields:
-  - name: _index
-    type: text
   - name: '@timestamp'
     type: date
   - name: action
