@@ -16,6 +16,7 @@ import (
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
@@ -75,7 +76,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 			})
 
@@ -97,11 +98,11 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 			})
 
-			require.ErrorIs(t, err, httpreply.ReplyAccessDenied)
+			require.Equal(t, err, httpreply.ReplyAccessDenied)
 		})
 
 		t.Run("partially authorized", func(t *testing.T) {
@@ -127,7 +128,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 			})
 			require.NoError(t, err)
@@ -150,7 +151,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 			})
 			require.ErrorContains(t, err, "cluster 'unknown-cluster' not found")
@@ -160,7 +161,7 @@ func TestQueryService(t *testing.T) {
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
 					{Criterion: client.QueryRequestFilterCriterion{Type: "unknown"}},
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 			})
 			require.ErrorContains(t, err, "invalid request: Key: 'QueryRequest.Filters[0].Criterion.Type' Error:Field validation for 'Type' failed")
@@ -170,7 +171,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 				},
 				GroupBys: []client.QueryRequestGroup{
 					{Type: "unknown"},
@@ -193,26 +194,112 @@ func TestQueryService(t *testing.T) {
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange"}},
 					},
 				})
-				require.ErrorContains(t, err, "invalid relativeTimeRange duration")
+				require.ErrorContains(t, err, "unknown collection field name '' for criterion type 'relativeTimeRange''")
 			})
 			t.Run("invalid", func(t *testing.T) {
 				t.Run("relativeTimeRange", func(t *testing.T) {
-					_, err := subject.Query(ctx, client.QueryRequest{
-						CollectionName: "flows",
-						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "invalid1", LTE: "invalid2"}},
-						},
+					t.Run("gte duration", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "invalid1", LTE: "10m", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `failed to parse relativeTimeRange gte field: time: invalid duration "invalid1"`)
 					})
-					require.ErrorIs(t, err, httpreply.ToBadRequest(`failed to parse relativeTimeRange gte field: time: invalid duration "invalid1"`))
+					t.Run("lte duration", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "invalid2", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `failed to parse relativeTimeRange lte field: time: invalid duration "invalid2"`)
+					})
+					t.Run("missing field", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "5m"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `unknown collection field name '' for criterion type 'relativeTimeRange'`)
+					})
+					t.Run("unknown field", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "5m", Field: "unknown-field"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `unknown collection field name 'unknown-field'`)
+					})
+					t.Run("incorrect field type", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "5m", Field: "bytes_in"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid collection field 'bytes_in' for criterion type 'relativeTimeRange'`)
+					})
 				})
 				t.Run("dateRange", func(t *testing.T) {
-					_, err := subject.Query(ctx, client.QueryRequest{
-						CollectionName: "flows",
-						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "invalid1", LTE: "invalid2"}},
-						},
+					t.Run("gte time", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "invalid1", LTE: "2020-01-01T00:00:00Z", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid 'invalid1' value for criterion type 'dateRange'`)
 					})
-					require.ErrorIs(t, err, httpreply.ToBadRequest(""))
+					t.Run("lte time", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "invalid2", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid 'invalid2' value for criterion type 'dateRange'`)
+					})
+					t.Run("missing field", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, "unknown collection field name '' for criterion type 'dateRange''")
+					})
+					t.Run("unknown field", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z", Field: "unknown-field"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `unknown collection field name 'unknown-field' for criterion type 'dateRange'`)
+					})
+					t.Run("incorrect field type", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z", Field: "bytes_in"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid collection field 'bytes_in' for criterion type 'dateRange'`)
+					})
 				})
 			})
 
@@ -221,8 +308,8 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 					},
 				})
 				require.ErrorContains(t, err, "multiple time range filters set")
@@ -232,7 +319,7 @@ func TestQueryService(t *testing.T) {
 				_, err := subject.Query(ctx,
 					client.QueryRequest{
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 						},
 					})
 				require.ErrorContains(t, err, "unknown collection ''")
@@ -241,7 +328,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "unknown",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
 						},
 					})
 					require.ErrorContains(t, err, "unknown collection 'unknown'")
@@ -277,7 +364,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 					},
 				})
 
@@ -297,7 +384,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 					},
 				})
 
@@ -317,7 +404,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 					},
 				})
 
@@ -348,7 +435,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 					},
 				})
 
@@ -398,7 +485,7 @@ func TestQueryService(t *testing.T) {
 									CollectionName: "flows",
 									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
-										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
 										{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 0},
@@ -424,7 +511,7 @@ func TestQueryService(t *testing.T) {
 								CollectionName: "flows",
 								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 								Filters: []client.QueryRequestFilter{
-									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
 									{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 11},
@@ -464,7 +551,7 @@ func TestQueryService(t *testing.T) {
 									CollectionName: "flows",
 									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
-										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
 										{Type: client.GroupType(groups.GroupTypeTime)},
@@ -527,7 +614,7 @@ func TestQueryService(t *testing.T) {
 								CollectionName: "flows",
 								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2", "cluster3"},
 								Filters: []client.QueryRequestFilter{
-									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
 									{Type: client.GroupType(groups.GroupTypeTime), MaxValues: 3},
@@ -561,7 +648,7 @@ func TestQueryService(t *testing.T) {
 						MaxDocs:        intp(0),
 						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 						},
 						Aggregations: client.QueryRequestAggregations{
 							"a-count-aggregation": {
@@ -613,6 +700,54 @@ func TestQueryService(t *testing.T) {
 						require.True(t, g.SortOrder().Asc)
 					})
 				})
+
+				t.Run("time range fields", func(t *testing.T) {
+					queryWithFilter := func(t *testing.T, filter client.QueryRequestFilter) *lsv1.FlowLogParams {
+						t.Helper()
+						subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
+
+						mockClient.SetResults(
+							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 0, Items: []lsv1.FlowLog{}})},
+						)
+
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							MaxDocs:        intp(0),
+							ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+							Filters: []client.QueryRequestFilter{
+								filter,
+							},
+							Aggregations: client.QueryRequestAggregations{
+								"a-count-aggregation": {
+									FieldName: "_count",
+									Function: client.QueryRequestAggregationFunction{
+										Type: client.AggregationFunctionTypeCount,
+									},
+								},
+							},
+						})
+						require.NoError(t, err)
+						requests := mockClient.Requests()
+						require.Len(t, requests, 1)
+						params, ok := requests[0].GetParams().(*lsv1.FlowLogParams)
+						require.True(t, ok, "expected params type to be *lsv1.FlowLogParams, but it was %T", requests[0].GetParams())
+						return params
+					}
+
+					t.Run("relativeTimeRange", func(t *testing.T) {
+						params := queryWithFilter(t, client.QueryRequestFilter{
+							Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"},
+						})
+						require.Equal(t, lmav1.TimeField("start_time"), params.QueryParams.TimeRange.Field)
+					})
+
+					t.Run("dateRange", func(t *testing.T) {
+						params := queryWithFilter(t, client.QueryRequestFilter{
+							Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z", Field: "end_time"},
+						})
+						require.Equal(t, lmav1.TimeField("end_time"), params.QueryParams.TimeRange.Field)
+					})
+				})
 			})
 		})
 
@@ -637,7 +772,7 @@ func TestQueryService(t *testing.T) {
 				CollectionName: "flows",
 				ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 				},
 			})
 

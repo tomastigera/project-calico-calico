@@ -269,12 +269,12 @@ func TestParams(t *testing.T) {
 		t.Run("dateRange", func(t *testing.T) {
 			subject := newQueryParams(0)
 
-			to := time.Date(2024, 12, 11, 10, 9, 8, 7, time.UTC)
+			to := time.Date(2021, 12, 11, 10, 9, 8, 7, time.UTC)
 			from := time.Date(2020, 12, 11, 10, 9, 8, 7, time.UTC)
 			now := time.Date(2025, 12, 11, 10, 9, 8, 7, time.UTC)
 
 			err := subject.setCriteria(filters.Criteria{
-				filters.NewDateRange(from, to, false),
+				filters.NewDateRange(nil, from, to, false),
 			}, now)
 			require.NoError(t, err)
 
@@ -282,13 +282,27 @@ func TestParams(t *testing.T) {
 			require.Equal(t, lsv1.QueryParams{
 				TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now},
 			}, subject.linseedQueryParams)
+			require.Equal(t, time.Duration(365*24)*time.Hour, subject.requestedPeriod)
 
 			t.Run("negated", func(t *testing.T) {
 				subject := newQueryParams(0)
 				err := subject.setCriteria(filters.Criteria{
-					filters.NewDateRange(from, to, true),
+					filters.NewDateRange(nil, from, to, true),
 				}, now)
 				require.ErrorContains(t, err, "negated dateRange criterion is not supported")
+			})
+
+			t.Run("with field set", func(t *testing.T) {
+				subject := newQueryParams(0)
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, to, false),
+				}, now)
+				require.NoError(t, err)
+
+				require.Empty(t, subject.selector)
+				require.Equal(t, lsv1.QueryParams{
+					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now, Field: "test-field"},
+				}, subject.linseedQueryParams)
 			})
 		})
 
@@ -315,7 +329,7 @@ func TestParams(t *testing.T) {
 
 			now := time.Date(2025, 12, 11, 10, 30, 8, 7, time.UTC)
 
-			criterion, err := filters.NewRelativeTimeRange("10m", "5m", false)
+			criterion, err := filters.NewRelativeTimeRange(nil, "10m", "5m", false)
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{criterion}, now)
@@ -329,15 +343,36 @@ func TestParams(t *testing.T) {
 					Now:  &now,
 				},
 			}, subject.linseedQueryParams)
+			require.Equal(t, time.Duration(5)*time.Minute, subject.requestedPeriod)
 
 			t.Run("negated", func(t *testing.T) {
 				subject = &queryParams{}
 
-				criterion, err = filters.NewRelativeTimeRange("5m", "10m", true)
+				criterion, err = filters.NewRelativeTimeRange(nil, "10m", "5m", true)
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{criterion}, now)
 				require.ErrorContains(t, err, "negated relativeTimeRange criterion is not supported")
+			})
+
+			t.Run("with field set", func(t *testing.T) {
+				subject = &queryParams{}
+
+				criterion, err = filters.NewRelativeTimeRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), "10m", "5m", false)
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{criterion}, now)
+				require.NoError(t, err)
+
+				require.Empty(t, subject.selector)
+				require.Equal(t, lsv1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						To:    time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
+						From:  time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
+						Now:   &now,
+						Field: "test-field",
+					},
+				}, subject.linseedQueryParams)
 			})
 		})
 

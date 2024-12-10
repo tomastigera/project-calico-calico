@@ -11,6 +11,14 @@ type collectionFieldGeneric struct {
 	fieldName FieldName
 }
 
+func NewCollectionFieldGeneric(fieldName FieldName, fieldType FieldType, displayFieldType FieldType) CollectionField {
+	return collectionFieldGeneric{
+		fieldName:        fieldName,
+		fieldType:        fieldType,
+		displayFieldType: displayFieldType,
+	}
+}
+
 func (c collectionFieldGeneric) Name() FieldName {
 	return c.fieldName
 }

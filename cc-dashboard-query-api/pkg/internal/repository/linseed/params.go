@@ -71,24 +71,14 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			return "", fmt.Errorf("negated relativeTimeRange criterion is not supported")
 		}
 
-		p.requestedPeriod = c.Gte() - c.Lte()
-		p.linseedQueryParams.SetTimeRange(&lmav1.TimeRange{
-			From: now.Add(-c.Gte()),
-			To:   now.Add(-c.Lte()),
-			Now:  &now,
-		})
+		p.setTimeRange(now, now.Add(-c.Gte()), now.Add(-c.Lte()), c.Gte()-c.Lte(), c.Field())
 		return "", nil
 	case *filters.CriterionDateRange:
 		if c.Negate() {
 			return "", fmt.Errorf("negated dateRange criterion is not supported")
 		}
 
-		p.requestedPeriod = c.Gte().Sub(c.Lte())
-		p.linseedQueryParams.SetTimeRange(&lmav1.TimeRange{
-			From: c.Gte(),
-			To:   c.Lte(),
-			Now:  &now,
-		})
+		p.setTimeRange(now, c.Gte(), c.Lte(), c.Lte().Sub(c.Gte()), c.Field())
 		return "", nil
 	case *filters.CriterionEquals:
 		// handle linseed client special params
@@ -193,7 +183,22 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 	}
 
 	return "", fmt.Errorf("invalid criterion %T", criterion)
+}
 
+func (p *queryParams) setTimeRange(now, from, to time.Time, requestPeriod time.Duration, field collections.CollectionField) {
+	var timeField lmav1.TimeField
+
+	if field != nil {
+		timeField = lmav1.TimeField(field.Name())
+	}
+
+	p.requestedPeriod = requestPeriod
+	p.linseedQueryParams.SetTimeRange(&lmav1.TimeRange{
+		From:  from,
+		To:    to,
+		Now:   &now,
+		Field: timeField,
+	})
 }
 
 func selectorEquals(c *filters.CriterionEquals) (string, error) {

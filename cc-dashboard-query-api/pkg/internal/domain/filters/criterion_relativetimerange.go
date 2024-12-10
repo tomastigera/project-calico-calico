@@ -3,18 +3,21 @@ package filters
 import (
 	"fmt"
 	"time"
+
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 )
 
 type CriterionRelativeTimeRange struct {
 	gte time.Duration
 	lte time.Duration
 
+	field  collections.CollectionField
 	negate bool
 }
 
 var _ Criterion = (*CriterionRelativeTimeRange)(nil)
 
-func NewRelativeTimeRange(gte, lte string, negate bool) (Criterion, error) {
+func NewRelativeTimeRange(field collections.CollectionField, gte, lte string, negate bool) (Criterion, error) {
 	var err error
 	var gteDuration, lteDuration time.Duration
 
@@ -37,6 +40,7 @@ func NewRelativeTimeRange(gte, lte string, negate bool) (Criterion, error) {
 	return &CriterionRelativeTimeRange{
 		gte:    gteDuration,
 		lte:    lteDuration,
+		field:  field,
 		negate: negate,
 	}, nil
 }
@@ -51,4 +55,8 @@ func (c *CriterionRelativeTimeRange) Gte() time.Duration {
 
 func (c *CriterionRelativeTimeRange) Lte() time.Duration {
 	return c.lte
+}
+
+func (c *CriterionRelativeTimeRange) Field() collections.CollectionField {
+	return c.field
 }

@@ -9,19 +9,19 @@ import (
 func TestCriterionRelativeTimeRange(t *testing.T) {
 
 	t.Run("validation", func(t *testing.T) {
-		_, err := NewRelativeTimeRange("", "", false)
+		_, err := NewRelativeTimeRange(nil, "", "", false)
 		require.ErrorContains(t, err, "invalid relativeTimeRange duration")
 
-		_, err = NewRelativeTimeRange("hello world", "", false)
+		_, err = NewRelativeTimeRange(nil, "hello world", "", false)
 		require.ErrorContains(t, err, "failed to parse relativeTimeRange gte field")
 
-		_, err = NewRelativeTimeRange("", "hello world", false)
+		_, err = NewRelativeTimeRange(nil, "", "hello world", false)
 		require.ErrorContains(t, err, "failed to parse relativeTimeRange lte field")
 
-		_, err = NewRelativeTimeRange("15m", "", false)
+		_, err = NewRelativeTimeRange(nil, "15m", "", false)
 		require.NoError(t, err)
 
-		_, err = NewRelativeTimeRange("", "15m", false)
+		_, err = NewRelativeTimeRange(nil, "", "15m", false)
 		require.NoError(t, err)
 	})
 }

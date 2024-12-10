@@ -224,7 +224,7 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 	getCollectionField := func(fieldName string) (collections.CollectionField, error) {
 		field, found := queryCollection.Field(collections.FieldName(fieldName))
 		if !found {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("unknown collection field name '%s'", fieldName))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("unknown collection field name '%s' for criterion type '%s'", fieldName, from.Type))
 		}
 		return field, nil
 	}
@@ -299,17 +299,30 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		}
 		return filters.NewIPRange(field, from.From, from.To, negate), nil
 	case client.CriterionTypeDateRange:
+		field, err := getCollectionField(from.Field)
+		if err != nil {
+			return nil, err
+		} else if field.Type() != collections.FieldTypeDate {
+			return nil, errInvalidFieldType
+		}
 		gte, err := time.Parse(time.RFC3339, from.GTE)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid collection field '%s' value for criterion type '%s': %v", from.Field, from.Type, err))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid '%s' value for criterion type '%s': %v", from.GTE, from.Type, err))
 		}
 		lte, err := time.Parse(time.RFC3339, from.LTE)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid collection field '%s' value for criterion type '%s': %v", from.Field, from.Type, err))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid '%s' value for criterion type '%s': %v", from.LTE, from.Type, err))
 		}
-		return filters.NewDateRange(gte, lte, negate), nil
+		return filters.NewDateRange(field, gte, lte, negate), nil
 	case client.CriterionTypeRelativeTimeRange:
+		field, err := getCollectionField(from.Field)
+		if err != nil {
+			return nil, err
+		} else if field.Type() != collections.FieldTypeDate {
+			return nil, errInvalidFieldType
+		}
 		criterion, err := filters.NewRelativeTimeRange(
+			field,
 			strings.ToLower(reRemovePrefix.ReplaceAllString(from.GTE, "")),
 			strings.ToLower(reRemovePrefix.ReplaceAllString(from.LTE, "")),
 			negate,
