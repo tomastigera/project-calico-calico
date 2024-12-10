@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/filters"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"github.com/tigera/tds-apiserver/pkg/httpreply"
 )
 
 type queryParams struct {
@@ -202,8 +204,17 @@ func (p *queryParams) setTimeRange(now, from, to time.Time, requestPeriod time.D
 }
 
 func selectorEquals(c *filters.CriterionEquals) (string, error) {
-	value := reflect.ValueOf(c.Value())
 	if c.Field().Type().Is(collections.FieldTypeNumber) {
+		criterionValue := c.Value()
+		if valueString, ok := criterionValue.(string); ok {
+			if valueInt, err := strconv.ParseInt(valueString, 10, 64); err == nil {
+				criterionValue = valueInt
+			} else if valueFloat, err := strconv.ParseFloat(valueString, 64); err == nil {
+				criterionValue = valueFloat
+			}
+		}
+		value := reflect.ValueOf(criterionValue)
+
 		if value.CanInt() {
 			v := value.Int()
 			if c.Negate() {
@@ -223,7 +234,7 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 			}
 			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
 		}
-		return "", fmt.Errorf("equals criterion value is not a number: %v %T", c.Value(), c.Value())
+		return "", httpreply.ToBadRequest(fmt.Sprintf("equals criterion value is not a number: %v %T", c.Value(), c.Value()))
 	}
 
 	if valueString, ok := c.Value().(string); ok {

@@ -402,4 +402,32 @@ func TestParams(t *testing.T) {
 			subject.selector)
 	})
 
+	t.Run("string to numeric value conversion", func(t *testing.T) {
+		subject := newQueryParams(0)
+
+		err := subject.setCriteria(filters.Criteria{
+			filters.NewEquals(countField, `124`, false),
+			filters.NewEquals(countField, `123.0`, true),
+		}, time.Time{})
+		require.NoError(t, err)
+
+		require.Equal(t,
+			`count = 124 AND count != 123`,
+			subject.selector)
+
+		t.Run("negative numbers", func(t *testing.T) {
+			subject := newQueryParams(0)
+
+			err := subject.setCriteria(filters.Criteria{
+				filters.NewEquals(countField, `-849`, false),
+				filters.NewEquals(countField, `-534.0`, true),
+			}, time.Time{})
+			require.NoError(t, err)
+
+			require.Equal(t,
+				`count = -849 AND count != -534`,
+				subject.selector)
+		})
+	})
+
 }
