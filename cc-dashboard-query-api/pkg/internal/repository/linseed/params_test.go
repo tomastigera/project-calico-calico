@@ -100,7 +100,7 @@ func TestParams(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
-					selector: `count < 10 AND count > 20`,
+					selector: `NOT (count >= 10 AND count <= 20)`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},

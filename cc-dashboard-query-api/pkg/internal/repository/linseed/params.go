@@ -137,7 +137,7 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 	case *filters.CriterionRange:
 		field := c.Field()
 		if c.Negate() {
-			return fmt.Sprintf(`%s < %d AND %s > %d`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
+			return fmt.Sprintf(`NOT (%s >= %d AND %s <= %d)`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
 		}
 		return fmt.Sprintf(`%s >= %d AND %s <= %d`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
 	case *filters.CriterionExists:
