@@ -179,7 +179,8 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 		}
 		return fmt.Sprintf(`%s >= %s AND %s <= %s`, field.Name(), from, field.Name(), to), nil
 	case *filters.CriterionStartsWith:
-		return selectorWildcard(c, c.Field().Name(), c.Value()+"*")
+		value := strings.ReplaceAll(strings.ReplaceAll(c.Value(), `*`, `\*`), `?`, `\?`)
+		return selectorWildcard(c, c.Field().Name(), value+"*")
 	case *filters.CriterionWildcard:
 		return selectorWildcard(c, c.Field().Name(), c.Pattern())
 	}

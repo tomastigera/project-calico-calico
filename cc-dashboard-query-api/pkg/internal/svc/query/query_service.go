@@ -243,7 +243,11 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		if err != nil {
 			return nil, err
 		}
-		return filters.NewStartsWith(field, from.Value.(string), negate), nil
+		value, ok := from.Value.(string)
+		if !ok {
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid value '%v' for criterion type '%s'", from.Value, from.Type))
+		}
+		return filters.NewStartsWith(field, value, negate), nil
 	case client.CriterionTypeExists:
 		field, err := getCollectionField(from.Field)
 		if err != nil {

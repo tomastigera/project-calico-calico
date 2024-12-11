@@ -323,6 +323,24 @@ func TestParams(t *testing.T) {
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
+			t.Run("value escaping", func(t *testing.T) {
+				subject := newQueryParams(0)
+
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewStartsWith(qnameField, "test-domain*1.", false),
+					filters.NewStartsWith(qnameField, "test-domain?2.", true),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, &queryParams{
+					selector: `qname IN {"test-domain\\*1.*"} AND qname NOTIN {"test-domain\\?2.*"}`,
+
+					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				}, subject)
+
+			})
+
 		})
 		t.Run("relativeTimeRange", func(t *testing.T) {
 			subject := newQueryParams(0)
