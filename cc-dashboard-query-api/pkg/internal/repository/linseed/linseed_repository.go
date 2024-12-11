@@ -33,7 +33,8 @@ type LinseedRepository struct {
 var (
 	_ repository.Repository = &LinseedRepository{}
 
-	reInvalidSelectorValueErr = regexp.MustCompile(`Invalid selector .*in request: (invalid value for.*)`)
+	reInvalidSelectorValueErr    = regexp.MustCompile(`Invalid selector .*in request: (invalid value for.*)`)
+	reUnexpectedSelectorTokenErr = regexp.MustCompile(`Invalid selector (.*) in request:.* unexpected token.*`)
 )
 
 func NewLinseedRepository(logger logging.Logger, tenantID, url, caCertPath, clientCert, clientKey, tokenPath string) (*LinseedRepository, error) {
@@ -169,6 +170,9 @@ func handleQueryResultError(err error) error {
 	if m := reInvalidSelectorValueErr.FindStringSubmatch(err.Error()); m != nil && len(m) == 2 {
 		// Handle invalid selector value errors as a Bad Request
 		return httpreply.ToBadRequest(m[1])
+	} else if m := reUnexpectedSelectorTokenErr.FindStringSubmatch(err.Error()); m != nil && len(m) == 2 {
+		// Handle invalid selector value errors as a Bad Request
+		return httpreply.ToBadRequest(fmt.Sprintf("invalid criterion filter: %s", m[1]))
 	}
 	return err
 }

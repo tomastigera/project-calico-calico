@@ -17,6 +17,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/tigera/tds-apiserver/pkg/httpreply"
 	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
@@ -74,7 +75,22 @@ func TestLinseedRepository(t *testing.T) {
 				CollectionName: collections.CollectionNameDNS,
 				ClusterID:      "fake-cluster",
 			})
+			require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 			require.ErrorContains(t, err, "invalid value for field: test-value")
+		})
+
+		t.Run("returns bad request on token errors", func(t *testing.T) {
+			mockClient.SetResults(rest.MockResult{
+				StatusCode: 500,
+				Err:        errors.New(`[status 500] server error: Invalid selector (bytes_in = -1) in request: 1:12: unexpected token \"-\" (expected <ident> | <string> | <int> | <float>)`),
+			})
+
+			_, err := subject.Query(ctx, query.QueryRequest{
+				CollectionName: collections.CollectionNameDNS,
+				ClusterID:      "fake-cluster",
+			})
+			require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+			require.ErrorContains(t, err, "invalid criterion filter: (bytes_in = -1)'")
 		})
 	})
 

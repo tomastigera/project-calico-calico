@@ -205,9 +205,17 @@ func TestParams(t *testing.T) {
 				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 				require.ErrorContains(t, err, `invalid equals criterion value "9.223372036854786e+18"`)
 
-				err = setEqualsCriterion(t, -9223372036854786048.0)
+				err = setEqualsCriterion(t, -1)
 				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
-				require.ErrorContains(t, err, `invalid equals criterion value "-9.223372036854786e+18"`)
+				require.ErrorContains(t, err, `invalid equals criterion value "-1"`)
+
+				err = setEqualsCriterion(t, -1.0)
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "-1"`)
+
+				err = setEqualsCriterion(t, "-1")
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "-1"`)
 			})
 		})
 

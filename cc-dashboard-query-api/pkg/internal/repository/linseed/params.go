@@ -224,11 +224,7 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 		value := reflect.ValueOf(criterionValue)
 
 		if value.CanInt() {
-			v := value.Int()
-			if c.Negate() {
-				return fmt.Sprintf(`%s != %d`, c.Field().Name(), v), nil
-			}
-			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
+			return selectorEqualsInt(c, value.Int())
 		} else if value.CanFloat() {
 			if v := value.Float(); v > float64(math.MaxInt) || v < float64(math.MinInt) {
 				return "", httpreply.ToBadRequest(fmt.Sprintf(`invalid equals criterion value "%v" `, c.Value()))
@@ -240,12 +236,9 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 				}
 				return fmt.Sprintf(`%s = %f`, c.Field().Name(), v), nil
 			*/
-			if c.Negate() {
-				return fmt.Sprintf(`%s != %d`, c.Field().Name(), v), nil
-			}
-			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
+			return selectorEqualsInt(c, v)
 		}
-		return "", httpreply.ToBadRequest(fmt.Sprintf("equals criterion value is not a number: %v %T", c.Value(), c.Value()))
+		return "", httpreply.ToBadRequest(fmt.Sprintf("equals criterion value is not a number: %v (%T)", c.Value(), c.Value()))
 	}
 
 	if valueString, ok := c.Value().(string); ok {
@@ -253,6 +246,19 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 	}
 
 	return "", fmt.Errorf("equals criterion value '%v' is not a string", c.Value())
+}
+
+func selectorEqualsInt(c *filters.CriterionEquals, value int64) (string, error) {
+	if value < 0 {
+		// Note: Linseed parser does not support negative numbers and returns
+		// HTTP 500: Invalid selector (<field> = <negative-value>) in request: unexpected token \"-\" (expected <ident> | <string> | <int> | <float>)
+		return "", httpreply.ToBadRequest(fmt.Sprintf(`invalid equals criterion value "%v"`, c.Value()))
+	}
+
+	if c.Negate() {
+		return fmt.Sprintf(`%s != %d`, c.Field().Name(), value), nil
+	}
+	return fmt.Sprintf(`%s = %d`, c.Field().Name(), value), nil
 }
 
 func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, value string) (string, error) {
