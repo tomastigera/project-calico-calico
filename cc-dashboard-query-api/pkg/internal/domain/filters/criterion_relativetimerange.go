@@ -23,13 +23,13 @@ func NewRelativeTimeRange(field collections.CollectionField, gte, lte string, ne
 
 	if gte != "" {
 		if gteDuration, err = time.ParseDuration(gte); err != nil {
-			return nil, fmt.Errorf("failed to parse relativeTimeRange gte field: %v", err)
+			return nil, fmt.Errorf("invalid value for relativeTimeRange gte field: %s", gte)
 		}
 	}
 
 	if lte != "" {
 		if lteDuration, err = time.ParseDuration(lte); err != nil {
-			return nil, fmt.Errorf("failed to parse relativeTimeRange lte field: %v", err)
+			return nil, fmt.Errorf("invalid value for relativeTimeRange lte field: %s", lte)
 		}
 	}
 

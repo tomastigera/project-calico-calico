@@ -13,10 +13,10 @@ func TestCriterionRelativeTimeRange(t *testing.T) {
 		require.ErrorContains(t, err, "invalid relativeTimeRange duration")
 
 		_, err = NewRelativeTimeRange(nil, "hello world", "", false)
-		require.ErrorContains(t, err, "failed to parse relativeTimeRange gte field")
+		require.ErrorContains(t, err, "invalid value for relativeTimeRange gte field: hello world")
 
 		_, err = NewRelativeTimeRange(nil, "", "hello world", false)
-		require.ErrorContains(t, err, "failed to parse relativeTimeRange lte field")
+		require.ErrorContains(t, err, "invalid value for relativeTimeRange lte field: hello world")
 
 		_, err = NewRelativeTimeRange(nil, "15m", "", false)
 		require.NoError(t, err)

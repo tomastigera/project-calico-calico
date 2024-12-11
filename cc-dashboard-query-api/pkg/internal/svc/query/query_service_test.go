@@ -205,7 +205,7 @@ func TestQueryService(t *testing.T) {
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
-						require.ErrorContains(t, err, `failed to parse relativeTimeRange gte field: time: invalid duration "invalid1"`)
+						require.ErrorContains(t, err, `invalid value for relativeTimeRange gte field: invalid1`)
 					})
 					t.Run("lte duration", func(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -215,7 +215,7 @@ func TestQueryService(t *testing.T) {
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
-						require.ErrorContains(t, err, `failed to parse relativeTimeRange lte field: time: invalid duration "invalid2"`)
+						require.ErrorContains(t, err, `invalid value for relativeTimeRange lte field: invalid2`)
 					})
 					t.Run("missing field", func(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{

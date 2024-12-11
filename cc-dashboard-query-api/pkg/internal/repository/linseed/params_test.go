@@ -336,7 +336,7 @@ func TestParams(t *testing.T) {
 
 				require.Empty(t, subject.selector)
 				require.Equal(t, lsv1.QueryParams{
-					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now, Field: "test-field"},
+					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now, Field: ""},
 				}, subject.linseedQueryParams)
 			})
 		})
@@ -423,7 +423,7 @@ func TestParams(t *testing.T) {
 						To:    time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
 						From:  time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
 						Now:   &now,
-						Field: "test-field",
+						Field: "",
 					},
 				}, subject.linseedQueryParams)
 			})
