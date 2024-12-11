@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,7 +30,11 @@ type LinseedRepository struct {
 	logger logging.Logger
 }
 
-var _ repository.Repository = &LinseedRepository{}
+var (
+	_ repository.Repository = &LinseedRepository{}
+
+	reInvalidSelectorValueErr = regexp.MustCompile(`Invalid selector .*in request: (invalid value for.*)`)
+)
 
 func NewLinseedRepository(logger logging.Logger, tenantID, url, caCertPath, clientCert, clientKey, tokenPath string) (*LinseedRepository, error) {
 	linseedClient, err := lsclient.NewClient(tenantID, rest.Config{
@@ -128,7 +133,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 	if len(repositoryAggregations) > 0 {
 		resultAggregations, err := collectionClient.Aggregations(ctx, req.ClusterID, params)
 		if err != nil {
-			return result.QueryResult{}, err
+			return result.QueryResult{}, handleQueryResultError(err)
 		}
 
 		queryResult.Aggregations = make(aggregations.AggregationValues)
@@ -152,11 +157,20 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 	} else {
 		queryResult, err = collectionClient.List(ctx, req.ClusterID, params)
 		if err != nil {
-			return result.QueryResult{}, err
+			return result.QueryResult{}, handleQueryResultError(err)
 		}
 	}
 
 	return queryResult, nil
+}
+
+func handleQueryResultError(err error) error {
+
+	if m := reInvalidSelectorValueErr.FindStringSubmatch(err.Error()); m != nil && len(m) == 2 {
+		// Handle invalid selector value errors as a Bad Request
+		return httpreply.ToBadRequest(m[1])
+	}
+	return err
 }
 
 func queryAggregationToElastic(queryAggregation aggregations.Aggregation) (elastic.Aggregation, error) {

@@ -3,6 +3,7 @@ package linseed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/olivere/elastic/v7"
@@ -61,6 +62,19 @@ func TestLinseedRepository(t *testing.T) {
 			require.Equal(t, result.QueryResult{
 				Documents: []result.QueryResultDocument{},
 			}, queryResult)
+		})
+
+		t.Run("returns bad request on selector errors", func(t *testing.T) {
+			mockClient.SetResults(rest.MockResult{
+				StatusCode: 500,
+				Err:        errors.New(`[status 500] server error: Invalid selector (( field = "test-value" )) in request: invalid value for field: test-value")`),
+			})
+
+			_, err := subject.Query(ctx, query.QueryRequest{
+				CollectionName: collections.CollectionNameDNS,
+				ClusterID:      "fake-cluster",
+			})
+			require.ErrorContains(t, err, "invalid value for field: test-value")
 		})
 	})
 

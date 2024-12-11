@@ -3,6 +3,7 @@ package linseed
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -229,6 +230,9 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 			}
 			return fmt.Sprintf(`%s = %d`, c.Field().Name(), v), nil
 		} else if value.CanFloat() {
+			if v := value.Float(); v > float64(math.MaxInt) || v < float64(math.MinInt) {
+				return "", httpreply.ToBadRequest(fmt.Sprintf(`invalid equals criterion value "%v" `, c.Value()))
+			}
 			v := int64(value.Float()) // TODO: investigate if we need to support float64 querying with getSelectorFloat64
 			/*
 				if c.Negate() {

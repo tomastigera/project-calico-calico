@@ -11,6 +11,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/filters"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"github.com/tigera/tds-apiserver/pkg/httpreply"
 )
 
 func TestParams(t *testing.T) {
@@ -181,6 +182,32 @@ func TestParams(t *testing.T) {
 						},
 					}, subject)
 				})
+			})
+
+			t.Run("invalid numbers", func(t *testing.T) {
+				setEqualsCriterion := func(t *testing.T, value any) error {
+					subject := newQueryParams(0)
+
+					return subject.setCriteria(filters.Criteria{
+						filters.NewEquals(countField, value, false),
+					}, time.Time{})
+				}
+
+				err := setEqualsCriterion(t, "10000000000000000000")
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "10000000000000000000"`)
+
+				err = setEqualsCriterion(t, "10000000000000000000.0")
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "10000000000000000000.0"`)
+
+				err = setEqualsCriterion(t, 9223372036854786048.0)
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "9.223372036854786e+18"`)
+
+				err = setEqualsCriterion(t, -9223372036854786048.0)
+				require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+				require.ErrorContains(t, err, `invalid equals criterion value "-9.223372036854786e+18"`)
 			})
 		})
 
