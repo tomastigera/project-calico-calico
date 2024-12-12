@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -332,6 +333,37 @@ func TestQueryService(t *testing.T) {
 					})
 					require.ErrorContains(t, err, "unknown collection 'unknown'")
 				})
+			})
+		})
+
+		t.Run("exists criterion", func(t *testing.T) {
+
+			t.Run("supported for text field", func(t *testing.T) {
+				_, err := subject.Query(ctx, client.QueryRequest{
+					CollectionName: "flows",
+					Filters: []client.QueryRequestFilter{
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: "dest_domains"}},
+					},
+				})
+				require.NoError(t, err)
+			})
+
+			t.Run("not supported for non-text field", func(t *testing.T) {
+				for _, tc := range []string{
+					"@timestamp", "bytes_in", "num_flows", "policy.type",
+				} {
+					t.Run(tc, func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: tc}},
+							},
+						})
+						require.ErrorContains(t, err, fmt.Sprintf("invalid collection field '%s' for criterion type 'exists'", tc))
+					})
+				}
 			})
 		})
 

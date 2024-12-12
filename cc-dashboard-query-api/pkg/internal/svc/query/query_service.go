@@ -253,6 +253,12 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		if err != nil {
 			return nil, err
 		}
+		if field.Type() != collections.FieldTypeText {
+			// Exists field is not supported for non-text fields in linseed atm
+			// See https://tigera.atlassian.net/browse/TSLA-8361
+			// See https://tigera.atlassian.net/browse/TSLA-8406
+			return nil, errInvalidFieldType
+		}
 		return filters.NewExists(field, negate), nil
 	case client.CriterionTypeIn:
 		field, err := getCollectionField(from.Field)
