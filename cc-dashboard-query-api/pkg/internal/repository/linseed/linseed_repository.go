@@ -73,7 +73,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 
 	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
 	if err != nil {
-		return result.QueryResult{}, err
+		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
 	}
 
 	// Build elastic aggregations from req.Aggregations
