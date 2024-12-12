@@ -335,6 +335,33 @@ func TestQueryService(t *testing.T) {
 			})
 		})
 
+		t.Run("range criterion", func(t *testing.T) {
+			t.Run("invalid", func(t *testing.T) {
+				t.Run("gte value", func(t *testing.T) {
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "invalid-value", LTE: "10", Field: "bytes_in"}},
+						},
+					})
+					require.ErrorContains(t, err, "failed to parse range gte field: invalid-value")
+				})
+
+				t.Run("lte value", func(t *testing.T) {
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "10", LTE: "invalid-value", Field: "bytes_in"}},
+						},
+					})
+					require.ErrorContains(t, err, "failed to parse range lte field: invalid-value")
+				})
+			})
+		})
+
 		t.Run("maxDocs", func(t *testing.T) {
 
 			setMockResult := func() {

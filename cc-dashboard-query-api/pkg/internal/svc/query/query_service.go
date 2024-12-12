@@ -287,11 +287,11 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		}
 		gte, err := strconv.ParseInt(from.GTE, 10, 64)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s gte field: %v", from.Type, err))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE))
 		}
 		lte, err := strconv.ParseInt(from.LTE, 10, 64)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s lte field: %v", from.Type, err))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE))
 		}
 		return filters.NewRange(field, gte, lte, negate), nil
 	case client.CriterionTypeIPRange:
