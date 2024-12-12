@@ -21,18 +21,27 @@ func TestParams(t *testing.T) {
 
 	qnameField, found := collectionsMap[collections.CollectionNameDNS].Field("qname")
 	require.True(t, found)
+	require.Equal(t, collections.FieldTypeQName, qnameField.Type())
 
 	clientNameField, found := collectionsMap[collections.CollectionNameDNS].Field("client_name")
 	require.True(t, found)
+	require.Equal(t, collections.FieldTypeText, clientNameField.Type())
 
 	countField, found := collectionsMap[collections.CollectionNameDNS].Field("count")
 	require.True(t, found)
+	require.Equal(t, collections.FieldTypeNumber, countField.Type())
 
 	clientIPField, found := collectionsMap[collections.CollectionNameDNS].Field("client_ip")
 	require.True(t, found)
+	require.Equal(t, collections.FieldTypeIP, clientIPField.Type())
 
 	policyTypeField, found := collectionsMap[collections.CollectionNameFlows].Field(collections.FieldNamePolicyType)
 	require.True(t, found)
+	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
+
+	enumField, found := collectionsMap[collections.CollectionNameFlows].Field("action")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
 
 	t.Run("filter criterion", func(t *testing.T) {
 		t.Run("in", func(t *testing.T) {
@@ -126,13 +135,24 @@ func TestParams(t *testing.T) {
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 			}, subject)
 
-			t.Run("unknown enum field", func(t *testing.T) {
+			t.Run("enum fields", func(t *testing.T) {
 				subject := newQueryParams(0)
 
 				err := subject.setCriteria(filters.Criteria{
-					filters.NewEquals(collections.NewCollectionFieldEnum("invalid-field", nil, ""), "test-value", false),
+					filters.NewEquals(enumField, `allow`, false),
 				}, time.Time{})
-				require.ErrorContains(t, err, "unknown collection enum field 'invalid-field'")
+				require.NoError(t, err)
+
+				require.Equal(t, `action = "allow"`, subject.selector)
+
+				t.Run("invalid value", func(t *testing.T) {
+					subject := newQueryParams(0)
+
+					err := subject.setCriteria(filters.Criteria{
+						filters.NewEquals(enumField, `invalid-value`, false),
+					}, time.Time{})
+					require.ErrorContains(t, err, "invalid value for field 'action': invalid-value")
+				})
 			})
 
 			t.Run("policy match", func(t *testing.T) {
