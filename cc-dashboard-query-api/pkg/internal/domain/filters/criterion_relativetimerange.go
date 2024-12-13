@@ -17,23 +17,10 @@ type CriterionRelativeTimeRange struct {
 
 var _ Criterion = (*CriterionRelativeTimeRange)(nil)
 
-func NewRelativeTimeRange(field collections.CollectionField, gte, lte string, negate bool) (Criterion, error) {
-	var err error
-	var gteDuration, lteDuration time.Duration
-
-	if gte != "" {
-		if gteDuration, err = time.ParseDuration(gte); err != nil {
-			return nil, fmt.Errorf("invalid value for relativeTimeRange gte field: %s", gte)
-		}
-	}
-
-	if lte != "" {
-		if lteDuration, err = time.ParseDuration(lte); err != nil {
-			return nil, fmt.Errorf("invalid value for relativeTimeRange lte field: %s", lte)
-		}
-	}
-
-	if gteDuration == 0 && lteDuration == 0 {
+func NewRelativeTimeRange(field collections.CollectionField, gteDuration, lteDuration time.Duration, negate bool) (Criterion, error) {
+	if gteDuration < 0 || lteDuration < 0 ||
+		(lteDuration > gteDuration) ||
+		(gteDuration == 0 && lteDuration == 0) {
 		return nil, fmt.Errorf("invalid relativeTimeRange duration")
 	}
 

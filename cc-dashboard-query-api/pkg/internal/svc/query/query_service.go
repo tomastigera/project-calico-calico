@@ -119,7 +119,7 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 	}
 
 	repositoryRequest.Filters, err = slices.MapOrError(req.Filters, func(from client.QueryRequestFilter) (filters.Criterion, error) {
-		return mapClientCriterion(from.Criterion, from.Negate, queryCollection)
+		return s.mapClientCriterion(ctx, from.Criterion, from.Negate, queryCollection)
 	})
 	if err != nil {
 		return client.QueryResponse{}, err
@@ -219,7 +219,12 @@ func (s *QueryService) validateRequest(req client.QueryRequest) (collections.Col
 
 var reRemovePrefix = regexp.MustCompile(`^PT`)
 
-func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, queryCollection collections.Collection) (filters.Criterion, error) {
+func (s *QueryService) mapClientCriterion(
+	ctx context.Context,
+	from client.QueryRequestFilterCriterion,
+	negate bool,
+	queryCollection collections.Collection,
+) (filters.Criterion, error) {
 
 	getCollectionField := func(fieldName string) (collections.CollectionField, error) {
 		field, found := queryCollection.Field(collections.FieldName(fieldName))
@@ -278,7 +283,7 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse or criteria: %v", err))
 		}
 		criteria, err := slices.MapOrError(fromCriteria, func(subCriterion client.QueryRequestFilterCriterion) (filters.Criterion, error) {
-			return mapClientCriterion(subCriterion, negate, queryCollection)
+			return s.mapClientCriterion(ctx, subCriterion, negate, queryCollection)
 		})
 		if err != nil {
 			return nil, err
@@ -293,11 +298,15 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		}
 		gte, err := strconv.ParseInt(from.GTE, 10, 64)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE))
+			message := fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE)
+			s.logger.ErrorC(ctx, message, zap.Error(err))
+			return nil, httpreply.ToBadRequest(message)
 		}
 		lte, err := strconv.ParseInt(from.LTE, 10, 64)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE))
+			message := fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE)
+			s.logger.ErrorC(ctx, message, zap.Error(err))
+			return nil, httpreply.ToBadRequest(message)
 		}
 		return filters.NewRange(field, gte, lte, negate), nil
 	case client.CriterionTypeIPRange:
@@ -328,19 +337,33 @@ func mapClientCriterion(from client.QueryRequestFilterCriterion, negate bool, qu
 		field, err := getCollectionField(from.Field)
 		if err != nil {
 			return nil, err
-		} else if field.Type() != collections.FieldTypeDate {
+		}
+		if field.Type() != collections.FieldTypeDate {
 			return nil, errInvalidFieldType
 		}
-		criterion, err := filters.NewRelativeTimeRange(
-			field,
-			strings.ToLower(reRemovePrefix.ReplaceAllString(from.GTE, "")),
-			strings.ToLower(reRemovePrefix.ReplaceAllString(from.LTE, "")),
-			negate,
-		)
+
+		var gteDuration, lteDuration time.Duration
+		if gte := strings.ToLower(reRemovePrefix.ReplaceAllString(from.GTE, "")); gte != "" {
+			if gteDuration, err = time.ParseDuration(gte); err != nil {
+				message := fmt.Sprintf("invalid value for relativeTimeRange gte field: %s", gte)
+				s.logger.ErrorC(ctx, message, zap.Error(err))
+				return nil, httpreply.ToBadRequest(message)
+			}
+		}
+
+		if lte := strings.ToLower(reRemovePrefix.ReplaceAllString(from.LTE, "")); lte != "" {
+			if lteDuration, err = time.ParseDuration(lte); err != nil {
+				message := fmt.Sprintf("invalid value for relativeTimeRange lte field: %s", lte)
+				s.logger.ErrorC(ctx, message, zap.Error(err))
+				return nil, httpreply.ToBadRequest(message)
+			}
+		}
+
+		criterion, err := filters.NewRelativeTimeRange(field, gteDuration, lteDuration, negate)
 		if err != nil {
 			return nil, httpreply.ToBadRequest(err.Error())
 		}
-		return criterion, err
+		return criterion, nil
 	}
 
 	return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid filter criterion type: %s", from.Type))

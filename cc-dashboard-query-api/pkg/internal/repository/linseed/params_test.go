@@ -395,7 +395,7 @@ func TestParams(t *testing.T) {
 
 			now := time.Date(2025, 12, 11, 10, 30, 8, 7, time.UTC)
 
-			criterion, err := filters.NewRelativeTimeRange(nil, "10m", "5m", false)
+			criterion, err := filters.NewRelativeTimeRange(nil, time.Duration(10)*time.Minute, time.Duration(5)*time.Minute, false)
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{criterion}, now)
@@ -414,7 +414,7 @@ func TestParams(t *testing.T) {
 			t.Run("negated", func(t *testing.T) {
 				subject = &queryParams{}
 
-				criterion, err = filters.NewRelativeTimeRange(nil, "10m", "5m", true)
+				criterion, err := filters.NewRelativeTimeRange(nil, time.Duration(10)*time.Minute, time.Duration(5)*time.Minute, true)
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{criterion}, now)
@@ -424,7 +424,12 @@ func TestParams(t *testing.T) {
 			t.Run("with field set", func(t *testing.T) {
 				subject = &queryParams{}
 
-				criterion, err = filters.NewRelativeTimeRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), "10m", "5m", false)
+				criterion, err = filters.NewRelativeTimeRange(
+					collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""),
+					time.Duration(10)*time.Minute,
+					time.Duration(5)*time.Minute,
+					false,
+				)
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{criterion}, now)

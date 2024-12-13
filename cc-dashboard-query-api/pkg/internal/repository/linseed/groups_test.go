@@ -51,7 +51,7 @@ func TestLinseedGroups(t *testing.T) {
 				require.Equal(t, elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("1m").
+					FixedInterval("60s").
 					OrderByKey(false), aggregation)
 			})
 
@@ -68,7 +68,7 @@ func TestLinseedGroups(t *testing.T) {
 					require.Equal(t, elastic.
 						NewDateHistogramAggregation().
 						Field("field1").
-						FixedInterval("15m").
+						FixedInterval("900s").
 						OrderByKey(false), aggregation)
 				})
 				t.Run("asc", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestLinseedGroups(t *testing.T) {
 					require.Equal(t, elastic.
 						NewDateHistogramAggregation().
 						Field("field1").
-						FixedInterval("15m").
+						FixedInterval("900s").
 						OrderByKey(true), aggregation)
 				})
 			})
@@ -88,7 +88,7 @@ func TestLinseedGroups(t *testing.T) {
 				expectedGroupTimeElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("15m").
+					FixedInterval("900s").
 					OrderByKey(false)
 
 				expectedGroupDiscreteElasticAggregation := elastic.
@@ -116,7 +116,7 @@ func TestLinseedGroups(t *testing.T) {
 				expectedGroupTimeElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("15m").
+					FixedInterval("900s").
 					OrderByKey(false).
 					SubAggregation("a1", elastic.NewTermsAggregation().Field("t1")).
 					SubAggregation("a2", elastic.NewSumAggregation().Field("s1")).
@@ -174,6 +174,22 @@ func TestLinseedGroups(t *testing.T) {
 				}
 
 				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, elasticAggregations, 0)
+				require.NoError(t, err)
+				require.Equal(t, expectedElasticAggregation, elasticAggregation)
+			})
+
+			t.Run("with minimum time interval", func(t *testing.T) {
+				expectedElasticAggregation := elastic.
+					NewDateHistogramAggregation().
+					Field("field1").
+					FixedInterval("60s").
+					OrderByKey(false)
+
+				queryGroups := groups.Groups{
+					groups.NewGroupTime("field1", "1s", 10, groupSortOrder),
+				}
+
+				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, nil, 0)
 				require.NoError(t, err)
 				require.Equal(t, expectedElasticAggregation, elasticAggregation)
 			})

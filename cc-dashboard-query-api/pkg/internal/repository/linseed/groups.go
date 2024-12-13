@@ -86,9 +86,15 @@ func queryGroupToElasticAggregation(queryGroup groups.Group, elasticAggregations
 		if interval == 0 || int64(requestedPeriod/interval) > maxGroupTimeAggregationResults {
 			intervalClamped := requestedPeriod / time.Duration(maxGroupTimeAggregationResults)
 			if intervalClamped > interval {
-				intervalValue = strconv.FormatInt(int64(intervalClamped.Seconds()), 10) + "s"
+				interval = intervalClamped
 			}
 		}
+
+		// ensure a minimum interval of 1m
+		if interval < 1*time.Minute {
+			interval = 1 * time.Minute
+		}
+		intervalValue = strconv.FormatInt(int64(interval.Seconds()), 10) + "s"
 
 		dateTimeHistogramAggregation := elastic.NewDateHistogramAggregation().
 			Field(queryGroup.FieldName()).
