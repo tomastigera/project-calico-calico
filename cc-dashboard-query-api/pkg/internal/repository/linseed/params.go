@@ -80,7 +80,20 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			return "", fmt.Errorf("negated dateRange criterion is not supported")
 		}
 
-		p.setTimeRange(now, c.Gte(), c.Lte(), c.Lte().Sub(c.Gte()), c.Field())
+		errGTEGreaterThanLTE := fmt.Errorf("invalid value for dateRange: gte is greater than lte")
+
+		gte := c.Gte()
+		lte := c.Lte()
+		if lte == nil {
+			lte = &now
+			errGTEGreaterThanLTE = fmt.Errorf("invalid value for dateRange gte")
+		}
+
+		if gte.After(*lte) {
+			return "", errGTEGreaterThanLTE
+		}
+
+		p.setTimeRange(now, gte, *lte, lte.Sub(gte), c.Field())
 		return "", nil
 	case *filters.CriterionEquals:
 		// handle linseed client special params

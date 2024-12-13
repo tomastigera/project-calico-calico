@@ -375,7 +375,7 @@ func TestParams(t *testing.T) {
 			now := time.Date(2025, 12, 11, 10, 9, 8, 7, time.UTC)
 
 			err := subject.setCriteria(filters.Criteria{
-				filters.NewDateRange(nil, from, to, false),
+				filters.NewDateRange(nil, from, &to, false),
 			}, now)
 			require.NoError(t, err)
 
@@ -388,7 +388,7 @@ func TestParams(t *testing.T) {
 			t.Run("negated", func(t *testing.T) {
 				subject := newQueryParams(0)
 				err := subject.setCriteria(filters.Criteria{
-					filters.NewDateRange(nil, from, to, true),
+					filters.NewDateRange(nil, from, &to, true),
 				}, now)
 				require.ErrorContains(t, err, "negated dateRange criterion is not supported")
 			})
@@ -396,7 +396,7 @@ func TestParams(t *testing.T) {
 			t.Run("with field set", func(t *testing.T) {
 				subject := newQueryParams(0)
 				err := subject.setCriteria(filters.Criteria{
-					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, to, false),
+					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, &to, false),
 				}, now)
 				require.NoError(t, err)
 
@@ -404,6 +404,35 @@ func TestParams(t *testing.T) {
 				require.Equal(t, lsv1.QueryParams{
 					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now, Field: ""},
 				}, subject.linseedQueryParams)
+			})
+
+			t.Run("defaults lte field to now", func(t *testing.T) {
+				subject := newQueryParams(0)
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, nil, false),
+				}, now)
+				require.NoError(t, err)
+				require.True(t, subject.linseedQueryParams.TimeRange.To.Equal(now))
+			})
+
+			t.Run("gte is not greater than lte", func(t *testing.T) {
+				lte := time.Date(2020, 0, 0, 0, 0, 0, 0, time.UTC)
+				gte := time.Date(2020, 0, 0, 0, 0, 0, 1, time.UTC)
+
+				subject := newQueryParams(0)
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, &lte, false),
+				}, now)
+				require.ErrorContains(t, err, "invalid value for dateRange: gte is greater than lte")
+			})
+			t.Run("gte is not greater than default lte", func(t *testing.T) {
+				gte := time.Date(10000, 0, 0, 0, 0, 0, 1, time.UTC)
+
+				subject := newQueryParams(0)
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, nil, false),
+				}, now)
+				require.ErrorContains(t, err, "invalid value for dateRange gte")
 			})
 		})
 

@@ -339,14 +339,25 @@ func (s *QueryService) mapClientCriterion(
 		} else if field.Type() != collections.FieldTypeDate {
 			return nil, errInvalidFieldType
 		}
-		gte, err := time.Parse(time.RFC3339, from.GTE)
+
+		gte, err := parseDateRangeTime(from.GTE)
 		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid '%s' value for criterion type '%s': %v", from.GTE, from.Type, err))
+			message := fmt.Sprintf("invalid value '%s' for criterion type '%s' gte field", from.GTE, from.Type)
+			s.logger.ErrorC(ctx, message, zap.Error(err))
+			return nil, httpreply.ToBadRequest(message)
 		}
-		lte, err := time.Parse(time.RFC3339, from.LTE)
-		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid '%s' value for criterion type '%s': %v", from.LTE, from.Type, err))
+
+		var lte *time.Time
+		if from.LTE != "" {
+			value, err := parseDateRangeTime(from.LTE)
+			if err != nil {
+				message := fmt.Sprintf("invalid value '%s' for criterion type '%s' lte field", from.LTE, from.Type)
+				s.logger.ErrorC(ctx, message, zap.Error(err))
+				return nil, httpreply.ToBadRequest(message)
+			}
+			lte = &value
 		}
+
 		return filters.NewDateRange(field, gte, lte, negate), nil
 	case client.CriterionTypeRelativeTimeRange:
 		field, err := getCollectionField(from.Field)
@@ -476,4 +487,23 @@ func mapResultAggregations(resultAggregations aggregations.AggregationValues) cl
 		clientAggregations[aggKey] = responseValue
 	}
 	return clientAggregations
+}
+
+func parseDateRangeTime(dateRangeTime string) (time.Time, error) {
+	validDateRangeTimeFormats := []string{
+		time.DateOnly,
+		"2006-01-02T15:04:05",
+		time.RFC3339,
+		time.RFC3339Nano,
+	}
+
+	var t time.Time
+	var err error
+	for _, timeFormat := range validDateRangeTimeFormats {
+		t, err = time.Parse(timeFormat, dateRangeTime)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return t, err
 }

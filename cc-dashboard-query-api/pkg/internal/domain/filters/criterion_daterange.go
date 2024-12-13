@@ -8,7 +8,7 @@ import (
 
 type CriterionDateRange struct {
 	gte time.Time
-	lte time.Time
+	lte *time.Time
 
 	field  collections.CollectionField
 	negate bool
@@ -16,7 +16,7 @@ type CriterionDateRange struct {
 
 var _ Criterion = (*CriterionDateRange)(nil)
 
-func NewDateRange(field collections.CollectionField, gte, lte time.Time, negate bool) Criterion {
+func NewDateRange(field collections.CollectionField, gte time.Time, lte *time.Time, negate bool) Criterion {
 	return &CriterionDateRange{
 		gte:    gte,
 		lte:    lte,
@@ -33,7 +33,7 @@ func (c *CriterionDateRange) Gte() time.Time {
 	return c.gte
 }
 
-func (c *CriterionDateRange) Lte() time.Time {
+func (c *CriterionDateRange) Lte() *time.Time {
 	return c.lte
 }
 

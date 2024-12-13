@@ -258,7 +258,7 @@ func TestQueryService(t *testing.T) {
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
-						require.ErrorContains(t, err, `invalid 'invalid1' value for criterion type 'dateRange'`)
+						require.ErrorContains(t, err, `invalid value 'invalid1' for criterion type 'dateRange' gte field`)
 					})
 					t.Run("lte time", func(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -268,7 +268,7 @@ func TestQueryService(t *testing.T) {
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
-						require.ErrorContains(t, err, `invalid 'invalid2' value for criterion type 'dateRange'`)
+						require.ErrorContains(t, err, `invalid value 'invalid2' for criterion type 'dateRange' lte field`)
 					})
 					t.Run("missing field", func(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -299,6 +299,87 @@ func TestQueryService(t *testing.T) {
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 						require.ErrorContains(t, err, `invalid collection field 'bytes_in' for criterion type 'dateRange'`)
+					})
+					t.Run("gte is greater than lte", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2021-01-01T00:00:00Z", LTE: "2020-01-01T00:00:00Z", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid value for dateRange: gte is greater than lte`)
+					})
+					t.Run("gte field is mandatory", func(t *testing.T) {
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "", LTE: "", Field: "@timestamp"}},
+							},
+						})
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid value '' for criterion type 'dateRange' gte field`)
+					})
+
+					t.Run("parse formats", func(t *testing.T) {
+						testCases := []struct {
+							name     string
+							value    string
+							expected time.Time
+						}{
+							{
+								name:     "date only",
+								value:    "2024-01-01",
+								expected: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							},
+							{
+								name:     "datetime",
+								value:    "2024-01-01T12:00:00",
+								expected: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+							},
+							{
+								name:     "datetime utc",
+								value:    "2024-01-01T12:00:00Z",
+								expected: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+							},
+							{
+								name:     "datetime with timezone",
+								value:    "2024-01-01T12:00:00-07:00",
+								expected: time.Date(2024, 1, 1, 12, 0, 0, 0, time.FixedZone("UTC-7", -7*60*60)),
+							},
+							{
+								name:     "datetime nanoseconds utc",
+								value:    "2024-01-01T12:00:00.000000123Z",
+								expected: time.Date(2024, 1, 1, 12, 0, 0, 123, time.UTC),
+							},
+							{
+								name:     "datetime nanoseconds with timezone",
+								value:    "2024-01-01T12:00:00.000000123-07:00",
+								expected: time.Date(2024, 1, 1, 12, 0, 0, 123, time.FixedZone("UTC-7", -7*60*60)),
+							},
+						}
+
+						for _, testCase := range testCases {
+							t.Run(testCase.name, func(t *testing.T) {
+								mockClient.SetResults(
+									rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+								)
+								_, err := subject.Query(ctx, client.QueryRequest{
+									CollectionName: "flows",
+									Filters: []client.QueryRequestFilter{
+										{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: testCase.value, LTE: testCase.value, Field: "@timestamp"}},
+									},
+								})
+								require.NoError(t, err, testCase)
+								requests := mockClient.Requests()
+								require.Len(t, requests, 1, testCase)
+								require.IsType(t, &lsv1.FlowLogParams{}, requests[0].GetParams(), testCase)
+
+								timeRange := requests[0].GetParams().(*lsv1.FlowLogParams).TimeRange
+								require.True(t, testCase.expected.Equal(timeRange.From), testCase, timeRange.From)
+								require.True(t, testCase.expected.Equal(timeRange.To), testCase, timeRange.To)
+							})
+						}
 					})
 				})
 			})
@@ -339,6 +420,9 @@ func TestQueryService(t *testing.T) {
 		t.Run("exists criterion", func(t *testing.T) {
 
 			t.Run("supported for text field", func(t *testing.T) {
+				mockClient.SetResults(
+					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				)
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
 					Filters: []client.QueryRequestFilter{
