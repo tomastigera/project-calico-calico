@@ -391,6 +391,91 @@ func TestQueryService(t *testing.T) {
 					})
 					require.ErrorContains(t, err, "failed to parse range lte field: invalid-value")
 				})
+
+				t.Run("no values set", func(t *testing.T) {
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", Field: "bytes_in"}},
+						},
+					})
+					require.ErrorContains(t, err, "invalid gte and lte values for range criterion")
+				})
+
+				t.Run("gte greater than lte", func(t *testing.T) {
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "100", LTE: "1", Field: "bytes_in"}},
+						},
+					})
+					require.ErrorContains(t, err, "invalid gte and lte values for range criterion")
+				})
+			})
+
+			t.Run("success", func(t *testing.T) {
+				t.Run("only gte field set", func(t *testing.T) {
+					mockClient.SetResults(
+						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+					)
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "10", Field: "bytes_in"}},
+						},
+					})
+					require.NoError(t, err)
+				})
+				t.Run("only lte field set", func(t *testing.T) {
+					mockClient.SetResults(
+						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+					)
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "range", LTE: "10", Field: "bytes_in"}},
+						},
+					})
+					require.NoError(t, err)
+				})
+
+				t.Run("lte and gte fields set", func(t *testing.T) {
+					t.Run("to the same value", func(t *testing.T) {
+						mockClient.SetResults(
+							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						)
+
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "99", LTE: "100", Field: "bytes_in"}},
+							},
+						})
+						require.NoError(t, err)
+					})
+
+					t.Run("lte greater than gte", func(t *testing.T) {
+						mockClient.SetResults(
+							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						)
+
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "99", LTE: "100", Field: "bytes_in"}},
+							},
+						})
+						require.NoError(t, err)
+					})
+				})
 			})
 		})
 

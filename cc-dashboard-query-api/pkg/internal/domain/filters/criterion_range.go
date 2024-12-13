@@ -6,15 +6,15 @@ import (
 
 type CriterionRange struct {
 	field collections.CollectionField
-	gte   int64
-	lte   int64
+	gte   *int64
+	lte   *int64
 
 	negate bool
 }
 
 var _ Criterion = (*CriterionRange)(nil)
 
-func NewRange(field collections.CollectionField, gte, lte int64, negate bool) Criterion {
+func NewRange(field collections.CollectionField, gte, lte *int64, negate bool) Criterion {
 	return &CriterionRange{
 		field: field,
 		gte:   gte,
@@ -32,10 +32,10 @@ func (c *CriterionRange) Field() collections.CollectionField {
 	return c.field
 }
 
-func (c *CriterionRange) Gte() int64 {
+func (c *CriterionRange) Gte() *int64 {
 	return c.gte
 }
 
-func (c *CriterionRange) Lte() int64 {
+func (c *CriterionRange) Lte() *int64 {
 	return c.lte
 }

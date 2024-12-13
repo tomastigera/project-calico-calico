@@ -293,20 +293,35 @@ func (s *QueryService) mapClientCriterion(
 		field, err := getCollectionField(from.Field)
 		if err != nil {
 			return nil, err
-		} else if !field.Type().Is(collections.FieldTypeNumber) {
+		}
+		if !field.Type().Is(collections.FieldTypeNumber) {
 			return nil, errInvalidFieldType
 		}
-		gte, err := strconv.ParseInt(from.GTE, 10, 64)
-		if err != nil {
-			message := fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE)
-			s.logger.ErrorC(ctx, message, zap.Error(err))
-			return nil, httpreply.ToBadRequest(message)
+
+		var gte, lte *int64
+		if from.GTE != "" {
+			if value, err := strconv.ParseInt(from.GTE, 10, 64); err != nil {
+				message := fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE)
+				s.logger.ErrorC(ctx, message, zap.Error(err))
+				return nil, httpreply.ToBadRequest(message)
+			} else {
+				gte = &value
+			}
 		}
-		lte, err := strconv.ParseInt(from.LTE, 10, 64)
-		if err != nil {
-			message := fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE)
-			s.logger.ErrorC(ctx, message, zap.Error(err))
-			return nil, httpreply.ToBadRequest(message)
+
+		if from.LTE != "" {
+			if value, err := strconv.ParseInt(from.LTE, 10, 64); err != nil {
+				message := fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE)
+				s.logger.ErrorC(ctx, message, zap.Error(err))
+				return nil, httpreply.ToBadRequest(message)
+			} else {
+				lte = &value
+			}
+		}
+
+		if lte == nil && gte == nil ||
+			(lte != nil && gte != nil && *lte < *gte) {
+			return nil, httpreply.ToBadRequest("invalid gte and lte values for range criterion")
 		}
 		return filters.NewRange(field, gte, lte, negate), nil
 	case client.CriterionTypeIPRange:

@@ -88,7 +88,7 @@ func TestParams(t *testing.T) {
 			subject := newQueryParams(0)
 
 			err := subject.setCriteria(filters.Criteria{
-				filters.NewRange(countField, 10, 20, false),
+				filters.NewRange(countField, intp(10), intp(20), false),
 			}, time.Time{})
 			require.NoError(t, err)
 
@@ -103,7 +103,7 @@ func TestParams(t *testing.T) {
 				subject := newQueryParams(0)
 
 				err := subject.setCriteria(filters.Criteria{
-					filters.NewRange(countField, 10, 20, true),
+					filters.NewRange(countField, intp(10), intp(20), true),
 				}, time.Time{})
 				require.NoError(t, err)
 
@@ -113,6 +113,59 @@ func TestParams(t *testing.T) {
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
 				}, subject)
+			})
+
+			t.Run("no parameters", func(t *testing.T) {
+				err := subject.setCriteria(filters.Criteria{
+					filters.NewRange(countField, nil, nil, true),
+				}, time.Time{})
+				require.ErrorContains(t, err, "invalid range criterion for field 'count'")
+			})
+
+			t.Run("single parameter", func(t *testing.T) {
+				subject := newQueryParams(0)
+
+				t.Run("gte", func(t *testing.T) {
+					err := subject.setCriteria(filters.Criteria{
+						filters.NewRange(countField, intp(10), nil, false),
+					}, time.Time{})
+					require.NoError(t, err)
+
+					require.Equal(t, &queryParams{
+						selector: `count >= 10`,
+
+						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					}, subject)
+				})
+				t.Run("lte", func(t *testing.T) {
+					err := subject.setCriteria(filters.Criteria{
+						filters.NewRange(countField, nil, intp(20), false),
+					}, time.Time{})
+					require.NoError(t, err)
+
+					require.Equal(t, &queryParams{
+						selector: `count <= 20`,
+
+						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					}, subject)
+
+					t.Run("negated", func(t *testing.T) {
+
+						err := subject.setCriteria(filters.Criteria{
+							filters.NewRange(countField, nil, intp(20), true),
+						}, time.Time{})
+						require.NoError(t, err)
+
+						require.Equal(t, &queryParams{
+							selector: `NOT (count <= 20)`,
+
+							domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+							linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+						}, subject)
+					})
+				})
 			})
 		})
 
@@ -496,4 +549,8 @@ func TestParams(t *testing.T) {
 		})
 	})
 
+}
+
+func intp(i int64) *int64 {
+	return &i
 }

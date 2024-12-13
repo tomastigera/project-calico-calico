@@ -133,11 +133,28 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 
 		return prefix + "( " + strings.Join(selectors, " OR ") + " )", nil
 	case *filters.CriterionRange:
+		gte := c.Gte()
 		field := c.Field()
-		if c.Negate() {
-			return fmt.Sprintf(`NOT (%s >= %d AND %s <= %d)`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
+
+		selector := ""
+		if gte != nil {
+			selector += fmt.Sprintf(`%s >= %d`, field.Name(), *gte)
 		}
-		return fmt.Sprintf(`%s >= %d AND %s <= %d`, field.Name(), c.Gte(), field.Name(), c.Lte()), nil
+		if lte := c.Lte(); lte != nil {
+			if gte != nil {
+				selector += " AND "
+			}
+			selector += fmt.Sprintf(`%s <= %d`, field.Name(), *lte)
+		}
+
+		if selector == "" {
+			return "", fmt.Errorf("invalid range criterion for field '%s'", c.Field().Name())
+		}
+
+		if c.Negate() {
+			return fmt.Sprintf(`NOT (%s)`, selector), nil
+		}
+		return selector, nil
 	case *filters.CriterionExists:
 		// This selector does not match ES' exists exactly. TODO: Implement a linseed exists selector
 		field := c.Field()
