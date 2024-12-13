@@ -12,16 +12,6 @@
     type: text
   - name: count
     type: number
-  - name: dns.question.class
-    type: text
-  - name: dns.question.name
-    type: text
-  - name: dns.question.registered_domain
-    type: text
-  - name: dns.question.type
-    type: text
-  - name: dns.response_code
-    type: text
   - name: end_time
     type: date
   - name: generated_time
