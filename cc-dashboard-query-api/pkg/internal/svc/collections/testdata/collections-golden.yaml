@@ -222,7 +222,7 @@
   - name: dest_service_namespace
     type: text
   - name: dest_service_port
-    type: text
+    type: number
   - name: dest_service_port_name
     type: text
   - name: dest_service_port

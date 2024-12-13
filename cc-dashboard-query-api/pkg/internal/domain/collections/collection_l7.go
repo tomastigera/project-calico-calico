@@ -13,7 +13,7 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_port_num"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_name"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_namespace"},
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_port"},
+		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_service_port"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_port_name"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_service_port"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
