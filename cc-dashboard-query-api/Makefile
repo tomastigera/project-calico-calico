@@ -45,6 +45,6 @@ helm-pr:
 	/usr/bin/yq write -i charts/cc-tenants/values.gcp-us-$(ENV)-01.yaml --tag '!!str' ccDashboardQueryApi.apiImageTag ${TAG_NAME} && \
 	git checkout -B ${TAG_NAME}-$(ENV)-release && \
 	git add . && \
-	git commit -am "Release ${TAG_NAME} to $(ENV) environment" && \
+	git commit -am "Release ${PROJECT_NAME} ${TAG_NAME} to $(ENV) environment" && \
 	git push -u origin ${TAG_NAME}-$(ENV)-release && \
 	/usr/bin/hub pull-request -m "PR for ${TAG_NAME} CC Dashboard Query API $(ENV) Release" $(PR_OPTS)

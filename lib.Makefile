@@ -22,7 +22,7 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/tmp/go/pkg/mod:rw
 
 # DOCKER_BUILD is the base build command used for building all images.
 DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) \
@@ -35,7 +35,7 @@ CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 CONTAINERIZED=docker run --rm \
 				--net=host \
 				$(EXTRA_DOCKER_ARGS) \
-				-e GOCACHE=/go-cache \
+				-e GOCACHE=/tmp/go-cache \
 				-e GOPROXY=$(GOPROXY) \
 				-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 				-v $(REPO_ROOT):/go/src/github.com/tigera/$(REPO_BASENAME):rw \

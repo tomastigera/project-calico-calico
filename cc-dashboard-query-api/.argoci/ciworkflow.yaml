@@ -59,19 +59,24 @@ spec:
     - name: main
       dag:
         tasks:
-          - name: build-images
-            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'PR'"
-            template: build-images
+          - name: test-and-build-images
+            template: test-and-build-images
           - name: push-dev-images
+            depends: "test-and-build-images"
             when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
             template: push-dev-images
+          - name: push-prod-images
+            depends: "test-and-build-images"
+            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
+            template: build-and-push-prod-images
 
-    - name: build-images
+    - name: test-and-build-images
       script:
         source: |
           source checkout
           cd cc-dashboard-query-api
           until docker ps; do sleep 5; done
+          make test
           make docker-build
 
     - name: push-dev-images
@@ -85,3 +90,13 @@ spec:
           source .argoci/scripts/cd_prologue.sh
           make docker-push
           ENV=dev PR_OPTS=" -l autoupdate,automerge,dev,cc-dashboard-query-api" make helm-pr
+
+    - name: build-and-push-prod-images
+      script:
+        source: |
+          source checkout
+          cd cc-dashboard-query-api
+          source .argoci/scripts/cd_prologue.sh
+          make docker-push
+          ENV=stag make helm-pr
+          ENV=prod make helm-pr
