@@ -260,7 +260,7 @@ func groupBucketsFromElastic(elasticGroupKey string, queryGroup groups.Group, re
 			}
 
 			if elasticBucketItem.KeyAsString == nil {
-				bucketItem.err = fmt.Errorf("unable to get group %s aggregation bucket key", elasticGroupKey)
+				bucketItem.key = strconv.FormatFloat(elasticBucketItem.Key, 'f', -1, 64)
 			} else {
 				bucketItem.key = *elasticBucketItem.KeyAsString
 			}

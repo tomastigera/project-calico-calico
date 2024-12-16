@@ -228,6 +228,27 @@ func TestLinseedGroups(t *testing.T) {
 				require.Equal(t, int64(99), resultBucketItems[0].docCount)
 				require.Equal(t, int64(11), resultBucketItems[1].docCount)
 			})
+
+			t.Run("from discrete group", func(t *testing.T) {
+				elasticResult := elastic.Aggregations{
+					"g0": json.RawMessage(`{"buckets": [{"key": 1734382560000, "doc_count": 315, "a_#flows": {"value": 4616.0 } }, {"key": 1734382680000, "doc_count": 626, "a_#flows": {"value": 10121.0 } } ] }`),
+				}
+				aggregationBucketItems, err := groupBucketsFromElastic("g0", groupDiscrete, elasticResult)
+				require.NoError(t, err)
+				require.Len(t, aggregationBucketItems, 2)
+				require.Equal(t, "1734382560000", aggregationBucketItems[0].key)
+				require.Equal(t, "1734382680000", aggregationBucketItems[1].key)
+			})
+			t.Run("from time group", func(t *testing.T) {
+				elasticResult := elastic.Aggregations{
+					"g0": json.RawMessage(`{"buckets": [{"key": 1734382560000, "doc_count": 315, "a_#flows": {"value": 4616.0 } }, {"key": 1734382680000, "doc_count": 626, "a_#flows": {"value": 10121.0 } } ] }`),
+				}
+				aggregationBucketItems, err := groupBucketsFromElastic("g0", groupTime, elasticResult)
+				require.NoError(t, err)
+				require.Len(t, aggregationBucketItems, 2)
+				require.Equal(t, "1734382560000", aggregationBucketItems[0].key)
+				require.Equal(t, "1734382680000", aggregationBucketItems[1].key)
+			})
 		})
 
 		t.Run("query groups from elastic", func(t *testing.T) {
