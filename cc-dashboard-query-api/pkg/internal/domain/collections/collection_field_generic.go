@@ -9,6 +9,9 @@ type collectionFieldGeneric struct {
 
 	// Name The collection field name
 	fieldName FieldName
+
+	// internal indicates a field is not returned in the collections endpoint response
+	internal bool
 }
 
 func NewCollectionFieldGeneric(fieldName FieldName, fieldType FieldType, displayFieldType FieldType) CollectionField {
@@ -25,6 +28,10 @@ func (c collectionFieldGeneric) Name() FieldName {
 
 func (c collectionFieldGeneric) Type() FieldType {
 	return c.fieldType
+}
+
+func (c collectionFieldGeneric) Internal() bool {
+	return c.internal
 }
 
 func (c collectionFieldGeneric) DisplayType() FieldType {

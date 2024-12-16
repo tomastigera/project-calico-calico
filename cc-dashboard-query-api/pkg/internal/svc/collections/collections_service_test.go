@@ -47,6 +47,31 @@ func TestCollectionsService(t *testing.T) {
 		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameFlows))
 	})
 
+	t.Run("internal fields are absent from the collection response", func(t *testing.T) {
+
+		flowsCollection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
+			return collection.Name() == collections.CollectionNameFlows
+		})
+		require.True(t, found)
+
+		internalFieldNames := slices.MapFiltered(flowsCollection.Fields(), func(field collections.CollectionField) (collections.FieldName, bool) {
+			return field.Name(), field.Internal()
+		})
+		require.NotEmpty(t, internalFieldNames)
+
+		response, err := subject.Collections(ctx)
+		require.NoError(t, err)
+
+		responseCollection, found := slices.Find(response, func(collection client.Collection) bool {
+			return collections.CollectionName(collection.Name) == collections.CollectionNameFlows
+		})
+		require.True(t, found)
+
+		require.Empty(t, slices.FilterBy(responseCollection.Fields, func(field client.CollectionField) bool {
+			return slices.Contains(internalFieldNames, collections.FieldName(field.Name))
+		}))
+	})
+
 	t.Run("matches golden files", func(t *testing.T) {
 
 		collectionsResponse, err := subject.Collections(ctx)

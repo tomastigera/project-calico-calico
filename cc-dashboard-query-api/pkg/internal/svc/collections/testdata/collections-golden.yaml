@@ -1,6 +1,8 @@
 - defaultTimeFieldName: start_time
   fields:
-  - name: '@timestamp'
+  - name: end_time
+    type: date
+  - name: start_time
     type: date
   - name: client_ip
     type: ip
@@ -11,18 +13,6 @@
   - name: client_namespace
     type: text
   - name: count
-    type: number
-  - name: end_time
-    type: date
-  - name: generated_time
-    type: date
-  - name: host
-    type: text
-  - name: latency_count
-    type: number
-  - name: latency_max
-    type: number
-  - name: latency_mean
     type: number
   - name: qclass
     type: text
@@ -36,24 +26,12 @@
     type: text
   - name: rrsets.rdata
     type: text
-  - name: servers.ip
-    type: ip
-  - name: servers.name
-    type: text
-  - name: servers.name_aggr
-    type: text
-  - name: servers.namespace
-    type: text
-  - name: source.ip
-    type: ip
-  - name: start_time
-    type: date
-  - name: type
-    type: text
   name: dns
 - defaultTimeFieldName: start_time
   fields:
-  - name: '@timestamp'
+  - name: end_time
+    type: date
+  - name: start_time
     type: date
   - name: action
     type: enum
@@ -64,12 +42,8 @@
     type: number
   - name: bytes_out
     type: number
-  - name: dest_domains
-    type: text
   - name: dest_ip
     type: ip
-  - name: dest_labels.labels
-    type: text
   - name: dest_name
     type: text
   - name: dest_name_aggr
@@ -91,25 +65,16 @@
   - name: dest_service_port_num
     type: number
   - name: dest_type
-    type: text
-  - name: destination.bytes
-    type: number
-  - name: destination.packets
-    type: number
-  - name: destination.port
-    type: number
-  - name: end_time
-    type: date
-  - name: host
-    type: text
+    type: enum
+    values:
+    - wep
+    - hep
+    - ns
+    - net
   - name: http_requests_allowed_in
     type: number
   - name: http_requests_denied_in
     type: number
-  - name: nat_outgoing_ports
-    type: number
-  - name: network.protocol
-    type: text
   - name: num_flows
     type: number
   - name: num_flows_completed
@@ -143,17 +108,21 @@
   - name: process_name
     type: text
   - name: proto
-    type: text
+    type: enum
+    values:
+    - icmp
+    - tcp
+    - udp
+    - ipip
+    - esp
+    - icmp6
   - name: reporter
-    type: text
-  - name: source.bytes
-    type: number
-  - name: source.packets
-    type: number
+    type: enum
+    values:
+    - src
+    - dst
   - name: source_ip
     type: ip
-  - name: source_labels.labels
-    type: text
   - name: source_name
     type: text
   - name: source_name_aggr
@@ -165,35 +134,18 @@
   - name: source_port_num
     type: number
   - name: source_type
-    type: text
-  - name: start_time
-    type: date
-  - name: tcp_lost_packets
-    type: number
-  - name: tcp_max_min_rtt
-    type: number
-  - name: tcp_max_smooth_rtt
-    type: number
-  - name: tcp_mean_min_rtt
-    type: number
-  - name: tcp_mean_mss
-    type: number
-  - name: tcp_mean_send_congestion_window
-    type: number
-  - name: tcp_mean_smooth_rtt
-    type: number
-  - name: tcp_min_mss
-    type: number
-  - name: tcp_min_send_congestion_window
-    type: number
-  - name: tcp_total_retransmissions
-    type: number
-  - name: tcp_unrecovered_to
-    type: number
+    type: enum
+    values:
+    - wep
+    - hep
+    - ns
+    - net
   name: flows
 - defaultTimeFieldName: start_time
   fields:
-  - name: '@timestamp'
+  - name: end_time
+    type: date
+  - name: start_time
     type: date
   - name: bytes_in
     type: number
@@ -215,8 +167,6 @@
     type: number
   - name: dest_service_port_name
     type: text
-  - name: dest_service_port
-    type: number
   - name: host
     type: text
   - name: method
@@ -225,6 +175,4 @@
     type: text
   - name: user_agent
     type: text
-  - name: start_time
-    type: date
   name: l7

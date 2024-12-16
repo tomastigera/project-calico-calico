@@ -4,6 +4,7 @@ type CollectionFieldEnum struct {
 	fieldName    FieldName
 	fieldValues  []string
 	defaultValue string
+	internal     bool
 }
 
 func NewCollectionFieldEnum(fieldName FieldName, fieldValues []string, defaultValue string) CollectionFieldEnum {
@@ -20,6 +21,10 @@ func (c CollectionFieldEnum) Name() FieldName {
 
 func (c CollectionFieldEnum) Type() FieldType {
 	return FieldTypeEnum
+}
+
+func (c CollectionFieldEnum) Internal() bool {
+	return c.internal
 }
 
 func (c CollectionFieldEnum) DisplayType() FieldType {

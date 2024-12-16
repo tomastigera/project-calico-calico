@@ -35,12 +35,12 @@ func (s *CollectionsService) Collections(ctx security.AuthContext) (client.Colle
 func mapCollection(from collections.Collection) client.Collection {
 	return client.Collection{
 		Name:                 client.CollectionName(from.Name()),
-		Fields:               slices.Map(from.Fields(), mapCollectionFields),
+		Fields:               slices.MapFiltered(from.Fields(), mapCollectionFields),
 		DefaultTimeFieldName: client.CollectionFieldName(from.DefaultTimeFieldName()),
 	}
 }
 
-func mapCollectionFields(from collections.CollectionField) client.CollectionField {
+func mapCollectionFields(from collections.CollectionField) (client.CollectionField, bool) {
 	collectionField := client.CollectionField{
 		Name: client.CollectionFieldName(from.Name()),
 		Type: client.CollectionFieldType(from.DisplayType()),
@@ -51,5 +51,5 @@ func mapCollectionFields(from collections.CollectionField) client.CollectionFiel
 		collectionField.DefaultValue = collectionFieldEnum.DefaultValue()
 	}
 
-	return collectionField
+	return collectionField, !from.Internal()
 }

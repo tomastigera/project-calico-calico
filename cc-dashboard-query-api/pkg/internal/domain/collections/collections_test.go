@@ -24,7 +24,7 @@ func TestCollections(t *testing.T) {
 		for _, c := range allCollections {
 			field, found := c.Field("@timestamp")
 			require.True(t, found)
-			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"}, field)
+			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true}, field)
 		}
 	})
 }
