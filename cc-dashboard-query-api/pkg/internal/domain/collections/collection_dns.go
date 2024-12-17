@@ -6,7 +6,7 @@ var collectionDNS = Collection{
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true},
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
-		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate},
+		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, internal: true},
 
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "client_ip"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "client_name"},

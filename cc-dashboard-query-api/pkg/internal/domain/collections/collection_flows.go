@@ -6,7 +6,7 @@ var collectionFlows = Collection{
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true},
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
-		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate},
+		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, internal: true},
 
 		CollectionFieldEnum{fieldName: "action", fieldValues: []string{"allow", "deny"}},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},
