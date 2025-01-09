@@ -55,6 +55,8 @@ components:
       properties:
         defaultValue:
           type: string
+        filterDisabled:
+          type: boolean
         name:
           type: string
         type:

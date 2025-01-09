@@ -2,6 +2,9 @@
   fields:
   - name: end_time
     type: date
+  - filterDisabled: true
+    name: start_time
+    type: date
   - name: client_ip
     type: ip
   - name: client_name
@@ -28,6 +31,9 @@
 - defaultTimeFieldName: start_time
   fields:
   - name: end_time
+    type: date
+  - filterDisabled: true
+    name: start_time
     type: date
   - name: action
     type: enum
@@ -140,6 +146,9 @@
 - defaultTimeFieldName: start_time
   fields:
   - name: end_time
+    type: date
+  - filterDisabled: true
+    name: start_time
     type: date
   - name: bytes_in
     type: number

@@ -42,8 +42,9 @@ func mapCollection(from collections.Collection) client.Collection {
 
 func mapCollectionFields(from collections.CollectionField) (client.CollectionField, bool) {
 	collectionField := client.CollectionField{
-		Name: client.CollectionFieldName(from.Name()),
-		Type: client.CollectionFieldType(from.DisplayType()),
+		Name:           client.CollectionFieldName(from.Name()),
+		Type:           client.CollectionFieldType(from.DisplayType()),
+		FilterDisabled: from.FilterDisabled(),
 	}
 
 	if collectionFieldEnum, ok := from.(collections.CollectionFieldEnum); ok {

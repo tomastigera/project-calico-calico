@@ -1,18 +1,11 @@
 package collections
 
 type CollectionFieldEnum struct {
-	fieldName    FieldName
-	fieldValues  []string
-	defaultValue string
-	internal     bool
-}
-
-func NewCollectionFieldEnum(fieldName FieldName, fieldValues []string, defaultValue string) CollectionFieldEnum {
-	return CollectionFieldEnum{
-		fieldName:    fieldName,
-		fieldValues:  fieldValues,
-		defaultValue: defaultValue,
-	}
+	fieldName      FieldName
+	fieldValues    []string
+	defaultValue   string
+	internal       bool
+	filterDisabled bool
 }
 
 func (c CollectionFieldEnum) Name() FieldName {
@@ -25,6 +18,10 @@ func (c CollectionFieldEnum) Type() FieldType {
 
 func (c CollectionFieldEnum) Internal() bool {
 	return c.internal
+}
+
+func (c CollectionFieldEnum) FilterDisabled() bool {
+	return c.filterDisabled
 }
 
 func (c CollectionFieldEnum) DisplayType() FieldType {

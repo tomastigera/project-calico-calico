@@ -6,7 +6,7 @@ var collectionL7 = Collection{
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true},
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
-		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, internal: true},
+		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, filterDisabled: true},
 
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_out"},

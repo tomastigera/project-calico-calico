@@ -12,6 +12,9 @@ type collectionFieldGeneric struct {
 
 	// internal indicates a field is not returned in the collections endpoint response
 	internal bool
+
+	// filterDisabled indicate a field must not be used for filtering if set to true
+	filterDisabled bool
 }
 
 func NewCollectionFieldGeneric(fieldName FieldName, fieldType FieldType, displayFieldType FieldType) CollectionField {
@@ -32,6 +35,10 @@ func (c collectionFieldGeneric) Type() FieldType {
 
 func (c collectionFieldGeneric) Internal() bool {
 	return c.internal
+}
+
+func (c collectionFieldGeneric) FilterDisabled() bool {
+	return c.filterDisabled
 }
 
 func (c collectionFieldGeneric) DisplayType() FieldType {
