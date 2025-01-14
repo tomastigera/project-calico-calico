@@ -142,6 +142,39 @@
     - hep
     - ns
     - net
+  - filterDisabled: true
+    name: tcp_lost_packets
+    type: number
+  - filterDisabled: true
+    name: tcp_max_min_rtt
+    type: number
+  - filterDisabled: true
+    name: tcp_max_smooth_rtt
+    type: number
+  - filterDisabled: true
+    name: tcp_mean_min_rtt
+    type: number
+  - filterDisabled: true
+    name: tcp_mean_mss
+    type: number
+  - filterDisabled: true
+    name: tcp_mean_send_congestion_window
+    type: number
+  - filterDisabled: true
+    name: tcp_mean_smooth_rtt
+    type: number
+  - filterDisabled: true
+    name: tcp_min_mss
+    type: number
+  - filterDisabled: true
+    name: tcp_min_send_congestion_window
+    type: number
+  - filterDisabled: true
+    name: tcp_total_retransmissions
+    type: number
+  - filterDisabled: true
+    name: tcp_unrecovered_to
+    type: number
   name: flows
 - defaultTimeFieldName: start_time
   fields:
