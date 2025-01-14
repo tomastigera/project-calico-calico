@@ -1,8 +1,6 @@
 package client
 
 import (
-	"encoding/json"
-
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
