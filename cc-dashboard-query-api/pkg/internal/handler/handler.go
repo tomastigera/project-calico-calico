@@ -138,7 +138,9 @@ func (m queryResponseWriterBodyMapper[T]) Map(resp client.QueryResponse, w http.
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(marshalled)
-		m.logger.ErrorC(r.Context(), "failed to write response", logging.Error(err))
+		if err != nil {
+			m.logger.ErrorC(r.Context(), "failed to write response", logging.Error(err))
+		}
 	}
 }
 

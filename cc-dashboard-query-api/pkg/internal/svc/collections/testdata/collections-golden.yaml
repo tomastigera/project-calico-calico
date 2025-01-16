@@ -15,6 +15,12 @@
     type: text
   - name: count
     type: number
+  - filterDisabled: true
+    name: latency_max
+    type: number
+  - filterDisabled: true
+    name: latency_mean
+    type: number
   - name: qclass
     type: text
   - name: qname
@@ -44,6 +50,9 @@
     type: number
   - name: bytes_out
     type: number
+  - filterDisabled: true
+    name: dest_domains
+    type: text
   - name: dest_ip
     type: ip
   - name: dest_name
@@ -73,6 +82,9 @@
     - hep
     - ns
     - net
+  - filterDisabled: true
+    name: host
+    type: text
   - name: http_requests_allowed_in
     type: number
   - name: http_requests_denied_in
@@ -203,9 +215,15 @@
     type: number
   - name: dest_service_port_name
     type: text
+  - filterDisabled: true
+    name: duration_mean
+    type: number
   - name: host
     type: text
   - name: method
+    type: text
+  - filterDisabled: true
+    name: response_code
     type: text
   - name: url
     type: text
