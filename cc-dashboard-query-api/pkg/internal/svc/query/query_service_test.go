@@ -977,6 +977,12 @@ func TestQueryService(t *testing.T) {
 						require.Empty(t, params.QueryParams.TimeRange.Field)
 					})
 				})
+
+				t.Run("distinct groupBy type is an alias to discrete", func(t *testing.T) {
+					g, err := mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeDistinct)})
+					require.NoError(t, err)
+					require.Equal(t, groups.GroupTypeDiscrete, g.Type())
+				})
 			})
 		})
 

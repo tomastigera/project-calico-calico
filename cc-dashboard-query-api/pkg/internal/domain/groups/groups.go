@@ -10,6 +10,8 @@ type GroupSortOrderType string
 const (
 	GroupTypeTime     = GroupType("time")
 	GroupTypeDiscrete = GroupType("discrete")
+	// GroupTypeDistinct is an alias for discrete. TODO: remove GroupTypeDiscrete once all existing queries are using the discrete type
+	GroupTypeDistinct = GroupType("distinct")
 
 	GroupSortOrderTypeSelf  = GroupSortOrderType("self")
 	GroupSortOrderTypeCount = GroupSortOrderType("count")

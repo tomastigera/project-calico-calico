@@ -407,6 +407,8 @@ func mapClientGroup(from client.QueryRequestGroup) (groups.Group, error) {
 	}
 
 	switch groups.GroupType(from.Type) {
+	case groups.GroupTypeDistinct:
+		fallthrough
 	case groups.GroupTypeDiscrete:
 		if sortOrder.Type == "" {
 			sortOrder.Type = groups.GroupSortOrderTypeCount // default discrete group sort order is by count

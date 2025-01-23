@@ -90,7 +90,7 @@ type GroupType string
 
 // QueryRequestGroup An aggregation group
 type QueryRequestGroup struct {
-	Type      GroupType               `json:"type" validate:"required,oneof=time discrete"`
+	Type      GroupType               `json:"type" validate:"required,oneof=time discrete distinct"`
 	Interval  string                  `json:"interval"`
 	FieldName string                  `json:"fieldName"`
 	MaxValues int                     `json:"maxValues"`
