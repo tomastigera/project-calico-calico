@@ -71,8 +71,10 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 		zap.Any("aggregations", req.Aggregations),
 	)
 
+	clusterID := domain.ManagedClusterName(ctx.ClusterID())
+
 	// Note: this statement requires req.CollectionName to match the lma.tigera.io resourceNames (it currently does)
-	authorized, err := ctx.IsResourcePermitted(s.logger, "lma.tigera.io", "*", string(req.CollectionName))
+	authorized, err := ctx.IsResourcePermitted(s.logger, "lma.tigera.io", string(clusterID), string(req.CollectionName))
 	if err != nil {
 		return client.QueryResponse{}, err
 	} else if !authorized {
@@ -100,7 +102,6 @@ func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) 
 
 	req.Clusters = managedClusterNames
 	*/
-	clusterID := domain.ManagedClusterName(ctx.ClusterID())
 	if !slices.Contains(managedClusterNames, clusterID) {
 		return client.QueryResponse{}, httpreply.ToBadRequest(fmt.Sprintf("cluster '%s' not found", clusterID))
 	}
