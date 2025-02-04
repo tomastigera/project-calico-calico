@@ -4,7 +4,7 @@ include ../lib.Makefile
 PROJECT_NAME ?= cc-dashboard-query-api
 
 GCP_PROJECT ?= tigera-tesla
-TAG_NAME ?= $(shell git describe --always --tags --long)
+TAG_NAME ?= $(if $(git-release-tag-for-current-commit),$(git-release-tag-for-current-commit),$(shell git describe --always --tags --long))
 DOCKERFILE=Dockerfile
 
 BINDIR=bin

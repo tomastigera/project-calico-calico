@@ -6,6 +6,9 @@ PACKAGE_NAME ?= github.com/tigera/$(REPO_BASENAME)/$(PROJECT_NAME)
 LOCAL_USER_ID:=$(shell id -u)
 LOCAL_GROUP_ID:=$(shell id -g)
 
+# git-release-tag-for-current-commit gets the release tag for the current commit if there is one.
+git-release-tag-for-current-commit = $(shell git describe --first-parent --tags --exact-match --exclude "*dev*")
+
 # Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
 	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
