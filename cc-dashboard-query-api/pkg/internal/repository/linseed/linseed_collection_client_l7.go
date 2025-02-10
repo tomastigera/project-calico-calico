@@ -3,7 +3,6 @@ package linseed
 import (
 	"context"
 	"encoding/json"
-	"go.uber.org/zap"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -12,8 +11,8 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 type collectionClientL7 struct {
@@ -57,8 +56,8 @@ func (c *collectionClientL7) Params(params *queryParams, aggregations map[string
 
 func (c *collectionClientL7) List(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (result.QueryResult, error) {
 	c.logger.DebugC(ctx, "L7Logs.List",
-		zap.String("clusterName", string(clusterName)),
-		zap.Any("params", params))
+		logging.String("clusterName", string(clusterName)),
+		logging.Any("params", params))
 
 	listResult, err := c.client.L7Logs(string(clusterName)).List(ctx, params)
 	if err != nil {
@@ -75,8 +74,8 @@ func (c *collectionClientL7) List(ctx context.Context, clusterName query.Managed
 
 func (c *collectionClientL7) Aggregations(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (elastic.Aggregations, error) {
 	c.logger.DebugC(ctx, "L7Logs.Aggregations",
-		zap.String("clusterName", string(clusterName)),
-		zap.Any("params", params))
+		logging.String("clusterName", string(clusterName)),
+		logging.Any("params", params))
 
 	return c.client.L7Logs(string(clusterName)).Aggregations(ctx, params)
 }

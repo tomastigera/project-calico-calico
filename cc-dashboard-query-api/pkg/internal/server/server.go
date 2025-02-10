@@ -10,15 +10,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/handler"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/auth"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/query"
-	"github.com/tigera/tds-apiserver/pkg/logging"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/otel"
 )
 
@@ -27,17 +27,17 @@ func Start(
 	ctx context.Context,
 	cfg *config.Config,
 	logger logging.Logger,
-	k8sRestConfig *rest.Config,
+	authorizer security.Authorizer,
 	k8sClient *kubernetes.Clientset,
+	k8sRestConfig *rest.Config,
 	dynamicClient dynamic.Interface,
-	rbacAuthorizer lmaauth.RBACAuthorizer,
 ) error {
 	authService, err := auth.NewAuthService(
 		cfg,
 		logger,
+		authorizer,
 		k8sClient,
 		k8sRestConfig,
-		rbacAuthorizer,
 	)
 	if err != nil {
 		return err

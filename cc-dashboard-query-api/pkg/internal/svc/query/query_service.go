@@ -10,7 +10,6 @@ import (
 	"time"
 
 	validatorv10 "github.com/go-playground/validator/v10"
-	"go.uber.org/zap"
 
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
@@ -23,9 +22,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
 	"github.com/tigera/tds-apiserver/lib/comparators"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 type QueryService struct {
@@ -51,7 +50,7 @@ func NewQueryService(
 	tenantNamespace string,
 ) *QueryService {
 	return &QueryService{
-		logger:                   logger.Named("QueryService"),
+		logger:                   logger.WithName("QueryService"),
 		timeout:                  queryTimeout,
 		repository:               repository,
 		collections:              collections.Collections(),
@@ -61,29 +60,29 @@ func NewQueryService(
 	}
 }
 
-func (s *QueryService) Query(ctx security.AuthContext, req client.QueryRequest) (client.QueryResponse, error) {
+func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (client.QueryResponse, error) {
 	s.logger.DebugC(ctx, "Query",
-		zap.Intp("maxDocs", req.MaxDocs),
-		zap.String("collectionName", string(req.CollectionName)),
-		zap.Any("clusterFilter", req.ClusterFilter),
-		zap.Any("filters", req.Filters),
-		zap.Any("groups", req.GroupBys),
-		zap.Any("aggregations", req.Aggregations),
+		logging.Intp("maxDocs", req.MaxDocs),
+		logging.String("collectionName", string(req.CollectionName)),
+		logging.Any("clusterFilter", req.ClusterFilter),
+		logging.Any("filters", req.Filters),
+		logging.Any("groups", req.GroupBys),
+		logging.Any("aggregations", req.Aggregations),
 	)
 
 	clusterID := domain.ManagedClusterName(ctx.ClusterID())
 
+	queryCollection, err := s.validateRequest(req)
+	if err != nil {
+		return client.QueryResponse{}, err
+	}
+
 	// Note: this statement requires req.CollectionName to match the lma.tigera.io resourceNames (it currently does)
-	authorized, err := ctx.IsResourcePermitted(s.logger, "lma.tigera.io", string(clusterID), string(req.CollectionName))
+	authorized, err := ctx.IsResourcePermitted("lma.tigera.io", string(req.CollectionName), string(clusterID))
 	if err != nil {
 		return client.QueryResponse{}, err
 	} else if !authorized {
 		return client.QueryResponse{}, httpreply.ReplyAccessDenied
-	}
-
-	queryCollection, err := s.validateRequest(req)
-	if err != nil {
-		return client.QueryResponse{}, err
 	}
 
 	managedClusterNames, err := s.managedClusterNameLister.List(ctx)
@@ -303,7 +302,7 @@ func (s *QueryService) mapClientCriterion(
 		if from.GTE != "" {
 			if value, err := strconv.ParseInt(from.GTE, 10, 64); err != nil {
 				message := fmt.Sprintf("failed to parse %s gte field: %s", from.Type, from.GTE)
-				s.logger.ErrorC(ctx, message, zap.Error(err))
+				s.logger.ErrorC(ctx, message, logging.Error(err))
 				return nil, httpreply.ToBadRequest(message)
 			} else {
 				gte = &value
@@ -313,7 +312,7 @@ func (s *QueryService) mapClientCriterion(
 		if from.LTE != "" {
 			if value, err := strconv.ParseInt(from.LTE, 10, 64); err != nil {
 				message := fmt.Sprintf("failed to parse %s lte field: %s", from.Type, from.LTE)
-				s.logger.ErrorC(ctx, message, zap.Error(err))
+				s.logger.ErrorC(ctx, message, logging.Error(err))
 				return nil, httpreply.ToBadRequest(message)
 			} else {
 				lte = &value
@@ -344,7 +343,7 @@ func (s *QueryService) mapClientCriterion(
 		gte, err := parseDateRangeTime(from.GTE)
 		if err != nil {
 			message := fmt.Sprintf("invalid value '%s' for criterion type '%s' gte field", from.GTE, from.Type)
-			s.logger.ErrorC(ctx, message, zap.Error(err))
+			s.logger.ErrorC(ctx, message, logging.Error(err))
 			return nil, httpreply.ToBadRequest(message)
 		}
 
@@ -353,7 +352,7 @@ func (s *QueryService) mapClientCriterion(
 			value, err := parseDateRangeTime(from.LTE)
 			if err != nil {
 				message := fmt.Sprintf("invalid value '%s' for criterion type '%s' lte field", from.LTE, from.Type)
-				s.logger.ErrorC(ctx, message, zap.Error(err))
+				s.logger.ErrorC(ctx, message, logging.Error(err))
 				return nil, httpreply.ToBadRequest(message)
 			}
 			lte = &value
@@ -373,7 +372,7 @@ func (s *QueryService) mapClientCriterion(
 		if gte := strings.ToLower(reRemovePrefix.ReplaceAllString(from.GTE, "")); gte != "" {
 			if gteDuration, err = time.ParseDuration(gte); err != nil {
 				message := fmt.Sprintf("invalid value for relativeTimeRange gte field: %s", gte)
-				s.logger.ErrorC(ctx, message, zap.Error(err))
+				s.logger.ErrorC(ctx, message, logging.Error(err))
 				return nil, httpreply.ToBadRequest(message)
 			}
 		}
@@ -381,7 +380,7 @@ func (s *QueryService) mapClientCriterion(
 		if lte := strings.ToLower(reRemovePrefix.ReplaceAllString(from.LTE, "")); lte != "" {
 			if lteDuration, err = time.ParseDuration(lte); err != nil {
 				message := fmt.Sprintf("invalid value for relativeTimeRange lte field: %s", lte)
-				s.logger.ErrorC(ctx, message, zap.Error(err))
+				s.logger.ErrorC(ctx, message, logging.Error(err))
 				return nil, httpreply.ToBadRequest(message)
 			}
 		}

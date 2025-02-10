@@ -37,5 +37,8 @@ type Config struct {
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
 	// LMAAuthorizationCacheTTL when >0 this will cache the lma authorization results
-	LMAAuthorizationCacheTTL time.Duration `default:"0" split_words:"true"`
+	LMAAuthorizationCacheTTL time.Duration `default:"10s" split_words:"true"`
+
+	// Endpoint for authorization requests
+	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
 }

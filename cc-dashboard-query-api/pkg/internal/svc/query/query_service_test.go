@@ -11,20 +11,21 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
-	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead
@@ -36,16 +37,19 @@ type bucketItems struct {
 
 func TestQueryService(t *testing.T) {
 
-	ctx := security.NewUserAuthContext(
-		context.Background(),
-		&user.DefaultInfo{Name: "fake-user"},
-		security.RBACAuthorizerFunc(
-			func(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
-				return true, nil
-			}),
-		"",
-		"cluster1",
-	)
+	newAuthContext := func(t *testing.T, matchRules bool, clusterID string) security.Context {
+		t.Helper()
+
+		return security.NewUserAuthContext(
+			context.Background(),
+			&user.DefaultInfo{Name: "fake-user"},
+			clusterID,
+			fake.NewAuthorizer(matchRules),
+			k8sfake.NewSimpleClientset(),
+		)
+	}
+
+	ctx := newAuthContext(t, true, "cluster1")
 
 	logger := logging.New("TestQueryService")
 
@@ -68,10 +72,9 @@ func TestQueryService(t *testing.T) {
 
 	t.Run("authorization", func(t *testing.T) {
 		t.Run("authorized", func(t *testing.T) {
-
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
-				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 			)
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
@@ -83,17 +86,7 @@ func TestQueryService(t *testing.T) {
 			require.NoError(t, err)
 		})
 		t.Run("unauthorized", func(t *testing.T) {
-
-			ctx := security.NewUserAuthContext(
-				context.Background(),
-				&user.DefaultInfo{Name: "fake-user"},
-				security.RBACAuthorizerFunc(
-					func(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
-						return false, nil
-					}),
-				"",
-				"cluster1",
-			)
+			ctx := newAuthContext(t, false, "cluster1")
 
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
@@ -110,19 +103,10 @@ func TestQueryService(t *testing.T) {
 			// or any other method
 			t.Skipf("partial authorization is disabled until cluster-scoped logs are implemented")
 
-			ctx := security.NewUserAuthContext(
-				context.Background(),
-				&user.DefaultInfo{Name: "fake-user"},
-				security.RBACAuthorizerFunc(
-					func(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
-						return resources.Resource == "cluster1", nil
-					}),
-				"",
-				"cluster1",
-			)
+			ctx := newAuthContext(t, true, "cluster1")
 
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 			)
 
 			_, err := subject.Query(ctx, client.QueryRequest{
@@ -137,16 +121,7 @@ func TestQueryService(t *testing.T) {
 
 	t.Run("validation", func(t *testing.T) {
 		t.Run("unknown cluster", func(t *testing.T) {
-			ctx := security.NewUserAuthContext(
-				context.Background(),
-				&user.DefaultInfo{Name: "fake-user"},
-				security.RBACAuthorizerFunc(
-					func(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
-						return true, nil
-					}),
-				"",
-				"unknown-cluster",
-			)
+			ctx := newAuthContext(t, true, "unknown-cluster")
 
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
@@ -362,7 +337,7 @@ func TestQueryService(t *testing.T) {
 						for _, testCase := range testCases {
 							t.Run(testCase.name, func(t *testing.T) {
 								mockClient.SetResults(
-									rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+									lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 								)
 								_, err := subject.Query(ctx, client.QueryRequest{
 									CollectionName: "flows",
@@ -397,13 +372,15 @@ func TestQueryService(t *testing.T) {
 			})
 
 			t.Run("collectionName", func(t *testing.T) {
-				_, err := subject.Query(ctx,
-					client.QueryRequest{
-						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
-						},
-					})
-				require.ErrorContains(t, err, "unknown collection ''")
+				t.Run("unset", func(t *testing.T) {
+					_, err := subject.Query(ctx,
+						client.QueryRequest{
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							},
+						})
+					require.ErrorContains(t, err, "unknown collection ''")
+				})
 
 				t.Run("invalid", func(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
@@ -421,7 +398,7 @@ func TestQueryService(t *testing.T) {
 
 			t.Run("supported for text field", func(t *testing.T) {
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 				)
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
@@ -502,7 +479,7 @@ func TestQueryService(t *testing.T) {
 			t.Run("success", func(t *testing.T) {
 				t.Run("only gte field set", func(t *testing.T) {
 					mockClient.SetResults(
-						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 					)
 
 					_, err := subject.Query(ctx, client.QueryRequest{
@@ -516,7 +493,7 @@ func TestQueryService(t *testing.T) {
 				})
 				t.Run("only lte field set", func(t *testing.T) {
 					mockClient.SetResults(
-						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 					)
 
 					_, err := subject.Query(ctx, client.QueryRequest{
@@ -532,7 +509,7 @@ func TestQueryService(t *testing.T) {
 				t.Run("lte and gte fields set", func(t *testing.T) {
 					t.Run("to the same value", func(t *testing.T) {
 						mockClient.SetResults(
-							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 						)
 
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -547,7 +524,7 @@ func TestQueryService(t *testing.T) {
 
 					t.Run("lte greater than gte", func(t *testing.T) {
 						mockClient.SetResults(
-							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
 						)
 
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -568,7 +545,7 @@ func TestQueryService(t *testing.T) {
 			setMockResult := func() {
 				t.Helper()
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 11, Items: []lsv1.FlowLog{
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 11, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 						{ID: "flow-log2"},
 						{ID: "flow-log3"},
@@ -624,7 +601,7 @@ func TestQueryService(t *testing.T) {
 				for i := int64(0); i < mockResult.TotalHits; i++ {
 					mockResult.Items = append(mockResult.Items, lsv1.FlowLog{ID: "flow-log" + strconv.FormatInt(i, 10)})
 				}
-				mockClient.SetResults(rest.MockResult{Body: jsonMarshal(t, mockResult)})
+				mockClient.SetResults(lsrest.MockResult{Body: jsonMarshal(t, mockResult)})
 
 				resp, err := subject.Query(ctx, client.QueryRequest{
 					MaxDocs:        intp(1000),
@@ -645,12 +622,12 @@ func TestQueryService(t *testing.T) {
 		t.Run("single-tenant", func(t *testing.T) {
 			t.Run("query", func(t *testing.T) {
 				mockClient.SetResults(
-					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
 						{ID: "flow-log1"},
 						{ID: "flow-log2"},
 						{ID: "flow-log3"},
 					}})},
-					rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
 						{ID: "flow-log4"},
 						{ID: "flow-log5"},
 					}})},
@@ -700,10 +677,10 @@ func TestQueryService(t *testing.T) {
 								// see defaultMaxValue in cc-dashboard-query-api/pkg/internal/domain/groups/group_discrete.go
 
 								mockClient.SetResults(
-									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 										"g0": jsonMarshal(t, groupResults[0]),
 									})},
-									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 										"g0": jsonMarshal(t, groupResults[1]),
 									})},
 								)
@@ -726,10 +703,10 @@ func TestQueryService(t *testing.T) {
 							})
 
 							mockClient.SetResults(
-								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+								lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 									"g0": jsonMarshal(t, groupResults[0]),
 								})},
-								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+								lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 									"g0": jsonMarshal(t, groupResults[1]),
 								})},
 							)
@@ -766,10 +743,10 @@ func TestQueryService(t *testing.T) {
 								}
 
 								mockClient.SetResults(
-									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 										"g0": jsonMarshal(t, groupResults[0]),
 									})},
-									rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+									lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 										"g0": jsonMarshal(t, groupResults[1]),
 									})},
 								)
@@ -815,13 +792,13 @@ func TestQueryService(t *testing.T) {
 							}
 
 							mockClient.SetResults(
-								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+								lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 									"g0": jsonMarshal(t, groupResults[0]),
 								})},
-								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+								lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 									"g0": jsonMarshal(t, groupResults[1]),
 								})},
-								rest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
+								lsrest.MockResult{Body: jsonMarshal(t, elastic.Aggregations{
 									"g0": jsonMarshal(t, groupResults[2]),
 								})},
 							)
@@ -863,7 +840,7 @@ func TestQueryService(t *testing.T) {
 					subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
 
 					mockClient.SetResults(
-						rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
 							{ID: "flow-log1"},
 							{ID: "flow-log2"},
 							{ID: "flow-log3"},
@@ -934,7 +911,7 @@ func TestQueryService(t *testing.T) {
 						subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
 
 						mockClient.SetResults(
-							rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 0, Items: []lsv1.FlowLog{}})},
+							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 0, Items: []lsv1.FlowLog{}})},
 						)
 
 						_, err := subject.Query(ctx, client.QueryRequest{
@@ -990,12 +967,12 @@ func TestQueryService(t *testing.T) {
 			subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
 
 			mockClient.SetResults(
-				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
 					{ID: "flow-log1"},
 					{ID: "flow-log2"},
 					{ID: "flow-log3"},
 				}})},
-				rest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
 					{ID: "flow-log4"},
 					{ID: "flow-log5"},
 				}})},

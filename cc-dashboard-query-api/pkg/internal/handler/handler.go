@@ -17,9 +17,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/auth"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/query"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -40,7 +40,7 @@ func NewHandler(
 			logging.String("path", r.URL.Path),
 			logging.String("method", r.Method),
 			logging.Any("err", err),
-			logging.Any("stacktrace", debug.Stack()),
+			logging.String("stacktrace", string(debug.Stack())),
 		)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
@@ -52,7 +52,7 @@ func NewHandler(
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	withAuthContext := func() handleradapters.ReqMapper[security.AuthContext] {
+	withAuthContext := func() handleradapters.ReqMapper[security.Context] {
 		return authService.NewUserAuthContextMapper()
 	}
 

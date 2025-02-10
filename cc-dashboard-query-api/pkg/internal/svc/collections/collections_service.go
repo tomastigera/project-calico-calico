@@ -4,9 +4,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 type CollectionsService struct {
@@ -15,21 +15,27 @@ type CollectionsService struct {
 
 func NewCollectionsService(logger logging.Logger) *CollectionsService {
 	return &CollectionsService{
-		logger: logger.Named("CollectionsService"),
+		logger: logger.WithName("CollectionsService"),
 	}
 }
 
-func (s *CollectionsService) Collections(ctx security.AuthContext) (client.CollectionsResponse, error) {
+func (s *CollectionsService) Collections(ctx security.Context) (client.CollectionsResponse, error) {
 	s.logger.DebugC(ctx, "Collections")
 
-	// Note: collections could be authorized individually using the resourceName field and a bulk SubjectAccessReview
-	authorized, err := ctx.IsResourcePermitted(s.logger, "dashboards.calicocloud.io", "collections", "*")
+	allCollections := collections.Collections()
+
+	// authorize users with lma rules for any cluster
+	authorized, err := ctx.IsAnyPermitted("lma.tigera.io", slices.Map(allCollections, func(c collections.Collection) string {
+		// Note: this statement requires c.Name() to match the lma.tigera.io resourceNames (it currently does)
+		return string(c.Name())
+	}))
 	if err != nil {
 		return client.CollectionsResponse{}, err
 	} else if !authorized {
 		return client.CollectionsResponse{}, httpreply.ReplyAccessDenied
 	}
-	return slices.Map(collections.Collections(), mapCollection), nil
+
+	return slices.Map(allCollections, mapCollection), nil
 }
 
 func mapCollection(from collections.Collection) client.Collection {

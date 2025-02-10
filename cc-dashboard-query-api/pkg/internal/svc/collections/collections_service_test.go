@@ -8,27 +8,28 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 func TestCollectionsService(t *testing.T) {
-	ctx := security.NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user"}, security.RBACAuthorizerFunc(
-		func(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
-			return true, nil
-		}),
-		"",
-		"tigera-labs",
-	)
-
 	logger := logging.New("TestCollectionsService")
+
+	ctx := security.NewUserAuthContext(
+		context.Background(),
+		&user.DefaultInfo{Name: "fake-user"},
+		"tigera-labs",
+		fake.NewAuthorizer(true),
+		k8sfake.NewSimpleClientset(),
+	)
 
 	subject := NewCollectionsService(logger)
 

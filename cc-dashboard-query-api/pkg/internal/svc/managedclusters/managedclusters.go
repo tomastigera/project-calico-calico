@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,8 +14,8 @@ import (
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 type NameLister interface {
@@ -60,7 +58,7 @@ func (n *nameLister) List(ctx context.Context) ([]query.ManagedClusterName, erro
 		if managedCluster, ok := object.(*unstructured.Unstructured); ok {
 			return query.ManagedClusterName(managedCluster.GetName()), nil
 		}
-		n.logger.ErrorC(ctx, "failed to list managed cluster", zap.Any("object", object))
+		n.logger.ErrorC(ctx, "failed to list managed cluster", logging.Any("object", object))
 		return "", fmt.Errorf("failed to list managed clusters")
 	})
 }

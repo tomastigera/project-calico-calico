@@ -6,13 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/handler"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/query"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 var (
@@ -25,7 +23,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	handleError := func(msg string, err error) {
-		logger.ErrorC(ctx, "error", zap.String("message", msg), zap.Error(err))
+		logger.ErrorC(ctx, "error", logging.String("message", msg), logging.Error(err))
 		os.Exit(1)
 	}
 

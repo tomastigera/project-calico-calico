@@ -2,19 +2,20 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/cache"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/server"
-	"github.com/tigera/tds-apiserver/pkg/logging"
+	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 var logger = logging.New("cc-dashboard-query-api")
@@ -26,15 +27,8 @@ func main() {
 
 	cfg := &config.Config{}
 	if err := envconfig.Process("CC_DASHBOARD_QUERY_API", cfg); err != nil {
-		logger.Fatal("failed to process config", logging.Error(err))
-	}
-
-	// Setup logging
-	// Main logger
-	err := logging.SetCurrentLevel(cfg.LogLevel)
-	if err != nil {
-		logger.ErrorC(ctx, "failed to parse log level. Using INFO", logging.Error(err))
-		_ = logging.SetCurrentLevel("INFO")
+		logger.Error("failed to process config", logging.Error(err))
+		os.Exit(1)
 	}
 
 	// Library logger
@@ -54,38 +48,35 @@ func main() {
 		k8sRestConfig, err = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
 	}
 	if err != nil {
-		logger.Fatal("failed to build kubernetes rest config", logging.Error(err))
+		logger.Error("failed to build kubernetes rest config", logging.Error(err))
+		os.Exit(1)
 	}
 
 	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
 	if err != nil {
-		logger.Fatal("failed to create kubernetes client", logging.Error(err))
+		logger.Error("failed to create kubernetes client", logging.Error(err))
+		os.Exit(1)
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(k8sRestConfig)
 	if err != nil {
-		logger.Fatal("failed to create calico client", logging.Error(err))
+		logger.Error("failed to create calico client", logging.Error(err))
+		os.Exit(1)
 	}
 
-	// Create an authorizer to use for lma.tigera.io resources. If a tenant namespace is configured, the authorizer
-	// will use LocalSubjectAccessReviews to check access to the tenant namespace. Otherwise, it will use SubjectAccessReviews
-	// to check access at the cluster scope.
-	rbacAuthorizer := lmaauth.NewNamespacedRBACAuthorizer(k8sClient, cfg.TenantNamespace)
-
-	if cfg.LMAAuthorizationCacheTTL > 0 {
-		authCache, err := cache.NewExpiring[string, bool](cache.ExpiringConfig{
-			Context: ctx,
-			Name:    "lma-access-authorizer",
-			TTL:     cfg.LMAAuthorizationCacheTTL,
-		})
-		if err != nil {
-			logger.Fatal("failed to create authorization cache", logging.Error(err))
-		}
-
-		rbacAuthorizer = lmaauth.NewCachingAuthorizer(authCache, rbacAuthorizer)
+	authorizer, err := security.NewAuthorizer(
+		ctx,
+		logger,
+		cfg.TenantNamespace,
+		cfg.LMAAuthorizationCacheTTL,
+	)
+	if err != nil {
+		logger.Error("failed to create authorizer", logging.Error(err))
+		os.Exit(1)
 	}
 
-	if err := server.Start(ctx, cfg, logger, k8sRestConfig, k8sClient, dynamicClient, rbacAuthorizer); err != nil {
-		logger.Fatal("server start failed", logging.Error(err))
+	if err := server.Start(ctx, cfg, logger, authorizer, k8sClient, k8sRestConfig, dynamicClient); err != nil {
+		logger.Error("server start failed", logging.Error(err))
+		os.Exit(1)
 	}
 }

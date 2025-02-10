@@ -9,7 +9,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/swaggest/openapi-go/openapi3"
 
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -17,25 +16,24 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
-	"github.com/tigera/tds-apiserver/pkg/logging"
 )
 
 type AuthService struct {
-	client          dynamic.DynamicClient
-	jwtAuth         lmaauth.JWTAuth
-	logger          logging.Logger
-	rbacAuthorizer  lmaauth.RBACAuthorizer
-	tenantNamespace string
+	jwtAuth          lmaauth.JWTAuth
+	logger           logging.Logger
+	authorizer       security.Authorizer
+	k8sManagerConfig *rest.Config
 }
 
 func NewAuthService(
 	cfg *config.Config,
 	logger logging.Logger,
+	authorizer security.Authorizer,
 	k8sClient kubernetes.Interface,
 	k8sRestConfig *rest.Config,
-	rbacAuthorizer lmaauth.RBACAuthorizer,
 ) (*AuthService, error) {
 	var opts []lmaauth.JWTAuthOption
 
@@ -61,15 +59,18 @@ func NewAuthService(
 	}
 
 	return &AuthService{
-		logger:         logger,
-		jwtAuth:        jwtAuth,
-		rbacAuthorizer: rbacAuthorizer,
+		logger:     logger,
+		jwtAuth:    jwtAuth,
+		authorizer: authorizer,
+		k8sManagerConfig: &rest.Config{
+			Host: cfg.MultiClusterForwardingEndpoint,
+		},
 	}, nil
 }
 
-func (s *AuthService) NewUserAuthContextMapper() handleradapters.ReqMapper[security.AuthContext] {
-	return handleradapters.NewReqMapper[security.AuthContext](
-		func(w http.ResponseWriter, r *http.Request, p httprouter.Params) (security.AuthContext, bool) {
+func (s *AuthService) NewUserAuthContextMapper() handleradapters.ReqMapper[security.Context] {
+	return handleradapters.NewReqMapper[security.Context](
+		func(w http.ResponseWriter, r *http.Request, p httprouter.Params) (security.Context, bool) {
 			authContext, err := s.authenticateRequest(r)
 			if err != nil {
 				// errors are expected here, e.g. token expired, missing, invalid, etc., we don't want alerts so we log at info level
@@ -91,7 +92,7 @@ func (s *AuthService) NewUserAuthContextMapper() handleradapters.ReqMapper[secur
 	)
 }
 
-func (s *AuthService) authenticateRequest(r *http.Request) (security.AuthContext, error) {
+func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, errors.New("no auth header")
@@ -113,7 +114,15 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.AuthContext
 	// Single clusterID. TODO: remove once linseed supports multi-cluster queries
 	clusterID := r.Header.Get(lmak8s.XClusterIDHeader)
 
-	return security.NewUserAuthContext(r.Context(), userInfo, s.rbacAuthorizer, s.tenantNamespace, clusterID), nil
+	k8sRestConfig := rest.CopyConfig(s.k8sManagerConfig)
+	k8sRestConfig.BearerToken = strings.TrimPrefix(authHeader, "Bearer ")
+
+	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return security.NewUserAuthContext(r.Context(), userInfo, clusterID, s.authorizer, k8sClient), nil
 }
 
 func p[T any](v T) *T { return &v }

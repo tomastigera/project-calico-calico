@@ -14,7 +14,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
-	"github.com/tigera/tds-apiserver/pkg/logging"
+	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 func TestLinseedCollectionClientFlows(t *testing.T) {

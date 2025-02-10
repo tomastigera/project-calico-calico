@@ -3,42 +3,42 @@ package security
 import (
 	"context"
 
-	"go.uber.org/zap"
-
-	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/tigera/tds-apiserver/pkg/logging"
+	"k8s.io/client-go/kubernetes"
 )
 
-type AuthContext interface {
+type Context interface {
 	context.Context
 	ClusterID() string // Temporary cluster-id. TODO: Remove once linseed supports multi-cluster queries
 	UserInfo() user.Info
-	TenantNamespace() string
-	IsResourcePermitted(logger logging.Logger, apiGroup, resource, resourceName string) (bool, error)
+
+	KubernetesClient() kubernetes.Interface
+	IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error)
+	IsResourcePermitted(apiGroup, resourceName, resource string) (bool, error)
 }
 
 type userAuthContext struct {
 	context.Context
-	clusterID       string
-	userInfo        user.Info
-	rbacAuthorizer  lmaauth.RBACAuthorizer
-	tenantNamespace string
+	clusterID  string
+	userInfo   user.Info
+	k8sClient  kubernetes.Interface
+	authorizer Authorizer
 }
 
-func NewUserAuthContext(parent context.Context, userInfo user.Info, rbacAuthorizer lmaauth.RBACAuthorizer, tenantNamespace, clusterID string) AuthContext {
-	if parent == nil {
-		parent = context.Background()
-	}
+func NewUserAuthContext(
+	parent context.Context,
+	userInfo user.Info,
+	clusterID string,
+	authorizer Authorizer,
+	k8sClient kubernetes.Interface,
+) Context {
 
 	return &userAuthContext{
-		Context:         parent,
-		clusterID:       clusterID,
-		userInfo:        userInfo,
-		rbacAuthorizer:  rbacAuthorizer,
-		tenantNamespace: tenantNamespace,
+		Context:    parent,
+		userInfo:   userInfo,
+		clusterID:  clusterID,
+		k8sClient:  k8sClient,
+		authorizer: authorizer,
 	}
 }
 
@@ -46,46 +46,18 @@ func (u *userAuthContext) UserInfo() user.Info {
 	return u.userInfo
 }
 
-func (u *userAuthContext) TenantNamespace() string {
-	return u.tenantNamespace
-}
-
 func (u *userAuthContext) ClusterID() string {
 	return u.clusterID
 }
 
-func (u *userAuthContext) IsResourcePermitted(logger logging.Logger, apiGroup, resource, resourceName string) (bool, error) {
-	authorized, err := u.rbacAuthorizer.Authorize(u.UserInfo(), &authzv1.ResourceAttributes{
-		Name:      resourceName,
-		Verb:      "get",
-		Group:     apiGroup,
-		Resource:  resource,
-		Namespace: u.TenantNamespace(),
-	}, nil)
-	if err != nil {
-		return false, err
-	}
+func (u *userAuthContext) KubernetesClient() kubernetes.Interface {
+	return u.k8sClient
+}
 
-	if authorized {
-		logger.DebugC(
-			u,
-			"user is authorized",
-			zap.String("apiGroup", apiGroup),
-			zap.String("resource", resource),
-			zap.String("resourceName", resourceName),
-			zap.String("namespace", u.tenantNamespace),
-			zap.String("user", u.UserInfo().GetName()),
-		)
-	} else {
-		logger.DebugC(
-			u,
-			"user is not authorized",
-			zap.String("apiGroup", apiGroup),
-			zap.String("resource", resource),
-			zap.String("resourceName", resourceName),
-			zap.String("namespace", u.tenantNamespace),
-			zap.String("user", u.UserInfo().GetName()),
-		)
-	}
-	return authorized, nil
+func (u *userAuthContext) IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error) {
+	return u.authorizer.Authorize(u, apiGroup, resourceNames, nil)
+}
+
+func (u *userAuthContext) IsResourcePermitted(apiGroup, resourceName, resource string) (bool, error) {
+	return u.authorizer.Authorize(u, apiGroup, []string{resourceName}, &resource)
 }
