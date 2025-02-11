@@ -18,6 +18,7 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
@@ -25,6 +26,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
 	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 	"github.com/tigera/tds-apiserver/pkg/httpreply"
 )
 
@@ -140,19 +142,6 @@ func TestQueryService(t *testing.T) {
 				},
 			})
 			require.ErrorContains(t, err, "invalid request: Key: 'QueryRequest.Filters[0].Criterion.Type' Error:Field validation for 'Type' failed")
-		})
-
-		t.Run("unknown group type", func(t *testing.T) {
-			_, err := subject.Query(ctx, client.QueryRequest{
-				CollectionName: "flows",
-				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
-				},
-				GroupBys: []client.QueryRequestGroup{
-					{Type: "unknown"},
-				},
-			})
-			require.ErrorContains(t, err, "invalid request: Key: 'QueryRequest.GroupBys[0].Type' Error:Field validation for 'Type' failed")
 		})
 
 		t.Run("time range criterion", func(t *testing.T) {
@@ -692,7 +681,7 @@ func TestQueryService(t *testing.T) {
 										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
-										{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 0},
+										{FieldName: "dest_namespace", MaxValues: 0},
 									},
 								})
 
@@ -718,7 +707,7 @@ func TestQueryService(t *testing.T) {
 									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
-									{Type: client.GroupType(groups.GroupTypeDiscrete), MaxValues: 11},
+									{FieldName: "dest_namespace", MaxValues: 11},
 								},
 							})
 
@@ -758,7 +747,7 @@ func TestQueryService(t *testing.T) {
 										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
-										{Type: client.GroupType(groups.GroupTypeTime)},
+										{FieldName: "start_time"},
 									},
 								})
 
@@ -821,7 +810,7 @@ func TestQueryService(t *testing.T) {
 									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
-									{Type: client.GroupType(groups.GroupTypeTime), MaxValues: 3},
+									{FieldName: "start_time", MaxValues: 3},
 								},
 							})
 							require.NoError(t, err)
@@ -874,31 +863,36 @@ func TestQueryService(t *testing.T) {
 				})
 
 				t.Run("sort order", func(t *testing.T) {
+					collection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
+						return collection.Name() == "flows"
+					})
+					require.True(t, found)
+
 					t.Run("defaults", func(t *testing.T) {
-						g, err := mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeDiscrete)})
+						g, err := mapClientGroup(collection, client.QueryRequestGroup{FieldName: "dest_namespace"})
 						require.NoError(t, err)
 						require.True(t, g.SortOrder().Asc)
 						require.Equal(t, groups.GroupSortOrderTypeCount, g.SortOrder().Type)
 
-						g, err = mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeTime)})
+						g, err = mapClientGroup(collection, client.QueryRequestGroup{FieldName: "start_time"})
 						require.NoError(t, err)
 						require.True(t, g.SortOrder().Asc)
 						require.Equal(t, groups.GroupSortOrderTypeSelf, g.SortOrder().Type)
 					})
 
 					t.Run("desc", func(t *testing.T) {
-						g, err := mapClientGroup(client.QueryRequestGroup{
-							Type:  client.GroupType(groups.GroupTypeDiscrete),
-							Order: &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: false}},
+						g, err := mapClientGroup(collection, client.QueryRequestGroup{
+							FieldName: "dest_namespace",
+							Order:     &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: false}},
 						)
 						require.NoError(t, err)
 						require.False(t, g.SortOrder().Asc)
 					})
 
 					t.Run("asc", func(t *testing.T) {
-						g, err := mapClientGroup(client.QueryRequestGroup{
-							Type:  client.GroupType(groups.GroupTypeDiscrete),
-							Order: &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: true}},
+						g, err := mapClientGroup(collection, client.QueryRequestGroup{
+							FieldName: "dest_namespace",
+							Order:     &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: true}},
 						)
 						require.NoError(t, err)
 						require.True(t, g.SortOrder().Asc)
@@ -953,12 +947,6 @@ func TestQueryService(t *testing.T) {
 						//require.Equal(t, lmav1.TimeField("end_time"), params.QueryParams.TimeRange.Field) // TODO: enable once linseed supports date fields https://tigera.atlassian.net/browse/TSLA-8376
 						require.Empty(t, params.QueryParams.TimeRange.Field)
 					})
-				})
-
-				t.Run("distinct groupBy type is an alias to discrete", func(t *testing.T) {
-					g, err := mapClientGroup(client.QueryRequestGroup{Type: client.GroupType(groups.GroupTypeDistinct)})
-					require.NoError(t, err)
-					require.Equal(t, groups.GroupTypeDiscrete, g.Type())
 				})
 			})
 		})

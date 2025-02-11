@@ -125,7 +125,9 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		return client.QueryResponse{}, err
 	}
 
-	repositoryRequest.Groups, err = slices.MapOrError(req.GroupBys, mapClientGroup)
+	repositoryRequest.Groups, err = slices.MapOrError(req.GroupBys, func(from client.QueryRequestGroup) (groups.Group, error) {
+		return mapClientGroup(queryCollection, from)
+	})
 	if err != nil {
 		return client.QueryResponse{}, err
 	}
@@ -395,7 +397,7 @@ func (s *QueryService) mapClientCriterion(
 	return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid filter criterion type: %s", from.Type))
 }
 
-func mapClientGroup(from client.QueryRequestGroup) (groups.Group, error) {
+func mapClientGroup(collection collections.Collection, from client.QueryRequestGroup) (groups.Group, error) {
 	sortOrder := groups.GroupSortOrder{
 		Asc: true,
 	}
@@ -406,21 +408,22 @@ func mapClientGroup(from client.QueryRequestGroup) (groups.Group, error) {
 		sortOrder.AggregationKey = from.Order.AggKey
 	}
 
-	switch groups.GroupType(from.Type) {
-	case groups.GroupTypeDistinct:
-		fallthrough
-	case groups.GroupTypeDiscrete:
-		if sortOrder.Type == "" {
-			sortOrder.Type = groups.GroupSortOrderTypeCount // default discrete group sort order is by count
-		}
-		return groups.NewGroupDiscrete(from.FieldName, from.MaxValues, sortOrder), nil
-	case groups.GroupTypeTime:
+	collectionField, found := collection.Field(collections.FieldName(from.FieldName))
+	if !found {
+		return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid field name: %s", from.FieldName))
+	}
+
+	if collectionField.Type() == collections.FieldTypeDate {
 		if sortOrder.Type == "" {
 			sortOrder.Type = groups.GroupSortOrderTypeSelf // default time group sort order is by key
 		}
 		return groups.NewGroupTime(from.FieldName, from.Interval, from.MaxValues, sortOrder), nil
 	}
-	return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid group type: %s", from.Type))
+
+	if sortOrder.Type == "" {
+		sortOrder.Type = groups.GroupSortOrderTypeCount // default discrete group sort order is by count
+	}
+	return groups.NewGroupDiscrete(from.FieldName, from.MaxValues, sortOrder), nil
 }
 
 func mapClientAggregation(from client.QueryRequestAggregation) (aggregations.Aggregation, error) {
