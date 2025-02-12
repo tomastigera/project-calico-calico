@@ -28,13 +28,18 @@ import (
 )
 
 type QueryService struct {
+	cfg                      Config
 	logger                   logging.Logger
-	timeout                  time.Duration
 	validator                *validatorv10.Validate
 	repository               repository.Repository
 	collections              []collections.Collection
-	tenantNamespace          string
 	managedClusterNameLister managedclusters.NameLister
+}
+
+type Config struct {
+	QueryTimeout           time.Duration
+	MaxRequestFilters      int
+	MaxRequestAggregations int
 }
 
 const (
@@ -46,15 +51,13 @@ func NewQueryService(
 	logger logging.Logger,
 	repository repository.Repository,
 	managedClusterNameLister managedclusters.NameLister,
-	queryTimeout time.Duration,
-	tenantNamespace string,
+	cfg Config,
 ) *QueryService {
 	return &QueryService{
+		cfg:                      cfg,
 		logger:                   logger.WithName("QueryService"),
-		timeout:                  queryTimeout,
 		repository:               repository,
 		collections:              collections.Collections(),
-		tenantNamespace:          tenantNamespace,
 		managedClusterNameLister: managedClusterNameLister,
 		validator:                validatorv10.New(),
 	}
@@ -141,7 +144,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		repositoryRequest.Aggregations[aggregations.AggregationKey(aggName)] = aggregation
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, s.timeout)
+	ctxTimeout, cancel := context.WithTimeout(ctx, s.cfg.QueryTimeout)
 	defer cancel()
 
 	queryResult, err := s.repository.Query(ctxTimeout, repositoryRequest)
@@ -214,6 +217,14 @@ func (s *QueryService) validateRequest(req client.QueryRequest) (collections.Col
 	})
 	if !found {
 		return collections.Collection{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection '%s'", req.CollectionName))
+	}
+
+	if len(req.Filters) > s.cfg.MaxRequestFilters {
+		return collections.Collection{}, httpreply.ToBadRequest("filters limit exceeded")
+	}
+
+	if len(req.Aggregations) > s.cfg.MaxRequestAggregations {
+		return collections.Collection{}, httpreply.ToBadRequest("aggregations limit exceeded")
 	}
 
 	return queryCollection, nil

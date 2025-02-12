@@ -128,8 +128,6 @@ components:
           type: string
         orderBy:
           $ref: '#/components/schemas/QueryRequestGroupOrder'
-        type:
-          type: string
       type: object
     QueryRequestGroupOrder:
       properties:

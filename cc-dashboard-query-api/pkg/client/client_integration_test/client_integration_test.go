@@ -27,7 +27,16 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	queryService := query.NewQueryService(logger, nil, nil, time.Duration(2)*time.Minute, "")
+	queryService := query.NewQueryService(
+		logger,
+		nil,
+		nil,
+		query.Config{
+			QueryTimeout:           time.Duration(2) * time.Minute,
+			MaxRequestFilters:      10,
+			MaxRequestAggregations: 5,
+		},
+	)
 	collectionsService := collections.NewCollectionsService(logger)
 
 	var err error

@@ -41,4 +41,10 @@ type Config struct {
 
 	// Endpoint for authorization requests
 	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+
+	// MaxRequestFilters limits the number of filters on query requests
+	MaxRequestFilters int `default:"10" split_words:"true"`
+
+	// MaxRequestAggregations limits the number of aggregations on query requests
+	MaxRequestAggregations int `default:"5" split_words:"true"`
 }

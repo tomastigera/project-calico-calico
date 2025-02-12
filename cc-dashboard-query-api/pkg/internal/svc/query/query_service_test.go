@@ -68,8 +68,11 @@ func TestQueryService(t *testing.T) {
 		logger,
 		repository,
 		managedClusterLister,
-		2*time.Minute,
-		"",
+		Config{
+			QueryTimeout:           time.Duration(2) * time.Minute,
+			MaxRequestFilters:      10,
+			MaxRequestAggregations: 5,
+		},
 	)
 
 	t.Run("authorization", func(t *testing.T) {
@@ -142,6 +145,51 @@ func TestQueryService(t *testing.T) {
 				},
 			})
 			require.ErrorContains(t, err, "invalid request: Key: 'QueryRequest.Filters[0].Criterion.Type' Error:Field validation for 'Type' failed")
+		})
+		t.Run("request filters limit", func(t *testing.T) {
+			subject := NewQueryService(
+				logger,
+				repository,
+				managedClusterLister,
+				Config{
+					QueryTimeout:           time.Duration(2) * time.Minute,
+					MaxRequestFilters:      1,
+					MaxRequestAggregations: 5,
+				},
+			)
+
+			_, err := subject.Query(ctx, client.QueryRequest{
+				CollectionName: "flows",
+				Filters: []client.QueryRequestFilter{
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: "dest_name"}},
+				},
+			})
+			require.ErrorContains(t, err, "filters limit exceeded")
+		})
+		t.Run("request aggregations limit", func(t *testing.T) {
+			subject := NewQueryService(
+				logger,
+				repository,
+				managedClusterLister,
+				Config{
+					QueryTimeout:           time.Duration(2) * time.Minute,
+					MaxRequestFilters:      10,
+					MaxRequestAggregations: 1,
+				},
+			)
+
+			_, err := subject.Query(ctx, client.QueryRequest{
+				CollectionName: "flows",
+				Filters: []client.QueryRequestFilter{
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+				},
+				Aggregations: map[client.QueryRequestAggregationKey]client.QueryRequestAggregation{
+					"agg1": {FieldName: "bytes_in", Function: client.QueryRequestAggregationFunction{Type: "max"}},
+					"agg2": {FieldName: "bytes_in", Function: client.QueryRequestAggregationFunction{Type: "min"}},
+				},
+			})
+			require.ErrorContains(t, err, "aggregations limit exceeded")
 		})
 
 		t.Run("time range criterion", func(t *testing.T) {
@@ -799,8 +847,11 @@ func TestQueryService(t *testing.T) {
 								managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
 									return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
 								}),
-								2*time.Minute,
-								"",
+								Config{
+									QueryTimeout:           time.Duration(2) * time.Minute,
+									MaxRequestFilters:      10,
+									MaxRequestAggregations: 5,
+								},
 							)
 
 							resp, err := subject.Query(ctx, client.QueryRequest{
@@ -826,7 +877,16 @@ func TestQueryService(t *testing.T) {
 				})
 
 				t.Run("count aggregation with no groups", func(t *testing.T) {
-					subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
+					subject := NewQueryService(
+						logger,
+						repository,
+						managedClusterLister,
+						Config{
+							QueryTimeout:           time.Duration(2) * time.Minute,
+							MaxRequestFilters:      10,
+							MaxRequestAggregations: 5,
+						},
+					)
 
 					mockClient.SetResults(
 						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
@@ -902,7 +962,16 @@ func TestQueryService(t *testing.T) {
 				t.Run("time range fields", func(t *testing.T) {
 					queryWithFilter := func(t *testing.T, filter client.QueryRequestFilter) *lsv1.FlowLogParams {
 						t.Helper()
-						subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
+						subject := NewQueryService(
+							logger,
+							repository,
+							managedClusterLister,
+							Config{
+								QueryTimeout:           time.Duration(2) * time.Minute,
+								MaxRequestFilters:      10,
+								MaxRequestAggregations: 5,
+							},
+						)
 
 						mockClient.SetResults(
 							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 0, Items: []lsv1.FlowLog{}})},
@@ -952,7 +1021,16 @@ func TestQueryService(t *testing.T) {
 		})
 
 		t.Run("multi-tenant", func(t *testing.T) {
-			subject := NewQueryService(logger, repository, managedClusterLister, 2*time.Minute, "cc-tenant-acme")
+			subject := NewQueryService(
+				logger,
+				repository,
+				managedClusterLister,
+				Config{
+					QueryTimeout:           time.Duration(2) * time.Minute,
+					MaxRequestFilters:      10,
+					MaxRequestAggregations: 5,
+				},
+			)
 
 			mockClient.SetResults(
 				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{

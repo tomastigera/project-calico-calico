@@ -65,8 +65,11 @@ func Start(
 		logger,
 		linseedRepository,
 		managedClusterNameLister,
-		time.Duration(2)*time.Minute,
-		cfg.TenantNamespace,
+		query.Config{
+			QueryTimeout:           time.Duration(2) * time.Minute,
+			MaxRequestFilters:      cfg.MaxRequestFilters,
+			MaxRequestAggregations: cfg.MaxRequestAggregations,
+		},
 	)
 
 	collectionsService := collections.NewCollectionsService(logger)
