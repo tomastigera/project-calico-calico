@@ -31,6 +31,7 @@ const (
 type Collection struct {
 	name                 CollectionName
 	fields               []CollectionField
+	groupBys             []GroupBy
 	defaultTimeFieldName FieldType
 }
 
@@ -46,6 +47,10 @@ func (c Collection) Name() CollectionName {
 
 func (c Collection) Fields() []CollectionField {
 	return slices.Clone(c.fields)
+}
+
+func (c Collection) GroupBys() []GroupBy {
+	return slices.Clone(c.groupBys)
 }
 
 func (c Collection) DefaultTimeFieldName() FieldType {

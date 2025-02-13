@@ -18,7 +18,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 func TestLinseedRepository(t *testing.T) {

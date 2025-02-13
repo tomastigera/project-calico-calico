@@ -25,4 +25,22 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "url"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "user_agent"},
 	},
+	groupBys: []GroupBy{
+		groupBy{
+			field: "dest_service_name",
+			nested: []GroupBy{
+				groupBy{field: "method"},
+				groupBy{field: "response_code"},
+			},
+		},
+		groupBy{
+			field: "start_time",
+			nested: []GroupBy{
+				groupBy{field: "dest_service_name"},
+			},
+		},
+		groupBy{field: "response_code"},
+		groupBy{field: "method"},
+		groupBy{field: "url"},
+	},
 }

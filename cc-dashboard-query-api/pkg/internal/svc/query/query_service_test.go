@@ -27,7 +27,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead

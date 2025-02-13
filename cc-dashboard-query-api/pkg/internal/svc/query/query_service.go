@@ -24,7 +24,7 @@ import (
 	"github.com/tigera/tds-apiserver/lib/comparators"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 type QueryService struct {

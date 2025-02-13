@@ -33,6 +33,18 @@
     type: text
   - name: rrsets.rdata
     type: text
+  groupBys:
+  - field: client_name_aggr
+    nested:
+    - field: qtype
+    - field: rcode
+  - field: dest_ip
+  - field: end_time
+  - field: qname
+  - field: qtype
+  - field: rcode
+  - field: source_name_aggr
+  - field: start_time
   name: dns
 - defaultTimeFieldName: start_time
   fields:
@@ -187,6 +199,52 @@
   - filterDisabled: true
     name: tcp_unrecovered_to
     type: number
+  groupBys:
+  - field: end_time
+    nested:
+    - field: action
+  - field: start_time
+    nested:
+    - field: host
+    - field: dest_namespace
+    - field: source_namespace
+  - field: source_namespace
+    nested:
+    - field: source_name_aggr
+      nested:
+      - field: dest_domains
+        nested:
+        - field: dest_port
+      - field: dest_namespace
+        nested:
+        - field: dest_name_aggr
+          nested:
+          - field: dest_port
+      - field: source_name
+        nested:
+        - field: dest_namespace
+          nested:
+          - field: dest_name_aggr
+            nested:
+            - field: dest_name
+  - field: dest_ip
+    nested:
+    - field: dest_domains
+      nested:
+      - field: dest_port
+  - field: source_name
+    nested:
+    - field: dest_name
+  - field: process_id
+    nested:
+    - field: process_name
+      nested:
+      - field: process_args
+  - field: dest_namespace
+  - field: dest_domains
+  - field: dest_port
+  - field: source_ip
+  - field: host
   name: flows
 - defaultTimeFieldName: start_time
   fields:
@@ -229,4 +287,15 @@
     type: text
   - name: user_agent
     type: text
+  groupBys:
+  - field: dest_service_name
+    nested:
+    - field: method
+    - field: response_code
+  - field: start_time
+    nested:
+    - field: dest_service_name
+  - field: response_code
+  - field: method
+  - field: url
   name: l7

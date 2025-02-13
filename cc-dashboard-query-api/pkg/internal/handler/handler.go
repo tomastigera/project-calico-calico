@@ -17,9 +17,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/auth"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/query"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

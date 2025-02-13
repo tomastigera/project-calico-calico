@@ -18,7 +18,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 type AuthService struct {

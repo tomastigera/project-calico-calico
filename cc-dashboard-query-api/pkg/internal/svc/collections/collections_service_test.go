@@ -16,6 +16,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
@@ -23,19 +24,34 @@ import (
 func TestCollectionsService(t *testing.T) {
 	logger := logging.New("TestCollectionsService")
 
-	ctx := security.NewUserAuthContext(
-		context.Background(),
-		&user.DefaultInfo{Name: "fake-user"},
-		"tigera-labs",
-		fake.NewAuthorizer(true),
-		k8sfake.NewSimpleClientset(),
-	)
+	newSecurityContext := func(authorized bool) security.Context {
+		return security.NewUserAuthContext(
+			context.Background(),
+			&user.DefaultInfo{Name: "fake-user"},
+			"tigera-labs",
+			fake.NewAuthorizer(authorized),
+			k8sfake.NewSimpleClientset(),
+		)
+	}
 
 	subject := NewCollectionsService(logger)
 
+	t.Run("authorization", func(t *testing.T) {
+		t.Run("authorized", func(t *testing.T) {
+			_, err := subject.Collections(newSecurityContext(true))
+
+			require.NoError(t, err)
+		})
+		t.Run("unauthorized", func(t *testing.T) {
+			_, err := subject.Collections(newSecurityContext(false))
+
+			require.Equal(t, err, httpreply.ReplyAccessDenied)
+		})
+	})
+
 	t.Run("collection names", func(t *testing.T) {
 
-		collectionsResponse, err := subject.Collections(ctx)
+		collectionsResponse, err := subject.Collections(newSecurityContext(true))
 		require.NoError(t, err)
 
 		collectionMap := slices.AssociateBy(collectionsResponse, func(collection client.Collection) client.CollectionName {
@@ -60,7 +76,7 @@ func TestCollectionsService(t *testing.T) {
 		})
 		require.NotEmpty(t, internalFieldNames)
 
-		response, err := subject.Collections(ctx)
+		response, err := subject.Collections(newSecurityContext(true))
 		require.NoError(t, err)
 
 		responseCollection, found := slices.Find(response, func(collection client.Collection) bool {
@@ -75,7 +91,7 @@ func TestCollectionsService(t *testing.T) {
 
 	t.Run("matches golden files", func(t *testing.T) {
 
-		collectionsResponse, err := subject.Collections(ctx)
+		collectionsResponse, err := subject.Collections(newSecurityContext(true))
 		require.NoError(t, err)
 
 		expectMatchesGoldenYaml(t, "collections", collectionsResponse)

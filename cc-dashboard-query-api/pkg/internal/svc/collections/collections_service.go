@@ -4,9 +4,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/pkg/httpreply"
 )
 
 type CollectionsService struct {
@@ -41,12 +41,13 @@ func (s *CollectionsService) Collections(ctx security.Context) (client.Collectio
 func mapCollection(from collections.Collection) client.Collection {
 	return client.Collection{
 		Name:                 client.CollectionName(from.Name()),
-		Fields:               slices.MapFiltered(from.Fields(), mapCollectionFields),
+		Fields:               slices.MapFiltered(from.Fields(), mapCollectionField),
+		GroupBys:             slices.Map(from.GroupBys(), mapCollectionGroupBy),
 		DefaultTimeFieldName: client.CollectionFieldName(from.DefaultTimeFieldName()),
 	}
 }
 
-func mapCollectionFields(from collections.CollectionField) (client.CollectionField, bool) {
+func mapCollectionField(from collections.CollectionField) (client.CollectionField, bool) {
 	collectionField := client.CollectionField{
 		Name:           client.CollectionFieldName(from.Name()),
 		Type:           client.CollectionFieldType(from.DisplayType()),
@@ -59,4 +60,11 @@ func mapCollectionFields(from collections.CollectionField) (client.CollectionFie
 	}
 
 	return collectionField, !from.Internal()
+}
+
+func mapCollectionGroupBy(from collections.GroupBy) client.CollectionGroupBy {
+	return client.CollectionGroupBy{
+		Field:  client.CollectionFieldName(from.Field()),
+		Nested: slices.ToSliceAny(slices.Map(from.Nested(), mapCollectionGroupBy)),
+	}
 }

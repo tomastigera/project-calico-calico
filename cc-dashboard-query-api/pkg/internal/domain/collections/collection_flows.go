@@ -71,4 +71,109 @@ var collectionFlows = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_total_retransmissions", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_unrecovered_to", filterDisabled: true},
 	},
+	groupBys: []GroupBy{
+		groupBy{
+			field: "end_time",
+			nested: []GroupBy{
+				groupBy{field: "action"},
+			},
+		},
+		groupBy{
+			field: "start_time",
+			nested: []GroupBy{
+				groupBy{field: "host"},
+				groupBy{field: "dest_namespace"},
+				groupBy{field: "source_namespace"},
+			},
+		},
+		groupBy{
+			field: "source_namespace",
+			nested: []GroupBy{
+				groupBy{
+					field: "source_name_aggr",
+					nested: []GroupBy{
+						groupBy{
+							field: "dest_domains",
+							nested: []GroupBy{
+								groupBy{
+									field:  "dest_port",
+									nested: []GroupBy{},
+								},
+							},
+						},
+						groupBy{
+							field: "dest_namespace",
+							nested: []GroupBy{
+								groupBy{
+									field: "dest_name_aggr",
+									nested: []GroupBy{
+										groupBy{
+											field:  "dest_port",
+											nested: []GroupBy{},
+										},
+									},
+								},
+							},
+						},
+						groupBy{
+							field: "source_name",
+							nested: []GroupBy{
+								groupBy{
+									field: "dest_namespace",
+									nested: []GroupBy{
+										groupBy{
+											field: "dest_name_aggr",
+											nested: []GroupBy{
+												groupBy{
+													field:  "dest_name",
+													nested: []GroupBy{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		groupBy{
+			field: "dest_ip",
+			nested: []GroupBy{
+				groupBy{
+					field: "dest_domains",
+					nested: []GroupBy{
+						groupBy{
+							field: "dest_port",
+						},
+					},
+				},
+			},
+		},
+		groupBy{
+			field: "source_name",
+			nested: []GroupBy{
+				groupBy{field: "dest_name"},
+			},
+		},
+		groupBy{
+			field: "process_id",
+			nested: []GroupBy{
+				groupBy{
+					field: "process_name",
+					nested: []GroupBy{
+						groupBy{
+							field: "process_args",
+						},
+					},
+				},
+			},
+		},
+		groupBy{field: "dest_namespace"},
+		groupBy{field: "dest_domains"},
+		groupBy{field: "dest_port"},
+		groupBy{field: "source_ip"},
+		groupBy{field: "host"},
+	},
 }

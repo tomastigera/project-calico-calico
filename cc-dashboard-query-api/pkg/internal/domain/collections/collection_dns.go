@@ -31,4 +31,20 @@ var collectionDNS = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "source.ip", internal: true},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "type", internal: true},
 	},
+	groupBys: []GroupBy{
+		groupBy{
+			field: "client_name_aggr",
+			nested: []GroupBy{
+				groupBy{field: "qtype"},
+				groupBy{field: "rcode"},
+			},
+		},
+		groupBy{field: "dest_ip"},
+		groupBy{field: "end_time"},
+		groupBy{field: "qname"},
+		groupBy{field: "qtype"},
+		groupBy{field: "rcode"},
+		groupBy{field: "source_name_aggr"},
+		groupBy{field: "start_time"},
+	},
 }
