@@ -451,6 +451,14 @@ func mapClientAggregation(from client.QueryRequestAggregation) (aggregations.Agg
 		return aggregations.NewAggregationMax(from.FieldName), nil
 	case client.AggregationFunctionTypePercentile:
 		return aggregations.NewAggregationPercentile(from.FieldName, from.Function.Percentile), nil
+	case client.AggregationFunctionTypePercentile50:
+		return aggregations.NewAggregationPercentile(from.FieldName, 50), nil
+	case client.AggregationFunctionTypePercentile90:
+		return aggregations.NewAggregationPercentile(from.FieldName, 90), nil
+	case client.AggregationFunctionTypePercentile95:
+		return aggregations.NewAggregationPercentile(from.FieldName, 95), nil
+	case client.AggregationFunctionTypePercentile100:
+		return aggregations.NewAggregationPercentile(from.FieldName, 100), nil
 	}
 
 	return nil, fmt.Errorf("unknown aggregation type '%s'", from.Function.Type)

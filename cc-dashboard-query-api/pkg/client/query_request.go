@@ -114,12 +114,16 @@ type QueryRequestAggregation struct {
 type AggregationFunctionType string
 
 const (
-	AggregationFunctionTypeCount      = AggregationFunctionType("count")
-	AggregationFunctionTypeSum        = AggregationFunctionType("sum")
-	AggregationFunctionTypeAvg        = AggregationFunctionType("avg")
-	AggregationFunctionTypeMin        = AggregationFunctionType("min")
-	AggregationFunctionTypeMax        = AggregationFunctionType("max")
-	AggregationFunctionTypePercentile = AggregationFunctionType("percentile")
+	AggregationFunctionTypeCount         = AggregationFunctionType("count")
+	AggregationFunctionTypeSum           = AggregationFunctionType("sum")
+	AggregationFunctionTypeAvg           = AggregationFunctionType("avg")
+	AggregationFunctionTypeMin           = AggregationFunctionType("min")
+	AggregationFunctionTypeMax           = AggregationFunctionType("max")
+	AggregationFunctionTypePercentile    = AggregationFunctionType("percentile")
+	AggregationFunctionTypePercentile50  = AggregationFunctionType("p50")
+	AggregationFunctionTypePercentile90  = AggregationFunctionType("p90")
+	AggregationFunctionTypePercentile95  = AggregationFunctionType("p95")
+	AggregationFunctionTypePercentile100 = AggregationFunctionType("p100")
 )
 
 type QueryRequestAggregationFunction struct {

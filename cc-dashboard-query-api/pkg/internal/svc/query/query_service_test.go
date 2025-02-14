@@ -18,6 +18,7 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
@@ -653,6 +654,34 @@ func TestQueryService(t *testing.T) {
 				require.Len(t, resp.Documents, MaxQueryDocumentsLimit)
 			})
 		})
+	})
+
+	t.Run("percentile aggregation mapping", func(t *testing.T) {
+		testCases := []struct {
+			functionType       string
+			expectedPercentile float64
+		}{
+			{functionType: "p50", expectedPercentile: 50},
+			{functionType: "p90", expectedPercentile: 90},
+			{functionType: "p95", expectedPercentile: 95},
+			{functionType: "p100", expectedPercentile: 100},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.functionType, func(t *testing.T) {
+				agg, err := mapClientAggregation(client.QueryRequestAggregation{
+					Function: client.QueryRequestAggregationFunction{
+						Type: client.AggregationFunctionType(tc.functionType),
+					},
+				})
+				require.NoError(t, err)
+
+				pct, ok := agg.(aggregations.AggregationPercentile)
+				require.True(t, ok)
+
+				require.Equal(t, tc.expectedPercentile, pct.Percentile())
+			})
+		}
 	})
 
 	t.Run("success", func(t *testing.T) {
