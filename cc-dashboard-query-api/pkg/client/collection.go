@@ -22,6 +22,9 @@ type CollectionField struct {
 
 	// FilterDisabled disables the use of this particular field in filters if set to true
 	FilterDisabled bool `json:"filterDisabled,omitempty"`
+
+	// AggregationFunctionTypes a slice of valid aggregation function types for this collection field
+	AggregationFunctionTypes []AggregationFunctionType `json:"aggregationFunctionTypes,omitempty"`
 }
 
 type CollectionGroupBy struct {

@@ -136,7 +136,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	}
 
 	for aggName, clientAggregation := range req.Aggregations {
-		aggregation, err := mapClientAggregation(clientAggregation)
+		aggregation, err := mapClientAggregation(clientAggregation, queryCollection)
 		if err != nil {
 			return client.QueryResponse{}, err
 		}
@@ -453,7 +453,20 @@ func mapClientGroup(collection collections.Collection, from client.QueryRequestG
 	return groups.NewGroupDiscrete(from.FieldName, from.MaxValues, sortOrder), nil
 }
 
-func mapClientAggregation(from client.QueryRequestAggregation) (aggregations.Aggregation, error) {
+func mapClientAggregation(from client.QueryRequestAggregation, collection collections.Collection) (aggregations.Aggregation, error) {
+
+	if from.Function.Type != client.AggregationFunctionTypeCount {
+		// skip count aggregation function, which does not require a FieldName
+		collectionField, found := collection.Field(collections.FieldName(from.FieldName))
+		if !found {
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid field name: %s", from.FieldName))
+		}
+
+		if !slices.Contains(collectionField.AggregationFunctionTypes(), collections.AggregationFunctionType(from.Function.Type)) {
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid aggregation function %s for field %s", from.Function.Type, from.FieldName))
+		}
+	}
+
 	switch from.Function.Type {
 	case client.AggregationFunctionTypeCount:
 		return aggregations.NewAggregationCount(), nil

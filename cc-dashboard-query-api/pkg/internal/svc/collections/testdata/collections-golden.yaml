@@ -15,10 +15,20 @@
     type: text
   - name: count
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - avg
+    - max
+    - p50
+    - p90
+    - p95
+    - p100
+    filterDisabled: true
     name: latency_max
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - avg
+    - min
+    filterDisabled: true
     name: latency_mean
     type: number
   - name: qclass
@@ -57,9 +67,13 @@
     values:
     - allow
     - deny
-  - name: bytes_in
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_in
     type: number
-  - name: bytes_out
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_out
     type: number
   - filterDisabled: true
     name: dest_domains
@@ -100,11 +114,17 @@
     type: number
   - name: http_requests_denied_in
     type: number
-  - name: num_flows
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows
     type: number
-  - name: num_flows_completed
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows_completed
     type: number
-  - name: num_flows_started
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows_started
     type: number
   - name: num_original_source_ips
     type: number
@@ -116,9 +136,13 @@
     type: number
   - name: original_source_ips
     type: ip
-  - name: packets_in
+  - aggregationFunctionTypes:
+    - sum
+    name: packets_in
     type: number
-  - name: packets_out
+  - aggregationFunctionTypes:
+    - sum
+    name: packets_out
     type: number
   - defaultValue: enforced
     name: policy.type
@@ -165,13 +189,27 @@
     - hep
     - ns
     - net
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - sum
+    filterDisabled: true
     name: tcp_lost_packets
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - max
+    - p50
+    - p90
+    - p95
+    - p100
+    filterDisabled: true
     name: tcp_max_min_rtt
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - max
+    - p50
+    - p90
+    - p95
+    - p100
+    filterDisabled: true
     name: tcp_max_smooth_rtt
     type: number
   - filterDisabled: true
@@ -192,10 +230,15 @@
   - filterDisabled: true
     name: tcp_min_send_congestion_window
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - max
+    - sum
+    filterDisabled: true
     name: tcp_total_retransmissions
     type: number
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - sum
+    filterDisabled: true
     name: tcp_unrecovered_to
     type: number
   groupBys:
@@ -253,9 +296,13 @@
   - filterDisabled: true
     name: start_time
     type: date
-  - name: bytes_in
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_in
     type: number
-  - name: bytes_out
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_out
     type: number
   - name: dest_name
     type: text
@@ -273,7 +320,14 @@
     type: number
   - name: dest_service_port_name
     type: text
-  - filterDisabled: true
+  - aggregationFunctionTypes:
+    - avg
+    filterDisabled: true
+    name: duration_max
+    type: number
+  - aggregationFunctionTypes:
+    - avg
+    filterDisabled: true
     name: duration_mean
     type: number
   - name: host

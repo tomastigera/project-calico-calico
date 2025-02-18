@@ -1,11 +1,12 @@
 package collections
 
 type CollectionFieldEnum struct {
-	fieldName      FieldName
-	fieldValues    []string
-	defaultValue   string
-	internal       bool
-	filterDisabled bool
+	fieldName                FieldName
+	fieldValues              []string
+	defaultValue             string
+	internal                 bool
+	filterDisabled           bool
+	aggregationFunctionTypes []AggregationFunctionType
 }
 
 func (c CollectionFieldEnum) Name() FieldName {
@@ -34,4 +35,8 @@ func (c CollectionFieldEnum) Values() []string {
 
 func (c CollectionFieldEnum) DefaultValue() string {
 	return c.defaultValue
+}
+
+func (c CollectionFieldEnum) AggregationFunctionTypes() []AggregationFunctionType {
+	return c.aggregationFunctionTypes
 }

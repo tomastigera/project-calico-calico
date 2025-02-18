@@ -718,6 +718,57 @@ func TestQueryService(t *testing.T) {
 		})
 	})
 
+	t.Run("aggregation", func(t *testing.T) {
+		testCases := []struct {
+			name         string
+			valid        bool
+			functionType client.AggregationFunctionType
+		}{
+			{
+				name:         "valid",
+				functionType: client.AggregationFunctionTypeSum,
+				valid:        true,
+			},
+			{
+				name:         "invalid",
+				functionType: client.AggregationFunctionTypeAvg,
+				valid:        false,
+			},
+			{
+				name:         "valid for all",
+				functionType: client.AggregationFunctionTypeCount,
+				valid:        true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.valid {
+					mockClient.SetResults(lsrest.MockResult{Body: nil})
+				}
+
+				_, err := subject.Query(ctx, client.QueryRequest{
+					MaxDocs:        intp(1000),
+					CollectionName: "flows",
+					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
+					Filters: []client.QueryRequestFilter{
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+					},
+					Aggregations: client.QueryRequestAggregations{
+						"agg0": {FieldName: "bytes_in", Function: client.QueryRequestAggregationFunction{Type: tc.functionType}},
+					},
+				})
+
+				if tc.valid {
+					require.NoError(t, err)
+				} else {
+					require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+					require.ErrorContains(t, err, `invalid aggregation function`)
+				}
+			})
+		}
+	})
+
 	t.Run("percentile aggregation mapping", func(t *testing.T) {
 		testCases := []struct {
 			functionType       string
@@ -729,13 +780,19 @@ func TestQueryService(t *testing.T) {
 			{functionType: "p100", expectedPercentile: 100},
 		}
 
+		queryCollection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
+			return collection.Name() == "flows"
+		})
+		require.True(t, found)
+
 		for _, tc := range testCases {
 			t.Run(tc.functionType, func(t *testing.T) {
 				agg, err := mapClientAggregation(client.QueryRequestAggregation{
+					FieldName: "tcp_max_min_rtt",
 					Function: client.QueryRequestAggregationFunction{
 						Type: client.AggregationFunctionType(tc.functionType),
 					},
-				})
+				}, queryCollection)
 				require.NoError(t, err)
 
 				pct, ok := agg.(aggregations.AggregationPercentile)

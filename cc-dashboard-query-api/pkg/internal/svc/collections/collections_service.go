@@ -52,6 +52,12 @@ func mapCollectionField(from collections.CollectionField) (client.CollectionFiel
 		Name:           client.CollectionFieldName(from.Name()),
 		Type:           client.CollectionFieldType(from.DisplayType()),
 		FilterDisabled: from.FilterDisabled(),
+		AggregationFunctionTypes: slices.Map(
+			from.AggregationFunctionTypes(),
+			func(aggregationFunctionType collections.AggregationFunctionType) client.AggregationFunctionType {
+				return client.AggregationFunctionType(aggregationFunctionType)
+			},
+		),
 	}
 
 	if collectionFieldEnum, ok := from.(collections.CollectionFieldEnum); ok {

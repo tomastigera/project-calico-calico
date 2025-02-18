@@ -8,8 +8,20 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
 		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, filterDisabled: true},
 
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_out"},
+		collectionFieldGeneric{
+			fieldName: "bytes_in",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "bytes_out",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_name"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_name_aggr"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_namespace"},
@@ -18,7 +30,21 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_namespace"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_service_port"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_port_name"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "duration_mean", filterDisabled: true},
+		collectionFieldGeneric{
+			fieldName:      "duration_max",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeAvg,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName:      "duration_mean",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeAvg,
+			}},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "method"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "response_code", filterDisabled: true},

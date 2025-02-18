@@ -6,4 +6,5 @@ type CollectionField interface {
 	Internal() bool
 	FilterDisabled() bool
 	DisplayType() FieldType
+	AggregationFunctionTypes() []AggregationFunctionType
 }

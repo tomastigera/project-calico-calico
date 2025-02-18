@@ -9,8 +9,20 @@ var collectionFlows = Collection{
 		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, filterDisabled: true},
 
 		CollectionFieldEnum{fieldName: "action", fieldValues: []string{"allow", "deny"}},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_in"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "bytes_out"},
+		collectionFieldGeneric{
+			fieldName: "bytes_in",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "bytes_out",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_domains", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "dest_ip"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_labels.labels", internal: true},
@@ -33,16 +45,46 @@ var collectionFlows = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "http_requests_denied_in"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "nat_outgoing_ports", internal: true},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "network.protocol", internal: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_flows"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_flows_completed"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_flows_started"},
+		collectionFieldGeneric{
+			fieldName: "num_flows",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "num_flows_completed",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "num_flows_started",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_original_source_ips"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_process_args"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_process_ids"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "num_process_names"},
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "original_source_ips"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "packets_in"},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "packets_out"},
+		collectionFieldGeneric{
+			fieldName: "packets_in",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "packets_out",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
 		CollectionFieldEnum{fieldName: FieldNamePolicyType, fieldValues: []string{FieldPolicyStaged, FieldPolicyEnforced}, defaultValue: FieldPolicyEnforced},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_args"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_id"},
@@ -59,17 +101,61 @@ var collectionFlows = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "source_port"},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "source_port_num"},
 		CollectionFieldEnum{fieldName: "source_type", fieldValues: []string{"wep", "hep", "ns", "net"}},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_lost_packets", filterDisabled: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_max_min_rtt", filterDisabled: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_max_smooth_rtt", filterDisabled: true},
+		collectionFieldGeneric{
+			fieldName:      "tcp_lost_packets",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName:      "tcp_max_min_rtt",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeMax,
+				AggregationFunctionTypePercentile50,
+				AggregationFunctionTypePercentile90,
+				AggregationFunctionTypePercentile95,
+				AggregationFunctionTypePercentile100,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName:      "tcp_max_smooth_rtt",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeMax,
+				AggregationFunctionTypePercentile50,
+				AggregationFunctionTypePercentile90,
+				AggregationFunctionTypePercentile95,
+				AggregationFunctionTypePercentile100,
+			},
+		},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_mean_min_rtt", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_mean_mss", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_mean_send_congestion_window", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_mean_smooth_rtt", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_min_mss", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_min_send_congestion_window", filterDisabled: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_total_retransmissions", filterDisabled: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "tcp_unrecovered_to", filterDisabled: true},
+		collectionFieldGeneric{
+			fieldName:      "tcp_total_retransmissions",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeMax,
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName:      "tcp_unrecovered_to",
+			fieldType:      FieldTypeNumber,
+			filterDisabled: true,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
 	},
 	groupBys: []GroupBy{
 		groupBy{

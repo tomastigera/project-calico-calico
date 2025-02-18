@@ -15,6 +15,9 @@ type collectionFieldGeneric struct {
 
 	// filterDisabled indicate a field must not be used for filtering if set to true
 	filterDisabled bool
+
+	// aggregationFunctionTypes is a slice of valid aggregation functions for this collection field
+	aggregationFunctionTypes []AggregationFunctionType
 }
 
 func NewCollectionFieldGeneric(fieldName FieldName, fieldType FieldType, displayFieldType FieldType) CollectionField {
@@ -39,6 +42,10 @@ func (c collectionFieldGeneric) Internal() bool {
 
 func (c collectionFieldGeneric) FilterDisabled() bool {
 	return c.filterDisabled
+}
+
+func (c collectionFieldGeneric) AggregationFunctionTypes() []AggregationFunctionType {
+	return c.aggregationFunctionTypes
 }
 
 func (c collectionFieldGeneric) DisplayType() FieldType {
