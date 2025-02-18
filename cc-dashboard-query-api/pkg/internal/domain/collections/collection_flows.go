@@ -174,6 +174,7 @@ var collectionFlows = Collection{
 		groupBy{field: "dest_domains"},
 		groupBy{field: "dest_port"},
 		groupBy{field: "source_ip"},
+		groupBy{field: "source_name_aggr"},
 		groupBy{field: "host"},
 	},
 }

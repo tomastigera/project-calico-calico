@@ -22,9 +22,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
 	"github.com/tigera/tds-apiserver/lib/comparators"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 type QueryService struct {
@@ -225,6 +225,22 @@ func (s *QueryService) validateRequest(req client.QueryRequest) (collections.Col
 
 	if len(req.Aggregations) > s.cfg.MaxRequestAggregations {
 		return collections.Collection{}, httpreply.ToBadRequest("aggregations limit exceeded")
+	}
+
+	// Enforce collection groupBys combination tree
+	collectionGroupBys := queryCollection.GroupBys()
+	for _, groupBy := range req.GroupBys {
+		collectionGroupBy, found := slices.Find(collectionGroupBys, func(g collections.GroupBy) bool {
+			return g.Field() == collections.FieldName(groupBy.FieldName)
+		})
+
+		if !found {
+			fieldNames := slices.Map(req.GroupBys, func(g client.QueryRequestGroup) string { return g.FieldName })
+
+			return collections.Collection{}, httpreply.ToBadRequest(fmt.Sprintf("invalid group combination: %s", strings.Join(fieldNames, ",")))
+		}
+
+		collectionGroupBys = collectionGroupBy.Nested()
 	}
 
 	return queryCollection, nil

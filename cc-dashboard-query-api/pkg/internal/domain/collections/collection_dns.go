@@ -44,7 +44,6 @@ var collectionDNS = Collection{
 		groupBy{field: "qname"},
 		groupBy{field: "qtype"},
 		groupBy{field: "rcode"},
-		groupBy{field: "source_name_aggr"},
 		groupBy{field: "start_time"},
 	},
 }

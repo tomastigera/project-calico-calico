@@ -43,7 +43,6 @@
   - field: qname
   - field: qtype
   - field: rcode
-  - field: source_name_aggr
   - field: start_time
   name: dns
 - defaultTimeFieldName: start_time
@@ -244,6 +243,7 @@
   - field: dest_domains
   - field: dest_port
   - field: source_ip
+  - field: source_name_aggr
   - field: host
   name: flows
 - defaultTimeFieldName: start_time

@@ -26,9 +26,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead
@@ -653,6 +653,68 @@ func TestQueryService(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, resp.Documents, MaxQueryDocumentsLimit)
 			})
+		})
+
+		t.Run("groupBy combination", func(t *testing.T) {
+			testCases := []struct {
+				name     string
+				valid    bool
+				groupBys []client.QueryRequestGroup
+			}{
+				{
+					name:  "invalid",
+					valid: false,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "bytes_in"},
+						{FieldName: "action"},
+					},
+				},
+				{
+					name:  "valid for partial group list",
+					valid: true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "source_namespace"},
+						{FieldName: "source_name_aggr"},
+						{FieldName: "source_name"},
+					},
+				},
+				{
+					name:  "valid for complete group list",
+					valid: true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "source_namespace"},
+						{FieldName: "source_name_aggr"},
+						{FieldName: "source_name"},
+						{FieldName: "dest_namespace"},
+						{FieldName: "dest_name_aggr"},
+						{FieldName: "dest_name"},
+					},
+				},
+			}
+
+			for _, testCase := range testCases {
+				t.Run(testCase.name, func(t *testing.T) {
+					if testCase.valid {
+						mockClient.SetResults(lsrest.MockResult{Body: nil})
+					}
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						ClusterFilter:  []client.ManagedClusterName{"cluster1"},
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						},
+						GroupBys: testCase.groupBys,
+					})
+
+					if testCase.valid {
+						require.NoError(t, err)
+					} else {
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid group combination`)
+					}
+				})
+			}
 		})
 	})
 
