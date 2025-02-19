@@ -4,7 +4,6 @@ var collectionDNS = Collection{
 	name:                 CollectionNameDNS,
 	defaultTimeFieldName: "start_time",
 	fields: []CollectionField{
-		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true},
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
 		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, filterDisabled: true},
 

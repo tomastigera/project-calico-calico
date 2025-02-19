@@ -57,7 +57,7 @@ func TestParams(t *testing.T) {
 				selector: `( client_name = "test-value1" OR client_name = "test-value2" OR client_name = "test-value3" ) AND ( client_name != "test-value4" AND client_name != "test-value5" AND client_name != "test-value6" )`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
@@ -80,7 +80,7 @@ func TestParams(t *testing.T) {
 				selector: `( client_name = "test-value1" OR client_name != "test-value2" ) AND NOT ( client_name = "test-value3" OR client_name != "test-value4" )`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
@@ -96,7 +96,7 @@ func TestParams(t *testing.T) {
 				selector: `count >= 10 AND count <= 20`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -111,7 +111,7 @@ func TestParams(t *testing.T) {
 					selector: `NOT (count >= 10 AND count <= 20)`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
 
@@ -135,7 +135,7 @@ func TestParams(t *testing.T) {
 						selector: `count >= 10`,
 
 						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 					}, subject)
 				})
 				t.Run("lte", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestParams(t *testing.T) {
 						selector: `count <= 20`,
 
 						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 					}, subject)
 
 					t.Run("negated", func(t *testing.T) {
@@ -162,7 +162,7 @@ func TestParams(t *testing.T) {
 							selector: `NOT (count <= 20)`,
 
 							domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-							linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+							linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 						}, subject)
 					})
 				})
@@ -185,7 +185,7 @@ func TestParams(t *testing.T) {
 					lsv1.DomainMatchRRSet:  nil,
 					lsv1.DomainMatchRRData: nil,
 				},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("enum fields", func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestParams(t *testing.T) {
 					},
 					linseedQuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				}, subject)
@@ -249,7 +249,7 @@ func TestParams(t *testing.T) {
 						},
 						linseedQuerySortParams: lsv1.QuerySortParams{
 							Sort: []lsv1.SearchRequestSortBy{
-								{Field: "@timestamp", Descending: true},
+								{Field: "start_time", Descending: true},
 							},
 						},
 					}, subject)
@@ -297,7 +297,7 @@ func TestParams(t *testing.T) {
 				selector: `client_name IN {"*"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -312,7 +312,7 @@ func TestParams(t *testing.T) {
 					selector: `client_name NOTIN {"*"}`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
 
@@ -329,7 +329,7 @@ func TestParams(t *testing.T) {
 				selector: `client_ip >= "10.0.0.1" AND client_ip <= "10.0.0.255"`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestParams(t *testing.T) {
 					selector: `client_ip < "10.0.0.1" AND client_ip > "10.0.0.255"`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
 		})
@@ -363,7 +363,7 @@ func TestParams(t *testing.T) {
 				selector: `qname IN {"*test-domain1.com"} AND qname NOTIN {"test-domain2.com*"} AND qname NOTIN {"test-domain*.com"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
@@ -450,7 +450,7 @@ func TestParams(t *testing.T) {
 				selector: `qname IN {"test-domain1.*"} AND qname NOTIN {"test-domain2.*"} AND qname NOTIN {"test-domain3.*"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("value escaping", func(t *testing.T) {
@@ -466,7 +466,7 @@ func TestParams(t *testing.T) {
 					selector: `qname IN {"test-domain\\*1.*"} AND qname NOTIN {"test-domain\\?2.*"}`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "@timestamp", Descending: true}}},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 
 			})
@@ -535,7 +535,7 @@ func TestParams(t *testing.T) {
 		subject := newQueryParams(0)
 		require.Equal(t, lsv1.QuerySortParams{
 			Sort: []lsv1.SearchRequestSortBy{
-				{Field: "@timestamp", Descending: true},
+				{Field: "start_time", Descending: true},
 			},
 		}, subject.linseedQuerySortParams)
 	})

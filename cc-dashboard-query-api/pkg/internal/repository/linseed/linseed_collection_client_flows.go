@@ -69,7 +69,10 @@ func (c *collectionClientFlows) List(ctx context.Context, clusterName query.Mana
 	return result.QueryResult{
 		Hits: listResult.TotalHits,
 		Documents: slices.Map(listResult.Items, func(i lsv1.FlowLog) result.QueryResultDocument {
-			return result.QueryResultDocument{Content: flowLogDocument{FlowLog: i, Cluster: clusterName}, Timestamp: time.Unix(i.Timestamp, 0).UTC()}
+			return result.QueryResultDocument{
+				Content:   flowLogDocument{FlowLog: i, Cluster: clusterName},
+				Timestamp: time.Unix(i.StartTime, 0).UTC(),
+			}
 		}),
 	}, nil
 }

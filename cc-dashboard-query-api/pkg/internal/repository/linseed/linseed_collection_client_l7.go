@@ -67,7 +67,10 @@ func (c *collectionClientL7) List(ctx context.Context, clusterName query.Managed
 	return result.QueryResult{
 		Hits: listResult.TotalHits,
 		Documents: slices.Map(listResult.Items, func(i lsv1.L7Log) result.QueryResultDocument {
-			return result.QueryResultDocument{Content: l7LogDocument{L7Log: i, Cluster: clusterName}, Timestamp: time.Unix(i.StartTime, 0).UTC()}
+			return result.QueryResultDocument{
+				Content:   l7LogDocument{L7Log: i, Cluster: clusterName},
+				Timestamp: time.Unix(i.StartTime, 0).UTC(),
+			}
 		}),
 	}, nil
 }

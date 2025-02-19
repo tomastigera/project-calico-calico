@@ -176,7 +176,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	}
 
 	queryResponse.Documents = slices.Map(
-		slices.SortByComparing( // sort desc by @timestamp
+		slices.SortByComparing( // sort desc by start_time
 			queryResult.Documents,
 			comparators.Func[result.QueryResultDocument](func(doc1, doc2 result.QueryResultDocument) int {
 				if doc1.Timestamp.UnixMicro() == doc2.Timestamp.UnixMicro() {

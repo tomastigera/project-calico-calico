@@ -51,7 +51,7 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				}, params)
@@ -60,8 +60,8 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 
 		t.Run("query result", func(t *testing.T) {
 			flowLogs := []lsv1.FlowLog{
-				{DestName: "test-dst1", TCPLostPackets: 11, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
-				{DestName: "test-dst2", TCPLostPackets: 22, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestName: "test-dst1", TCPLostPackets: 11, StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestName: "test-dst2", TCPLostPackets: 22, StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
 			}
 
 			mockClient.SetResults(rest.MockResult{
@@ -81,7 +81,7 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 							FlowLog: lsv1.FlowLog{
 								DestName:       "test-dst1",
 								TCPLostPackets: 11,
-								Timestamp:      time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
+								StartTime:      time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
 							},
 						},
 						Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC),
@@ -92,7 +92,7 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 							FlowLog: lsv1.FlowLog{
 								DestName:       "test-dst2",
 								TCPLostPackets: 22,
-								Timestamp:      time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
+								StartTime:      time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
 							},
 						},
 						Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC),
@@ -137,7 +137,7 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				},

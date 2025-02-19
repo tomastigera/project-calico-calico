@@ -36,7 +36,7 @@ func newQueryParams(maxDocuments int) *queryParams {
 		},
 		linseedQuerySortParams: lsv1.QuerySortParams{
 			Sort: []lsv1.SearchRequestSortBy{
-				{Field: "@timestamp", Descending: true},
+				{Field: "start_time", Descending: true},
 			},
 		},
 	}

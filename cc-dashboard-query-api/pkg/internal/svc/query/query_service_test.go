@@ -85,7 +85,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 			})
 
@@ -97,7 +97,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 			})
 
@@ -118,7 +118,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 			})
 			require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 			})
 			require.ErrorContains(t, err, "cluster 'unknown-cluster' not found")
@@ -142,7 +142,7 @@ func TestQueryService(t *testing.T) {
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
 					{Criterion: client.QueryRequestFilterCriterion{Type: "unknown"}},
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 			})
 			require.ErrorContains(t, err, "invalid request: Key: 'QueryRequest.Filters[0].Criterion.Type' Error:Field validation for 'Type' failed")
@@ -162,7 +162,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 					{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: "dest_name"}},
 				},
 			})
@@ -183,7 +183,7 @@ func TestQueryService(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 				},
 				Aggregations: map[client.QueryRequestAggregationKey]client.QueryRequestAggregation{
 					"agg1": {FieldName: "bytes_in", Function: client.QueryRequestAggregationFunction{Type: "max"}},
@@ -215,7 +215,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "invalid1", LTE: "10m", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "invalid1", LTE: "10m", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -225,7 +225,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "invalid2", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "10m", LTE: "invalid2", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -267,7 +267,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "invalid1", LTE: "2020-01-01T00:00:00Z", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "invalid1", LTE: "2020-01-01T00:00:00Z", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -277,7 +277,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "invalid2", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "invalid2", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -317,7 +317,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2021-01-01T00:00:00Z", LTE: "2020-01-01T00:00:00Z", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2021-01-01T00:00:00Z", LTE: "2020-01-01T00:00:00Z", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -327,7 +327,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "", LTE: "", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "", LTE: "", Field: "start_time"}},
 							},
 						})
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
@@ -380,7 +380,7 @@ func TestQueryService(t *testing.T) {
 								_, err := subject.Query(ctx, client.QueryRequest{
 									CollectionName: "flows",
 									Filters: []client.QueryRequestFilter{
-										{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: testCase.value, LTE: testCase.value, Field: "@timestamp"}},
+										{Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: testCase.value, LTE: testCase.value, Field: "start_time"}},
 									},
 								})
 								require.NoError(t, err, testCase)
@@ -402,8 +402,8 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 					},
 				})
 				require.ErrorContains(t, err, "multiple time range filters set")
@@ -414,7 +414,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx,
 						client.QueryRequest{
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							},
 						})
 					require.ErrorContains(t, err, "unknown collection ''")
@@ -424,7 +424,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "unknown",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 						},
 					})
 					require.ErrorContains(t, err, "unknown collection 'unknown'")
@@ -441,7 +441,7 @@ func TestQueryService(t *testing.T) {
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 						{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: "dest_domains"}},
 					},
 				})
@@ -450,13 +450,13 @@ func TestQueryService(t *testing.T) {
 
 			t.Run("not supported for non-text field", func(t *testing.T) {
 				for _, tc := range []string{
-					"@timestamp", "bytes_in", "num_flows", "policy.type",
+					"start_time", "bytes_in", "num_flows", "policy.type",
 				} {
 					t.Run(tc, func(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 								{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: tc}},
 							},
 						})
@@ -473,7 +473,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "invalid-value", LTE: "10", Field: "bytes_in"}},
 						},
 					})
@@ -484,7 +484,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "10", LTE: "invalid-value", Field: "bytes_in"}},
 						},
 					})
@@ -495,7 +495,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", Field: "bytes_in"}},
 						},
 					})
@@ -506,7 +506,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "100", LTE: "1", Field: "bytes_in"}},
 						},
 					})
@@ -523,7 +523,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "10", Field: "bytes_in"}},
 						},
 					})
@@ -537,7 +537,7 @@ func TestQueryService(t *testing.T) {
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							{Criterion: client.QueryRequestFilterCriterion{Type: "range", LTE: "10", Field: "bytes_in"}},
 						},
 					})
@@ -553,7 +553,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 								{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "99", LTE: "100", Field: "bytes_in"}},
 							},
 						})
@@ -568,7 +568,7 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							Filters: []client.QueryRequestFilter{
-								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "@timestamp"}},
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 								{Criterion: client.QueryRequestFilterCriterion{Type: "range", GTE: "99", LTE: "100", Field: "bytes_in"}},
 							},
 						})
@@ -606,7 +606,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 				})
 
@@ -626,7 +626,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 				})
 
@@ -646,7 +646,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 				})
 
@@ -702,7 +702,7 @@ func TestQueryService(t *testing.T) {
 						CollectionName: "flows",
 						ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 						},
 						GroupBys: testCase.groupBys,
 					})
@@ -752,7 +752,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 					Aggregations: client.QueryRequestAggregations{
 						"agg0": {FieldName: "bytes_in", Function: client.QueryRequestAggregationFunction{Type: tc.functionType}},
@@ -824,7 +824,7 @@ func TestQueryService(t *testing.T) {
 					CollectionName: "flows",
 					ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 					Filters: []client.QueryRequestFilter{
-						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 				})
 
@@ -874,7 +874,7 @@ func TestQueryService(t *testing.T) {
 									CollectionName: "flows",
 									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
-										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
 										{FieldName: "dest_namespace", MaxValues: 0},
@@ -900,7 +900,7 @@ func TestQueryService(t *testing.T) {
 								CollectionName: "flows",
 								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 								Filters: []client.QueryRequestFilter{
-									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
 									{FieldName: "dest_namespace", MaxValues: 11},
@@ -940,7 +940,7 @@ func TestQueryService(t *testing.T) {
 									CollectionName: "flows",
 									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
-										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 									},
 									GroupBys: []client.QueryRequestGroup{
 										{FieldName: "start_time"},
@@ -1006,7 +1006,7 @@ func TestQueryService(t *testing.T) {
 								CollectionName: "flows",
 								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2", "cluster3"},
 								Filters: []client.QueryRequestFilter{
-									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 								},
 								GroupBys: []client.QueryRequestGroup{
 									{FieldName: "start_time", MaxValues: 3},
@@ -1049,7 +1049,7 @@ func TestQueryService(t *testing.T) {
 						MaxDocs:        intp(0),
 						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 						Filters: []client.QueryRequestFilter{
-							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 						},
 						Aggregations: client.QueryRequestAggregations{
 							"a-count-aggregation": {
@@ -1198,7 +1198,7 @@ func TestQueryService(t *testing.T) {
 				CollectionName: "flows",
 				ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "@timestamp"}},
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 				},
 			})
 

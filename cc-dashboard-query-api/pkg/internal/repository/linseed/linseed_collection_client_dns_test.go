@@ -51,7 +51,7 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 				},
 				QuerySortParams: lsv1.QuerySortParams{
 					Sort: []lsv1.SearchRequestSortBy{
-						{Field: "@timestamp", Descending: true},
+						{Field: "start_time", Descending: true},
 					},
 				},
 			}, params)
@@ -119,7 +119,7 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				},

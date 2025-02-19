@@ -17,8 +17,8 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
-	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 func TestLinseedRepository(t *testing.T) {
@@ -119,7 +119,7 @@ func TestLinseedRepository(t *testing.T) {
 				DNSLogParams: lsv1.DNSLogParams{
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				},
@@ -167,7 +167,7 @@ func TestLinseedRepository(t *testing.T) {
 				DNSLogParams: lsv1.DNSLogParams{
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "@timestamp", Descending: true},
+							{Field: "start_time", Descending: true},
 						},
 					},
 				},

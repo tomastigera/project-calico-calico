@@ -20,11 +20,11 @@ func TestCollections(t *testing.T) {
 		require.ElementsMatch(t, collectionNames, []CollectionName{"dns", "flows", "l7"})
 	})
 
-	t.Run("contains timestamp field", func(t *testing.T) {
+	t.Run("contains start_time field", func(t *testing.T) {
 		for _, c := range allCollections {
-			field, found := c.Field("@timestamp")
+			field, found := c.Field("start_time")
 			require.True(t, found)
-			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp", internal: true}, field)
+			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "start_time", filterDisabled: true}, field, c.name)
 		}
 	})
 }
