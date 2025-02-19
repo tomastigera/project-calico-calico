@@ -31,7 +31,9 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			t.Run("params", func(t *testing.T) {
 				now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
-				repositoryQueryParams := newQueryParams(0)
+				repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+
 				repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 					From: time.Date(2023, 1, 2, 3, 4, 5, 0, time.UTC),
 					To:   time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
@@ -60,8 +62,8 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 
 		t.Run("query result", func(t *testing.T) {
 			flowLogs := []lsv1.FlowLog{
-				{DestName: "test-dst1", TCPLostPackets: 11, StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
-				{DestName: "test-dst2", TCPLostPackets: 22, StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestName: "test-dst1", Cluster: "fake-cluster", TCPLostPackets: 11, StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestName: "test-dst2", Cluster: "fake-cluster", TCPLostPackets: 22, StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
 			}
 
 			mockClient.SetResults(rest.MockResult{
@@ -70,30 +72,26 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 					TotalHits: 22,
 				},
 			})
-			queryResult, err := subject.List(ctx, "fake-cluster", &lsv1.QueryParams{})
+			queryResult, err := subject.List(ctx, &lsv1.QueryParams{})
 			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
 				Hits: 22,
 				Documents: []result.QueryResultDocument{
 					{
-						Content: flowLogDocument{
-							Cluster: "fake-cluster",
-							FlowLog: lsv1.FlowLog{
-								DestName:       "test-dst1",
-								TCPLostPackets: 11,
-								StartTime:      time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
-							},
+						Content: lsv1.FlowLog{
+							DestName:       "test-dst1",
+							Cluster:        "fake-cluster",
+							TCPLostPackets: 11,
+							StartTime:      time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
 						},
 						Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC),
 					},
 					{
-						Content: flowLogDocument{
-							Cluster: "fake-cluster",
-							FlowLog: lsv1.FlowLog{
-								DestName:       "test-dst2",
-								TCPLostPackets: 22,
-								StartTime:      time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
-							},
+						Content: lsv1.FlowLog{
+							DestName:       "test-dst2",
+							Cluster:        "fake-cluster",
+							TCPLostPackets: 22,
+							StartTime:      time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(),
 						},
 						Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC),
 					},
@@ -117,7 +115,9 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 			aggregations := map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
 
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams := newQueryParams(0)
+			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
+
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
 				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
@@ -161,7 +161,7 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 					"agg2": json.RawMessage(`{"buckets":[]}`)},
 			})
 
-			aggrResult, err := subject.Aggregations(ctx, "fake-cluster", &lsv1.FlowLogAggregationParams{
+			aggrResult, err := subject.Aggregations(ctx, &lsv1.FlowLogAggregationParams{
 				Aggregations: elastic.Aggregations{
 					"agg1": json.RawMessage(`{"terms":{"field":"f1"}}`),
 					"agg2": json.RawMessage(`{"terms":{"field":"f2"}}`),

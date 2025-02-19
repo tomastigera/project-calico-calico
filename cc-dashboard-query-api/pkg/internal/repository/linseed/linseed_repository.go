@@ -18,8 +18,9 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository"
-	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 type LinseedRepository struct {
@@ -69,9 +70,12 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		return result.QueryResult{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName))
 	}
 
-	linseedQueryParams := newQueryParams(req.MaxDocuments)
+	linseedQueryParams, err := newQueryParams(req.MaxDocuments, slices.ToStrings(req.ClusterIDs))
+	if err != nil {
+		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
+	}
 
-	err := linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
+	err = linseedQueryParams.setCriteria(req.Filters, time.Now().UTC())
 	if err != nil {
 		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
 	}
@@ -107,7 +111,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		 * aggregations. For groups, this key is the group numeric index in the req.Groups slice, prefixed with "g".
 		 *
 		 * Only the elastic aggregation for the group at index 0 ("g0") must be set in repositoryAggregations because
-		 * each subsequent group is set as an elastic subaggregation of the previous-index group, so groups beyond
+		 * each subsequent group is set as an elastic sub-aggregation of the previous-index group, so groups beyond
 		 * index 0 are already included in aggJson.
 		 */
 		repositoryAggregations["g0"] = aggJson
@@ -132,7 +136,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 
 	var queryResult result.QueryResult
 	if len(repositoryAggregations) > 0 {
-		resultAggregations, err := collectionClient.Aggregations(ctx, req.ClusterID, params)
+		resultAggregations, err := collectionClient.Aggregations(ctx, params)
 		if err != nil {
 			return result.QueryResult{}, handleQueryResultError(err)
 		}
@@ -156,7 +160,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		}
 
 	} else {
-		queryResult, err = collectionClient.List(ctx, req.ClusterID, params)
+		queryResult, err = collectionClient.List(ctx, params)
 		if err != nil {
 			return result.QueryResult{}, handleQueryResultError(err)
 		}

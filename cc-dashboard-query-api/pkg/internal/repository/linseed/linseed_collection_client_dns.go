@@ -8,7 +8,6 @@ import (
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
@@ -22,8 +21,7 @@ type collectionClientDNS struct {
 // TODO: This document should contain relevant fields instead of the entirety of the DNSLog
 type dnsLogDocument struct {
 	lsv1.DNSLog
-	Cluster  query.ManagedClusterName `json:"cluster"`
-	ClientIP string                   `json:"client_ip"`
+	ClientIP string `json:"client_ip"`
 }
 
 var _ linseedCollectionClient = &collectionClientDNS{}
@@ -62,34 +60,31 @@ func (c *collectionClientDNS) Params(params *queryParams, aggregations map[strin
 	return dnsLogParams, nil
 }
 
-func (c *collectionClientDNS) List(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (result.QueryResult, error) {
+func (c *collectionClientDNS) List(ctx context.Context, params lsv1.Params) (result.QueryResult, error) {
 	c.logger.DebugC(ctx, "DNSLogs.List",
-		logging.String("clusterName", string(clusterName)),
 		logging.Any("params", params))
 
-	listResult, err := c.client.DNSLogs(string(clusterName)).List(ctx, params)
+	listResult, err := c.client.DNSLogs(lsv1.QueryMultipleClusters).List(ctx, params)
 	if err != nil {
 		return result.QueryResult{}, err
 	}
 
 	return result.QueryResult{
 		Hits: listResult.TotalHits,
-		Documents: slices.Map(listResult.Items, func(i lsv1.DNSLog) result.QueryResultDocument {
+		Documents: slices.Map(listResult.Items, func(item lsv1.DNSLog) result.QueryResultDocument {
 			return result.QueryResultDocument{
 				Content: dnsLogDocument{
-					DNSLog:   i,
-					Cluster:  clusterName,
-					ClientIP: result.QueryResultDocumentContentIP(i.ClientIP),
+					DNSLog:   item,
+					ClientIP: result.QueryResultDocumentContentIP(item.ClientIP),
 				},
-				Timestamp: i.StartTime.UTC()}
+				Timestamp: item.StartTime.UTC()}
 		}),
 	}, nil
 }
 
-func (c *collectionClientDNS) Aggregations(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (elastic.Aggregations, error) {
+func (c *collectionClientDNS) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
 	c.logger.DebugC(ctx, "DNSLogs.Aggregations",
-		logging.String("clusterName", string(clusterName)),
 		logging.Any("params", params))
 
-	return c.client.DNSLogs(string(clusterName)).Aggregations(ctx, params)
+	return c.client.DNSLogs(lsv1.QueryMultipleClusters).Aggregations(ctx, params)
 }

@@ -62,7 +62,7 @@ func TestQueryService(t *testing.T) {
 	repository := linseed.NewLinseedRepositoryWithClient(logger, "", mockClient)
 
 	managedClusterLister := managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
-		return []query.ManagedClusterName{"cluster1", "cluster2"}, nil
+		return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
 	})
 
 	subject := NewQueryService(
@@ -101,42 +101,138 @@ func TestQueryService(t *testing.T) {
 				},
 			})
 
-			require.Equal(t, err, httpreply.ReplyAccessDenied)
+			require.Equal(t, httpreply.ReplyAccessDenied, err)
 		})
 
-		t.Run("partially authorized", func(t *testing.T) {
-			// TODO: enable this test once cluster-scoped log authorization is implemented either by using a bulk SubjectAccessReview
-			// or any other method
-			t.Skipf("partial authorization is disabled until cluster-scoped logs are implemented")
+		t.Run("authorized", func(t *testing.T) {
+			stringp := func(s string) *string { return &s }
 
-			ctx := newAuthContext(t, true, "cluster1")
-
-			mockClient.SetResults(
-				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
-			)
-
-			_, err := subject.Query(ctx, client.QueryRequest{
-				CollectionName: "flows",
-				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+			testCases := []struct {
+				name              string
+				matchingResources []fake.MatchingResource
+				expectSuccess     bool
+			}{
+				{
+					name: "partial for cluster1",
+					matchingResources: []fake.MatchingResource{
+						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster1")},
+					},
+					expectSuccess: false,
 				},
-			})
-			require.NoError(t, err)
+				{
+					name: "partial for cluster2",
+					matchingResources: []fake.MatchingResource{
+						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster2")},
+					},
+					expectSuccess: false,
+				},
+				{
+					name: "all requested clusters",
+					matchingResources: []fake.MatchingResource{
+						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster1")},
+						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster2")},
+					},
+					expectSuccess: true,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					ctx := security.NewUserAuthContext(
+						context.Background(),
+						&user.DefaultInfo{Name: "fake-user"},
+						"cluster3",
+						fake.NewAuthorizerForMatchingResources(tc.matchingResources),
+						k8sfake.NewSimpleClientset(),
+					)
+
+					mockClient.SetResults(
+						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+					)
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+						},
+					})
+
+					if tc.expectSuccess {
+						require.NoError(t, err)
+					} else {
+						require.Equal(t, httpreply.ReplyAccessDenied, err)
+					}
+				})
+			}
 		})
 	})
 
 	t.Run("validation", func(t *testing.T) {
-		t.Run("unknown cluster", func(t *testing.T) {
-			ctx := newAuthContext(t, true, "unknown-cluster")
+		t.Run("cluster", func(t *testing.T) {
+			t.Run("unknown", func(t *testing.T) {
+				ctx := newAuthContext(t, true, "cluster1")
 
-			_, err := subject.Query(ctx, client.QueryRequest{
-				CollectionName: "flows",
-				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
-				},
+				_, err := subject.Query(ctx, client.QueryRequest{
+					CollectionName: "flows",
+					ClusterFilter:  []client.ManagedClusterName{"unknown-cluster"},
+					Filters: []client.QueryRequestFilter{
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+					},
+				})
+
+				require.Equal(t, httpreply.ToBadRequest("empty clusterIDs not allowed for query parameters"), err)
 			})
-			require.ErrorContains(t, err, "cluster 'unknown-cluster' not found")
+
+			t.Run("clusterFilter", func(t *testing.T) {
+				testCases := []struct {
+					name             string
+					clusterFilter    []client.ManagedClusterName
+					expectedClusters []string
+					message          string
+				}{
+					{
+						name:             "is empty",
+						clusterFilter:    nil,
+						expectedClusters: []string{"cluster1"},
+						message:          "expected QueryParams cluster to match security.Context cluster",
+					},
+					{
+						name:             "is set",
+						clusterFilter:    []client.ManagedClusterName{"cluster2", "cluster3", "cluster-unknown"},
+						expectedClusters: []string{"cluster2", "cluster3"},
+						message:          "expected QueryParams cluster to match ManagedClusterLister clusters",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						ctx := newAuthContext(t, true, "cluster1")
+
+						mockClient.SetResults(
+							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						)
+
+						_, err := subject.Query(ctx, client.QueryRequest{
+							CollectionName: "flows",
+							ClusterFilter:  tc.clusterFilter,
+							Filters: []client.QueryRequestFilter{
+								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+							},
+						})
+						require.NoError(t, err)
+
+						requests := mockClient.Requests()
+						require.Len(t, requests, 1)
+						require.IsType(t, &lsv1.FlowLogParams{}, requests[0].GetParams())
+
+						flowLogParams := requests[0].GetParams().(*lsv1.FlowLogParams)
+						require.Equal(t, tc.expectedClusters, flowLogParams.QueryParams.GetClusters(), tc.message)
+					})
+				}
+			})
 		})
+
 		t.Run("unknown criterion type", func(t *testing.T) {
 			_, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
@@ -400,7 +496,6 @@ func TestQueryService(t *testing.T) {
 			t.Run("multiple", func(t *testing.T) {
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
@@ -584,17 +679,17 @@ func TestQueryService(t *testing.T) {
 				t.Helper()
 				mockClient.SetResults(
 					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 11, Items: []lsv1.FlowLog{
-						{ID: "flow-log1"},
-						{ID: "flow-log2"},
-						{ID: "flow-log3"},
-						{ID: "flow-log4"},
-						{ID: "flow-log5"},
-						{ID: "flow-log6"},
-						{ID: "flow-log7"},
-						{ID: "flow-log8"},
-						{ID: "flow-log9"},
-						{ID: "flow-log10"},
-						{ID: "flow-log11"},
+						{ID: "flow-log1", Cluster: "cluster1"},
+						{ID: "flow-log2", Cluster: "cluster1"},
+						{ID: "flow-log3", Cluster: "cluster1"},
+						{ID: "flow-log4", Cluster: "cluster1"},
+						{ID: "flow-log5", Cluster: "cluster1"},
+						{ID: "flow-log6", Cluster: "cluster1"},
+						{ID: "flow-log7", Cluster: "cluster1"},
+						{ID: "flow-log8", Cluster: "cluster1"},
+						{ID: "flow-log9", Cluster: "cluster1"},
+						{ID: "flow-log10", Cluster: "cluster1"},
+						{ID: "flow-log11", Cluster: "cluster1"},
 					}})},
 				)
 			}
@@ -604,7 +699,6 @@ func TestQueryService(t *testing.T) {
 				resp, err := subject.Query(ctx, client.QueryRequest{
 					MaxDocs:        intp(2),
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
@@ -613,10 +707,7 @@ func TestQueryService(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, resp.Documents, 2)
 
-				documents := documentsToClusterAndLogID(t, resp.Documents)
-				require.Equal(t, map[string][]string{
-					"cluster1": {"flow-log1", "flow-log2"},
-				}, documents)
+				require.Equal(t, []string{"flow-log1", "flow-log2"}, slices.Map(resp.Documents, documentToFlowLogID))
 			})
 
 			t.Run("default value", func(t *testing.T) {
@@ -624,7 +715,6 @@ func TestQueryService(t *testing.T) {
 				resp, err := subject.Query(ctx, client.QueryRequest{
 					MaxDocs:        nil,
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
@@ -644,7 +734,6 @@ func TestQueryService(t *testing.T) {
 				resp, err := subject.Query(ctx, client.QueryRequest{
 					MaxDocs:        intp(1000),
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
@@ -700,7 +789,6 @@ func TestQueryService(t *testing.T) {
 
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
-						ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 						Filters: []client.QueryRequestFilter{
 							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 						},
@@ -750,7 +838,6 @@ func TestQueryService(t *testing.T) {
 				_, err := subject.Query(ctx, client.QueryRequest{
 					MaxDocs:        intp(1000),
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
@@ -807,35 +894,31 @@ func TestQueryService(t *testing.T) {
 		t.Run("single-tenant", func(t *testing.T) {
 			t.Run("query", func(t *testing.T) {
 				mockClient.SetResults(
-					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
-						{ID: "flow-log1"},
-						{ID: "flow-log2"},
-						{ID: "flow-log3"},
-					}})},
-					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
-						{ID: "flow-log4"},
-						{ID: "flow-log5"},
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 5, Items: []lsv1.FlowLog{
+						{ID: "flow-log1", Cluster: "cluster1"},
+						{ID: "flow-log2", Cluster: "cluster1"},
+						{ID: "flow-log3", Cluster: "cluster1"},
+						{ID: "flow-log4", Cluster: "cluster2"},
+						{ID: "flow-log5", Cluster: "cluster2"},
 					}})},
 				)
 
-				expectedFlowLogsIDs1 := []string{"flow-log1", "flow-log2", "flow-log3"}
+				expectedFlowLogsIDs := []string{"flow-log1", "flow-log2", "flow-log3", "flow-log4", "flow-log5"}
 
 				resp, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
-					ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 					Filters: []client.QueryRequestFilter{
 						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 					},
 				})
 
 				require.NoError(t, err)
-				require.Len(t, resp.Documents, 3)
-				require.Equal(t, client.QueryResponseTotals{Value: 3}, resp.Totals)
+				require.Len(t, resp.Documents, 5)
+				require.Equal(t, client.QueryResponseTotals{Value: 5}, resp.Totals)
 				require.Empty(t, resp.GroupValues)
 				require.Empty(t, resp.Aggregations)
 
-				documents := documentsToClusterAndLogID(t, resp.Documents)
-				require.Equal(t, map[string][]string{"cluster1": expectedFlowLogsIDs1}, documents)
+				require.Equal(t, expectedFlowLogsIDs, slices.Map(resp.Documents, documentToFlowLogID))
 			})
 
 			t.Run("result", func(t *testing.T) {
@@ -872,7 +955,6 @@ func TestQueryService(t *testing.T) {
 
 								resp, err := subject.Query(ctx, client.QueryRequest{
 									CollectionName: "flows",
-									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
 										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 									},
@@ -898,7 +980,6 @@ func TestQueryService(t *testing.T) {
 
 							resp, err := subject.Query(ctx, client.QueryRequest{
 								CollectionName: "flows",
-								ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 								Filters: []client.QueryRequestFilter{
 									{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 								},
@@ -938,7 +1019,6 @@ func TestQueryService(t *testing.T) {
 
 								resp, err := subject.Query(ctx, client.QueryRequest{
 									CollectionName: "flows",
-									ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 									Filters: []client.QueryRequestFilter{
 										{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 									},
@@ -1047,7 +1127,6 @@ func TestQueryService(t *testing.T) {
 					resp, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
 						MaxDocs:        intp(0),
-						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 						Filters: []client.QueryRequestFilter{
 							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 						},
@@ -1128,7 +1207,6 @@ func TestQueryService(t *testing.T) {
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
 							MaxDocs:        intp(0),
-							ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 							Filters: []client.QueryRequestFilter{
 								filter,
 							},
@@ -1181,57 +1259,37 @@ func TestQueryService(t *testing.T) {
 			)
 
 			mockClient.SetResults(
-				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 3, Items: []lsv1.FlowLog{
-					{ID: "flow-log1"},
-					{ID: "flow-log2"},
-					{ID: "flow-log3"},
-				}})},
-				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 2, Items: []lsv1.FlowLog{
-					{ID: "flow-log4"},
-					{ID: "flow-log5"},
+				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{TotalHits: 5, Items: []lsv1.FlowLog{
+					{ID: "flow-log1", Cluster: "cluster1"},
+					{ID: "flow-log2", Cluster: "cluster1"},
+					{ID: "flow-log3", Cluster: "cluster1"},
+					{ID: "flow-log4", Cluster: "cluster2"},
+					{ID: "flow-log5", Cluster: "cluster2"},
 				}})},
 			)
 
-			expectedFlowLogsIDs1 := []string{"flow-log1", "flow-log2", "flow-log3"}
+			expectedFlowLogsIDs := []string{"flow-log1", "flow-log2", "flow-log3", "flow-log4", "flow-log5"}
 
 			resp, err := subject.Query(ctx, client.QueryRequest{
 				CollectionName: "flows",
-				ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 				Filters: []client.QueryRequestFilter{
 					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
 				},
 			})
 
 			require.NoError(t, err)
-			require.Len(t, resp.Documents, 3)
-			require.Equal(t, client.QueryResponseTotals{Value: 3}, resp.Totals)
+			require.Len(t, resp.Documents, 5)
+			require.Equal(t, client.QueryResponseTotals{Value: 5}, resp.Totals)
 			require.Empty(t, resp.GroupValues)
 			require.Empty(t, resp.Aggregations)
 
-			documents := documentsToClusterAndLogID(t, resp.Documents)
-			require.Equal(t, map[string][]string{"cluster1": expectedFlowLogsIDs1}, documents)
+			require.Equal(t, expectedFlowLogsIDs, slices.Map(resp.Documents, documentToFlowLogID))
 		})
 	})
 }
 
-func documentsToClusterAndLogID(t *testing.T, documents []any) map[string][]string {
-	t.Helper()
-
-	var documentsSliceMap []map[string]any
-	documentsJSON, err := json.Marshal(documents)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(documentsJSON, &documentsSliceMap))
-
-	m := map[string][]string{}
-	for _, d := range documentsSliceMap {
-		cluster := d["cluster"].(string)
-		if _, ok := m[cluster]; !ok {
-			m[cluster] = []string{}
-		}
-		m[cluster] = append(m[cluster], d["id"].(string))
-	}
-
-	return m
+func documentToFlowLogID(d any) string {
+	return d.(lsv1.FlowLog).ID
 }
 
 func jsonMarshal(t *testing.T, v interface{}) []byte {

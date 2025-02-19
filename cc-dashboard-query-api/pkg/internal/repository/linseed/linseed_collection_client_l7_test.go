@@ -30,7 +30,9 @@ func TestLinseedCollectionClientL7(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams := newQueryParams(0)
+			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
+
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
 				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
@@ -58,8 +60,8 @@ func TestLinseedCollectionClientL7(t *testing.T) {
 
 		t.Run("query result", func(t *testing.T) {
 			l7Logs := []lsv1.L7Log{
-				{DestNamespace: "test-namespace1", StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
-				{DestNamespace: "test-namespace2", StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestNamespace: "test-namespace1", Cluster: "fake-cluster", StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
+				{DestNamespace: "test-namespace2", Cluster: "fake-cluster", StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix()},
 			}
 
 			mockClient.SetResults(rest.MockResult{
@@ -68,13 +70,13 @@ func TestLinseedCollectionClientL7(t *testing.T) {
 					TotalHits: 22,
 				},
 			})
-			queryResult, err := subject.List(ctx, "fake-cluster", &lsv1.QueryParams{})
+			queryResult, err := subject.List(ctx, &lsv1.QueryParams{})
 			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
 				Hits: 22,
 				Documents: []result.QueryResultDocument{
-					{Content: l7LogDocument{Cluster: "fake-cluster", L7Log: l7Logs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-					{Content: l7LogDocument{Cluster: "fake-cluster", L7Log: l7Logs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
+					{Content: l7Logs[0], Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+					{Content: l7Logs[1], Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
 				},
 			}, queryResult)
 		})
@@ -134,7 +136,7 @@ func TestLinseedCollectionClientL7(t *testing.T) {
 					"agg2": json.RawMessage(`{"buckets":[]}`)},
 			})
 
-			aggrResult, err := subject.Aggregations(ctx, "fake-cluster", &lsv1.QueryParams{})
+			aggrResult, err := subject.Aggregations(ctx, &lsv1.QueryParams{})
 			require.NoError(t, err)
 			require.Equal(t, expectedAggregations, aggrResult)
 		})

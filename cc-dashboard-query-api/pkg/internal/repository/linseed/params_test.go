@@ -43,11 +43,23 @@ func TestParams(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
 
+	t.Run("clusterIDs", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			_, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
+		})
+		t.Run("empty", func(t *testing.T) {
+			_, err := newQueryParams(0, []string{})
+			require.ErrorContains(t, err, "empty clusterIDs not allowed for query parameters")
+		})
+	})
+
 	t.Run("filter criterion", func(t *testing.T) {
 		t.Run("in", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewIn(clientNameField, []string{"test-value1", "test-value2", "test-value3"}, false),
 				filters.NewIn(clientNameField, []string{"test-value4", "test-value5", "test-value6"}, true),
 			}, time.Time{})
@@ -57,14 +69,16 @@ func TestParams(t *testing.T) {
 				selector: `( client_name = "test-value1" OR client_name = "test-value2" OR client_name = "test-value3" ) AND ( client_name != "test-value4" AND client_name != "test-value5" AND client_name != "test-value6" )`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
 		t.Run("or", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewOr(filters.Criteria{
 					filters.NewEquals(clientNameField, "test-value1", false),
 					filters.NewEquals(clientNameField, "test-value2", true),
@@ -80,14 +94,16 @@ func TestParams(t *testing.T) {
 				selector: `( client_name = "test-value1" OR client_name != "test-value2" ) AND NOT ( client_name = "test-value3" OR client_name != "test-value4" )`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
 		t.Run("range", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewRange(countField, intp(10), intp(20), false),
 			}, time.Time{})
 			require.NoError(t, err)
@@ -96,13 +112,15 @@ func TestParams(t *testing.T) {
 				selector: `count >= 10 AND count <= 20`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewRange(countField, intp(10), intp(20), true),
 				}, time.Time{})
 				require.NoError(t, err)
@@ -111,6 +129,7 @@ func TestParams(t *testing.T) {
 					selector: `NOT (count >= 10 AND count <= 20)`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
@@ -123,7 +142,8 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("single parameter", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
 				t.Run("gte", func(t *testing.T) {
 					err := subject.setCriteria(filters.Criteria{
@@ -135,6 +155,7 @@ func TestParams(t *testing.T) {
 						selector: `count >= 10`,
 
 						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 					}, subject)
 				})
@@ -148,6 +169,7 @@ func TestParams(t *testing.T) {
 						selector: `count <= 20`,
 
 						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 					}, subject)
 
@@ -162,6 +184,7 @@ func TestParams(t *testing.T) {
 							selector: `NOT (count <= 20)`,
 
 							domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+							linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 							linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 						}, subject)
 					})
@@ -170,9 +193,10 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("equals", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewEquals(qnameField, "test-domain1.com", false),
 				filters.NewEquals(qnameField, "test-domain2.com", true),
 				filters.NewEquals(qnameField, "test-domain3.com", true),
@@ -185,13 +209,15 @@ func TestParams(t *testing.T) {
 					lsv1.DomainMatchRRSet:  nil,
 					lsv1.DomainMatchRRData: nil,
 				},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("enum fields", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewEquals(enumField, `allow`, false),
 				}, time.Time{})
 				require.NoError(t, err)
@@ -199,9 +225,10 @@ func TestParams(t *testing.T) {
 				require.Equal(t, `action = "allow"`, subject.selector)
 
 				t.Run("invalid value", func(t *testing.T) {
-					subject := newQueryParams(0)
+					subject, err := newQueryParams(0, []string{"fake-cluster"})
+					require.NoError(t, err)
 
-					err := subject.setCriteria(filters.Criteria{
+					err = subject.setCriteria(filters.Criteria{
 						filters.NewEquals(enumField, `invalid-value`, false),
 					}, time.Time{})
 					require.ErrorContains(t, err, "invalid value for field 'action': invalid-value")
@@ -209,9 +236,10 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("policy match", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewEquals(policyTypeField, "staged", false),
 				}, time.Time{})
 				require.NoError(t, err)
@@ -225,6 +253,7 @@ func TestParams(t *testing.T) {
 						lsv1.DomainMatchRRSet:  nil,
 						lsv1.DomainMatchRRData: nil,
 					},
+					linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					linseedQuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
 							{Field: "start_time", Descending: true},
@@ -233,9 +262,10 @@ func TestParams(t *testing.T) {
 				}, subject)
 
 				t.Run("negated", func(t *testing.T) {
-					subject := newQueryParams(0)
+					subject, err := newQueryParams(0, []string{"fake-cluster"})
+					require.NoError(t, err)
 
-					err := subject.setCriteria(filters.Criteria{
+					err = subject.setCriteria(filters.Criteria{
 						filters.NewEquals(policyTypeField, "staged", true),
 					}, time.Time{})
 					require.NoError(t, err)
@@ -247,6 +277,7 @@ func TestParams(t *testing.T) {
 							lsv1.DomainMatchRRSet:  nil,
 							lsv1.DomainMatchRRData: nil,
 						},
+						linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 						linseedQuerySortParams: lsv1.QuerySortParams{
 							Sort: []lsv1.SearchRequestSortBy{
 								{Field: "start_time", Descending: true},
@@ -258,7 +289,8 @@ func TestParams(t *testing.T) {
 
 			t.Run("invalid numbers", func(t *testing.T) {
 				setEqualsCriterion := func(t *testing.T, value any) error {
-					subject := newQueryParams(0)
+					subject, err := newQueryParams(0, []string{"fake-cluster"})
+					require.NoError(t, err)
 
 					return subject.setCriteria(filters.Criteria{
 						filters.NewEquals(countField, value, false),
@@ -286,9 +318,10 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("exists", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewExists(clientNameField, false),
 			}, time.Time{})
 			require.NoError(t, err)
@@ -297,13 +330,15 @@ func TestParams(t *testing.T) {
 				selector: `client_name IN {"*"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewExists(clientNameField, true),
 				}, time.Time{})
 				require.NoError(t, err)
@@ -312,15 +347,17 @@ func TestParams(t *testing.T) {
 					selector: `client_name NOTIN {"*"}`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
 
 		})
 		t.Run("ipRange", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewIPRange(clientIPField, "10.0.0.1", "10.0.0.255", false),
 			}, time.Time{})
 			require.NoError(t, err)
@@ -329,13 +366,15 @@ func TestParams(t *testing.T) {
 				selector: `client_ip >= "10.0.0.1" AND client_ip <= "10.0.0.255"`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewIPRange(clientIPField, "10.0.0.1", "10.0.0.255", true),
 				}, time.Time{})
 				require.NoError(t, err)
@@ -344,15 +383,17 @@ func TestParams(t *testing.T) {
 					selector: `client_ip < "10.0.0.1" AND client_ip > "10.0.0.255"`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 			})
 		})
 
 		t.Run("wildcard", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewWildcard(qnameField, "*test-domain1.com", false),
 				filters.NewWildcard(qnameField, "test-domain2.com*", true),
 				filters.NewWildcard(qnameField, "test-domain*.com", true),
@@ -363,18 +404,20 @@ func TestParams(t *testing.T) {
 				selector: `qname IN {"*test-domain1.com"} AND qname NOTIN {"test-domain2.com*"} AND qname NOTIN {"test-domain*.com"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 		})
 
 		t.Run("dateRange", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
 			to := time.Date(2021, 12, 11, 10, 9, 8, 7, time.UTC)
 			from := time.Date(2020, 12, 11, 10, 9, 8, 7, time.UTC)
 			now := time.Date(2025, 12, 11, 10, 9, 8, 7, time.UTC)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewDateRange(nil, from, &to, false),
 			}, now)
 			require.NoError(t, err)
@@ -382,20 +425,23 @@ func TestParams(t *testing.T) {
 			require.Empty(t, subject.selector)
 			require.Equal(t, lsv1.QueryParams{
 				TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now},
+				Clusters:  []string{"fake-cluster"},
 			}, subject.linseedQueryParams)
 			require.Equal(t, time.Duration(365*24)*time.Hour, subject.requestedPeriod)
 
 			t.Run("negated", func(t *testing.T) {
-				subject := newQueryParams(0)
-				err := subject.setCriteria(filters.Criteria{
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(nil, from, &to, true),
 				}, now)
 				require.ErrorContains(t, err, "negated dateRange criterion is not supported")
 			})
 
 			t.Run("with field set", func(t *testing.T) {
-				subject := newQueryParams(0)
-				err := subject.setCriteria(filters.Criteria{
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, &to, false),
 				}, now)
 				require.NoError(t, err)
@@ -403,12 +449,14 @@ func TestParams(t *testing.T) {
 				require.Empty(t, subject.selector)
 				require.Equal(t, lsv1.QueryParams{
 					TimeRange: &lmav1.TimeRange{From: from, To: to, Now: &now, Field: ""},
+					Clusters:  []string{"fake-cluster"},
 				}, subject.linseedQueryParams)
 			})
 
 			t.Run("defaults lte field to now", func(t *testing.T) {
-				subject := newQueryParams(0)
-				err := subject.setCriteria(filters.Criteria{
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, nil, false),
 				}, now)
 				require.NoError(t, err)
@@ -419,8 +467,9 @@ func TestParams(t *testing.T) {
 				lte := time.Date(2020, 0, 0, 0, 0, 0, 0, time.UTC)
 				gte := time.Date(2020, 0, 0, 0, 0, 0, 1, time.UTC)
 
-				subject := newQueryParams(0)
-				err := subject.setCriteria(filters.Criteria{
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, &lte, false),
 				}, now)
 				require.ErrorContains(t, err, "invalid value for dateRange: gte is greater than lte")
@@ -428,8 +477,9 @@ func TestParams(t *testing.T) {
 			t.Run("gte is not greater than default lte", func(t *testing.T) {
 				gte := time.Date(10000, 0, 0, 0, 0, 0, 1, time.UTC)
 
-				subject := newQueryParams(0)
-				err := subject.setCriteria(filters.Criteria{
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, nil, false),
 				}, now)
 				require.ErrorContains(t, err, "invalid value for dateRange gte")
@@ -437,9 +487,10 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("startsWith", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewStartsWith(qnameField, "test-domain1.", false),
 				filters.NewStartsWith(qnameField, "test-domain2.", true),
 				filters.NewStartsWith(qnameField, "test-domain3.", true),
@@ -450,13 +501,15 @@ func TestParams(t *testing.T) {
 				selector: `qname IN {"test-domain1.*"} AND qname NOTIN {"test-domain2.*"} AND qname NOTIN {"test-domain3.*"}`,
 
 				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
 
 			t.Run("value escaping", func(t *testing.T) {
-				subject := newQueryParams(0)
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
 
-				err := subject.setCriteria(filters.Criteria{
+				err = subject.setCriteria(filters.Criteria{
 					filters.NewStartsWith(qnameField, "test-domain*1.", false),
 					filters.NewStartsWith(qnameField, "test-domain?2.", true),
 				}, time.Time{})
@@ -466,6 +519,7 @@ func TestParams(t *testing.T) {
 					selector: `qname IN {"test-domain\\*1.*"} AND qname NOTIN {"test-domain\\?2.*"}`,
 
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 				}, subject)
 
@@ -473,7 +527,8 @@ func TestParams(t *testing.T) {
 
 		})
 		t.Run("relativeTimeRange", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
 			now := time.Date(2025, 12, 11, 10, 30, 8, 7, time.UTC)
 
@@ -490,6 +545,7 @@ func TestParams(t *testing.T) {
 					From: time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
 					Now:  &now,
 				},
+				Clusters: []string{"fake-cluster"},
 			}, subject.linseedQueryParams)
 			require.Equal(t, time.Duration(5)*time.Minute, subject.requestedPeriod)
 
@@ -532,7 +588,8 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("sort documents by timestamp", func(t *testing.T) {
-		subject := newQueryParams(0)
+		subject, err := newQueryParams(0, []string{"fake-cluster"})
+		require.NoError(t, err)
 		require.Equal(t, lsv1.QuerySortParams{
 			Sort: []lsv1.SearchRequestSortBy{
 				{Field: "start_time", Descending: true},
@@ -541,9 +598,10 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("value escaping", func(t *testing.T) {
-		subject := newQueryParams(0)
+		subject, err := newQueryParams(0, []string{"fake-cluster"})
+		require.NoError(t, err)
 
-		err := subject.setCriteria(filters.Criteria{
+		err = subject.setCriteria(filters.Criteria{
 			filters.NewEquals(clientNameField, `test-name1" AND false`, false),
 			filters.NewEquals(clientNameField, `"test-name2"OR 123`, true),
 			filters.NewEquals(clientNameField, `test-name3' NOT 1=1"`, true),
@@ -556,9 +614,10 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("string to numeric value conversion", func(t *testing.T) {
-		subject := newQueryParams(0)
+		subject, err := newQueryParams(0, []string{"fake-cluster"})
+		require.NoError(t, err)
 
-		err := subject.setCriteria(filters.Criteria{
+		err = subject.setCriteria(filters.Criteria{
 			filters.NewEquals(countField, `124`, false),
 			filters.NewEquals(countField, `123.0`, true),
 		}, time.Time{})
@@ -569,9 +628,10 @@ func TestParams(t *testing.T) {
 			subject.selector)
 
 		t.Run("negative numbers", func(t *testing.T) {
-			subject := newQueryParams(0)
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
 
-			err := subject.setCriteria(filters.Criteria{
+			err = subject.setCriteria(filters.Criteria{
 				filters.NewEquals(countField, `-849`, false),
 			}, time.Time{})
 			require.ErrorContains(t, err, `invalid equals criterion value "-849"`)

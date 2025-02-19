@@ -12,7 +12,7 @@ type ManagedClusterName string
 type QueryRequest struct {
 	Groups         groups.Groups
 	Filters        filters.Criteria
-	ClusterID      ManagedClusterName
+	ClusterIDs     []ManagedClusterName
 	Aggregations   aggregations.Aggregations
 	MaxDocuments   int
 	CollectionName collections.CollectionName

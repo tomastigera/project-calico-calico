@@ -30,7 +30,9 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams := newQueryParams(0)
+			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
+
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
 				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
@@ -60,8 +62,8 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 		t.Run("query result", func(t *testing.T) {
 			ip := net.ParseIP("1.2.3.4")
 			dnsLogs := []lsv1.DNSLog{
-				{QName: "test-domain1.com", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-				{QName: "test-domain2.com", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC), ClientIP: &ip},
+				{QName: "test-domain1.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+				{QName: "test-domain2.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC), ClientIP: &ip},
 			}
 
 			mockClient.SetResults(rest.MockResult{
@@ -70,13 +72,13 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 					TotalHits: 22,
 				},
 			})
-			queryResult, err := subject.List(ctx, "fake-cluster", &lsv1.QueryParams{})
+			queryResult, err := subject.List(ctx, &lsv1.QueryParams{})
 			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
 				Hits: 22,
 				Documents: []result.QueryResultDocument{
-					{Content: dnsLogDocument{ClientIP: "0.0.0.0", Cluster: "fake-cluster", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-					{Content: dnsLogDocument{ClientIP: "1.2.3.4", Cluster: "fake-cluster", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
+					{Content: dnsLogDocument{ClientIP: "0.0.0.0", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+					{Content: dnsLogDocument{ClientIP: "1.2.3.4", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
 				},
 			}, queryResult)
 		})
@@ -97,7 +99,9 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 			aggregations := map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
 
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams := newQueryParams(0)
+			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			require.NoError(t, err)
+
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
 				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
 				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
@@ -143,7 +147,7 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 					"agg2": json.RawMessage(`{"buckets":[]}`)},
 			})
 
-			aggrResult, err := subject.Aggregations(ctx, "fake-cluster", &lsv1.QueryParams{})
+			aggrResult, err := subject.Aggregations(ctx, &lsv1.QueryParams{})
 			require.NoError(t, err)
 			require.Equal(t, expectedAggregations, aggrResult)
 		})

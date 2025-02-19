@@ -42,7 +42,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			queryResult, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 			})
 			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
@@ -57,7 +57,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			queryResult, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 			})
 			require.NoError(t, err)
 			require.Equal(t, result.QueryResult{
@@ -73,7 +73,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 			})
 			require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 			require.ErrorContains(t, err, "invalid value for field: test-value")
@@ -87,7 +87,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err := subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 			})
 			require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 			require.ErrorContains(t, err, "invalid criterion filter: (bytes_in = -1)'")
@@ -105,7 +105,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 				Aggregations: map[aggregations.AggregationKey]aggregations.Aggregation{
 					"agg1": aggregations.NewAggregationSum("f1"),
 				},
@@ -117,6 +117,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			require.Equal(t, &lsv1.DNSAggregationParams{
 				DNSLogParams: lsv1.DNSLogParams{
+					QueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
 							{Field: "start_time", Descending: true},
@@ -149,7 +150,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
-				ClusterID:      "fake-cluster",
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 				Aggregations: map[aggregations.AggregationKey]aggregations.Aggregation{
 					"agg1": aggregations.NewAggregationSum("f1"),
 				},
@@ -165,6 +166,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			require.Equal(t, &lsv1.DNSAggregationParams{
 				DNSLogParams: lsv1.DNSLogParams{
+					QueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
 							{Field: "start_time", Descending: true},

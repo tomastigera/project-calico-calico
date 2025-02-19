@@ -8,7 +8,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lestrrat-go/jwx/v2 v2.1.3
-	github.com/magefile/mage v1.15.0
+	github.com/magefile/mage v1.15.1-0.20231118170541-2385abb49a1f
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/projectcalico/calico v3.27.0+incompatible
 	github.com/rs/cors v1.11.1
@@ -18,10 +18,10 @@ require (
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 	github.com/tigera/tds-apiserver v0.74.0
 	github.com/tigera/tds-apiserver/lib v0.0.0-20250214200642-9354e245c4ea
-	k8s.io/api v0.30.1
-	k8s.io/apimachinery v0.30.1
-	k8s.io/apiserver v0.29.10
-	k8s.io/client-go v0.30.1
+	k8s.io/api v0.30.9
+	k8s.io/apimachinery v0.30.9
+	k8s.io/apiserver v0.30.9
+	k8s.io/client-go v0.30.9
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -77,9 +77,9 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
-	github.com/prometheus/client_golang v1.20.2 // indirect
+	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.57.0 // indirect
+	github.com/prometheus/common v0.61.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -102,30 +102,29 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
-	google.golang.org/grpc v1.65.0 // indirect
-	google.golang.org/protobuf v1.35.1 // indirect
+	golang.org/x/time v0.8.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
+	google.golang.org/grpc v1.68.1 // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.29.10 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/component-base v0.30.9 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a // indirect
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/network-policy-api v0.1.5 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 
 replace (
-	// github.com/tigera/calico-private@v3.20.0-2.0
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20241101222323-0d90db0e812a
+	// github.com/tigera/calico-private@v3.21.0-1.0
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250210230124-c54f05d60af0
 
-	// github.com/tigera/calico-private@v3.20.0-2.0
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20241101222323-0d90db0e812a
+	// github.com/tigera/calico-private@v3.21.0-1.0
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20250210230124-c54f05d60af0
 
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.10
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.10

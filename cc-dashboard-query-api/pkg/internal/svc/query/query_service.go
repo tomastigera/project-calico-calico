@@ -73,19 +73,17 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		logging.Any("aggregations", req.Aggregations),
 	)
 
-	clusterID := domain.ManagedClusterName(ctx.ClusterID())
-
 	queryCollection, err := s.validateRequest(req)
 	if err != nil {
 		return client.QueryResponse{}, err
 	}
 
-	// Note: this statement requires req.CollectionName to match the lma.tigera.io resourceNames (it currently does)
-	authorized, err := ctx.IsResourcePermitted("lma.tigera.io", string(req.CollectionName), string(clusterID))
-	if err != nil {
-		return client.QueryResponse{}, err
-	} else if !authorized {
-		return client.QueryResponse{}, httpreply.ReplyAccessDenied
+	clusterIDs := slices.Map(req.ClusterFilter, func(c client.ManagedClusterName) domain.ManagedClusterName {
+		return domain.ManagedClusterName(c)
+	})
+
+	if len(clusterIDs) == 0 {
+		clusterIDs = []domain.ManagedClusterName{domain.ManagedClusterName(ctx.ClusterID())}
 	}
 
 	managedClusterNames, err := s.managedClusterNameLister.List(ctx)
@@ -93,19 +91,19 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		return client.QueryResponse{}, err
 	}
 
-	/* TODO: enable this code once linseed supports multi-cluster queries
-	if len(req.ClusterFilter) > 0 {
-		// filter out non-existing ManagedCluster names.
-		// Note that an empty req.ClusterFilter means we'll query all managed clusters logs
-		managedClusterNames = slices.FilterBy(managedClusterNames, func(managedClusterName domain.ManagedClusterName) bool {
-			return slices.Contains(req.ClusterFilter, client.ManagedClusterName(managedClusterName))
-		})
-	}
+	// filter out non-existing ManagedCluster names.
+	clusterIDs = slices.FilterBy(managedClusterNames, func(managedClusterName domain.ManagedClusterName) bool {
+		return slices.Contains(clusterIDs, managedClusterName)
+	})
 
-	req.Clusters = managedClusterNames
-	*/
-	if !slices.Contains(managedClusterNames, clusterID) {
-		return client.QueryResponse{}, httpreply.ToBadRequest(fmt.Sprintf("cluster '%s' not found", clusterID))
+	for _, clusterID := range slices.Clone(clusterIDs) {
+		// Note: this statement requires req.CollectionName to match the lma.tigera.io resourceNames (it currently does)
+		authorized, err := ctx.IsResourcePermitted("lma.tigera.io", string(req.CollectionName), string(clusterID))
+		if err != nil {
+			return client.QueryResponse{}, err
+		} else if !authorized {
+			return client.QueryResponse{}, httpreply.ReplyAccessDenied
+		}
 	}
 
 	maxDocuments := MaxQueryDocumentsDefault
@@ -115,7 +113,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	}
 
 	repositoryRequest := domain.QueryRequest{
-		ClusterID:      clusterID,
+		ClusterIDs:     clusterIDs,
 		Aggregations:   make(aggregations.Aggregations),
 		MaxDocuments:   maxDocuments,
 		CollectionName: queryCollection.Name(),

@@ -9,7 +9,6 @@ import (
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
@@ -18,12 +17,6 @@ import (
 type collectionClientFlows struct {
 	logger logging.Logger
 	client lsclient.Client
-}
-
-// TODO: This document should contain relevant fields instead of the entirety of the FlowLog
-type flowLogDocument struct {
-	lsv1.FlowLog
-	Cluster query.ManagedClusterName `json:"cluster"`
 }
 
 var _ linseedCollectionClient = &collectionClientFlows{}
@@ -56,31 +49,29 @@ func (c *collectionClientFlows) Params(params *queryParams, aggregations map[str
 	return flowLogsLogParams, nil
 }
 
-func (c *collectionClientFlows) List(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (result.QueryResult, error) {
+func (c *collectionClientFlows) List(ctx context.Context, params lsv1.Params) (result.QueryResult, error) {
 	c.logger.DebugC(ctx, "FlowLogs.List",
-		logging.String("clusterName", string(clusterName)),
 		logging.Any("params", params))
 
-	listResult, err := c.client.FlowLogs(string(clusterName)).List(ctx, params)
+	listResult, err := c.client.FlowLogs(lsv1.QueryMultipleClusters).List(ctx, params)
 	if err != nil {
 		return result.QueryResult{}, err
 	}
 
 	return result.QueryResult{
 		Hits: listResult.TotalHits,
-		Documents: slices.Map(listResult.Items, func(i lsv1.FlowLog) result.QueryResultDocument {
+		Documents: slices.Map(listResult.Items, func(item lsv1.FlowLog) result.QueryResultDocument {
 			return result.QueryResultDocument{
-				Content:   flowLogDocument{FlowLog: i, Cluster: clusterName},
-				Timestamp: time.Unix(i.StartTime, 0).UTC(),
+				Content:   item,
+				Timestamp: time.Unix(item.StartTime, 0).UTC(),
 			}
 		}),
 	}, nil
 }
 
-func (c *collectionClientFlows) Aggregations(ctx context.Context, clusterName query.ManagedClusterName, params lsv1.Params) (elastic.Aggregations, error) {
+func (c *collectionClientFlows) Aggregations(ctx context.Context, params lsv1.Params) (elastic.Aggregations, error) {
 	c.logger.DebugC(ctx, "FlowLogs.Aggregations",
-		logging.String("clusterName", string(clusterName)),
 		logging.Any("params", params))
 
-	return c.client.FlowLogs(string(clusterName)).Aggregations(ctx, params)
+	return c.client.FlowLogs(lsv1.QueryMultipleClusters).Aggregations(ctx, params)
 }
