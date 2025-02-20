@@ -48,7 +48,6 @@
     nested:
     - field: qtype
     - field: rcode
-  - field: dest_ip
   - field: end_time
   - field: qname
   - field: qtype

@@ -58,7 +58,6 @@ var collectionDNS = Collection{
 				groupBy{field: "rcode"},
 			},
 		},
-		groupBy{field: "dest_ip"},
 		groupBy{field: "end_time"},
 		groupBy{field: "qname"},
 		groupBy{field: "qtype"},
