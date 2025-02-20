@@ -46,7 +46,6 @@ func TestQueryService(t *testing.T) {
 		return security.NewUserAuthContext(
 			context.Background(),
 			&user.DefaultInfo{Name: "fake-user"},
-			clusterID,
 			fake.NewAuthorizer(matchRules),
 			k8sfake.NewSimpleClientset(),
 		)
@@ -77,20 +76,6 @@ func TestQueryService(t *testing.T) {
 	)
 
 	t.Run("authorization", func(t *testing.T) {
-		t.Run("authorized", func(t *testing.T) {
-			mockClient.SetResults(
-				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
-				lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
-			)
-			_, err := subject.Query(ctx, client.QueryRequest{
-				CollectionName: "flows",
-				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
-				},
-			})
-
-			require.NoError(t, err)
-		})
 		t.Run("unauthorized", func(t *testing.T) {
 			ctx := newAuthContext(t, false, "cluster1")
 
@@ -105,32 +90,47 @@ func TestQueryService(t *testing.T) {
 		})
 
 		t.Run("authorized", func(t *testing.T) {
-			stringp := func(s string) *string { return &s }
 
 			testCases := []struct {
-				name              string
-				matchingResources []fake.MatchingResource
-				expectSuccess     bool
+				name                string
+				clusterFilter       []client.ManagedClusterName
+				authorizedResources []string
+				expectSuccess       bool
+				expectedErrMessage  string
 			}{
 				{
-					name: "partial for cluster1",
-					matchingResources: []fake.MatchingResource{
-						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster1")},
+					name:          "partial for cluster1",
+					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
+					authorizedResources: []string{
+						"cluster1",
 					},
-					expectSuccess: false,
+					expectSuccess:      false,
+					expectedErrMessage: "access denied to cluster cluster2",
 				},
 				{
-					name: "partial for cluster2",
-					matchingResources: []fake.MatchingResource{
-						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster2")},
+					name:          "partial for cluster2",
+					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
+					authorizedResources: []string{
+						"cluster2",
 					},
-					expectSuccess: false,
+					expectSuccess:      false,
+					expectedErrMessage: "access denied to cluster cluster1",
 				},
 				{
-					name: "all requested clusters",
-					matchingResources: []fake.MatchingResource{
-						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster1")},
-						{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp("cluster2")},
+					name:          "all requested clusters",
+					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
+					authorizedResources: []string{
+						"cluster1",
+						"cluster2",
+					},
+					expectSuccess: true,
+				},
+				{
+					name:          "all clusters",
+					clusterFilter: nil,
+					authorizedResources: []string{
+						"cluster1",
+						"cluster2",
 					},
 					expectSuccess: true,
 				},
@@ -141,8 +141,9 @@ func TestQueryService(t *testing.T) {
 					ctx := security.NewUserAuthContext(
 						context.Background(),
 						&user.DefaultInfo{Name: "fake-user"},
-						"cluster3",
-						fake.NewAuthorizerForMatchingResources(tc.matchingResources),
+						fake.NewAuthorizerForMatchingResources(slices.Map(tc.authorizedResources, func(resource string) fake.MatchingResource {
+							return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
+						})),
 						k8sfake.NewSimpleClientset(),
 					)
 
@@ -161,7 +162,11 @@ func TestQueryService(t *testing.T) {
 					if tc.expectSuccess {
 						require.NoError(t, err)
 					} else {
-						require.Equal(t, httpreply.ReplyAccessDenied, err)
+						require.Equal(t, httpreply.Reply{
+							Key:     httpreply.AccessDenied,
+							Status:  httpreply.ReplyAccessDenied.Status,
+							Message: tc.expectedErrMessage,
+						}, err)
 					}
 				})
 			}
@@ -181,37 +186,65 @@ func TestQueryService(t *testing.T) {
 					},
 				})
 
-				require.Equal(t, httpreply.ToBadRequest("empty clusterIDs not allowed for query parameters"), err)
+				require.Equal(t, httpreply.ReplyAccessDenied, err)
 			})
 
 			t.Run("clusterFilter", func(t *testing.T) {
 				testCases := []struct {
-					name             string
-					clusterFilter    []client.ManagedClusterName
-					expectedClusters []string
+					name                string
+					clusterFilter       []client.ManagedClusterName
+					authorizedResources []string
+
 					message          string
+					expectedErr      error
+					expectedClusters []string
 				}{
 					{
-						name:             "is empty",
-						clusterFilter:    nil,
-						expectedClusters: []string{"cluster1"},
-						message:          "expected QueryParams cluster to match security.Context cluster",
+						name:                "is empty",
+						clusterFilter:       nil,
+						authorizedResources: []string{"*"}, // authorized for all managed clusters
+						expectedClusters:    []string{},
+						message:             "expected QueryParams clusters be empty and AllClusters to be set",
 					},
 					{
-						name:             "is set",
-						clusterFilter:    []client.ManagedClusterName{"cluster2", "cluster3", "cluster-unknown"},
-						expectedClusters: []string{"cluster2", "cluster3"},
-						message:          "expected QueryParams cluster to match ManagedClusterLister clusters",
+						name:                "is empty with partial resources authorized authorization",
+						clusterFilter:       nil,
+						authorizedResources: []string{"cluster2", "cluster3"}, // authorized for subset of managed clusters
+						expectedClusters:    []string{"cluster2", "cluster3"},
+						message:             "expected QueryParams clusters be match authorized resources",
+					},
+					{
+						name:                "is set",
+						clusterFilter:       []client.ManagedClusterName{"cluster2", "cluster3"},
+						authorizedResources: []string{"cluster1", "cluster2", "cluster3"},
+						expectedClusters:    []string{"cluster2", "cluster3"},
+						message:             "expected QueryParams cluster to match clusterFilter",
+					},
+					{
+						name:                "contains unknown cluster",
+						clusterFilter:       []client.ManagedClusterName{"cluster2", "cluster3", "cluster-unknown"},
+						authorizedResources: []string{"cluster1", "cluster2", "cluster3"},
+						message:             "expected request denied",
+						expectedErr:         httpreply.ReplyAccessDenied,
 					},
 				}
 
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
-						ctx := newAuthContext(t, true, "cluster1")
-
-						mockClient.SetResults(
-							lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+						ctx := security.NewUserAuthContext(
+							context.Background(),
+							&user.DefaultInfo{Name: "fake-user"},
+							fake.NewAuthorizerForMatchingResources(slices.Map(tc.authorizedResources, func(resource string) fake.MatchingResource {
+								return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
+							})),
+							k8sfake.NewSimpleClientset(),
 						)
+
+						if tc.expectedErr == nil {
+							mockClient.SetResults(
+								lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+							)
+						}
 
 						_, err := subject.Query(ctx, client.QueryRequest{
 							CollectionName: "flows",
@@ -220,14 +253,25 @@ func TestQueryService(t *testing.T) {
 								{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 							},
 						})
-						require.NoError(t, err)
 
-						requests := mockClient.Requests()
-						require.Len(t, requests, 1)
-						require.IsType(t, &lsv1.FlowLogParams{}, requests[0].GetParams())
+						if tc.expectedErr != nil {
+							require.Equal(t, tc.expectedErr, err)
+						} else {
+							require.NoError(t, err)
 
-						flowLogParams := requests[0].GetParams().(*lsv1.FlowLogParams)
-						require.Equal(t, tc.expectedClusters, flowLogParams.QueryParams.GetClusters(), tc.message)
+							requests := mockClient.Requests()
+							require.Len(t, requests, 1)
+							require.IsType(t, &lsv1.FlowLogParams{}, requests[0].GetParams())
+
+							flowLogParams := requests[0].GetParams().(*lsv1.FlowLogParams)
+							require.Equal(t, tc.expectedClusters, flowLogParams.QueryParams.GetClusters(), tc.message)
+
+							if len(tc.expectedClusters) == 0 {
+								require.True(t, flowLogParams.QueryParams.AllClusters, tc.message)
+							} else {
+								require.False(t, flowLogParams.QueryParams.AllClusters, tc.message)
+							}
+						}
 					})
 				}
 			})
@@ -1304,3 +1348,5 @@ func jsonMarshal(t *testing.T, v interface{}) []byte {
 func intp(i int) *int {
 	return &i
 }
+
+func stringp(s string) *string { return &s }

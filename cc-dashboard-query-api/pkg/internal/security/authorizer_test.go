@@ -55,7 +55,7 @@ func TestAuthorizer(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		ctx := NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: userName}, "tigera-labs", authorizer, k8sClient)
+		ctx := NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: userName}, authorizer, k8sClient)
 
 		return ctx, authorizer, namespaceHits
 	}
@@ -194,7 +194,7 @@ func TestAuthorizer(t *testing.T) {
 			require.Equal(t, 1, len(*namespaceHits))
 		}
 
-		ctx = NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user2"}, "tigera-labs", authorizer, ctx.KubernetesClient())
+		ctx = NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user2"}, authorizer, ctx.KubernetesClient())
 		authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 		require.NoError(t, err)
 		require.True(t, authorized)

@@ -27,12 +27,12 @@ type queryParams struct {
 }
 
 func newQueryParams(maxDocuments int, clusterIDs []string) (*queryParams, error) {
-	if len(clusterIDs) == 0 {
-		return nil, fmt.Errorf("empty clusterIDs not allowed for query parameters")
-	}
-
 	return &queryParams{
-		linseedQueryParams: lsv1.QueryParams{MaxPageSize: maxDocuments, Clusters: clusterIDs},
+		linseedQueryParams: lsv1.QueryParams{
+			MaxPageSize: maxDocuments,
+			Clusters:    clusterIDs,
+			AllClusters: len(clusterIDs) == 0,
+		},
 		domainMatches: map[lsv1.DomainMatchType][]string{
 			lsv1.DomainMatchQname:  nil,
 			lsv1.DomainMatchRRSet:  nil,

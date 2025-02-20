@@ -82,27 +82,54 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		return domain.ManagedClusterName(c)
 	})
 
-	if len(clusterIDs) == 0 {
-		clusterIDs = []domain.ManagedClusterName{domain.ManagedClusterName(ctx.ClusterID())}
-	}
-
 	managedClusterNames, err := s.managedClusterNameLister.List(ctx)
 	if err != nil {
 		return client.QueryResponse{}, err
 	}
 
-	// filter out non-existing ManagedCluster names.
-	clusterIDs = slices.FilterBy(managedClusterNames, func(managedClusterName domain.ManagedClusterName) bool {
-		return slices.Contains(clusterIDs, managedClusterName)
-	})
+	// find if any request clusterIDs do not match existing ManagedCluster names
+	if slices.AnyMatch(clusterIDs, func(clusterID domain.ManagedClusterName) bool {
+		return !slices.Contains(managedClusterNames, clusterID)
+	}) {
+		return client.QueryResponse{}, httpreply.ReplyAccessDenied
+	}
 
-	for _, clusterID := range slices.Clone(clusterIDs) {
-		// Note: this statement requires req.CollectionName to match the lma.tigera.io resourceNames (it currently does)
-		authorized, err := ctx.IsResourcePermitted("lma.tigera.io", string(req.CollectionName), string(clusterID))
+	if len(clusterIDs) == 0 {
+		authorized, err := ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), "*")
 		if err != nil {
 			return client.QueryResponse{}, err
 		} else if !authorized {
-			return client.QueryResponse{}, httpreply.ReplyAccessDenied
+			// "all managed clusters" query should select the authorized subset of managed clusters for custom roles
+			for _, clusterID := range managedClusterNames {
+				authorized, err = ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), string(clusterID))
+				if err != nil {
+					return client.QueryResponse{}, err
+				}
+
+				if authorized {
+					clusterIDs = append(clusterIDs, clusterID)
+				}
+			}
+
+			if len(clusterIDs) == 0 {
+				// user is unauthorized for all managed clusters
+				return client.QueryResponse{}, httpreply.ReplyAccessDenied
+			}
+		}
+	} else {
+
+		for _, clusterID := range clusterIDs {
+			authorized, err := ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), string(clusterID))
+			if err != nil {
+				return client.QueryResponse{}, err
+			} else if !authorized {
+				// req.ClusterFilter contains a managed cluster the user is not authorized to access
+				return client.QueryResponse{}, httpreply.Reply{
+					Key:     httpreply.AccessDenied,
+					Status:  httpreply.ReplyAccessDenied.Status,
+					Message: fmt.Sprintf("access denied to cluster %s", clusterID),
+				}
+			}
 		}
 	}
 

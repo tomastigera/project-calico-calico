@@ -1,8 +1,5 @@
 package aggregations
 
-/* TODO: Fix linseed to return query results for multiple managed clusters from a single query
- */
-
 type AggregationValue interface {
 	Value() any
 }

@@ -28,7 +28,6 @@ func TestCollectionsService(t *testing.T) {
 		return security.NewUserAuthContext(
 			context.Background(),
 			&user.DefaultInfo{Name: "fake-user"},
-			"tigera-labs",
 			fake.NewAuthorizer(authorized),
 			k8sfake.NewSimpleClientset(),
 		)

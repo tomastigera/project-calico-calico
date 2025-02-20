@@ -26,8 +26,7 @@ func (s *CollectionsService) Collections(ctx security.Context) (client.Collectio
 
 	// authorize users with lma rules for any cluster
 	authorized, err := ctx.IsAnyPermitted("lma.tigera.io", slices.Map(allCollections, func(c collections.Collection) string {
-		// Note: this statement requires c.Name() to match the lma.tigera.io resourceNames (it currently does)
-		return string(c.Name())
+		return c.LmaResourceName()
 	}))
 	if err != nil {
 		return client.CollectionsResponse{}, err

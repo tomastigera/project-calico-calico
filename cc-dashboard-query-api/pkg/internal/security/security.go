@@ -9,7 +9,6 @@ import (
 
 type Context interface {
 	context.Context
-	ClusterID() string // Temporary cluster-id. TODO: Remove once linseed supports multi-cluster queries
 	UserInfo() user.Info
 
 	KubernetesClient() kubernetes.Interface
@@ -28,7 +27,6 @@ type userAuthContext struct {
 func NewUserAuthContext(
 	parent context.Context,
 	userInfo user.Info,
-	clusterID string,
 	authorizer Authorizer,
 	k8sClient kubernetes.Interface,
 ) Context {
@@ -36,7 +34,6 @@ func NewUserAuthContext(
 	return &userAuthContext{
 		Context:    parent,
 		userInfo:   userInfo,
-		clusterID:  clusterID,
 		k8sClient:  k8sClient,
 		authorizer: authorizer,
 	}
@@ -44,10 +41,6 @@ func NewUserAuthContext(
 
 func (u *userAuthContext) UserInfo() user.Info {
 	return u.userInfo
-}
-
-func (u *userAuthContext) ClusterID() string {
-	return u.clusterID
 }
 
 func (u *userAuthContext) KubernetesClient() kubernetes.Interface {

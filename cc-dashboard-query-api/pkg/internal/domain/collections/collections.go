@@ -63,6 +63,11 @@ func (c Collection) Field(fieldName FieldName) (CollectionField, bool) {
 	})
 }
 
+func (c Collection) LmaResourceName() string {
+	// Note: this statement requires c.name to match the lma.tigera.io resourceNames (it currently does)
+	return string(c.name)
+}
+
 func (t FieldType) Is(fieldType FieldType) bool {
 	return t == fieldType
 }

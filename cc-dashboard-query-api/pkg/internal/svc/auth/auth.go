@@ -13,12 +13,11 @@ import (
 	"k8s.io/client-go/rest"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
 )
 
 type AuthService struct {
@@ -111,9 +110,6 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		return nil, fmt.Errorf("unexpected authentication status code: %d", statusCode)
 	}
 
-	// Single clusterID. TODO: remove once linseed supports multi-cluster queries
-	clusterID := r.Header.Get(lmak8s.XClusterIDHeader)
-
 	k8sRestConfig := rest.CopyConfig(s.k8sManagerConfig)
 	k8sRestConfig.BearerToken = strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -122,7 +118,7 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		return nil, err
 	}
 
-	return security.NewUserAuthContext(r.Context(), userInfo, clusterID, s.authorizer, k8sClient), nil
+	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient), nil
 }
 
 func p[T any](v T) *T { return &v }

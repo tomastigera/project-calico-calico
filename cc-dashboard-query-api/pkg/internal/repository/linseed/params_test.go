@@ -44,13 +44,15 @@ func TestParams(t *testing.T) {
 	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
 
 	t.Run("clusterIDs", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			_, err := newQueryParams(0, []string{"fake-cluster"})
+		t.Run("non-empty", func(t *testing.T) {
+			subject, err := newQueryParams(0, []string{"fake-cluster"})
 			require.NoError(t, err)
+			require.False(t, subject.linseedQueryParams.AllClusters)
 		})
 		t.Run("empty", func(t *testing.T) {
-			_, err := newQueryParams(0, []string{})
-			require.ErrorContains(t, err, "empty clusterIDs not allowed for query parameters")
+			subject, err := newQueryParams(0, []string{})
+			require.NoError(t, err)
+			require.True(t, subject.linseedQueryParams.AllClusters)
 		})
 	})
 
