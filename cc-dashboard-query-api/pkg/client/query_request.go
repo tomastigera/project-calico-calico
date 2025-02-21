@@ -119,7 +119,6 @@ const (
 	AggregationFunctionTypeAvg           = AggregationFunctionType("avg")
 	AggregationFunctionTypeMin           = AggregationFunctionType("min")
 	AggregationFunctionTypeMax           = AggregationFunctionType("max")
-	AggregationFunctionTypePercentile    = AggregationFunctionType("percentile")
 	AggregationFunctionTypePercentile50  = AggregationFunctionType("p50")
 	AggregationFunctionTypePercentile90  = AggregationFunctionType("p90")
 	AggregationFunctionTypePercentile95  = AggregationFunctionType("p95")
@@ -127,8 +126,7 @@ const (
 )
 
 type QueryRequestAggregationFunction struct {
-	Type       AggregationFunctionType `json:"type"`
-	Percentile float64                 `json:"pct,omitempty"`
+	Type AggregationFunctionType `json:"type"`
 }
 
 // GetCriteria returns a QueryRequestFilterCriterion criteria field

@@ -503,8 +503,6 @@ func mapClientAggregation(from client.QueryRequestAggregation, collection collec
 		return aggregations.NewAggregationMin(from.FieldName), nil
 	case client.AggregationFunctionTypeMax:
 		return aggregations.NewAggregationMax(from.FieldName), nil
-	case client.AggregationFunctionTypePercentile:
-		return aggregations.NewAggregationPercentile(from.FieldName, from.Function.Percentile), nil
 	case client.AggregationFunctionTypePercentile50:
 		return aggregations.NewAggregationPercentile(from.FieldName, 50), nil
 	case client.AggregationFunctionTypePercentile90:
