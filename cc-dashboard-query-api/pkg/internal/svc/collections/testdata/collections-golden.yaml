@@ -21,7 +21,6 @@
     - p50
     - p90
     - p95
-    - p100
     filterDisabled: true
     name: latency_max
     type: number

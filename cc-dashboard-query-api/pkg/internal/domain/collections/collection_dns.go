@@ -25,7 +25,6 @@ var collectionDNS = Collection{
 				AggregationFunctionTypePercentile50,
 				AggregationFunctionTypePercentile90,
 				AggregationFunctionTypePercentile95,
-				AggregationFunctionTypePercentile100,
 			},
 		},
 		collectionFieldGeneric{
