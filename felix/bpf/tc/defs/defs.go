@@ -130,6 +130,7 @@ const (
 	EpTypeL3Device EndpointType = "l3dev"
 	EpTypeNAT      EndpointType = "nat"
 	EpTypeLO       EndpointType = "lo"
+	EpTypeVXLAN    EndpointType = "vxlan"
 )
 
 func SectionName(endpointType EndpointType, fromOrTo ToOrFromEp) string {
@@ -145,7 +146,8 @@ func ProgFilename(ipVer int, epType EndpointType, toOrFrom ToOrFromEp, epToHostD
 
 	// Should match CALI_FIB_LOOKUP_ENABLED in bpf.h
 	if fib {
-		toHost := (epType == EpTypeWorkload || epType == EpTypeHost || epType == EpTypeLO) && toOrFrom == FromEp
+		toHost := (epType == EpTypeWorkload || epType == EpTypeHost || epType == EpTypeLO ||
+			epType == EpTypeVXLAN) && toOrFrom == FromEp
 		toHEP := (epType == EpTypeHost || epType == EpTypeLO) && toOrFrom == ToEp
 
 		realFIB := epType != EpTypeL3Device && (toHost || toHEP)
@@ -187,6 +189,8 @@ func ProgFilename(ipVer int, epType EndpointType, toOrFrom ToOrFromEp, epToHostD
 		epTypeShort = "nat"
 	case EpTypeLO:
 		epTypeShort = "lo"
+	case EpTypeVXLAN:
+		epTypeShort = "vxlan"
 	}
 	corePart := ""
 	if btf {

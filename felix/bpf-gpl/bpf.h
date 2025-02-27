@@ -53,6 +53,7 @@
 #define CALI_TC_NAT_IF	(1<<7)
 #define CALI_TC_LO	(1<<8)
 #define CALI_CT_CLEANUP	(1<<9)
+#define CALI_TC_VXLAN	(1<<10)
 
 #ifndef CALI_DROP_WORKLOAD_TO_HOST
 #define CALI_DROP_WORKLOAD_TO_HOST false
