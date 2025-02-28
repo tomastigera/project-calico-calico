@@ -144,6 +144,7 @@ skip_redir_ifindex:
 
 		if (redirect_peer && ct_result_rc(state->ct_result.rc) == CALI_CT_ESTABLISHED_BYPASS &&
 			state->ct_result.ifindex_fwd != CT_INVALID_IFINDEX) {
+			ctx->fwd.mark |= CALI_SKB_MARK_BYPASS;
 			rc = bpf_redirect_peer(state->ct_result.ifindex_fwd, 0);
 			if (rc == TC_ACT_REDIRECT) {
 				CALI_DEBUG("Redirect to peer interface (%d) succeeded.", state->ct_result.ifindex_fwd);
@@ -154,6 +155,19 @@ skip_redir_ifindex:
 	}
 
 #if CALI_FIB_ENABLED
+
+#ifndef IPVER6
+	if (CALI_F_FROM_WEP && state->ct_result.ifindex_fwd != CT_INVALID_IFINDEX) {
+		rc = bpf_redirect_neigh(state->ct_result.ifindex_fwd, NULL, 0, 0);
+		if (rc == TC_ACT_REDIRECT) {
+			ctx->fwd.mark |= CALI_SKB_MARK_BYPASS;
+			CALI_DEBUG("Redirect to dev %d without fib lookup",
+					state->ct_result.ifindex_fwd);
+			goto skip_fib;
+		}
+	}
+#endif
+
 	/* Only do FIB for packets to be turned around at a HEP on HEP egress. */
 	if (CALI_F_TO_HEP && !(ctx->state->flags & CALI_ST_CT_NP_LOOP)) {
 		goto skip_fib;

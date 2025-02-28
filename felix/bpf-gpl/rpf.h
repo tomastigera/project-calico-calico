@@ -11,6 +11,7 @@
 
 static CALI_BPF_INLINE bool wep_rpf_check(struct cali_tc_ctx *ctx, struct cali_rt *r)
 {
+#if 0
         CALI_DEBUG("Workload RPF check src=" IP_FMT " skb iface=%d.",
                         debug_ip(ctx->state->ip_src), ctx->skb->ifindex);
         if (!r) {
@@ -31,12 +32,14 @@ static CALI_BPF_INLINE bool wep_rpf_check(struct cali_tc_ctx *ctx, struct cali_r
                                 ctx->skb->ifindex, r->if_index);
                 return false;
         }
+#endif
 
         return true;
 }
 
 static CALI_BPF_INLINE bool hep_rpf_check(struct cali_tc_ctx *ctx)
 {
+#if 0
 	bool ret = false;
 	bool strict;
 #ifdef IPVER6
@@ -127,5 +130,8 @@ static CALI_BPF_INLINE bool hep_rpf_check(struct cali_tc_ctx *ctx)
 #endif
 	CALI_DEBUG("Host RPF check rc %d result %d", rc, ret);
 	return ret;
+#endif
+
+	return true;
 }
 #endif /* __CALI_FIB_H__ */

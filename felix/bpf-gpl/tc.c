@@ -71,6 +71,11 @@ int calico_tc_main(struct __sk_buff *skb)
 	skb->mark = SKB_MARK;
 #endif
 
+	if ((CALI_F_HEP && !CALI_F_VXLAN) || (CALI_F_VXLAN && CALI_F_EGRESS&& skb->mark == CALI_SKB_MARK_BYPASS)) {
+		skb_set_mark(skb, CALI_SKB_MARK_SEEN);
+		return TC_ACT_UNSPEC;
+	}
+
 	if (CALI_F_LO && CALI_F_TO_HOST) {
 		/* Do nothing, it is a packet that just looped around. */
 		return TC_ACT_UNSPEC;
@@ -255,6 +260,9 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 
 	/* Do conntrack lookup before anything else */
 	ctx->state->ct_result = calico_ct_lookup(ctx);
+	if (ct_result_rc(ctx->state->ct_result.rc) != CALI_CT_NEW) {
+		goto allow;
+	}
 
 	calico_tc_process_ct_lookup(ctx);
 
@@ -469,6 +477,7 @@ syn_force_policy:
 			&& !(ctx->state->ip_proto == IPPROTO_ICMPV6 && ip_link_local(ctx->state->ip_src))
 #endif
 		) {
+#if 0
 		struct cali_rt *r = cali_rt_lookup(&ctx->state->ip_src);
 		/* Do RPF check since it's our responsibility to police that. */
 		if (!wep_rpf_check(ctx, r)) {
@@ -497,6 +506,7 @@ syn_force_policy:
 				ctx->state->flags |= CALI_ST_SKIP_FIB;
 			}
 		}
+#endif
 	}
 
 	/* [SMC] I had to add this revalidation when refactoring the conntrack code to use the context and

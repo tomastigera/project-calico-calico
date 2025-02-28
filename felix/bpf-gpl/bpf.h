@@ -93,6 +93,8 @@
 #define CALI_F_CGROUP	(((CALI_COMPILE_FLAGS) & CALI_CGROUP) != 0)
 #define CALI_F_DSR	((CALI_COMPILE_FLAGS & CALI_TC_DSR) != 0)
 
+#define CALI_F_VXLAN	((CALI_COMPILE_FLAGS & CALI_TC_VXLAN) != 0)
+
 #define CALI_RES_REDIR_BACK	108 /* packet should be sent back the same iface */
 #define CALI_RES_REDIR_IFINDEX	109 /* packet should be sent straight to
 				     * state->ct_result->ifindex_fwd
