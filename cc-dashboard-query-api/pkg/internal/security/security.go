@@ -10,6 +10,7 @@ import (
 type Context interface {
 	context.Context
 	UserInfo() user.Info
+	Authorization() string
 
 	KubernetesClient() kubernetes.Interface
 	IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error)
@@ -18,10 +19,11 @@ type Context interface {
 
 type userAuthContext struct {
 	context.Context
-	clusterID  string
-	userInfo   user.Info
-	k8sClient  kubernetes.Interface
-	authorizer Authorizer
+	clusterID     string
+	userInfo      user.Info
+	k8sClient     kubernetes.Interface
+	authorizer    Authorizer
+	authorization string
 }
 
 func NewUserAuthContext(
@@ -29,13 +31,15 @@ func NewUserAuthContext(
 	userInfo user.Info,
 	authorizer Authorizer,
 	k8sClient kubernetes.Interface,
+	authorization string,
 ) Context {
 
 	return &userAuthContext{
-		Context:    parent,
-		userInfo:   userInfo,
-		k8sClient:  k8sClient,
-		authorizer: authorizer,
+		Context:       parent,
+		userInfo:      userInfo,
+		k8sClient:     k8sClient,
+		authorizer:    authorizer,
+		authorization: authorization,
 	}
 }
 
@@ -45,6 +49,10 @@ func (u *userAuthContext) UserInfo() user.Info {
 
 func (u *userAuthContext) KubernetesClient() kubernetes.Interface {
 	return u.k8sClient
+}
+
+func (u *userAuthContext) Authorization() string {
+	return u.authorization
 }
 
 func (u *userAuthContext) IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error) {

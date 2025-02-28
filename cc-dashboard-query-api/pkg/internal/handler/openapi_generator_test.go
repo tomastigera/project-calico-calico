@@ -1,4 +1,4 @@
-package client_integration_test
+package handler
 
 import (
 	"os"

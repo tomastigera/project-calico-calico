@@ -19,6 +19,134 @@ paths:
       - bearer_jwt: []
       tags:
       - Collections
+  /api/metadata:
+    get:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardListResponse'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    post:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardCreateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+  /api/metadata/{dashboardID}:
+    delete:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    get:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    put:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
   /api/query:
     post:
       requestBody:
@@ -77,6 +205,99 @@ components:
     CollectionGroupBy:
       properties:
         field:
+          type: string
+      type: object
+    Dashboard:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        id:
+          type: string
+        isImmutable:
+          type: boolean
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
+          type: string
+      type: object
+    DashboardCard:
+      properties:
+        chart:
+          additionalProperties: {}
+          type: object
+        id:
+          type: string
+        query:
+          additionalProperties: {}
+          type: object
+        responseMapping:
+          additionalProperties: {}
+          type: object
+        title:
+          type: string
+      type: object
+    DashboardCreateRequest:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
+          type: string
+      type: object
+    DashboardListResponse:
+      properties:
+        dashboards:
+          items:
+            $ref: '#/components/schemas/DashboardSummary'
+          type: array
+      type: object
+    DashboardSummary:
+      properties:
+        id:
+          type: string
+        isImmutable:
+          type: boolean
+        title:
+          type: string
+      type: object
+    DashboardUpdateRequest:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
           type: string
       type: object
     QueryRequest:

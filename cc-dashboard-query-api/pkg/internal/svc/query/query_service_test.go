@@ -48,6 +48,7 @@ func TestQueryService(t *testing.T) {
 			&user.DefaultInfo{Name: "fake-user"},
 			fake.NewAuthorizer(matchRules),
 			k8sfake.NewSimpleClientset(),
+			"Bearer fake-token",
 		)
 	}
 
@@ -145,6 +146,7 @@ func TestQueryService(t *testing.T) {
 							return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
 						})),
 						k8sfake.NewSimpleClientset(),
+						"Bearer fake-token",
 					)
 
 					mockClient.SetResults(
@@ -238,6 +240,7 @@ func TestQueryService(t *testing.T) {
 								return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
 							})),
 							k8sfake.NewSimpleClientset(),
+							"Bearer fake-token",
 						)
 
 						if tc.expectedErr == nil {

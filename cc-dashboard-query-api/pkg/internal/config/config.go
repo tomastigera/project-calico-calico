@@ -47,4 +47,6 @@ type Config struct {
 
 	// MaxRequestAggregations limits the number of aggregations on query requests
 	MaxRequestAggregations int `default:"5" split_words:"true"`
+
+	MetadataAPIEndpoint string `default:"https://api2.tesla.tigera.io/orgs/dashboards" split_words:"true"`
 }

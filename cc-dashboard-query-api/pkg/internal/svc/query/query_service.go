@@ -95,13 +95,13 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	}
 
 	if len(clusterIDs) == 0 {
-		authorized, err := ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), "*")
+		authorized, err := ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), "*")
 		if err != nil {
 			return client.QueryResponse{}, err
 		} else if !authorized {
 			// "all managed clusters" query should select the authorized subset of managed clusters for custom roles
 			for _, clusterID := range managedClusterNames {
-				authorized, err = ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), string(clusterID))
+				authorized, err = ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), string(clusterID))
 				if err != nil {
 					return client.QueryResponse{}, err
 				}
@@ -119,7 +119,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	} else {
 
 		for _, clusterID := range clusterIDs {
-			authorized, err := ctx.IsResourcePermitted("lma.tigera.io", queryCollection.LmaResourceName(), string(clusterID))
+			authorized, err := ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), string(clusterID))
 			if err != nil {
 				return client.QueryResponse{}, err
 			} else if !authorized {

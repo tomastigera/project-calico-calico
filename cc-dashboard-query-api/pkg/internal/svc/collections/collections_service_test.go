@@ -30,6 +30,7 @@ func TestCollectionsService(t *testing.T) {
 			&user.DefaultInfo{Name: "fake-user"},
 			fake.NewAuthorizer(authorized),
 			k8sfake.NewSimpleClientset(),
+			"Bearer fake-token",
 		)
 	}
 

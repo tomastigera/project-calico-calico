@@ -17,6 +17,7 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/auth"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/collections"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/managedclusters"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/metadata"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/query"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/otel"
@@ -72,6 +73,7 @@ func Start(
 		},
 	)
 
+	metadataService := metadata.NewMetadataService(logger, cfg.MetadataAPIEndpoint)
 	collectionsService := collections.NewCollectionsService(logger)
 
 	handlerRegistry, err := handler.NewHandler(
@@ -79,6 +81,7 @@ func Start(
 		strings.Split(cfg.CorsOrigins, ","),
 		authService,
 		queryService,
+		metadataService,
 		collectionsService,
 	)
 	if err != nil {

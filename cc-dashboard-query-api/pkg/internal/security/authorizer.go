@@ -15,6 +15,8 @@ import (
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
+const APIGroupLMATigera = "lma.tigera.io"
+
 type Authorizer interface {
 	Authorize(ctx Context, apiGroup string, resourceName []string, resource *string) (bool, error)
 }

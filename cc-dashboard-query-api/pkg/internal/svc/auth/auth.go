@@ -118,7 +118,7 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		return nil, err
 	}
 
-	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient), nil
+	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient, authHeader), nil
 }
 
 func p[T any](v T) *T { return &v }
