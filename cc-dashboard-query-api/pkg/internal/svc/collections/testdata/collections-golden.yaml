@@ -13,6 +13,9 @@
     type: text
   - name: client_namespace
     type: text
+  - filterDisabled: true
+    name: cluster
+    type: text
   - name: count
     type: number
   - aggregationFunctionTypes:
@@ -47,6 +50,7 @@
     nested:
     - field: qtype
     - field: rcode
+  - field: cluster
   - field: end_time
   - field: qname
   - field: qtype
@@ -73,6 +77,9 @@
     - sum
     name: bytes_out
     type: number
+  - filterDisabled: true
+    name: cluster
+    type: text
   - filterDisabled: true
     name: dest_domains
     type: text
@@ -280,6 +287,7 @@
     - field: process_name
       nested:
       - field: process_args
+  - field: cluster
   - field: dest_namespace
   - field: dest_domains
   - field: dest_port
@@ -302,6 +310,9 @@
     - sum
     name: bytes_out
     type: number
+  - filterDisabled: true
+    name: cluster
+    type: text
   - name: dest_name
     type: text
   - name: dest_name_aggr
@@ -347,6 +358,7 @@
   - field: start_time
     nested:
     - field: dest_service_name
+  - field: cluster
   - field: response_code
   - field: method
   - field: url
