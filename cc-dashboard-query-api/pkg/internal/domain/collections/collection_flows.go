@@ -5,7 +5,7 @@ var collectionFlows = Collection{
 	defaultTimeFieldName: "start_time",
 	fields: []CollectionField{
 		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
-		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate, filterDisabled: true},
+		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate},
 
 		CollectionFieldEnum{fieldName: "action", fieldValues: []string{"allow", "deny"}},
 		collectionFieldGeneric{

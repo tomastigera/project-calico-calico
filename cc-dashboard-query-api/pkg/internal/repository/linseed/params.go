@@ -225,12 +225,9 @@ func (p *queryParams) setTimeRange(now, from, to time.Time, requestPeriod time.D
 	var timeField lmav1.TimeField
 
 	if field != nil {
-		// Linseed only support lmav1.FieldDefault and lmav1.FieldGeneratedTime
-		// See https://tigera.atlassian.net/browse/TSLA-8329?focusedCommentId=75852
-		// See https://tigera.atlassian.net/browse/TSLA-8376
-
-		if lmav1.TimeField(field.Name()) == lmav1.FieldGeneratedTime || lmav1.TimeField(field.Name()) == lmav1.FieldDefault {
-			timeField = lmav1.TimeField(field.Name())
+		switch ltFieldName := lmav1.TimeField(field.Name()); ltFieldName {
+		case lmav1.FieldGeneratedTime, lmav1.FieldStartTime, lmav1.FieldDefault:
+			timeField = ltFieldName
 		}
 	}
 

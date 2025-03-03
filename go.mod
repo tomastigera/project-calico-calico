@@ -98,7 +98,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
+	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
@@ -120,11 +120,11 @@ require (
 )
 
 replace (
-	// github.com/tigera/calico-private@v3.21.0-1.0
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250210230124-c54f05d60af0
+	// github.com/tigera/calico-private@9426b13a7059 (see https://tigera.slack.com/archives/C01043ZNTNE/p1740786222128039?thread_ts=1740782194.168739&cid=C01043ZNTNE)
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250228210546-9426b13a7059
 
-	// github.com/tigera/calico-private@v3.21.0-1.0
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20250210230124-c54f05d60af0
+	// github.com/tigera/calico-private@9426b13a7059 (see https://tigera.slack.com/archives/C01043ZNTNE/p1740786222128039?thread_ts=1740782194.168739&cid=C01043ZNTNE)
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20250228210546-9426b13a7059
 
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.10
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.10

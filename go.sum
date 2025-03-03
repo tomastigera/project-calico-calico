@@ -227,10 +227,10 @@ github.com/swaggest/openapi-go v0.2.45 h1:LOMAEleKVLg4E86lSCyioJK7ltjWRx50AaP4LZ
 github.com/swaggest/openapi-go v0.2.45/go.mod h1:/ykzNtS1ZO7X43OnEtyisMktxCiawQLyGd08rkjV68U=
 github.com/swaggest/refl v1.3.0 h1:PEUWIku+ZznYfsoyheF97ypSduvMApYyGkYF3nabS0I=
 github.com/swaggest/refl v1.3.0/go.mod h1:3Ujvbmh1pfSbDYjC6JGG7nMgPvpG0ehQL4iNonnLNbg=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250210230124-c54f05d60af0 h1:hREMhVJrlPzMWOxkGa45ZTjFH7+DA4U4Vhs8cG32bvE=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250210230124-c54f05d60af0/go.mod h1:tu2f6XaKMwyFDaED4kSG9TtnXtHLMVZWAV6Ptdfgy1c=
-github.com/tigera/calico-private/api v0.0.0-20250210230124-c54f05d60af0 h1:jqjzmtXhspy/3v/n4+Eb4hmpzRZd0c9FFp1H9PFZPrE=
-github.com/tigera/calico-private/api v0.0.0-20250210230124-c54f05d60af0/go.mod h1:YMzt3uMbVWGB90MSMXdk5fNFMxeqIB3n/t7G4rrJ2o8=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250228210546-9426b13a7059 h1:8EbVxbFaj8m7hiwBVHPAx6A+UyO59t6fPGs7vytB/hk=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20250228210546-9426b13a7059/go.mod h1:fiJaaUwcZzmzYNVQ051J9a8zkO67cnJPpdCkkY7bGCY=
+github.com/tigera/calico-private/api v0.0.0-20250228210546-9426b13a7059 h1:0ZeK5NZ5/nS51Z9s1bwnEkhkFQEPVQA95gUkuhpd+i8=
+github.com/tigera/calico-private/api v0.0.0-20250228210546-9426b13a7059/go.mod h1:YMzt3uMbVWGB90MSMXdk5fNFMxeqIB3n/t7G4rrJ2o8=
 github.com/tigera/tds-apiserver v0.74.0 h1:B6M2lrgjjNear1DdTD1WeUFlqtDCN3lIuwA2c+Q3xDc=
 github.com/tigera/tds-apiserver v0.74.0/go.mod h1:z3D5Gag7kg8nGI+Hzc4PggtUpoak92qbDq2xipf3f8I=
 github.com/tigera/tds-apiserver/lib v0.0.0-20250214200642-9354e245c4ea h1:FJlfDP6kOWaCke3FaBiKogkK2w22m+F8whZCSvFA6Z4=
@@ -288,8 +288,8 @@ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLL
 golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
 golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
 golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
-golang.org/x/oauth2 v0.24.0 h1:KTBBxWqUa0ykRPLtV69rRto9TLXcqYkeswu48x/gvNE=
-golang.org/x/oauth2 v0.24.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
+golang.org/x/oauth2 v0.25.0 h1:CY4y7XT9v0cRI9oupztF8AgiIu99L/ksR/Xp/6jrZ70=
+golang.org/x/oauth2 v0.25.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

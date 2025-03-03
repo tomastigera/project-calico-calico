@@ -24,7 +24,7 @@ func TestCollections(t *testing.T) {
 		for _, c := range allCollections {
 			field, found := c.Field("start_time")
 			require.True(t, found)
-			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "start_time", filterDisabled: true}, field, c.name)
+			require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "start_time"}, field, c.name)
 		}
 	})
 }

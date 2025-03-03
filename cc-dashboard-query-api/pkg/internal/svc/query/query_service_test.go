@@ -17,6 +17,7 @@ import (
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
@@ -1278,15 +1279,13 @@ func TestQueryService(t *testing.T) {
 						params := queryWithFilter(t, client.QueryRequestFilter{
 							Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"},
 						})
-						// require.Equal(t, lmav1.TimeField("start_time"), params.QueryParams.TimeRange.Field)  // TODO: enable once linseed supports date fields https://tigera.atlassian.net/browse/TSLA-8376
-						require.Empty(t, params.QueryParams.TimeRange.Field)
+						require.Equal(t, lmav1.FieldStartTime, params.QueryParams.TimeRange.Field)
 					})
 
 					t.Run("dateRange", func(t *testing.T) {
 						params := queryWithFilter(t, client.QueryRequestFilter{
 							Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z", Field: "end_time"},
 						})
-						//require.Equal(t, lmav1.TimeField("end_time"), params.QueryParams.TimeRange.Field) // TODO: enable once linseed supports date fields https://tigera.atlassian.net/browse/TSLA-8376
 						require.Empty(t, params.QueryParams.TimeRange.Field)
 					})
 				})

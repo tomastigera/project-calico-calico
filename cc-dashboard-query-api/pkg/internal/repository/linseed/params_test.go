@@ -562,28 +562,55 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("with field set", func(t *testing.T) {
-				subject = &queryParams{}
 
-				criterion, err = filters.NewRelativeTimeRange(
-					collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""),
-					time.Duration(10)*time.Minute,
-					time.Duration(5)*time.Minute,
-					false,
-				)
-				require.NoError(t, err)
-
-				err = subject.setCriteria(filters.Criteria{criterion}, now)
-				require.NoError(t, err)
-
-				require.Empty(t, subject.selector)
-				require.Equal(t, lsv1.QueryParams{
-					TimeRange: &lmav1.TimeRange{
-						To:    time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
-						From:  time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
-						Now:   &now,
-						Field: "",
+				testCase := []struct {
+					field         string
+					expectedField string
+				}{
+					{
+						field:         "start_time",
+						expectedField: "start_time",
 					},
-				}, subject.linseedQueryParams)
+					{
+						field:         "generated_time",
+						expectedField: "generated_time",
+					},
+					{
+						field:         "end_time",
+						expectedField: "",
+					},
+					{
+						field:         "unknown_field",
+						expectedField: "",
+					},
+				}
+
+				for _, tc := range testCase {
+					t.Run(tc.field, func(t *testing.T) {
+						subject = &queryParams{}
+
+						criterion, err = filters.NewRelativeTimeRange(
+							collections.NewCollectionFieldGeneric(collections.FieldName(tc.field), collections.FieldTypeDate, ""),
+							time.Duration(10)*time.Minute,
+							time.Duration(5)*time.Minute,
+							false,
+						)
+						require.NoError(t, err)
+
+						err = subject.setCriteria(filters.Criteria{criterion}, now)
+						require.NoError(t, err)
+
+						require.Empty(t, subject.selector)
+						require.Equal(t, lsv1.QueryParams{
+							TimeRange: &lmav1.TimeRange{
+								To:    time.Date(2025, 12, 11, 10, 25, 8, 7, time.UTC),
+								From:  time.Date(2025, 12, 11, 10, 20, 8, 7, time.UTC),
+								Now:   &now,
+								Field: lmav1.TimeField(tc.expectedField),
+							},
+						}, subject.linseedQueryParams)
+					})
+				}
 			})
 		})
 

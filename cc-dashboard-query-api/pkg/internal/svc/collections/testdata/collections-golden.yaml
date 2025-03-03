@@ -2,8 +2,7 @@
   fields:
   - name: end_time
     type: date
-  - filterDisabled: true
-    name: start_time
+  - name: start_time
     type: date
   - name: client_ip
     type: ip
@@ -61,8 +60,7 @@
   fields:
   - name: end_time
     type: date
-  - filterDisabled: true
-    name: start_time
+  - name: start_time
     type: date
   - name: action
     type: enum
@@ -299,8 +297,7 @@
   fields:
   - name: end_time
     type: date
-  - filterDisabled: true
-    name: start_time
+  - name: start_time
     type: date
   - aggregationFunctionTypes:
     - sum
