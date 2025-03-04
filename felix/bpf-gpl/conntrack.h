@@ -1040,6 +1040,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		result.ifindex_fwd = dst_to_src->ifindex;
 	}
 
+#if 0
     if ((CALI_F_INGRESS && CALI_F_TUNNEL) || !skb_seen(ctx->skb)) {
 		/* Account for the src->dst leg if we haven't seen the packet yet.
 		 * Since when the traffic is tunneled, BPF program on the host
@@ -1055,6 +1056,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		src_to_dst->packets++;
 		src_to_dst->bytes += ctx->skb->len;
 	}
+#endif
 
 	if (syn) {
 		CALI_CT_DEBUG("packet is SYN");

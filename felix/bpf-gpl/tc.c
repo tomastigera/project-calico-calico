@@ -130,6 +130,7 @@ int calico_tc_main(struct __sk_buff *skb)
 
 	/* Optimisation: if XDP program has already accepted the packet,
 	 * skip all processing. */
+#if 0
 	if (CALI_F_FROM_HEP) {
 		if (xdp2tc_get_metadata(skb) & CALI_META_ACCEPTED_BY_XDP) {
 			CALI_LOG_IF(CALI_LOG_LEVEL_INFO,
@@ -138,6 +139,7 @@ int calico_tc_main(struct __sk_buff *skb)
 			return TC_ACT_UNSPEC;
 		}
 	}
+#endif
 
 	/* Initialise the context, which is stored on the stack, and the state, which
 	 * we use to pass data from one program to the next via tail calls. */

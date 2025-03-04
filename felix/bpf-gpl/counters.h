@@ -62,9 +62,11 @@ static CALI_BPF_INLINE counters_t *counters_get(int ifindex)
 
 static CALI_BPF_INLINE void counter_inc(struct cali_tc_ctx *ctx, int type)
 {
+#if 0
 	if (ctx->counters) {
 		((__u64 *)((ctx)->counters))[type]++;
 	}
+#endif
 }
 
 static CALI_BPF_INLINE void deny_reason(struct cali_tc_ctx *ctx, int reason)
