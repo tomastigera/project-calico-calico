@@ -77,6 +77,8 @@ enum cali_jump_index {
 	PROG_INDEX_HOST_CT_CONFLICT_DEBUG,
 	PROG_INDEX_ICMP_INNER_NAT_DEBUG,
 	PROG_INDEX_NEW_FLOW_DEBUG,
+
+	PROG_INDEX_MAX
 };
 
 #if CALI_F_XDP
@@ -89,7 +91,7 @@ CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 2400, 0)
  * is shared!
  */
 #define CALI_JUMP_TO_POLICY(ctx) \
-	bpf_tail_call((ctx)->xdp, &cali_jump_prog_map, (ctx)->xdp_globals->jumps[PROG_INDEX_POLICY])
+	bpf_tail_call((ctx)->xdp, &cali_jump_prog_map, (__u32)((ctx)->xdp_globals->jumps[PROG_INDEX_POLICY]))
 #else /* CALI_F_XDP */
 
 #define cali_jump_prog_map map_symbol(cali_jump, 3)
@@ -97,8 +99,8 @@ CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 2400, 0)
 CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 240000, 0)
 
 #define __CALI_JUMP_TO_POLICY(ctx, allow, deny, pol) do {	\
-	(ctx)->skb->cb[0] = (ctx)->globals->data.jumps[PROG_PATH(allow)];			\
-	(ctx)->skb->cb[1] = (ctx)->globals->data.jumps[PROG_PATH(deny)];				\
+	(ctx)->skb->cb[0] = (__u32)((ctx)->globals->data.jumps[PROG_PATH(allow)]);		\
+	(ctx)->skb->cb[1] = (__u32)((ctx)->globals->data.jumps[PROG_PATH(deny)]);		\
 	CALI_DEBUG("policy allow prog at %d", (ctx)->globals->data.jumps[PROG_PATH(allow)]);	\
 	CALI_DEBUG("policy deny prog at %d", (ctx)->globals->data.jumps[PROG_PATH(deny)]);	\
 	CALI_DEBUG("jump to policy prog at %d", (ctx)->globals->data.jumps[pol]);		\

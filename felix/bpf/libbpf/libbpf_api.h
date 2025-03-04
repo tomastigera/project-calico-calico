@@ -190,12 +190,12 @@ void bpf_tc_set_globals(struct bpf_map *map,
 
 	int i;
 
-	for (i = 0; i < sizeof(v4.jumps)/sizeof(uint); i++) {
-		v4.jumps[i] = jumps[i];
+	for (i = 0; i < 16; i++) {
+		v4.jumps[i] = (unsigned char) jumps[i];
 	}
 
-	for (i = 0; i < sizeof(v6.jumps)/sizeof(uint); i++) {
-		v6.jumps[i] = jumps6[i];
+	for (i = 0; i < 16; i++) {
+		v6.jumps[i] = (unsigned char) jumps6[i];
 	}
 
 	v6.wg_port = wg6_port;

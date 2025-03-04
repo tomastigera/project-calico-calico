@@ -34,15 +34,15 @@ int  cali_tc_preamble(struct __sk_buff *skb)
 	__u16 protocol = bpf_ntohs(skb->protocol);
 	/* Set the globals for the rest of the prog chain. */
 	if (protocol == ETH_P_IPV6) {
-		if (__globals.v6.jumps[PROG_INDEX_MAIN] != (__u32)-1) {
+		if (__globals.v6.jumps[PROG_INDEX_MAIN] != (__u8)-1) {
 			globals_data = &__globals.v6;
-		} else if (__globals.v4.jumps[PROG_INDEX_MAIN] != (__u32)-1) {
+		} else if (__globals.v4.jumps[PROG_INDEX_MAIN] != (__u8)-1) {
 			globals_data = &__globals.v4;
 		}
 	} else {
-		if (__globals.v4.jumps[PROG_INDEX_MAIN] != (__u32)-1) {
+		if (__globals.v4.jumps[PROG_INDEX_MAIN] != (__u8)-1) {
 			globals_data = &__globals.v4;
-		} else if (__globals.v6.jumps[PROG_INDEX_MAIN] != (__u32)-1) {
+		} else if (__globals.v6.jumps[PROG_INDEX_MAIN] != (__u8)-1) {
 			globals_data = &__globals.v6;
 		}
 	}
@@ -53,7 +53,8 @@ int  cali_tc_preamble(struct __sk_buff *skb)
 	}
 
 	/* We do the copy once here so keep the program smaller */
-	globals->data = *globals_data;
+	// globals->data = *globals_data;
+	__builtin_memcpy((void *)globals->data.jumps, (void *)globals_data->jumps, 16);
 
 #if EMIT_LOGS
 	CALI_LOG("tc_preamble iface %s", globals->data.iface_name);
@@ -62,12 +63,13 @@ int  cali_tc_preamble(struct __sk_buff *skb)
 	/* If we have log filter installed, tell the filter where to jump next
 	 * and jump to the filter.
 	 */
-	if (globals->data.log_filter_jmp != (__u32)-1) {
-		skb->cb[0] = JUMP(PROG_INDEX_MAIN);
-		skb->cb[1] = JUMP_DEBUG(PROG_INDEX_MAIN);
-		bpf_tail_call(skb, &cali_jump_prog_map, globals->data.log_filter_jmp);
+	if (globals_data->log_filter_jmp != (__u32)-1) {
+		__builtin_memcpy((void *)globals->data.iface_name, (void *)globals_data->iface_name, 16);
+		skb->cb[0] = (__u32) JUMP(PROG_INDEX_MAIN);
+		skb->cb[1] = (__u32) JUMP_DEBUG(PROG_INDEX_MAIN);
+		bpf_tail_call(skb, &cali_jump_prog_map, globals_data->log_filter_jmp);
 		CALI_LOG("tc_preamble iface %s failed to call log filter %d",
-				globals->data.iface_name, globals->data.log_filter_jmp);
+				globals->data.iface_name, globals_data->log_filter_jmp);
 		/* try to jump to the regular path */
 	}
 

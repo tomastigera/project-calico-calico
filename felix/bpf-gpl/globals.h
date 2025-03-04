@@ -9,6 +9,7 @@
 
 #define DECLARE_TC_GLOBAL_DATA(name, ip_t)	\
 struct name {				\
+	__u8 jumps[16];	\
 	ip_t host_ip;			\
 	__be16 tunnel_mtu;		\
 	__be16 vxlan_port;		\
@@ -24,7 +25,6 @@ struct name {				\
 	__u32 natout_idx;		\
 	__u8 iface_name[16];		\
 	__u32 log_filter_jmp;		\
-	__u32 jumps[40];		\
 }
 
 DECLARE_TC_GLOBAL_DATA(cali_tc_global_data, ipv6_addr_t);
