@@ -157,10 +157,40 @@ skip_redir_ifindex:
 #if CALI_FIB_ENABLED
 
 #ifndef IPVER6
-	if (CALI_F_FROM_WEP && state->ct_result.ifindex_fwd != CT_INVALID_IFINDEX) {
-		rc = bpf_redirect_neigh(state->ct_result.ifindex_fwd, NULL, 0, 0);
+	if (CALI_F_FROM_WEP) {
+		if (state->ct_result.ifindex_fwd == CT_INVALID_IFINDEX) {
+			*fib_params(ctx) = (struct bpf_fib_lookup) {
+				.family = 2, /* AF_INET */
+				.tot_len = 0,
+				.l4_protocol = state->ip_proto,
+			};
+			fib_params(ctx)->ipv4_src = state->ip_src;
+			fib_params(ctx)->ipv4_dst = state->ip_dst;
+			rc = bpf_fib_lookup(ctx->skb, fib_params(ctx), sizeof(struct bpf_fib_lookup), ctx->fwd.fib_flags);
+			CALI_DEBUG("FBI rc %d", rc);
+			state->ct_result.ifindex_fwd = fib_params(ctx)->ifindex;
+		}
+
+		struct cali_rt *dest_rt = cali_rt_lookup(&ctx->state->post_nat_ip_dst);
+		if (dest_rt == NULL) {
+			goto deny;
+		}
+		if (!(dest_rt->flags & CALI_RT_TUNNELED)) {
+			goto deny;
+		}
+
+		struct bpf_tunnel_key key = {
+			.tunnel_id = 4096,
+			.remote_ipv4 = dest_rt->next_hop,
+			.tunnel_ttl = 16,
+		};
+		int err = bpf_skb_set_tunnel_key(
+				ctx->skb, &key, offsetof(struct bpf_tunnel_key, local_ipv4), BPF_F_ZERO_CSUM_TX);
+		CALI_DEBUG("bpf_skb_set_tunnel_key %d", err);
+		ctx->fwd.mark |= CALI_SKB_MARK_BYPASS;
+
+		rc = bpf_redirect(state->ct_result.ifindex_fwd, 0);
 		if (rc == TC_ACT_REDIRECT) {
-			ctx->fwd.mark |= CALI_SKB_MARK_BYPASS;
 			CALI_DEBUG("Redirect to dev %d without fib lookup",
 					state->ct_result.ifindex_fwd);
 			goto skip_fib;

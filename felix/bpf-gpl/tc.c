@@ -71,10 +71,12 @@ int calico_tc_main(struct __sk_buff *skb)
 	skb->mark = SKB_MARK;
 #endif
 
+	/*
 	if ((CALI_F_HEP && !CALI_F_VXLAN) || (CALI_F_VXLAN && CALI_F_EGRESS&& skb->mark == CALI_SKB_MARK_BYPASS)) {
 		skb_set_mark(skb, CALI_SKB_MARK_SEEN);
 		return TC_ACT_UNSPEC;
 	}
+	*/
 
 	if (CALI_F_LO && CALI_F_TO_HOST) {
 		/* Do nothing, it is a packet that just looped around. */
