@@ -107,6 +107,7 @@ type QueryRequestAggregationKey string
 type QueryRequestAggregations map[QueryRequestAggregationKey]QueryRequestAggregation
 
 type QueryRequestAggregation struct {
+	Order     int                             `json:"order"`
 	FieldName string                          `json:"fieldName"`
 	Function  QueryRequestAggregationFunction `json:"function"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/olivere/elastic/v7"
@@ -106,8 +107,8 @@ func TestLinseedRepository(t *testing.T) {
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
 				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
-				Aggregations: map[aggregations.AggregationKey]aggregations.Aggregation{
-					"agg1": aggregations.NewAggregationSum("f1"),
+				Aggregations: aggregations.Aggregations{
+					aggregations.NewAggregationSum("agg1", 0, "f1", false),
 				},
 			})
 			require.NoError(t, err)
@@ -136,11 +137,11 @@ func TestLinseedRepository(t *testing.T) {
 			aggSource, err := elastic.NewDateHistogramAggregation().
 				Field("fg1").
 				FixedInterval("1m").
-				Order("_count", true).
+				OrderByKey(true).
 				SubAggregation("g1",
 					elastic.NewTermsAggregation().
 						Field("fg2").
-						Order("_count", true).
+						OrderByAggregation("a_agg1", false).
 						Size(10).
 						SubAggregation("a_agg1", elastic.NewSumAggregation().Field("f1"))).
 				Source()
@@ -151,12 +152,12 @@ func TestLinseedRepository(t *testing.T) {
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
 				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
-				Aggregations: map[aggregations.AggregationKey]aggregations.Aggregation{
-					"agg1": aggregations.NewAggregationSum("f1"),
+				Aggregations: aggregations.Aggregations{
+					aggregations.NewAggregationSum("agg1", 0, "f1", false),
 				},
 				Groups: groups.Groups{
-					groups.NewGroupTime("fg1", "1M", 10, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeCount, Asc: true}),
-					groups.NewGroupDiscrete("fg2", 10, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeCount, Asc: true}),
+					groups.NewGroupTime("fg1", "1M", 10),
+					groups.NewGroupDiscrete("fg2", 10),
 				},
 			})
 			require.NoError(t, err)
@@ -182,8 +183,7 @@ func TestLinseedRepository(t *testing.T) {
 		t.Run("percentiles are returned with the correct key", func(t *testing.T) {
 
 			type testCase struct {
-				key           string
-				agg           aggregations.Aggregation
+				agg           aggregation
 				elasticValue  map[string]float64
 				expectedValue aggregations.AggregationValue
 			}
@@ -197,44 +197,123 @@ func TestLinseedRepository(t *testing.T) {
 				})
 				require.NoError(t, err)
 
+				aggKey := string(tc.agg.agg.Key())
+
 				resultAggregations := make(aggregations.AggregationValues)
-				err = elasticAggregationToQueryResult(tc.key, tc.agg, 0, resultAggregations, elastic.Aggregations{
-					"a_" + tc.key: elasticValuesBytes,
+				err = elasticAggregationToQueryResult(tc.agg, 0, resultAggregations, elastic.Aggregations{
+					"a_" + aggKey: elasticValuesBytes,
 				})
 				require.NoError(t, err)
 
 				require.Equal(t, aggregations.AggregationValues{
-					tc.key: tc.expectedValue,
+					aggKey: tc.expectedValue,
 				}, resultAggregations)
 			}
 
+			newAggregationPercentile := func(pct float64) aggregation {
+				return aggregation{
+					agg:                aggregations.NewAggregationPercentile("agg1", 0, "f1", pct, false),
+					elasticAggregation: elastic.NewPercentilesAggregation().Percentiles(pct),
+				}
+			}
+
 			testPercentileAggregationValue(testCase{
-				key:           "agg0",
-				agg:           aggregations.NewAggregationPercentile("f1", 100),
+				agg:           newAggregationPercentile(100),
 				elasticValue:  map[string]float64{"100.0": 10100},
 				expectedValue: aggregations.NewAggregationValue(floatp(10100)),
 			})
 
 			testPercentileAggregationValue(testCase{
-				key:           "agg1",
-				agg:           aggregations.NewAggregationPercentile("f1", 95),
+				agg:           newAggregationPercentile(95),
 				elasticValue:  map[string]float64{"95.0": 10095},
 				expectedValue: aggregations.NewAggregationValue(floatp(10095)),
 			})
 
 			testPercentileAggregationValue(testCase{
-				key:           "agg2",
-				agg:           aggregations.NewAggregationPercentile("f1", 84.357),
+				agg:           newAggregationPercentile(84.357),
 				elasticValue:  map[string]float64{"84.357": 184357.33},
 				expectedValue: aggregations.NewAggregationValue(floatp(184357.33)),
 			})
 
 			testPercentileAggregationValue(testCase{
-				key:           "agg3",
-				agg:           aggregations.NewAggregationPercentile("f1", 1),
+				agg:           newAggregationPercentile(1),
 				elasticValue:  map[string]float64{"1.0": 10001.4},
 				expectedValue: aggregations.NewAggregationValue(floatp(10001.4)),
 			})
+		})
+
+		t.Run("are ordered", func(t *testing.T) {
+			testCases := []struct {
+				name         string
+				aggregations aggregations.Aggregations
+			}{
+				{
+					name: "t1",
+					aggregations: aggregations.Aggregations{
+						aggregations.NewAggregationSum("agg30", 30, "f1", false),
+						aggregations.NewAggregationSum("agg20", 20, "f1", false),
+						aggregations.NewAggregationSum("agg10", 10, "f1", false),
+					},
+				},
+				{
+					name: "t1",
+					aggregations: aggregations.Aggregations{
+						aggregations.NewAggregationSum("agg20", 20, "f1", false),
+						aggregations.NewAggregationSum("agg30", 30, "f1", false),
+						aggregations.NewAggregationSum("agg10", 10, "f1", false),
+					},
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+
+					group1 := elastic.NewTermsAggregation().
+						Field("fg2").
+						Size(10).
+						Order("a_agg10", false).
+						Order("a_agg20", false).
+						Order("a_agg30", false)
+
+					for _, agg := range tc.aggregations {
+						elasticAggregation, err := queryAggregationToElastic(agg)
+						require.NoError(t, err)
+
+						group1.SubAggregation(fmt.Sprintf("a_%s", agg.Key()), elasticAggregation)
+					}
+
+					aggSource, err := elastic.NewDateHistogramAggregation().
+						Field("fg1").
+						OrderByKey(true).
+						FixedInterval("1m").
+						SubAggregation("g1", group1).
+						Source()
+					require.NoError(t, err)
+					expectedAggregation, err := json.Marshal(aggSource)
+					require.NoError(t, err)
+
+					mockClient.SetResults(rest.MockResult{})
+					_, err = subject.Query(ctx, query.QueryRequest{
+						CollectionName: collections.CollectionNameDNS,
+						ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
+						Aggregations:   tc.aggregations,
+						Groups: groups.Groups{
+							groups.NewGroupTime("fg1", "1M", 10),
+							groups.NewGroupDiscrete("fg2", 10),
+						},
+					})
+					require.NoError(t, err)
+
+					requests := mockClient.Requests()
+					require.Len(t, requests, 1)
+
+					params, ok := requests[0].GetParams().(*lsv1.DNSAggregationParams)
+					require.True(t, ok)
+					require.Equal(t, map[string]json.RawMessage{
+						"g0": expectedAggregation,
+					}, params.Aggregations)
+				})
+			}
 		})
 	})
 }

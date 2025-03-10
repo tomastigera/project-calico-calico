@@ -1,6 +1,11 @@
 package aggregations
 
-type Aggregation interface{}
+type Aggregation interface {
+	Key() AggregationKey
+	Order() int
+	SortAsc() bool
+}
 
 type AggregationKey string
-type Aggregations map[AggregationKey]Aggregation
+
+type Aggregations []Aggregation

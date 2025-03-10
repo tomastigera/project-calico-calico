@@ -11,12 +11,14 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
 )
 
-type sortOrderFunc func(asc bool)
+const (
+	maxSubAggregationSortItems = 3
+)
+
 type groupAggregation struct {
 	elasticAggregation elastic.Aggregation
 
@@ -24,9 +26,8 @@ type groupAggregation struct {
 	aggregationKey string
 	queryGroups    groups.Groups
 
+	setSortOrder   func(subAggregations []aggregation)
 	subAggregation func(aggKey string, agg elastic.Aggregation)
-	orderByKey     sortOrderFunc
-	orderByCount   sortOrderFunc
 }
 
 type groupAggregations []*groupAggregation
@@ -65,19 +66,6 @@ func newGroupAggregation(
 		g.setElasticMultiTermsAggregation(queryGroups)
 	}
 
-	// set default group sort order
-	// It will be replaced with aggregation auto sorting by https://tigera.atlassian.net/browse/TSLA-8709
-	for _, queryGroup := range queryGroups {
-		switch sortOrder := queryGroup.SortOrder(); sortOrder.Type {
-		case groups.GroupSortOrderTypeSelf:
-			g.orderByKey(sortOrder.Asc)
-		case groups.GroupSortOrderTypeCount:
-			g.orderByCount(sortOrder.Asc)
-		default:
-			return nil, fmt.Errorf("unknown sort order '%s' for %s group '%s'", sortOrder.Type, queryGroup.Type(), queryGroup.FieldName())
-		}
-	}
-
 	return g, nil
 }
 
@@ -112,10 +100,11 @@ func (g *groupAggregation) setElasticDateHistogramAggregation(
 		Field(queryGroup.FieldName()).
 		FixedInterval(fixedInterval)
 
-	g.elasticAggregation = dateTimeHistogramAggregation
-	g.orderByKey = func(sortAsc bool) { dateTimeHistogramAggregation.OrderByKey(sortAsc) }
-	g.orderByCount = func(sortAsc bool) { dateTimeHistogramAggregation.OrderByCount(sortAsc) }
+	g.setSortOrder = func(agg []aggregation) {
+		dateTimeHistogramAggregation.OrderByKey(true) // date histogram is always ordered by (datetime) key
+	}
 	g.subAggregation = func(aggKey string, agg elastic.Aggregation) { dateTimeHistogramAggregation.SubAggregation(aggKey, agg) }
+	g.elasticAggregation = dateTimeHistogramAggregation
 
 	return nil
 }
@@ -125,11 +114,23 @@ func (g *groupAggregation) setElasticTermsAggregation(queryGroup groups.Group) {
 		Field(queryGroup.FieldName()).
 		Size(queryGroup.MaxValues())
 
-	g.elasticAggregation = termsAggregation
+	g.setSortOrder = func(agg []aggregation) {
+		if len(agg) == 0 {
+			// default to sort by key asc if no aggregations are set
+			termsAggregation.OrderByKey(true)
+			return
+		}
 
-	g.orderByKey = func(sortAsc bool) { termsAggregation.OrderByKey(sortAsc) }
-	g.orderByCount = func(sortAsc bool) { termsAggregation.OrderByCount(sortAsc) }
+		for _, aggItem := range agg[:min(len(agg), maxSubAggregationSortItems)] {
+			if aggItem.elasticAggregation == nil {
+				termsAggregation.OrderByCount(aggItem.agg.SortAsc())
+			} else {
+				termsAggregation.OrderByAggregation(aggItem.elasticKey(), aggItem.agg.SortAsc())
+			}
+		}
+	}
 	g.subAggregation = func(aggKey string, agg elastic.Aggregation) { termsAggregation.SubAggregation(aggKey, agg) }
+	g.elasticAggregation = termsAggregation
 }
 
 func (g *groupAggregation) setElasticMultiTermsAggregation(queryGroups groups.Groups) {
@@ -137,17 +138,29 @@ func (g *groupAggregation) setElasticMultiTermsAggregation(queryGroups groups.Gr
 		Size(slices.Min(tdsslices.Map(queryGroups, groups.Group.MaxValues))).
 		Terms(tdsslices.Map(queryGroups, groups.Group.FieldName)...)
 
-	g.elasticAggregation = multiTermsAggregation
+	g.setSortOrder = func(agg []aggregation) {
+		if len(agg) == 0 {
+			// default to sort by key asc if no aggregations are set
+			multiTermsAggregation.OrderByKey(true)
+			return
+		}
 
-	g.orderByKey = func(sortAsc bool) { multiTermsAggregation.OrderByKey(sortAsc) }
-	g.orderByCount = func(sortAsc bool) { multiTermsAggregation.OrderByCount(sortAsc) }
+		for _, aggItem := range agg[:min(len(agg), maxSubAggregationSortItems)] {
+			if aggItem.elasticAggregation == nil {
+				multiTermsAggregation.OrderByCount(aggItem.agg.SortAsc())
+			} else {
+				multiTermsAggregation.OrderByAggregation(aggItem.elasticKey(), aggItem.agg.SortAsc())
+			}
+		}
+	}
 	g.subAggregation = func(aggKey string, agg elastic.Aggregation) { multiTermsAggregation.SubAggregation(aggKey, agg) }
+	g.elasticAggregation = multiTermsAggregation
 }
 
 func (g groupAggregations) fromElastic(
 	groupIndex int,
 	resultAggregations elastic.Aggregations,
-	subAggregations aggregations.Aggregations,
+	subAggregations []aggregation,
 	parent groups.AppendableGroupValue,
 ) error {
 	var bucketItems []aggregationBucketItem

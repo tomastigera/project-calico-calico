@@ -80,25 +80,31 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
 	}
 
+	// Sort aggregations by order
+	sortedAggregations := slices.SortBy(req.Aggregations, func(a aggregations.Aggregation) int {
+		return a.Order()
+	})
+
 	// Build elastic aggregations from req.Aggregations
 	// If no groups are present in QueryRequest.Groups, these are defined as a root-level aggregations
 	// If at least 1 group is present in the QueryRequest.Groups, these are defined as aggregations for the last group
-	elasticAggregations := make(map[string]elastic.Aggregation)
-	for aggKey, agg := range req.Aggregations {
+	var subAggregations []aggregation
+	for _, agg := range sortedAggregations {
 		elasticAggregation, err := queryAggregationToElastic(agg)
 		if err != nil {
 			return result.QueryResult{}, err
 		}
 
-		if elasticAggregation != nil {
-			elasticAggregations["a_"+string(aggKey)] = elasticAggregation
-		}
+		subAggregations = append(subAggregations, aggregation{
+			agg:                agg,
+			elasticAggregation: elasticAggregation,
+		})
 	}
 
 	var elasticGroups groupAggregations
 	repositoryAggregations := make(map[string]json.RawMessage)
 	if len(req.Groups) > 0 {
-		elasticGroups, err = queryGroupsToElastic(req.Groups, elasticAggregations, linseedQueryParams.requestedPeriod)
+		elasticGroups, err = queryGroupsToElastic(req.Groups, subAggregations, linseedQueryParams.requestedPeriod)
 		if err != nil {
 			return result.QueryResult{}, err
 		}
@@ -113,13 +119,16 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		repositoryAggregations[elasticGroups[0].aggregationKey] = elasticGroups[0].aggJson
 	} else {
 		// Set root level aggregations
-		for aggKey, elasticAggregation := range elasticAggregations {
-			aggJson, err := elasticAggregationToJSON(elasticAggregation)
+		for _, agg := range subAggregations {
+			if agg.elasticAggregation == nil {
+				continue
+			}
+			aggJson, err := elasticAggregationToJSON(agg.elasticAggregation)
 			if err != nil {
 				return result.QueryResult{}, err
 			}
 
-			repositoryAggregations[aggKey] = aggJson
+			repositoryAggregations[agg.elasticKey()] = aggJson
 		}
 	}
 
@@ -138,15 +147,15 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		}
 
 		queryResult.Aggregations = make(aggregations.AggregationValues)
-		for aggKey, agg := range req.Aggregations {
-			err := elasticAggregationToQueryResult(string(aggKey), agg, 0, queryResult.Aggregations, resultAggregations)
+		for _, agg := range subAggregations {
+			err := elasticAggregationToQueryResult(agg, 0, queryResult.Aggregations, resultAggregations)
 			if err != nil {
 				return result.QueryResult{}, err
 			}
 		}
 
 		if len(elasticGroups) > 0 {
-			err := elasticGroups.fromElastic(0, resultAggregations, req.Aggregations, &queryResult)
+			err := elasticGroups.fromElastic(0, resultAggregations, subAggregations, &queryResult)
 			if err != nil {
 				return result.QueryResult{}, err
 			}
@@ -203,30 +212,35 @@ func queryAggregationToElastic(queryAggregation aggregations.Aggregation) (elast
 	return elasticAggregation, nil
 }
 
-func elasticAggregationToQueryResult(aggKey string, aggregation aggregations.Aggregation, docCount int64, resultAggregations aggregations.AggregationValues, elasticAggregations elastic.Aggregations) error {
+func elasticAggregationToQueryResult(
+	agg aggregation,
+	docCount int64,
+	resultAggregations aggregations.AggregationValues,
+	elasticAggregations elastic.Aggregations,
+) error {
 	var found bool
 	var value *elastic.AggregationValueMetric
 
-	elasticKey := "a_" + string(aggKey)
+	aggKey := string(agg.agg.Key())
 
-	switch agg := aggregation.(type) {
+	switch a := agg.agg.(type) {
 	case aggregations.AggregationCount:
 		resultAggregations[aggKey] = aggregations.NewAggregationValue(&docCount)
 		return nil
 	case aggregations.AggregationSum:
-		value, found = elasticAggregations.Sum(elasticKey)
+		value, found = elasticAggregations.Sum(agg.elasticKey())
 	case aggregations.AggregationAvg:
-		value, found = elasticAggregations.Avg(elasticKey)
+		value, found = elasticAggregations.Avg(agg.elasticKey())
 	case aggregations.AggregationMin:
-		value, found = elasticAggregations.Min(elasticKey)
+		value, found = elasticAggregations.Min(agg.elasticKey())
 	case aggregations.AggregationMax:
-		value, found = elasticAggregations.Max(elasticKey)
+		value, found = elasticAggregations.Max(agg.elasticKey())
 	case aggregations.AggregationPercentile:
 		var percentiles *elastic.AggregationPercentilesMetric
-		percentiles, found = elasticAggregations.Percentiles(elasticKey)
+		percentiles, found = elasticAggregations.Percentiles(agg.elasticKey())
 		if found {
 			value = &elastic.AggregationValueMetric{}
-			key := strconv.FormatFloat(agg.Percentile(), 'f', -1, 64)
+			key := strconv.FormatFloat(a.Percentile(), 'f', -1, 64)
 			if !strings.Contains(key, ".") {
 				key += ".0" // elastic returns "N.0" for a percentile "N" key with 0 decimals
 			}

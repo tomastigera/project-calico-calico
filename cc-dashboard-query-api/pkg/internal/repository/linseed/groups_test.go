@@ -23,15 +23,13 @@ func (c fakeGroup) Type() groups.GroupType {
 
 func TestLinseedGroups(t *testing.T) {
 
-	groupSortOrder := groups.GroupSortOrder{Type: groups.GroupSortOrderTypeSelf}
-
-	groupTime := groups.NewGroupTime("field1", "PT15M", 0, groupSortOrder)
-	groupDiscrete := groups.NewGroupDiscrete("field1", 10, groupSortOrder)
+	groupTime := groups.NewGroupTime("field1", "PT15M", 0)
+	groupDiscrete := groups.NewGroupDiscrete("field1", 10)
 
 	t.Run("from domain to elastic", func(t *testing.T) {
 		t.Run("query group to elastic aggregation", func(t *testing.T) {
 			t.Run("time group interval adjustment for result count limit", func(t *testing.T) {
-				groupTime2 := groups.NewGroupTime("field1", "PT1M", 0, groupSortOrder)
+				groupTime2 := groups.NewGroupTime("field1", "PT1M", 0)
 				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour*200)
 				require.NoError(t, err)
 				require.Len(t, elasticGroups, 1)
@@ -39,9 +37,9 @@ func TestLinseedGroups(t *testing.T) {
 					NewDateHistogramAggregation().
 					Field("field1").
 					FixedInterval("120m").
-					OrderByKey(false), elasticGroups[0].elasticAggregation)
+					OrderByKey(true), elasticGroups[0].elasticAggregation)
 
-				groupTime2 = groups.NewGroupTime("field1", "PT1M", 0, groupSortOrder)
+				groupTime2 = groups.NewGroupTime("field1", "PT1M", 0)
 				elasticGroups, err = queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
 				require.NoError(t, err)
 				require.Len(t, elasticGroups, 1)
@@ -49,37 +47,19 @@ func TestLinseedGroups(t *testing.T) {
 					NewDateHistogramAggregation().
 					Field("field1").
 					FixedInterval("1m").
-					OrderByKey(false), elasticGroups[0].elasticAggregation)
+					OrderByKey(true), elasticGroups[0].elasticAggregation)
 			})
 
 			t.Run("time group order", func(t *testing.T) {
-				t.Run("unknown type", func(t *testing.T) {
-					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groups.GroupSortOrder{Type: "unknown"})
-					_, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
-					require.ErrorContains(t, err, "unknown sort order 'unknown' for time group 'field1'")
-				})
-				t.Run("desc", func(t *testing.T) {
-					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groupSortOrder)
-					elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
-					require.NoError(t, err)
-					require.Len(t, elasticGroups, 1)
-					require.Equal(t, elastic.
-						NewDateHistogramAggregation().
-						Field("field1").
-						FixedInterval("15m").
-						OrderByKey(false), elasticGroups[0].elasticAggregation)
-				})
-				t.Run("asc", func(t *testing.T) {
-					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeSelf, Asc: true})
-					elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
-					require.NoError(t, err)
-					require.Len(t, elasticGroups, 1)
-					require.Equal(t, elastic.
-						NewDateHistogramAggregation().
-						Field("field1").
-						FixedInterval("15m").
-						OrderByKey(true), elasticGroups[0].elasticAggregation)
-				})
+				groupTime2 := groups.NewGroupTime("field1", "PT15M", 0)
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
+				require.NoError(t, err)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, elastic.
+					NewDateHistogramAggregation().
+					Field("field1").
+					FixedInterval("15m").
+					OrderByKey(true), elasticGroups[0].elasticAggregation)
 			})
 
 			t.Run("with no subaggregations", func(t *testing.T) {
@@ -88,13 +68,13 @@ func TestLinseedGroups(t *testing.T) {
 					NewDateHistogramAggregation().
 					Field("field1").
 					FixedInterval("15m").
-					OrderByKey(false)
+					OrderByKey(true)
 
 				expectedGroupDiscreteElasticAggregation := elastic.
 					NewTermsAggregation().
 					Field("field1").
 					Size(10).
-					OrderByKey(false)
+					OrderByKey(true)
 
 				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime}, nil, 0)
 				require.NoError(t, err)
@@ -108,29 +88,40 @@ func TestLinseedGroups(t *testing.T) {
 			})
 
 			t.Run("with subaggregations", func(t *testing.T) {
-				elasticAggregations := map[string]elastic.Aggregation{
-					"a1": elastic.NewTermsAggregation().Field("t1"),
-					"a2": elastic.NewSumAggregation().Field("s1"),
-					"a3": elastic.NewAvgAggregation().Field("avg1"),
+				elasticAggregations := []aggregation{
+					{
+						agg:                aggregations.NewAggregationSum("a1", 1, "f1", false),
+						elasticAggregation: elastic.NewTermsAggregation().Field("f1"),
+					},
+					{
+						agg:                aggregations.NewAggregationMin("a2", 2, "f2", true),
+						elasticAggregation: elastic.NewMinAggregation().Field("f2"),
+					},
+					{
+						agg:                aggregations.NewAggregationAvg("a3", 3, "f3", false),
+						elasticAggregation: elastic.NewAvgAggregation().Field("f3"),
+					},
 				}
 
 				expectedGroupTimeElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
 					FixedInterval("15m").
-					OrderByKey(false).
-					SubAggregation("a1", elastic.NewTermsAggregation().Field("t1")).
-					SubAggregation("a2", elastic.NewSumAggregation().Field("s1")).
-					SubAggregation("a3", elastic.NewAvgAggregation().Field("avg1"))
+					OrderByKey(true).
+					SubAggregation("a_a1", elastic.NewTermsAggregation().Field("f1")).
+					SubAggregation("a_a2", elastic.NewMinAggregation().Field("f2")).
+					SubAggregation("a_a3", elastic.NewAvgAggregation().Field("f3"))
 
 				expectedGroupDiscreteElasticAggregation := elastic.
 					NewTermsAggregation().
 					Field("field1").
 					Size(10).
-					OrderByKey(false).
-					SubAggregation("a1", elastic.NewTermsAggregation().Field("t1")).
-					SubAggregation("a2", elastic.NewSumAggregation().Field("s1")).
-					SubAggregation("a3", elastic.NewAvgAggregation().Field("avg1"))
+					OrderByAggregation("a_a1", false).
+					OrderByAggregation("a_a2", true).
+					OrderByAggregation("a_a3", false).
+					SubAggregation("a_a1", elastic.NewTermsAggregation().Field("f1")).
+					SubAggregation("a_a2", elastic.NewMinAggregation().Field("f2")).
+					SubAggregation("a_a3", elastic.NewAvgAggregation().Field("f3"))
 
 				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime}, elasticAggregations, 0)
 				require.NoError(t, err)
@@ -148,10 +139,10 @@ func TestLinseedGroups(t *testing.T) {
 					NewDateHistogramAggregation().
 					Field("field1").
 					FixedInterval("1m").
-					OrderByKey(false)
+					OrderByKey(true)
 
 				queryGroups := groups.Groups{
-					groups.NewGroupTime("field1", "1s", 10, groupSortOrder),
+					groups.NewGroupTime("field1", "1s", 10),
 				}
 
 				elasticGroups, err := queryGroupsToElastic(queryGroups, nil, 0)
@@ -230,7 +221,7 @@ func TestLinseedGroups(t *testing.T) {
 					}),
 				}
 
-				groupDiscrete2 := groups.NewGroupDiscrete("field2", 10, groupSortOrder)
+				groupDiscrete2 := groups.NewGroupDiscrete("field2", 10)
 
 				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete, groupDiscrete2}, nil, 0)
 				require.NoError(t, err)
@@ -288,9 +279,12 @@ func TestLinseedGroups(t *testing.T) {
 		})
 
 		t.Run("query groups from elastic", func(t *testing.T) {
-			queryRequestAggregations := aggregations.Aggregations{
-				"count": aggregations.NewAggregationCount(),
+			subAggregations := []aggregation{
+				{
+					agg: aggregations.NewAggregationCount("count", 0, false),
+				},
 			}
+
 			elasticResult := elastic.Aggregations{
 				"g0": jsonMarshal(t, map[string]any{
 					"buckets": []map[string]any{
@@ -321,7 +315,7 @@ func TestLinseedGroups(t *testing.T) {
 			require.Len(t, elasticGroups, 2)
 
 			var res result.QueryResult
-			err = elasticGroups.fromElastic(0, elasticResult, queryRequestAggregations, &res)
+			err = elasticGroups.fromElastic(0, elasticResult, subAggregations, &res)
 			require.NoError(t, err)
 
 			require.Equal(t, groups.GroupValues{

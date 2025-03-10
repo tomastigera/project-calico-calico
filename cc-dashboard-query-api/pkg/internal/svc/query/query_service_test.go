@@ -21,7 +21,6 @@ import (
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
@@ -922,7 +921,7 @@ func TestQueryService(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.functionType, func(t *testing.T) {
-				agg, err := mapClientAggregation(client.QueryRequestAggregation{
+				agg, err := mapClientAggregation("agg0", client.QueryRequestAggregation{
 					FieldName: "tcp_max_min_rtt",
 					Function: client.QueryRequestAggregationFunction{
 						Type: client.AggregationFunctionType(tc.functionType),
@@ -1195,43 +1194,6 @@ func TestQueryService(t *testing.T) {
 					require.Equal(t, client.QueryResponseAggregations{
 						"a-count-aggregation": {AsString: "3"},
 					}, resp.Aggregations)
-				})
-
-				t.Run("sort order", func(t *testing.T) {
-					collection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
-						return collection.Name() == "flows"
-					})
-					require.True(t, found)
-
-					t.Run("defaults", func(t *testing.T) {
-						g, err := mapClientGroup(collection, client.QueryRequestGroup{FieldName: "dest_namespace"})
-						require.NoError(t, err)
-						require.True(t, g.SortOrder().Asc)
-						require.Equal(t, groups.GroupSortOrderTypeCount, g.SortOrder().Type)
-
-						g, err = mapClientGroup(collection, client.QueryRequestGroup{FieldName: "start_time"})
-						require.NoError(t, err)
-						require.True(t, g.SortOrder().Asc)
-						require.Equal(t, groups.GroupSortOrderTypeSelf, g.SortOrder().Type)
-					})
-
-					t.Run("desc", func(t *testing.T) {
-						g, err := mapClientGroup(collection, client.QueryRequestGroup{
-							FieldName: "dest_namespace",
-							Order:     &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: false}},
-						)
-						require.NoError(t, err)
-						require.False(t, g.SortOrder().Asc)
-					})
-
-					t.Run("asc", func(t *testing.T) {
-						g, err := mapClientGroup(collection, client.QueryRequestGroup{
-							FieldName: "dest_namespace",
-							Order:     &client.QueryRequestGroupOrder{Type: client.QueryRequestGroupOrderType(groups.GroupSortOrderTypeCount), SortAsc: true}},
-						)
-						require.NoError(t, err)
-						require.True(t, g.SortOrder().Asc)
-					})
 				})
 
 				t.Run("time range fields", func(t *testing.T) {

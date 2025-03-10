@@ -141,7 +141,6 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 
 	repositoryRequest := domain.QueryRequest{
 		ClusterIDs:     clusterIDs,
-		Aggregations:   make(aggregations.Aggregations),
 		MaxDocuments:   maxDocuments,
 		CollectionName: queryCollection.Name(),
 	}
@@ -160,13 +159,18 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		return client.QueryResponse{}, err
 	}
 
-	for aggName, clientAggregation := range req.Aggregations {
-		aggregation, err := mapClientAggregation(clientAggregation, queryCollection)
+	countAggregations := make(map[string]client.QueryRequestAggregation)
+	for aggKey, clientAggregation := range req.Aggregations {
+		aggregation, err := mapClientAggregation(aggregations.AggregationKey(aggKey), clientAggregation, queryCollection)
 		if err != nil {
 			return client.QueryResponse{}, err
 		}
 
-		repositoryRequest.Aggregations[aggregations.AggregationKey(aggName)] = aggregation
+		if clientAggregation.Function.Type == client.AggregationFunctionTypeCount {
+			countAggregations[string(aggKey)] = clientAggregation
+		}
+
+		repositoryRequest.Aggregations = append(repositoryRequest.Aggregations, aggregation)
 	}
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, s.cfg.QueryTimeout)
@@ -185,17 +189,12 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		Aggregations: mapResultAggregations(queryResult.Aggregations),
 	}
 
-	if len(queryResponse.GroupValues) == 0 && len(req.Aggregations) > 0 {
+	if len(req.GroupBys) == 0 {
 		// Handle the special case of a count aggregation with no groups set, which results in no elastic aggregations
 		// being queried (since the count aggregation relies on document/hit count)
-		for aggKey, agg := range req.Aggregations {
-			switch agg.Function.Type {
-			case client.AggregationFunctionTypeCount:
-				if _, found := queryResponse.Aggregations[string(aggKey)]; !found {
-					queryResponse.Aggregations[string(aggKey)] = client.QueryResponseValueAsString{
-						AsString: strconv.FormatInt(queryResult.Hits, 10),
-					}
-				}
+		for aggKey, _ := range countAggregations {
+			queryResponse.Aggregations[aggKey] = client.QueryResponseValueAsString{
+				AsString: strconv.FormatInt(queryResult.Hits, 10),
 			}
 		}
 	}
@@ -450,35 +449,23 @@ func (s *QueryService) mapClientCriterion(
 }
 
 func mapClientGroup(collection collections.Collection, from client.QueryRequestGroup) (groups.Group, error) {
-	sortOrder := groups.GroupSortOrder{
-		Asc: true,
-	}
-
-	if from.Order != nil {
-		sortOrder.Type = groups.GroupSortOrderType(from.Order.Type)
-		sortOrder.Asc = from.Order.SortAsc
-		sortOrder.AggregationKey = from.Order.AggKey
-	}
-
 	collectionField, found := collection.Field(collections.FieldName(from.FieldName))
 	if !found {
 		return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid field name: %s", from.FieldName))
 	}
 
 	if collectionField.Type() == collections.FieldTypeDate {
-		if sortOrder.Type == "" {
-			sortOrder.Type = groups.GroupSortOrderTypeSelf // default time group sort order is by key
-		}
-		return groups.NewGroupTime(from.FieldName, from.Interval, from.MaxValues, sortOrder), nil
+		return groups.NewGroupTime(from.FieldName, from.Interval, from.MaxValues), nil
 	}
 
-	if sortOrder.Type == "" {
-		sortOrder.Type = groups.GroupSortOrderTypeCount // default discrete group sort order is by count
-	}
-	return groups.NewGroupDiscrete(from.FieldName, from.MaxValues, sortOrder), nil
+	return groups.NewGroupDiscrete(from.FieldName, from.MaxValues), nil
 }
 
-func mapClientAggregation(from client.QueryRequestAggregation, collection collections.Collection) (aggregations.Aggregation, error) {
+func mapClientAggregation(
+	aggKey aggregations.AggregationKey,
+	from client.QueryRequestAggregation,
+	collection collections.Collection,
+) (aggregations.Aggregation, error) {
 
 	if from.Function.Type != client.AggregationFunctionTypeCount {
 		// skip count aggregation function, which does not require a FieldName
@@ -494,23 +481,23 @@ func mapClientAggregation(from client.QueryRequestAggregation, collection collec
 
 	switch from.Function.Type {
 	case client.AggregationFunctionTypeCount:
-		return aggregations.NewAggregationCount(), nil
+		return aggregations.NewAggregationCount(aggKey, from.Order, false), nil
 	case client.AggregationFunctionTypeSum:
-		return aggregations.NewAggregationSum(from.FieldName), nil
+		return aggregations.NewAggregationSum(aggKey, from.Order, from.FieldName, false), nil
 	case client.AggregationFunctionTypeAvg:
-		return aggregations.NewAggregationAvg(from.FieldName), nil
+		return aggregations.NewAggregationAvg(aggKey, from.Order, from.FieldName, false), nil
 	case client.AggregationFunctionTypeMin:
-		return aggregations.NewAggregationMin(from.FieldName), nil
+		return aggregations.NewAggregationMin(aggKey, from.Order, from.FieldName, true), nil
 	case client.AggregationFunctionTypeMax:
-		return aggregations.NewAggregationMax(from.FieldName), nil
+		return aggregations.NewAggregationMax(aggKey, from.Order, from.FieldName, false), nil
 	case client.AggregationFunctionTypePercentile50:
-		return aggregations.NewAggregationPercentile(from.FieldName, 50), nil
+		return aggregations.NewAggregationPercentile(aggKey, from.Order, from.FieldName, 50, false), nil
 	case client.AggregationFunctionTypePercentile90:
-		return aggregations.NewAggregationPercentile(from.FieldName, 90), nil
+		return aggregations.NewAggregationPercentile(aggKey, from.Order, from.FieldName, 90, false), nil
 	case client.AggregationFunctionTypePercentile95:
-		return aggregations.NewAggregationPercentile(from.FieldName, 95), nil
+		return aggregations.NewAggregationPercentile(aggKey, from.Order, from.FieldName, 95, false), nil
 	case client.AggregationFunctionTypePercentile100:
-		return aggregations.NewAggregationPercentile(from.FieldName, 100), nil
+		return aggregations.NewAggregationPercentile(aggKey, from.Order, from.FieldName, 100, false), nil
 	}
 
 	return nil, fmt.Errorf("unknown aggregation type '%s'", from.Function.Type)

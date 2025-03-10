@@ -11,9 +11,9 @@ import (
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
-type subAggregation struct {
-	key         string
-	aggregation elastic.Aggregation
+type aggregation struct {
+	agg                aggregations.Aggregation
+	elasticAggregation elastic.Aggregation
 }
 
 type aggregationBucketItem struct {
@@ -27,10 +27,14 @@ const (
 	maxGroupTimeAggregationResults = 100
 )
 
+func (a aggregation) elasticKey() string {
+	return "a_" + string(a.agg.Key())
+}
+
 // queryGroupsToElastic convert queryGroups and subAggregations into a slice of groupAggregation
 func queryGroupsToElastic(
 	queryGroups groups.Groups,
-	subAggregations map[string]elastic.Aggregation,
+	subAggregations []aggregation,
 	requestedInterval time.Duration,
 ) (groupAggregations, error) {
 	if len(queryGroups) == 0 {
@@ -72,10 +76,17 @@ func queryGroupsToElastic(
 		g = append(g, elasticGroupDiscrete)
 	}
 
-	if len(g) > 0 {
-		lastGroup := g[len(g)-1]
-		for aggKey, agg := range subAggregations {
-			lastGroup.subAggregation(aggKey, agg)
+	for i, group := range g {
+		if i < len(g)-1 {
+			group.setSortOrder(nil)
+		} else {
+			// set subAggregation on last group
+			for _, agg := range subAggregations {
+				if agg.elasticAggregation != nil {
+					group.subAggregation(agg.elasticKey(), agg.elasticAggregation)
+				}
+			}
+			group.setSortOrder(subAggregations)
 		}
 	}
 
@@ -93,7 +104,7 @@ func bucketItemsToGroupValue(
 	g groupAggregations,
 	groupIndex int,
 	bucketItems []aggregationBucketItem,
-	subAggregations aggregations.Aggregations,
+	subAggregations []aggregation,
 	parent groups.AppendableGroupValue,
 ) error {
 
@@ -132,9 +143,9 @@ func bucketItemsToGroupValue(
 
 		if len(g) == nextGroupIndex {
 
-			for aggKey, agg := range subAggregations {
+			for _, agg := range subAggregations {
 				// Transform sub aggregations and store the results in groupValue.Aggregations
-				err := elasticAggregationToQueryResult(string(aggKey), agg, bucketItem.docCount, lastGroupValue.Aggregations, bucketItem.aggregations)
+				err := elasticAggregationToQueryResult(agg, bucketItem.docCount, lastGroupValue.Aggregations, bucketItem.aggregations)
 				if err != nil {
 					return err
 				}

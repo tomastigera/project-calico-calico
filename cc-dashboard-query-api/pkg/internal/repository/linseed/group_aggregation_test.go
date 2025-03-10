@@ -10,10 +10,8 @@ import (
 )
 
 func TestGroupAggregation(t *testing.T) {
-	groupSortOrder := groups.GroupSortOrder{Type: groups.GroupSortOrderTypeSelf}
-
-	groupTime := groups.NewGroupTime("field1", "PT15M", 0, groupSortOrder)
-	groupDiscrete := groups.NewGroupDiscrete("field1", 10, groupSortOrder)
+	groupTime := groups.NewGroupTime("field1", "PT15M", 0)
+	groupDiscrete := groups.NewGroupDiscrete("field1", 10)
 
 	t.Run("unknown group type", func(t *testing.T) {
 		_, err := newGroupAggregation(0, groups.Groups{fakeGroup{Group: groupDiscrete}}, 0)
@@ -26,7 +24,7 @@ func TestGroupAggregation(t *testing.T) {
 	})
 
 	t.Run("time group", func(t *testing.T) {
-		groupTime2 := groups.NewGroupTime("field2", "PT15M", 0, groupSortOrder)
+		groupTime2 := groups.NewGroupTime("field2", "PT15M", 0)
 
 		testCases := []struct {
 			name          string
@@ -77,7 +75,7 @@ func TestGroupAggregation(t *testing.T) {
 		})
 
 		t.Run("multiple groups are converted into a multi terms aggregation", func(t *testing.T) {
-			groupDiscrete2 := groups.NewGroupDiscrete("field2", 10, groupSortOrder)
+			groupDiscrete2 := groups.NewGroupDiscrete("field2", 10)
 			elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete, groupDiscrete2}, nil, 0)
 			require.NoError(t, err)
 			require.Len(t, elasticGroups, 1)
