@@ -95,14 +95,10 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		}
 	}
 
+	var elasticGroups groupAggregations
 	repositoryAggregations := make(map[string]json.RawMessage)
 	if len(req.Groups) > 0 {
-		elasticAggregation, err := queryGroupsToElastic(0, req.Groups, elasticAggregations, linseedQueryParams.requestedPeriod)
-		if err != nil {
-			return result.QueryResult{}, err
-		}
-
-		aggJson, err := elasticAggregationToJSON(elasticAggregation)
+		elasticGroups, err = queryGroupsToElastic(req.Groups, elasticAggregations, linseedQueryParams.requestedPeriod)
 		if err != nil {
 			return result.QueryResult{}, err
 		}
@@ -114,7 +110,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		 * each subsequent group is set as an elastic sub-aggregation of the previous-index group, so groups beyond
 		 * index 0 are already included in aggJson.
 		 */
-		repositoryAggregations["g0"] = aggJson
+		repositoryAggregations[elasticGroups[0].aggregationKey] = elasticGroups[0].aggJson
 	} else {
 		// Set root level aggregations
 		for aggKey, elasticAggregation := range elasticAggregations {
@@ -149,8 +145,9 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 			}
 		}
 
-		if len(req.Groups) > 0 {
-			if err := queryGroupsFromElastic(0, req.Groups, req.Aggregations, resultAggregations, &queryResult); err != nil {
+		if len(elasticGroups) > 0 {
+			err := elasticGroups.fromElastic(0, resultAggregations, req.Aggregations, &queryResult)
+			if err != nil {
 				return result.QueryResult{}, err
 			}
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
 )
 
 type fakeGroup struct {
@@ -29,57 +30,55 @@ func TestLinseedGroups(t *testing.T) {
 
 	t.Run("from domain to elastic", func(t *testing.T) {
 		t.Run("query group to elastic aggregation", func(t *testing.T) {
-
-			t.Run("unknown group type", func(t *testing.T) {
-				_, err := queryGroupToElasticAggregation(fakeGroup{Group: groupDiscrete}, nil, nil, 0)
-				require.ErrorContains(t, err, "unknown group type 'fake-group'")
-			})
-
 			t.Run("time group interval adjustment for result count limit", func(t *testing.T) {
 				groupTime2 := groups.NewGroupTime("field1", "PT1M", 0, groupSortOrder)
-				aggregation, err := queryGroupToElasticAggregation(groupTime2, nil, nil, time.Hour*200)
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour*200)
 				require.NoError(t, err)
+				require.Len(t, elasticGroups, 1)
 				require.Equal(t, elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("7200s").
-					OrderByKey(false), aggregation)
+					FixedInterval("120m").
+					OrderByKey(false), elasticGroups[0].elasticAggregation)
 
 				groupTime2 = groups.NewGroupTime("field1", "PT1M", 0, groupSortOrder)
-				aggregation, err = queryGroupToElasticAggregation(groupTime2, nil, nil, time.Hour)
+				elasticGroups, err = queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
 				require.NoError(t, err)
+				require.Len(t, elasticGroups, 1)
 				require.Equal(t, elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("60s").
-					OrderByKey(false), aggregation)
+					FixedInterval("1m").
+					OrderByKey(false), elasticGroups[0].elasticAggregation)
 			})
 
 			t.Run("time group order", func(t *testing.T) {
 				t.Run("unknown type", func(t *testing.T) {
 					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groups.GroupSortOrder{Type: "unknown"})
-					_, err := queryGroupToElasticAggregation(groupTime2, nil, nil, time.Hour)
+					_, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
 					require.ErrorContains(t, err, "unknown sort order 'unknown' for time group 'field1'")
 				})
 				t.Run("desc", func(t *testing.T) {
 					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groupSortOrder)
-					aggregation, err := queryGroupToElasticAggregation(groupTime2, nil, nil, time.Hour)
+					elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
 					require.NoError(t, err)
+					require.Len(t, elasticGroups, 1)
 					require.Equal(t, elastic.
 						NewDateHistogramAggregation().
 						Field("field1").
-						FixedInterval("900s").
-						OrderByKey(false), aggregation)
+						FixedInterval("15m").
+						OrderByKey(false), elasticGroups[0].elasticAggregation)
 				})
 				t.Run("asc", func(t *testing.T) {
 					groupTime2 := groups.NewGroupTime("field1", "PT15M", 0, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeSelf, Asc: true})
-					aggregation, err := queryGroupToElasticAggregation(groupTime2, nil, nil, time.Hour)
+					elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime2}, nil, time.Hour)
 					require.NoError(t, err)
+					require.Len(t, elasticGroups, 1)
 					require.Equal(t, elastic.
 						NewDateHistogramAggregation().
 						Field("field1").
-						FixedInterval("900s").
-						OrderByKey(true), aggregation)
+						FixedInterval("15m").
+						OrderByKey(true), elasticGroups[0].elasticAggregation)
 				})
 			})
 
@@ -88,7 +87,7 @@ func TestLinseedGroups(t *testing.T) {
 				expectedGroupTimeElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("900s").
+					FixedInterval("15m").
 					OrderByKey(false)
 
 				expectedGroupDiscreteElasticAggregation := elastic.
@@ -97,30 +96,32 @@ func TestLinseedGroups(t *testing.T) {
 					Size(10).
 					OrderByKey(false)
 
-				aggregation, err := queryGroupToElasticAggregation(groupTime, nil, nil, 0)
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime}, nil, 0)
 				require.NoError(t, err)
-				require.Equal(t, expectedGroupTimeElasticAggregation, aggregation)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, expectedGroupTimeElasticAggregation, elasticGroups[0].elasticAggregation)
 
-				aggregation, err = queryGroupToElasticAggregation(groupDiscrete, nil, nil, 0)
+				elasticGroups, err = queryGroupsToElastic(groups.Groups{groupDiscrete}, nil, 0)
 				require.NoError(t, err)
-				require.Equal(t, expectedGroupDiscreteElasticAggregation, aggregation)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, expectedGroupDiscreteElasticAggregation, elasticGroups[0].elasticAggregation)
 			})
 
 			t.Run("with subaggregations", func(t *testing.T) {
 				elasticAggregations := map[string]elastic.Aggregation{
 					"a1": elastic.NewTermsAggregation().Field("t1"),
 					"a2": elastic.NewSumAggregation().Field("s1"),
+					"a3": elastic.NewAvgAggregation().Field("avg1"),
 				}
-				subGroupAggregation := &subAggregation{key: "sg1", aggregation: elastic.NewAvgAggregation().Field("avg1")}
 
 				expectedGroupTimeElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("900s").
+					FixedInterval("15m").
 					OrderByKey(false).
 					SubAggregation("a1", elastic.NewTermsAggregation().Field("t1")).
 					SubAggregation("a2", elastic.NewSumAggregation().Field("s1")).
-					SubAggregation("sg1", elastic.NewAvgAggregation().Field("avg1"))
+					SubAggregation("a3", elastic.NewAvgAggregation().Field("avg1"))
 
 				expectedGroupDiscreteElasticAggregation := elastic.
 					NewTermsAggregation().
@@ -129,125 +130,160 @@ func TestLinseedGroups(t *testing.T) {
 					OrderByKey(false).
 					SubAggregation("a1", elastic.NewTermsAggregation().Field("t1")).
 					SubAggregation("a2", elastic.NewSumAggregation().Field("s1")).
-					SubAggregation("sg1", elastic.NewAvgAggregation().Field("avg1"))
+					SubAggregation("a3", elastic.NewAvgAggregation().Field("avg1"))
 
-				elasticAggregation, err := queryGroupToElasticAggregation(groupTime, elasticAggregations, subGroupAggregation, 0)
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime}, elasticAggregations, 0)
 				require.NoError(t, err)
-				require.Equal(t, expectedGroupTimeElasticAggregation, elasticAggregation)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, expectedGroupTimeElasticAggregation, elasticGroups[0].elasticAggregation)
 
-				elasticAggregation, err = queryGroupToElasticAggregation(groupDiscrete, elasticAggregations, subGroupAggregation, 0)
+				elasticGroups, err = queryGroupsToElastic(groups.Groups{groupDiscrete}, elasticAggregations, 0)
 				require.NoError(t, err)
-				require.Equal(t, expectedGroupDiscreteElasticAggregation, elasticAggregation)
-			})
-		})
-
-		t.Run("query group to elastic", func(t *testing.T) {
-			queryGroups := groups.Groups{
-				groups.NewGroupDiscrete("field1", 10, groupSortOrder),
-			}
-
-			t.Run("with no subaggregations", func(t *testing.T) {
-				expectedElasticAggregation := elastic.
-					NewTermsAggregation().
-					Field("field1").
-					Size(10).
-					OrderByKey(false)
-
-				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, nil, 0)
-				require.NoError(t, err)
-				require.Equal(t, expectedElasticAggregation, elasticAggregation)
-			})
-
-			t.Run("with subaggregations", func(t *testing.T) {
-				expectedElasticAggregation := elastic.
-					NewTermsAggregation().
-					Field("field1").
-					Size(10).
-					OrderByKey(false).
-					// Note: NewAggregationCount() does not generate an elastic aggregation since it relies on the docCount
-					SubAggregation("a_a2", elastic.NewSumAggregation().Field("f1")).
-					SubAggregation("a_a3", elastic.NewPercentilesAggregation().Field("f2").Percentiles(95))
-
-				elasticAggregations := map[string]elastic.Aggregation{
-					"a_a2": elastic.NewSumAggregation().Field("f1"),
-					"a_a3": elastic.NewPercentilesAggregation().Field("f2").Percentiles(95),
-				}
-
-				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, elasticAggregations, 0)
-				require.NoError(t, err)
-				require.Equal(t, expectedElasticAggregation, elasticAggregation)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, expectedGroupDiscreteElasticAggregation, elasticGroups[0].elasticAggregation)
 			})
 
 			t.Run("with minimum time interval", func(t *testing.T) {
 				expectedElasticAggregation := elastic.
 					NewDateHistogramAggregation().
 					Field("field1").
-					FixedInterval("60s").
+					FixedInterval("1m").
 					OrderByKey(false)
 
 				queryGroups := groups.Groups{
 					groups.NewGroupTime("field1", "1s", 10, groupSortOrder),
 				}
 
-				elasticAggregation, err := queryGroupsToElastic(0, queryGroups, nil, 0)
+				elasticGroups, err := queryGroupsToElastic(queryGroups, nil, 0)
 				require.NoError(t, err)
-				require.Equal(t, expectedElasticAggregation, elasticAggregation)
+				require.Len(t, elasticGroups, 1)
+				require.Equal(t, expectedElasticAggregation, elasticGroups[0].elasticAggregation)
 			})
 		})
 	})
 
 	t.Run("elastic result to domain", func(t *testing.T) {
-		t.Run("group buckets from elastic", func(t *testing.T) {
+		t.Run("group values from elastic", func(t *testing.T) {
 			t.Run("unknown group type", func(t *testing.T) {
-				_, err := groupBucketsFromElastic("", fakeGroup{Group: groupDiscrete}, nil)
-				require.ErrorContains(t, err, "unknown group type 'fake-group'")
+				_, err := queryGroupsToElastic(groups.Groups{fakeGroup{Group: groupDiscrete}}, nil, 0)
+				require.ErrorContains(t, err, "unexpected fake-group groupBy for field field1")
 			})
 
 			t.Run("aggregation not found", func(t *testing.T) {
-				aggregationBucketItems, err := groupBucketsFromElastic("", groupDiscrete, nil)
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete}, nil, 0)
 				require.NoError(t, err)
-				require.Nil(t, aggregationBucketItems)
+				require.Len(t, elasticGroups, 1)
+
+				var res result.QueryResult
+				err = elasticGroups.fromElastic(0, nil, nil, &res)
+				require.NoError(t, err)
+				require.Nil(t, res.GroupValues)
+				require.Nil(t, res.Aggregations)
 			})
 
 			t.Run("aggregation found", func(t *testing.T) {
 				elasticResult := elastic.Aggregations{
 					"g0": json.RawMessage(`{"buckets": [{"key":"test-123","doc_count":99},{"key":"test-456","doc_count":11}]}`),
 				}
-				aggregationBucketItems, err := groupBucketsFromElastic("g0", groupDiscrete, elasticResult)
+
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete}, nil, 0)
 				require.NoError(t, err)
-				require.NotNil(t, aggregationBucketItems)
+				require.Len(t, elasticGroups, 1)
 
-				var resultBucketItems []aggregationBucketItem
-				for _, bucketItem := range aggregationBucketItems {
-					resultBucketItems = append(resultBucketItems, bucketItem)
-				}
+				var res result.QueryResult
+				err = elasticGroups.fromElastic(0, elasticResult, nil, &res)
+				require.NoError(t, err)
 
-				require.Len(t, resultBucketItems, 2)
-				require.Equal(t, "test-123", resultBucketItems[0].key)
-				require.Equal(t, "test-456", resultBucketItems[1].key)
-				require.Equal(t, int64(99), resultBucketItems[0].docCount)
-				require.Equal(t, int64(11), resultBucketItems[1].docCount)
+				require.NoError(t, err)
+				require.NotNil(t, res.GroupValues)
+				require.Len(t, res.GroupValues, 2)
+				require.Equal(t, "test-123", res.GroupValues[0].Key)
+				require.Equal(t, "test-456", res.GroupValues[1].Key)
+				require.Equal(t, int64(99), res.GroupValues[0].DocCount)
+				require.Equal(t, int64(11), res.GroupValues[1].DocCount)
 			})
 
 			t.Run("from discrete group", func(t *testing.T) {
 				elasticResult := elastic.Aggregations{
 					"g0": json.RawMessage(`{"buckets": [{"key": 1734382560000, "doc_count": 315, "a_#flows": {"value": 4616.0 } }, {"key": 1734382680000, "doc_count": 626, "a_#flows": {"value": 10121.0 } } ] }`),
 				}
-				aggregationBucketItems, err := groupBucketsFromElastic("g0", groupDiscrete, elasticResult)
+
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete}, nil, 0)
 				require.NoError(t, err)
-				require.Len(t, aggregationBucketItems, 2)
-				require.Equal(t, "1734382560000", aggregationBucketItems[0].key)
-				require.Equal(t, "1734382680000", aggregationBucketItems[1].key)
+				require.Len(t, elasticGroups, 1)
+
+				var res result.QueryResult
+				err = elasticGroups.fromElastic(0, elasticResult, nil, &res)
+				require.NoError(t, err)
+				require.Len(t, res.GroupValues, 2)
+				require.Equal(t, "1734382560000", res.GroupValues[0].Key)
+				require.Equal(t, "1734382680000", res.GroupValues[1].Key)
 			})
+
+			t.Run("from multiple discrete group", func(t *testing.T) {
+				elasticResult := elastic.Aggregations{
+					"g0-1": jsonMarshal(t, map[string]any{
+						"buckets": []map[string]any{
+							{"key": []string{"g0-value1", "g1-value1"}, "doc_count": 11},
+							{"key": []string{"g0-value2", "g1-value2"}, "doc_count": 22},
+						},
+					}),
+				}
+
+				groupDiscrete2 := groups.NewGroupDiscrete("field2", 10, groupSortOrder)
+
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete, groupDiscrete2}, nil, 0)
+				require.NoError(t, err)
+				require.Len(t, elasticGroups, 1)
+
+				var res result.QueryResult
+				err = elasticGroups.fromElastic(0, elasticResult, nil, &res)
+				require.NoError(t, err)
+
+				require.Equal(t, groups.GroupValues{
+					&groups.GroupValue{
+						Key:          "g0-value1",
+						DocCount:     11,
+						Aggregations: aggregations.AggregationValues{},
+						SubGroupValues: groups.GroupValues{
+							&groups.GroupValue{
+								Key:          "g1-value1",
+								DocCount:     11,
+								Aggregations: aggregations.AggregationValues{},
+							},
+						},
+					},
+					&groups.GroupValue{
+						Key:          "g0-value2",
+						DocCount:     22,
+						Aggregations: aggregations.AggregationValues{},
+						SubGroupValues: groups.GroupValues{
+							&groups.GroupValue{
+								Key:          "g1-value2",
+								DocCount:     22,
+								Aggregations: aggregations.AggregationValues{},
+							},
+						},
+					},
+				}, res.GroupValues)
+			})
+
 			t.Run("from time group", func(t *testing.T) {
 				elasticResult := elastic.Aggregations{
 					"g0": json.RawMessage(`{"buckets": [{"key": 1734382560000, "doc_count": 315, "a_#flows": {"value": 4616.0 } }, {"key": 1734382680000, "doc_count": 626, "a_#flows": {"value": 10121.0 } } ] }`),
 				}
-				aggregationBucketItems, err := groupBucketsFromElastic("g0", groupTime, elasticResult)
+
+				elasticGroups, err := queryGroupsToElastic(groups.Groups{groupDiscrete}, nil, 0)
 				require.NoError(t, err)
-				require.Len(t, aggregationBucketItems, 2)
-				require.Equal(t, "1734382560000", aggregationBucketItems[0].key)
-				require.Equal(t, "1734382680000", aggregationBucketItems[1].key)
+				require.Len(t, elasticGroups, 1)
+
+				var res result.QueryResult
+				err = elasticGroups.fromElastic(0, elasticResult, nil, &res)
+				require.NoError(t, err)
+
+				require.Len(t, res.GroupValues, 2)
+				require.Equal(t, "1734382560000", res.GroupValues[0].Key)
+				require.Equal(t, "1734382680000", res.GroupValues[1].Key)
 			})
 		})
 
@@ -256,37 +292,77 @@ func TestLinseedGroups(t *testing.T) {
 				"count": aggregations.NewAggregationCount(),
 			}
 			elasticResult := elastic.Aggregations{
-				"g0": json.RawMessage(`{"buckets": [{"key":"test-123","doc_count":99},{"key":"test-456","doc_count":11}]}`),
-			}
-
-			groupValue := &groups.GroupValue{}
-
-			aggValue1 := int64(99)
-			aggValue2 := int64(11)
-			expectedAggregationValue1 := aggregations.NewAggregationValue[int64](&aggValue1)
-			expectedAggregationValue2 := aggregations.NewAggregationValue[int64](&aggValue2)
-
-			err := queryGroupsFromElastic(0, groups.Groups{groupDiscrete, groupTime}, queryRequestAggregations, elasticResult, groupValue)
-			require.NoError(t, err)
-
-			require.Equal(t, &groups.GroupValue{
-				SubGroupValues: groups.GroupValues{
-					&groups.GroupValue{
-						Key:      "test-123",
-						DocCount: 99,
-						Aggregations: aggregations.AggregationValues{
-							"count": expectedAggregationValue1,
+				"g0": jsonMarshal(t, map[string]any{
+					"buckets": []map[string]any{
+						{
+							"key":       float64(1),
+							"doc_count": 11,
+							"g1": map[string]any{
+								"buckets": []map[string]any{
+									{"key": "g1-value1", "doc_count": 111},
+								},
+							},
+						},
+						{
+							"key":       float64(2),
+							"doc_count": 22,
+							"g1": map[string]any{
+								"buckets": []map[string]any{
+									{"key": "g1-value2", "doc_count": 222},
+								},
+							},
 						},
 					},
-					&groups.GroupValue{
-						Key:      "test-456",
-						DocCount: 11,
-						Aggregations: aggregations.AggregationValues{
-							"count": expectedAggregationValue2,
+				}),
+			}
+
+			elasticGroups, err := queryGroupsToElastic(groups.Groups{groupTime, groupDiscrete}, nil, 0)
+			require.NoError(t, err)
+			require.Len(t, elasticGroups, 2)
+
+			var res result.QueryResult
+			err = elasticGroups.fromElastic(0, elasticResult, queryRequestAggregations, &res)
+			require.NoError(t, err)
+
+			require.Equal(t, groups.GroupValues{
+				&groups.GroupValue{
+					Key:          "1",
+					DocCount:     11,
+					Aggregations: aggregations.AggregationValues{},
+					SubGroupValues: groups.GroupValues{
+						&groups.GroupValue{
+							Key:      "g1-value1",
+							DocCount: 111,
+							Aggregations: aggregations.AggregationValues{
+								"count": aggregations.NewAggregationValue[int64](intp(111)),
+							},
 						},
 					},
 				},
-			}, groupValue)
+				&groups.GroupValue{
+					Key:          "2",
+					DocCount:     22,
+					Aggregations: aggregations.AggregationValues{},
+					SubGroupValues: groups.GroupValues{
+						&groups.GroupValue{
+							Key:      "g1-value2",
+							DocCount: 222,
+							Aggregations: aggregations.AggregationValues{
+								"count": aggregations.NewAggregationValue[int64](intp(222)),
+							},
+						},
+					},
+				},
+			}, res.GroupValues)
 		})
 	})
+}
+
+func jsonMarshal(t *testing.T, object any) json.RawMessage {
+	t.Helper()
+
+	jsonBytes, err := json.Marshal(object)
+	require.NoError(t, err)
+
+	return jsonBytes
 }

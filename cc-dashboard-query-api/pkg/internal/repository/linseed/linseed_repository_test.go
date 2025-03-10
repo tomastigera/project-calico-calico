@@ -133,10 +133,10 @@ func TestLinseedRepository(t *testing.T) {
 		t.Run("are queried at the inner-most group level only", func(t *testing.T) {
 			mockClient.SetResults(rest.MockResult{})
 
-			aggSource, err := elastic.NewTermsAggregation().
+			aggSource, err := elastic.NewDateHistogramAggregation().
 				Field("fg1").
+				FixedInterval("1m").
 				Order("_count", true).
-				Size(10).
 				SubAggregation("g1",
 					elastic.NewTermsAggregation().
 						Field("fg2").
@@ -155,7 +155,7 @@ func TestLinseedRepository(t *testing.T) {
 					"agg1": aggregations.NewAggregationSum("f1"),
 				},
 				Groups: groups.Groups{
-					groups.NewGroupDiscrete("fg1", 10, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeCount, Asc: true}),
+					groups.NewGroupTime("fg1", "1M", 10, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeCount, Asc: true}),
 					groups.NewGroupDiscrete("fg2", 10, groups.GroupSortOrder{Type: groups.GroupSortOrderTypeCount, Asc: true}),
 				},
 			})

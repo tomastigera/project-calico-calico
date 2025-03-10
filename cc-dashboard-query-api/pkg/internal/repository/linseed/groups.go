@@ -2,14 +2,13 @@ package linseed
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
+	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 type subAggregation struct {
@@ -19,7 +18,7 @@ type subAggregation struct {
 
 type aggregationBucketItem struct {
 	err          error
-	key          string
+	keys         []string
 	docCount     int64
 	aggregations elastic.Aggregations
 }
@@ -28,167 +27,119 @@ const (
 	maxGroupTimeAggregationResults = 100
 )
 
-func errUnknownGroupType(groupType groups.GroupType) error {
-	return fmt.Errorf("unknown group type '%s'", groupType)
-}
-
-func queryGroupToElasticAggregation(queryGroup groups.Group, elasticAggregations map[string]elastic.Aggregation, subGroupAggregation *subAggregation, requestedPeriod time.Duration) (elastic.Aggregation, error) {
-
-	groupType := queryGroup.Type()
-	/* Phase 2: see GroupSortOrderTypeAggregation in cc-dashboard-query-api/pkg/internal/domain/groups/groups.go
-	groupSortOrder := queryGroup.SortOrder()
-	sortOrderAggregationKey := fmt.Sprintf("a_%s", groupSortOrder.AggregationKey)
-
-	if groupSortOrder.Type == groups.GroupSortOrderTypeAggregation {
-		if _, found := elasticAggregations[sortOrderAggregationKey]; !found {
-			return nil, fmt.Errorf("invalid aggregation key '%s' in %s group %s", groupSortOrder.AggregationKey, groupType, queryGroup.FieldName())
-		}
-	}
-	*/
-	var elasticGroupAggregation elastic.Aggregation
-	var appendSubAggregation func(name string, subAggregation elastic.Aggregation)
-	switch groupType {
-	case groups.GroupTypeDiscrete:
-		termsAggregation := elastic.NewTermsAggregation().
-			Field(queryGroup.FieldName()).
-			Size(queryGroup.MaxValues())
-
-		appendSubAggregation = func(name string, subAggregation elastic.Aggregation) {
-			termsAggregation.SubAggregation(name, subAggregation)
-		}
-
-		switch sortOrder := queryGroup.SortOrder(); sortOrder.Type {
-		case groups.GroupSortOrderTypeSelf:
-			termsAggregation = termsAggregation.OrderByKey(sortOrder.Asc)
-		case groups.GroupSortOrderTypeCount:
-			termsAggregation = termsAggregation.OrderByCount(sortOrder.Asc)
-		/* Phase 2: see GroupSortOrderTypeAggregation in cc-dashboard-query-api/pkg/internal/domain/groups/groups.go
-		case groups.GroupSortOrderTypeAggregation:
-			termsAggregation = termsAggregation.OrderByAggregation(fmt.Sprintf("a_%s", sortOrder.AggregationKey), sortOrder.Asc)
-		*/
-		default:
-			return nil, fmt.Errorf("unknown sort order '%s' for %s group '%s'", sortOrder.Type, queryGroup.Type(), queryGroup.FieldName())
-		}
-
-		elasticGroupAggregation = termsAggregation
-	case groups.GroupTypeTime:
-		var interval time.Duration
-		intervalValue := strings.ToLower(strings.Replace(queryGroup.Interval(), "PT", "", -1))
-		if intervalValue != "" {
-			var err error
-			interval, err = time.ParseDuration(intervalValue)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// adjust interval to contain at most maxGroupTimeAggregationResults results
-		if interval == 0 || int64(requestedPeriod/interval) > maxGroupTimeAggregationResults {
-			intervalClamped := requestedPeriod / time.Duration(maxGroupTimeAggregationResults)
-			if intervalClamped > interval {
-				interval = intervalClamped
-			}
-		}
-
-		// ensure a minimum interval of 1m
-		if interval < 1*time.Minute {
-			interval = 1 * time.Minute
-		}
-		intervalValue = strconv.FormatInt(int64(interval.Seconds()), 10) + "s"
-
-		dateTimeHistogramAggregation := elastic.NewDateHistogramAggregation().
-			Field(queryGroup.FieldName()).
-			FixedInterval(intervalValue)
-
-		appendSubAggregation = func(name string, subAggregation elastic.Aggregation) {
-			dateTimeHistogramAggregation.SubAggregation(name, subAggregation)
-		}
-
-		switch sortOrder := queryGroup.SortOrder(); sortOrder.Type {
-		case groups.GroupSortOrderTypeSelf:
-			dateTimeHistogramAggregation = dateTimeHistogramAggregation.OrderByKey(sortOrder.Asc)
-		case groups.GroupSortOrderTypeCount:
-			dateTimeHistogramAggregation = dateTimeHistogramAggregation.OrderByCount(sortOrder.Asc)
-		/* Phase 2: see GroupSortOrderTypeAggregation in cc-dashboard-query-api/pkg/internal/domain/groups/groups.go
-		case groups.GroupSortOrderTypeAggregation:
-			dateTimeHistogramAggregation = dateTimeHistogramAggregation.OrderByAggregation(fmt.Sprintf("a_%s", sortOrder.AggregationKey), sortOrder.Asc)
-		*/
-		default:
-			return nil, fmt.Errorf("unknown sort order '%s' for %s group '%s'", sortOrder.Type, queryGroup.Type(), queryGroup.FieldName())
-		}
-
-		elasticGroupAggregation = dateTimeHistogramAggregation
-	default:
-		return nil, errUnknownGroupType(queryGroup.Type())
+// queryGroupsToElastic convert queryGroups and subAggregations into a slice of groupAggregation
+func queryGroupsToElastic(
+	queryGroups groups.Groups,
+	subAggregations map[string]elastic.Aggregation,
+	requestedInterval time.Duration,
+) (groupAggregations, error) {
+	if len(queryGroups) == 0 {
+		return nil, fmt.Errorf("empty query group on group aggregation")
 	}
 
-	if subGroupAggregation != nil {
-		appendSubAggregation(subGroupAggregation.key, subGroupAggregation.aggregation)
-	}
-
-	for aggKey, agg := range elasticAggregations {
-		appendSubAggregation(aggKey, agg)
-	}
-
-	return elasticGroupAggregation, nil
-}
-
-func queryGroupsToElastic(groupIndex int, queryGroups groups.Groups, elasticAggregations map[string]elastic.Aggregation, requestedPeriod time.Duration) (elastic.Aggregation, error) {
-	var subGroupAggregation *subAggregation
-
-	if len(queryGroups) > 1 {
-		var err error
-		subGroupAggregation = &subAggregation{
-			key: fmt.Sprintf("g%d", groupIndex+1),
-		}
-		subGroupAggregation.aggregation, err = queryGroupsToElastic(groupIndex+1, queryGroups[1:], elasticAggregations, requestedPeriod)
+	var g groupAggregations
+	groupIndex := 0
+	if queryGroups[0].Type() == groups.GroupTypeTime {
+		group, err := newGroupAggregation(groupIndex, groups.Groups{queryGroups[groupIndex]}, requestedInterval)
 		if err != nil {
 			return nil, err
 		}
+
+		groupIndex++
+		g = append(g, group)
 	}
 
-	if len(queryGroups) != 1 {
-		elasticAggregations = nil
+	nonDiscreteGroup, found := slices.Find(queryGroups[groupIndex:], func(g groups.Group) bool {
+		return g.Type() != groups.GroupTypeDiscrete
+	})
+
+	if found {
+		return nil, fmt.Errorf("unexpected %s groupBy for field %s", nonDiscreteGroup.Type(), nonDiscreteGroup.FieldName())
 	}
 
-	return queryGroupToElasticAggregation(queryGroups[0], elasticAggregations, subGroupAggregation, requestedPeriod)
+	// process discrete groups
+	if len(queryGroups) > groupIndex {
+		elasticGroupDiscrete, err := newGroupAggregation(groupIndex, queryGroups[groupIndex:], requestedInterval)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(g) > 0 {
+			previousGroup := g[len(g)-1]
+			previousGroup.subAggregation(elasticGroupDiscrete.aggregationKey, elasticGroupDiscrete.elasticAggregation)
+		}
+
+		g = append(g, elasticGroupDiscrete)
+	}
+
+	if len(g) > 0 {
+		lastGroup := g[len(g)-1]
+		for aggKey, agg := range subAggregations {
+			lastGroup.subAggregation(aggKey, agg)
+		}
+	}
+
+	aggJson, err := elasticAggregationToJSON(g[0].elasticAggregation)
+	if err != nil {
+		return nil, err
+	}
+	g[0].aggJson = aggJson
+
+	return g, nil
 }
 
-// queryGroupsFromElastic Iterate queryRequestGroups and recursively store bucket aggregations and group aggregations
-// into groups.GroupValue appended to appendableGroupValue
-func queryGroupsFromElastic(groupIndex int, queryRequestGroups groups.Groups, queryRequestAggregations aggregations.Aggregations, resultAggregations elastic.Aggregations, appendableGroupValue groups.AppendableGroupValue) error {
+// bucketItemsToGroupValue Iterate bucketItems and recursively store bucket items into parent
+func bucketItemsToGroupValue(
+	g groupAggregations,
+	groupIndex int,
+	bucketItems []aggregationBucketItem,
+	subAggregations aggregations.Aggregations,
+	parent groups.AppendableGroupValue,
+) error {
 
-	// Get the aggregation item buckets for the current group
-	aggregationItemBuckets, err := groupBucketsFromElastic(
-		fmt.Sprintf("g%d", groupIndex), // A group aggregation is identified by "g" + groupIndex
-		queryRequestGroups[groupIndex],
-		resultAggregations,
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, bucketItem := range aggregationItemBuckets {
+	nextGroupIndex := groupIndex + 1
+	for _, bucketItem := range bucketItems {
 		if bucketItem.err != nil {
 			return bucketItem.err
 		}
 
-		// Each bucket item is stored in a groups.GroupValue
-		groupValue := &groups.GroupValue{
-			Key:          bucketItem.key,
-			DocCount:     bucketItem.docCount,
-			Aggregations: make(aggregations.AggregationValues),
-		}
+		var firstGroupValue, parentGroupValue, lastGroupValue *groups.GroupValue
+		for _, key := range bucketItem.keys { // process multi_terms keys
 
-		for aggKey, agg := range queryRequestAggregations {
-			// Transform aggregations and store the results in groupValue.Aggregations
-			err := elasticAggregationToQueryResult(string(aggKey), agg, bucketItem.docCount, groupValue.Aggregations, bucketItem.aggregations)
-			if err != nil {
-				return err
+			// Each bucket item is stored in a groups.GroupValue
+			lastGroupValue = &groups.GroupValue{
+				Key:          key,
+				DocCount:     bucketItem.docCount,
+				Aggregations: make(aggregations.AggregationValues),
 			}
+
+			if parentGroupValue == nil {
+				firstGroupValue = lastGroupValue
+			} else {
+				parentGroupValue.AppendGroupValue(lastGroupValue)
+			}
+			parentGroupValue = lastGroupValue
 		}
 
-		if groupIndex+1 < len(queryRequestGroups) {
+		if lastGroupValue == nil {
+			continue
+		}
+
+		// Append the current groupValue to either
+		// - A QueryResult object (if this is the group at groupIndex == 0)
+		// - The current group's parent GroupValue (for groups at groupIndex > 0)
+		parent.AppendGroupValue(firstGroupValue)
+
+		if len(g) == nextGroupIndex {
+
+			for aggKey, agg := range subAggregations {
+				// Transform sub aggregations and store the results in groupValue.Aggregations
+				err := elasticAggregationToQueryResult(string(aggKey), agg, bucketItem.docCount, lastGroupValue.Aggregations, bucketItem.aggregations)
+				if err != nil {
+					return err
+				}
+			}
+		} else if len(g) > nextGroupIndex {
 
 			/* Each bucket item has group sub-aggregations for the group following the current group, and each of
 			 * these following group sub-aggregations will have their own aggregations and group sub-aggregations.
@@ -201,73 +152,17 @@ func queryGroupsFromElastic(groupIndex int, queryRequestGroups groups.Groups, qu
 			 * groups.GroupValue struct
 			 */
 
-			if err := queryGroupsFromElastic(
-				groupIndex+1,
-				queryRequestGroups,
-				queryRequestAggregations,
+			err := g.fromElastic(
+				nextGroupIndex,
 				bucketItem.aggregations,
-				groupValue, // Store subgroup aggregations in the groupValue.SubGroupValues field
-			); err != nil {
+				subAggregations,
+				lastGroupValue, // Store subgroup aggregations in the groupValue.SubGroupValues field
+			)
+			if err != nil {
 				return err
 			}
 		}
-
-		// Append the current groupValue to either
-		// - The QueryResult (if this is the group at groupIndex == 0)
-		// - The current group's parent group GroupValue (for groups at groupIndex > 0)
-		appendableGroupValue.AppendGroupValue(groupValue)
 	}
 
 	return nil
-}
-
-func groupBucketsFromElastic(elasticGroupKey string, queryGroup groups.Group, resultAggregations elastic.Aggregations) ([]aggregationBucketItem, error) {
-
-	var aggregationBucketItems []aggregationBucketItem
-	switch queryGroup.Type() {
-	case groups.GroupTypeDiscrete:
-		aggBucketKeyItems, found := resultAggregations.Terms(elasticGroupKey)
-		if !found {
-			return nil, nil
-		}
-
-		for _, elasticBucketItem := range aggBucketKeyItems.Buckets {
-			bucketItem := aggregationBucketItem{
-				docCount:     elasticBucketItem.DocCount,
-				aggregations: elasticBucketItem.Aggregations,
-			}
-			key, ok := elasticBucketItem.Key.(string)
-			if !ok {
-				key = elasticBucketItem.KeyNumber.String()
-				if key == "" {
-					bucketItem.err = fmt.Errorf("unable to get group %s aggregation bucket key", elasticGroupKey)
-				}
-			}
-			bucketItem.key = key
-			aggregationBucketItems = append(aggregationBucketItems, bucketItem)
-		}
-		return aggregationBucketItems, nil
-	case groups.GroupTypeTime:
-		aggBucketKeyItems, found := resultAggregations.DateHistogram(elasticGroupKey)
-		if !found {
-			return nil, nil
-		}
-
-		for _, elasticBucketItem := range aggBucketKeyItems.Buckets {
-			bucketItem := aggregationBucketItem{
-				docCount:     elasticBucketItem.DocCount,
-				aggregations: elasticBucketItem.Aggregations,
-			}
-
-			if elasticBucketItem.KeyAsString == nil {
-				bucketItem.key = strconv.FormatFloat(elasticBucketItem.Key, 'f', -1, 64)
-			} else {
-				bucketItem.key = *elasticBucketItem.KeyAsString
-			}
-			aggregationBucketItems = append(aggregationBucketItems, bucketItem)
-		}
-
-		return aggregationBucketItems, nil
-	}
-	return nil, errUnknownGroupType(queryGroup.Type())
 }
