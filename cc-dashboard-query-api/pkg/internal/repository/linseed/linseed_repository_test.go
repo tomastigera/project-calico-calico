@@ -252,7 +252,7 @@ func TestLinseedRepository(t *testing.T) {
 					aggregations: aggregations.Aggregations{
 						aggregations.NewAggregationSum("agg30", 30, "f1", false),
 						aggregations.NewAggregationSum("agg20", 20, "f1", false),
-						aggregations.NewAggregationSum("agg10", 10, "f1", false),
+						aggregations.NewAggregationPercentile("agg10", 10, "f1", 95, false),
 					},
 				},
 				{
@@ -260,7 +260,7 @@ func TestLinseedRepository(t *testing.T) {
 					aggregations: aggregations.Aggregations{
 						aggregations.NewAggregationSum("agg20", 20, "f1", false),
 						aggregations.NewAggregationSum("agg30", 30, "f1", false),
-						aggregations.NewAggregationSum("agg10", 10, "f1", false),
+						aggregations.NewAggregationPercentile("agg10", 10, "f1", 95, false),
 					},
 				},
 			}
@@ -271,7 +271,7 @@ func TestLinseedRepository(t *testing.T) {
 					group1 := elastic.NewTermsAggregation().
 						Field("fg2").
 						Size(10).
-						Order("a_agg10", false).
+						Order("a_agg10.95", false).
 						Order("a_agg20", false).
 						Order("a_agg30", false)
 

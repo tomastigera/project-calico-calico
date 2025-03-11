@@ -125,7 +125,7 @@ func (g *groupAggregation) setElasticTermsAggregation(queryGroup groups.Group) {
 			if aggItem.elasticAggregation == nil {
 				termsAggregation.OrderByCount(aggItem.agg.SortAsc())
 			} else {
-				termsAggregation.OrderByAggregation(aggItem.elasticKey(), aggItem.agg.SortAsc())
+				termsAggregation.OrderByAggregation(aggItem.orderKey(), aggItem.agg.SortAsc())
 			}
 		}
 	}
@@ -149,7 +149,7 @@ func (g *groupAggregation) setElasticMultiTermsAggregation(queryGroups groups.Gr
 			if aggItem.elasticAggregation == nil {
 				multiTermsAggregation.OrderByCount(aggItem.agg.SortAsc())
 			} else {
-				multiTermsAggregation.OrderByAggregation(aggItem.elasticKey(), aggItem.agg.SortAsc())
+				multiTermsAggregation.OrderByAggregation(aggItem.orderKey(), aggItem.agg.SortAsc())
 			}
 		}
 	}

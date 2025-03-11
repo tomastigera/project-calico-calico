@@ -31,6 +31,15 @@ func (a aggregation) elasticKey() string {
 	return "a_" + string(a.agg.Key())
 }
 
+func (a aggregation) orderKey() string {
+	pAgg, isPercentile := a.agg.(aggregations.AggregationPercentile)
+	if isPercentile {
+		return fmt.Sprintf("%s.%.0f", a.elasticKey(), pAgg.Percentile())
+	}
+
+	return a.elasticKey()
+}
+
 // queryGroupsToElastic convert queryGroups and subAggregations into a slice of groupAggregation
 func queryGroupsToElastic(
 	queryGroups groups.Groups,
