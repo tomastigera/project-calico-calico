@@ -85,7 +85,7 @@ int calico_tc_main(struct __sk_buff *skb)
 
 	if (CALI_F_FROM_WEP) {
 		skb->queue_mapping = 0;
-		bpf_set_hash(skb, 1);
+	//	bpf_set_hash(skb, 1);
 	}
 
 	/* Optimisation: if another BPF program has already pre-approved the packet,

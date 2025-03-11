@@ -10,6 +10,8 @@
 #include "ifstate.h"
 #include "profiling.h"
 
+#include <linux/if_packet.h>
+
 #if CALI_FIB_ENABLED
 #define fwd_fib(fwd)			((fwd)->fib)
 #define fwd_fib_set(fwd, v)		((fwd)->fib = v)
@@ -157,31 +159,33 @@ skip_redir_ifindex:
 #if CALI_FIB_ENABLED
 
 #ifndef IPVER6
-	if (CALI_F_FROM_WEP) {
+	if (CALI_F_FROM_WEP && fwd_fib(&ctx->fwd) ) {
 		if (state->ct_result.ifindex_fwd == CT_INVALID_IFINDEX) {
 			*fib_params(ctx) = (struct bpf_fib_lookup) {
 				.family = 2, /* AF_INET */
 				.tot_len = 0,
+				.ifindex = CALI_F_TO_HOST ? ctx->skb->ingress_ifindex : ctx->skb->ifindex,
 				.l4_protocol = state->ip_proto,
 			};
 			fib_params(ctx)->ipv4_src = state->ip_src;
 			fib_params(ctx)->ipv4_dst = state->ip_dst;
 			rc = bpf_fib_lookup(ctx->skb, fib_params(ctx), sizeof(struct bpf_fib_lookup), ctx->fwd.fib_flags);
-			CALI_DEBUG("FBI rc %d", rc);
+			CALI_DEBUG("FIB rc %d", rc);
 			state->ct_result.ifindex_fwd = fib_params(ctx)->ifindex;
 		}
 
-		struct cali_rt *dest_rt = cali_rt_lookup(&ctx->state->post_nat_ip_dst);
+		struct cali_rt *dest_rt = cali_rt_lookup(&ctx->state->ip_dst);
 		if (dest_rt == NULL) {
+			CALI_DEBUG("XXX no route for " IP_FMT, &ctx->state->ip_dst);
 			goto deny;
 		}
 		if (!(dest_rt->flags & CALI_RT_TUNNELED)) {
+			CALI_DEBUG("XXX not tunneled");
 			goto deny;
 		}
-
 		struct bpf_tunnel_key key = {
 			.tunnel_id = 4096,
-			.remote_ipv4 = dest_rt->next_hop,
+			.remote_ipv4 = bpf_htonl(dest_rt->next_hop),
 			.tunnel_ttl = 16,
 		};
 		int err = bpf_skb_set_tunnel_key(
@@ -453,6 +457,9 @@ allow:
 			CALI_INFO("Final result=DENY (%d). Program execution time: %lluns",
 					reason, prog_end_time-state->prog_start_time);
 		} else {
+			if (CALI_F_VXLAN && CALI_F_TO_HOST) {
+				bpf_skb_change_type(ctx->skb, PACKET_HOST);
+			}
 			CALI_INFO("Final result=ALLOW (%d). Program execution time: %lluns",
 					reason, prog_end_time-state->prog_start_time);
 		}
