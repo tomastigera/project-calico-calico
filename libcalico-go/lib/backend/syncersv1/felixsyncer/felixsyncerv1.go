@@ -155,6 +155,10 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ListInterface: model.ResourceListOptions{Kind: apiv3.KindEgressGatewayPolicy},
 				ClientID:      calicoClientID,
 			},
+			{
+				ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPPeer},
+				ClientID:      calicoClientID,
+			},
 		}
 
 		// If running in kdd mode, also watch Kubernetes network policies directly.

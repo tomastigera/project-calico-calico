@@ -61,6 +61,7 @@ type endpointCallbacks interface {
 		endpointKey model.EndpointKey,
 		endpoint model.Endpoint,
 		egressData EndpointEgressData,
+		peerData *EndpointBGPPeer,
 		filteredTiers []TierInfo,
 	)
 }
@@ -454,6 +455,10 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 
 	packetCaptureCalculator := NewPacketCaptureCalculator(callbacks)
 	packetCaptureCalculator.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+	// Create and hook up the active BGP peer calculator.
+	activeBGPPeerCalc := NewActiveBGPPeerCalculator(hostname)
+	activeBGPPeerCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+	activeBGPPeerCalc.OnEndpointBGPPeerDataUpdate = polResolver.OnEndpointBGPPeerDataUpdate
 
 	// Register for host IP updates.
 	//

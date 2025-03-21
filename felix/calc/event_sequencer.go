@@ -67,6 +67,14 @@ func (e EndpointEgressData) IsEmpty() bool {
 	return true
 }
 
+// EndpointUpdate contains information about updates applied to the endpoint.
+type endpointUpdate struct {
+	endpoint   interface{}
+	peerData   *EndpointBGPPeer
+	egressData EndpointEgressData
+	tierInfo   []TierInfo
+}
+
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
 // when Flush() is called.  It flushed updates in a dependency-safe order.
 type EventSequencer struct {
@@ -83,9 +91,7 @@ type EventSequencer struct {
 	pendingProfileUpdates         map[model.ProfileRulesKey]*ParsedRules
 	pendingProfileDeletes         set.Set[model.ProfileRulesKey]
 	pendingEncapUpdate            *config.Encapsulation
-	pendingEndpointUpdates        map[model.Key]interface{}
-	pendingEndpointEgressUpdates  map[model.Key]EndpointEgressData
-	pendingEndpointTierUpdates    map[model.Key][]TierInfo
+	pendingEndpointUpdates        map[model.Key]endpointUpdate
 	pendingEndpointDeletes        set.Set[model.Key]
 	pendingHostIPUpdates          map[string]*net.IP
 	pendingHostIPDeletes          set.Set[string]
@@ -188,9 +194,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingPolicyDeletes:          set.New[model.PolicyKey](),
 		pendingProfileUpdates:         map[model.ProfileRulesKey]*ParsedRules{},
 		pendingProfileDeletes:         set.New[model.ProfileRulesKey](),
-		pendingEndpointUpdates:        map[model.Key]interface{}{},
-		pendingEndpointEgressUpdates:  map[model.Key]EndpointEgressData{},
-		pendingEndpointTierUpdates:    map[model.Key][]TierInfo{},
+		pendingEndpointUpdates:        map[model.Key]endpointUpdate{},
 		pendingEndpointDeletes:        set.New[model.Key](),
 		pendingHostIPUpdates:          map[string]*net.IP{},
 		pendingHostIPDeletes:          set.New[string](),
@@ -456,7 +460,7 @@ func (buf *EventSequencer) flushProfileDeletes() {
 	})
 }
 
-func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.TierInfo) *proto.WorkloadEndpoint {
+func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, tiers []*proto.TierInfo) *proto.WorkloadEndpoint {
 	mac := ""
 	if ep.Mac != nil {
 		mac = ep.Mac.String()
@@ -474,6 +478,31 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 			EgressMaxConnections:  ep.QoSControls.EgressMaxConnections,
 		}
 	}
+
+	var egressGatewayRules []*proto.EgressGatewayRule
+	egressGatewayHealthPort := int32(egressData.HealthPort)
+	isEgressGateway := egressData.IsEgressGateway
+	// To break gatewaying loops, we do not allow a workload to route
+	// via egress gateways if it is _itself_ an egress gateway.
+	if !isEgressGateway {
+		for _, r := range egressData.EgressGatewayRules {
+			egressRule := proto.EgressGatewayRule{
+				IpSetId:                  r.IpSetID,
+				MaxNextHops:              int32(r.MaxNextHops),
+				Destination:              r.CIDR,
+				PreferLocalEgressGateway: r.PreferLocalGW,
+			}
+			egressGatewayRules = append(egressGatewayRules, &egressRule)
+		}
+	}
+
+	var localBGPPeer *proto.LocalBGPPeer
+	if peerData != nil {
+		localBGPPeer = &proto.LocalBGPPeer{
+			BgpPeerName: peerData.v3PeerName,
+		}
+	}
+
 	return &proto.WorkloadEndpoint{
 		State:                      ep.State,
 		Name:                       ep.Name,
@@ -490,6 +519,10 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		ExternalNetworkNames:       ep.ExternalNetworkNames,
 		ApplicationLayer:           appLayerToProtoAppLayer(ep.ApplicationLayer),
 		QosControls:                qosControls,
+		LocalBgpPeer:               localBGPPeer,
+		IsEgressGateway:            isEgressGateway,
+		EgressGatewayHealthPort:    egressGatewayHealthPort,
+		EgressGatewayRules:         egressGatewayRules,
 	}
 }
 
@@ -510,13 +543,12 @@ func (buf *EventSequencer) OnEndpointTierUpdate(
 	endpointKey model.EndpointKey,
 	endpoint model.Endpoint,
 	egressData EndpointEgressData,
+	peerData *EndpointBGPPeer,
 	filteredTiers []TierInfo,
 ) {
 	if endpoint == nil {
 		// Deletion. Squash any queued updates.
 		delete(buf.pendingEndpointUpdates, endpointKey)
-		delete(buf.pendingEndpointEgressUpdates, endpointKey)
-		delete(buf.pendingEndpointTierUpdates, endpointKey)
 		if buf.sentEndpoints.Contains(endpointKey) {
 			// We'd previously sent an update, so we need to send a deletion.
 			buf.pendingEndpointDeletes.Add(endpointKey)
@@ -524,34 +556,27 @@ func (buf *EventSequencer) OnEndpointTierUpdate(
 	} else {
 		// Update.
 		buf.pendingEndpointDeletes.Discard(endpointKey)
-		buf.pendingEndpointUpdates[endpointKey] = endpoint
-		buf.pendingEndpointEgressUpdates[endpointKey] = egressData
-		buf.pendingEndpointTierUpdates[endpointKey] = filteredTiers
+		buf.pendingEndpointUpdates[endpointKey] = endpointUpdate{
+			endpoint:   endpoint,
+			peerData:   peerData,
+			egressData: egressData,
+			tierInfo:   filteredTiers,
+		}
 	}
 }
 
 func (buf *EventSequencer) flushEndpointTierUpdates() {
-	for key, endpoint := range buf.pendingEndpointUpdates {
-		tiers, untrackedTiers, preDNATTiers, forwardTiers := tierInfoToProtoTierInfo(buf.pendingEndpointTierUpdates[key])
+	for key, endpointUpdate := range buf.pendingEndpointUpdates {
+		endpoint := endpointUpdate.endpoint
+
+		tiers, untrackedTiers, preDNATTiers, forwardTiers := tierInfoToProtoTierInfo(endpointUpdate.tierInfo)
 		switch key := key.(type) {
+
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
-			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
-			protoEp.EgressGatewayHealthPort = int32(buf.pendingEndpointEgressUpdates[key].HealthPort)
-			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
-			// To break gatewaying loops, we do not allow a workload to route
-			// via egress gateways if it is _itself_ an egress gateway.
-			if !protoEp.IsEgressGateway {
-				for _, r := range buf.pendingEndpointEgressUpdates[key].EgressGatewayRules {
-					egressRule := proto.EgressGatewayRule{
-						IpSetId:                  r.IpSetID,
-						MaxNextHops:              int32(r.MaxNextHops),
-						Destination:              r.CIDR,
-						PreferLocalEgressGateway: r.PreferLocalGW,
-					}
-					protoEp.EgressGatewayRules = append(protoEp.EgressGatewayRules, &egressRule)
-				}
-			}
+
+			protoEp := ModelWorkloadEndpointToProto(wlep, endpointUpdate.egressData, endpointUpdate.peerData, tiers)
+
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,
@@ -560,6 +585,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 				},
 				Endpoint: protoEp,
 			})
+
 		case model.HostEndpointKey:
 			hep := endpoint.(*model.HostEndpoint)
 			buf.Callback(&proto.HostEndpointUpdate{
@@ -573,8 +599,6 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		buf.sentEndpoints.Add(key)
 		// And clean up the pending buffer.
 		delete(buf.pendingEndpointUpdates, key)
-		delete(buf.pendingEndpointEgressUpdates, key)
-		delete(buf.pendingEndpointTierUpdates, key)
 	}
 }
 
@@ -1393,6 +1417,8 @@ func (buf *EventSequencer) OnGlobalBGPConfigUpdate(cfg *v3.BGPConfiguration) {
 			}
 			buf.pendingGlobalBGPConfig.ServiceLoadbalancerCidrs = append(buf.pendingGlobalBGPConfig.ServiceLoadbalancerCidrs, block.CIDR)
 		}
+		buf.pendingGlobalBGPConfig.LocalWorkloadPeeringIpV4 = cfg.Spec.LocalWorkloadPeeringIPV4
+		buf.pendingGlobalBGPConfig.LocalWorkloadPeeringIpV6 = cfg.Spec.LocalWorkloadPeeringIPV6
 	}
 }
 

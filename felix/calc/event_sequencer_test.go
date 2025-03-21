@@ -32,7 +32,7 @@ import (
 
 var _ = DescribeTable("ModelWorkloadEndpointToProto",
 	func(in model.WorkloadEndpoint, expected *proto.WorkloadEndpoint) {
-		out := calc.ModelWorkloadEndpointToProto(&in, []*proto.TierInfo{})
+		out := calc.ModelWorkloadEndpointToProto(&in, calc.EndpointEgressData{}, nil, []*proto.TierInfo{})
 		Expect(out).To(Equal(expected))
 	},
 	Entry("workload endpoint with NAT", model.WorkloadEndpoint{
@@ -440,6 +440,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 				},
 			},
 			nil,
+			nil,
 		)
 		uut.Flush()
 		Expect(recorder.Messages).To(Equal([]interface{}{&proto.WorkloadEndpointUpdate{
@@ -467,6 +468,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
 			calc.EndpointEgressData{},
+			nil,
 			nil,
 		)
 		uut.Flush()
