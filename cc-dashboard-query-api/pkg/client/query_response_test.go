@@ -11,7 +11,7 @@ import (
 
 func TestQueryResponse(t *testing.T) {
 
-	t.Run("write csv", func(t *testing.T) {
+	t.Run("csv output", func(t *testing.T) {
 		t.Run("no values", func(t *testing.T) {
 			subject := QueryResponse{}
 
@@ -83,20 +83,47 @@ func TestQueryResponse(t *testing.T) {
 			}
 		})
 
-		t.Run("groups and aggregations results", func(t *testing.T) {
-			queryResponseGroupValueToAny := func(qrgv QueryResponseGroupValue) any {
-				return qrgv
-			}
+		t.Run("group values with no aggregation results are absent", func(t *testing.T) {
 
 			subject := QueryResponse{
 				GroupValues: []QueryResponseGroupValue{
-					{Key: "g0:0", NestedValues: slices.Map([]QueryResponseGroupValue{
+					{Key: "g0:0", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+						{Key: "g0:0-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "100"}}},
+						{Key: "g0:0-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "200"}}},
+					})},
+					{Key: "g0:1", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+						{Key: "g0:1-g1:0", Aggregations: nil},
+						{Key: "g0:1-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "200"}}},
+					})},
+					{Key: "g0:2", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+						{Key: "g0:2-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "100"}}},
+						{Key: "g0:2-g1:1", Aggregations: nil},
+					})},
+					{Key: "g0:3", NestedValues: nil},
+				},
+			}
+
+			w := &bytes.Buffer{}
+			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)"})
+			require.NoError(t, err)
+
+			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg1)\n"+
+				"g0:0,g0:0-g1:0,100\n"+
+				"g0:0,g0:0-g1:1,200\n"+
+				"g0:1,g0:1-g1:1,200\n"+
+				"g0:2,g0:2-g1:0,100\n", w.String())
+		})
+
+		t.Run("groups and aggregations results", func(t *testing.T) {
+			subject := QueryResponse{
+				GroupValues: []QueryResponseGroupValue{
+					{Key: "g0:0", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
 						{Key: "g0:0:g1:0", Aggregations: map[string]QueryResponseValueAsString{
 							"agg1": {AsString: "100"},
 							"agg2": {AsString: "200"},
 						}},
-					}, queryResponseGroupValueToAny)},
-					{Key: "g0:1", NestedValues: slices.Map([]QueryResponseGroupValue{
+					})},
+					{Key: "g0:1", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
 						{Key: "g0:1:g1:0", Aggregations: map[string]QueryResponseValueAsString{
 							"agg1": {AsString: "300"},
 							"agg2": {AsString: "400"},
@@ -105,7 +132,7 @@ func TestQueryResponse(t *testing.T) {
 							"agg1": {AsString: "500"},
 							"agg2": {AsString: "600"},
 						}},
-					}, queryResponseGroupValueToAny)},
+					})},
 				},
 			}
 
@@ -115,7 +142,7 @@ func TestQueryResponse(t *testing.T) {
 				expected string
 			}{
 				{
-					name:    "all fields",
+					name:    "all aggregations and groupBys",
 					columns: []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)", "aggregations(agg2)"},
 					expected: "groupBys(0),groupBys(1),aggregations(agg1),aggregations(agg2)\n" +
 						"g0:0,g0:0:g1:0,100,200\n" +
@@ -123,7 +150,7 @@ func TestQueryResponse(t *testing.T) {
 						"g0:1,g0:1:g1:1,500,600\n",
 				},
 				{
-					name:    "all fields with aliases",
+					name:    "alias set for all aggregations and groupBys",
 					columns: []string{"groupBys(0):first group", "groupBys(1):second group", "aggregations(agg1):first aggregation", "aggregations(agg2):second aggregation"},
 					expected: "first group,second group,first aggregation,second aggregation\n" +
 						"g0:0,g0:0:g1:0,100,200\n" +
@@ -131,7 +158,7 @@ func TestQueryResponse(t *testing.T) {
 						"g0:1,g0:1:g1:1,500,600\n",
 				},
 				{
-					name:    "fields subset",
+					name:    "subset of aggregations and groupBys",
 					columns: []string{"groupBys(1)", "aggregations(agg2)", "aggregations(agg1)"},
 					expected: "groupBys(1),aggregations(agg2),aggregations(agg1)\n" +
 						"g0:0:g1:0,200,100\n" +
@@ -139,7 +166,7 @@ func TestQueryResponse(t *testing.T) {
 						"g0:1:g1:1,600,500\n",
 				},
 				{
-					name:    "unknown fields are ignored",
+					name:    "unknown aggregations and groupBys values are set to empty",
 					columns: []string{"groupBys(1)", "groupBys(99)", "aggregations(agg2)", "aggregations(unknown-aggregation)"},
 					expected: "groupBys(1),groupBys(99),aggregations(agg2),aggregations(unknown-aggregation)\n" +
 						"g0:0:g1:0,,200,\n" +

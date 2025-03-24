@@ -112,9 +112,7 @@ func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string) error {
 			})
 		}
 	} else if len(q.GroupValues) > 0 {
-		// Process groupValues and aggregations to csv
-		csvEntryMap := make(map[string]any)
-		err := q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, 0, q.GroupValues)
+		err := q.convertGroupValuesToCSV(csvWriter, fields, nil, 0, q.GroupValues)
 		if err != nil {
 			return err
 		}
@@ -142,12 +140,22 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 		return field == keyColumn
 	})
 	for _, groupValue := range groupValues {
+		if groupIndex == 0 {
+			// Process groupValues and aggregations to csv
+			csvEntryMap = make(map[string]any)
+		}
+
 		if containsKey {
 			csvEntryMap[keyColumn] = groupValue.Key
 		}
 
 		var err error
-		if len(groupValue.NestedValues) == 0 {
+		if len(groupValue.NestedValues) > 0 {
+			// process subgroup values
+			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, slices.Map(groupValue.NestedValues, func(gv any) QueryResponseGroupValue {
+				return gv.(QueryResponseGroupValue)
+			}))
+		} else if len(groupValue.Aggregations) > 0 {
 			// process aggregations if no subgroup values are available
 			err = q.writeCSVRecord(csvWriter, fields, func(field string) any {
 				// each aggregation value is identified by the pseudo field aggregations(key)
@@ -161,11 +169,6 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 				}
 				return ""
 			})
-		} else {
-			// process subgroup values
-			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, slices.Map(groupValue.NestedValues, func(gv any) QueryResponseGroupValue {
-				return gv.(QueryResponseGroupValue)
-			}))
 		}
 		if err != nil {
 			return err
