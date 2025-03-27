@@ -17,6 +17,7 @@ import (
 
 const (
 	maxSubAggregationSortItems = 3
+	maxTermsBucketItems        = 1000
 )
 
 type groupAggregation struct {
@@ -112,7 +113,7 @@ func (g *groupAggregation) setElasticDateHistogramAggregation(
 func (g *groupAggregation) setElasticTermsAggregation(queryGroup groups.Group) {
 	termsAggregation := elastic.NewTermsAggregation().
 		Field(queryGroup.FieldName()).
-		Size(queryGroup.MaxValues())
+		Size(min(queryGroup.MaxValues(), maxTermsBucketItems))
 
 	g.setSortOrder = func(agg []aggregation) {
 		if len(agg) == 0 {
@@ -135,7 +136,7 @@ func (g *groupAggregation) setElasticTermsAggregation(queryGroup groups.Group) {
 
 func (g *groupAggregation) setElasticMultiTermsAggregation(queryGroups groups.Groups) {
 	multiTermsAggregation := elastic.NewMultiTermsAggregation().
-		Size(slices.Min(tdsslices.Map(queryGroups, groups.Group.MaxValues))).
+		Size(min(maxTermsBucketItems, slices.Min(tdsslices.Map(queryGroups, groups.Group.MaxValues)))).
 		Terms(tdsslices.Map(queryGroups, groups.Group.FieldName)...)
 
 	g.setSortOrder = func(agg []aggregation) {

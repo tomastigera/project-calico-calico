@@ -2,6 +2,7 @@ package linseed
 
 import (
 	"testing"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestGroupAggregation(t *testing.T) {
 		})
 	})
 
-	t.Run("bucket item mapping", func(t *testing.T) {
+	t.Run("bucket items mapping", func(t *testing.T) {
 		t.Run("terms buckets", func(t *testing.T) {
 			testCases := []struct {
 				name       string
@@ -166,5 +167,56 @@ func TestGroupAggregation(t *testing.T) {
 				})
 			}
 		})
+	})
+
+	t.Run("max bucket items", func(t *testing.T) {
+		const expectedTermBucketItems = 1000
+
+		testCases := []struct {
+			name     string
+			groups   groups.Groups
+			expected elastic.Aggregation
+		}{
+			{
+				name: "single term",
+				groups: groups.Groups{
+					groups.NewGroupDiscrete("f1", 1000000),
+				},
+				expected: elastic.NewTermsAggregation().
+					Field("f1").
+					Size(expectedTermBucketItems).
+					OrderByKey(true),
+			},
+			{
+				name: "multi terms",
+				groups: groups.Groups{
+					groups.NewGroupDiscrete("f1", 1000000),
+					groups.NewGroupDiscrete("f2", 2000000),
+				},
+				expected: elastic.NewMultiTermsAggregation().
+					Terms("f1", "f2").
+					Size(expectedTermBucketItems).
+					OrderByKey(true),
+			},
+			{
+				name: "date histogram limited to 100 bucket items",
+				groups: groups.Groups{
+					groups.NewGroupTime("f1", "1M", 1000000),
+				},
+				expected: elastic.NewDateHistogramAggregation().
+					Field("f1").
+					FixedInterval("2m").
+					OrderByKey(true),
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				elasticGroups, err := queryGroupsToElastic(tc.groups, nil, 200*time.Minute)
+				require.NoError(t, err)
+
+				require.Equal(t, tc.expected, elasticGroups[0].elasticAggregation)
+			})
+		}
 	})
 }
