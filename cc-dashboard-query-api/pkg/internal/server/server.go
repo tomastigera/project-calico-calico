@@ -2,7 +2,11 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -90,10 +94,57 @@ func Start(
 
 	rootHandler := otel.NewHandlerIfEnabled(cfg.OpenTelemetryEnabled, handlerRegistry.Handler())
 
-	httpServer := &http.Server{
-		Addr:    cfg.ListenAddr,
-		Handler: rootHandler,
+	tlsConfig, err := getTLSConfig(cfg.HTTPSCACert)
+	if err != nil {
+		return err
 	}
 
-	return httpServer.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey)
+	errCh := make(chan error)
+	go func() {
+		healthServer := &http.Server{
+			// We only want the health url to be accessible from within the container.
+			// Kubelet will use an exec probe to get status.
+			Addr: fmt.Sprintf("localhost:%d", cfg.HealthPort),
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/health" {
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
+		}
+		errCh <- healthServer.ListenAndServe()
+	}()
+
+	go func() {
+		httpServer := &http.Server{
+			Addr:      cfg.ListenAddr,
+			Handler:   rootHandler,
+			TLSConfig: tlsConfig,
+		}
+
+		errCh <- httpServer.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey)
+	}()
+
+	return <-errCh
+}
+
+func getTLSConfig(caCertFilename string) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	if caCertFilename != "" {
+		caCert, err := os.ReadFile(caCertFilename)
+		if err != nil {
+			return nil, err
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		tlsConfig = &tls.Config{
+			ClientCAs:  caCertPool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		}
+	}
+
+	return tlsConfig, nil
 }

@@ -5,6 +5,7 @@ import "time"
 type Config struct {
 	LogLevel   string `default:"INFO" split_words:"true"`
 	ListenAddr string `default:":8443" split_words:"true"`
+	HealthPort int    `default:"8080" split_words:"true"`
 
 	OpenTelemetryEnabled bool `default:"false"`
 
@@ -20,6 +21,9 @@ type Config struct {
 	// HTTPSCert, HTTPSKey - path to a x509 certificate and its private key for the https server
 	HTTPSCert string `default:"/certs/https/cert" split_words:"true"`
 	HTTPSKey  string `default:"/certs/https/key" split_words:"true"`
+
+	// HTTPSCACert Used to verify client certificates for mTLS.
+	HTTPSCACert string `default:"" split_words:"true"`
 
 	// Linseed configuration
 	LinseedURL        string `default:"https://tigera-linseed.tigera-elasticsearch.svc" split_words:"true"`
