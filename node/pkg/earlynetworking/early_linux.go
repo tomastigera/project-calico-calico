@@ -361,6 +361,8 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string, f
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to get a netlink handle. Aborting address and route config")
 	}
+	defer nl.Close()
+
 	// Attempt to set strict check - this allows for route filtering at a lower level, saving some compute resources.
 	err = nl.SetStrictCheck(true)
 	if err != nil {
