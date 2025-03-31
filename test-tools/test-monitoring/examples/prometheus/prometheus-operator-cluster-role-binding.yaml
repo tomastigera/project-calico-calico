@@ -8,6 +8,6 @@ roleRef:
   kind: ClusterRole
   name: calico-prometheus-operator
 subjects:
-- kind: ServiceAccount
-  name: calico-prometheus-operator
-  namespace: tigera-prometheus
+  - kind: ServiceAccount
+    name: calico-prometheus-operator
+    namespace: tigera-prometheus

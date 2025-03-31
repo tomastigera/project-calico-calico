@@ -21,7 +21,7 @@ global_job_config:
       - cd third_party/envoy-proxy
 
 blocks:
-  - name: 'Test Cut Release - Envoy Proxy'
+  - name: "Test Cut Release - Envoy Proxy"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

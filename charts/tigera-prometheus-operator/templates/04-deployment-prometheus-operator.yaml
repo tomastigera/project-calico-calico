@@ -26,35 +26,35 @@ spec:
       serviceAccountName: calico-prometheus-operator
       {{- if or .Values.imagePullSecrets .Values.imagePullSecretReferences }}
       imagePullSecrets:
-      {{- include "tigera-prometheus-operator.imagePullSecrets" . | nindent 6 }}
+      {{- include "tigera-prometheus-operator.imagePullSecrets" . | nindent 8 }}
       {{- end }}
       containers:
-      - name: calico-prometheus-operator
-        image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
-        args:
-          - --cluster-domain=cluster.local
-          - --config-reloader-memory-request=50Mi
-          - --namespaces=tigera-prometheus
-          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
-          - --config-reloader-cpu-limit=150m
-        resources:
-          requests:
-            cpu: 100m
-            memory: 100Mi
-          limits:
-            cpu: 200m
-            memory: 200Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          readOnlyRootFilesystem: true
-          runAsGroup: 10001
-          runAsNonRoot: true
-          runAsUser: 10001
-          seccompProfile:
-            type: RuntimeDefault
+        - name: calico-prometheus-operator
+          image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
+          args:
+            - --cluster-domain=cluster.local
+            - --config-reloader-memory-request=50Mi
+            - --namespaces=tigera-prometheus
+            - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+            - --config-reloader-cpu-limit=150m
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
 {{- end }}
 

@@ -13,129 +13,129 @@ metadata:
   name: "envoy-enabled-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   ownerReferences:
-  - apiVersion: apps/v1
-    blockOwnerDeletion: true
-    controller: true
-    kind: ReplicaSet
-    name: customer-8676f57d86
-    uid: 1582ad5b-6612-11e9-81bf-42010a80001a
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: customer-8676f57d86
+      uid: 1582ad5b-6612-11e9-81bf-42010a80001a
   resourceVersion: "166275"
   selfLink: /api/v1/namespaces/yaobank/pods/customer-8676f57d86-bl74c
   uid: 4bfe8c1e-6612-11e9-81bf-42010a80001a
 spec:
   containers:
-  - image: quay.io/calico/yaobank-customer:v0.1
-    imagePullPolicy: IfNotPresent
-    name: customer
-    ports:
-    - containerPort: 8000
-      protocol: TCP
-    resources: {}
-    terminationMessagePath: /dev/termination-log
-    terminationMessagePolicy: File
-    volumeMounts:
-    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-      name: customer-token-8mvkw
-      readOnly: true
-  - image: docker.io/istio/proxyv2:1.0.7
-    imagePullPolicy: IfNotPresent
-    name: istio-proxy
-    args:
-    - proxy
-    - sidecar
-    - --configPath
-    - /etc/istio/proxy
-    - --binaryPath
-    - /usr/local/bin/envoy
-    - --serviceCluster
-    - customer
-    - --drainDuration
-    - 45s
-    - --parentShutdownDuration
-    - 1m0s
-    - --discoveryAddress
-    - istio-pilot.istio-system:15005
-    - --discoveryRefreshDelay
-    - 1s
-    - --zipkinAddress
-    - zipkin.istio-system:9411
-    - --connectTimeout
-    - 10s
-    - --proxyAdminPort
-    - "15000"
-    - --controlPlaneAuthPolicy
-    - MUTUAL_TLS
-    env:
-    - name: POD_NAME
-      valueFrom:
-        fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.name
-    - name: POD_NAMESPACE
-      valueFrom:
-        fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.namespace
-    - name: INSTANCE_IP
-      valueFrom:
-        fieldRef:
-          apiVersion: v1
-          fieldPath: status.podIP
-    - name: ISTIO_META_POD_NAME
-      valueFrom:
-        fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.name
-    - name: ISTIO_META_INTERCEPTION_MODE
-      value: REDIRECT
-    - name: ISTIO_METAJSON_LABELS
-      value: |
-        {"app":"customer","pod-template-hash":"8676f57d86","version":"v1"}
-    ports:
-    - containerPort: 15090
-      name: http-envoy-prom
-      protocol: TCP
-    securityContext:
-      procMount: Default
-      readOnlyRootFilesystem: true
-      runAsUser: 1337
-    terminationMessagePath: /dev/termination-log
-    terminationMessagePolicy: File
-    volumeMounts:
-    - mountPath: /etc/istio/proxy
-      name: istio-envoy
-    - mountPath: /etc/certs/
-      name: istio-certs
-      readOnly: true
+    - image: quay.io/calico/yaobank-customer:v0.1
+      imagePullPolicy: IfNotPresent
+      name: customer
+      ports:
+        - containerPort: 8000
+          protocol: TCP
+      resources: {}
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: customer-token-8mvkw
+          readOnly: true
+    - image: docker.io/istio/proxyv2:1.0.7
+      imagePullPolicy: IfNotPresent
+      name: istio-proxy
+      args:
+        - proxy
+        - sidecar
+        - --configPath
+        - /etc/istio/proxy
+        - --binaryPath
+        - /usr/local/bin/envoy
+        - --serviceCluster
+        - customer
+        - --drainDuration
+        - 45s
+        - --parentShutdownDuration
+        - 1m0s
+        - --discoveryAddress
+        - istio-pilot.istio-system:15005
+        - --discoveryRefreshDelay
+        - 1s
+        - --zipkinAddress
+        - zipkin.istio-system:9411
+        - --connectTimeout
+        - 10s
+        - --proxyAdminPort
+        - "15000"
+        - --controlPlaneAuthPolicy
+        - MUTUAL_TLS
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: ISTIO_META_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_METAJSON_LABELS
+          value: |
+            {"app":"customer","pod-template-hash":"8676f57d86","version":"v1"}
+      ports:
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+      securityContext:
+        procMount: Default
+        readOnlyRootFilesystem: true
+        runAsUser: 1337
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /etc/certs/
+          name: istio-certs
+          readOnly: true
   dnsPolicy: ClusterFirst
   initContainers:
-  - image: docker.io/istio/proxy_init:1.0.7
-    imagePullPolicy: IfNotPresent
-    name: istio-init
-    args:
-    - -p
-    - "15001"
-    - -u
-    - "1337"
-    - -m
-    - REDIRECT
-    - -i
-    - '*'
-    - -x
-    - ""
-    - -b
-    - "8000"
-    - -d
-    - ""
-    resources: {}
-    securityContext:
-      capabilities:
-        add:
-        - NET_ADMIN
-      privileged: true
-      procMount: Default
-    terminationMessagePath: /dev/termination-log
-    terminationMessagePolicy: File
+    - image: docker.io/istio/proxy_init:1.0.7
+      imagePullPolicy: IfNotPresent
+      name: istio-init
+      args:
+        - -p
+        - "15001"
+        - -u
+        - "1337"
+        - -m
+        - REDIRECT
+        - -i
+        - "*"
+        - -x
+        - ""
+        - -b
+        - "8000"
+        - -d
+        - ""
+      resources: {}
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+        privileged: true
+        procMount: Default
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
   nodeName: erik-kadm-node-1
   priority: 0
   restartPolicy: Always
@@ -145,55 +145,55 @@ spec:
   serviceAccountName: customer
   terminationGracePeriodSeconds: 30
   tolerations:
-  - effect: NoExecute
-    key: node.kubernetes.io/not-ready
-    operator: Exists
-    tolerationSeconds: 300
-  - effect: NoExecute
-    key: node.kubernetes.io/unreachable
-    operator: Exists
-    tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
   volumes:
-  - name: customer-token-8mvkw
-    secret:
-      defaultMode: 420
-      secretName: customer-token-8mvkw
-  - emptyDir:
-      medium: Memory
-    name: istio-envoy
-  - name: istio-certs
-    secret:
-      defaultMode: 420
-      optional: true
-      secretName: istio.customer
+    - name: customer-token-8mvkw
+      secret:
+        defaultMode: 420
+        secretName: customer-token-8mvkw
+    - emptyDir:
+        medium: Memory
+      name: istio-envoy
+    - name: istio-certs
+      secret:
+        defaultMode: 420
+        optional: true
+        secretName: istio.customer
 status:
   containerStatuses:
-  - containerID: docker://a0176997a4e3147f5f778ac0e5205e64cd5d23c97dcb4c527be8658d9910fb2f
-    image: quay.io/calico/yaobank-customer:v0.1
-    imageID: docker-pullable://quay.io/calico/yaobank-customer@sha256:0255e9741c1e651a309cd9d1f39ce7f33b0e23cbdc6239132d687bc4f4d54192
-    lastState: {}
-    name: customer
-    ready: true
-    restartCount: 0
-  - containerID: docker://35dd5e160ac899209ca58dad75dac542f2ec4142a8b97723cb4cd21fb49a2811
-    image: istio/proxyv2:1.0.7
-    imageID: docker-pullable://istio/proxyv2@sha256:9c6663cddbc984e88c27530d8acac7dca83070c4ad6d2570604cc4fff6c36a7a
-    lastState: {}
-    name: istio-proxy
-    ready: true
-    restartCount: 0
+    - containerID: docker://a0176997a4e3147f5f778ac0e5205e64cd5d23c97dcb4c527be8658d9910fb2f
+      image: quay.io/calico/yaobank-customer:v0.1
+      imageID: docker-pullable://quay.io/calico/yaobank-customer@sha256:0255e9741c1e651a309cd9d1f39ce7f33b0e23cbdc6239132d687bc4f4d54192
+      lastState: {}
+      name: customer
+      ready: true
+      restartCount: 0
+    - containerID: docker://35dd5e160ac899209ca58dad75dac542f2ec4142a8b97723cb4cd21fb49a2811
+      image: istio/proxyv2:1.0.7
+      imageID: docker-pullable://istio/proxyv2@sha256:9c6663cddbc984e88c27530d8acac7dca83070c4ad6d2570604cc4fff6c36a7a
+      lastState: {}
+      name: istio-proxy
+      ready: true
+      restartCount: 0
   initContainerStatuses:
-  - containerID: docker://93c381f1cd7b9d087ecbf51b22ac774b7cdf3678a2f087374abfdce2507b3b5c
-    image: istio/proxy_init:1.0.7
-    imageID: docker-pullable://istio/proxy_init@sha256:fa41549250eef900072bd96bbb9f45c8b35ae81465bfbc06c317e256d74a064d
-    lastState: {}
-    name: istio-init
-    ready: true
-    restartCount: 0
-    state:
-      terminated:
-        containerID: docker://93c381f1cd7b9d087ecbf51b22ac774b7cdf3678a2f087374abfdce2507b3b5c
-        exitCode: 0
-        reason: Completed
+    - containerID: docker://93c381f1cd7b9d087ecbf51b22ac774b7cdf3678a2f087374abfdce2507b3b5c
+      image: istio/proxy_init:1.0.7
+      imageID: docker-pullable://istio/proxy_init@sha256:fa41549250eef900072bd96bbb9f45c8b35ae81465bfbc06c317e256d74a064d
+      lastState: {}
+      name: istio-init
+      ready: true
+      restartCount: 0
+      state:
+        terminated:
+          containerID: docker://93c381f1cd7b9d087ecbf51b22ac774b7cdf3678a2f087374abfdce2507b3b5c
+          exitCode: 0
+          reason: Completed
   phase: Running
   qosClass: Burstable

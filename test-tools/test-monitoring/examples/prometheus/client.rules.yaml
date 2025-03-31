@@ -8,13 +8,13 @@ metadata:
     prometheus: client
 spec:
   groups:
-  - name: client.rules
-    rules:
-    - record: linseed_request_duration_seconds
-      expr: histogram_quantile(0.99, sum(linseed_request_duration_seconds_bucket) BY (le))
-      labels:
-        quantile: "0.99"
-    - record: max_cpu
-      expr: max((avg by (instance) (irate(process_cpu_seconds_total[5m]))) * 100)
-    - record: max_mem
-      expr: max(go_memstats_alloc_bytes)
+    - name: client.rules
+      rules:
+        - record: linseed_request_duration_seconds
+          expr: histogram_quantile(0.99, sum(linseed_request_duration_seconds_bucket) BY (le))
+          labels:
+            quantile: "0.99"
+        - record: max_cpu
+          expr: max((avg by (instance) (irate(process_cpu_seconds_total[5m]))) * 100)
+        - record: max_mem
+          expr: max(go_memstats_alloc_bytes)

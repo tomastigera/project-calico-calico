@@ -7,8 +7,8 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-          - name: flexvol-driver-host
-            mountPath: /host/driver
+            - name: flexvol-driver-host
+              mountPath: /host/driver
       containers:
         - name: calico-node
           env:

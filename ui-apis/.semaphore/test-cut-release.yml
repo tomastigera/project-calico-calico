@@ -21,7 +21,7 @@ global_job_config:
       - cd ui-apis
 
 blocks:
-  - name: 'Test Cut Release - UI APIs'
+  - name: "Test Cut Release - UI APIs"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

@@ -1,1 +1,1 @@
-{{ toYaml .AuditEvents }}
+{{toYaml .AuditEvents}}

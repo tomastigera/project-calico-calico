@@ -9,8 +9,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      ingress-with-address-selector: 'yes'
+      ingress-with-address-selector: "yes"
   ingress:
     - from:
-      - ipBlock:
-          cidr: "8.8.8.8/32"
+        - ipBlock:
+            cidr: "8.8.8.8/32"

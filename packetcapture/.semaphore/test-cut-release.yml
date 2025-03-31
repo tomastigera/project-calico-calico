@@ -21,7 +21,7 @@ global_job_config:
       - cd packetcapture
 
 blocks:
-  - name: 'Test Cut Release - Packet Capture'
+  - name: "Test Cut Release - Packet Capture"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

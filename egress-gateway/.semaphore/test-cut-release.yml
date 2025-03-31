@@ -21,7 +21,7 @@ global_job_config:
       - cd egress-gateway
 
 blocks:
-  - name: 'Test Cut Release - Egress Gateway'
+  - name: "Test Cut Release - Egress Gateway"
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -35,8 +35,8 @@ blocks:
       jobs:
         - name: Test Cut Release - Egress Gateway
           env_vars:
-          - name: DEV_REGISTRIES
-            value: gcr.io/unique-caldron-775/cnx/tigera
+            - name: DEV_REGISTRIES
+              value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
             - make cut-release DRYRUN=true IMAGE_ONLY=true

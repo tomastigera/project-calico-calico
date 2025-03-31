@@ -21,7 +21,7 @@ global_job_config:
       - cd intrusion-detection-controller
 
 blocks:
-  - name: 'Test Cut Release - Intrusion Detection Controller'
+  - name: "Test Cut Release - Intrusion Detection Controller"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

@@ -21,7 +21,7 @@ global_job_config:
       - cd webhooks-processor
 
 blocks:
-  - name: 'Test Cut Release - Webhooks Processor'
+  - name: "Test Cut Release - Webhooks Processor"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

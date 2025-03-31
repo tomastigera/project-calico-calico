@@ -21,7 +21,7 @@ global_job_config:
       - cd calicoq
 
 blocks:
-  - name: 'Test Cut Release - calicoq'
+  - name: "Test Cut Release - calicoq"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

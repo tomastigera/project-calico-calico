@@ -21,7 +21,7 @@ global_job_config:
       - cd queryserver
 
 blocks:
-  - name: 'Test Cut Release - Query Server'
+  - name: "Test Cut Release - Query Server"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

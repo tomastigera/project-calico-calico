@@ -21,7 +21,7 @@ global_job_config:
       - cd firewall-integration
 
 blocks:
-  - name: 'Cut Release - Firewall Integration'
+  - name: "Cut Release - Firewall Integration"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

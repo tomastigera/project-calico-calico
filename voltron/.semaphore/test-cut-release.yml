@@ -21,7 +21,7 @@ global_job_config:
       - cd voltron
 
 blocks:
-  - name: 'Test Cut Release - Voltron'
+  - name: "Test Cut Release - Voltron"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

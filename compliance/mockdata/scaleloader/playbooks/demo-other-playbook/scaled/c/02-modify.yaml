@@ -1,4 +1,4 @@
-action: update 
+action: update
 kind: GlobalNetworkSet
 apiVersion: projectcalico.org/v3
 metadata:

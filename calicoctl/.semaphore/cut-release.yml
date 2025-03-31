@@ -21,7 +21,7 @@ global_job_config:
       - cd calicoctl
 
 blocks:
-  - name: 'Cut Release - calicoctl'
+  - name: "Cut Release - calicoctl"
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -35,8 +35,8 @@ blocks:
       jobs:
         - name: Cut Release - calicoctl
           env_vars:
-          - name: DEV_REGISTRIES
-            value: gcr.io/unique-caldron-775/cnx/tigera
+            - name: DEV_REGISTRIES
+              value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
             - make cut-release CONFIRM=true IMAGE_ONLY=true

@@ -40,8 +40,8 @@ spec:
     matchLabels:
       app: calico-typha-prometheus
   endpoints:
-  - port: web
-    interval: 10s
+    - port: web
+      interval: 10s
 ---
 # This is the Service that exposes the Prometheus UI to the user.
 apiVersion: v1
@@ -52,11 +52,11 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: web
-    nodePort: 30400
-    port: 9090
-    protocol: TCP
-    targetPort: web
+    - name: web
+      nodePort: 30400
+      port: 9090
+      protocol: TCP
+      targetPort: web
   selector:
     prometheus: calico-typha
 ---
@@ -70,14 +70,14 @@ metadata:
   labels:
     app: calico-typha-prometheus
   annotations:
-    prometheus.io/scrape: 'true'
+    prometheus.io/scrape: "true"
 spec:
   selector:
     k8s-app: calico-typha
   ports:
-  - name: web
-    protocol: TCP
-    port: 9093
+    - name: web
+      protocol: TCP
+      port: 9093
   clusterIP: None
 ---
 apiVersion: v1
@@ -95,6 +95,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-- kind: ServiceAccount
-  name: prometheus-typha
-  namespace: calico-system
+  - kind: ServiceAccount
+    name: prometheus-typha
+    namespace: calico-system

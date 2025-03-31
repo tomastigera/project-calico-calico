@@ -21,7 +21,7 @@ global_job_config:
       - cd linseed
 
 blocks:
-  - name: 'Test Cut Release - Linseed'
+  - name: "Test Cut Release - Linseed"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

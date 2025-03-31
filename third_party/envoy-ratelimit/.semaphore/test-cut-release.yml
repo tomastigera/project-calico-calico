@@ -21,7 +21,7 @@ global_job_config:
       - cd third_party/envoy-ratelimit
 
 blocks:
-  - name: 'Test Cut Release - Envoy Ratelimit'
+  - name: "Test Cut Release - Envoy Ratelimit"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

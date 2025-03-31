@@ -57,6 +57,7 @@ ci-preflight-checks:
 	$(MAKE) check-release-cut-promotions
 	$(MAKE) generate
 	$(MAKE) fix-all
+	$(MAKE) yaml-lint
 	$(MAKE) check-dirty
 
 check-gotchas:
@@ -97,6 +98,9 @@ check-release-cut-promotions:
 
 check-language:
 	./hack/check-language.sh
+
+yaml-lint:
+	@docker run --rm $$(tty -s && echo "-it" || echo) -v $(PWD):/data cytopia/yamllint:latest .
 
 protobuf:
 	$(MAKE) -C app-policy protobuf

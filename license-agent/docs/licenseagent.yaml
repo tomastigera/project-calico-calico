@@ -6,7 +6,6 @@ metadata:
   name: tigera-license-agent
 
 ---
-
 # Required RBAC:
 # - watch/list nodes and access LicenseKeys
 kind: ServiceAccount
@@ -16,7 +15,6 @@ metadata:
   namespace: tigera-license-agent
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -37,7 +35,6 @@ rules:
       - get
       - watch
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -47,12 +44,11 @@ roleRef:
   kind: ClusterRole
   name: tigera-license-agent
 subjects:
-- kind: ServiceAccount
-  name: tigera-license-agent
-  namespace: tigera-license-agent
+  - kind: ServiceAccount
+    name: tigera-license-agent
+    namespace: tigera-license-agent
 
 ---
-
 # License-agent deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -64,7 +60,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-     type: Recreate
+    type: Recreate
   selector:
     matchLabels:
       k8s-app: tigera-license-agent
@@ -113,19 +109,18 @@ metadata:
   namespace: tigera-prometheus
 spec:
   endpoints:
-  - honorLabels: true
-    interval: 5s
-    port: calico-metrics-port
-    scrapeTimeout: 5s
+    - honorLabels: true
+      interval: 5s
+      port: calico-metrics-port
+      scrapeTimeout: 5s
   namespaceSelector:
     matchNames:
-    - tigera-license-agent
+      - tigera-license-agent
   selector:
     matchLabels:
       k8s-app: tigera-license-agent
 
 ---
-
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -136,19 +131,19 @@ metadata:
     prometheus: calico-node-prometheus
 spec:
   groups:
-  - name: tigera-lic.rules
-    rules:
-    - alert: WarningLicenseExpiry
-      expr: license_number_of_days < 50
-      labels:
-        severity: warning
-      annotations:
-        summary: "Calico Enterprise License expires in less than 50 days"
-        description: "Calico Enterprise License expires in less than 50 days"
-    - alert: CriticalLicenseExpiry
-      expr: license_number_of_days < 10
-      labels:
-        severity: critical
-      annotations:
-        summary: "Calico Enterprise License expires in less than 10 days"
-        description: "Calico Enterprise License expires in less than 10 days"
+    - name: tigera-lic.rules
+      rules:
+        - alert: WarningLicenseExpiry
+          expr: license_number_of_days < 50
+          labels:
+            severity: warning
+          annotations:
+            summary: "Calico Enterprise License expires in less than 50 days"
+            description: "Calico Enterprise License expires in less than 50 days"
+        - alert: CriticalLicenseExpiry
+          expr: license_number_of_days < 10
+          labels:
+            severity: critical
+          annotations:
+            summary: "Calico Enterprise License expires in less than 10 days"
+            description: "Calico Enterprise License expires in less than 10 days"

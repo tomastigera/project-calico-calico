@@ -9,9 +9,9 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      protected: 'yes'
+      protected: "yes"
   ingress:
     - from:
-      - podSelector:
-          matchLabels:
-            source: 'non-existant'
+        - podSelector:
+            matchLabels:
+              source: "non-existant"

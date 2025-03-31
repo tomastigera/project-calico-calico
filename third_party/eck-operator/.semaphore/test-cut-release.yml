@@ -21,7 +21,7 @@ global_job_config:
       - cd third_party/eck-operator
 
 blocks:
-  - name: 'Test Cut Release - ECK Operator'
+  - name: "Test Cut Release - ECK Operator"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

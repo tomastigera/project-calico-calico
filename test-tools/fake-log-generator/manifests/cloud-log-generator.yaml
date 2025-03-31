@@ -15,45 +15,45 @@ spec:
         k8s-app: fake-log-gen
     spec:
       containers:
-      - env:
-        - name: PROMETHEUSMETRICSPORT
-          value: "2112"
-        - name: RATE
-          value: "4"
-        - name: BATCH_SIZE
-          value: "20"
-        - name: FLOW_LOG_FILE
-          value: "./flows.log"
-        - name: DIRECT_OUTPUT
-          value: "true"
-        - name: LINSEED_ENDPOINT
-          value: https://tigera-linseed.tigera-elasticsearch.svc
-        - name: LINSEED_CA_PATH
-          value: /etc/pki/tls/certs/tigera-ca-bundle.crt
-        - name: TLS_KEY_PATH
-          value: /tigera-fluentd-prometheus-tls/tls.key
-        - name: TLS_CRT_PATH
-          value: /tigera-fluentd-prometheus-tls/tls.crt
-        - name: LINSEED_TOKEN
-          value: /var/run/secrets/tigera.io/linseed/token
-        ports:
-        - name: metrics
-          containerPort: 2112
-        image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
-        imagePullPolicy: Always
-        name: log-generator
-        volumeMounts:
-        - mountPath: /etc/pki/tls/certs
-          name: tigera-ca-bundle
-          readOnly: true
-        - mountPath: /tigera-fluentd-prometheus-tls
-          name: tigera-fluentd-prometheus-tls
-          readOnly: true
-        - mountPath: /var/run/secrets/tigera.io/linseed/
-          name: linseed-token
+        - env:
+            - name: PROMETHEUSMETRICSPORT
+              value: "2112"
+            - name: RATE
+              value: "4"
+            - name: BATCH_SIZE
+              value: "20"
+            - name: FLOW_LOG_FILE
+              value: "./flows.log"
+            - name: DIRECT_OUTPUT
+              value: "true"
+            - name: LINSEED_ENDPOINT
+              value: https://tigera-linseed.tigera-elasticsearch.svc
+            - name: LINSEED_CA_PATH
+              value: /etc/pki/tls/certs/tigera-ca-bundle.crt
+            - name: TLS_KEY_PATH
+              value: /tigera-fluentd-prometheus-tls/tls.key
+            - name: TLS_CRT_PATH
+              value: /tigera-fluentd-prometheus-tls/tls.crt
+            - name: LINSEED_TOKEN
+              value: /var/run/secrets/tigera.io/linseed/token
+          ports:
+            - name: metrics
+              containerPort: 2112
+          image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
+          imagePullPolicy: Always
+          name: log-generator
+          volumeMounts:
+            - mountPath: /etc/pki/tls/certs
+              name: tigera-ca-bundle
+              readOnly: true
+            - mountPath: /tigera-fluentd-prometheus-tls
+              name: tigera-fluentd-prometheus-tls
+              readOnly: true
+            - mountPath: /var/run/secrets/tigera.io/linseed/
+              name: linseed-token
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: tigera-pull-secret
+        - name: tigera-pull-secret
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -64,30 +64,30 @@ spec:
       serviceAccountName: fluentd-node
       terminationGracePeriodSeconds: 0
       tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
       volumes:
-      - name: tigera-fluentd-prometheus-tls
-        secret:
-          defaultMode: 420
-          secretName: tigera-fluentd-prometheus-tls
-      - name: linseed-token
-        secret:
-          defaultMode: 420
-          items:
-          - key: token
-            path: token
-          secretName: fluentd-node-tigera-linseed-token
-      - configMap:
-          defaultMode: 420
-          items:
-          - key: tigera-ca-bundle.crt
-            path: tigera-ca-bundle.crt
-          - key: tigera-ca-bundle.crt
-            path: ca.pem
-          - key: ca-bundle.crt
-            path: ca-bundle.crt
+        - name: tigera-fluentd-prometheus-tls
+          secret:
+            defaultMode: 420
+            secretName: tigera-fluentd-prometheus-tls
+        - name: linseed-token
+          secret:
+            defaultMode: 420
+            items:
+              - key: token
+                path: token
+            secretName: fluentd-node-tigera-linseed-token
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: tigera-ca-bundle.crt
+                path: tigera-ca-bundle.crt
+              - key: tigera-ca-bundle.crt
+                path: ca.pem
+              - key: ca-bundle.crt
+                path: ca-bundle.crt
+            name: tigera-ca-bundle
           name: tigera-ca-bundle
-        name: tigera-ca-bundle

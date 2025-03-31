@@ -9,6 +9,6 @@ spec:
   ingress:
     - action: Allow
       source:
-        selector: 'all()'
+        selector: "all()"
   types:
     - Ingress

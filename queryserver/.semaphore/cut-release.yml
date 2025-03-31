@@ -20,9 +20,8 @@ global_job_config:
       - retry git fetch --unshallow
       - cd queryserver
 
-
 blocks:
-  - name: 'Cut Release - Query Server'
+  - name: "Cut Release - Query Server"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

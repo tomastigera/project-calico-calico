@@ -6,7 +6,6 @@ spec:
   reportType: "audit"
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
 metadata:
@@ -15,7 +14,6 @@ spec:
   reportType: "audit"
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
 metadata:
@@ -24,7 +22,6 @@ spec:
   reportType: "inventory"
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
 metadata:

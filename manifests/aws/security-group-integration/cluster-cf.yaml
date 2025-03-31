@@ -13,8 +13,6 @@ Parameters:
     Description: The security group of your Kubernetes master nodes.
     Type: AWS::EC2::SecurityGroup::Id
 Resources:
-
-
   # Create a security group to be used as the default for Kubernetes pods. All pods will be
   # automatically added to this security group.
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
@@ -33,8 +31,8 @@ Resources:
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraPodDefault
-        - GroupId
+          - TigeraPodDefault
+          - GroupId
       Description: "Allow all egress"
       IpProtocol: -1
       FromPort: -1
@@ -45,23 +43,23 @@ Resources:
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraPodDefault
-        - GroupId
+          - TigeraPodDefault
+          - GroupId
       Description: "Allow from other pods"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       SourceSecurityGroupId:
         Fn::GetAtt:
-        - TigeraPodDefault
-        - GroupId
+          - TigeraPodDefault
+          - GroupId
   TigeraPodDefaultSGIngressFromK8sHost:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraPodDefault
-        - GroupId
+          - TigeraPodDefault
+          - GroupId
       Description: "Allow from Kubernetes worker nodes"
       IpProtocol: -1
       FromPort: -1
@@ -73,15 +71,14 @@ Resources:
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraPodDefault
-        - GroupId
+          - TigeraPodDefault
+          - GroupId
       Description: "Allow from Kubernetes control plane nodes"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       SourceSecurityGroupId:
         Ref: KubernetesControlPlaneSGId
-
 
 # Output values.
 Outputs:

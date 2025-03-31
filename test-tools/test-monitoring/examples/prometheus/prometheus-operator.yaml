@@ -12615,21 +12615,20 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-        kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
       containers:
-      - name: calico-prometheus-operator
-        image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:v3.14.3
-        args:
-          - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:v3.14.3
-          - --config-reloader-memory-request=25Mi
-          - --namespaces=tigera-prometheus,calico-system,tigera-fluentd
-          - --cluster-domain=cluster.local
-          - --config-reloader-cpu-limit=150m
-        resources:
-          requests:
-            cpu: 100m
-            memory: 50Mi
-          limits:
-            cpu: 200m
-            memory: 100Mi
+        - name: calico-prometheus-operator
+          image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:v3.14.3
+          args:
+            - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:v3.14.3
+            - --config-reloader-memory-request=25Mi
+            - --namespaces=tigera-prometheus,calico-system,tigera-fluentd
+            - --cluster-domain=cluster.local
+            - --config-reloader-cpu-limit=150m
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+            limits:
+              cpu: 200m
+              memory: 100Mi

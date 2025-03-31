@@ -9,4 +9,3 @@ spec:
   globalNetworkSet:
     labels:
       feed: vpn-feed
-

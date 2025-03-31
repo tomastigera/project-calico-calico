@@ -20,9 +20,8 @@ global_job_config:
       - retry git fetch --unshallow
       - cd firewall-integration
 
-
 blocks:
-  - name: 'Test Cut Release - Firewall Integration'
+  - name: "Test Cut Release - Firewall Integration"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

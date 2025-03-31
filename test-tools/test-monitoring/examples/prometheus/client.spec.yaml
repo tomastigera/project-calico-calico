@@ -35,15 +35,15 @@ metadata:
   labels:
     k8s-app: fake-log-gen
   annotations:
-    prometheus.io/scrape: 'true'
+    prometheus.io/scrape: "true"
 spec:
   selector:
     k8s-app: fake-log-gen
   ports:
-  - name: metrics
-    protocol: TCP
-    port: 2112
-    targetPort: metrics
+    - name: metrics
+      protocol: TCP
+      port: 2112
+      targetPort: metrics
   clusterIP: None
 
 ---
@@ -61,8 +61,8 @@ spec:
     matchLabels:
       k8s-app: fake-log-gen
   endpoints:
-  - port: metrics
-    interval: 10s
+    - port: metrics
+      interval: 10s
 # ---
 # apiVersion: monitoring.coreos.com/v1
 # kind: PodMonitor
@@ -100,11 +100,11 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: web
-    nodePort: 30300
-    port: 9090
-    protocol: TCP
-    targetPort: web
+    - name: web
+      nodePort: 30300
+      port: 9090
+      protocol: TCP
+      targetPort: web
   selector:
     prometheus: client
 ---
@@ -123,6 +123,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-- kind: ServiceAccount
-  name: prometheus-client
-  namespace: tigera-fluentd
+  - kind: ServiceAccount
+    name: prometheus-client
+    namespace: tigera-fluentd

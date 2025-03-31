@@ -3,43 +3,40 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-all
 rules:
-- apiGroups: ["lma.tigera.io"]
-  resources: ["cluster"]
-  resourceNames: ["flows", "audit*", "audit_kube", "audit_ee", "events"]
-  verbs: ["get"]
+  - apiGroups: ["lma.tigera.io"]
+    resources: ["cluster"]
+    resourceNames: ["flows", "audit*", "audit_kube", "audit_ee", "events"]
+    verbs: ["get"]
 ---
-   
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-flowonly
 rules:
-- apiGroups: ["lma.tigera.io"]
-  resources: ["cluster"]
-  resourceNames: ["flows"]
-  verbs: ["get"]
+  - apiGroups: ["lma.tigera.io"]
+    resources: ["cluster"]
+    resourceNames: ["flows"]
+    verbs: ["get"]
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-auditonly
 rules:
-- apiGroups: ["lma.tigera.io"]
-  resources: ["cluster"]
-  resourceNames: ["audit*", "audit_kube", "audit_ee"]
-  verbs: ["get"]
+  - apiGroups: ["lma.tigera.io"]
+    resources: ["cluster"]
+    resourceNames: ["audit*", "audit_kube", "audit_ee"]
+    verbs: ["get"]
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-audit_kube-only
 rules:
-- apiGroups: ["lma.tigera.io"]
-  resources: ["cluster"]
-  resourceNames: ["audit_kube"]
-  verbs: ["get"]
+  - apiGroups: ["lma.tigera.io"]
+    resources: ["cluster"]
+    resourceNames: ["audit_kube"]
+    verbs: ["get"]
 
 ---
 kind: ClusterRole
@@ -47,5 +44,5 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-path-to-something
 rules:
-- nonResourceURLs: ["/path/to/something"]
-  verbs: ["get"]
+  - nonResourceURLs: ["/path/to/something"]
+    verbs: ["get"]

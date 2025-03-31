@@ -21,7 +21,7 @@ global_job_config:
       - cd kube-controllers
 
 blocks:
-  - name: 'Cut Release - Kube Controllers'
+  - name: "Cut Release - Kube Controllers"
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -35,8 +35,8 @@ blocks:
       jobs:
         - name: Cut Release - Kube Controllers
           env_vars:
-          - name: DEV_REGISTRIES
-            value: gcr.io/unique-caldron-775/cnx/tigera
+            - name: DEV_REGISTRIES
+              value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
             - CONFIRM=true bash ./.semaphore/scripts/cut-release.sh

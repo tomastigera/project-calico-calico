@@ -1,5 +1,4 @@
 ---
-
 # Required RBAC:
 # - watch/list nodes and pods
 kind: ServiceAccount
@@ -9,34 +8,32 @@ metadata:
   namespace: tigera-firewall-integration
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tigera-policy-integration-controller
 rules:
-    # This allows get, create and update access to the Calico Tiers.
+  # This allows get, create and update access to the Calico Tiers.
   - apiGroups: ["projectcalico.org"]
     resources: ["tiers"]
-    verbs: ["get","create","update"]
+    verbs: ["get", "create", "update"]
     # This allows read access to the Calico GlobalNetworkPolicies.
   - apiGroups: ["projectcalico.org"]
     resources: ["tier.globalnetworkpolicies"]
-    verbs: ["get","create","list","update","delete"]
+    verbs: ["get", "create", "list", "update", "delete"]
     # This allows read access to the Calico GlobalNetworkSets.
   - apiGroups: ["projectcalico.org"]
     resources: ["globalnetworksets"]
-    verbs: ["get","create","list","update","delete"]
+    verbs: ["get", "create", "list", "update", "delete"]
     # Events posts require the following access.
   - apiGroups: [""] # "" indicates the core API group
     resources: ["pods"]
-    verbs: ["post","get","list"]
+    verbs: ["post", "get", "list"]
   - apiGroups: [""] # "" indicates the core API group
     resources: ["events"]
-    verbs: ["post","get"]
+    verbs: ["post", "get"]
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -46,12 +43,11 @@ roleRef:
   kind: ClusterRole
   name: tigera-policy-integration-controller
 subjects:
-- kind: ServiceAccount
-  name: tigera-policy-integration-controller
-  namespace: tigera-firewall-integration
+  - kind: ServiceAccount
+    name: tigera-policy-integration-controller
+    namespace: tigera-firewall-integration
 
 ---
-
 # The actual tigera-policy-integration-controller deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -63,7 +59,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-     type: Recreate
+    type: Recreate
   selector:
     matchLabels:
       k8s-app: tigera-panorama
