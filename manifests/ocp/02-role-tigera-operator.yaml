@@ -524,7 +524,7 @@ rules:
       - jobs
       - cronjobs
     verbs:
-      - "*"
+      - '*'
   # The Tigera API server needs to be registered.
   - apiGroups:
       - apiregistration.k8s.io
@@ -547,7 +547,7 @@ rules:
       - globalnetworkpolicies
       - policyrecommendationscopes
     verbs:
-      - "*"
+      - '*'
   # For tiered network policy actions, tigera-apiserver requires that we authorize the operator for the tier.networkpolicies and tier.globalnetworkpolicies pseudo-kinds.
   - apiGroups:
       - projectcalico.org
@@ -598,26 +598,26 @@ rules:
     resources:
       - elasticsearches
     verbs:
-      - "*"
+      - '*'
   - apiGroups:
       - storage.k8s.io
     resources:
       - storageclasses
     verbs:
-      - "*"
+      - '*'
   - apiGroups:
       - kibana.k8s.elastic.co
     resources:
       - kibanas
     verbs:
-      - "*"
+      - '*'
   - apiGroups:
       - admissionregistration.k8s.io
     resources:
       - validatingwebhookconfigurations
       - mutatingwebhookconfigurations
     verbs:
-      - "*"
+      - '*'
   - apiGroups:
       - projectcalico.org
     resources:
