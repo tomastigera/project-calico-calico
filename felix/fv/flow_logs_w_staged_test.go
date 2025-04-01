@@ -1789,7 +1789,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 		opts.IPIPEnabled = false
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "5"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "3"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
@@ -2053,10 +2053,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 	}
 
 	It("get expected flow logs with pending policies", func() {
-		if bpfEnabled {
-			Skip("flaky, needs a fix")
-		}
-
 		// Describe the connectivity that we now expect.
 		// For ep1_1 -> ep2_1 we use the service cluster IP to test service info in the flow log
 		cc = &connectivity.Checker{}
@@ -2064,6 +2060,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 
 		// Do 1 rounds of connectivity checking.
 		cc.CheckConnectivity()
+
+		// Wait for conntrack to pick up so that flow is processed with the correct policy definition (this is a hack
+		// because changing the policy before the flow is processed can result in unmatch rule ID).
+		if bpfEnabled {
+			// Make sure that conntrack scanning ticks at least once
+			time.Sleep(3 * conntrack.ScanPeriod)
+		} else {
+			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// 10% leeway over the polling jitter of 10%)
+			time.Sleep(6 * time.Second)
+		}
 
 		// Configured staged allow.
 		configureStagedAllow()
@@ -2150,7 +2157,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":         {},
-						"1|tier2|default/tier2.staged:np2-1|allow|2": {},
+						"1|tier2|default/tier2.staged:np2-1|deny|-1": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -2220,7 +2227,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":         {},
-						"1|tier2|default/tier2.staged:np2-1|allow|1": {},
+						"1|tier2|default/tier2.staged:np2-1|deny|-1": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -2282,7 +2289,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		if bpfEnabled {
 			// Make sure that conntrack scanning ticks at least once, and that the we wait for the
 			// flush interval to expire.
-			time.Sleep(6 * conntrack.ScanPeriod)
+			time.Sleep(3 * conntrack.ScanPeriod)
 		} else {
 			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)

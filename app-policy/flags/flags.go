@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 package flags
 
 import (
@@ -19,8 +19,8 @@ type Config struct {
 	LogLevel           string      `json:"logLevel,omitempty"`
 	PerHostALPEnabled  bool        `json:"perHostAlpEnabled,omitempty"`
 	PerHostWAFEnabled  bool        `json:"perHostWafEnabled,omitempty"`
-	SidecarALPEnabled  bool        `json:"sidecarWafEnabled,omitempty"`
-	SidecarWAFEnabled  bool        `json:"sidecarAlpEnabled,omitempty"`
+	SidecarALPEnabled  bool        `json:"sidecarAlpEnabled,omitempty"`
+	SidecarWAFEnabled  bool        `json:"sidecarWafEnabled,omitempty"`
 	SidecarLogsEnabled bool        `json:"sidecarLogsEnabled,omitempty"`
 	WAFRulesetFiles    stringArray `json:"wafRulesetFiles,omitempty"`
 	WAFRulesetRootDir  string      `json:"wafRulesetRootDir,omitempty"`

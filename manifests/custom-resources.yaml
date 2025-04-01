@@ -101,10 +101,3 @@ metadata:
 # metadata:
 #   name: tigera-secure
 
----
-
-# Configures the Calico Whisker observability UI.
-apiVersion: operator.tigera.io/v1
-kind: Whisker
-metadata:
-  name: default

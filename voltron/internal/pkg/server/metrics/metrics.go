@@ -23,7 +23,8 @@ const (
 	labelHttpMethod     = "method"
 	labelSvcAccName     = "svcAcc"
 	labelLong           = "long"
-	labelStatusCategory = "statusCategory" // e.g. 2xx, 3xx
+	labelStatusCategory = "statusCategory" // e.g. 2xx, 3xx - see HttpStatusCategory
+	labelStatusCode     = "statusCode"     // e.g. 400, 401, 429, "" - see HttpStatusCode
 )
 
 var registerOnce sync.Once
@@ -72,7 +73,8 @@ var (
 // Metrics used by the inner handler when proxying requests received over the tunnel from
 // managed clusters.
 var (
-	tunnelIngressLabels = []string{"cluster", "tenant", "url"}
+	tunnelIngressLabels           = []string{"cluster", "tenant", "url"}
+	tunnelHttpStatusIngressLabels = []string{"cluster", "tenant", "url", labelStatusCategory, labelStatusCode}
 
 	InnerRequestsInflight = metrics.NewGaugeVec(&metrics.GaugeOpts{
 		Name: "http_tunnel_ingress_requests_inflight",
@@ -82,7 +84,7 @@ var (
 	InnerRequestsTotal = metrics.NewCounterVec(&metrics.CounterOpts{
 		Name: "http_tunnel_ingress_requests_total",
 		Help: "The total number of http requests received from managed clusters",
-	}, tunnelIngressLabels)
+	}, tunnelHttpStatusIngressLabels)
 
 	InnerRequestTimeSeconds = metrics.NewHistogramVec(&metrics.HistogramOpts{
 		Name: "http_tunnel_ingress_request_time_seconds",
@@ -180,7 +182,7 @@ func OnRequestStart(r *http.Request, authToken jwt.JWT) func(*httpsnoop.Metrics)
 			r.Method,
 			strconv.FormatBool(long),
 			serviceAccountName,
-			httpStatusCategory(snoopMetrics.Code),
+			HttpStatusCategory(snoopMetrics.Code),
 		); err != nil {
 			logger.Info("failed to get http status metric", zap.String("name", httpStatusTotal.Name), zap.Error(err))
 		} else {
@@ -195,7 +197,8 @@ func OnRequestStart(r *http.Request, authToken jwt.JWT) func(*httpsnoop.Metrics)
 	}
 }
 
-func httpStatusCategory(statusCode int) string {
+// HttpStatusCategory returns a string representing the category of the HTTP status code, e.g. "2XX", "3XX", etc.
+func HttpStatusCategory(statusCode int) string {
 	switch {
 	case statusCode == 0: // httpsnoop fails to capture a status sometimes
 		return "zero"
@@ -211,6 +214,26 @@ func httpStatusCategory(statusCode int) string {
 		return "5XX"
 	default:
 		return ">599"
+	}
+}
+
+// HttpStatusCode returns a string representing the HTTP status of "interesting" codes, e.g.  "400", "401", "429". Uninteresting codes return "".
+//
+// Having a default value for uninteresting codes allows us to use the same metric for all of those status codes, reducing cardinality of the metrics.
+//
+// This can be combined with the HttpStatusCategory metric to get a more complete picture of the status codes being returned.
+func HttpStatusCode(statusCode int) string {
+	switch statusCode {
+	case 400: // bad request
+		return "400"
+	case 401: // unauthorized
+		return "401"
+	case 403: // forbidden
+		return "403"
+	case 429: // rate limit
+		return "429"
+	default:
+		return ""
 	}
 }
 

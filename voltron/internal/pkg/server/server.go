@@ -24,10 +24,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"golang.org/x/oauth2"
 	authnv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/transport"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
@@ -130,6 +132,10 @@ type Server struct {
 	accessLogger *accesslog.Logger
 
 	cors *cors.CORS
+
+	// The token that Voltron uses has an exp of 1h by default and is periodically refreshed in the rest config
+	// BearerTokenFile location by the kubelet (k8s 1.22+). This token source uses client-go's tokenSource.
+	tokenSource oauth2.TokenSource
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -221,6 +227,7 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
 
+	srv.tokenSource = transport.NewCachedFileTokenSource(config.BearerTokenFile)
 	return srv, nil
 }
 
@@ -552,7 +559,17 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
 	// requests with this value in the ClusterHeaderField.
 	if isK8sRequest && (!hasClusterHeader || clusterID == lmak8s.DefaultCluster) {
-		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", s.config.BearerToken))
+		token, err := s.tokenSource.Token()
+		var voltronSAToken string
+		if err != nil {
+			logrus.Errorf("Failed to read the container's JWT from disk, defaulting to the config.BearerToken which" +
+				"was read at startup. This token may expire.")
+			voltronSAToken = s.config.BearerToken
+		} else {
+			voltronSAToken = token.AccessToken
+		}
+
+		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", voltronSAToken))
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}

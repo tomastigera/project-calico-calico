@@ -57,7 +57,7 @@
     fluentd-windows:
       image: tigera/fluentd-windows
       version: master
-    coreos-fluentd:
+    upstream-fluentd:
       version: 1.18.0
     ui-apis:
       image: tigera/ui-apis
