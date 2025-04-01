@@ -83,7 +83,7 @@ func TestQueryResponse(t *testing.T) {
 			}
 		})
 
-		t.Run("group values with no aggregation results are absent", func(t *testing.T) {
+		t.Run("group values with no aggregation results are included", func(t *testing.T) {
 
 			subject := QueryResponse{
 				GroupValues: []QueryResponseGroupValue{
@@ -93,10 +93,10 @@ func TestQueryResponse(t *testing.T) {
 					})},
 					{Key: "g0:1", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
 						{Key: "g0:1-g1:0", Aggregations: nil},
-						{Key: "g0:1-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "200"}}},
+						{Key: "g0:1-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "300"}}},
 					})},
 					{Key: "g0:2", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
-						{Key: "g0:2-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "100"}}},
+						{Key: "g0:2-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "400"}}},
 						{Key: "g0:2-g1:1", Aggregations: nil},
 					})},
 					{Key: "g0:3", NestedValues: nil},
@@ -110,8 +110,11 @@ func TestQueryResponse(t *testing.T) {
 			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg1)\n"+
 				"g0:0,g0:0-g1:0,100\n"+
 				"g0:0,g0:0-g1:1,200\n"+
-				"g0:1,g0:1-g1:1,200\n"+
-				"g0:2,g0:2-g1:0,100\n", w.String())
+				"g0:1,g0:1-g1:0,\n"+
+				"g0:1,g0:1-g1:1,300\n"+
+				"g0:2,g0:2-g1:0,400\n"+
+				"g0:2,g0:2-g1:1,\n"+
+				"g0:3,,\n", w.String())
 		})
 
 		t.Run("groups and aggregations results", func(t *testing.T) {

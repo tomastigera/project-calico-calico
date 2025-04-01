@@ -155,7 +155,7 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, slices.Map(groupValue.NestedValues, func(gv any) QueryResponseGroupValue {
 				return gv.(QueryResponseGroupValue)
 			}))
-		} else if len(groupValue.Aggregations) > 0 {
+		} else {
 			// process aggregations if no subgroup values are available
 			err = q.writeCSVRecord(csvWriter, fields, func(field string) any {
 				// each aggregation value is identified by the pseudo field aggregations(key)
