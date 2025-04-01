@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 
@@ -74,19 +75,49 @@ func (h *handlerHelper) Handler() http.Handler {
 			utils.TenantHeaderField:  tenantID,
 		}
 		logCtx := log.WithFields(fields)
+		start := time.Now()
 
-		// Increment the number of requests in flight and total number of requests received.
 		promLabels := []string{h.ManagedCluster.ID, tenantID, r.URL.String()}
+
+		httpStatus := http.StatusOK
+		w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+			WriteHeader: func(headerFunc httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+				return func(code int) {
+					httpStatus = code
+					headerFunc(code)
+				}
+			},
+		})
+
+		defer func() {
+			// Update metrics tracking request duration.
+			if requestTimeMetric, err := metrics.InnerRequestTimeSecondsTotal.GetMetricWithLabelValues(promLabels...); err != nil {
+				logCtx.WithError(err).Warn("Failed to get request time metric")
+			} else {
+				requestTimeMetric.Add(time.Since(start).Seconds())
+			}
+			if requestDurationMetrics, err := metrics.InnerRequestTimeSeconds.GetMetricWithLabelValues(promLabels...); err != nil {
+				logCtx.WithError(err).Warn("Failed to get request duration metric")
+			} else {
+				requestDurationMetrics.Observe(time.Since(start).Seconds())
+			}
+
+			// Update metrics tracking request status.
+			totalRequestsLabels := promLabels
+			totalRequestsLabels = append(totalRequestsLabels, metrics.HttpStatusCategory(httpStatus), metrics.HttpStatusCode(httpStatus))
+			if totalRequestsMetrics, err := metrics.InnerRequestsTotal.GetMetricWithLabelValues(totalRequestsLabels...); err != nil {
+				logCtx.WithError(err).Warn("Failed to get total requests metric")
+			} else {
+				totalRequestsMetrics.Inc()
+			}
+		}()
+
+		// Increment the number of requests in flight
 		if inflightMetric, err := metrics.InnerRequestsInflight.GetMetricWithLabelValues(promLabels...); err != nil {
 			logCtx.WithError(err).Warn("Failed to get inflight metric")
 		} else {
 			inflightMetric.Inc()
 			defer inflightMetric.Dec()
-		}
-		if totalRequestsMetrics, err := metrics.InnerRequestsTotal.GetMetricWithLabelValues(promLabels...); err != nil {
-			logCtx.WithError(err).Warn("Failed to get total requests metric")
-		} else {
-			totalRequestsMetrics.Inc()
 		}
 
 		// Enforce rate limiting if configured to do so.
@@ -149,19 +180,6 @@ func (h *handlerHelper) Handler() http.Handler {
 		// Headers have been set properly. Now, proxy the connection
 		// using Voltron's own key / cert for mTLS with Linseed.
 		logCtx.Debug("Handling connection received over the tunnel")
-		start := time.Now()
 		h.proxy.ServeHTTP(w, r)
-
-		// Update metrics tracking request duration.
-		if requestTimeMetric, err := metrics.InnerRequestTimeSecondsTotal.GetMetricWithLabelValues(promLabels...); err != nil {
-			logCtx.WithError(err).Warn("Failed to get request time metric")
-		} else {
-			requestTimeMetric.Add(time.Since(start).Seconds())
-		}
-		if requestDurationmetrics, err := metrics.InnerRequestTimeSeconds.GetMetricWithLabelValues(promLabels...); err != nil {
-			logCtx.WithError(err).Warn("Failed to get request duration metric")
-		} else {
-			requestDurationmetrics.Observe(time.Since(start).Seconds())
-		}
 	})
 }
