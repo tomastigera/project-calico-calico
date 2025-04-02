@@ -18,6 +18,7 @@ SKIP_SUBDIRS = [
     "e2e",
     "felix",
     "fluent-bit",
+    "guardian",
     "goldmane",
     "whisker",
     "whisker-backend",
