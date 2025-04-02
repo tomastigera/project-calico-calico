@@ -33,12 +33,20 @@ import (
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/iptables"
+	"github.com/projectcalico/calico/felix/linkaddrs"
 	"github.com/projectcalico/calico/felix/nftables"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+)
+
+var (
+	// EgressGatewayInterfaceStaticAddr is added to the host-side EG veth.
+	// rp_filter=2 only works if the interface also has at least one IP address defined on it.
+	// So assign the IPv4 link-local address 169.254.1.2 on the interface.
+	EgressGatewayInterfaceStaticAddr = ip.FromString("169.254.1.2")
 )
 
 type hepListener interface {
@@ -209,6 +217,14 @@ type endpointManager struct {
 	// Interfaces to which we've added a host-side address, for egress IP function to work.
 	egressGatewayAddressAdded map[string]netlink.Addr
 
+	// localBGPPeerIP records information on current local bgp peer IP.
+	localBGPPeerIP string
+	// newLocalBGPPeerIP records information on the new local bgp peer IP from GlobalBGPConfigUpdate.
+	newLocalBGPPeerIP         string
+	needToCheckLocalBGPPeerIP bool
+
+	linkAddrsMgr *linkaddrs.LinkAddrsManager
+
 	needToCheckDispatchChains     bool
 	needToCheckEndpointMarkChains bool
 
@@ -222,7 +238,7 @@ type endpointManager struct {
 	bpfLogLevel            string
 }
 
-type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
+type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string, extraInfo interface{})
 
 type procSysWriter func(path, value string) error
 
@@ -247,6 +263,7 @@ func newEndpointManager(
 	bpfLogLevel string,
 	floatingIPsEnabled bool,
 	nft bool,
+	linkAddrsMgr *linkaddrs.LinkAddrsManager,
 ) *endpointManager {
 	nlHandle, _ := netlink.NewHandle()
 
@@ -274,6 +291,7 @@ func newEndpointManager(
 		bpfLogLevel,
 		floatingIPsEnabled,
 		nft,
+		linkAddrsMgr,
 	)
 }
 
@@ -301,6 +319,7 @@ func newEndpointManagerWithShims(
 	bpfLogLevel string,
 	floatingIPsEnabled bool,
 	nft bool,
+	linkAddrsMgr *linkaddrs.LinkAddrsManager,
 ) *endpointManager {
 	wlIfacesPattern := "^(" + strings.Join(wlInterfacePrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -312,7 +331,7 @@ func newEndpointManagerWithShims(
 		actions = nftables.Actions()
 	}
 
-	return &endpointManager{
+	epManager := &endpointManager{
 		ipVersion:              ipVersion,
 		wlIfacesRegexp:         wlIfacesRegexp,
 		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
@@ -383,13 +402,18 @@ func newEndpointManagerWithShims(
 		activeEPMarkDispatchChains:     map[string]*generictables.Chain{},
 		needToCheckDispatchChains:      true, // Need to do start-of-day update.
 		needToCheckEndpointMarkChains:  true, // Need to do start-of-day update.
+		needToCheckLocalBGPPeerIP:      true, // Need to do start-of-day update.
 
 		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 		callbacks:              newEndpointManagerCallbacks(callbacks, ipVersion),
 		nlHandle:               nlHandle,
 		tcpStatsEnabled:        tcpStatsEnabled,
 		bpfLogLevel:            bpfLogLevel,
+
+		linkAddrsMgr: linkAddrsMgr,
 	}
+
+	return epManager
 }
 
 func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
@@ -463,6 +487,9 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 		id := types.ProtoToPolicyID(msg.GetId())
 		m.dirtyPolicyIDs.Discard(id)
 		delete(m.activePolicySelectors, id)
+	case *proto.GlobalBGPConfigUpdate:
+		log.Debug("GlobalBGPConfig updated.")
+		m.onBGPConfigUpdate(msg)
 	}
 }
 
@@ -608,18 +635,18 @@ func (m *endpointManager) updateEndpointStatuses() {
 	m.epIDsToUpdateStatus.Iter(func(item interface{}) error {
 		switch id := item.(type) {
 		case types.WorkloadEndpointID:
-			status := m.calculateWorkloadEndpointStatus(id)
-			m.OnEndpointStatusUpdate(m.ipVersion, id, status)
+			status, endpoint := m.calculateWorkloadEndpointStatus(id)
+			m.OnEndpointStatusUpdate(m.ipVersion, id, status, endpoint)
 		case types.HostEndpointID:
 			status := m.calculateHostEndpointStatus(id)
-			m.OnEndpointStatusUpdate(m.ipVersion, id, status)
+			m.OnEndpointStatusUpdate(m.ipVersion, id, status, nil)
 		}
 
 		return set.RemoveItem
 	})
 }
 
-func (m *endpointManager) calculateWorkloadEndpointStatus(id types.WorkloadEndpointID) string {
+func (m *endpointManager) calculateWorkloadEndpointStatus(id types.WorkloadEndpointID) (string, *proto.WorkloadEndpoint) {
 	logCxt := log.WithField("workloadEndpointID", id)
 	logCxt.Debug("Re-evaluating workload endpoint status")
 	var operUp, adminUp, failed bool
@@ -650,7 +677,7 @@ func (m *endpointManager) calculateWorkloadEndpointStatus(id types.WorkloadEndpo
 		"status":  status,
 	})
 	logCxt.Info("Re-evaluated workload endpoint status")
-	return status
+	return status, workload
 }
 
 func (m *endpointManager) calculateHostEndpointStatus(id types.HostEndpointID) (status string) {
@@ -730,6 +757,10 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			logCxt.Info("Workload removed, deleting old state.")
 			m.routeTable.SetRoutes(oldWorkload.Name, nil)
 			m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
+
+			if !m.ifaceIsForEgressGateway(oldWorkload.Name) {
+				m.linkAddrsMgr.RemoveLinkLocalAddress(oldWorkload.Name)
+			}
 			delete(m.activeWlIfaceNameToID, oldWorkload.Name)
 			if m.hasSourceSpoofingConfiguration(oldWorkload.Name) {
 				logCxt.Debugf("Removing RPF configuration for old workload %s", oldWorkload.Name)
@@ -787,6 +818,9 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 					}
 					m.routeTable.SetRoutes(oldWorkload.Name, nil)
 					m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
+					if !m.ifaceIsForEgressGateway(oldWorkload.Name) {
+						m.linkAddrsMgr.RemoveLinkLocalAddress(oldWorkload.Name)
+					}
 					delete(m.activeWlIfaceNameToID, oldWorkload.Name)
 				}
 				adminUp := workload.State == "active"
@@ -952,6 +986,18 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 
 		// Set flag to update endpoint mark chains.
 		m.needToCheckEndpointMarkChains = true
+	}
+
+	if m.needToCheckLocalBGPPeerIP {
+		m.needToCheckLocalBGPPeerIP = false
+		m.localBGPPeerIP = m.newLocalBGPPeerIP
+		log.WithFields(log.Fields{
+			"oldIP": m.localBGPPeerIP,
+			"newIP": m.newLocalBGPPeerIP}).Debug("local BGP peer IP updated.")
+		// Reconfigure the interfaces of all active workload endpoints.
+		for ifaceName := range m.activeWlIfaceNameToID {
+			m.wlIfaceNamesToReconfigure.Add(ifaceName)
+		}
 	}
 
 	m.wlIfaceNamesToReconfigure.Iter(func(ifaceName string) error {
@@ -1484,7 +1530,7 @@ func (m *endpointManager) configureEgressGatewayInterface(name, rpfilter string)
 	}
 
 	// rp_filter=2 only works if the interface also has at least one IP address defined on it.
-	// So assign the IPv4 link-local address 169.254.1.2 on the interface (which is the host
+	// So assign an IPv4 link-local address on the interface (which is the host
 	// side of the veth pair for the egress gateway pod).
 	link, err := m.nlHandle.LinkByName(name)
 	if err != nil {
@@ -1503,13 +1549,9 @@ func (m *endpointManager) configureEgressGatewayInterface(name, rpfilter string)
 		return nil
 	}
 
-	// No existing IPv4 addresses, so add 169.254.1.2/32.
-	ip, net, err := net.ParseCIDR("169.254.1.2/32")
-	if err != nil {
-		return err
-	}
-	net.IP = ip
-	addr := netlink.Addr{IPNet: net, Scope: int(netlink.SCOPE_LINK)}
+	// No existing IPv4 addresses, so add the static address.
+	ipNet := EgressGatewayInterfaceStaticAddr.AsCIDR().ToIPNet()
+	addr := netlink.Addr{IPNet: &ipNet, Scope: int(netlink.SCOPE_LINK)}
 	log.WithFields(log.Fields{"address": addr}).Info("Assign address to egress gateway device")
 	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
 		return err
@@ -1583,7 +1625,7 @@ func (m *endpointManager) interfaceExistsInProcSys(name string) (bool, error) {
 	return true, nil
 }
 
-func configureInterface(name string, ipVersion int, rpFilter string, writeProcSys procSysWriter) error {
+func configureProcSysForInterface(name string, ipVersion int, rpFilter string, writeProcSys procSysWriter) error {
 	log.WithField("ifaceName", name).Info(
 		"Applying /proc/sys configuration to interface.")
 
@@ -1689,7 +1731,12 @@ func (m *endpointManager) configureInterface(name string) error {
 		}
 	}
 
-	return configureInterface(name, int(m.ipVersion), rpFilter, m.writeProcSys)
+	err = configureProcSysForInterface(name, int(m.ipVersion), rpFilter, m.writeProcSys)
+	if err != nil {
+		return err
+	}
+
+	return m.ensureLocalBGPPeerIPOnInterface(name)
 }
 
 func writeProcSys(path, value string) error {
@@ -1821,4 +1868,63 @@ func (m *endpointManager) updatePolicyGroups(ifaceName string, allGroups []rules
 	} else {
 		delete(m.ifaceNameToPolicyGroupChainNames, ifaceName)
 	}
+}
+
+func (m *endpointManager) onBGPConfigUpdate(update *proto.GlobalBGPConfigUpdate) {
+	if m.ipVersion == 4 {
+		if update.LocalWorkloadPeeringIpV4 != m.localBGPPeerIP {
+			m.needToCheckLocalBGPPeerIP = true
+			m.newLocalBGPPeerIP = update.LocalWorkloadPeeringIpV4
+		}
+	} else {
+		if update.LocalWorkloadPeeringIpV6 != m.localBGPPeerIP {
+			m.needToCheckLocalBGPPeerIP = true
+			m.newLocalBGPPeerIP = update.LocalWorkloadPeeringIpV6
+		}
+	}
+}
+
+func (m *endpointManager) ifaceIsForLocalBGPPeer(name string) bool {
+	id, ok := m.activeWlIfaceNameToID[name]
+	if !ok {
+		return false
+	}
+	ep := m.activeWlEndpoints[id]
+	return ep != nil && ep.LocalBgpPeer != nil && len(ep.LocalBgpPeer.BgpPeerName) != 0
+}
+
+func (m *endpointManager) ensureLocalBGPPeerIPOnInterface(name string) error {
+	logCtx := log.WithField("iface", name)
+	logCtx.Debug("Configure interface for local bpg peer role")
+
+	if m.ifaceIsForLocalBGPPeer(name) {
+		if len(m.localBGPPeerIP) == 0 {
+			logCtx.Warning("no peer ip is defined trying to configure local BGP peer ip on interface")
+			return fmt.Errorf("interface belongs to a local BGP peer but peer IP is not defined yet.")
+		}
+
+		ipAddr := ip.FromString(m.localBGPPeerIP)
+		if ipAddr == nil {
+			logCtx.WithField("localBGPPeerIP", m.localBGPPeerIP).Error("Failed to parse peer ip")
+			return fmt.Errorf("Failed to parse peer ip")
+		}
+
+		var ipCIDR ip.CIDR
+		if m.ipVersion == 4 {
+			ipCIDR = ip.CIDRFromAddrAndPrefix(ipAddr, 32)
+		} else {
+			ipCIDR = ip.CIDRFromAddrAndPrefix(ipAddr, 128)
+		}
+
+		if err := m.linkAddrsMgr.SetLinkLocalAddress(name, ipCIDR); err != nil {
+			log.WithError(err).Warning("Failed to add peer ip")
+			return err
+		}
+		logCtx.WithFields(log.Fields{"address": ipCIDR}).Info("Assigned host side address to workload interface to set up local BGP peer")
+	} else if !m.ifaceIsForEgressGateway(name) {
+		m.linkAddrsMgr.RemoveLinkLocalAddress(name)
+	}
+
+	logCtx.Debug("Completed configure local bgp role on device")
+	return nil
 }

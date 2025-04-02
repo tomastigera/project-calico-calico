@@ -61,10 +61,11 @@ type PolicyResolver struct {
 	policySorter          *PolicySorter
 	Callbacks             []PolicyResolverCallbacks
 	InSync                bool
+	endpointBGPPeerData   map[model.WorkloadEndpointKey]EndpointBGPPeer
 }
 
 type PolicyResolverCallbacks interface {
-	OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, egressData EndpointEgressData, filteredTiers []TierInfo)
+	OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, filteredTiers []TierInfo)
 }
 
 func NewPolicyResolver() *PolicyResolver {
@@ -76,6 +77,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
 		dirtyEndpoints:        set.New[model.EndpointKey](),
+		endpointBGPPeerData:   map[model.WorkloadEndpointKey]EndpointBGPPeer{},
 		policySorter:          NewPolicySorter(),
 		Callbacks:             []PolicyResolverCallbacks{},
 	}
@@ -210,7 +212,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 	if !ok {
 		log.Debugf("Endpoint is unknown, sending nil update")
 		for _, cb := range pr.Callbacks {
-			cb.OnEndpointTierUpdate(endpointID, nil, EndpointEgressData{}, []TierInfo{})
+			cb.OnEndpointTierUpdate(endpointID, nil, EndpointEgressData{}, nil, []TierInfo{})
 		}
 		return nil
 	}
@@ -250,8 +252,17 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
+
+	var peerData *EndpointBGPPeer
+	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
+		data := pr.endpointBGPPeerData[key]
+		if !data.Empty() {
+			peerData = &data
+		}
+	}
+
 	for _, cb := range pr.Callbacks {
-		cb.OnEndpointTierUpdate(endpointID, endpoint, egressData, applicableTiers)
+		cb.OnEndpointTierUpdate(endpointID, endpoint, egressData, peerData, applicableTiers)
 	}
 	return nil
 }
@@ -270,6 +281,15 @@ func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointK
 		pr.endpointEgressData[key] = egressData
 	} else {
 		delete(pr.endpointEgressData, key)
+	}
+	pr.dirtyEndpoints.Add(key)
+}
+
+func (pr *PolicyResolver) OnEndpointBGPPeerDataUpdate(key model.WorkloadEndpointKey, peerData *EndpointBGPPeer) {
+	if peerData != nil {
+		pr.endpointBGPPeerData[key] = *peerData
+	} else {
+		delete(pr.endpointBGPPeerData, key)
 	}
 	pr.dirtyEndpoints.Add(key)
 }

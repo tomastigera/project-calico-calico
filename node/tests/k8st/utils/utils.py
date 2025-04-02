@@ -297,6 +297,10 @@ def calico_node_pod_names():
     return kubectl("get po -n kube-system -l k8s-app=calico-node" +
                    " -o jsonpath='{.items[*].metadata.name}'").split()
 
+def calico_node_pod_name(nodename):
+    name = kubectl("get po -n kube-system -l k8s-app=calico-node --field-selector spec.nodeName=%s -o jsonpath='{.items[0].metadata.name}'" % nodename)
+    return name
+
 def update_ds_env(ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
