@@ -10,44 +10,44 @@ spec:
   groups:
     - name: kubernetes.rules
       rules:
-      - record: api_request_latencies
-        expr: histogram_quantile(0.99, sum(apiserver_request_latencies_bucket{verb=~"GET|PUT|PATCH|POST"}) BY (le))
-        labels:
-          quantile: "0.99"
+        - record: api_request_latencies
+          expr: histogram_quantile(0.99, sum(apiserver_request_latencies_bucket{verb=~"GET|PUT|PATCH|POST"}) BY (le))
+          labels:
+            quantile: "0.99"
 
-      - record: all_pods_count
-        expr: sum(kubelet_running_pod_count)
-      - record: pod_start_latency_microseconds
-        expr: kubelet_pod_start_latency_microseconds{quantile="0.99"}
-        labels:
-          quantile: "0.99"
+        - record: all_pods_count
+          expr: sum(kubelet_running_pod_count)
+        - record: pod_start_latency_microseconds
+          expr: kubelet_pod_start_latency_microseconds{quantile="0.99"}
+          labels:
+            quantile: "0.99"
 
-      - record: cpu_client_pods
-        expr: sum(rate(container_cpu_usage_seconds_total{pod=~"client.*"}[2m])) by (instance) * 800
-      - record: cpu_server_pods
-        expr: sum(rate(container_cpu_usage_seconds_total{pod=~"server.*"}[2m])) by (instance) * 800
-      - record: cpu_calico_node
-        expr: sum(rate(container_cpu_usage_seconds_total{pod=~"calico-node-.*"}[2m])) by (pod) * 100
-      - record: cpu_kube_proxy
-        expr: sum(rate(container_cpu_usage_seconds_total{pod=~".*kube-proxy.*"}[1m])) by (pod) * 100
-      - record: cpu_kubelet
-        expr: sum(rate(container_cpu_usage_seconds_total{id=~".*kubelet.*"}[2m])) by (instance) * 100
+        - record: cpu_client_pods
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~"client.*"}[2m])) by (instance) * 800
+        - record: cpu_server_pods
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~"server.*"}[2m])) by (instance) * 800
+        - record: cpu_calico_node
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~"calico-node-.*"}[2m])) by (pod) * 100
+        - record: cpu_kube_proxy
+          expr: sum(rate(container_cpu_usage_seconds_total{pod=~".*kube-proxy.*"}[1m])) by (pod) * 100
+        - record: cpu_kubelet
+          expr: sum(rate(container_cpu_usage_seconds_total{id=~".*kubelet.*"}[2m])) by (instance) * 100
 
-      - record: running_client_count
-        expr: sum(kube_deployment_status_replicas_available{deployment=~"client.*cali.*"})
-      - record: running_client_percent
-        expr: sum(kube_deployment_status_replicas_available{deployment=~"client.*cali.*"}) / sum(kube_deployment_spec_replicas{deployment=~"client.*cali.*"})
-      - record: desired_client_count
-        expr: sum(kube_deployment_spec_replicas{deployment=~"client.*cali.*"})
+        - record: running_client_count
+          expr: sum(kube_deployment_status_replicas_available{deployment=~"client.*cali.*"})
+        - record: running_client_percent
+          expr: sum(kube_deployment_status_replicas_available{deployment=~"client.*cali.*"}) / sum(kube_deployment_spec_replicas{deployment=~"client.*cali.*"})
+        - record: desired_client_count
+          expr: sum(kube_deployment_spec_replicas{deployment=~"client.*cali.*"})
 
-      - record: cluster_cpu
-        expr: 100 - avg((irate(node_cpu{mode="idle"}[2m])) * 100)
-      - record: cluster_mem
-        expr: (sum(node_memory_MemTotal) - sum(node_memory_MemFree+node_memory_Buffers+node_memory_Cached) ) / sum(node_memory_MemTotal) * 100
+        - record: cluster_cpu
+          expr: 100 - avg((irate(node_cpu{mode="idle"}[2m])) * 100)
+        - record: cluster_mem
+          expr: (sum(node_memory_MemTotal) - sum(node_memory_MemFree+node_memory_Buffers+node_memory_Cached) ) / sum(node_memory_MemTotal) * 100
 
-      - record: calico_node_mem
-        expr: container_memory_rss{pod=~"calico-node.*"}
-      - record: calico_typha_mem
-        expr: container_memory_rss{pod=~"calico-typha.*"}
-      - record: prom_mem
-        expr: container_memory_rss{pod=~"prometheus-.*"}
+        - record: calico_node_mem
+          expr: container_memory_rss{pod=~"calico-node.*"}
+        - record: calico_typha_mem
+          expr: container_memory_rss{pod=~"calico-typha.*"}
+        - record: prom_mem
+          expr: container_memory_rss{pod=~"prometheus-.*"}

@@ -7,51 +7,53 @@ metadata:
   name: cis-benchmark
 spec:
   downloadTemplates:
-  - name: all-tests.csv
-    template: |
-      nodeName,testIndex,testDescription,status,scored,remediation
-      {{ range $i, $node := .CISBenchmark -}}
-      {{- range $j, $section := $node.Results -}}
-      {{- range $k, $result := $section.Results -}}
-      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
-      {{ end }}
-      {{- end }}
-      {{- end }}
-  - name: failed-tests.csv
-    template: |
-      nodeName,testIndex,testDescription,status,scored,remediation
-      {{ range $i, $node := .CISBenchmark }}
-      {{- range $j, $section := $node.Results }}
-      {{- range $k, $result := $section.Results }}
-      {{- if eq $result.Status "FAIL" }}
-      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
-      {{ end }}
-      {{- end }}
-      {{- end }}
-      {{- end }}
-  - name: node-summary.csv
-    template: |
-      node,version,status,testsPassing,testsFailing,testsUnknown,testsTotal
-      {{ range $_, $node := .CISBenchmark }}
-      {{- $node.NodeName }},{{ $node.KubernetesVersion }},{{ $node.Summary.Status }},{{ $node.Summary.TotalPass }},{{ $node.Summary.TotalFail }},{{ $node.Summary.TotalInfo }},{{ $node.Summary.Total }}
-      {{ end }}
-  - name: total-summary.csv
-    template: "{{ $c := csv }}\n{{- $c := $c.AddColumn \"startTime\"           \"{{
-      dateRfc3339 .StartTime }}\" }}\n{{- $c := $c.AddColumn \"endTime\"             \"{{
-      dateRfc3339 .EndTime }}\" }}\n{{- $c := $c.AddColumn \"type\"             \t
-      \"{{ .CISBenchmarkSummary.Type }}\" }}\n{{- $c := $c.AddColumn \"hiPercentThreshold\"
-      \ \"{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.HighThreshold  }}{{ .ReportSpec.CIS.HighThreshold
-      }}{{ else }}100{{ end }}{{ else }}100{{ end }}\" }}\n{{- $c := $c.AddColumn
-      \"medPercentThreshold\" \"{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.MedThreshold
-      \ }}{{ .ReportSpec.CIS.MedThreshold }}{{ else }}50{{ end }}{{ else }}50{{ end
-      }}\" }}\n{{- $c := $c.AddColumn \"hiNodeCount\"         \"{{ .CISBenchmarkSummary.HighCount
-      }}\" }}\n{{- $c := $c.AddColumn \"medNodeCount\"        \"{{ .CISBenchmarkSummary.MedCount
-      }}\" }}\n{{- $c := $c.AddColumn \"lowNodeCount\"        \"{{ .CISBenchmarkSummary.LowCount
-      }}\" }}\n{{- $c.Render . }}\n"
+    - name: all-tests.csv
+      template: |
+        nodeName,testIndex,testDescription,status,scored,remediation
+        {{ range $i, $node := .CISBenchmark -}}
+        {{- range $j, $section := $node.Results -}}
+        {{- range $k, $result := $section.Results -}}
+        {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
+        {{ end }}
+        {{- end }}
+        {{- end }}
+    - name: failed-tests.csv
+      template: |
+        nodeName,testIndex,testDescription,status,scored,remediation
+        {{ range $i, $node := .CISBenchmark }}
+        {{- range $j, $section := $node.Results }}
+        {{- range $k, $result := $section.Results }}
+        {{- if eq $result.Status "FAIL" }}
+        {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
+        {{ end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+    - name: node-summary.csv
+      template: |
+        node,version,status,testsPassing,testsFailing,testsUnknown,testsTotal
+        {{ range $_, $node := .CISBenchmark }}
+        {{- $node.NodeName }},{{ $node.KubernetesVersion }},{{ $node.Summary.Status }},{{ $node.Summary.TotalPass }},{{ $node.Summary.TotalFail }},{{ $node.Summary.TotalInfo }},{{ $node.Summary.Total }}
+        {{ end }}
+    - name: total-summary.csv
+      template:
+        "{{ $c := csv }}\n{{- $c := $c.AddColumn \"startTime\"           \"{{
+        dateRfc3339 .StartTime }}\" }}\n{{- $c := $c.AddColumn \"endTime\"             \"{{
+        dateRfc3339 .EndTime }}\" }}\n{{- $c := $c.AddColumn \"type\"             \t
+        \"{{ .CISBenchmarkSummary.Type }}\" }}\n{{- $c := $c.AddColumn \"hiPercentThreshold\"
+        \ \"{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.HighThreshold  }}{{ .ReportSpec.CIS.HighThreshold
+        }}{{ else }}100{{ end }}{{ else }}100{{ end }}\" }}\n{{- $c := $c.AddColumn
+        \"medPercentThreshold\" \"{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.MedThreshold
+        \ }}{{ .ReportSpec.CIS.MedThreshold }}{{ else }}50{{ end }}{{ else }}50{{ end
+        }}\" }}\n{{- $c := $c.AddColumn \"hiNodeCount\"         \"{{ .CISBenchmarkSummary.HighCount
+        }}\" }}\n{{- $c := $c.AddColumn \"medNodeCount\"        \"{{ .CISBenchmarkSummary.MedCount
+        }}\" }}\n{{- $c := $c.AddColumn \"lowNodeCount\"        \"{{ .CISBenchmarkSummary.LowCount
+        }}\" }}\n{{- $c.Render . }}\n"
   includeCISBenchmarkData: true
   uiSummaryTemplate:
     name: ui-summary.json
-    template: '{{ $n := len .CISBenchmark }}{"heading": "Kubernetes CIS Benchmark","type":
+    template:
+      '{{ $n := len .CISBenchmark }}{"heading": "Kubernetes CIS Benchmark","type":
       "row","widgets": [{"heading": "Node Failure Summary","type": "cis-benchmark-nodes","summary":
       {"label": "Total","total": {{ $n }}},"data": [{"label": "HIGH","value": {{ .CISBenchmarkSummary.HighCount
       }},"desc": "Nodes with {{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.HighThreshold

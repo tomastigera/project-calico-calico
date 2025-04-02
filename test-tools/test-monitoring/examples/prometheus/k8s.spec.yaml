@@ -33,13 +33,13 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: web
-    nodePort: 30900
-    port: 9090
-    protocol: TCP
-    targetPort: web
+    - name: web
+      nodePort: 30900
+      port: 9090
+      protocol: TCP
+      targetPort: web
   selector:
-    prometheus:  k8s
+    prometheus: k8s
 ---
 # Per-node exporters, etc.
 apiVersion: apps/v1
@@ -59,32 +59,36 @@ spec:
     spec:
       serviceAccountName: prometheus-k8s
       containers:
-      - name: kube-state-metrics
-        image: gcr.io/google_containers/kube-state-metrics:v0.5.0
-        args: ["--collectors", "daemonsets,deployments,nodes,replicasets,replicationcontrollers"]
-        ports:
-        - name: metrics
-          containerPort: 8080
-        resources:
-          requests:
-            memory: 500Mi
-            cpu: 100m
+        - name: kube-state-metrics
+          image: gcr.io/google_containers/kube-state-metrics:v0.5.0
+          args:
+            [
+              "--collectors",
+              "daemonsets,deployments,nodes,replicasets,replicationcontrollers",
+            ]
+          ports:
+            - name: metrics
+              containerPort: 8080
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 100m
 ---
 apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    prometheus.io/scrape: 'true'
+    prometheus.io/scrape: "true"
   labels:
     app: kube-state-metrics
   name: kube-state-metrics
   namespace: tigera-fluentd
 spec:
   ports:
-  - name: metrics
-    port: 8080
-    targetPort: metrics
-    protocol: TCP
+    - name: metrics
+      port: 8080
+      targetPort: metrics
+      protocol: TCP
   selector:
     app: kube-state-metrics
 ---
@@ -107,36 +111,36 @@ spec:
       hostNetwork: true
       hostPID: true
       containers:
-      - image:  quay.io/prometheus/node-exporter:v0.13.0
-        args:
-        - "-collector.procfs=/host/proc"
-        - "-collector.sysfs=/host/sys"
-        name: node-exporter
-        ports:
-        - containerPort: 9100
-          hostPort: 9100
-          name: scrape
-        resources:
-          requests:
-            memory: 30Mi
-            cpu: 100m
-          limits:
-            memory: 50Mi
-            cpu: 200m
-        volumeMounts:
-        - name: proc
-          readOnly:  true
-          mountPath: /host/proc
-        - name: sys
-          readOnly: true
-          mountPath: /host/sys
+        - image: quay.io/prometheus/node-exporter:v0.13.0
+          args:
+            - "-collector.procfs=/host/proc"
+            - "-collector.sysfs=/host/sys"
+          name: node-exporter
+          ports:
+            - containerPort: 9100
+              hostPort: 9100
+              name: scrape
+          resources:
+            requests:
+              memory: 30Mi
+              cpu: 100m
+            limits:
+              memory: 50Mi
+              cpu: 200m
+          volumeMounts:
+            - name: proc
+              readOnly: true
+              mountPath: /host/proc
+            - name: sys
+              readOnly: true
+              mountPath: /host/sys
       volumes:
-      - name: proc
-        hostPath:
-          path: /proc
-      - name: sys
-        hostPath:
-          path: /sys
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
 ---
 apiVersion: v1
 kind: Service
@@ -144,16 +148,16 @@ metadata:
   labels:
     app: node-exporter
   annotations:
-    prometheus.io/scrape: 'true'
+    prometheus.io/scrape: "true"
   name: node-exporter
   namespace: tigera-fluentd
 spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: metrics
-    port: 9100
-    protocol: TCP
+    - name: metrics
+      port: 9100
+      protocol: TCP
   selector:
     app: node-exporter
 ---
@@ -172,6 +176,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-- kind: ServiceAccount
-  name: prometheus-k8s
-  namespace: tigera-fluentd
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: tigera-fluentd

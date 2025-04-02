@@ -4,18 +4,18 @@
     name: group1
   spec:
     ingress:
-    - action: Allow
-      source:
-        selector: projectcalico.org/namespace == 'group1'
+      - action: Allow
+        source:
+          selector: projectcalico.org/namespace == 'group1'
 - apiVersion: projectcalico.org/v3
   kind: Profile
   metadata:
     name: group2
   spec:
     ingress:
-    - action: Allow
-      source:
-        selector: projectcalico.org/namespace == 'group2'
+      - action: Allow
+        source:
+          selector: projectcalico.org/namespace == 'group2'
 - apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
@@ -28,9 +28,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:e1
     ipNetworks:
-    - 192.168.0.1/32
+      - 192.168.0.1/32
     profiles:
-    - group1
+      - group1
     workload: g1w1
     orchestrator: k8s
     node: host1
@@ -48,9 +48,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:e2
     ipNetworks:
-    - 192.168.0.2/32
+      - 192.168.0.2/32
     profiles:
-    - group1
+      - group1
     workload: g1w2
     orchestrator: k8s
     node: host1
@@ -68,9 +68,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:e3
     ipNetworks:
-    - 192.168.0.3/32
+      - 192.168.0.3/32
     profiles:
-    - group1
+      - group1
     workload: g1w3
     orchestrator: k8s
     node: host1
@@ -88,9 +88,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:f1
     ipNetworks:
-    - 192.168.1.1/32
+      - 192.168.1.1/32
     profiles:
-    - group2
+      - group2
     workload: g2w1
     orchestrator: k8s
     node: host1
@@ -108,9 +108,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:f2
     ipNetworks:
-    - 192.168.1.2/32
+      - 192.168.1.2/32
     profiles:
-    - group2
+      - group2
     workload: g2w2
     orchestrator: k8s
     node: host1
@@ -128,9 +128,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:f3
     ipNetworks:
-    - 192.168.1.3/32
+      - 192.168.1.3/32
     profiles:
-    - group2
+      - group2
     workload: g2w3
     orchestrator: k8s
     node: host1
@@ -145,13 +145,13 @@
     selector: projectcalico.org/namespace == 'group1'
     order: 500
     egress:
-    - action: Deny
-      destination:
-        selector: projectcalico.org/namespace == 'group1'
+      - action: Deny
+        destination:
+          selector: projectcalico.org/namespace == 'group1'
     ingress:
-    - action: Allow
-      source:
-        selector: projectcalico.org/namespace == 'group2'
+      - action: Allow
+        source:
+          selector: projectcalico.org/namespace == 'group2'
 - apiVersion: projectcalico.org/v3
   kind: NetworkPolicy
   metadata:
@@ -161,10 +161,10 @@
     selector: projectcalico.org/namespace == 'group2'
     order: 400
     egress:
-    - action: Allow
-      destination:
-        selector: projectcalico.org/namespace in {'group1','group2'}
+      - action: Allow
+        destination:
+          selector: projectcalico.org/namespace in {'group1','group2'}
     ingress:
-    - action: Deny
-      source:
-        selector: projectcalico.org/namespace in {'group1','group2'}
+      - action: Deny
+        source:
+          selector: projectcalico.org/namespace in {'group1','group2'}

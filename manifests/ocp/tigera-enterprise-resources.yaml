@@ -5,14 +5,12 @@ kind: Manager
 metadata:
   name: tigera-secure
 
-
 ---
 # This section installs and configures Calico Enterprise intrusion detection functionality.
 apiVersion: operator.tigera.io/v1
 kind: IntrusionDetection
 metadata:
   name: tigera-secure
-
 
 ---
 apiVersion: operator.tigera.io/v1
@@ -23,7 +21,6 @@ spec:
   nodes:
     count: 1
 
-
 ---
 # This section installs and configures Calico Enterprise log collector functionality.
 apiVersion: operator.tigera.io/v1
@@ -31,14 +28,12 @@ kind: LogCollector
 metadata:
   name: tigera-secure
 
-
 ---
 # This section configures Prometheus for Calico Enterprise.
 apiVersion: operator.tigera.io/v1
 kind: Monitor
 metadata:
   name: tigera-secure
-
 
 ---
 # This section installs and configures Calico Enterprise policy recommendation functionality.
@@ -48,7 +43,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # Uncomment this section to configure Calico Enterprise compliance functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.Compliance
 # apiVersion: operator.tigera.io/v1
@@ -57,11 +51,9 @@ metadata:
 #   name: tigera-secure
 
 ---
-
 # Uncomment this section to configure Calico Enterprise Packet Capture functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.PacketCaptureAPI
 # apiVersion: operator.tigera.io/v1
 # kind: PacketCaptureAPI
 # metadata:
 #   name: tigera-secure
-

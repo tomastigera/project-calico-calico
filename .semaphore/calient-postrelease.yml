@@ -12,24 +12,24 @@ blocks:
   - name: "Run postrelease tests"
     task:
       secrets:
-      - name: quay-readonly-postrelease-token
-      - name: google-service-account-for-gce
-      - name: marvin-aws-config
-      - name: marvin-aws-credentials
+        - name: quay-readonly-postrelease-token
+        - name: google-service-account-for-gce
+        - name: marvin-aws-config
+        - name: marvin-aws-credentials
       env_vars:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /home/semaphore/secrets/secret.google-service-account-key.json
       prologue:
         commands:
-        - checkout
-        - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+          - checkout
+          - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
       jobs:
-      - name: "Run Calico Enterprise postrelease tests"
-        execution_time_limit:
-          minutes: 180
-        commands:
-        - make -C hack/postrelease/calient test_all
+        - name: "Run Calico Enterprise postrelease tests"
+          execution_time_limit:
+            minutes: 180
+          commands:
+            - make -C hack/postrelease/calient test_all
       epilogue:
         always:
           commands:
-          - '[[ -f hack/postrelease/calient/xunit.xml ]] && test-results publish hack/postrelease/calient/xunit.xml'
+            - "[[ -f hack/postrelease/calient/xunit.xml ]] && test-results publish hack/postrelease/calient/xunit.xml"

@@ -21,7 +21,7 @@ global_job_config:
       - cd ingress-collector
 
 blocks:
-  - name: 'Cut Release - Ingress Collector'
+  - name: "Cut Release - Ingress Collector"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

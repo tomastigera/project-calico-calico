@@ -21,21 +21,21 @@ metadata:
   name: titan
   namespace: titan
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - list
-  - get
-- apiGroups:
-  - ""
-  resources:
-  - users
-  - groups
-  - serviceaccounts
-  verbs:
-  - impersonate
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - list
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - users
+      - groups
+      - serviceaccounts
+    verbs:
+      - impersonate
 ---
 # Used by fake-guardian container
 kind: ClusterRoleBinding
@@ -47,9 +47,9 @@ roleRef:
   kind: ClusterRole
   name: titan
 subjects:
-- kind: ServiceAccount
-  name: titan
-  namespace: titan
+  - kind: ServiceAccount
+    name: titan
+    namespace: titan
 ---
 kind: StatefulSet
 apiVersion: apps/v1
@@ -72,96 +72,96 @@ spec:
         k8s-app: titan
     spec:
       containers:
-      - name: fake-guardian
-        env:
-        - name: FAKE_GUARDIAN_STATEFUL_SET
-          value: "true"
-        - name: MY_POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: FAKE_GUARDIAN_FLOW_PUBLISH_BATCH_SIZE
-          value: "10"
-        image: gcr.io/unique-caldron-775/cnx/tigera/fake-guardian:master
-        imagePullPolicy: IfNotPresent
-        resources:
-          limits:
-            memory: 500Mi
-          requests:
-            cpu: 50m
-            memory: 300Mi
-        volumeMounts:
-        - mountPath: /etc/pki/tls/certs
-          name: tigera-ca-bundle-voltron
-          readOnly: true
-      - name: log-generator
-        env:
-        - name: PROMETHEUSMETRICSPORT
-          value: "2113"
-        - name: RATE
-          value: "1"
-        - name: BATCH_SIZE
-          value: "5"
-        - name: FLOW_LOG_FILE
-          value: "./flows.log"
-        - name: DIRECT_OUTPUT
-          value: "true"
-        # TODO: Update the linseed endpoint to point to the fake-guardian tunnel endpoint instead of real one.
-        - name: LINSEED_ENDPOINT
-          value: https://tigera-linseed.tigera-elasticsearch.svc
-        - name: LINSEED_CA_PATH
-          value: /etc/pki/tls/certs/tigera-ca-bundle-linseed.crt
-        - name: TLS_KEY_PATH
-          value: /tigera-fluentd-prometheus-tls/tls.key
-        - name: TLS_CRT_PATH
-          value: /tigera-fluentd-prometheus-tls/tls.crt
-        - name: LINSEED_TOKEN
-          value: /var/run/secrets/tigera.io/linseed/token
-        image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
-        imagePullPolicy: Always
-        volumeMounts:
-        - mountPath: /etc/pki/tls/certs
-          name: tigera-ca-bundle-linseed
-          readOnly: true
-        - mountPath: /tigera-fluentd-prometheus-tls
-          name: tigera-fluentd-prometheus-tls
-          readOnly: true
-        - mountPath: /var/run/secrets/tigera.io/linseed/
-          name: linseed-token
-        ports:
-        - name: metrics
-          containerPort: 2113
-        securityContext: {}
+        - name: fake-guardian
+          env:
+            - name: FAKE_GUARDIAN_STATEFUL_SET
+              value: "true"
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: FAKE_GUARDIAN_FLOW_PUBLISH_BATCH_SIZE
+              value: "10"
+          image: gcr.io/unique-caldron-775/cnx/tigera/fake-guardian:master
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 500Mi
+            requests:
+              cpu: 50m
+              memory: 300Mi
+          volumeMounts:
+            - mountPath: /etc/pki/tls/certs
+              name: tigera-ca-bundle-voltron
+              readOnly: true
+        - name: log-generator
+          env:
+            - name: PROMETHEUSMETRICSPORT
+              value: "2113"
+            - name: RATE
+              value: "1"
+            - name: BATCH_SIZE
+              value: "5"
+            - name: FLOW_LOG_FILE
+              value: "./flows.log"
+            - name: DIRECT_OUTPUT
+              value: "true"
+            # TODO: Update the linseed endpoint to point to the fake-guardian tunnel endpoint instead of real one.
+            - name: LINSEED_ENDPOINT
+              value: https://tigera-linseed.tigera-elasticsearch.svc
+            - name: LINSEED_CA_PATH
+              value: /etc/pki/tls/certs/tigera-ca-bundle-linseed.crt
+            - name: TLS_KEY_PATH
+              value: /tigera-fluentd-prometheus-tls/tls.key
+            - name: TLS_CRT_PATH
+              value: /tigera-fluentd-prometheus-tls/tls.crt
+            - name: LINSEED_TOKEN
+              value: /var/run/secrets/tigera.io/linseed/token
+          image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /etc/pki/tls/certs
+              name: tigera-ca-bundle-linseed
+              readOnly: true
+            - mountPath: /tigera-fluentd-prometheus-tls
+              name: tigera-fluentd-prometheus-tls
+              readOnly: true
+            - mountPath: /var/run/secrets/tigera.io/linseed/
+              name: linseed-token
+          ports:
+            - name: metrics
+              containerPort: 2113
+          securityContext: {}
       volumes:
-      # CA Bundle needed for authenticating to voltron for fake-guardian
-      - name: tigera-ca-bundle-voltron
-        configMap:
-          defaultMode: 420
-          name: tigera-ca-bundle
-      # CA Bundle needed for authenticating to linseed for log-generator
-      - name: tigera-ca-bundle-linseed
-        configMap:
-          defaultMode: 420
-          items:
-          - key: tigera-ca-bundle.crt
-            path: tigera-ca-bundle-linseed.crt
-          - key: ca-bundle.crt
-            path: ca-bundle-linseed.crt
-          name: tigera-ca-bundle-linseed
-        ## Log generator container dependent volumes
-      - name: tigera-fluentd-prometheus-tls
-        secret:
-          defaultMode: 420
-          secretName: tigera-fluentd-prometheus-tls
-      - name: linseed-token
-        secret:
-          defaultMode: 420
-          items:
-          - key: token
-            path: token
-          secretName: fluentd-node-tigera-linseed-token
+        # CA Bundle needed for authenticating to voltron for fake-guardian
+        - name: tigera-ca-bundle-voltron
+          configMap:
+            defaultMode: 420
+            name: tigera-ca-bundle
+        # CA Bundle needed for authenticating to linseed for log-generator
+        - name: tigera-ca-bundle-linseed
+          configMap:
+            defaultMode: 420
+            items:
+              - key: tigera-ca-bundle.crt
+                path: tigera-ca-bundle-linseed.crt
+              - key: ca-bundle.crt
+                path: ca-bundle-linseed.crt
+            name: tigera-ca-bundle-linseed
+          ## Log generator container dependent volumes
+        - name: tigera-fluentd-prometheus-tls
+          secret:
+            defaultMode: 420
+            secretName: tigera-fluentd-prometheus-tls
+        - name: linseed-token
+          secret:
+            defaultMode: 420
+            items:
+              - key: token
+                path: token
+            secretName: fluentd-node-tigera-linseed-token
       imagePullSecrets:
-      - name: tigera-pull-secret
+        - name: tigera-pull-secret
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux

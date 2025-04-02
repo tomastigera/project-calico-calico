@@ -5,15 +5,14 @@ kind: ClusterRole
 metadata:
   name: tigera-linseed
 rules:
-- apiGroups: ["authentication.k8s.io"]
-  resources: ["tokenreviews"]
-  verbs: ["create"]
-- apiGroups: ["authorization.k8s.io"]
-  resources: ["subjectaccessreviews"]
-  verbs: ["create"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
 
 ---
-
 # This ClusterRoleBinding binds the above ClusterRole to the service account
 # created as part of FV setup.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -21,47 +20,45 @@ kind: ClusterRoleBinding
 metadata:
   name: tigera-linseed
 subjects:
-- kind: ServiceAccount
-  name: tigera-linseed
-  namespace: default
+  - kind: ServiceAccount
+    name: tigera-linseed
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: tigera-linseed
   apiGroup: rbac.authorization.k8s.io
 
 ---
-
 # This ClusterRole provides the FV client with permissions required for the tests.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tigera-linseed-fv
 rules:
-- apiGroups: ["linseed.tigera.io"]
-  resources:
-  - auditlogs
-  - benchmarks
-  - bgplogs
-  - compliancereports
-  - dnsflows
-  - dnslogs
-  - ee_auditlogs
-  - events
-  - flowlogs
-  - flows
-  - kube_auditlogs
-  - l7flows
-  - l7logs
-  - processes
-  - runtimereports
-  - snapshots
-  - threatfeeds_domainnameset
-  - threatfeeds_ipset
-  - waflogs
-  verbs: ["*"]
+  - apiGroups: ["linseed.tigera.io"]
+    resources:
+      - auditlogs
+      - benchmarks
+      - bgplogs
+      - compliancereports
+      - dnsflows
+      - dnslogs
+      - ee_auditlogs
+      - events
+      - flowlogs
+      - flows
+      - kube_auditlogs
+      - l7flows
+      - l7logs
+      - processes
+      - runtimereports
+      - snapshots
+      - threatfeeds_domainnameset
+      - threatfeeds_ipset
+      - waflogs
+    verbs: ["*"]
 
 ---
-
 # This ClusterRoleBinding binds the above ClusterRole to the fv client service account
 # created as part of FV setup.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -69,59 +66,58 @@ kind: ClusterRoleBinding
 metadata:
   name: tigera-linseed-fv
 subjects:
-- kind: ServiceAccount
-  name: tigera-linseed-fv
-  namespace: default
+  - kind: ServiceAccount
+    name: tigera-linseed-fv
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: tigera-linseed-fv
   apiGroup: rbac.authorization.k8s.io
 
 ---
-
 # This ClusterRole that permits multi-cluster querying
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tigera-linseed-fv-multi-cluster
 rules:
-- apiGroups: ["linseed.tigera.io"]
-  resources:
-  - auditlogs
-  - benchmarks
-  - bgplogs
-  - compliancereports
-  - dnsflows
-  - dnslogs
-  - events
-  - flowlogs
-  - flows
-  - l7flows
-  - l7logs
-  - processes
-  - runtimereports
-  - snapshots
-  - threatfeeds_domainnameset
-  - threatfeeds_ipset
-  - waflogs
-  - auditlogs-multi-cluster
-  - benchmarks-multi-cluster
-  - bgplogs-multi-cluster
-  - compliancereports-multi-cluster
-  - dnsflows-multi-cluster
-  - dnslogs-multi-cluster
-  - events-multi-cluster
-  - flowlogs-multi-cluster
-  - flows-multi-cluster
-  - l7flows-multi-cluster
-  - l7logs-multi-cluster
-  - processes-multi-cluster
-  - runtimereports-multi-cluster
-  - snapshots-multi-cluster
-  - threatfeeds_domainnameset-multi-cluster
-  - threatfeeds_ipset-multi-cluster
-  - waflogs-multi-cluster
-  verbs: ["get"]
+  - apiGroups: ["linseed.tigera.io"]
+    resources:
+      - auditlogs
+      - benchmarks
+      - bgplogs
+      - compliancereports
+      - dnsflows
+      - dnslogs
+      - events
+      - flowlogs
+      - flows
+      - l7flows
+      - l7logs
+      - processes
+      - runtimereports
+      - snapshots
+      - threatfeeds_domainnameset
+      - threatfeeds_ipset
+      - waflogs
+      - auditlogs-multi-cluster
+      - benchmarks-multi-cluster
+      - bgplogs-multi-cluster
+      - compliancereports-multi-cluster
+      - dnsflows-multi-cluster
+      - dnslogs-multi-cluster
+      - events-multi-cluster
+      - flowlogs-multi-cluster
+      - flows-multi-cluster
+      - l7flows-multi-cluster
+      - l7logs-multi-cluster
+      - processes-multi-cluster
+      - runtimereports-multi-cluster
+      - snapshots-multi-cluster
+      - threatfeeds_domainnameset-multi-cluster
+      - threatfeeds_ipset-multi-cluster
+      - waflogs-multi-cluster
+    verbs: ["get"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -129,9 +125,9 @@ kind: ClusterRoleBinding
 metadata:
   name: tigera-linseed-fv-multi-cluster
 subjects:
-- kind: ServiceAccount
-  name: tigera-linseed-fv-multi-cluster
-  namespace: default
+  - kind: ServiceAccount
+    name: tigera-linseed-fv-multi-cluster
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: tigera-linseed-fv-multi-cluster

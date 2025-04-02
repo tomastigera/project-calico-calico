@@ -3,66 +3,62 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenuserall
 subjects:
-- kind: User
-  name: tokenuserall
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: tokenuserall
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: tigera-elasticsearch-access-all
   apiGroup: rbac.authorization.k8s.io
 ---
-
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenflowonly
 subjects:
-- kind: User
-  name: tokenuserflowonly
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: tokenuserflowonly
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: tigera-elasticsearch-access-flowonly
   apiGroup: rbac.authorization.k8s.io
 ---
-
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenauditonly
 subjects:
-- kind: User
-  name: tokenuserauditonly
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: tokenuserauditonly
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: tigera-elasticsearch-access-auditonly
   apiGroup: rbac.authorization.k8s.io
 ---
-
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenauditkubeonly
 subjects:
-- kind: User
-  name: tokenuserauditkubeonly
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: tokenuserauditkubeonly
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: tigera-elasticsearch-access-audit_kube-only
   apiGroup: rbac.authorization.k8s.io
 
 ---
-
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-access-path-to-something-for-tokenusernru
 subjects:
-- kind: User
-  name: tokenusernru
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: tokenusernru
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: tigera-path-to-something

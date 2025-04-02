@@ -56,30 +56,29 @@ spec:
       imagePullSecrets:
         - name: tigera-pull-secret
       containers:
-      - name: calico-prometheus-operator
-        image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
-        args:
-          - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
-          - --config-reloader-memory-request=50Mi
-          - --namespaces=tigera-prometheus
-          - --cluster-domain=cluster.local
-          - --config-reloader-cpu-limit=150m
-        resources:
-          requests:
-            cpu: 100m
-            memory: 50Mi
-          limits:
-            cpu: 200m
-            memory: 100Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-              - ALL
-          privileged: false
-          runAsGroup: 10001
-          runAsNonRoot: true
-          runAsUser: 10001
-          seccompProfile:
-            type: RuntimeDefault
-
+        - name: calico-prometheus-operator
+          image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
+          args:
+            - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
+            - --config-reloader-memory-request=50Mi
+            - --namespaces=tigera-prometheus
+            - --cluster-domain=cluster.local
+            - --config-reloader-cpu-limit=150m
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+            limits:
+              cpu: 200m
+              memory: 100Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault

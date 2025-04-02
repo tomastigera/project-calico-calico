@@ -41,31 +41,31 @@ Resources:
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraTrustEnforcement
-        - GroupId
+          - TigeraTrustEnforcement
+          - GroupId
       Description: "Allow to Tigera enforced hosts"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       DestinationSecurityGroupId:
         Fn::GetAtt:
-        - TigeraEnforced
-        - GroupId
+          - TigeraEnforced
+          - GroupId
   TigeraTrustEnforcementSGIngressFromEnforced:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraTrustEnforcement
-        - GroupId
+          - TigeraTrustEnforcement
+          - GroupId
       Description: "Allow from Tigera enforced hosts"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       SourceSecurityGroupId:
         Fn::GetAtt:
-        - TigeraEnforced
-        - GroupId
+          - TigeraEnforced
+          - GroupId
   # Create rules for tigera-has-host-enforcement SG.
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
@@ -74,31 +74,31 @@ Resources:
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraEnforced
-        - GroupId
+          - TigeraEnforced
+          - GroupId
       Description: "Allow to the trusting SG"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       DestinationSecurityGroupId:
         Fn::GetAtt:
-        - TigeraTrustEnforcement
-        - GroupId
+          - TigeraTrustEnforcement
+          - GroupId
   TigeraEnforcedSGIngressFromTrusted:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
         Fn::GetAtt:
-        - TigeraEnforced
-        - GroupId
+          - TigeraEnforced
+          - GroupId
       Description: "Allow from the trusting SG"
       IpProtocol: -1
       FromPort: -1
       ToPort: -1
       SourceSecurityGroupId:
         Fn::GetAtt:
-        - TigeraTrustEnforcement
-        - GroupId
+          - TigeraTrustEnforcement
+          - GroupId
 
   # Create an SQS queue, rule, and queue policy.
   # TODO: Queue depth alarm
@@ -155,43 +155,43 @@ Resources:
     Type: "AWS::IAM::Group"
     Properties:
       Policies:
-      - PolicyName: "tigera-controller-policy"
-        PolicyDocument:
-          # TODO: Limit to target VPC.
-          Statement:
-          - Effect: Allow
-            Action:
-              - ec2:DescribeNetworkInterfaces
-              - ec2:DescribeSecurityGroups
-              - ec2:DescribeVpcs
-              - ec2:ModifyNetworkInterfaceAttribute
-            Resource: "*"
-          # Allowances for querying and modifying RDS Instances and Clusters
-          - Effect: Allow
-            Action:
-              - rds:DescribeDBInstances
-              - rds:DescribeDBClusters
-              - rds:ModifyDBInstance
-              - rds:ModifyDBCluster
-              - rds:DescribeDBSubnetGroups
-            Resource: "*"
-          - Effect: Allow
-            Action:
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessageBatch
-              - sqs:DeleteMessage
-            Resource: !GetAtt
-              - TigeraQueue
-              - Arn
-          - Effect: Allow
-            Action:
-              - cloudWatch:PutMetricData
-            Resource: "*"
+        - PolicyName: "tigera-controller-policy"
+          PolicyDocument:
+            # TODO: Limit to target VPC.
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeVpcs
+                  - ec2:ModifyNetworkInterfaceAttribute
+                Resource: "*"
+              # Allowances for querying and modifying RDS Instances and Clusters
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBInstances
+                  - rds:DescribeDBClusters
+                  - rds:ModifyDBInstance
+                  - rds:ModifyDBCluster
+                  - rds:DescribeDBSubnetGroups
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessageBatch
+                  - sqs:DeleteMessage
+                Resource: !GetAtt
+                  - TigeraQueue
+                  - Arn
+              - Effect: Allow
+                Action:
+                  - cloudWatch:PutMetricData
+                Resource: "*"
   TigeraControllerUser:
-    Type: 'AWS::IAM::User'
+    Type: "AWS::IAM::User"
     Properties:
       Groups:
-      - !Ref TigeraControllerGroup
+        - !Ref TigeraControllerGroup
 
 # Output values.
 Outputs:

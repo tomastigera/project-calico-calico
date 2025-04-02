@@ -9,6 +9,6 @@ spec:
   egress:
     - action: Allow
       destination:
-        selector: 'all()'
+        selector: "all()"
   types:
     - Egress

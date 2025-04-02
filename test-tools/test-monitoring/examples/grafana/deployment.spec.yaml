@@ -23,21 +23,21 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       containers:
-      - image: grafana/grafana:4.5.2
-        name: grafana
-        imagePullPolicy: Always
-        resources:
-          requests:
-            cpu: __GRAFANA_CPU__
-            memory: __GRAFANA_MEM__
-        ports:
-        - containerPort: 3000
+        - image: grafana/grafana:4.5.2
           name: grafana
-          protocol: TCP
-        env:
-          - name: GF_AUTH_BASIC_ENABLED
-            value: "false"
-          - name: GF_AUTH_ANONYMOUS_ENABLED
-            value: "true"
-          - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-            value: Admin
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: __GRAFANA_CPU__
+              memory: __GRAFANA_MEM__
+          ports:
+            - containerPort: 3000
+              name: grafana
+              protocol: TCP
+          env:
+            - name: GF_AUTH_BASIC_ENABLED
+              value: "false"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Admin

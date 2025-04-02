@@ -17,7 +17,6 @@ spec:
   # registry: <my-registry>
 
 ---
-
 # This section configures the Tigera web manager.
 # Remove this section for a Managed cluster.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.Manager
@@ -27,7 +26,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # This section installs and configures the Calico Enterprise API server.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.APIServer
 apiVersion: operator.tigera.io/v1
@@ -40,7 +38,6 @@ metadata:
   name: default
 
 ---
-
 # This section installs and configures Calico Enterprise intrusion detection functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.IntrusionDetection
 apiVersion: operator.tigera.io/v1
@@ -49,7 +46,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # This section configures the Elasticsearch cluster used by Calico Enterprise.
 # Remove this section for a Managed cluster.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.LogStorage
@@ -62,7 +58,6 @@ spec:
     count: 1
 
 ---
-
 # This section configures collection of Tigera flow, DNS, and audit logs.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.LogCollector
 apiVersion: operator.tigera.io/v1
@@ -71,7 +66,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # This section configures Prometheus for Calico Enterprise.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.Monitor
 apiVersion: operator.tigera.io/v1
@@ -80,7 +74,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # This section installs and configures Calico Enterprise policy recommendation functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.PolicyRecommendation
 apiVersion: operator.tigera.io/v1
@@ -89,7 +82,6 @@ metadata:
   name: tigera-secure
 
 ---
-
 # Uncomment this section to configure Calico Enterprise compliance functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.Compliance
 # apiVersion: operator.tigera.io/v1
@@ -98,11 +90,9 @@ metadata:
 #   name: tigera-secure
 
 ---
-
 # Uncomment this section to configure Calico Enterprise Packet Capture functionality.
 # For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.PacketCaptureAPI
 # apiVersion: operator.tigera.io/v1
 # kind: PacketCaptureAPI
 # metadata:
 #   name: tigera-secure
-

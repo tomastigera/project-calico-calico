@@ -9,13 +9,13 @@ data:
   tigera.firewall.fortigate: |
     - name: prod-east1
       ip: 1.2.3.1
-      apikey: 
+      apikey:
         secretKeyRef:
           name: fortigate-east1
           key: apikey-fortigate-east1
     - name: prod-east2
-      ip: 1.2.3.2 
-      apikey: 
+      ip: 1.2.3.2
+      apikey:
         secretKeyRef:
           name: fortigate-east2
           key: apikey-fortigate-east2

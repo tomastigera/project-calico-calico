@@ -21,7 +21,7 @@ global_job_config:
       - cd policy-recommendation
 
 blocks:
-  - name: 'Cut Release - Policy Recommendation'
+  - name: "Cut Release - Policy Recommendation"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

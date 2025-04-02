@@ -21,7 +21,7 @@ global_job_config:
       - cd compliance
 
 blocks:
-  - name: 'Cut Release - Compliance'
+  - name: "Cut Release - Compliance"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

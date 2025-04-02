@@ -21,7 +21,7 @@ global_job_config:
       - cd third_party/envoy-gateway
 
 blocks:
-  - name: 'Cut Release - Envoy Gateway'
+  - name: "Cut Release - Envoy Gateway"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

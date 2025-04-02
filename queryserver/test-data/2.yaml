@@ -1,87 +1,81 @@
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
- name: tier1
+  name: tier1
 spec:
- order: 1.0
+  order: 1.0
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
- name: tier2
+  name: tier2
 spec:
- order: 2.0
+  order: 2.0
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
- name: tier3
+  name: tier3
 spec:
- order: 3.0
+  order: 3.0
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
- name: tier1.host-eps
+  name: tier1.host-eps
 spec:
- tier: tier1
- selector: has(host)
- ingress:
- - action: Allow
- egress:
- - action: Allow
+  tier: tier1
+  selector: has(host)
+  ingress:
+    - action: Allow
+  egress:
+    - action: Allow
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
- name: tier2.sad-pandas
- namespace: namespace1
+  name: tier2.sad-pandas
+  namespace: namespace1
 spec:
- tier: tier2
- selector: panda == 'sad'
- ingress:
- - action: Allow
- egress:
- - action: Allow
+  tier: tier2
+  selector: panda == 'sad'
+  ingress:
+    - action: Allow
+  egress:
+    - action: Allow
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
- name: tier3.very-sad-pandas
- namespace: namespace1
+  name: tier3.very-sad-pandas
+  namespace: namespace1
 spec:
- tier: tier3
- selector: panda == 'verysad'
- ingress:
- - action: Allow
-   source:
-    selector: panda == 'reallyverysad'
- egress:
- - action: Allow
-   source:
-    selector: panda == 'reallyverysad'
+  tier: tier3
+  selector: panda == 'verysad'
+  ingress:
+    - action: Allow
+      source:
+        selector: panda == 'reallyverysad'
+  egress:
+    - action: Allow
+      source:
+        selector: panda == 'reallyverysad'
 
-----
-
+---
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
- name: tier3.another-sad-panda
- namespace: namespace1
+  name: tier3.another-sad-panda
+  namespace: namespace1
 spec:
- tier: tier3
- selector: panda == 'reallyverysad'
- ingress:
- - action: Deny
- egress:
- - action: Deny
+  tier: tier3
+  selector: panda == 'reallyverysad'
+  ingress:
+    - action: Deny
+  egress:
+    - action: Deny

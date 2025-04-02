@@ -10,7 +10,6 @@ spec:
     testKey: testValue
 
 ---
-
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
@@ -21,7 +20,6 @@ spec:
   node: kube-master
 
 ---
-
 kind: IPPool
 apiVersion: projectcalico.org/v3
 metadata:

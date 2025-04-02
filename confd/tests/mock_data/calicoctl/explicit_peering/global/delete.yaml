@@ -7,7 +7,6 @@ spec:
   asNumber: 64567
 
 ---
-
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
@@ -17,7 +16,6 @@ spec:
   asNumber: 64567
 
 ---
-
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
@@ -27,7 +25,6 @@ spec:
   asNumber: 64567
 
 ---
-
 kind: IPPool
 apiVersion: projectcalico.org/v3
 metadata:
@@ -38,7 +35,6 @@ spec:
   natOutgoing: true
 
 ---
-
 kind: BFDConfiguration
 apiVersion: projectcalico.org/v3
 metadata:

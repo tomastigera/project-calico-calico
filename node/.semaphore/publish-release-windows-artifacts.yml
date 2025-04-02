@@ -28,7 +28,7 @@ global_job_config:
       - cd node
 
 blocks:
-  - name: 'Publish Release Binaries'
+  - name: "Publish Release Binaries"
     task:
       secrets:
         # Mount a secret for pulling images from GCR.
@@ -53,4 +53,3 @@ blocks:
               value: 1w
             - name: WINDOWS_ZIP_WILDCARD
               value: "./dist/tigera-calico-windows*.zip"
-

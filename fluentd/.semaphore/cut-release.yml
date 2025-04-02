@@ -35,8 +35,8 @@ blocks:
       jobs:
         - name: Cut Release - fluentd
           env_vars:
-          - name: DEV_REGISTRIES
-            value: gcr.io/unique-caldron-775/cnx/tigera
+            - name: DEV_REGISTRIES
+              value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
             - CONFIRM=true bash ./.semaphore/scripts/cut-release.sh

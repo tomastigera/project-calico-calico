@@ -21,7 +21,7 @@ global_job_config:
       - cd license-agent
 
 blocks:
-  - name: 'Cut Release - License Agent'
+  - name: "Cut Release - License Agent"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

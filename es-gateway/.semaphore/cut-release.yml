@@ -21,7 +21,7 @@ global_job_config:
       - cd es-gateway
 
 blocks:
-  - name: 'Cut Release - ES Gateway'
+  - name: "Cut Release - ES Gateway"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

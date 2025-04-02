@@ -21,7 +21,7 @@ global_job_config:
       - cd third_party/dex
 
 blocks:
-  - name: 'Test Cut Release - Dex'
+  - name: "Test Cut Release - Dex"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

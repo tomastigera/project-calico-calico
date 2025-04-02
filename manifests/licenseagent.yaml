@@ -6,7 +6,6 @@ metadata:
   name: tigera-license-agent
 
 ---
-
 # Required RBAC:
 # - watch/list nodes and access LicenseKeys
 kind: ServiceAccount
@@ -16,7 +15,6 @@ metadata:
   namespace: tigera-license-agent
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -37,7 +35,6 @@ rules:
       - get
       - watch
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -47,12 +44,11 @@ roleRef:
   kind: ClusterRole
   name: tigera-license-agent
 subjects:
-- kind: ServiceAccount
-  name: tigera-license-agent
-  namespace: tigera-license-agent
+  - kind: ServiceAccount
+    name: tigera-license-agent
+    namespace: tigera-license-agent
 
 ---
-
 # License-agent deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -64,7 +60,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-     type: Recreate
+    type: Recreate
   selector:
     matchLabels:
       k8s-app: tigera-license-agent
@@ -115,13 +111,13 @@ metadata:
   namespace: tigera-prometheus
 spec:
   endpoints:
-  - honorLabels: true
-    interval: 5s
-    port: calico-metrics-port
-    scrapeTimeout: 5s
+    - honorLabels: true
+      interval: 5s
+      port: calico-metrics-port
+      scrapeTimeout: 5s
   namespaceSelector:
     matchNames:
-    - tigera-license-agent
+      - tigera-license-agent
   selector:
     matchLabels:
       k8s-app: tigera-license-agent
@@ -137,22 +133,22 @@ spec:
   tier: allow-tigera
   selector: k8s-app == 'tigera-license-agent'
   types:
-  - Ingress
-  - Egress
+    - Ingress
+    - Egress
   ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: app == 'prometheus'
-      namespaceSelector: name == 'tigera-prometheus'
-    destination:
-      ports:
-        - 9081
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: app == 'prometheus'
+        namespaceSelector: name == 'tigera-prometheus'
+      destination:
+        ports:
+          - 9081
   egress:
-  - action: Allow
-    protocol: TCP
-    source: {}
-    destination:
-      ports:
-       -  6443
-       -  443
+    - action: Allow
+      protocol: TCP
+      source: {}
+      destination:
+        ports:
+          - 6443
+          - 443

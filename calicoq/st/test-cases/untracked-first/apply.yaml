@@ -6,9 +6,9 @@
     selector: projectcalico.org/namespace == 'advanced-policy-demo'
     order: 500
     egress:
-    - action: Deny
-      destination:
-        selector: type == 'production'
+      - action: Deny
+        destination:
+          selector: type == 'production'
     doNotTrack: true
     applyOnForward: true
 - apiVersion: projectcalico.org/v3
@@ -23,9 +23,9 @@
     interfaceName: cali0ef24ba
     mac: ca:fe:1d:52:bb:e9
     ipNetworks:
-    - 192.168.0.0/32
+      - 192.168.0.0/32
     profiles:
-    - k8s-ns.advanced-policy-demo
+      - k8s-ns.advanced-policy-demo
     workload: nginx-2371676037-bk6v2
     orchestrator: k8s
     node: tigera-lwr-kubetest-02
@@ -40,15 +40,15 @@
     selector: projectcalico.org/namespace == 'advanced-policy-demo'
     order: 400
     egress:
-    - action: Allow
-      destination:
-        selector: projectcalico.org/namespace == 'advanced-policy-demo'
+      - action: Allow
+        destination:
+          selector: projectcalico.org/namespace == 'advanced-policy-demo'
 - apiVersion: projectcalico.org/v3
   kind: Profile
   metadata:
     name: k8s-ns.advanced-policy-demo
   spec:
     ingress:
-    - action: Allow
-      source:
-        selector: projectcalico.org/namespace == 'advanced-policy-demo'
+      - action: Allow
+        source:
+          selector: projectcalico.org/namespace == 'advanced-policy-demo'

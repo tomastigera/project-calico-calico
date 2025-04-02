@@ -57,8 +57,11 @@ for out_file in semaphore.yml semaphore-scheduled-builds.yml; do
   cat semaphore.yml.d/02-global_job_config.yml >>$out_file
   cat semaphore.yml.d/03-promotions.yml >>$out_file
 
+  # use sed to properly indent blocks
   echo "blocks:" >>$out_file
-  cat semaphore.yml.d/blocks/*.yml >>$out_file
+  cat semaphore.yml.d/blocks/*.yml | sed -e 's/^./  &/' >>$out_file
+
+  cat semaphore.yml.d/99-after_pipeline.yml >>$out_file
 done
 
 sed -i "s/\${FORCE_RUN}/false/g" semaphore.yml
@@ -75,10 +78,10 @@ cat semaphore.yml.d/01-preamble.yml >>$out_file
 cat semaphore.yml.d/02-global_job_config.yml >>$out_file
 
 echo "blocks:" >>$out_file
-cat semaphore.yml.d/blocks/10-prerequisites.yml >>$out_file
-cat semaphore.yml.d/blocks/30-deep-packet-inspection.yml >>$out_file
-cat semaphore.yml.d/blocks/30-elasticsearch.yml >>$out_file
-cat semaphore.yml.d/blocks/30-fluentd.yml >>$out_file
+cat semaphore.yml.d/blocks/10-prerequisites.yml | sed -e 's/^./  &/' >>$out_file
+cat semaphore.yml.d/blocks/30-deep-packet-inspection.yml | sed -e 's/^./  &/' >>$out_file
+cat semaphore.yml.d/blocks/30-elasticsearch.yml | sed -e 's/^./  &/' >>$out_file
+cat semaphore.yml.d/blocks/30-fluentd.yml | sed -e 's/^./  &/' >>$out_file
 
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-third-party-builds.yml
 sed -i "s/\${WEEKLY_RUN}/true/g" semaphore-third-party-builds.yml

@@ -1,188 +1,176 @@
 apiVersion: projectcalico.org/v3
 kind: Profile
 metadata:
- name: sad
+  name: sad
 spec:
- labelsToApply:
-   panda: sad
+  labelsToApply:
+    panda: sad
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Profile
 metadata:
- name: verysad
+  name: verysad
 spec:
- labelsToApply:
-   panda: verysad
+  labelsToApply:
+    panda: verysad
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
 metadata:
- name: rack1--host1-k8s-pod.name-eth0
- namespace: namespace1
- labels:
-   app: frontend
+  name: rack1--host1-k8s-pod.name-eth0
+  namespace: namespace1
+  labels:
+    app: frontend
 spec:
- node: rack1-host1
- orchestrator: k8s
- workload: default.frontend-m33p
- pod: pod.name
- endpoint: eth0
- containerID: mycontainer-01234
- interfaceName: cali0ef24ba
- mac: ca:fe:1b:ad:be:ef
- ipNetworks:
- - 192.168.9.0/32
- profiles:
- - sad
+  node: rack1-host1
+  orchestrator: k8s
+  workload: default.frontend-m33p
+  pod: pod.name
+  endpoint: eth0
+  containerID: mycontainer-01234
+  interfaceName: cali0ef24ba
+  mac: ca:fe:1b:ad:be:ef
+  ipNetworks:
+    - 192.168.9.0/32
+  profiles:
+    - sad
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
 metadata:
- name: rack1--host1-k8s-pod.name-eth1
- namespace: namespace1
- labels:
-   panda: reallyverysad
+  name: rack1--host1-k8s-pod.name-eth1
+  namespace: namespace1
+  labels:
+    panda: reallyverysad
 spec:
- node: rack1-host1
- orchestrator: k8s
- workload: default.frontend-m33p
- pod: pod.name
- endpoint: eth1
- containerID: mycontainer-01234
- interfaceName: cali0ef24ba
- mac: ca:fe:1b:ad:be:ef
- ipNetworks:
- - 192.168.9.0/32
+  node: rack1-host1
+  orchestrator: k8s
+  workload: default.frontend-m33p
+  pod: pod.name
+  endpoint: eth1
+  containerID: mycontainer-01234
+  interfaceName: cali0ef24ba
+  mac: ca:fe:1b:ad:be:ef
+  ipNetworks:
+    - 192.168.9.0/32
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
 metadata:
- name: rack2--host1-k8s-pod.name.2-eth0
- namespace: namespace2
- labels:
-   app: backend
+  name: rack2--host1-k8s-pod.name.2-eth0
+  namespace: namespace2
+  labels:
+    app: backend
 spec:
- node: rack2-host1
- orchestrator: k8s
- workload: default.frontend-m33p
- pod: pod.name.2
- endpoint: eth0
- containerID: mycontainer-01234
- interfaceName: cali0ef24ba
- mac: ca:fe:1b:ad:be:ef
- ipNetworks:
- - 192.168.10.0/32
- profiles:
- - verysad
+  node: rack2-host1
+  orchestrator: k8s
+  workload: default.frontend-m33p
+  pod: pod.name.2
+  endpoint: eth0
+  containerID: mycontainer-01234
+  interfaceName: cali0ef24ba
+  mac: ca:fe:1b:ad:be:ef
+  ipNetworks:
+    - 192.168.10.0/32
+  profiles:
+    - verysad
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
 metadata:
- name: rack2--host1-k8s-pod.name.3-eth0
- namespace: namespace2
- labels:
-   panda: verysad
+  name: rack2--host1-k8s-pod.name.3-eth0
+  namespace: namespace2
+  labels:
+    panda: verysad
 spec:
- node: rack2-host1
- orchestrator: k8s
- workload: default.frontend-m33p
- pod: pod.name.3
- endpoint: eth0
- containerID: mycontainer-01235
- interfaceName: cali0ef24bb
- mac: ca:fe:1b:ad:be:ef
- ipNetworks:
- - 192.168.10.1/32
+  node: rack2-host1
+  orchestrator: k8s
+  workload: default.frontend-m33p
+  pod: pod.name.3
+  endpoint: eth0
+  containerID: mycontainer-01235
+  interfaceName: cali0ef24bb
+  mac: ca:fe:1b:ad:be:ef
+  ipNetworks:
+    - 192.168.10.1/32
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
 metadata:
- name: rack2--host1-k8s-pod.name.4-eth0
- namespace: namespace2
+  name: rack2--host1-k8s-pod.name.4-eth0
+  namespace: namespace2
 spec:
- node: rack2-host1
- orchestrator: k8s
- workload: default.frontend-m33p
- pod: pod.name.4
- endpoint: eth0
- containerID: mycontainer-01235
- interfaceName: cali0ef24bc
- mac: ca:fe:1b:ad:be:ef
- ipNetworks:
- - 192.168.10.2/32
+  node: rack2-host1
+  orchestrator: k8s
+  workload: default.frontend-m33p
+  pod: pod.name.4
+  endpoint: eth0
+  containerID: mycontainer-01235
+  interfaceName: cali0ef24bc
+  mac: ca:fe:1b:ad:be:ef
+  ipNetworks:
+    - 192.168.10.2/32
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: HostEndpoint
 metadata:
- name: rack1--host1-endpoint1
- labels:
-   host: ""
+  name: rack1--host1-endpoint1
+  labels:
+    host: ""
 spec:
- node: rack1-host1
- interfaceName: eth0
- expectedIPs:
- - 1.2.3.4
+  node: rack1-host1
+  interfaceName: eth0
+  expectedIPs:
+    - 1.2.3.4
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: HostEndpoint
 metadata:
- name: rack1--host2-endpoint1
- labels:
-   host: ""
+  name: rack1--host2-endpoint1
+  labels:
+    host: ""
 spec:
- node: rack1-host2
- interfaceName: eth0
- expectedIPs:
- - 1.2.3.5
+  node: rack1-host2
+  interfaceName: eth0
+  expectedIPs:
+    - 1.2.3.5
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: HostEndpoint
 metadata:
- name: rack1--host2-endpoint2
+  name: rack1--host2-endpoint2
 spec:
- node: rack1-host2
- interfaceName: eth2
- expectedIPs:
- - 1.2.3.6
+  node: rack1-host2
+  interfaceName: eth2
+  expectedIPs:
+    - 1.2.3.6
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Node
 metadata:
- name: rack1-host1
+  name: rack1-host1
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Node
 metadata:
- name: rack1-host2
+  name: rack1-host2
 
 ---
-
 apiVersion: projectcalico.org/v3
 kind: Node
 metadata:
- name: rack1-host3
+  name: rack1-host3
 spec:
   bgp:
     ipv4Address: "1.2.3.4"

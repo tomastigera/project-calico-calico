@@ -7,9 +7,9 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      egress-to-any-ns: 'yes'
+      egress-to-any-ns: "yes"
   egress:
     - to:
-      - namespaceSelector:
-          matchLabels:
-            nsb-label: "{{.Namespace}}"
+        - namespaceSelector:
+            matchLabels:
+              nsb-label: "{{.Namespace}}"

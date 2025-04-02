@@ -2,27 +2,27 @@ spec:
   template:
     spec:
       containers:
-      - name: <INGRESS_CONTROLLER_NAME>
-        volumeMounts:
-        - name: ingress-logs
-          mountPath: /var/log/calico/ingress
-      - name: ingress-collector
-        image: gcr.io/unique-caldron-775/cnx/tigera/ingress-collector:master
-        imagePullPolicy: Always
-        env:
-        - name: FELIX_DIAL_TARGET
-          value: "/var/run/felix/nodeagent/socket"
-        volumeMounts:
-        - name: ingress-logs
-          mountPath: /var/log/calico/ingress
-        - name: felix-sync
-          mountPath: /var/run/felix
+        - name: <INGRESS_CONTROLLER_NAME>
+          volumeMounts:
+            - name: ingress-logs
+              mountPath: /var/log/calico/ingress
+        - name: ingress-collector
+          image: gcr.io/unique-caldron-775/cnx/tigera/ingress-collector:master
+          imagePullPolicy: Always
+          env:
+            - name: FELIX_DIAL_TARGET
+              value: "/var/run/felix/nodeagent/socket"
+          volumeMounts:
+            - name: ingress-logs
+              mountPath: /var/log/calico/ingress
+            - name: felix-sync
+              mountPath: /var/run/felix
       imagePullSecrets:
-      - name: calico-pull-secret
-      - name: cnx-pull-secret
+        - name: calico-pull-secret
+        - name: cnx-pull-secret
       volumes:
-      - name: ingress-logs
-        emptyDir: {}
-      - name: felix-sync
-        flexVolume:
-          driver: nodeagent/uds
+        - name: ingress-logs
+          emptyDir: {}
+        - name: felix-sync
+          flexVolume:
+            driver: nodeagent/uds

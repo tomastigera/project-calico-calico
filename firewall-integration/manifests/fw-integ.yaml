@@ -9,7 +9,6 @@ data:
   fw_devicegroup: "test-dg"
 
 ---
-
 kind: Secret
 apiVersion: v1
 type: Opaque
@@ -21,7 +20,6 @@ data:
   fw_password: aENiOFZ2N21DM3VtNHlRdQ==
 
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,54 +38,54 @@ spec:
         k8s-app: firewall-integration-controller
     spec:
       imagePullSecrets:
-      - name: cnx-pull-secret
+        - name: cnx-pull-secret
       containers:
-      - name: fw-integ
-        image: gcr.io/unique-caldron-775/cnx/tigera/firewall-integration:latest
-        env:
-        # Panorama info.
-        - name: FW_HOSTNAME
-          valueFrom:
-            configMapKeyRef:
-              name: fw-config
-              key: fw_hostname
-        - name: FW_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: fw-secret-config
-              key: fw_username
-        - name: FW_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: fw-secret-config
-              key: fw_password
-        - name: FW_DEVGROUP
-          value: test-dg
-        # TSEE info.
-        - name: TSEE_TIER_PREFIX
-          value: fw
-        - name: TSEE_NETWORK_PREFIX
-          value: panw
-        - name: TSEE_TIER_ORDER
-          value: "101"
-        # etcd info.
-        - name: ETCD_ENDPOINTS
-          valueFrom:
-            configMapKeyRef:
-              name: fw-config
-              key: etcd_endpoints
-        - name: ETCD_CERT_FILE
-          valueFrom:
-            configMapKeyRef:
-              name: calico-config
-              key: etcd_cert
-        - name: ETCD_KEY_FILE
-          valueFrom:
-            configMapKeyRef:
-              name: calico-config
-              key: etcd_key
-        - name: ETCD_CA_CERT_FILE
-          valueFrom:
-            configMapKeyRef:
-              name: calico-config
-              key: etcd_ca
+        - name: fw-integ
+          image: gcr.io/unique-caldron-775/cnx/tigera/firewall-integration:latest
+          env:
+            # Panorama info.
+            - name: FW_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: fw-config
+                  key: fw_hostname
+            - name: FW_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fw-secret-config
+                  key: fw_username
+            - name: FW_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fw-secret-config
+                  key: fw_password
+            - name: FW_DEVGROUP
+              value: test-dg
+            # TSEE info.
+            - name: TSEE_TIER_PREFIX
+              value: fw
+            - name: TSEE_NETWORK_PREFIX
+              value: panw
+            - name: TSEE_TIER_ORDER
+              value: "101"
+            # etcd info.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: fw-config
+                  key: etcd_endpoints
+            - name: ETCD_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_cert
+            - name: ETCD_KEY_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_key
+            - name: ETCD_CA_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_ca

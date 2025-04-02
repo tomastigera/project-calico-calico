@@ -21,7 +21,7 @@ global_job_config:
       - cd key-cert-provisioner
 
 blocks:
-  - name: 'Test Cut Release - Key Cert Provisioner'
+  - name: "Test Cut Release - Key Cert Provisioner"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

@@ -7,6 +7,6 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      egress-with-noselector: 'yes'
+      egress-with-noselector: "yes"
   egress:
     - {}

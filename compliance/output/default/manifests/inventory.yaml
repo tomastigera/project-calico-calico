@@ -7,53 +7,54 @@ metadata:
   name: inventory
 spec:
   downloadTemplates:
-  - name: summary.csv
-    template: |-
-      {{ $c := csv }}
-      {{- $c := $c.AddColumn "startTime"                     "{{ dateRfc3339 .StartTime }}" }}
-      {{- $c := $c.AddColumn "endTime"                       "{{ dateRfc3339 .EndTime }}" }}
-      {{- $c := $c.AddColumn "endpointSelector"              "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceNames"                "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \";\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceSelector"             "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountNames"           "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \";\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountSelectors"       "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "endpointsNumInScope"           "{{ .EndpointsSummary.NumTotal }}" }}
-      {{- $c := $c.AddColumn "endpointsNumIngressProtected"  "{{ .EndpointsSummary.NumIngressProtected }}" }}
-      {{- $c := $c.AddColumn "endpointsNumEgressProtected"   "{{ .EndpointsSummary.NumEgressProtected }}" }}
-      {{- $c := $c.AddColumn "namespacesNumInScope"          "{{ .NamespacesSummary.NumTotal }}" }}
-      {{- $c := $c.AddColumn "namespacesNumIngressProtected" "{{ .NamespacesSummary.NumIngressProtected }}" }}
-      {{- $c := $c.AddColumn "namespacesNumEgressProtected"  "{{ .NamespacesSummary.NumEgressProtected }}" }}
-      {{- $c := $c.AddColumn "serviceAccountsNumInScope"     "{{ .EndpointsSummary.NumServiceAccounts }}" }}
-      {{- $c.Render . }}
-  - name: endpoints.csv
-    template: |-
-      {{ $c := csv }}
-      {{- $c := $c.AddColumn "endpoint"         "{{ .Endpoint }}" }}
-      {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
-      {{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
-      {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
-      {{- $c := $c.AddColumn "appliedPolicies"  "{{ join \";\" .AppliedPolicies }}" }}
-      {{- $c := $c.AddColumn "services"         "{{ join \";\" .Services }}" }}
-      {{- $c.Render .Endpoints }}
-  - name: namespaces.csv
-    template: |-
-      {{ $c := csv }}
-      {{- $c := $c.AddColumn "namespace"        "{{ .Namespace }}" }}
-      {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
-      {{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
-      {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
-      {{- $c.Render .Namespaces }}
-  - name: services.csv
-    template: |-
-      {{ $c := csv }}
-      {{- $c := $c.AddColumn "service"          "{{ .Service }}" }}
-      {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
-      {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
-      {{- $c.Render .Services }}
+    - name: summary.csv
+      template: |-
+        {{ $c := csv }}
+        {{- $c := $c.AddColumn "startTime"                     "{{ dateRfc3339 .StartTime }}" }}
+        {{- $c := $c.AddColumn "endTime"                       "{{ dateRfc3339 .EndTime }}" }}
+        {{- $c := $c.AddColumn "endpointSelector"              "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}" }}
+        {{- $c := $c.AddColumn "namespaceNames"                "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \";\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" }}
+        {{- $c := $c.AddColumn "namespaceSelector"             "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}" }}
+        {{- $c := $c.AddColumn "serviceAccountNames"           "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \";\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+        {{- $c := $c.AddColumn "serviceAccountSelectors"       "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+        {{- $c := $c.AddColumn "endpointsNumInScope"           "{{ .EndpointsSummary.NumTotal }}" }}
+        {{- $c := $c.AddColumn "endpointsNumIngressProtected"  "{{ .EndpointsSummary.NumIngressProtected }}" }}
+        {{- $c := $c.AddColumn "endpointsNumEgressProtected"   "{{ .EndpointsSummary.NumEgressProtected }}" }}
+        {{- $c := $c.AddColumn "namespacesNumInScope"          "{{ .NamespacesSummary.NumTotal }}" }}
+        {{- $c := $c.AddColumn "namespacesNumIngressProtected" "{{ .NamespacesSummary.NumIngressProtected }}" }}
+        {{- $c := $c.AddColumn "namespacesNumEgressProtected"  "{{ .NamespacesSummary.NumEgressProtected }}" }}
+        {{- $c := $c.AddColumn "serviceAccountsNumInScope"     "{{ .EndpointsSummary.NumServiceAccounts }}" }}
+        {{- $c.Render . }}
+    - name: endpoints.csv
+      template: |-
+        {{ $c := csv }}
+        {{- $c := $c.AddColumn "endpoint"         "{{ .Endpoint }}" }}
+        {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+        {{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
+        {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+        {{- $c := $c.AddColumn "appliedPolicies"  "{{ join \";\" .AppliedPolicies }}" }}
+        {{- $c := $c.AddColumn "services"         "{{ join \";\" .Services }}" }}
+        {{- $c.Render .Endpoints }}
+    - name: namespaces.csv
+      template: |-
+        {{ $c := csv }}
+        {{- $c := $c.AddColumn "namespace"        "{{ .Namespace }}" }}
+        {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+        {{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
+        {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+        {{- $c.Render .Namespaces }}
+    - name: services.csv
+      template: |-
+        {{ $c := csv }}
+        {{- $c := $c.AddColumn "service"          "{{ .Service }}" }}
+        {{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+        {{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+        {{- $c.Render .Services }}
   includeEndpointData: true
   uiSummaryTemplate:
     name: ui-summary.json
-    template: '{"heading":"Inscope vs Protected","type":"panel","widgets":[{"data":[{"label":"Protected
+    template:
+      '{"heading":"Inscope vs Protected","type":"panel","widgets":[{"data":[{"label":"Protected
       ingress","value":{{ .EndpointsSummary.NumIngressProtected }}}],"heading":"Endpoints","summary":{"label":"Total","total":{{
       .EndpointsSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
       ingress","value":{{ .NamespacesSummary.NumIngressProtected }}}],"heading":"Namespaces","summary":{"label":"Total","total":{{

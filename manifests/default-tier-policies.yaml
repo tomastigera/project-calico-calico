@@ -1,5 +1,5 @@
-# On upgrading calico Enterprise, from v3.2 or lower  to v3.3 or above. 
-# Remove below kubernetes network policies from the cluster.  
+# On upgrading calico Enterprise, from v3.2 or lower  to v3.3 or above.
+# Remove below kubernetes network policies from the cluster.
 # These policies have been converted to calico network policies and organized under `allow-tigera` tier.
 
 ---
@@ -13,7 +13,6 @@ spec:
     matchLabels: {}
 
 ---
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -24,7 +23,6 @@ spec:
     matchLabels: {}
 
 ---
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -35,7 +33,6 @@ spec:
     matchLabels: {}
 
 ---
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -46,7 +43,6 @@ spec:
     matchLabels: {}
 
 ---
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -57,7 +53,6 @@ spec:
     matchLabels: {}
 
 ---
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -68,7 +63,6 @@ spec:
     matchLabels: {}
 
 ---
-
 # This manifest creates a network policy to allow traffic to Alertmanager
 # (TCP port 9093).
 apiVersion: networking.k8s.io/v1
@@ -78,15 +72,14 @@ metadata:
   namespace: tigera-prometheus
 spec:
   ingress:
-  - ports:
-    - port: 9093
-      protocol: TCP
+    - ports:
+        - port: 9093
+          protocol: TCP
   podSelector:
     matchLabels:
       alertmanager: calico-node-alertmanager
       app: alertmanager
 ---
-
 # This manifest creates a network policy to allow traffic between
 # Alertmanagers for HA configuration (TCP port 6783).
 apiVersion: networking.k8s.io/v1
@@ -96,28 +89,27 @@ metadata:
   namespace: tigera-prometheus
 spec:
   ingress:
-  - from:
-    - podSelector:
-        matchExpressions:
-        - key: app
-          operator: In
-          values:
-          - alertmanager
-        - key: alertmanager
-          operator: In
-          values:
-          - calico-node-alertmanager
-    ports:
-    - port: 9094
-      protocol: TCP
-    - port: 9094
-      protocol: UDP
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - alertmanager
+              - key: alertmanager
+                operator: In
+                values:
+                  - calico-node-alertmanager
+      ports:
+        - port: 9094
+          protocol: TCP
+        - port: 9094
+          protocol: UDP
   podSelector:
     matchLabels:
       alertmanager: calico-node-alertmanager
       app: alertmanager
 ---
-
 # This manifest creates a network policy to allow traffic to access the
 # Prometheus (TCP port 9090).
 apiVersion: networking.k8s.io/v1
@@ -127,11 +119,10 @@ metadata:
   namespace: tigera-prometheus
 spec:
   ingress:
-  - ports:
-    - port: 9090
-      protocol: TCP
+    - ports:
+        - port: 9090
+          protocol: TCP
   podSelector:
     matchLabels:
       app: prometheus
       prometheus: calico-node-prometheus
-

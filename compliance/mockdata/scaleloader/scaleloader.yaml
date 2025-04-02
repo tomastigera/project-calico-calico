@@ -22,40 +22,40 @@ metadata:
   name: compliance-scaleloader
   namespace: calico-monitoring
   labels:
-    k8s-app:  compliance-scaleloader
+    k8s-app: compliance-scaleloader
 spec:
   template:
     spec:
       restartPolicy: Never
       containers:
-      - name: scaleloader
-        image: gcr.io/unique-caldron-775/cnx/tigera/compliance-scaleloader:master
-        imagePullPolicy: Always
-        env:
-        - name: ELASTIC_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: tigera-es-config
-              key: tigera.elasticsearch.host
-        - name: ELASTIC_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: tigera-es-config
-              key: tigera.elasticsearch.port
-        - name: ELASTIC_INDEX_SUFFIX
-          valueFrom:
-            configMapKeyRef:
-              name: tigera-es-config
-              key: tigera.elasticsearch.cluster-name
-        - name: ELASTIC_SSL_VERIFY
-          value: "false"
-        - name: RUN_SCENARIO
-          value: "true"
-    
-        volumeMounts:
-          - name: sl-config
-            mountPath: /playbooks/scenario.yaml
-            subPath: scenario.yaml
+        - name: scaleloader
+          image: gcr.io/unique-caldron-775/cnx/tigera/compliance-scaleloader:master
+          imagePullPolicy: Always
+          env:
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
+            - name: ELASTIC_SSL_VERIFY
+              value: "false"
+            - name: RUN_SCENARIO
+              value: "true"
+
+          volumeMounts:
+            - name: sl-config
+              mountPath: /playbooks/scenario.yaml
+              subPath: scenario.yaml
       volumes:
         - name: sl-config
           configMap:
@@ -72,12 +72,11 @@ spec:
   tier: allow-cnx
   selector: name == 'es-client-tigera-elasticsearch'
   types:
-  - Ingress
+    - Ingress
   ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: job-name == 'compliance-scaleloader'
-    destination:
-      ports: [9200]
-
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: job-name == 'compliance-scaleloader'
+      destination:
+        ports: [9200]

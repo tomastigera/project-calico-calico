@@ -21,7 +21,7 @@ global_job_config:
       - cd pod2daemon
 
 blocks:
-  - name: 'Cut Release - pod2daemon'
+  - name: "Cut Release - pod2daemon"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

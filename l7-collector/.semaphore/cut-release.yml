@@ -21,7 +21,7 @@ global_job_config:
       - cd l7-collector
 
 blocks:
-  - name: 'Cut Release - L7 Collector'
+  - name: "Cut Release - L7 Collector"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

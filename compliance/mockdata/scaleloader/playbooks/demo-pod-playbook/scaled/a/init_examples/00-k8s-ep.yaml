@@ -8,12 +8,12 @@ metadata:
     endpointlabela: "K8s endpoint label a"
 subsets:
   - addresses:
-    - ip: "192.168.166.69"
-      hostname: "demo-endpoint.hostname.unused"
-      nodeName: "demo-endpoint.nodename.unused"
-      targetRef:
-        kind: "Pod"
-        namespace: "{{.Namespace}}"
-        name: "what-should-go-here"
-        uid: "f4f98703-54cc-11e9-ac1f-42010a800036"
-        resourceVersion: "xxxxx"
+      - ip: "192.168.166.69"
+        hostname: "demo-endpoint.hostname.unused"
+        nodeName: "demo-endpoint.nodename.unused"
+        targetRef:
+          kind: "Pod"
+          namespace: "{{.Namespace}}"
+          name: "what-should-go-here"
+          uid: "f4f98703-54cc-11e9-ac1f-42010a800036"
+          resourceVersion: "xxxxx"

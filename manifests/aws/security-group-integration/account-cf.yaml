@@ -10,34 +10,30 @@ Resources:
     Properties:
       LifecycleConfiguration:
         Rules:
-          -
-            ExpirationInDays: 7
+          - ExpirationInDays: 7
             Status: Enabled
   TigeraS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket:
-        Ref:  TigeraS3
+        Ref: TigeraS3
       PolicyDocument:
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:GetBucketAcl
             Resource: !GetAtt
               - TigeraS3
               - Arn
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:PutObject
             Resource:
               Fn::Join:
                 - ""
-                -
-                  - !GetAtt
+                - - !GetAtt
                     - TigeraS3
                     - Arn
                   - "/*"
@@ -61,4 +57,3 @@ Resources:
       IsMultiRegionTrail: true
       S3BucketName:
         Ref: TigeraS3
-

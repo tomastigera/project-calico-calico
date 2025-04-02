@@ -30,7 +30,7 @@ global_job_config:
       - cd node
 
 blocks:
-  - name: 'Test Publish Release Binaries'
+  - name: "Test Publish Release Binaries"
     task:
       secrets:
         # Mount a secret for pulling images from GCR.

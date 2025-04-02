@@ -1,6 +1,6 @@
 # this is a comment
 - apiVersion: v1 # so is this
-  kind: tier   
+  kind: tier
   # and this
   metadata:
     name: tier1

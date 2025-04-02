@@ -14,4 +14,3 @@ spec:
       name: grafana
   selector:
     app: grafana
-

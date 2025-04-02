@@ -251,1833 +251,1833 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-.*'"
 blocks:
-- name: Prerequisites
-  dependencies: []
-  task:
-    jobs:
-      - name: Pre-flight checks
+  - name: Prerequisites
+    dependencies: []
+    task:
+      jobs:
+        - name: Pre-flight checks
+          commands:
+            - make ci-preflight-checks
+  - name: apiserver
+    run:
+      when: "false or change_in(['/*', '/libcalico-go/', '/api/', '/apiserver/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    execution_time_limit:
+      minutes: 30
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - make ci-preflight-checks
-- name: apiserver
-  run:
-    when: "false or change_in(['/*', '/libcalico-go/', '/api/', '/apiserver/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  execution_time_limit:
-    minutes: 30
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd apiserver
-    jobs:
-      - name: make ci
+          - cd apiserver
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: API
+    run:
+      when: "false or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    execution_time_limit:
+      minutes: 30
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd api
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+  - name: app-policy
+    run:
+      when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: API
-  run:
-    when: "false or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  execution_time_limit:
-    minutes: 30
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd api
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci
-- name: app-policy
-  run:
-    when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd app-policy
-    epilogue:
-      always:
-        commands:
-          - test-results publish report
-    jobs:
-      - name: app-policy tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report
+      jobs:
+        - name: app-policy tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: app-policy - native arm64 runner
-  run:
-    when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - app-policy
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    prologue:
-      commands:
-        - cd app-policy
-    epilogue:
-      always:
+  - name: app-policy - native arm64 runner
+    run:
+      when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - app-policy
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      prologue:
         commands:
-          - test-results publish report
-    jobs:
-      - name: build binary
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report
+      jobs:
+        - name: build binary
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
+  - name: calicoctl
+    run:
+      when: "false or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
-- name: calicoctl
-  run:
-    when: "false or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd calicoctl
-    jobs:
-      - name: calicoctl tests
+          - cd calicoctl
+      jobs:
+        - name: calicoctl tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: cni-plugin
+    run:
+      when: "false or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd cni-plugin
+      jobs:
+        - name: cni-plugin tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+        - name: build windows cni-plugin images
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make image-windows
+  - name: "cni-plugin: Windows"
+    run:
+      when: "false or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: cni-plugin
-  run:
-    when: "false or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd cni-plugin
-    jobs:
-      - name: cni-plugin tests
+          # Load the github access secrets.  First fix the permissions.
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          # Prepare azure configuration.
+          - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none
+          - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
+          - export AZURE_TENANT_ID=$AZ_TENANT_ID
+          - export AZURE_CLIENT_ID=$AZ_SP_ID
+          - export AZURE_CLIENT_SECRET=$AZ_SP_PASSWORD
+          - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv-cni-plugin/report
+          - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-rg
+          - export LOGS_DIR=~/fv.log
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${SHORT_WORKFLOW_ID}
+          - export SUFFIX=${CLUSTER_NAME}
+          - cd cni-plugin
+          - ../.semaphore/run-and-monitor build.log make bin/windows/calico.exe bin/windows/calico-ipam.exe bin/windows/win-fv.exe
+      epilogue:
+        always:
+          commands:
+            - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+            - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+            - cd ~/calico-private/process/testing/winfv-cni-plugin/aso && make dist-clean
+      env_vars:
+        - name: SEMAPHORE_ARTIFACT_EXPIRY
+          value: 2w
+        - name: AZURE_LOCATION
+          value: eastus2
+        - name: KUBE_VERSION
+          value: v1.29.7
+      jobs:
+        - name: Containerd - Windows FV - overlay
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - export BACKEND=overlay
+            - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
+            - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
+        - name: Containerd - Windows FV - l2bridge
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - export BACKEND=l2bridge
+            - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
+            - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
+  - name: confd
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/confd/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd confd
+      jobs:
+        - name: "confd: CI"
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: crypto
+    run:
+      when: "false or change_in(['/lib.Makefile', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-      - name: build windows cni-plugin images
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make image-windows
-- name: "cni-plugin: Windows"
-  run:
-    when: "false or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: banzai-secrets
-    prologue:
-      commands:
-        # Load the github access secrets.  First fix the permissions.
-        - chmod 0600 ~/.keys/*
-        - ssh-add ~/.keys/*
-        # Prepare azure configuration.
-        - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none
-        - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
-        - export AZURE_TENANT_ID=$AZ_TENANT_ID
-        - export AZURE_CLIENT_ID=$AZ_SP_ID
-        - export AZURE_CLIENT_SECRET=$AZ_SP_PASSWORD
-        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv-cni-plugin/report
-        - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-rg
-        - export LOGS_DIR=~/fv.log
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${SHORT_WORKFLOW_ID}
-        - export SUFFIX=${CLUSTER_NAME}
-        - cd cni-plugin
-        - ../.semaphore/run-and-monitor build.log make bin/windows/calico.exe bin/windows/calico-ipam.exe bin/windows/win-fv.exe
-    epilogue:
-      always:
-        commands:
-          - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-          - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-          - cd ~/calico-private/process/testing/winfv-cni-plugin/aso && make dist-clean
-    env_vars:
-      - name: SEMAPHORE_ARTIFACT_EXPIRY
-        value: 2w
-      - name: AZURE_LOCATION
-        value: eastus2
-      - name: KUBE_VERSION
-        value: v1.29.7
-    jobs:
-      - name: Containerd - Windows FV - overlay
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - export BACKEND=overlay
-          - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
-          - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
-      - name: Containerd - Windows FV - l2bridge
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - export BACKEND=l2bridge
-          - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
-          - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
-- name: confd
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/confd/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd confd
-    jobs:
-      - name: "confd: CI"
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-- name: crypto
-  run:
-    when: "false or change_in(['/lib.Makefile', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd crypto
-    jobs:
-      - name: crypto tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-- name: e2e tests
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      # Since we create a local kind cluster, we need the test license.
-      - name: test-customer-license
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    jobs:
-      - name: sig-network conformance
-        execution_time_limit:
-          minutes: 60
-        env_vars:
-          - name: E2E_FOCUS
-            value: "sig-network.*Conformance"
-        commands:
-          - .semaphore/run-and-monitor e2e-test.log make e2e-test
-- name: "Felix: Build"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd felix
-        - cache restore go-pkg-cache
-        - cache restore go-mod-cache
-    jobs:
-      - name: Build and run UT, k8sfv
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - make build image fv-prereqs
-          - "cache store bin-${SEMAPHORE_GIT_SHA} bin"
-          - "cache store fv.test-${SEMAPHORE_GIT_SHA} fv/fv.test"
-          - cache store go-pkg-cache .go-pkg-cache
-          - "cache store go-mod-cache ${HOME}/go/pkg/mod/cache"
-          - docker save -o /tmp/calico-felix-test.tar tigera/felix-test:latest-amd64
-          - "cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix-test.tar"
-          - docker save -o /tmp/felixtest-typha.tar felix-test/typha:latest-amd64
-          - "cache store felixtest-typha-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-typha.tar"
-          - docker save -o /tmp/felixtest-dns-server.tar tigera-test/dns-server:latest
-          - "cache store felixtest-dns-server-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-dns-server.tar"
-          - docker save -o /tmp/felixtest-scapy.tar tigera-test/scapy:latest
-          - "cache store felixtest-scapy-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-scapy.tar"
-          - ../.semaphore/run-and-monitor ut.log make ut
-          - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
-          - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-      - name: Static checks
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - ../.semaphore/run-and-monitor static-checks.log make static-checks
-- name: "Felix: Build - native arm64 runner"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - "Felix: Build"
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    prologue:
-      commands:
-        - cd felix
-        - cache restore go-pkg-cache
-        - cache restore go-mod-cache
-    jobs:
-      - name: Build binary
-        commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
-- name: "Felix: Build Windows binaries"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    jobs:
-      - name: Build Windows binaries
+          - cd crypto
+      jobs:
+        - name: crypto tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: e2e tests
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        # Since we create a local kind cluster, we need the test license.
+        - name: test-customer-license
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      jobs:
+        - name: sig-network conformance
+          execution_time_limit:
+            minutes: 60
+          env_vars:
+            - name: E2E_FOCUS
+              value: "sig-network.*Conformance"
+          commands:
+            - .semaphore/run-and-monitor e2e-test.log make e2e-test
+  - name: "Felix: Build"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
           - cd felix
-          - make bin/calico-felix.exe fv/win-fv.exe
-- name: "Felix: Windows FV capz"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Felix: Build Windows binaries"]
-  task:
-    secrets:
-      - name: banzai-secrets
-      - name: private-repo
-    prologue:
-      commands:
-        - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none
-        - export REPORT_DIR=/home/semaphore/report
-        - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
-        - export AZURE_TENANT_ID=$AZ_TENANT_ID
-        - export AZURE_CLIENT_ID=$AZ_SP_ID
-        - export AZURE_CLIENT_SECRET=$AZ_SP_PASSWORD
-        - export AZURE_SUBSCRIPTION_ID_B64="$(echo -n "$AZ_SUBSCRIPTION_ID" | base64 | tr -d '\n')"
-        - export AZURE_TENANT_ID_B64="$(echo -n "$AZ_TENANT_ID" | base64 | tr -d '\n')"
-        - export AZURE_CLIENT_ID_B64="$(echo -n "$AZ_SP_ID" | base64 | tr -d '\n')"
-        - export AZURE_CLIENT_SECRET_B64="$(echo -n "$AZ_SP_PASSWORD" | base64 | tr -d '\n')"
-        - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv-felix/docker_cfg.json"
-        - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv-felix/infra/ee/license.yaml"
-        - cd felix
-    epilogue:
-      always:
+          - cache restore go-pkg-cache
+          - cache restore go-mod-cache
+      jobs:
+        - name: Build and run UT, k8sfv
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - make build image fv-prereqs
+            - "cache store bin-${SEMAPHORE_GIT_SHA} bin"
+            - "cache store fv.test-${SEMAPHORE_GIT_SHA} fv/fv.test"
+            - cache store go-pkg-cache .go-pkg-cache
+            - "cache store go-mod-cache ${HOME}/go/pkg/mod/cache"
+            - docker save -o /tmp/calico-felix-test.tar tigera/felix-test:latest-amd64
+            - "cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix-test.tar"
+            - docker save -o /tmp/felixtest-typha.tar felix-test/typha:latest-amd64
+            - "cache store felixtest-typha-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-typha.tar"
+            - docker save -o /tmp/felixtest-dns-server.tar tigera-test/dns-server:latest
+            - "cache store felixtest-dns-server-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-dns-server.tar"
+            - docker save -o /tmp/felixtest-scapy.tar tigera-test/scapy:latest
+            - "cache store felixtest-scapy-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-scapy.tar"
+            - ../.semaphore/run-and-monitor ut.log make ut
+            - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+            - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
+        - name: Static checks
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - ../.semaphore/run-and-monitor static-checks.log make static-checks
+  - name: "Felix: Build - native arm64 runner"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - "Felix: Build"
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      prologue:
         commands:
-          - artifact push job ${REPORT_DIR} --destination test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-    env_vars:
-      - name: FV_PROVISIONER
-        value: "capz"
-      - name: FV_TYPE
-        value: "calico-felix"
-      - name: SEMAPHORE_ARTIFACT_EXPIRY
-        value: 2w
-      - name: CONTAINERD_VERSION
-        value: 1.7.22
-    jobs:
-      - name: CAPZ - Windows FV
+          - cd felix
+          - cache restore go-pkg-cache
+          - cache restore go-mod-cache
+      jobs:
+        - name: Build binary
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
+  - name: "Felix: Build Windows binaries"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      jobs:
+        - name: Build Windows binaries
+          commands:
+            - cd felix
+            - make bin/calico-felix.exe fv/win-fv.exe
+  - name: "Felix: Windows FV capz"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies: ["Felix: Build Windows binaries"]
+    task:
+      secrets:
+        - name: banzai-secrets
+        - name: private-repo
+      prologue:
         commands:
-          - ./.semaphore/run-win-fv
-- name: "Felix: FV Tests"
-  run:
-    when: "false or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - "Felix: Build"
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    prologue:
-      commands:
-        - cd felix
-        - cache restore go-pkg-cache
-        - cache restore go-mod-cache
-        - "cache restore bin-${SEMAPHORE_GIT_SHA}"
-        - "cache restore fv.test-${SEMAPHORE_GIT_SHA}"
-        - "cache restore felix-image-${SEMAPHORE_GIT_SHA}"
-        - "cache restore felixtest-typha-image-${SEMAPHORE_GIT_SHA}"
-        - "cache restore felixtest-dns-server-image-${SEMAPHORE_GIT_SHA}"
-        - "cache restore scapy-image-${SEMAPHORE_GIT_SHA}"
-        - |-
-          if [ -s /etc/docker/daemon.json  ]; then
-          sudo sed -i '$d' /etc/docker/daemon.json && sudo sed -i '$s/$/,/' /etc/docker/daemon.json && sudo bash -c ' cat >> /etc/docker/daemon.json << EOF
-            "ipv6": true,
-            "fixed-cidr-v6": "2001:db8:1::/64"
-          }
-          EOF
-          ' ; else sudo bash -c ' cat > /etc/docker/daemon.json << EOF
-          {
-            "ipv6": true,
-            "fixed-cidr-v6": "2001:db8:1::/64"
-          }
-          EOF
-          ' ; fi
-        - sudo systemctl restart docker
-        # Load in the docker images pre-built by the build job.
-        - docker load -i /tmp/calico-felix-test.tar
-        - docker tag tigera/felix-test:latest-amd64 felix-test:latest-amd64
-        - rm /tmp/calico-felix-test.tar
-        - docker load -i /tmp/felixtest-typha.tar
-        - docker tag felix-test/typha:latest-amd64 typha:latest-amd64
-        - rm /tmp/felixtest-typha.tar
-        - docker load -i /tmp/felixtest-dns-server.tar
-        - rm /tmp/felixtest-dns-server.tar
-        - docker load -i /tmp/felixtest-scapy.tar
-        - rm /tmp/felixtest-scapy.tar
-        # Pre-loading the IPIP module prevents a flake where the first felix to use IPIP loads the module and
-        # routing in that first felix container chooses different source IPs than the tests are expecting.
-        - sudo modprobe ipip
-    jobs:
-      - name: FV Test matrix
-        execution_time_limit:
-          minutes: 120
+          - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none
+          - export REPORT_DIR=/home/semaphore/report
+          - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
+          - export AZURE_TENANT_ID=$AZ_TENANT_ID
+          - export AZURE_CLIENT_ID=$AZ_SP_ID
+          - export AZURE_CLIENT_SECRET=$AZ_SP_PASSWORD
+          - export AZURE_SUBSCRIPTION_ID_B64="$(echo -n "$AZ_SUBSCRIPTION_ID" | base64 | tr -d '\n')"
+          - export AZURE_TENANT_ID_B64="$(echo -n "$AZ_TENANT_ID" | base64 | tr -d '\n')"
+          - export AZURE_CLIENT_ID_B64="$(echo -n "$AZ_SP_ID" | base64 | tr -d '\n')"
+          - export AZURE_CLIENT_SECRET_B64="$(echo -n "$AZ_SP_PASSWORD" | base64 | tr -d '\n')"
+          - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv-felix/docker_cfg.json"
+          - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv-felix/infra/ee/license.yaml"
+          - cd felix
+      epilogue:
+        always:
+          commands:
+            - artifact push job ${REPORT_DIR} --destination test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+      env_vars:
+        - name: FV_PROVISIONER
+          value: "capz"
+        - name: FV_TYPE
+          value: "calico-felix"
+        - name: SEMAPHORE_ARTIFACT_EXPIRY
+          value: 2w
+        - name: CONTAINERD_VERSION
+          value: 1.7.22
+      jobs:
+        - name: CAPZ - Windows FV
+          commands:
+            - ./.semaphore/run-win-fv
+  - name: "Felix: FV Tests"
+    run:
+      when: "false or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - "Felix: Build"
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      prologue:
         commands:
-          - make check-wireguard
-          - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
-        parallelism: 3
-      - name: nftables FV Test matrix
-        execution_time_limit:
-          minutes: 120
-        env_vars:
-          - name: FELIX_FV_NFTABLES
-            value: "Enabled"
+          - cd felix
+          - cache restore go-pkg-cache
+          - cache restore go-mod-cache
+          - "cache restore bin-${SEMAPHORE_GIT_SHA}"
+          - "cache restore fv.test-${SEMAPHORE_GIT_SHA}"
+          - "cache restore felix-image-${SEMAPHORE_GIT_SHA}"
+          - "cache restore felixtest-typha-image-${SEMAPHORE_GIT_SHA}"
+          - "cache restore felixtest-dns-server-image-${SEMAPHORE_GIT_SHA}"
+          - "cache restore scapy-image-${SEMAPHORE_GIT_SHA}"
+          - |-
+            if [ -s /etc/docker/daemon.json  ]; then
+            sudo sed -i '$d' /etc/docker/daemon.json && sudo sed -i '$s/$/,/' /etc/docker/daemon.json && sudo bash -c ' cat >> /etc/docker/daemon.json << EOF
+              "ipv6": true,
+              "fixed-cidr-v6": "2001:db8:1::/64"
+            }
+            EOF
+            ' ; else sudo bash -c ' cat > /etc/docker/daemon.json << EOF
+            {
+              "ipv6": true,
+              "fixed-cidr-v6": "2001:db8:1::/64"
+            }
+            EOF
+            ' ; fi
+          - sudo systemctl restart docker
+          # Load in the docker images pre-built by the build job.
+          - docker load -i /tmp/calico-felix-test.tar
+          - docker tag tigera/felix-test:latest-amd64 felix-test:latest-amd64
+          - rm /tmp/calico-felix-test.tar
+          - docker load -i /tmp/felixtest-typha.tar
+          - docker tag felix-test/typha:latest-amd64 typha:latest-amd64
+          - rm /tmp/felixtest-typha.tar
+          - docker load -i /tmp/felixtest-dns-server.tar
+          - rm /tmp/felixtest-dns-server.tar
+          - docker load -i /tmp/felixtest-scapy.tar
+          - rm /tmp/felixtest-scapy.tar
+          # Pre-loading the IPIP module prevents a flake where the first felix to use IPIP loads the module and
+          # routing in that first felix container chooses different source IPs than the tests are expecting.
+          - sudo modprobe ipip
+      jobs:
+        - name: FV Test matrix
+          execution_time_limit:
+            minutes: 120
+          commands:
+            - make check-wireguard
+            - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+          parallelism: 3
+        - name: nftables FV Test matrix
+          execution_time_limit:
+            minutes: 120
+          env_vars:
+            - name: FELIX_FV_NFTABLES
+              value: "Enabled"
+          commands:
+            - make check-wireguard
+            - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+          parallelism: 3
+      epilogue:
+        always:
+          commands:
+            - ./.semaphore/collect-artifacts
+            - ./.semaphore/publish-artifacts
+            - test-results publish /home/semaphore/calico/felix/report/fv_suite.xml --name "felix-fv-${SEMAPHORE_JOB_INDEX}" || true
+            - test-results publish /home/semaphore/calico/felix/report/fv_nft_suite.xml --name "felix-fv-nft-${SEMAPHORE_JOB_INDEX}" || true
+  - name: "Felix: BPF UT/FV tests on new kernel"
+    run:
+      when: "false or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - make check-wireguard
-          - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
-        parallelism: 3
-    epilogue:
-      always:
+          - cd $HOME
+          - tar -czf calico-private.tar.gz calico-private
+          - cd calico-private/felix
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export ZONE=europe-west3-c
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-ipt-
+          - echo VM_PREFIX=${VM_PREFIX}
+          - export REPO_NAME=$(basename $(pwd))
+          - export NUM_FV_BATCHES=8
+          - export RUN_UT=true
+          - export FV_FOCUS=BPF-SAFE
+          - mkdir artifacts
+          - ./.semaphore/create-test-vms ${VM_PREFIX}
+      jobs:
+        - name: UT/FV tests on new kernel
+          execution_time_limit:
+            minutes: 180
+          commands:
+            - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
+      epilogue:
+        always:
+          commands:
+            - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
+            - ./.semaphore/publish-artifacts
+            - ./.semaphore/clean-up-vms ${VM_PREFIX}
+      secrets:
+        - name: google-service-account-for-gce
+  - name: "Felix: BPF UT/FV tests on new kernel (nftables)"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ./.semaphore/collect-artifacts
-          - ./.semaphore/publish-artifacts
-          - test-results publish /home/semaphore/calico/felix/report/fv_suite.xml --name "felix-fv-${SEMAPHORE_JOB_INDEX}" || true
-          - test-results publish /home/semaphore/calico/felix/report/fv_nft_suite.xml --name "felix-fv-nft-${SEMAPHORE_JOB_INDEX}" || true
-- name: "Felix: BPF UT/FV tests on new kernel"
-  run:
-    when: "false or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd $HOME
-        - tar -czf calico-private.tar.gz calico-private
-        - cd calico-private/felix
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export ZONE=europe-west3-c
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-ipt-
-        - echo VM_PREFIX=${VM_PREFIX}
-        - export REPO_NAME=$(basename $(pwd))
-        - export NUM_FV_BATCHES=8
-        - export RUN_UT=true
-        - export FV_FOCUS=BPF-SAFE
-        - mkdir artifacts
-        - ./.semaphore/create-test-vms ${VM_PREFIX}
-    jobs:
-      - name: UT/FV tests on new kernel
-        execution_time_limit:
-          minutes: 180
+          - cd $HOME
+          - tar -czf calico-private.tar.gz calico-private
+          - cd calico-private/felix
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export ZONE=europe-west3-c
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-nft-
+          - echo VM_PREFIX=${VM_PREFIX}
+          - export REPO_NAME=$(basename $(pwd))
+          - export NUM_FV_BATCHES=4
+          - export RUN_UT=false
+          - export FV_FOCUS='_BPF_.*ct=true'
+          - mkdir artifacts
+          - ./.semaphore/create-test-vms ${VM_PREFIX}
+      jobs:
+        - name: UT/FV tests on new kernel
+          env_vars:
+            - name: FELIX_FV_NFTABLES
+              value: "Enabled"
+          execution_time_limit:
+            minutes: 180
+          commands:
+            - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
+      epilogue:
+        always:
+          commands:
+            - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
+            - ./.semaphore/publish-artifacts
+            - ./.semaphore/clean-up-vms ${VM_PREFIX}
+      secrets:
+        - name: google-service-account-for-gce
+  - name: kube-controllers
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      prologue:
         commands:
-          - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
-    epilogue:
-      always:
+          - cd kube-controllers
+      jobs:
+        - name: "kube-controllers: tests"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - test-results publish report
+  - name: libcalico-go
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
-          - ./.semaphore/publish-artifacts
-          - ./.semaphore/clean-up-vms ${VM_PREFIX}
-    secrets:
-      - name: google-service-account-for-gce
-- name: "Felix: BPF UT/FV tests on new kernel (nftables)"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd $HOME
-        - tar -czf calico-private.tar.gz calico-private
-        - cd calico-private/felix
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export ZONE=europe-west3-c
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-nft-
-        - echo VM_PREFIX=${VM_PREFIX}
-        - export REPO_NAME=$(basename $(pwd))
-        - export NUM_FV_BATCHES=4
-        - export RUN_UT=false
-        - export FV_FOCUS='_BPF_.*ct=true'
-        - mkdir artifacts
-        - ./.semaphore/create-test-vms ${VM_PREFIX}
-    jobs:
-      - name: UT/FV tests on new kernel
-        env_vars:
-          - name: FELIX_FV_NFTABLES
-            value: "Enabled"
-        execution_time_limit:
-          minutes: 180
+          - cd libcalico-go
+      jobs:
+        - name: "libcalico-go: tests"
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+  - name: "Node: Build"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2004
+      secrets:
+        # Mount a secret for pulling images from GCR, and a license for the k8s FVs
+        - name: tigera-dev-ci-pull-credentials
+        - name: google-service-account-for-gcr
+        - name: test-customer-license
+      prologue:
         commands:
-          - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
-    epilogue:
-      always:
+          - cd node
+      jobs:
+        - name: "Node: CI"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - test-results publish ./report/nosetests.xml --name "node-ci" || true
+  - name: "Node: multi-arch build"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - "Node: Build"
+    task:
+      secrets:
+        # Mount a secret for pulling images from GCR, and a license for the k8s FVs
+        - name: tigera-dev-ci-pull-credentials
+        - name: google-service-account-for-gcr
+        - name: test-customer-license
+      prologue:
         commands:
-          - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
-          - ./.semaphore/publish-artifacts
-          - ./.semaphore/clean-up-vms ${VM_PREFIX}
-    secrets:
-      - name: google-service-account-for-gce
-- name: kube-controllers
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    prologue:
-      commands:
-        - cd kube-controllers
-    jobs:
-      - name: "kube-controllers: tests"
+          - cd node
+      jobs:
+        - name: Build Windows archive
+          commands:
+            - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
+        - name: Build Windows image
+          commands:
+            - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
+  - name: "Node: Build - native arm64 runner"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - "Node: Build"
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-4
+      secrets:
+        - name: tigera-dev-ci-pull-credentials
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd node
+      jobs:
+        - name: Build image
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
+  - name: "Node: kind-cluster tests"
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/egress-gateway/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-    epilogue:
-      always:
+          - cd $HOME
+          - tar -czf calico-private.tar.gz calico-private
+          - cd calico-private/node
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export ZONE=us-east4-c
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
+          - echo VM_PREFIX=${VM_PREFIX}
+          - export REPO_NAME=$(basename $(pwd))
+          - export VM_DISK_SIZE=80GB
+          - mkdir artifacts
+          - ../.semaphore/vms/create-test-vms ${ZONE} ${VM_PREFIX}
+      jobs:
+        - name: "Node: kind-cluster tests"
+          execution_time_limit:
+            minutes: 180
+          commands:
+            - ../.semaphore/vms/run-tests-on-vms ${ZONE} ${VM_PREFIX}
+      epilogue:
+        always:
+          commands:
+            - ../.semaphore/vms/publish-artifacts
+            - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+            - test-results publish ./report/*.xml --name "node-kind-tests" || true
+      secrets:
+        - name: google-service-account-for-gcr
+        - name: google-service-account-for-gce
+        - name: tigera-dev-ci-pull-credentials
+        - name: test-customer-license
+  - name: pod2daemon
+    run:
+      when: "false or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - test-results publish report
-- name: libcalico-go
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd libcalico-go
-    jobs:
-      - name: "libcalico-go: tests"
+          - cd pod2daemon
+      jobs:
+        - name: pod2daemon tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+            - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Typha
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci
-- name: "Node: Build"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2004
-    secrets:
-      # Mount a secret for pulling images from GCR, and a license for the k8s FVs
-      - name: tigera-dev-ci-pull-credentials
-      - name: google-service-account-for-gcr
-      - name: test-customer-license
-    prologue:
-      commands:
-        - cd node
-    jobs:
-      - name: "Node: CI"
+          - cd typha
+      jobs:
+        - name: "Typha: UT and FV tests"
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+        - name: "Typha: UT and FV tests on UBI-minimal"
+          commands:
+            - ../.semaphore/run-and-monitor make-fv-ubi.log make clean image fv
+          env_vars:
+            - name: USE_UBI8_AS_CALICO_BASE
+              value: "1"
+      epilogue:
+        always:
+          commands:
+            - |
+              for f in /home/semaphore/calico/typha/report/*; do
+                NAME=$(basename $f)
+                test-results compile --name typha-$NAME $f $NAME.json || true
+              done
+              for f in /home/semaphore/calico/typha/pkg/report/*; do
+                NAME=$(basename $f)
+                test-results compile --name typha-$NAME $f $NAME.json || true
+              done
+              test-results combine *.xml.json report.json || true
+              artifact push job report.json -d test-results/junit.json || true
+              artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
+            - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
+  - name: calicoq
+    run:
+      when: "false or change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: test-customer-license
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-    epilogue:
-      always:
+          - cd calicoq
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: compliance
+    run:
+      when: "false or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - test-results publish ./report/nosetests.xml --name "node-ci" || true
-- name: "Node: multi-arch build"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - "Node: Build"
-  task:
-    secrets:
-      # Mount a secret for pulling images from GCR, and a license for the k8s FVs
-      - name: tigera-dev-ci-pull-credentials
-      - name: google-service-account-for-gcr
-      - name: test-customer-license
-    prologue:
-      commands:
-        - cd node
-    jobs:
-      - name: Build Windows archive
+          - cd compliance
+      jobs:
+        - name: compliance tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Publish tigera/snort3 images
+    run:
+      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
-      - name: Build Windows image
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux amd64
+          commands:
+            - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
+  - name: Publish tigera/snort3 images - native arm64 runner
+    run:
+      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
-- name: "Node: Build - native arm64 runner"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - "Node: Build"
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-4
-    secrets:
-      - name: tigera-dev-ci-pull-credentials
-    prologue:
-      commands:
-        - cd node
-    jobs:
-      - name: Build image
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux arm64
+          commands:
+            - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
+  - name: Publish tigera/snort3 multi-arch manifests
+    run:
+      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/snort3 images
+      - Publish tigera/snort3 images - native arm64 runner
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
-- name: "Node: kind-cluster tests"
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/egress-gateway/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd $HOME
-        - tar -czf calico-private.tar.gz calico-private
-        - cd calico-private/node
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export ZONE=us-east4-c
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
-        - echo VM_PREFIX=${VM_PREFIX}
-        - export REPO_NAME=$(basename $(pwd))
-        - export VM_DISK_SIZE=80GB
-        - mkdir artifacts
-        - ../.semaphore/vms/create-test-vms ${ZONE} ${VM_PREFIX}
-    jobs:
-      - name: "Node: kind-cluster tests"
-        execution_time_limit:
-          minutes: 180
-        commands:
-          - ../.semaphore/vms/run-tests-on-vms ${ZONE} ${VM_PREFIX}
-    epilogue:
-      always:
-        commands:
-          - ../.semaphore/vms/publish-artifacts
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
-          - test-results publish ./report/*.xml --name "node-kind-tests" || true
-    secrets:
-      - name: google-service-account-for-gcr
-      - name: google-service-account-for-gce
-      - name: tigera-dev-ci-pull-credentials
-      - name: test-customer-license
-- name: pod2daemon
-  run:
-    when: "false or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd pod2daemon
-    jobs:
-      - name: pod2daemon tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-          - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Typha
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd typha
-    jobs:
-      - name: "Typha: UT and FV tests"
-        commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-      - name: "Typha: UT and FV tests on UBI-minimal"
-        commands:
-          - ../.semaphore/run-and-monitor make-fv-ubi.log make clean image fv
-        env_vars:
-          - name: USE_UBI8_AS_CALICO_BASE
-            value: '1'
-    epilogue:
-      always:
-        commands:
-          - |
-            for f in /home/semaphore/calico/typha/report/*; do
-              NAME=$(basename $f)
-              test-results compile --name typha-$NAME $f $NAME.json || true
-            done
-            for f in /home/semaphore/calico/typha/pkg/report/*; do
-              NAME=$(basename $f)
-              test-results compile --name typha-$NAME $f $NAME.json || true
-            done
-            test-results combine *.xml.json report.json || true
-            artifact push job report.json -d test-results/junit.json || true
-            artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
-          - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
-- name: calicoq
-  run:
-    when: "false or change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: test-customer-license
-    prologue:
-      commands:
-        - cd calicoq
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: compliance
-  run:
-    when: "false or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd compliance
-    jobs:
-      - name: compliance tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/snort3 images
-  run:
-    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux amd64
-        commands:
-          - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
-- name: Publish tigera/snort3 images - native arm64 runner
-  run:
-    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux arm64
-        commands:
-          - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
-- name: Publish tigera/snort3 multi-arch manifests
-  run:
-    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/snort3 images
-    - Publish tigera/snort3 images - native arm64 runner
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux multi-arch manifests
-        commands:
-          - make -C third_party/snort3 push-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/snort3 push-manifest CONFIRM=true
 
-- name: deep-packet-inspection
-  run:
-    when: "false or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/snort3 multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd deep-packet-inspection
-    jobs:
-      - name: deep-packet-inspection tests
+  - name: deep-packet-inspection
+    run:
+      when: "false or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/snort3 multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd deep-packet-inspection
+      jobs:
+        - name: deep-packet-inspection tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: egress-gateway
+    run:
+      when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: egress-gateway
-  run:
-    when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd egress-gateway
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-    epilogue:
-      always:
-        commands:
-          - ../.semaphore/publish-artifacts
+          - cd egress-gateway
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - ../.semaphore/publish-artifacts
 
-- name: egress-gateway - native arm64 runner
-  run:
-    when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - egress-gateway
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    prologue:
-      commands:
-        # The makefile sometimes tries to rebuild the protobufs but
-        # the build fails on ARM (and we know they're fresh due to
-        # the pre-flight job).
-        - touch felix/proto/felixbackend.pb.go
-        - cd egress-gateway
-    jobs:
-      - name: Build image
+  - name: egress-gateway - native arm64 runner
+    run:
+      when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - egress-gateway
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
-    epilogue:
-      always:
+          # The makefile sometimes tries to rebuild the protobufs but
+          # the build fails on ARM (and we know they're fresh due to
+          # the pre-flight job).
+          - touch felix/proto/felixbackend.pb.go
+          - cd egress-gateway
+      jobs:
+        - name: Build image
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
+      epilogue:
+        always:
+          commands:
+            - ../.semaphore/publish-artifacts
+  - name: elasticsearch-metrics
+    run:
+      when: "false or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/publish-artifacts
-- name: elasticsearch-metrics
-  run:
-    when: "false or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd elasticsearch-metrics
-    jobs:
-      - name: elasticsearch-metrics tests
+          - cd elasticsearch-metrics
+      jobs:
+        - name: elasticsearch-metrics tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Publish tigera/elasticsearch images
+    run:
+      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux amd64
+          commands:
+            - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
+  - name: Publish tigera/elasticsearch images - native arm64 runner
+    run:
+      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/elasticsearch images
-  run:
-    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux amd64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux arm64
+          commands:
+            - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
+  - name: Publish tigera/elasticsearch multi-arch manifests
+    run:
+      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/elasticsearch images
+      - Publish tigera/elasticsearch images - native arm64 runner
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
-- name: Publish tigera/elasticsearch images - native arm64 runner
-  run:
-    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux arm64
-        commands:
-          - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
-- name: Publish tigera/elasticsearch multi-arch manifests
-  run:
-    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/elasticsearch images
-    - Publish tigera/elasticsearch images - native arm64 runner
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux multi-arch manifests
-        commands:
-          - make -C third_party/elasticsearch push-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/elasticsearch push-manifest CONFIRM=true
 
-- name: elasticsearch
-  run:
-    when: "false or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/elasticsearch multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd elasticsearch
-    jobs:
-      - name: elasticsearch tests
+  - name: elasticsearch
+    run:
+      when: "false or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/elasticsearch multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd elasticsearch
+      jobs:
+        - name: elasticsearch tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: es-gateway
+    run:
+      when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: es-gateway
-  run:
-    when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd es-gateway
-    jobs:
-      - name: es-gateway tests
+          - cd es-gateway
+      jobs:
+        - name: es-gateway tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: firewall-integration
+    run:
+      when: "false or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd firewall-integration
+      jobs:
+        - name: firewall-integration tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Publish tigera/fluentd-base images
+    run:
+      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: firewall-integration
-  run:
-    when: "false or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd firewall-integration
-    jobs:
-      - name: firewall-integration tests
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux amd64
+          commands:
+            - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
+  - name: Publish tigera/fluentd-base images - native arm64 runner
+    run:
+      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux arm64
+          commands:
+            - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
+  - name: Publish tigera/fluentd-base multi-arch manifests
+    run:
+      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/fluentd-base images
+      - Publish tigera/fluentd-base images - native arm64 runner
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/fluentd-base images
-  run:
-    when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux amd64
-        commands:
-          - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
-- name: Publish tigera/fluentd-base images - native arm64 runner
-  run:
-    when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-2
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux arm64
-        commands:
-          - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
-- name: Publish tigera/fluentd-base multi-arch manifests
-  run:
-    when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/fluentd-base images
-    - Publish tigera/fluentd-base images - native arm64 runner
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux multi-arch manifests
-        commands:
-          - make -C third_party/fluentd-base push-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/fluentd-base push-manifest CONFIRM=true
 
-- name: fluentd
-  run:
-    when: "false or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/fluentd-base multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd fluentd
-    jobs:
-      - name: fluentd tests
+  - name: fluentd
+    run:
+      when: "false or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/fluentd-base multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd fluentd
+      jobs:
+        - name: fluentd tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 
-- name: Publish tigera/fluentd-base Windows images
-  run:
-    when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  execution_time_limit:
-    hours: 2
-  task:
-    secrets:
-      - name: banzai-secrets
-    prologue:
-      commands:
-        # Login to docker in order to pull images.
-        - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
-        # Clone the process repo and provision Windows instances.
-        - pushd .
-        - git clone git@github.com:tigera/process.git ~/process
-        - cd ~/process/testing/windows-instances
-        - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
-        # Save windows-instances terraform.
-        - tar czf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
-        - artifact push job --expire-in 2w ~/windows-tf.tar.gz
-        - popd
-        - cd fluentd
-    epilogue:
-      always:
+  - name: Publish tigera/fluentd-base Windows images
+    run:
+      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    execution_time_limit:
+      hours: 2
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
         commands:
+          # Login to docker in order to pull images.
+          - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
+          # Clone the process repo and provision Windows instances.
+          - pushd .
+          - git clone git@github.com:tigera/process.git ~/process
           - cd ~/process/testing/windows-instances
-          - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
-    jobs:
-      - name: Windows amd64
+          - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
+          # Save windows-instances terraform.
+          - tar czf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
+          - artifact push job --expire-in 2w ~/windows-tf.tar.gz
+          - popd
+          - cd fluentd
+      epilogue:
+        always:
+          commands:
+            - cd ~/process/testing/windows-instances
+            - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
+      jobs:
+        - name: Windows amd64
+          commands:
+            - export PROCESS_REPO=~/process/testing/windows-instances
+            - BASE=true CONFIRM=true .semaphore/windows-cd.sh
+  - name: Publish tigera/fluentd-base Windows multi-arch manifests
+    run:
+      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/fluentd-base Windows images
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - export PROCESS_REPO=~/process/testing/windows-instances
-          - BASE=true CONFIRM=true .semaphore/windows-cd.sh
-- name: Publish tigera/fluentd-base Windows multi-arch manifests
-  run:
-    when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/fluentd-base Windows images
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Windows multi-arch manifests
-        commands:
-          - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Windows multi-arch manifests
+          commands:
+            - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
 
-- name: fluentd Windows
-  run:
-    when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/fluentd-base Windows multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd fluentd
-    jobs:
-      - name: build windows image
+  - name: fluentd Windows
+    run:
+      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/fluentd-base Windows multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-windows.log make image-windows
-- name: ingress-collector
-  run:
-    when: "false or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd ingress-collector
-    jobs:
-      - name: ingress-collector tests
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd fluentd
+      jobs:
+        - name: build windows image
+          commands:
+            - ../.semaphore/run-and-monitor build-windows.log make image-windows
+  - name: ingress-collector
+    run:
+      when: "false or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd ingress-collector
+      jobs:
+        - name: ingress-collector tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: intrusion-detection-controller
+    run:
+      when: "false or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: intrusion-detection-controller
-  run:
-    when: "false or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
-        - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-        - cd intrusion-detection-controller
-    jobs:
-      - name: intrusion-detection-controller tests
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+          - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+          - cd intrusion-detection-controller
+      jobs:
+        - name: intrusion-detection-controller tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: key-cert-provisioner
+    run:
+      when: "false or change_in(['/*', '/key-cert-provisioner/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd key-cert-provisioner
+      jobs:
+        - name: key-cert-provisioner tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Publish tigera/kibana images
+    run:
+      when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: key-cert-provisioner
-  run:
-    when: "false or change_in(['/*', '/key-cert-provisioner/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd key-cert-provisioner
-    jobs:
-      - name: key-cert-provisioner tests
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch images
+          commands:
+            - make -C third_party/kibana cd CONFIRM=true
+  - name: Publish tigera/kibana multi-arch manifests
+    run:
+      when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/kibana images
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/kibana images
-  run:
-    when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux multi-arch images
-        commands:
-          - make -C third_party/kibana cd CONFIRM=true
-- name: Publish tigera/kibana multi-arch manifests
-  run:
-    when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/kibana images
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux multi-arch manifests
-        commands:
-          - make -C third_party/kibana push-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/kibana push-manifest CONFIRM=true
 
-- name: kibana
-  run:
-    when: "false or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/kibana multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd kibana
-    jobs:
-      - name: kibana tests
+  - name: kibana
+    run:
+      when: "false or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/kibana multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-- name: l7-admission-controller
-  run:
-    when: "false or change_in(['/*', '/l7-admission-controller/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd l7-admission-controller
-    jobs:
-      - name: make ci
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd kibana
+      jobs:
+        - name: kibana tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: l7-admission-controller
+    run:
+      when: "false or change_in(['/*', '/l7-admission-controller/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd l7-admission-controller
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Publish tigera/envoybinary images
+    run:
+      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/envoybinary images
-  run:
-    when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoybinary
-    jobs:
-      - name: Linux amd64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd third_party/envoybinary
+      jobs:
+        - name: Linux amd64
+          commands:
+            - ../../.semaphore/run-and-monitor build.log make cd ARCHES=amd64 CONFIRM=true
+  - name: Publish tigera/envoybinary images - native arm64 runner
+    run:
+      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    execution_time_limit:
+      hours: 8
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-4
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../../.semaphore/run-and-monitor build.log make cd ARCHES=amd64 CONFIRM=true
-- name: Publish tigera/envoybinary images - native arm64 runner
-  run:
-    when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  execution_time_limit:
-    hours: 8
-  task:
-    agent:
-      machine:
-        type: s1-aws-arm64-4
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoybinary
-    jobs:
-      - name: Linux arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd third_party/envoybinary
+      jobs:
+        - name: Linux arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-arm64.log make cd ARCHES=arm64 CONFIRM=true
+  - name: Publish tigera/envoybinary multi-arch manifests
+    run:
+      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/envoybinary images
+      - Publish tigera/envoybinary images - native arm64 runner
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../../.semaphore/run-and-monitor build-arm64.log make cd ARCHES=arm64 CONFIRM=true
-- name: Publish tigera/envoybinary multi-arch manifests
-  run:
-    when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Publish tigera/envoybinary images
-    - Publish tigera/envoybinary images - native arm64 runner
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoybinary
-    jobs:
-      - name: Linux multi-arch manifests
-        commands:
-          - make push-manifest CONFIRM=true
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd third_party/envoybinary
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make push-manifest CONFIRM=true
 
-- name: l7-collector
-  run:
-    when: "false or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/envoybinary multi-arch manifests
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd l7-collector
-    jobs:
-      - name: l7-collector tests
+  - name: l7-collector
+    run:
+      when: "false or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Publish tigera/envoybinary multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd l7-collector
+      jobs:
+        - name: l7-collector tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: license-agent
+    run:
+      when: "false or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: license-agent
-  run:
-    when: "false or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd license-agent
-    jobs:
-      - name: License Agent tests
+          - cd license-agent
+      jobs:
+        - name: License Agent tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: licensing
+    run:
+      when: "false or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd licensing
+      jobs:
+        - name: Licensing tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: linseed
+    run:
+      when: "false or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/', '/goldmane/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: licensing
-  run:
-    when: "false or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd licensing
-    jobs:
-      - name: Licensing tests
+          - cd linseed
+      jobs:
+        - name: linseed tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: lma
+    run:
+      when: "false or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd lma
+      jobs:
+        - name: lma tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: oiler
+    run:
+      when: "false or change_in(['/*', '/linseed/', '/oiler/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: linseed
-  run:
-    when: "false or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/', '/goldmane/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd linseed
-    jobs:
-      - name: linseed tests
+          - cd oiler
+      jobs:
+        - name: oiler tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: packetcapture
+    run:
+      when: "false or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd packetcapture
+      jobs:
+        - name: packetcapture tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: policy-recommendation
+    run:
+      when: "false or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: lma
-  run:
-    when: "false or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd lma
-    jobs:
-      - name: lma tests
+          - cd policy-recommendation
+      jobs:
+        - name: policy-recommendation tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: prometheus-service
+    run:
+      when: "false or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-- name: oiler
-  run:
-    when: "false or change_in(['/*', '/linseed/', '/oiler/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd oiler
-    jobs:
-      - name: oiler tests
+          - cd prometheus-service
+      jobs:
+        - name: prometheus-service tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: queryserver
+    run:
+      when: "false or change_in(['/*', '/queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd queryserver
+      jobs:
+        - name: queryserver tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: ui-apis
+    run:
+      when: "false or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: packetcapture
-  run:
-    when: "false or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd packetcapture
-    jobs:
-      - name: packetcapture tests
+          - cd ui-apis
+      jobs:
+        - name: ui-apis tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: voltron
+    run:
+      when: "false or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd voltron
+      jobs:
+        - name: voltron tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: webhooks-processor
+    run:
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: policy-recommendation
-  run:
-    when: "false or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd policy-recommendation
-    jobs:
-      - name: policy-recommendation tests
+          - cd webhooks-processor
+      jobs:
+        - name: webhooks processor tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: fluent-bit
+    run:
+      when: "false or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: google-service-account-for-gce
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd fluent-bit
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - export REPO_NAME=$(basename $(pwd))
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-fluent-bit
+          - export ZONE=us-east4-c
+          - echo VM_PREFIX=${VM_PREFIX}
+      jobs:
+        - name: fluent-bit tests
+          commands:
+            - make ci
+      epilogue:
+        always:
+          commands:
+            - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+  - name: selinux
+    run:
+      when: "false or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: google-service-account-for-gce
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: prometheus-service
-  run:
-    when: "false or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd prometheus-service
-    jobs:
-      - name: prometheus-service tests
+          - cd selinux
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - export REPO_NAME=$(basename $(pwd))
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
+          - export ZONE=us-east4-c
+          - echo VM_PREFIX=${VM_PREFIX}
+      jobs:
+        - name: SELinux FV tests
+          commands:
+            - make ci
+      epilogue:
+        always:
+          commands:
+            - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+  - name: alertmanager
+    run:
+      when: "false or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - sem-version go 1.23.7
+          - cd third_party/alertmanager
+      jobs:
+        - name: alertmanager tests
+          commands:
+            - ../../.semaphore/run-and-monitor ci.log make ci
+        - name: Build image
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+  - name: dex
+    run:
+      when: "false or change_in(['/*', '/third_party/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: queryserver
-  run:
-    when: "false or change_in(['/*', '/queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd queryserver
-    jobs:
-      - name: queryserver tests
+          - cd third_party/dex
+      jobs:
+        - name: dex tests
+          commands:
+            - ../../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: eck-operator
+    run:
+      when: "false or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd third_party/eck-operator
+      jobs:
+        - name: eck-operator tests
+          commands:
+            - ../../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: envoy-gateway
+    run:
+      when: "false or change_in(['/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: ui-apis
-  run:
-    when: "false or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd ui-apis
-    jobs:
-      - name: ui-apis tests
+          - cd third_party/envoy-gateway
+      jobs:
+        - name: Build binaries
+          matrix:
+            - env_var: ARCH
+              values:
+                - amd64
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: envoy-ratelimit
+    run:
+      when: "false or change_in(['/third_party/envoy-ratelimit'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd third_party/envoy-ratelimit
+      jobs:
+        - name: Build binaries
+          matrix:
+            - env_var: ARCH
+              values:
+                - amd64
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: prometheus-operator
+    run:
+      when: "false or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: voltron
-  run:
-    when: "false or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd voltron
-    jobs:
-      - name: voltron tests
+          - cd third_party/prometheus-operator
+      jobs:
+        - name: prometheus-operator tests
+          commands:
+            - ../../.semaphore/run-and-monitor ci.log make ci
+        - name: Build image
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+  - name: prometheus
+    run:
+      when: "false or change_in(['/third_party/prometheus/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd third_party/prometheus
+      jobs:
+        - name: prometheus tests
+          commands:
+            - ../../.semaphore/run-and-monitor ci.log make ci
+        - name: Build image
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+  - name: Fake guardian
+    run:
+      when: "false or change_in(['/*', '/test-tools/fake-guardian/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: webhooks-processor
-  run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd webhooks-processor
-    jobs:
-      - name: webhooks processor tests
+          - cd test-tools/fake-guardian
+      jobs:
+        - name: Fake guardian
+          commands:
+            - ../../.semaphore/run-and-monitor make-ci.log make ci
+  - name: Fake log generator
+    run:
+      when: "false or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+          - cd test-tools/fake-log-generator
+      jobs:
+        - name: Fake log generator
+          commands:
+            - ../../.semaphore/run-and-monitor make-ci.log make ci
+  - name: Mock node
+    run:
+      when: "false or change_in(['/*', '/test-tools/mocknode/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: fluent-bit
-  run:
-    when: "false or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: google-service-account-for-gce
-    prologue:
-      commands:
-        - cd fluent-bit
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export REPO_NAME=$(basename $(pwd))
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-fluent-bit
-        - export ZONE=us-east4-c
-        - echo VM_PREFIX=${VM_PREFIX}
-    jobs:
-      - name: fluent-bit tests
+          - cd test-tools/mocknode
+      jobs:
+        - name: Mock node
+          commands:
+            - ../../.semaphore/run-and-monitor make-ci.log make ci
+  - name: release tooling
+    run:
+      when: "false or change_in(['/*', '/release/'], {exclude: ['/**/.gitignore', '/**/*.md', '/**/LICENSE']})"
+    execution_time_limit:
+      minutes: 30
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
         commands:
-          - make ci
-    epilogue:
-      always:
-        commands:
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
-- name: selinux
-  run:
-    when: "false or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: google-service-account-for-gce
-    prologue:
-      commands:
-        - cd selinux
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export REPO_NAME=$(basename $(pwd))
-        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
-        - export ZONE=us-east4-c
-        - echo VM_PREFIX=${VM_PREFIX}
-    jobs:
-      - name: SELinux FV tests
-        commands:
-          - make ci
-    epilogue:
-      always:
-        commands:
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
-- name: alertmanager
-  run:
-    when: "false or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - sem-version go 1.23.7
-        - cd third_party/alertmanager
-    jobs:
-      - name: alertmanager tests
-        commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-- name: dex
-  run:
-    when: "false or change_in(['/*', '/third_party/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd third_party/dex
-    jobs:
-      - name: dex tests
-        commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: eck-operator
-  run:
-    when: "false or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd third_party/eck-operator
-    jobs:
-      - name: eck-operator tests
-        commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: envoy-gateway
-  run:
-    when: "false or change_in(['/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd third_party/envoy-gateway
-    jobs:
-      - name: Build binaries
-        matrix:
-          - env_var: ARCH
-            values:
-              - amd64
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: envoy-ratelimit
-  run:
-    when: "false or change_in(['/third_party/envoy-ratelimit'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd third_party/envoy-ratelimit
-    jobs:
-      - name: Build binaries
-        matrix:
-          - env_var: ARCH
-            values:
-              - amd64
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: prometheus-operator
-  run:
-    when: "false or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd third_party/prometheus-operator
-    jobs:
-      - name: prometheus-operator tests
-        commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-- name: prometheus
-  run:
-    when: "false or change_in(['/third_party/prometheus/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    agent:
-      machine:
-        type: f1-standard-4
-        os_image: ubuntu2204
-    prologue:
-      commands:
-        - cd third_party/prometheus
-    jobs:
-      - name: prometheus tests
-        commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-- name: Fake guardian
-  run:
-    when: "false or change_in(['/*', '/test-tools/fake-guardian/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd test-tools/fake-guardian
-    jobs:
-      - name: Fake guardian
-        commands:
-          - ../../.semaphore/run-and-monitor make-ci.log make ci
-- name: Fake log generator
-  run:
-    when: "false or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd test-tools/fake-log-generator
-    jobs:
-      - name: Fake log generator
-        commands:
-          - ../../.semaphore/run-and-monitor make-ci.log make ci
-- name: Mock node
-  run:
-    when: "false or change_in(['/*', '/test-tools/mocknode/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd test-tools/mocknode
-    jobs:
-      - name: Mock node
-        commands:
-          - ../../.semaphore/run-and-monitor make-ci.log make ci
-- name: release tooling
-  run:
-    when: "false or change_in(['/*', '/release/'], {exclude: ['/**/.gitignore', '/**/*.md', '/**/LICENSE']})"
-  execution_time_limit:
-    minutes: 30
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd release
-    jobs:
-      - name: ci
-        commands:
-          - ../.semaphore/run-and-monitor release-ci.log make ci
-      - name: build binary
-        commands:
-          - ../.semaphore/run-and-monitor release-build.log make build
-          - cache store release-${SEMAPHORE_GIT_SHA} bin
+          - cd release
+      jobs:
+        - name: ci
+          commands:
+            - ../.semaphore/run-and-monitor release-ci.log make ci
+        - name: build binary
+          commands:
+            - ../.semaphore/run-and-monitor release-build.log make build
+            - cache store release-${SEMAPHORE_GIT_SHA} bin
 after_pipeline:
   task:
     jobs:

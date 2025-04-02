@@ -8,9 +8,9 @@ metadata:
     prometheus: calico-node
 spec:
   groups:
-  - name: ./calico.rules
-    rules:
-    - record: max_cpu
-      expr: max((avg by (instance) (irate(process_cpu_seconds_total[5m]))) * 100)
-    - record: max_mem
-      expr: max(go_memstats_alloc_bytes)
+    - name: ./calico.rules
+      rules:
+        - record: max_cpu
+          expr: max((avg by (instance) (irate(process_cpu_seconds_total[5m]))) * 100)
+        - record: max_mem
+          expr: max(go_memstats_alloc_bytes)

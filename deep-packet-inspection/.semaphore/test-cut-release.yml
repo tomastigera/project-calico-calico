@@ -21,7 +21,7 @@ global_job_config:
       - cd deep-packet-inspection
 
 blocks:
-  - name: 'Test Cut Release - Deep Packet Inspection'
+  - name: "Test Cut Release - Deep Packet Inspection"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

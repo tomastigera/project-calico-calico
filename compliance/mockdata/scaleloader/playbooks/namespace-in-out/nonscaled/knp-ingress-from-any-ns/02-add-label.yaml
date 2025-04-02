@@ -9,7 +9,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      ingress-from-any-ns: 'yes'
+      ingress-from-any-ns: "yes"
   ingress:
     - from:
-      - namespaceSelector: {}
+        - namespaceSelector: {}
