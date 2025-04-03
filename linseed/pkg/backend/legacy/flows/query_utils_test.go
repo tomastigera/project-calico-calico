@@ -278,7 +278,20 @@ func TestCompileStringMatch(t *testing.T) {
 			testResult: testResult{
 				error:       false,
 				errorMsg:    "",
-				stringMatch: "*|adminnetworkpolicy|kanp.adminnetworkpolicy.test|*|*",
+				stringMatch: "*|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test|*|*",
+			},
+		},
+		{
+			name: "global calico network policy in adminnetworkpolicy tier",
+			policyMatch: v1.PolicyMatch{
+				Type: "",
+				Name: testutils.StringPtr("test"),
+				Tier: "adminnetworkpolicy",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|adminnetworkpolicy|adminnetworkpolicy.test|*|*",
 			},
 		},
 		{
@@ -326,7 +339,20 @@ func TestCompileStringMatch(t *testing.T) {
 			testResult: testResult{
 				error:       false,
 				errorMsg:    "",
-				stringMatch: "*|baselineadminnetworkpolicy|kbanp.baselineadminnetworkpolicy.test|*|*",
+				stringMatch: "*|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test|*|*",
+			},
+		},
+		{
+			name: "global calico network policy in baselineadminnetworkpolicy tier",
+			policyMatch: v1.PolicyMatch{
+				Type: "",
+				Name: testutils.StringPtr("test"),
+				Tier: "baselineadminnetworkpolicy",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|baselineadminnetworkpolicy|baselineadminnetworkpolicy.test|*|*",
 			},
 		},
 		{

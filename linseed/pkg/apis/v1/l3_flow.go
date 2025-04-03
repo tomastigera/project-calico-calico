@@ -93,7 +93,7 @@ type L3FlowParams struct {
 // PolicyMatch allows matching on a policy when querying flow logs.
 type PolicyMatch struct {
 	// Type of the policy: knp: KubernetesNetworkPolicy, anp: AdminNetworkPolicy
-	Type PolicyType `json:"type,omitempty" validate:"omitempty,oneof=knp kanp"`
+	Type PolicyType `json:"type,omitempty" validate:"omitempty,oneof=knp kanp kbanp"`
 
 	// Staged is a boolean that indicates matching for staged policies.
 	Staged bool `json:"staged,omitempty"`

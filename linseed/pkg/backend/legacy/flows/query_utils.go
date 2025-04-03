@@ -189,7 +189,7 @@ func calculateKANPTierAndName(staged bool, name, namespace, tier string) (string
 	if staged {
 		return "", "", errors.New("staged is not supported for adminnetworkpolicy")
 	}
-	nameMatch = fmt.Sprintf("%s%s", names.K8sAdminNetworkPolicyNamePrefix, nameMatch)
+	nameMatch = fmt.Sprintf("%s.%s%s", tier, names.K8sAdminNetworkPolicyNamePrefix, nameMatch)
 
 	return tier, nameMatch, nil
 }
@@ -213,7 +213,7 @@ func calculateKBANPTierAndName(staged bool, name, namespace, tier string) (strin
 	if staged {
 		return "", "", errors.New("staged is not supported for baselineadminnetworkpolicy")
 	}
-	nameMatch = fmt.Sprintf("%s%s", names.K8sBaselineAdminNetworkPolicyNamePrefix, nameMatch)
+	nameMatch = fmt.Sprintf("%s.%s%s", tier, names.K8sBaselineAdminNetworkPolicyNamePrefix, nameMatch)
 
 	return tier, nameMatch, nil
 }
