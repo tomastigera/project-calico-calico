@@ -25,7 +25,7 @@ CALI_MAP(cali_counters, 3,
 		struct counters_key, counters_t, 20000,
 		0)
 
-CALI_MAP(cali_counters_scratch, 1,
+CALI_MAP(cali_counters_scratch, 2,
 		BPF_MAP_TYPE_PERCPU_ARRAY,
 		__u32, counters_t, 1, 0)
 
