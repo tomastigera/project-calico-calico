@@ -173,6 +173,12 @@ var collectionFlows = Collection{
 			},
 		},
 		groupBy{
+			field: "cluster",
+			nested: []GroupBy{
+				groupBy{field: "source_namespace"},
+			},
+		},
+		groupBy{
 			field: "source_namespace",
 			nested: []GroupBy{
 				groupBy{

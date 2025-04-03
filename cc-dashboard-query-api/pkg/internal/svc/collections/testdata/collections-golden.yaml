@@ -253,6 +253,9 @@
     - field: host
     - field: dest_namespace
     - field: source_namespace
+  - field: cluster
+    nested:
+    - field: source_namespace
   - field: source_namespace
     nested:
     - field: source_name_aggr
