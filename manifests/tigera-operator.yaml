@@ -66,6 +66,7 @@ rules:
       - adminnetworkpolicies.policy.networking.k8s.io
       - apiservers.operator.tigera.io
       - baselineadminnetworkpolicies.policy.networking.k8s.io
+      - gatewayapis.operator.tigera.io
       - imagesets.operator.tigera.io
       - installations.operator.tigera.io
       - tigerastatuses.operator.tigera.io
@@ -680,6 +681,24 @@ rules:
       - list
       - get
       - watch
+  # 3. For Gateway API the operator needs to be able to create and reconcile a certificate
+  # generation job.
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - update
+    resourceNames:
+      - tigera-gateway-api-gateway-helm-certgen
 ---
 # Source: tigera-operator/templates/tigera-operator/02-rolebinding-tigera-operator.yaml
 kind: ClusterRoleBinding
