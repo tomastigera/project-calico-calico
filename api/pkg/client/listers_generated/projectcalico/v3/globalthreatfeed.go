@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // GlobalThreatFeedLister helps list GlobalThreatFeeds.
@@ -16,19 +16,19 @@ import (
 type GlobalThreatFeedLister interface {
 	// List lists all GlobalThreatFeeds in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.GlobalThreatFeed, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.GlobalThreatFeed, err error)
 	// Get retrieves the GlobalThreatFeed from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.GlobalThreatFeed, error)
+	Get(name string) (*projectcalicov3.GlobalThreatFeed, error)
 	GlobalThreatFeedListerExpansion
 }
 
 // globalThreatFeedLister implements the GlobalThreatFeedLister interface.
 type globalThreatFeedLister struct {
-	listers.ResourceIndexer[*v3.GlobalThreatFeed]
+	listers.ResourceIndexer[*projectcalicov3.GlobalThreatFeed]
 }
 
 // NewGlobalThreatFeedLister returns a new GlobalThreatFeedLister.
 func NewGlobalThreatFeedLister(indexer cache.Indexer) GlobalThreatFeedLister {
-	return &globalThreatFeedLister{listers.New[*v3.GlobalThreatFeed](indexer, v3.Resource("globalthreatfeed"))}
+	return &globalThreatFeedLister{listers.New[*projectcalicov3.GlobalThreatFeed](indexer, projectcalicov3.Resource("globalthreatfeed"))}
 }

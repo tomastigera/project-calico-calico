@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type SecurityEventWebhooksGetter interface {
 
 // SecurityEventWebhookInterface has methods to work with SecurityEventWebhook resources.
 type SecurityEventWebhookInterface interface {
-	Create(ctx context.Context, securityEventWebhook *v3.SecurityEventWebhook, opts v1.CreateOptions) (*v3.SecurityEventWebhook, error)
-	Update(ctx context.Context, securityEventWebhook *v3.SecurityEventWebhook, opts v1.UpdateOptions) (*v3.SecurityEventWebhook, error)
+	Create(ctx context.Context, securityEventWebhook *projectcalicov3.SecurityEventWebhook, opts v1.CreateOptions) (*projectcalicov3.SecurityEventWebhook, error)
+	Update(ctx context.Context, securityEventWebhook *projectcalicov3.SecurityEventWebhook, opts v1.UpdateOptions) (*projectcalicov3.SecurityEventWebhook, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, securityEventWebhook *v3.SecurityEventWebhook, opts v1.UpdateOptions) (*v3.SecurityEventWebhook, error)
+	UpdateStatus(ctx context.Context, securityEventWebhook *projectcalicov3.SecurityEventWebhook, opts v1.UpdateOptions) (*projectcalicov3.SecurityEventWebhook, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.SecurityEventWebhook, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.SecurityEventWebhookList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.SecurityEventWebhook, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.SecurityEventWebhookList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.SecurityEventWebhook, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.SecurityEventWebhook, err error)
 	SecurityEventWebhookExpansion
 }
 
 // securityEventWebhooks implements SecurityEventWebhookInterface
 type securityEventWebhooks struct {
-	*gentype.ClientWithList[*v3.SecurityEventWebhook, *v3.SecurityEventWebhookList]
+	*gentype.ClientWithList[*projectcalicov3.SecurityEventWebhook, *projectcalicov3.SecurityEventWebhookList]
 }
 
 // newSecurityEventWebhooks returns a SecurityEventWebhooks
 func newSecurityEventWebhooks(c *ProjectcalicoV3Client) *securityEventWebhooks {
 	return &securityEventWebhooks{
-		gentype.NewClientWithList[*v3.SecurityEventWebhook, *v3.SecurityEventWebhookList](
+		gentype.NewClientWithList[*projectcalicov3.SecurityEventWebhook, *projectcalicov3.SecurityEventWebhookList](
 			"securityeventwebhooks",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.SecurityEventWebhook { return &v3.SecurityEventWebhook{} },
-			func() *v3.SecurityEventWebhookList { return &v3.SecurityEventWebhookList{} }),
+			func() *projectcalicov3.SecurityEventWebhook { return &projectcalicov3.SecurityEventWebhook{} },
+			func() *projectcalicov3.SecurityEventWebhookList { return &projectcalicov3.SecurityEventWebhookList{} },
+		),
 	}
 }

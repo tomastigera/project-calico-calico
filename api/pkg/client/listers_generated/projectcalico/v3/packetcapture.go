@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // PacketCaptureLister helps list PacketCaptures.
@@ -16,7 +16,7 @@ import (
 type PacketCaptureLister interface {
 	// List lists all PacketCaptures in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.PacketCapture, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.PacketCapture, err error)
 	// PacketCaptures returns an object that can list and get PacketCaptures.
 	PacketCaptures(namespace string) PacketCaptureNamespaceLister
 	PacketCaptureListerExpansion
@@ -24,17 +24,17 @@ type PacketCaptureLister interface {
 
 // packetCaptureLister implements the PacketCaptureLister interface.
 type packetCaptureLister struct {
-	listers.ResourceIndexer[*v3.PacketCapture]
+	listers.ResourceIndexer[*projectcalicov3.PacketCapture]
 }
 
 // NewPacketCaptureLister returns a new PacketCaptureLister.
 func NewPacketCaptureLister(indexer cache.Indexer) PacketCaptureLister {
-	return &packetCaptureLister{listers.New[*v3.PacketCapture](indexer, v3.Resource("packetcapture"))}
+	return &packetCaptureLister{listers.New[*projectcalicov3.PacketCapture](indexer, projectcalicov3.Resource("packetcapture"))}
 }
 
 // PacketCaptures returns an object that can list and get PacketCaptures.
 func (s *packetCaptureLister) PacketCaptures(namespace string) PacketCaptureNamespaceLister {
-	return packetCaptureNamespaceLister{listers.NewNamespaced[*v3.PacketCapture](s.ResourceIndexer, namespace)}
+	return packetCaptureNamespaceLister{listers.NewNamespaced[*projectcalicov3.PacketCapture](s.ResourceIndexer, namespace)}
 }
 
 // PacketCaptureNamespaceLister helps list and get PacketCaptures.
@@ -42,15 +42,15 @@ func (s *packetCaptureLister) PacketCaptures(namespace string) PacketCaptureName
 type PacketCaptureNamespaceLister interface {
 	// List lists all PacketCaptures in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.PacketCapture, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.PacketCapture, err error)
 	// Get retrieves the PacketCapture from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.PacketCapture, error)
+	Get(name string) (*projectcalicov3.PacketCapture, error)
 	PacketCaptureNamespaceListerExpansion
 }
 
 // packetCaptureNamespaceLister implements the PacketCaptureNamespaceLister
 // interface.
 type packetCaptureNamespaceLister struct {
-	listers.ResourceIndexer[*v3.PacketCapture]
+	listers.ResourceIndexer[*projectcalicov3.PacketCapture]
 }

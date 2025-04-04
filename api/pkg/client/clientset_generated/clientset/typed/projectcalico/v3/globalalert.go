@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type GlobalAlertsGetter interface {
 
 // GlobalAlertInterface has methods to work with GlobalAlert resources.
 type GlobalAlertInterface interface {
-	Create(ctx context.Context, globalAlert *v3.GlobalAlert, opts v1.CreateOptions) (*v3.GlobalAlert, error)
-	Update(ctx context.Context, globalAlert *v3.GlobalAlert, opts v1.UpdateOptions) (*v3.GlobalAlert, error)
+	Create(ctx context.Context, globalAlert *projectcalicov3.GlobalAlert, opts v1.CreateOptions) (*projectcalicov3.GlobalAlert, error)
+	Update(ctx context.Context, globalAlert *projectcalicov3.GlobalAlert, opts v1.UpdateOptions) (*projectcalicov3.GlobalAlert, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, globalAlert *v3.GlobalAlert, opts v1.UpdateOptions) (*v3.GlobalAlert, error)
+	UpdateStatus(ctx context.Context, globalAlert *projectcalicov3.GlobalAlert, opts v1.UpdateOptions) (*projectcalicov3.GlobalAlert, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.GlobalAlert, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalAlertList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.GlobalAlert, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.GlobalAlertList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalAlert, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.GlobalAlert, err error)
 	GlobalAlertExpansion
 }
 
 // globalAlerts implements GlobalAlertInterface
 type globalAlerts struct {
-	*gentype.ClientWithList[*v3.GlobalAlert, *v3.GlobalAlertList]
+	*gentype.ClientWithList[*projectcalicov3.GlobalAlert, *projectcalicov3.GlobalAlertList]
 }
 
 // newGlobalAlerts returns a GlobalAlerts
 func newGlobalAlerts(c *ProjectcalicoV3Client) *globalAlerts {
 	return &globalAlerts{
-		gentype.NewClientWithList[*v3.GlobalAlert, *v3.GlobalAlertList](
+		gentype.NewClientWithList[*projectcalicov3.GlobalAlert, *projectcalicov3.GlobalAlertList](
 			"globalalerts",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.GlobalAlert { return &v3.GlobalAlert{} },
-			func() *v3.GlobalAlertList { return &v3.GlobalAlertList{} }),
+			func() *projectcalicov3.GlobalAlert { return &projectcalicov3.GlobalAlert{} },
+			func() *projectcalicov3.GlobalAlertList { return &projectcalicov3.GlobalAlertList{} },
+		),
 	}
 }

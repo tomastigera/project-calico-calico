@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // LicenseKeyLister helps list LicenseKeys.
@@ -16,19 +16,19 @@ import (
 type LicenseKeyLister interface {
 	// List lists all LicenseKeys in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.LicenseKey, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.LicenseKey, err error)
 	// Get retrieves the LicenseKey from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.LicenseKey, error)
+	Get(name string) (*projectcalicov3.LicenseKey, error)
 	LicenseKeyListerExpansion
 }
 
 // licenseKeyLister implements the LicenseKeyLister interface.
 type licenseKeyLister struct {
-	listers.ResourceIndexer[*v3.LicenseKey]
+	listers.ResourceIndexer[*projectcalicov3.LicenseKey]
 }
 
 // NewLicenseKeyLister returns a new LicenseKeyLister.
 func NewLicenseKeyLister(indexer cache.Indexer) LicenseKeyLister {
-	return &licenseKeyLister{listers.New[*v3.LicenseKey](indexer, v3.Resource("licensekey"))}
+	return &licenseKeyLister{listers.New[*projectcalicov3.LicenseKey](indexer, projectcalicov3.Resource("licensekey"))}
 }

@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // RemoteClusterConfigurationLister helps list RemoteClusterConfigurations.
@@ -16,19 +16,19 @@ import (
 type RemoteClusterConfigurationLister interface {
 	// List lists all RemoteClusterConfigurations in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.RemoteClusterConfiguration, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.RemoteClusterConfiguration, err error)
 	// Get retrieves the RemoteClusterConfiguration from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.RemoteClusterConfiguration, error)
+	Get(name string) (*projectcalicov3.RemoteClusterConfiguration, error)
 	RemoteClusterConfigurationListerExpansion
 }
 
 // remoteClusterConfigurationLister implements the RemoteClusterConfigurationLister interface.
 type remoteClusterConfigurationLister struct {
-	listers.ResourceIndexer[*v3.RemoteClusterConfiguration]
+	listers.ResourceIndexer[*projectcalicov3.RemoteClusterConfiguration]
 }
 
 // NewRemoteClusterConfigurationLister returns a new RemoteClusterConfigurationLister.
 func NewRemoteClusterConfigurationLister(indexer cache.Indexer) RemoteClusterConfigurationLister {
-	return &remoteClusterConfigurationLister{listers.New[*v3.RemoteClusterConfiguration](indexer, v3.Resource("remoteclusterconfiguration"))}
+	return &remoteClusterConfigurationLister{listers.New[*projectcalicov3.RemoteClusterConfiguration](indexer, projectcalicov3.Resource("remoteclusterconfiguration"))}
 }

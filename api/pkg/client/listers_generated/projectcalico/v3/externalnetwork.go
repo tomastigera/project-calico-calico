@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ExternalNetworkLister helps list ExternalNetworks.
@@ -16,19 +16,19 @@ import (
 type ExternalNetworkLister interface {
 	// List lists all ExternalNetworks in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.ExternalNetwork, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.ExternalNetwork, err error)
 	// Get retrieves the ExternalNetwork from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.ExternalNetwork, error)
+	Get(name string) (*projectcalicov3.ExternalNetwork, error)
 	ExternalNetworkListerExpansion
 }
 
 // externalNetworkLister implements the ExternalNetworkLister interface.
 type externalNetworkLister struct {
-	listers.ResourceIndexer[*v3.ExternalNetwork]
+	listers.ResourceIndexer[*projectcalicov3.ExternalNetwork]
 }
 
 // NewExternalNetworkLister returns a new ExternalNetworkLister.
 func NewExternalNetworkLister(indexer cache.Indexer) ExternalNetworkLister {
-	return &externalNetworkLister{listers.New[*v3.ExternalNetwork](indexer, v3.Resource("externalnetwork"))}
+	return &externalNetworkLister{listers.New[*projectcalicov3.ExternalNetwork](indexer, projectcalicov3.Resource("externalnetwork"))}
 }

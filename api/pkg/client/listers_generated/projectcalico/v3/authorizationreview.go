@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // AuthorizationReviewLister helps list AuthorizationReviews.
@@ -16,19 +16,19 @@ import (
 type AuthorizationReviewLister interface {
 	// List lists all AuthorizationReviews in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.AuthorizationReview, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.AuthorizationReview, err error)
 	// Get retrieves the AuthorizationReview from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.AuthorizationReview, error)
+	Get(name string) (*projectcalicov3.AuthorizationReview, error)
 	AuthorizationReviewListerExpansion
 }
 
 // authorizationReviewLister implements the AuthorizationReviewLister interface.
 type authorizationReviewLister struct {
-	listers.ResourceIndexer[*v3.AuthorizationReview]
+	listers.ResourceIndexer[*projectcalicov3.AuthorizationReview]
 }
 
 // NewAuthorizationReviewLister returns a new AuthorizationReviewLister.
 func NewAuthorizationReviewLister(indexer cache.Indexer) AuthorizationReviewLister {
-	return &authorizationReviewLister{listers.New[*v3.AuthorizationReview](indexer, v3.Resource("authorizationreview"))}
+	return &authorizationReviewLister{listers.New[*projectcalicov3.AuthorizationReview](indexer, projectcalicov3.Resource("authorizationreview"))}
 }

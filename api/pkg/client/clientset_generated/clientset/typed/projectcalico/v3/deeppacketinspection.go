@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type DeepPacketInspectionsGetter interface {
 
 // DeepPacketInspectionInterface has methods to work with DeepPacketInspection resources.
 type DeepPacketInspectionInterface interface {
-	Create(ctx context.Context, deepPacketInspection *v3.DeepPacketInspection, opts v1.CreateOptions) (*v3.DeepPacketInspection, error)
-	Update(ctx context.Context, deepPacketInspection *v3.DeepPacketInspection, opts v1.UpdateOptions) (*v3.DeepPacketInspection, error)
+	Create(ctx context.Context, deepPacketInspection *projectcalicov3.DeepPacketInspection, opts v1.CreateOptions) (*projectcalicov3.DeepPacketInspection, error)
+	Update(ctx context.Context, deepPacketInspection *projectcalicov3.DeepPacketInspection, opts v1.UpdateOptions) (*projectcalicov3.DeepPacketInspection, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, deepPacketInspection *v3.DeepPacketInspection, opts v1.UpdateOptions) (*v3.DeepPacketInspection, error)
+	UpdateStatus(ctx context.Context, deepPacketInspection *projectcalicov3.DeepPacketInspection, opts v1.UpdateOptions) (*projectcalicov3.DeepPacketInspection, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.DeepPacketInspection, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.DeepPacketInspectionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.DeepPacketInspection, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.DeepPacketInspectionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.DeepPacketInspection, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.DeepPacketInspection, err error)
 	DeepPacketInspectionExpansion
 }
 
 // deepPacketInspections implements DeepPacketInspectionInterface
 type deepPacketInspections struct {
-	*gentype.ClientWithList[*v3.DeepPacketInspection, *v3.DeepPacketInspectionList]
+	*gentype.ClientWithList[*projectcalicov3.DeepPacketInspection, *projectcalicov3.DeepPacketInspectionList]
 }
 
 // newDeepPacketInspections returns a DeepPacketInspections
 func newDeepPacketInspections(c *ProjectcalicoV3Client, namespace string) *deepPacketInspections {
 	return &deepPacketInspections{
-		gentype.NewClientWithList[*v3.DeepPacketInspection, *v3.DeepPacketInspectionList](
+		gentype.NewClientWithList[*projectcalicov3.DeepPacketInspection, *projectcalicov3.DeepPacketInspectionList](
 			"deeppacketinspections",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v3.DeepPacketInspection { return &v3.DeepPacketInspection{} },
-			func() *v3.DeepPacketInspectionList { return &v3.DeepPacketInspectionList{} }),
+			func() *projectcalicov3.DeepPacketInspection { return &projectcalicov3.DeepPacketInspection{} },
+			func() *projectcalicov3.DeepPacketInspectionList { return &projectcalicov3.DeepPacketInspectionList{} },
+		),
 	}
 }

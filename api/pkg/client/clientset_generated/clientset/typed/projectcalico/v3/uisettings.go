@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type UISettingsGetter interface {
 
 // UISettingsInterface has methods to work with UISettings resources.
 type UISettingsInterface interface {
-	Create(ctx context.Context, uISettings *v3.UISettings, opts v1.CreateOptions) (*v3.UISettings, error)
-	Update(ctx context.Context, uISettings *v3.UISettings, opts v1.UpdateOptions) (*v3.UISettings, error)
+	Create(ctx context.Context, uISettings *projectcalicov3.UISettings, opts v1.CreateOptions) (*projectcalicov3.UISettings, error)
+	Update(ctx context.Context, uISettings *projectcalicov3.UISettings, opts v1.UpdateOptions) (*projectcalicov3.UISettings, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.UISettings, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.UISettingsList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.UISettings, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.UISettingsList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.UISettings, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.UISettings, err error)
 	UISettingsExpansion
 }
 
 // uISettings implements UISettingsInterface
 type uISettings struct {
-	*gentype.ClientWithList[*v3.UISettings, *v3.UISettingsList]
+	*gentype.ClientWithList[*projectcalicov3.UISettings, *projectcalicov3.UISettingsList]
 }
 
 // newUISettings returns a UISettings
 func newUISettings(c *ProjectcalicoV3Client) *uISettings {
 	return &uISettings{
-		gentype.NewClientWithList[*v3.UISettings, *v3.UISettingsList](
+		gentype.NewClientWithList[*projectcalicov3.UISettings, *projectcalicov3.UISettingsList](
 			"uisettings",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.UISettings { return &v3.UISettings{} },
-			func() *v3.UISettingsList { return &v3.UISettingsList{} }),
+			func() *projectcalicov3.UISettings { return &projectcalicov3.UISettings{} },
+			func() *projectcalicov3.UISettingsList { return &projectcalicov3.UISettingsList{} },
+		),
 	}
 }

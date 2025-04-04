@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ManagedClusterLister helps list ManagedClusters.
@@ -16,19 +16,19 @@ import (
 type ManagedClusterLister interface {
 	// List lists all ManagedClusters in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.ManagedCluster, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.ManagedCluster, err error)
 	// Get retrieves the ManagedCluster from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.ManagedCluster, error)
+	Get(name string) (*projectcalicov3.ManagedCluster, error)
 	ManagedClusterListerExpansion
 }
 
 // managedClusterLister implements the ManagedClusterLister interface.
 type managedClusterLister struct {
-	listers.ResourceIndexer[*v3.ManagedCluster]
+	listers.ResourceIndexer[*projectcalicov3.ManagedCluster]
 }
 
 // NewManagedClusterLister returns a new ManagedClusterLister.
 func NewManagedClusterLister(indexer cache.Indexer) ManagedClusterLister {
-	return &managedClusterLister{listers.New[*v3.ManagedCluster](indexer, v3.Resource("managedcluster"))}
+	return &managedClusterLister{listers.New[*projectcalicov3.ManagedCluster](indexer, projectcalicov3.Resource("managedcluster"))}
 }

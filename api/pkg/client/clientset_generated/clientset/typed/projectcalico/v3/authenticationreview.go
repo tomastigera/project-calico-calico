@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type AuthenticationReviewsGetter interface {
 
 // AuthenticationReviewInterface has methods to work with AuthenticationReview resources.
 type AuthenticationReviewInterface interface {
-	Create(ctx context.Context, authenticationReview *v3.AuthenticationReview, opts v1.CreateOptions) (*v3.AuthenticationReview, error)
-	Update(ctx context.Context, authenticationReview *v3.AuthenticationReview, opts v1.UpdateOptions) (*v3.AuthenticationReview, error)
+	Create(ctx context.Context, authenticationReview *projectcalicov3.AuthenticationReview, opts v1.CreateOptions) (*projectcalicov3.AuthenticationReview, error)
+	Update(ctx context.Context, authenticationReview *projectcalicov3.AuthenticationReview, opts v1.UpdateOptions) (*projectcalicov3.AuthenticationReview, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, authenticationReview *v3.AuthenticationReview, opts v1.UpdateOptions) (*v3.AuthenticationReview, error)
+	UpdateStatus(ctx context.Context, authenticationReview *projectcalicov3.AuthenticationReview, opts v1.UpdateOptions) (*projectcalicov3.AuthenticationReview, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.AuthenticationReview, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.AuthenticationReviewList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.AuthenticationReview, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.AuthenticationReviewList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.AuthenticationReview, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.AuthenticationReview, err error)
 	AuthenticationReviewExpansion
 }
 
 // authenticationReviews implements AuthenticationReviewInterface
 type authenticationReviews struct {
-	*gentype.ClientWithList[*v3.AuthenticationReview, *v3.AuthenticationReviewList]
+	*gentype.ClientWithList[*projectcalicov3.AuthenticationReview, *projectcalicov3.AuthenticationReviewList]
 }
 
 // newAuthenticationReviews returns a AuthenticationReviews
 func newAuthenticationReviews(c *ProjectcalicoV3Client) *authenticationReviews {
 	return &authenticationReviews{
-		gentype.NewClientWithList[*v3.AuthenticationReview, *v3.AuthenticationReviewList](
+		gentype.NewClientWithList[*projectcalicov3.AuthenticationReview, *projectcalicov3.AuthenticationReviewList](
 			"authenticationreviews",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.AuthenticationReview { return &v3.AuthenticationReview{} },
-			func() *v3.AuthenticationReviewList { return &v3.AuthenticationReviewList{} }),
+			func() *projectcalicov3.AuthenticationReview { return &projectcalicov3.AuthenticationReview{} },
+			func() *projectcalicov3.AuthenticationReviewList { return &projectcalicov3.AuthenticationReviewList{} },
+		),
 	}
 }

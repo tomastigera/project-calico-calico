@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // PolicyRecommendationScopeLister helps list PolicyRecommendationScopes.
@@ -16,19 +16,19 @@ import (
 type PolicyRecommendationScopeLister interface {
 	// List lists all PolicyRecommendationScopes in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.PolicyRecommendationScope, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.PolicyRecommendationScope, err error)
 	// Get retrieves the PolicyRecommendationScope from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.PolicyRecommendationScope, error)
+	Get(name string) (*projectcalicov3.PolicyRecommendationScope, error)
 	PolicyRecommendationScopeListerExpansion
 }
 
 // policyRecommendationScopeLister implements the PolicyRecommendationScopeLister interface.
 type policyRecommendationScopeLister struct {
-	listers.ResourceIndexer[*v3.PolicyRecommendationScope]
+	listers.ResourceIndexer[*projectcalicov3.PolicyRecommendationScope]
 }
 
 // NewPolicyRecommendationScopeLister returns a new PolicyRecommendationScopeLister.
 func NewPolicyRecommendationScopeLister(indexer cache.Indexer) PolicyRecommendationScopeLister {
-	return &policyRecommendationScopeLister{listers.New[*v3.PolicyRecommendationScope](indexer, v3.Resource("policyrecommendationscope"))}
+	return &policyRecommendationScopeLister{listers.New[*projectcalicov3.PolicyRecommendationScope](indexer, projectcalicov3.Resource("policyrecommendationscope"))}
 }

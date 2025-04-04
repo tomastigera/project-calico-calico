@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,36 @@ type RemoteClusterConfigurationsGetter interface {
 
 // RemoteClusterConfigurationInterface has methods to work with RemoteClusterConfiguration resources.
 type RemoteClusterConfigurationInterface interface {
-	Create(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.CreateOptions) (*v3.RemoteClusterConfiguration, error)
-	Update(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.UpdateOptions) (*v3.RemoteClusterConfiguration, error)
+	Create(ctx context.Context, remoteClusterConfiguration *projectcalicov3.RemoteClusterConfiguration, opts v1.CreateOptions) (*projectcalicov3.RemoteClusterConfiguration, error)
+	Update(ctx context.Context, remoteClusterConfiguration *projectcalicov3.RemoteClusterConfiguration, opts v1.UpdateOptions) (*projectcalicov3.RemoteClusterConfiguration, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.RemoteClusterConfiguration, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.RemoteClusterConfigurationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.RemoteClusterConfiguration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.RemoteClusterConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.RemoteClusterConfiguration, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.RemoteClusterConfiguration, err error)
 	RemoteClusterConfigurationExpansion
 }
 
 // remoteClusterConfigurations implements RemoteClusterConfigurationInterface
 type remoteClusterConfigurations struct {
-	*gentype.ClientWithList[*v3.RemoteClusterConfiguration, *v3.RemoteClusterConfigurationList]
+	*gentype.ClientWithList[*projectcalicov3.RemoteClusterConfiguration, *projectcalicov3.RemoteClusterConfigurationList]
 }
 
 // newRemoteClusterConfigurations returns a RemoteClusterConfigurations
 func newRemoteClusterConfigurations(c *ProjectcalicoV3Client) *remoteClusterConfigurations {
 	return &remoteClusterConfigurations{
-		gentype.NewClientWithList[*v3.RemoteClusterConfiguration, *v3.RemoteClusterConfigurationList](
+		gentype.NewClientWithList[*projectcalicov3.RemoteClusterConfiguration, *projectcalicov3.RemoteClusterConfigurationList](
 			"remoteclusterconfigurations",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.RemoteClusterConfiguration { return &v3.RemoteClusterConfiguration{} },
-			func() *v3.RemoteClusterConfigurationList { return &v3.RemoteClusterConfigurationList{} }),
+			func() *projectcalicov3.RemoteClusterConfiguration {
+				return &projectcalicov3.RemoteClusterConfiguration{}
+			},
+			func() *projectcalicov3.RemoteClusterConfigurationList {
+				return &projectcalicov3.RemoteClusterConfigurationList{}
+			},
+		),
 	}
 }

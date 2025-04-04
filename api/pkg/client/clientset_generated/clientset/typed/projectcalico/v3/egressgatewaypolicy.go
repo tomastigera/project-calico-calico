@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type EgressGatewayPoliciesGetter interface {
 
 // EgressGatewayPolicyInterface has methods to work with EgressGatewayPolicy resources.
 type EgressGatewayPolicyInterface interface {
-	Create(ctx context.Context, egressGatewayPolicy *v3.EgressGatewayPolicy, opts v1.CreateOptions) (*v3.EgressGatewayPolicy, error)
-	Update(ctx context.Context, egressGatewayPolicy *v3.EgressGatewayPolicy, opts v1.UpdateOptions) (*v3.EgressGatewayPolicy, error)
+	Create(ctx context.Context, egressGatewayPolicy *projectcalicov3.EgressGatewayPolicy, opts v1.CreateOptions) (*projectcalicov3.EgressGatewayPolicy, error)
+	Update(ctx context.Context, egressGatewayPolicy *projectcalicov3.EgressGatewayPolicy, opts v1.UpdateOptions) (*projectcalicov3.EgressGatewayPolicy, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.EgressGatewayPolicy, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.EgressGatewayPolicyList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.EgressGatewayPolicy, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.EgressGatewayPolicyList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.EgressGatewayPolicy, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.EgressGatewayPolicy, err error)
 	EgressGatewayPolicyExpansion
 }
 
 // egressGatewayPolicies implements EgressGatewayPolicyInterface
 type egressGatewayPolicies struct {
-	*gentype.ClientWithList[*v3.EgressGatewayPolicy, *v3.EgressGatewayPolicyList]
+	*gentype.ClientWithList[*projectcalicov3.EgressGatewayPolicy, *projectcalicov3.EgressGatewayPolicyList]
 }
 
 // newEgressGatewayPolicies returns a EgressGatewayPolicies
 func newEgressGatewayPolicies(c *ProjectcalicoV3Client) *egressGatewayPolicies {
 	return &egressGatewayPolicies{
-		gentype.NewClientWithList[*v3.EgressGatewayPolicy, *v3.EgressGatewayPolicyList](
+		gentype.NewClientWithList[*projectcalicov3.EgressGatewayPolicy, *projectcalicov3.EgressGatewayPolicyList](
 			"egressgatewaypolicies",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.EgressGatewayPolicy { return &v3.EgressGatewayPolicy{} },
-			func() *v3.EgressGatewayPolicyList { return &v3.EgressGatewayPolicyList{} }),
+			func() *projectcalicov3.EgressGatewayPolicy { return &projectcalicov3.EgressGatewayPolicy{} },
+			func() *projectcalicov3.EgressGatewayPolicyList { return &projectcalicov3.EgressGatewayPolicyList{} },
+		),
 	}
 }

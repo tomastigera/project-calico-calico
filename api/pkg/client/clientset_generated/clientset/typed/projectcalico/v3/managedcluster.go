@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type ManagedClustersGetter interface {
 
 // ManagedClusterInterface has methods to work with ManagedCluster resources.
 type ManagedClusterInterface interface {
-	Create(ctx context.Context, managedCluster *v3.ManagedCluster, opts v1.CreateOptions) (*v3.ManagedCluster, error)
-	Update(ctx context.Context, managedCluster *v3.ManagedCluster, opts v1.UpdateOptions) (*v3.ManagedCluster, error)
+	Create(ctx context.Context, managedCluster *projectcalicov3.ManagedCluster, opts v1.CreateOptions) (*projectcalicov3.ManagedCluster, error)
+	Update(ctx context.Context, managedCluster *projectcalicov3.ManagedCluster, opts v1.UpdateOptions) (*projectcalicov3.ManagedCluster, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, managedCluster *v3.ManagedCluster, opts v1.UpdateOptions) (*v3.ManagedCluster, error)
+	UpdateStatus(ctx context.Context, managedCluster *projectcalicov3.ManagedCluster, opts v1.UpdateOptions) (*projectcalicov3.ManagedCluster, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.ManagedCluster, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.ManagedClusterList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.ManagedCluster, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.ManagedClusterList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.ManagedCluster, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.ManagedCluster, err error)
 	ManagedClusterExpansion
 }
 
 // managedClusters implements ManagedClusterInterface
 type managedClusters struct {
-	*gentype.ClientWithList[*v3.ManagedCluster, *v3.ManagedClusterList]
+	*gentype.ClientWithList[*projectcalicov3.ManagedCluster, *projectcalicov3.ManagedClusterList]
 }
 
 // newManagedClusters returns a ManagedClusters
 func newManagedClusters(c *ProjectcalicoV3Client) *managedClusters {
 	return &managedClusters{
-		gentype.NewClientWithList[*v3.ManagedCluster, *v3.ManagedClusterList](
+		gentype.NewClientWithList[*projectcalicov3.ManagedCluster, *projectcalicov3.ManagedClusterList](
 			"managedclusters",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.ManagedCluster { return &v3.ManagedCluster{} },
-			func() *v3.ManagedClusterList { return &v3.ManagedClusterList{} }),
+			func() *projectcalicov3.ManagedCluster { return &projectcalicov3.ManagedCluster{} },
+			func() *projectcalicov3.ManagedClusterList { return &projectcalicov3.ManagedClusterList{} },
+		),
 	}
 }
