@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type BFDConfigurationsGetter interface {
 
 // BFDConfigurationInterface has methods to work with BFDConfiguration resources.
 type BFDConfigurationInterface interface {
-	Create(ctx context.Context, bFDConfiguration *v3.BFDConfiguration, opts v1.CreateOptions) (*v3.BFDConfiguration, error)
-	Update(ctx context.Context, bFDConfiguration *v3.BFDConfiguration, opts v1.UpdateOptions) (*v3.BFDConfiguration, error)
+	Create(ctx context.Context, bFDConfiguration *projectcalicov3.BFDConfiguration, opts v1.CreateOptions) (*projectcalicov3.BFDConfiguration, error)
+	Update(ctx context.Context, bFDConfiguration *projectcalicov3.BFDConfiguration, opts v1.UpdateOptions) (*projectcalicov3.BFDConfiguration, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.BFDConfiguration, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.BFDConfigurationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.BFDConfiguration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.BFDConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.BFDConfiguration, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.BFDConfiguration, err error)
 	BFDConfigurationExpansion
 }
 
 // bFDConfigurations implements BFDConfigurationInterface
 type bFDConfigurations struct {
-	*gentype.ClientWithList[*v3.BFDConfiguration, *v3.BFDConfigurationList]
+	*gentype.ClientWithList[*projectcalicov3.BFDConfiguration, *projectcalicov3.BFDConfigurationList]
 }
 
 // newBFDConfigurations returns a BFDConfigurations
 func newBFDConfigurations(c *ProjectcalicoV3Client) *bFDConfigurations {
 	return &bFDConfigurations{
-		gentype.NewClientWithList[*v3.BFDConfiguration, *v3.BFDConfigurationList](
+		gentype.NewClientWithList[*projectcalicov3.BFDConfiguration, *projectcalicov3.BFDConfigurationList](
 			"bfdconfigurations",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.BFDConfiguration { return &v3.BFDConfiguration{} },
-			func() *v3.BFDConfigurationList { return &v3.BFDConfigurationList{} }),
+			func() *projectcalicov3.BFDConfiguration { return &projectcalicov3.BFDConfiguration{} },
+			func() *projectcalicov3.BFDConfigurationList { return &projectcalicov3.BFDConfigurationList{} },
+		),
 	}
 }

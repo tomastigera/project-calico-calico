@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // GlobalAlertLister helps list GlobalAlerts.
@@ -16,19 +16,19 @@ import (
 type GlobalAlertLister interface {
 	// List lists all GlobalAlerts in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.GlobalAlert, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.GlobalAlert, err error)
 	// Get retrieves the GlobalAlert from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.GlobalAlert, error)
+	Get(name string) (*projectcalicov3.GlobalAlert, error)
 	GlobalAlertListerExpansion
 }
 
 // globalAlertLister implements the GlobalAlertLister interface.
 type globalAlertLister struct {
-	listers.ResourceIndexer[*v3.GlobalAlert]
+	listers.ResourceIndexer[*projectcalicov3.GlobalAlert]
 }
 
 // NewGlobalAlertLister returns a new GlobalAlertLister.
 func NewGlobalAlertLister(indexer cache.Indexer) GlobalAlertLister {
-	return &globalAlertLister{listers.New[*v3.GlobalAlert](indexer, v3.Resource("globalalert"))}
+	return &globalAlertLister{listers.New[*projectcalicov3.GlobalAlert](indexer, projectcalicov3.Resource("globalalert"))}
 }

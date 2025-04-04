@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type UISettingsGroupsGetter interface {
 
 // UISettingsGroupInterface has methods to work with UISettingsGroup resources.
 type UISettingsGroupInterface interface {
-	Create(ctx context.Context, uISettingsGroup *v3.UISettingsGroup, opts v1.CreateOptions) (*v3.UISettingsGroup, error)
-	Update(ctx context.Context, uISettingsGroup *v3.UISettingsGroup, opts v1.UpdateOptions) (*v3.UISettingsGroup, error)
+	Create(ctx context.Context, uISettingsGroup *projectcalicov3.UISettingsGroup, opts v1.CreateOptions) (*projectcalicov3.UISettingsGroup, error)
+	Update(ctx context.Context, uISettingsGroup *projectcalicov3.UISettingsGroup, opts v1.UpdateOptions) (*projectcalicov3.UISettingsGroup, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.UISettingsGroup, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.UISettingsGroupList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.UISettingsGroup, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.UISettingsGroupList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.UISettingsGroup, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.UISettingsGroup, err error)
 	UISettingsGroupExpansion
 }
 
 // uISettingsGroups implements UISettingsGroupInterface
 type uISettingsGroups struct {
-	*gentype.ClientWithList[*v3.UISettingsGroup, *v3.UISettingsGroupList]
+	*gentype.ClientWithList[*projectcalicov3.UISettingsGroup, *projectcalicov3.UISettingsGroupList]
 }
 
 // newUISettingsGroups returns a UISettingsGroups
 func newUISettingsGroups(c *ProjectcalicoV3Client) *uISettingsGroups {
 	return &uISettingsGroups{
-		gentype.NewClientWithList[*v3.UISettingsGroup, *v3.UISettingsGroupList](
+		gentype.NewClientWithList[*projectcalicov3.UISettingsGroup, *projectcalicov3.UISettingsGroupList](
 			"uisettingsgroups",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.UISettingsGroup { return &v3.UISettingsGroup{} },
-			func() *v3.UISettingsGroupList { return &v3.UISettingsGroupList{} }),
+			func() *projectcalicov3.UISettingsGroup { return &projectcalicov3.UISettingsGroup{} },
+			func() *projectcalicov3.UISettingsGroupList { return &projectcalicov3.UISettingsGroupList{} },
+		),
 	}
 }

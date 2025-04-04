@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // BFDConfigurationLister helps list BFDConfigurations.
@@ -16,19 +16,19 @@ import (
 type BFDConfigurationLister interface {
 	// List lists all BFDConfigurations in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.BFDConfiguration, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.BFDConfiguration, err error)
 	// Get retrieves the BFDConfiguration from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.BFDConfiguration, error)
+	Get(name string) (*projectcalicov3.BFDConfiguration, error)
 	BFDConfigurationListerExpansion
 }
 
 // bFDConfigurationLister implements the BFDConfigurationLister interface.
 type bFDConfigurationLister struct {
-	listers.ResourceIndexer[*v3.BFDConfiguration]
+	listers.ResourceIndexer[*projectcalicov3.BFDConfiguration]
 }
 
 // NewBFDConfigurationLister returns a new BFDConfigurationLister.
 func NewBFDConfigurationLister(indexer cache.Indexer) BFDConfigurationLister {
-	return &bFDConfigurationLister{listers.New[*v3.BFDConfiguration](indexer, v3.Resource("bfdconfiguration"))}
+	return &bFDConfigurationLister{listers.New[*projectcalicov3.BFDConfiguration](indexer, projectcalicov3.Resource("bfdconfiguration"))}
 }

@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // AlertExceptionLister helps list AlertExceptions.
@@ -16,19 +16,19 @@ import (
 type AlertExceptionLister interface {
 	// List lists all AlertExceptions in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.AlertException, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.AlertException, err error)
 	// Get retrieves the AlertException from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.AlertException, error)
+	Get(name string) (*projectcalicov3.AlertException, error)
 	AlertExceptionListerExpansion
 }
 
 // alertExceptionLister implements the AlertExceptionLister interface.
 type alertExceptionLister struct {
-	listers.ResourceIndexer[*v3.AlertException]
+	listers.ResourceIndexer[*projectcalicov3.AlertException]
 }
 
 // NewAlertExceptionLister returns a new AlertExceptionLister.
 func NewAlertExceptionLister(indexer cache.Indexer) AlertExceptionLister {
-	return &alertExceptionLister{listers.New[*v3.AlertException](indexer, v3.Resource("alertexception"))}
+	return &alertExceptionLister{listers.New[*projectcalicov3.AlertException](indexer, projectcalicov3.Resource("alertexception"))}
 }

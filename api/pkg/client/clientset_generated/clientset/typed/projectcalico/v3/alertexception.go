@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type AlertExceptionsGetter interface {
 
 // AlertExceptionInterface has methods to work with AlertException resources.
 type AlertExceptionInterface interface {
-	Create(ctx context.Context, alertException *v3.AlertException, opts v1.CreateOptions) (*v3.AlertException, error)
-	Update(ctx context.Context, alertException *v3.AlertException, opts v1.UpdateOptions) (*v3.AlertException, error)
+	Create(ctx context.Context, alertException *projectcalicov3.AlertException, opts v1.CreateOptions) (*projectcalicov3.AlertException, error)
+	Update(ctx context.Context, alertException *projectcalicov3.AlertException, opts v1.UpdateOptions) (*projectcalicov3.AlertException, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, alertException *v3.AlertException, opts v1.UpdateOptions) (*v3.AlertException, error)
+	UpdateStatus(ctx context.Context, alertException *projectcalicov3.AlertException, opts v1.UpdateOptions) (*projectcalicov3.AlertException, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.AlertException, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.AlertExceptionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.AlertException, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.AlertExceptionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.AlertException, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.AlertException, err error)
 	AlertExceptionExpansion
 }
 
 // alertExceptions implements AlertExceptionInterface
 type alertExceptions struct {
-	*gentype.ClientWithList[*v3.AlertException, *v3.AlertExceptionList]
+	*gentype.ClientWithList[*projectcalicov3.AlertException, *projectcalicov3.AlertExceptionList]
 }
 
 // newAlertExceptions returns a AlertExceptions
 func newAlertExceptions(c *ProjectcalicoV3Client) *alertExceptions {
 	return &alertExceptions{
-		gentype.NewClientWithList[*v3.AlertException, *v3.AlertExceptionList](
+		gentype.NewClientWithList[*projectcalicov3.AlertException, *projectcalicov3.AlertExceptionList](
 			"alertexceptions",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.AlertException { return &v3.AlertException{} },
-			func() *v3.AlertExceptionList { return &v3.AlertExceptionList{} }),
+			func() *projectcalicov3.AlertException { return &projectcalicov3.AlertException{} },
+			func() *projectcalicov3.AlertExceptionList { return &projectcalicov3.AlertExceptionList{} },
+		),
 	}
 }

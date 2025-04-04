@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // EgressGatewayPolicyLister helps list EgressGatewayPolicies.
@@ -16,19 +16,19 @@ import (
 type EgressGatewayPolicyLister interface {
 	// List lists all EgressGatewayPolicies in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.EgressGatewayPolicy, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.EgressGatewayPolicy, err error)
 	// Get retrieves the EgressGatewayPolicy from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.EgressGatewayPolicy, error)
+	Get(name string) (*projectcalicov3.EgressGatewayPolicy, error)
 	EgressGatewayPolicyListerExpansion
 }
 
 // egressGatewayPolicyLister implements the EgressGatewayPolicyLister interface.
 type egressGatewayPolicyLister struct {
-	listers.ResourceIndexer[*v3.EgressGatewayPolicy]
+	listers.ResourceIndexer[*projectcalicov3.EgressGatewayPolicy]
 }
 
 // NewEgressGatewayPolicyLister returns a new EgressGatewayPolicyLister.
 func NewEgressGatewayPolicyLister(indexer cache.Indexer) EgressGatewayPolicyLister {
-	return &egressGatewayPolicyLister{listers.New[*v3.EgressGatewayPolicy](indexer, v3.Resource("egressgatewaypolicy"))}
+	return &egressGatewayPolicyLister{listers.New[*projectcalicov3.EgressGatewayPolicy](indexer, projectcalicov3.Resource("egressgatewaypolicy"))}
 }

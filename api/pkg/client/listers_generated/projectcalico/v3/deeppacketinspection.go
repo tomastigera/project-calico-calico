@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DeepPacketInspectionLister helps list DeepPacketInspections.
@@ -16,7 +16,7 @@ import (
 type DeepPacketInspectionLister interface {
 	// List lists all DeepPacketInspections in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.DeepPacketInspection, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.DeepPacketInspection, err error)
 	// DeepPacketInspections returns an object that can list and get DeepPacketInspections.
 	DeepPacketInspections(namespace string) DeepPacketInspectionNamespaceLister
 	DeepPacketInspectionListerExpansion
@@ -24,17 +24,17 @@ type DeepPacketInspectionLister interface {
 
 // deepPacketInspectionLister implements the DeepPacketInspectionLister interface.
 type deepPacketInspectionLister struct {
-	listers.ResourceIndexer[*v3.DeepPacketInspection]
+	listers.ResourceIndexer[*projectcalicov3.DeepPacketInspection]
 }
 
 // NewDeepPacketInspectionLister returns a new DeepPacketInspectionLister.
 func NewDeepPacketInspectionLister(indexer cache.Indexer) DeepPacketInspectionLister {
-	return &deepPacketInspectionLister{listers.New[*v3.DeepPacketInspection](indexer, v3.Resource("deeppacketinspection"))}
+	return &deepPacketInspectionLister{listers.New[*projectcalicov3.DeepPacketInspection](indexer, projectcalicov3.Resource("deeppacketinspection"))}
 }
 
 // DeepPacketInspections returns an object that can list and get DeepPacketInspections.
 func (s *deepPacketInspectionLister) DeepPacketInspections(namespace string) DeepPacketInspectionNamespaceLister {
-	return deepPacketInspectionNamespaceLister{listers.NewNamespaced[*v3.DeepPacketInspection](s.ResourceIndexer, namespace)}
+	return deepPacketInspectionNamespaceLister{listers.NewNamespaced[*projectcalicov3.DeepPacketInspection](s.ResourceIndexer, namespace)}
 }
 
 // DeepPacketInspectionNamespaceLister helps list and get DeepPacketInspections.
@@ -42,15 +42,15 @@ func (s *deepPacketInspectionLister) DeepPacketInspections(namespace string) Dee
 type DeepPacketInspectionNamespaceLister interface {
 	// List lists all DeepPacketInspections in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.DeepPacketInspection, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.DeepPacketInspection, err error)
 	// Get retrieves the DeepPacketInspection from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.DeepPacketInspection, error)
+	Get(name string) (*projectcalicov3.DeepPacketInspection, error)
 	DeepPacketInspectionNamespaceListerExpansion
 }
 
 // deepPacketInspectionNamespaceLister implements the DeepPacketInspectionNamespaceLister
 // interface.
 type deepPacketInspectionNamespaceLister struct {
-	listers.ResourceIndexer[*v3.DeepPacketInspection]
+	listers.ResourceIndexer[*projectcalicov3.DeepPacketInspection]
 }

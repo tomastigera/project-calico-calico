@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type ExternalNetworksGetter interface {
 
 // ExternalNetworkInterface has methods to work with ExternalNetwork resources.
 type ExternalNetworkInterface interface {
-	Create(ctx context.Context, externalNetwork *v3.ExternalNetwork, opts v1.CreateOptions) (*v3.ExternalNetwork, error)
-	Update(ctx context.Context, externalNetwork *v3.ExternalNetwork, opts v1.UpdateOptions) (*v3.ExternalNetwork, error)
+	Create(ctx context.Context, externalNetwork *projectcalicov3.ExternalNetwork, opts v1.CreateOptions) (*projectcalicov3.ExternalNetwork, error)
+	Update(ctx context.Context, externalNetwork *projectcalicov3.ExternalNetwork, opts v1.UpdateOptions) (*projectcalicov3.ExternalNetwork, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.ExternalNetwork, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.ExternalNetworkList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.ExternalNetwork, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.ExternalNetworkList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.ExternalNetwork, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.ExternalNetwork, err error)
 	ExternalNetworkExpansion
 }
 
 // externalNetworks implements ExternalNetworkInterface
 type externalNetworks struct {
-	*gentype.ClientWithList[*v3.ExternalNetwork, *v3.ExternalNetworkList]
+	*gentype.ClientWithList[*projectcalicov3.ExternalNetwork, *projectcalicov3.ExternalNetworkList]
 }
 
 // newExternalNetworks returns a ExternalNetworks
 func newExternalNetworks(c *ProjectcalicoV3Client) *externalNetworks {
 	return &externalNetworks{
-		gentype.NewClientWithList[*v3.ExternalNetwork, *v3.ExternalNetworkList](
+		gentype.NewClientWithList[*projectcalicov3.ExternalNetwork, *projectcalicov3.ExternalNetworkList](
 			"externalnetworks",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.ExternalNetwork { return &v3.ExternalNetwork{} },
-			func() *v3.ExternalNetworkList { return &v3.ExternalNetworkList{} }),
+			func() *projectcalicov3.ExternalNetwork { return &projectcalicov3.ExternalNetwork{} },
+			func() *projectcalicov3.ExternalNetworkList { return &projectcalicov3.ExternalNetworkList{} },
+		),
 	}
 }

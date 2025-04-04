@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type GlobalAlertTemplatesGetter interface {
 
 // GlobalAlertTemplateInterface has methods to work with GlobalAlertTemplate resources.
 type GlobalAlertTemplateInterface interface {
-	Create(ctx context.Context, globalAlertTemplate *v3.GlobalAlertTemplate, opts v1.CreateOptions) (*v3.GlobalAlertTemplate, error)
-	Update(ctx context.Context, globalAlertTemplate *v3.GlobalAlertTemplate, opts v1.UpdateOptions) (*v3.GlobalAlertTemplate, error)
+	Create(ctx context.Context, globalAlertTemplate *projectcalicov3.GlobalAlertTemplate, opts v1.CreateOptions) (*projectcalicov3.GlobalAlertTemplate, error)
+	Update(ctx context.Context, globalAlertTemplate *projectcalicov3.GlobalAlertTemplate, opts v1.UpdateOptions) (*projectcalicov3.GlobalAlertTemplate, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.GlobalAlertTemplate, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalAlertTemplateList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.GlobalAlertTemplate, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.GlobalAlertTemplateList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalAlertTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.GlobalAlertTemplate, err error)
 	GlobalAlertTemplateExpansion
 }
 
 // globalAlertTemplates implements GlobalAlertTemplateInterface
 type globalAlertTemplates struct {
-	*gentype.ClientWithList[*v3.GlobalAlertTemplate, *v3.GlobalAlertTemplateList]
+	*gentype.ClientWithList[*projectcalicov3.GlobalAlertTemplate, *projectcalicov3.GlobalAlertTemplateList]
 }
 
 // newGlobalAlertTemplates returns a GlobalAlertTemplates
 func newGlobalAlertTemplates(c *ProjectcalicoV3Client) *globalAlertTemplates {
 	return &globalAlertTemplates{
-		gentype.NewClientWithList[*v3.GlobalAlertTemplate, *v3.GlobalAlertTemplateList](
+		gentype.NewClientWithList[*projectcalicov3.GlobalAlertTemplate, *projectcalicov3.GlobalAlertTemplateList](
 			"globalalerttemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.GlobalAlertTemplate { return &v3.GlobalAlertTemplate{} },
-			func() *v3.GlobalAlertTemplateList { return &v3.GlobalAlertTemplateList{} }),
+			func() *projectcalicov3.GlobalAlertTemplate { return &projectcalicov3.GlobalAlertTemplate{} },
+			func() *projectcalicov3.GlobalAlertTemplateList { return &projectcalicov3.GlobalAlertTemplateList{} },
+		),
 	}
 }

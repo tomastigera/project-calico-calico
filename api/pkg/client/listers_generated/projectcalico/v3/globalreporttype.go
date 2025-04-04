@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // GlobalReportTypeLister helps list GlobalReportTypes.
@@ -16,19 +16,19 @@ import (
 type GlobalReportTypeLister interface {
 	// List lists all GlobalReportTypes in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.GlobalReportType, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.GlobalReportType, err error)
 	// Get retrieves the GlobalReportType from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.GlobalReportType, error)
+	Get(name string) (*projectcalicov3.GlobalReportType, error)
 	GlobalReportTypeListerExpansion
 }
 
 // globalReportTypeLister implements the GlobalReportTypeLister interface.
 type globalReportTypeLister struct {
-	listers.ResourceIndexer[*v3.GlobalReportType]
+	listers.ResourceIndexer[*projectcalicov3.GlobalReportType]
 }
 
 // NewGlobalReportTypeLister returns a new GlobalReportTypeLister.
 func NewGlobalReportTypeLister(indexer cache.Indexer) GlobalReportTypeLister {
-	return &globalReportTypeLister{listers.New[*v3.GlobalReportType](indexer, v3.Resource("globalreporttype"))}
+	return &globalReportTypeLister{listers.New[*projectcalicov3.GlobalReportType](indexer, projectcalicov3.Resource("globalreporttype"))}
 }

@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SecurityEventWebhookLister helps list SecurityEventWebhooks.
@@ -16,19 +16,19 @@ import (
 type SecurityEventWebhookLister interface {
 	// List lists all SecurityEventWebhooks in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.SecurityEventWebhook, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.SecurityEventWebhook, err error)
 	// Get retrieves the SecurityEventWebhook from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.SecurityEventWebhook, error)
+	Get(name string) (*projectcalicov3.SecurityEventWebhook, error)
 	SecurityEventWebhookListerExpansion
 }
 
 // securityEventWebhookLister implements the SecurityEventWebhookLister interface.
 type securityEventWebhookLister struct {
-	listers.ResourceIndexer[*v3.SecurityEventWebhook]
+	listers.ResourceIndexer[*projectcalicov3.SecurityEventWebhook]
 }
 
 // NewSecurityEventWebhookLister returns a new SecurityEventWebhookLister.
 func NewSecurityEventWebhookLister(indexer cache.Indexer) SecurityEventWebhookLister {
-	return &securityEventWebhookLister{listers.New[*v3.SecurityEventWebhook](indexer, v3.Resource("securityeventwebhook"))}
+	return &securityEventWebhookLister{listers.New[*projectcalicov3.SecurityEventWebhook](indexer, projectcalicov3.Resource("securityeventwebhook"))}
 }

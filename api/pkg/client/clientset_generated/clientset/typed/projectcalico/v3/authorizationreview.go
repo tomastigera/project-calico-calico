@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,34 @@ type AuthorizationReviewsGetter interface {
 
 // AuthorizationReviewInterface has methods to work with AuthorizationReview resources.
 type AuthorizationReviewInterface interface {
-	Create(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.CreateOptions) (*v3.AuthorizationReview, error)
-	Update(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.UpdateOptions) (*v3.AuthorizationReview, error)
+	Create(ctx context.Context, authorizationReview *projectcalicov3.AuthorizationReview, opts v1.CreateOptions) (*projectcalicov3.AuthorizationReview, error)
+	Update(ctx context.Context, authorizationReview *projectcalicov3.AuthorizationReview, opts v1.UpdateOptions) (*projectcalicov3.AuthorizationReview, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.UpdateOptions) (*v3.AuthorizationReview, error)
+	UpdateStatus(ctx context.Context, authorizationReview *projectcalicov3.AuthorizationReview, opts v1.UpdateOptions) (*projectcalicov3.AuthorizationReview, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.AuthorizationReview, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.AuthorizationReviewList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.AuthorizationReview, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.AuthorizationReviewList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.AuthorizationReview, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.AuthorizationReview, err error)
 	AuthorizationReviewExpansion
 }
 
 // authorizationReviews implements AuthorizationReviewInterface
 type authorizationReviews struct {
-	*gentype.ClientWithList[*v3.AuthorizationReview, *v3.AuthorizationReviewList]
+	*gentype.ClientWithList[*projectcalicov3.AuthorizationReview, *projectcalicov3.AuthorizationReviewList]
 }
 
 // newAuthorizationReviews returns a AuthorizationReviews
 func newAuthorizationReviews(c *ProjectcalicoV3Client) *authorizationReviews {
 	return &authorizationReviews{
-		gentype.NewClientWithList[*v3.AuthorizationReview, *v3.AuthorizationReviewList](
+		gentype.NewClientWithList[*projectcalicov3.AuthorizationReview, *projectcalicov3.AuthorizationReviewList](
 			"authorizationreviews",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.AuthorizationReview { return &v3.AuthorizationReview{} },
-			func() *v3.AuthorizationReviewList { return &v3.AuthorizationReviewList{} }),
+			func() *projectcalicov3.AuthorizationReview { return &projectcalicov3.AuthorizationReview{} },
+			func() *projectcalicov3.AuthorizationReviewList { return &projectcalicov3.AuthorizationReviewList{} },
+		),
 	}
 }

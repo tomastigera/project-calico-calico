@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,33 +23,36 @@ type PolicyRecommendationScopesGetter interface {
 
 // PolicyRecommendationScopeInterface has methods to work with PolicyRecommendationScope resources.
 type PolicyRecommendationScopeInterface interface {
-	Create(ctx context.Context, policyRecommendationScope *v3.PolicyRecommendationScope, opts v1.CreateOptions) (*v3.PolicyRecommendationScope, error)
-	Update(ctx context.Context, policyRecommendationScope *v3.PolicyRecommendationScope, opts v1.UpdateOptions) (*v3.PolicyRecommendationScope, error)
+	Create(ctx context.Context, policyRecommendationScope *projectcalicov3.PolicyRecommendationScope, opts v1.CreateOptions) (*projectcalicov3.PolicyRecommendationScope, error)
+	Update(ctx context.Context, policyRecommendationScope *projectcalicov3.PolicyRecommendationScope, opts v1.UpdateOptions) (*projectcalicov3.PolicyRecommendationScope, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, policyRecommendationScope *v3.PolicyRecommendationScope, opts v1.UpdateOptions) (*v3.PolicyRecommendationScope, error)
+	UpdateStatus(ctx context.Context, policyRecommendationScope *projectcalicov3.PolicyRecommendationScope, opts v1.UpdateOptions) (*projectcalicov3.PolicyRecommendationScope, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.PolicyRecommendationScope, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.PolicyRecommendationScopeList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.PolicyRecommendationScope, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.PolicyRecommendationScopeList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.PolicyRecommendationScope, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.PolicyRecommendationScope, err error)
 	PolicyRecommendationScopeExpansion
 }
 
 // policyRecommendationScopes implements PolicyRecommendationScopeInterface
 type policyRecommendationScopes struct {
-	*gentype.ClientWithList[*v3.PolicyRecommendationScope, *v3.PolicyRecommendationScopeList]
+	*gentype.ClientWithList[*projectcalicov3.PolicyRecommendationScope, *projectcalicov3.PolicyRecommendationScopeList]
 }
 
 // newPolicyRecommendationScopes returns a PolicyRecommendationScopes
 func newPolicyRecommendationScopes(c *ProjectcalicoV3Client) *policyRecommendationScopes {
 	return &policyRecommendationScopes{
-		gentype.NewClientWithList[*v3.PolicyRecommendationScope, *v3.PolicyRecommendationScopeList](
+		gentype.NewClientWithList[*projectcalicov3.PolicyRecommendationScope, *projectcalicov3.PolicyRecommendationScopeList](
 			"policyrecommendationscopes",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.PolicyRecommendationScope { return &v3.PolicyRecommendationScope{} },
-			func() *v3.PolicyRecommendationScopeList { return &v3.PolicyRecommendationScopeList{} }),
+			func() *projectcalicov3.PolicyRecommendationScope { return &projectcalicov3.PolicyRecommendationScope{} },
+			func() *projectcalicov3.PolicyRecommendationScopeList {
+				return &projectcalicov3.PolicyRecommendationScopeList{}
+			},
+		),
 	}
 }

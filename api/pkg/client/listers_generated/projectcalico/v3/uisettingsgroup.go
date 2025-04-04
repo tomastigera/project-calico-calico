@@ -5,10 +5,10 @@
 package v3
 
 import (
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // UISettingsGroupLister helps list UISettingsGroups.
@@ -16,19 +16,19 @@ import (
 type UISettingsGroupLister interface {
 	// List lists all UISettingsGroups in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.UISettingsGroup, err error)
+	List(selector labels.Selector) (ret []*projectcalicov3.UISettingsGroup, err error)
 	// Get retrieves the UISettingsGroup from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.UISettingsGroup, error)
+	Get(name string) (*projectcalicov3.UISettingsGroup, error)
 	UISettingsGroupListerExpansion
 }
 
 // uISettingsGroupLister implements the UISettingsGroupLister interface.
 type uISettingsGroupLister struct {
-	listers.ResourceIndexer[*v3.UISettingsGroup]
+	listers.ResourceIndexer[*projectcalicov3.UISettingsGroup]
 }
 
 // NewUISettingsGroupLister returns a new UISettingsGroupLister.
 func NewUISettingsGroupLister(indexer cache.Indexer) UISettingsGroupLister {
-	return &uISettingsGroupLister{listers.New[*v3.UISettingsGroup](indexer, v3.Resource("uisettingsgroup"))}
+	return &uISettingsGroupLister{listers.New[*projectcalicov3.UISettingsGroup](indexer, projectcalicov3.Resource("uisettingsgroup"))}
 }

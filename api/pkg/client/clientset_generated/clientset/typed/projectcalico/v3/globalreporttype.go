@@ -5,9 +5,9 @@
 package v3
 
 import (
-	"context"
+	context "context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -23,31 +23,32 @@ type GlobalReportTypesGetter interface {
 
 // GlobalReportTypeInterface has methods to work with GlobalReportType resources.
 type GlobalReportTypeInterface interface {
-	Create(ctx context.Context, globalReportType *v3.GlobalReportType, opts v1.CreateOptions) (*v3.GlobalReportType, error)
-	Update(ctx context.Context, globalReportType *v3.GlobalReportType, opts v1.UpdateOptions) (*v3.GlobalReportType, error)
+	Create(ctx context.Context, globalReportType *projectcalicov3.GlobalReportType, opts v1.CreateOptions) (*projectcalicov3.GlobalReportType, error)
+	Update(ctx context.Context, globalReportType *projectcalicov3.GlobalReportType, opts v1.UpdateOptions) (*projectcalicov3.GlobalReportType, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.GlobalReportType, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalReportTypeList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalicov3.GlobalReportType, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalicov3.GlobalReportTypeList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalReportType, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalicov3.GlobalReportType, err error)
 	GlobalReportTypeExpansion
 }
 
 // globalReportTypes implements GlobalReportTypeInterface
 type globalReportTypes struct {
-	*gentype.ClientWithList[*v3.GlobalReportType, *v3.GlobalReportTypeList]
+	*gentype.ClientWithList[*projectcalicov3.GlobalReportType, *projectcalicov3.GlobalReportTypeList]
 }
 
 // newGlobalReportTypes returns a GlobalReportTypes
 func newGlobalReportTypes(c *ProjectcalicoV3Client) *globalReportTypes {
 	return &globalReportTypes{
-		gentype.NewClientWithList[*v3.GlobalReportType, *v3.GlobalReportTypeList](
+		gentype.NewClientWithList[*projectcalicov3.GlobalReportType, *projectcalicov3.GlobalReportTypeList](
 			"globalreporttypes",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v3.GlobalReportType { return &v3.GlobalReportType{} },
-			func() *v3.GlobalReportTypeList { return &v3.GlobalReportTypeList{} }),
+			func() *projectcalicov3.GlobalReportType { return &projectcalicov3.GlobalReportType{} },
+			func() *projectcalicov3.GlobalReportTypeList { return &projectcalicov3.GlobalReportTypeList{} },
+		),
 	}
 }
