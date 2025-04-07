@@ -20,7 +20,7 @@ var allowDnsPolicy string = `
 apiVersion: crd.projectcalico.org/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-dns
+  name: default.allow-dns
   namespace: demo
 spec:
   order: 1
@@ -39,7 +39,7 @@ var allowDomainPolicy string = `
 apiVersion: crd.projectcalico.org/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-domain
+  name: default.allow-domain
   namespace: demo
 spec:
   order: 1
