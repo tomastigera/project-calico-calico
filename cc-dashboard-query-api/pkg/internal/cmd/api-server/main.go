@@ -49,6 +49,8 @@ func main() {
 		return
 	}
 
+	logger.Info("starting", logging.String("config", cfg.String()))
+
 	// Library logger
 	// The calico lma auth library uses logrus std
 	// Note: use logrus.SetFormatter or logrus.SetOutput to ensure logrus output matches the main logger

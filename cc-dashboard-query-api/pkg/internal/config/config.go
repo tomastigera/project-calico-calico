@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/json"
+)
 
 type Config struct {
 	LogLevel   string `default:"INFO" split_words:"true"`
@@ -18,12 +22,12 @@ type Config struct {
 	// CorsOrigins allowed origins for CORS response. Separate multiple origins by a comma (e.g. origin1,origin2,origin3)
 	CorsOrigins string `default:"https://www.calicocloud.io" split_words:"true"`
 
-	// HTTPSCert, HTTPSKey - path to a x509 certificate and its private key for the https server
-	HTTPSCert string `default:"/certs/https/cert" split_words:"true"`
-	HTTPSKey  string `default:"/certs/https/key" split_words:"true"`
+	// HttpsCert, HttpsKey - path to a x509 certificate and its private key for the https server
+	HttpsCert string `default:"/certs/https/cert" split_words:"true"`
+	HttpsKey  string `default:"/certs/https/key" split_words:"true"`
 
-	// HTTPSCACert Used to verify client certificates for mTLS.
-	HTTPSCACert string `default:"" split_words:"true"`
+	// HttpsCACert Used to verify client certificates for mTLS.
+	HttpsCACert string `default:"" split_words:"true"`
 
 	// Linseed configuration
 	LinseedURL        string `default:"https://tigera-linseed.tigera-elasticsearch.svc" split_words:"true"`
@@ -52,5 +56,19 @@ type Config struct {
 	// MaxRequestAggregations limits the number of aggregations on query requests
 	MaxRequestAggregations int `default:"5" split_words:"true"`
 
+	// MetadataAPIEndpoint dashboards metadata tds api endpoint
 	MetadataAPIEndpoint string `default:"https://api2.tesla.tigera.io/orgs/dashboards" split_words:"true"`
+}
+
+func (c Config) String() string {
+	c2 := c
+	if c2.OIDCAuthClientID != "" {
+		c2.OIDCAuthClientID = "<redacted>"
+	}
+
+	data, err := json.Marshal(c2)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
 }

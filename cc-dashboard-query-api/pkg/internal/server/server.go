@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/handler"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
@@ -94,7 +95,7 @@ func Start(
 
 	rootHandler := otel.NewHandlerIfEnabled(cfg.OpenTelemetryEnabled, handlerRegistry.Handler())
 
-	tlsConfig, err := getTLSConfig(cfg.HTTPSCACert)
+	tlsConfig, err := getTLSConfig(cfg.HttpsCACert)
 	if err != nil {
 		return err
 	}
@@ -123,27 +124,23 @@ func Start(
 			TLSConfig: tlsConfig,
 		}
 
-		errCh <- httpServer.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey)
+		errCh <- httpServer.ListenAndServeTLS(cfg.HttpsCert, cfg.HttpsKey)
 	}()
 
 	return <-errCh
 }
 
 func getTLSConfig(caCertFilename string) (*tls.Config, error) {
-	var tlsConfig *tls.Config
+	tlsConfig := calicotls.NewTLSConfig()
 	if caCertFilename != "" {
 		caCert, err := os.ReadFile(caCertFilename)
 		if err != nil {
 			return nil, err
 		}
 
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-
-		tlsConfig = &tls.Config{
-			ClientCAs:  caCertPool,
-			ClientAuth: tls.RequireAndVerifyClientCert,
-		}
+		tlsConfig.ClientCAs = x509.NewCertPool()
+		tlsConfig.ClientCAs.AppendCertsFromPEM(caCert)
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
 	return tlsConfig, nil

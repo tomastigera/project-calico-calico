@@ -11,7 +11,6 @@ import (
 )
 
 func TestServer(t *testing.T) {
-
 	t.Run("mTLS configuration", func(t *testing.T) {
 		certContent := []byte("-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----")
 		expectedCertPool := x509.NewCertPool()
@@ -21,21 +20,22 @@ func TestServer(t *testing.T) {
 		require.NoError(t, os.WriteFile(caCertFilename, certContent, 0o600))
 
 		testCases := []struct {
-			name           string
-			caCertFilename string
-			expected       *tls.Config
+			name               string
+			caCertFilename     string
+			expectedCAs        *x509.CertPool
+			expectedClientAuth tls.ClientAuthType
 		}{
 			{
-				name:     "disabled",
-				expected: nil,
+				name:               "disabled",
+				caCertFilename:     "",
+				expectedCAs:        nil,
+				expectedClientAuth: 0,
 			},
 			{
-				name:           "enabled",
-				caCertFilename: caCertFilename,
-				expected: &tls.Config{
-					ClientCAs:  expectedCertPool,
-					ClientAuth: tls.RequireAndVerifyClientCert,
-				},
+				name:               "enabled",
+				caCertFilename:     caCertFilename,
+				expectedCAs:        expectedCertPool,
+				expectedClientAuth: tls.RequireAndVerifyClientCert,
 			},
 		}
 
@@ -44,7 +44,8 @@ func TestServer(t *testing.T) {
 				tlsConfig, err := getTLSConfig(tc.caCertFilename)
 
 				require.NoError(t, err)
-				require.Equal(t, tc.expected, tlsConfig)
+				require.Equal(t, tc.expectedCAs, tlsConfig.ClientCAs)
+				require.Equal(t, tc.expectedClientAuth, tlsConfig.ClientAuth)
 			})
 		}
 	})
