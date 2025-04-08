@@ -331,20 +331,17 @@
     type: text
   - aggregationFunctionTypes:
     - avg
-    filterDisabled: true
     name: duration_max
     type: number
   - aggregationFunctionTypes:
     - avg
-    filterDisabled: true
     name: duration_mean
     type: number
   - name: host
     type: text
   - name: method
     type: text
-  - filterDisabled: true
-    name: response_code
+  - name: response_code
     type: text
   - name: url
     type: text

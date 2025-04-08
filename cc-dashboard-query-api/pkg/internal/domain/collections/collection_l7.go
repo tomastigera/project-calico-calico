@@ -31,23 +31,21 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_service_port"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_port_name"},
 		collectionFieldGeneric{
-			fieldName:      "duration_max",
-			fieldType:      FieldTypeNumber,
-			filterDisabled: true,
+			fieldName: "duration_max",
+			fieldType: FieldTypeNumber,
 			aggregationFunctionTypes: []AggregationFunctionType{
 				AggregationFunctionTypeAvg,
 			},
 		},
 		collectionFieldGeneric{
-			fieldName:      "duration_mean",
-			fieldType:      FieldTypeNumber,
-			filterDisabled: true,
+			fieldName: "duration_mean",
+			fieldType: FieldTypeNumber,
 			aggregationFunctionTypes: []AggregationFunctionType{
 				AggregationFunctionTypeAvg,
 			}},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "method"},
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "response_code", filterDisabled: true},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "response_code"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "url"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "user_agent"},
 	},
