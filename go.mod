@@ -106,6 +106,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/calico/lib/httpmachinery v0.0.0-00010101000000-000000000000
+	github.com/projectcalico/calico/lib/std v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus-community/elasticsearch_exporter v1.5.0
@@ -438,6 +439,7 @@ require (
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
+	github.com/projectcalico/calico/lib/std => ./lib/std
 
 	github.com/tigera/api => ./api
 
