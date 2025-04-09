@@ -41,6 +41,7 @@ func Start(
 	authService, err := auth.NewAuthService(
 		cfg,
 		logger,
+		cfg.TenantID,
 		authorizer,
 		k8sClient,
 		k8sRestConfig,

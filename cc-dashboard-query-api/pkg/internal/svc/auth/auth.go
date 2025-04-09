@@ -21,8 +21,8 @@ import (
 )
 
 type AuthService struct {
-	jwtAuth          lmaauth.JWTAuth
 	logger           logging.Logger
+	jwtAuth          lmaauth.JWTAuth
 	authorizer       security.Authorizer
 	k8sManagerConfig *rest.Config
 }
@@ -30,21 +30,31 @@ type AuthService struct {
 func NewAuthService(
 	cfg *config.Config,
 	logger logging.Logger,
+	tenantID string,
 	authorizer security.Authorizer,
 	k8sClient kubernetes.Interface,
 	k8sRestConfig *rest.Config,
+	dexOptions ...lmaauth.DexOption,
 ) (*AuthService, error) {
 	var opts []lmaauth.JWTAuthOption
 
 	if cfg.OIDCAuthIssuer != "" {
+		dexOptions = append(dexOptions,
+			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
+			lmaauth.WithCalicoCloudTenantClaim(tenantID),
+		)
+
+		if cfg.OIDCAuthJWKSURL != "" {
+			dexOptions = append(dexOptions, lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL))
+		}
+
 		dexAuth, err := lmaauth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
-			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
-			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
-			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
-			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
+			dexOptions...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to add an issuer to the authenticator: %v", err)
