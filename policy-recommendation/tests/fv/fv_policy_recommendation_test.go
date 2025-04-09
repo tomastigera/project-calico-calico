@@ -97,7 +97,7 @@ func TestPolicyRecommendationEnable(t *testing.T) {
 	// Start policy recommendation
 	minPollInterval := metav1.Duration{Duration: 500 * time.Millisecond}
 	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster,
-		mockClientSet, mockLinseedClient, minPollInterval)
+		mockClientSet, mockLinseedClient, minPollInterval, rscontroller.WatcherConfig{WatchScope: true})
 	Expect(err).NotTo(HaveOccurred())
 
 	stopChan := make(chan struct{})
@@ -211,7 +211,7 @@ func TestPolicyRecommendationSelector(t *testing.T) {
 	// Start policy recommendation
 	minPollInterval := metav1.Duration{Duration: 500 * time.Millisecond}
 	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster,
-		mockClientSet, mockLinseedClient, minPollInterval)
+		mockClientSet, mockLinseedClient, minPollInterval, rscontroller.WatcherConfig{WatchScope: true})
 	Expect(err).NotTo(HaveOccurred())
 
 	stopChan := make(chan struct{})
@@ -313,7 +313,7 @@ func TestPolicyRecommendationStabilization(t *testing.T) {
 	// Start policy recommendation
 	minPollInterval := metav1.Duration{Duration: 500 * time.Millisecond}
 	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster,
-		mockClientSet, mockLinseedClient, minPollInterval)
+		mockClientSet, mockLinseedClient, minPollInterval, rscontroller.WatcherConfig{WatchScope: true})
 	Expect(err).NotTo(HaveOccurred())
 
 	stopChan := make(chan struct{})

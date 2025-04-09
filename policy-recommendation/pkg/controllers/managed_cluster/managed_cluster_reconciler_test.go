@@ -20,6 +20,7 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
+	rscope "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/recommendation_scope"
 )
 
 var _ = Describe("ManagedClusterReconciler", func() {
@@ -157,6 +158,7 @@ func newMockRecommendationScopeControllers(
 	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
 	minPollInterval metav1.Duration,
+	watcherCfg rscope.WatcherConfig,
 ) (controller.Controller, error) {
 	return &mockRecommendationScopeController{}, nil
 }

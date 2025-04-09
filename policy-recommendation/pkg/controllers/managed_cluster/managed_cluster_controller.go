@@ -31,6 +31,9 @@ type managedClusterController struct {
 	// watcher is the watcher that is used to watch for updates to the managed cluster resource.
 	watcher watcher.Watcher
 
+	// recScopeWatcherCfg is the watcher configuration for the recommendation scope controller.
+	recScopeWatcherCfg rscope.WatcherConfig
+
 	// mutex protects the controller.
 	mutex sync.Mutex
 }
@@ -51,17 +54,19 @@ func NewManagedClusterController(
 	linseed lsclient.Client,
 	tenantNamespace string,
 	minPollInterval metav1.Duration,
+	recScopeWatcherCfg rscope.WatcherConfig,
 ) (controller.Controller, error) {
 	// The mapping of managed cluster names to PolicyRecommendationScope controllers.
 	managedClusters := make(map[string]*managedClusterCtrlContext)
 
 	return &managedClusterController{
-		ctx:             ctx,
-		managedClusters: managedClusters,
+		ctx:                ctx,
+		managedClusters:    managedClusters,
+		recScopeWatcherCfg: recScopeWatcherCfg,
 		watcher: watcher.NewWatcher(
 			newManagedClusterReconciler(
 				ctx, client, clientFactory, linseed, managedClusters,
-				rscope.NewRecommendationScopeController, tenantNamespace, minPollInterval),
+				rscope.NewRecommendationScopeController, tenantNamespace, minPollInterval, recScopeWatcherCfg),
 			newManagedClusterListWatcher(ctx, client, tenantNamespace),
 			&v3.ManagedCluster{},
 		),

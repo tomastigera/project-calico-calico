@@ -27,7 +27,7 @@ type namespaceReconciler struct {
 	clientSet lmak8s.ClientSet
 
 	// engine is the recommendation engine.
-	engine *recengine.RecommendationEngine
+	engine recengine.RecommendationEngine
 
 	// clog is the logger for the controller.
 	clog *log.Entry
@@ -37,7 +37,7 @@ type namespaceReconciler struct {
 }
 
 func newNamespaceReconciler(
-	ctx context.Context, clientSet lmak8s.ClientSet, cache rcache.ResourceCache, engine *recengine.RecommendationEngine, clog *log.Entry,
+	ctx context.Context, clientSet lmak8s.ClientSet, cache rcache.ResourceCache, engine recengine.RecommendationEngine, clog *log.Entry,
 ) controller.Reconciler {
 	return &namespaceReconciler{
 		ctx:       ctx,

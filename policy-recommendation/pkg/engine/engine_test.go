@@ -1,3 +1,5 @@
+// Copyright (c) 2024-2025 Tigera Inc. All rights reserved.
+
 package engine
 
 import (
@@ -38,7 +40,7 @@ var _ = Describe("RecommendationEngine", func() {
 			`!(projectcalico.org/name starts with 'kube-') && ` +
 			`!(projectcalico.org/name starts with 'openshift-')`
 
-			// kindRecommendations is the kind of the recommendations resource.
+		// kindRecommendations is the kind of the recommendations resource.
 		kindRecommendations = "recommendations"
 
 		retryInterval = 100 * time.Millisecond
@@ -47,7 +49,7 @@ var _ = Describe("RecommendationEngine", func() {
 
 	var (
 		stopChan chan struct{}
-		engine   *RecommendationEngine
+		engine   *recommendationEngine
 		logEntry *log.Entry
 	)
 
@@ -143,7 +145,7 @@ var _ = Describe("RecommendationEngine", func() {
 		cache.Set("tigera-namespace", v3.StagedNetworkPolicy{})
 		cache.Set("openshift-namespace", v3.StagedNetworkPolicy{})
 
-		engine = &RecommendationEngine{
+		engine = &recommendationEngine{
 			namespaces:         set.FromArray[string]([]string{"test-namespace", "tigera-namespace", "openshift-namespace"}),
 			filteredNamespaces: set.FromArray[string]([]string{}),
 			cache:              cache,
@@ -156,7 +158,7 @@ var _ = Describe("RecommendationEngine", func() {
 				uid:                       "rrf2w-2343f-2342f-00000",
 				clog:                      logEntry,
 			},
-			UpdateChannel: make(chan v3.PolicyRecommendationScope),
+			updateChannel: make(chan v3.PolicyRecommendationScope),
 			clock:         mockClock,
 			query:         query,
 			clog:          logEntry,
@@ -171,7 +173,7 @@ var _ = Describe("RecommendationEngine", func() {
 		It("should run the engine", func() {
 			go engine.Run(stopChan)
 
-			// Simulate an update to the UpdateChannel
+			// Simulate an update to the updateChannel
 			update := v3.PolicyRecommendationScope{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "rrf2w-2343f-2342f-11111",
@@ -190,7 +192,7 @@ var _ = Describe("RecommendationEngine", func() {
 					},
 				},
 			}
-			engine.UpdateChannel <- update
+			engine.updateChannel <- update
 
 			newParsedSelector, err := libcselector.Parse(newSelector)
 			Expect(err).NotTo(HaveOccurred())
@@ -328,13 +330,13 @@ var _ = Describe("RecommendationEngine", func() {
 
 	Context("removeRulesReferencingDeletedNamespace", func() {
 		var (
-			engine    *RecommendationEngine
+			engine    *recommendationEngine
 			snp       *v3.StagedNetworkPolicy
 			namespace string
 		)
 
 		BeforeEach(func() {
-			engine = &RecommendationEngine{
+			engine = &recommendationEngine{
 				clog: log.WithField("test", "test"),
 			}
 			snp = &v3.StagedNetworkPolicy{
