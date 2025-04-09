@@ -61,7 +61,6 @@ image: $(BUILD_IMAGES)
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
 $(ENVOY_GATEWAY_IMAGE_CREATED): register Dockerfile build
 	$(DOCKER_BUILD) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(VERSION)
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -71,3 +70,17 @@ $(ENVOY_GATEWAY_IMAGE_CREATED): register Dockerfile build
 ci: image
 
 cd: image-all cd-common
+
+.PHONY: release-build
+release-build: .release-$(VERSION).created
+.release-$(VERSION).created:
+	$(MAKE) clean image-all RELEASE=true
+	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
+	# Generate the `latest` images.
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
+	touch $@
+
+release-publish: release-prereqs .release-$(VERSION).published
+.release-$(VERSION).published:
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+	touch $@
