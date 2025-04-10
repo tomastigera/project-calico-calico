@@ -34,11 +34,9 @@ defaultOperatorRegistry=$($YQ .tigeraOperator.registry <../charts/tigera-operato
 OPERATOR_REGISTRY=${REGISTRY_OPERATOR:-$defaultOperatorRegistry}
 
 # Images used in manifests that are not rendered by Helm.
-NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar calico/mock-node calico/dikastes"
-NON_HELM_MANIFEST_IMAGES_ENT="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
+NON_HELM_MANIFEST_IMAGES="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
 tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
 tigera/calico-windows tigera/calicoctl"
-NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
 
 # Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
 # Defaults to nil, which results in CALICO_VERSION being set as the version for all non-helm manifest images.
