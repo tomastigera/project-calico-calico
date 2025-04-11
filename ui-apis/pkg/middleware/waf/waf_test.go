@@ -126,6 +126,25 @@ var _ = Describe("WAF middleware tests", func() {
 			}
 		})
 
+		It("Test no empty rule ID", func() {
+			rs := rulesets{
+				client: mockClientSet,
+			}
+			ctx := context.Background()
+			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
+			Expect(err).To(BeNil())
+
+			Expect(ruleset.ID).To(Equal("coreruleset-default"))
+			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
+			Expect(ruleset.Files).NotTo(BeEmpty())
+
+			for _, file := range ruleset.Files {
+				for _, rule := range file.Rules {
+					Expect(rule.ID).NotTo(BeEmpty(), fmt.Sprintf(`Rule "%s" from %s has an empty ID`, rule.Name, file.Name))
+				}
+			}
+		})
+
 		It("Test Get WAF rule", func() {
 			var expected = &v1.Rule{
 				ID:   "921180",

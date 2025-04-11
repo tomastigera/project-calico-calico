@@ -138,7 +138,7 @@ func (rs rulesets) GetRule(ctx context.Context, rulesetID string, ruleID string)
 func convertToRules(parsedRules []parser.Rule) []v1.Rule {
 	rules := []v1.Rule{}
 	for _, r := range parsedRules {
-		if r.Message != "" {
+		if r.Message != "" && r.Id != "" {
 			rule := v1.Rule{
 				ID:   r.Id,
 				Name: r.Message,
