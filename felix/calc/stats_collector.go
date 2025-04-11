@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -137,23 +137,29 @@ func (s *StatsCollector) OnUpdate(update api.Update) (filterOut bool) {
 	}
 	if update.UpdateType == api.UpdateTypeKVNew {
 		s.keyCountByHost[hostname] += 1
-		log.WithFields(log.Fields{
-			"key":      update.Key,
-			"host":     hostname,
-			"newCount": s.keyCountByHost[hostname],
-		}).Debug("Host-specific key added")
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithFields(log.Fields{
+				"key":      update.Key,
+				"host":     hostname,
+				"newCount": s.keyCountByHost[hostname],
+			}).Debug("Host-specific key added")
+		}
 		if counter != nil {
 			*counter += 1
 		}
 	} else if update.UpdateType == api.UpdateTypeKVDeleted {
 		s.keyCountByHost[hostname] -= 1
-		log.WithFields(log.Fields{
-			"key":      update.Key,
-			"host":     hostname,
-			"newCount": s.keyCountByHost[hostname],
-		}).Debug("Host-specific key deleted")
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithFields(log.Fields{
+				"key":      update.Key,
+				"host":     hostname,
+				"newCount": s.keyCountByHost[hostname],
+			}).Debug("Host-specific key deleted")
+		}
 		if s.keyCountByHost[hostname] <= 0 {
-			log.WithField("host", hostname).Debug("Host no longer has any keys")
+			if log.IsLevelEnabled(log.DebugLevel) {
+				log.WithField("host", hostname).Debug("Host no longer has any keys")
+			}
 			delete(s.keyCountByHost, hostname)
 		}
 		if counter != nil {
@@ -168,14 +174,15 @@ func (s *StatsCollector) UpdatePolicyCounts(numTiers, numPolicies, numProfiles, 
 	if numTiers == s.numTiers && numPolicies == s.numPolicies && numProfiles == s.numProfiles && numALPPolicies == s.numALPPolicies && numALPEndpoints == s.numALPEndpoints {
 		return
 	}
-
-	log.WithFields(log.Fields{
-		"numTiers":        numTiers,
-		"numPolicies":     numPolicies,
-		"numProfiles":     numProfiles,
-		"numALPPolicies":  numALPPolicies,
-		"numALPEndpoints": numALPEndpoints,
-	}).Debug("Number of tiers/policies/profiles changed")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"numTiers":        numTiers,
+			"numPolicies":     numPolicies,
+			"numProfiles":     numProfiles,
+			"numALPPolicies":  numALPPolicies,
+			"numALPEndpoints": numALPEndpoints,
+		}).Debug("Number of tiers/policies/profiles changed")
+	}
 	s.numTiers = numTiers
 	s.numPolicies = numPolicies
 	s.numProfiles = numProfiles
@@ -185,7 +192,9 @@ func (s *StatsCollector) UpdatePolicyCounts(numTiers, numPolicies, numProfiles, 
 }
 
 func (s *StatsCollector) sendUpdate() {
-	log.Debug("Checking whether we should send an update")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.Debug("Checking whether we should send an update")
+	}
 	update := StatsUpdate{
 		NumHosts:             len(s.keyCountByHost),
 		NumHostEndpoints:     s.numHostEndpoints,

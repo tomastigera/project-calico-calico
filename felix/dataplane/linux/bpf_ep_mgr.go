@@ -3336,6 +3336,9 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.Host
 }
 
 func (m *bpfEndpointManager) addHEPToIndexes(ifaceName string, ep *proto.HostEndpoint) {
+	if ep == nil {
+		return
+	}
 	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
 		for _, t := range tiers {
 			m.addPolicyToEPMappings(t.Name, t.IngressPolicies, ifaceName)
@@ -3346,7 +3349,10 @@ func (m *bpfEndpointManager) addHEPToIndexes(ifaceName string, ep *proto.HostEnd
 }
 
 func (m *bpfEndpointManager) removeHEPFromIndexes(ifaceName string, ep *proto.HostEndpoint) {
-	for _, tiers := range [][]*proto.TierInfo{ep.GetTiers(), ep.GetUntrackedTiers(), ep.GetPreDnatTiers(), ep.GetForwardTiers()} {
+	if ep == nil {
+		return
+	}
+	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
 		for _, t := range tiers {
 			m.removePolicyToEPMappings(t.Name, t.IngressPolicies, ifaceName)
 			m.removePolicyToEPMappings(t.Name, t.EgressPolicies, ifaceName)
