@@ -775,7 +775,7 @@ func (config *Config) ToConfigUpdate() *proto.ConfigUpdate {
 }
 
 func (config *Config) UpdateFromConfigUpdate(configUpdate *proto.ConfigUpdate) (changedFields set.Set[string], err error) {
-	log.Debug("Updating configuration from calculation graph message.")
+	log.WithField("msg", configUpdate).Debug("Updating configuration from calculation graph message.")
 	config.sourceToRawConfig = map[Source]map[string]string{}
 	for sourceInt, c := range configUpdate.GetSourceToRawConfig() {
 		source := Source(sourceInt)
