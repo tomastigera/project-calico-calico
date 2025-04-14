@@ -15,7 +15,6 @@
 package policystore
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -71,7 +70,7 @@ func NewIPSet(t syncapi.IPSetUpdate_IPSetType) IPSet {
 	case syncapi.IPSetUpdate_DOMAIN:
 		return ipOfDomainMapSet{}
 	}
-	log.Warn(fmt.Sprintf("Unrecognized IPSet type %T", t))
+	log.Warnf("Unrecognized IPSet type %v", t)
 	return nil
 }
 
