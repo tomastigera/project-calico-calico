@@ -1,4 +1,4 @@
-package waf
+package ruleset
 
 import (
 	"context"
@@ -23,8 +23,8 @@ type Rulesets interface {
 	GetRule(context.Context, string, string) (*v1.Rule, error)
 }
 
-type rulesets struct {
-	client lmak8s.ClientSet
+type Ruleset struct {
+	Client lmak8s.ClientSet
 }
 
 type rulesetInfo struct {
@@ -43,7 +43,7 @@ var (
 	}
 )
 
-func (rs rulesets) GetRulesets(ctx context.Context) ([]*v1.WAFRuleset, error) {
+func (rs Ruleset) GetRulesets(ctx context.Context) ([]*v1.WAFRuleset, error) {
 
 	var rulesets []*v1.WAFRuleset
 
@@ -58,13 +58,13 @@ func (rs rulesets) GetRulesets(ctx context.Context) ([]*v1.WAFRuleset, error) {
 	return rulesets, nil
 }
 
-func (rs rulesets) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, error) {
+func (rs Ruleset) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, error) {
 	rsInfo := builtinRulesets[id]
 	if len(rsInfo.name) == 0 {
 		return nil, fmt.Errorf("WAF ruleset %s not found", id)
 	}
 
-	config, err := rs.client.CoreV1().ConfigMaps(rsInfo.namespace).Get(ctx, rsInfo.name, metav1.GetOptions{})
+	config, err := rs.Client.CoreV1().ConfigMaps(rsInfo.namespace).Get(ctx, rsInfo.name, metav1.GetOptions{})
 	if err != nil {
 		return &v1.WAFRuleset{}, err
 	}
@@ -104,14 +104,14 @@ func (rs rulesets) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, e
 	return &wrs, nil
 }
 
-func (rs rulesets) GetRule(ctx context.Context, rulesetID string, ruleID string) (*v1.Rule, error) {
+func (rs Ruleset) GetRule(ctx context.Context, rulesetID string, ruleID string) (*v1.Rule, error) {
 
 	rsInfo := builtinRulesets[rulesetID]
 	if len(rsInfo.name) == 0 {
 		return nil, fmt.Errorf("WAF ruleset %s not found", rulesetID)
 	}
 
-	rulesMap, err := rs.client.CoreV1().ConfigMaps(rsInfo.namespace).Get(ctx, rsInfo.name, metav1.GetOptions{})
+	rulesMap, err := rs.Client.CoreV1().ConfigMaps(rsInfo.namespace).Get(ctx, rsInfo.name, metav1.GetOptions{})
 	if err != nil {
 		return &v1.Rule{}, err
 	}

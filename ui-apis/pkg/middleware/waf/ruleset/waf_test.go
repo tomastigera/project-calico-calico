@@ -1,4 +1,4 @@
-package waf
+package ruleset
 
 import (
 	"context"
@@ -49,8 +49,8 @@ var _ = Describe("WAF middleware tests", func() {
 
 	Context("WAF API", func() {
 		It("Test Get WAF Rulesets", func() {
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			result, err := rs.GetRulesets(ctx)
@@ -65,8 +65,8 @@ var _ = Describe("WAF middleware tests", func() {
 		})
 
 		It("Test Get WAF Ruleset", func() {
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
@@ -84,8 +84,8 @@ var _ = Describe("WAF middleware tests", func() {
 		})
 
 		It("Test Filtering WAF Ruleset", func() {
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
@@ -110,8 +110,8 @@ var _ = Describe("WAF middleware tests", func() {
 		})
 
 		It("Test Ordering WAF Ruleset", func() {
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
@@ -127,8 +127,8 @@ var _ = Describe("WAF middleware tests", func() {
 		})
 
 		It("Test no empty rule ID", func() {
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
@@ -167,8 +167,8 @@ var _ = Describe("WAF middleware tests", func() {
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
     setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"`,
 			}
-			rs := rulesets{
-				client: mockClientSet,
+			rs := Ruleset{
+				Client: mockClientSet,
 			}
 			ctx := context.Background()
 			result, err := rs.GetRule(ctx, defaultRuleset, "921180")

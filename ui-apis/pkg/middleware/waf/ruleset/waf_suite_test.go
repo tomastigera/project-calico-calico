@@ -1,5 +1,5 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
-package waf
+package ruleset
 
 import (
 	"testing"
