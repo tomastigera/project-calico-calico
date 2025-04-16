@@ -121,16 +121,9 @@ scale-test: image
 ###############################################################################
 # Release
 ###############################################################################
-release-verify-version: var-require-all-VERSION
-ifdef CONFIRM
-	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
-	$(if $(CURRENT_RELEASE_VERSION),,echo Current commit has not been tagged with a release version && exit 1)
-	$(if $(filter $(VERSION),$(git-release-tag-for-current-commit)),,\
-		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
-endif
 
 ## Builds and pushed binaries to the public s3 bucket.
-release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build
+release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION build-all
 ifdef CONFIRM
 	aws --profile helm s3 cp bin/calicoq-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoq --acl public-read
 else
