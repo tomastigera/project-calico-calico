@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
+	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/branch"
 )
 
@@ -258,6 +259,13 @@ func (o *OperatorManager) Publish() error {
 func (o *OperatorManager) PrePublishValidation() error {
 	if !o.isHashRelease {
 		return fmt.Errorf("operator manager publishes only for hash releases")
+	}
+
+	gitVersion := version.GitVersion()
+	if !version.HasDevTag(gitVersion, o.devTagIdentifier) {
+		err := fmt.Errorf("git version %s does not contain dev tag suffix %s", gitVersion, o.devTagIdentifier)
+		logrus.Error(err)
+		return err
 	}
 	if len(o.architectures) == 0 {
 		return fmt.Errorf("no architectures specified")

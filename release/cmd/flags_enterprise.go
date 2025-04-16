@@ -6,31 +6,45 @@ import (
 	cli "github.com/urfave/cli/v2"
 
 	"github.com/projectcalico/calico/release/internal/registry"
-	"github.com/projectcalico/calico/release/internal/utils"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
 var (
-	managerFlags = []cli.Flag{managerOrgFlag, managerRepoFlag, managerBranchFlag}
+	managerFlags = []cli.Flag{managerRemoteFlag, managerOrgFlag, managerRepoFlag, managerBranchFlag, managerDevTagSuffixFlag}
 
 	managerOrgFlag = &cli.StringFlag{
 		Name:    "manager-org",
 		Usage:   "The GitHub organization of the manager repository",
 		EnvVars: []string{"MANAGER_ORG"},
-		Value:   utils.TigeraOrg,
+		Value:   manager.DefaultOrg,
 	}
 
 	managerRepoFlag = &cli.StringFlag{
 		Name:    "manager-repo",
 		Usage:   "The GitHub repository of the manager",
 		EnvVars: []string{"MANAGER_REPO"},
-		Value:   utils.TigeraManager,
+		Value:   manager.DefaultRepoName,
 	}
 
 	managerBranchFlag = &cli.StringFlag{
 		Name:    "manager-branch",
 		Usage:   "The branch of the manager repository",
 		EnvVars: []string{"MANAGER_BRANCH"},
-		Value:   utils.DefaultBranch,
+		Value:   manager.DefaultBranchName,
+	}
+
+	managerRemoteFlag = &cli.StringFlag{
+		Name:    "manager-remote",
+		Usage:   "The remote of the manager repository",
+		EnvVars: []string{"MANAGER_REMOTE"},
+		Value:   manager.DefaultRemote,
+	}
+
+	managerDevTagSuffixFlag = &cli.StringFlag{
+		Name:    "manager-dev-tag-suffix",
+		Usage:   "The suffix used to denote development tags",
+		EnvVars: []string{"MANAGER_DEV_TAG_SUFFIX"},
+		Value:   manager.DefaultDevTagSuffix,
 	}
 )
 
@@ -68,6 +82,13 @@ var (
 		Name:    "publish-to-s3",
 		Usage:   "Publish the release to S3",
 		EnvVars: []string{"PUBLISH_TO_S3"},
+		Value:   true,
+	}
+
+	publishGitFlag = &cli.BoolFlag{
+		Name:    "publish-git",
+		Usage:   "Publish release git changes to GitHub i.e create a next dev tag",
+		EnvVars: []string{"PUBLISH_GIT"},
 		Value:   true,
 	}
 )
