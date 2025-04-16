@@ -58,6 +58,7 @@ ci-preflight-checks:
 	# $(MAKE) check-release-cut-promotions
 	# $(MAKE) generate
 	# $(MAKE) fix-all
+	# $(MAKE) check-ocp-no-crds
 	# $(MAKE) yaml-lint
 	# $(MAKE) check-dirty
 
@@ -99,6 +100,11 @@ check-release-cut-promotions:
 
 check-language:
 	./hack/check-language.sh
+
+CRD_FILES_IN_OCP_DIR=$(shell grep "^kind: CustomResourceDefinition" manifests/ocp/* -l)
+check-ocp-no-crds:
+	@echo "Checking for files in manifests/ocp with CustomResourceDefinitions"
+	@if [ ! -z "$(CRD_FILES_IN_OCP_DIR)" ]; then echo "ERROR: manifests/ocp should not have any CustomResourceDefinitions, these files should be removed:"; echo "$(CRD_FILES_IN_OCP_DIR)"; exit 1; fi
 
 yaml-lint:
 	@docker run --rm $$(tty -s && echo "-it" || echo) -v $(PWD):/data cytopia/yamllint:latest .
