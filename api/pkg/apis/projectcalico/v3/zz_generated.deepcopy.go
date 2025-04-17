@@ -3188,6 +3188,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.FlowLogsLocalReporter != nil {
+		in, out := &in.FlowLogsLocalReporter, &out.FlowLogsLocalReporter
+		*out = new(string)
+		**out = **in
+	}
 	if in.FlowLogsDestDomainsByClient != nil {
 		in, out := &in.FlowLogsDestDomainsByClient, &out.FlowLogsDestDomainsByClient
 		*out = new(bool)

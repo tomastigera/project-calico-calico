@@ -6483,6 +6483,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"flowLogsLocalReporter": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsLocalReporter configures local unix socket for reporting flow data from each node. [Default: Disabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"flowLogsDestDomainsByClient": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FlowLogsDestDomainsByClient is used to configure if the source IP is used in the mapping of top level destination domains. [Default: true]",

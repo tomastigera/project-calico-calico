@@ -939,6 +939,10 @@ type FelixConfigurationSpec struct {
 	// FlowLogGoldmaneServer is the flow server endpoint to which flow data should be published.
 	FlowLogsGoldmaneServer *string `json:"flowLogsGoldmaneServer,omitempty"`
 
+	// FlowLogsLocalReporter configures local unix socket for reporting flow data from each node. [Default: Disabled]
+	// +kubebuilder:validation:Enum=Disabled;Enabled
+	FlowLogsLocalReporter *string `json:"flowLogsLocalReporter,omitempty"`
+
 	// FlowLogsDestDomainsByClient is used to configure if the source IP is used in the mapping of top
 	// level destination domains. [Default: true]
 	FlowLogsDestDomainsByClient *bool `json:"flowLogsDestDomainsByClient,omitempty"`

@@ -469,6 +469,7 @@ type Config struct {
 	FlowLogsCollectProcessPath  bool   `config:"bool;false"`
 	FlowLogsCollectorDebugTrace bool   `config:"bool;false"`
 	FlowLogsGoldmaneServer      string `config:"string;"`
+	FlowLogsLocalReporter       string `config:"oneof(Enabled,Disabled);Disabled"`
 
 	// Config for DNS logs.
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
@@ -707,6 +708,10 @@ func (config *Config) TableRefreshInterval() time.Duration {
 		return config.NftablesRefreshInterval
 	}
 	return config.IptablesRefreshInterval
+}
+
+func (config *Config) FlowLogsLocalReporterEnabled() bool {
+	return config.FlowLogsLocalReporter == "Enabled"
 }
 
 func (config *Config) FlowLogsEnabled() bool {

@@ -40,7 +40,7 @@ import (
 const (
 	FlowLogSourceNone = iota
 	FlowLogSourceFile
-	FlowLogSourceGoldmane
+	FlowLogSourceLocalSocket
 )
 
 type TopologyOptions struct {

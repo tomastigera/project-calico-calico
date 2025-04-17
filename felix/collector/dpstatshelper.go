@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/goldmane"
 	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/local"
 	p "github.com/projectcalico/calico/felix/collector/prometheus"
 	"github.com/projectcalico/calico/felix/collector/syslog"
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -30,6 +31,7 @@ const (
 	L7LogsFileReporterName       = "l7file"
 	WAFEventsFileReporterName    = "waf"
 	FlowLogsGoldmaneReporterName = "goldmane"
+	FlowLogsLocalReporterName    = "socket"
 )
 
 // New creates the required dataplane stats collector, reporters and aggregators.
@@ -118,6 +120,11 @@ func New(
 		} else {
 			dispatchers[FlowLogsGoldmaneReporterName] = gd
 		}
+	}
+	if configParams.FlowLogsLocalReporterEnabled() {
+		log.Infof("Creating local Flow Logs Reporter with address %v", local.SocketAddress)
+		nd := local.NewReporter()
+		dispatchers[FlowLogsLocalReporterName] = nd
 	}
 
 	if len(dispatchers) > 0 {
@@ -252,28 +259,35 @@ func configureFlowAggregation(configParams *config.Config, fr *flowlog.FlowLogRe
 			fr.AddAggregator(cad, []string{FlowLogsFileReporterName})
 		}
 	}
+	// Set up aggregator for goldmane reporter.
 	if configParams.FlowLogsGoldmaneServer != "" {
-		log.Info("Creating golemane Aggregator for allowed")
-		gaa := flowlog.NewAggregator().
-			AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
-			DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
-			IncludeLabels(true).
-			IncludePolicies(true).
-			IncludeService(true).
-			MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-			ForAction(rules.RuleActionAllow)
+		log.Info("Creating goldmane Aggregator for allowed")
+		gaa := defaultFlowAggregator(rules.RuleActionAllow, configParams.FlowLogsCollectorDebugTrace)
 		log.Info("Adding Flow Logs Aggregator (allowed) for goldmane")
 		fr.AddAggregator(gaa, []string{FlowLogsGoldmaneReporterName})
 		log.Info("Creating goldmane Aggregator for denied")
-		gad := flowlog.NewAggregator().
-			AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
-			DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
-			IncludeLabels(true).
-			IncludePolicies(true).
-			IncludeService(true).
-			MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-			ForAction(rules.RuleActionDeny)
+		gad := defaultFlowAggregator(rules.RuleActionDeny, configParams.FlowLogsCollectorDebugTrace)
 		log.Info("Adding Flow Logs Aggregator (denied) for goldmane")
 		fr.AddAggregator(gad, []string{FlowLogsGoldmaneReporterName})
 	}
+	// Set up aggregator for local socket reporter.
+	if configParams.FlowLogsLocalReporterEnabled() {
+		log.Info("Creating local socket Aggregator for allowed")
+		gaa := defaultFlowAggregator(rules.RuleActionAllow, configParams.FlowLogsCollectorDebugTrace)
+		log.Info("Adding Flow Logs Aggregator (allowed) for local socket")
+		fr.AddAggregator(gaa, []string{FlowLogsLocalReporterName})
+		log.Info("Creating local socket Aggregator for denied")
+		gad := defaultFlowAggregator(rules.RuleActionDeny, configParams.FlowLogsCollectorDebugTrace)
+		log.Info("Adding Flow Logs Aggregator (denied) for local socket")
+		fr.AddAggregator(gad, []string{FlowLogsLocalReporterName})
+	}
+}
+
+func defaultFlowAggregator(forAction rules.RuleAction, traceEnabled bool) *flowlog.Aggregator {
+	return flowlog.NewAggregator().
+		DisplayDebugTraceLogs(traceEnabled).
+		IncludeLabels(true).
+		IncludePolicies(true).
+		IncludeService(true).
+		ForAction(forAction)
 }
