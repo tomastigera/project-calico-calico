@@ -1036,7 +1036,7 @@ type ipSet struct {
 	Port     string
 }
 
-func (s ipSet) ParsedSelector() selector.Selector {
+func (s ipSet) ParsedSelector() *selector.Selector {
 	sel, err := selector.Parse(s.Selector)
 	Expect(err).NotTo(HaveOccurred())
 	return sel
