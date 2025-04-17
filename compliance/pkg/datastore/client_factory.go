@@ -87,12 +87,12 @@ func (f *clientSetFactory) RestConfigForCluster(clusterID string) *rest.Config {
 	if clusterID != "" && clusterID != lmak8s.DefaultCluster {
 		restConfig.Host = f.multiClusterForwardingEndpoint
 		restConfig.CAFile = f.multiClusterForwardingCA
-		restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
+		restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 			return &addHeaderRoundTripper{
 				headers: map[string][]string{lmak8s.XClusterIDHeader: {clusterID}},
 				rt:      rt,
 			}
-		})
+		}
 	}
 
 	return restConfig
