@@ -120,11 +120,11 @@ EOF
     ${kubectl} label node kind-worker egress=true --overwrite
 
     # This is necessary for the correct node ip to be used on the node-node mesh.
-    ${kubectl} set env daemonset/calico-node -n kube-system IP_AUTODETECTION_METHOD=interface=eth0
-    ${kubectl} set env daemonset/calico-node -n kube-system IP6_AUTODETECTION_METHOD=interface=eth0
+    ${kubectl} set env daemonset/calico-node -n calico-system IP_AUTODETECTION_METHOD=interface=eth0
+    ${kubectl} set env daemonset/calico-node -n calico-system IP6_AUTODETECTION_METHOD=interface=eth0
 
     # Restart the calico-node daemonset to apply the changes.
-    ${kubectl} rollout restart daemonset/calico-node -n kube-system
+    ${kubectl} rollout restart daemonset/calico-node -n calico-system
 }
 
 function do_setup {
@@ -426,8 +426,8 @@ function do_cleanup {
     # Revert node label and annotations
     ${kubectl} label node kind-worker egress- --overwrite || true
     ${kubectl} label node kind-worker3 egress- --overwrite || true
-    ${kubectl} set env daemonset/calico-node -n kube-system IP_AUTODETECTION_METHOD=first-found || true
-    ${kubectl} set env daemonset/calico-node -n kube-system IP6_AUTODETECTION_METHOD=first-found || true
+    ${kubectl} set env daemonset/calico-node -n calico-system IP_AUTODETECTION_METHOD=first-found || true
+    ${kubectl} set env daemonset/calico-node -n calico-system IP6_AUTODETECTION_METHOD=first-found || true
 
     # Remove bootstrap routes from kind-worker
     docker exec kind-worker ip route del 172.31.51.0/24 via 172.31.41.1 || true

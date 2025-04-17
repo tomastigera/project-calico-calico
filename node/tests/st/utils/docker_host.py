@@ -40,7 +40,7 @@ CHECKOUT_DIR = os.getenv("HOST_CHECKOUT_DIR", "")
 if CHECKOUT_DIR == "":
     CHECKOUT_DIR = os.getcwd()
 
-NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "tigera/cnx-node:latest")
+NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "cnx-node:latest")
 
 FELIX_LOGLEVEL = os.getenv("ST_FELIX_LOGLEVEL", "")
 
@@ -73,7 +73,7 @@ class DockerHost(object):
 
     def __init__(self, name, start_calico=True, dind=True,
                  additional_docker_options="",
-                 post_docker_commands=["docker load -q -i /code/cnx-node.tar",
+                 post_docker_commands=["docker load -q -i /code/calico-node.tar",
                                        "docker load -q -i /code/busybox.tar"],
                  calico_node_autodetect_ip=False,
                  simulate_gce_routing=False,

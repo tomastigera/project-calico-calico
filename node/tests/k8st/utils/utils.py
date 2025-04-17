@@ -53,11 +53,11 @@ class DiagsCollector(object):
                 run("docker exec " + node + " ip r")
                 run("docker exec " + node + " ip l")
             for pod_name in calico_node_pod_names():
-                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
+                kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
                         allow_fail=True)
-                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
+                kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
                         allow_fail=True)
-                kubectl("logs -n kube-system %s" % pod_name,
+                kubectl("logs -n calico-system %s" % pod_name,
                         allow_fail=True)
             _log.info("===================================================")
             _log.info("============= COLLECTED DIAGS FOR TEST ============")
@@ -68,8 +68,8 @@ class DiagsCollector(object):
             _log.info("===================================================")
 
 def log_calico_node(node_ip):
-    pod_name = run(" kubectl get pod -n kube-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
-    kubectl("logs %s -n kube-system " % pod_name.strip())
+    pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
+    kubectl("logs %s -n calico-system " % pod_name.strip())
 
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
@@ -294,11 +294,11 @@ def stop_for_debug():
 
 
 def calico_node_pod_names():
-    return kubectl("get po -n kube-system -l k8s-app=calico-node" +
+    return kubectl("get po -n calico-system -l k8s-app=calico-node" +
                    " -o jsonpath='{.items[*].metadata.name}'").split()
 
 def calico_node_pod_name(nodename):
-    name = kubectl("get po -n kube-system -l k8s-app=calico-node --field-selector spec.nodeName=%s -o jsonpath='{.items[0].metadata.name}'" % nodename)
+    name = kubectl("get po -n calico-system -l k8s-app=calico-node --field-selector spec.nodeName=%s -o jsonpath='{.items[0].metadata.name}'" % nodename)
     return name
 
 def update_ds_env(ds, ns, env_vars):
@@ -333,7 +333,7 @@ def update_ds_env(ds, ns, env_vars):
         iterations_with_no_change = 0
         while True:
             time.sleep(10)
-            node_ds = api.read_namespaced_daemon_set_status("calico-node", "kube-system")
+            node_ds = api.read_namespaced_daemon_set_status("calico-node", "calico-system")
             _log.info("%d/%d nodes updated",
                       node_ds.status.updated_number_scheduled,
                       node_ds.status.desired_number_scheduled)
@@ -349,10 +349,10 @@ def update_ds_env(ds, ns, env_vars):
                 iterations_with_no_change = 0
 
         # Wait until all calico-node pods are ready.
-        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n kube-system --timeout=300s")
+        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n calico-system --timeout=300s")
 
 def copy_cnx_pull_secret(ns):
-    out = run("kubectl get secret cnx-pull-secret -n kube-system -o json")
+    out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")
 
     # Remove revision and UID information so we can re-apply cleanly.
     # This used to be done with --export, but that option has been removed from kubectl.

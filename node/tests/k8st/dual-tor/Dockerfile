@@ -15,7 +15,7 @@ RUN apt-get install -y podman
 COPY get-ips.sh /
 RUN chmod +x /get-ips.sh
 
-COPY tmp/cnx-node.tar /
+COPY tmp/calico-node.tar /
 RUN mkdir /calico-early
 
 ARG EARLY_NETWORK_CONFIG_FILE
