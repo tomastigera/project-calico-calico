@@ -38,7 +38,7 @@ spec:
         k8s-app: firewall-integration-controller
     spec:
       imagePullSecrets:
-        - name: cnx-pull-secret
+        - name: tigera-pull-secret
       containers:
         - name: fw-integ
           image: gcr.io/unique-caldron-775/cnx/tigera/firewall-integration:latest

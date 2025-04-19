@@ -353,7 +353,7 @@
         "destination": {
           "type": "wep",
           "name": "",
-          "aggregated_name": "tigera-apiserver-ff8df8d5f-*",
+          "aggregated_name": "calico-apiserver-ff8df8d5f-*",
           "namespace": "calico-system",
           "port": 0
         }
@@ -391,7 +391,7 @@
           "key": "k8s-app",
           "values": [
             {
-              "value": "tigera-apiserver",
+              "value": "calico-apiserver",
               "count": 2476
             }
           ]

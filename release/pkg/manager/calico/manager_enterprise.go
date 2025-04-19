@@ -42,13 +42,13 @@ var (
 	enterpriseImages = []string{
 		"voltron",
 		"guardian",
-		"cnx-apiserver",
-		"cnx-queryserver",
+		"apiserver",
+		"queryserver",
 		"kube-controllers",
 		"calicoq",
 		"typha",
 		"calicoctl",
-		"cnx-node",
+		"node",
 		"dikastes",
 		"dex",
 		"fluentd",
@@ -92,7 +92,7 @@ var (
 	enterpriseWindowsImages = []string{
 		"fluentd-windows",
 		"cni-windows",
-		"cnx-node-windows",
+		"node-windows",
 	}
 
 	enterpriseImageReleaseDirs = []string{

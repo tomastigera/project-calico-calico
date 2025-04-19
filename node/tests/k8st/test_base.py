@@ -298,7 +298,7 @@ metadata:
   namespace: %s
 spec:
   imagePullSecrets:
-  - name: cnx-pull-secret
+  - name: tigera-pull-secret
   initContainers:
   - name: egress-gateway-init
     image: docker.io/tigera/egress-gateway:test-build

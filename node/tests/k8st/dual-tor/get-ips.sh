@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Load CNX node image from archive.
+# Load tigera/node image from archive.
 podman load < /calico-node.tar >&2
 
-# Run CNX node in early networking mode.
-podman run -d --privileged --net=host -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml --name calico-early cnx-node >&2
+# Run calico-node in early networking mode.
+podman run -d --privileged --net=host -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml --name calico-early calico-node >&2
 
 count=0
 while sleep 1; do

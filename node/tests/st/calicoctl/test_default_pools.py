@@ -38,9 +38,9 @@ class TestDefaultPools(TestBase):
 
     def setUp(self):
         try:
-            self.host.execute("docker rm -f cnx-node")
+            self.host.execute("docker rm -f calico-node")
         except CommandExecError:
-            # Presumably cnx-node wasn't running
+            # Presumably calico-node wasn't running
             pass
         wipe_etcd(get_ip())
 
@@ -156,7 +156,7 @@ class TestDefaultPools(TestBase):
         assert pools_dict == [], "Pools not empty: %s" % pools_dict
 
     def assert_calico_node_log_contains(self, expected_string):
-        assert expected_string in self.host.execute("docker logs cnx-node"), \
+        assert expected_string in self.host.execute("docker logs calico-node"), \
             "Didn't find %s in start log" % expected_string
 
     def wait_for_node_log(self, expected_log):

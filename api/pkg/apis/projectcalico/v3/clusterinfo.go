@@ -53,7 +53,7 @@ type ClusterInformationSpec struct {
 	ClusterType string `json:"clusterType,omitempty" validate:"omitempty"`
 	// CalicoVersion is the version of Calico that the cluster is running
 	CalicoVersion string `json:"calicoVersion,omitempty" validate:"omitempty"`
-	// CNXVersion is the version of CNX that the cluster is running
+	// CNXVersion is the version of Calico Enterprise that the cluster is running
 	CNXVersion string `json:"cnxVersion,omitempty" validate:"omitempty"`
 	// DatastoreReady is used during significant datastore migrations to signal to components
 	// such as Felix that it should wait before accessing the datastore.

@@ -82,7 +82,7 @@ var GenerateLicenseCmd = &cobra.Command{
 	Use:        "generate",
 	Aliases:    []string{"gen", "gen-lic", "generate-license", "make-me-a-license"},
 	SuggestFor: []string{"gen", "generat", "generate-license"},
-	Short:      "Generate CNX license file and store the fields in the database",
+	Short:      "Generate Calico Enterprise license file and store the fields in the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Lower case customer name for consistency.
 		claims.Customer = strings.ToLower(claims.Customer)

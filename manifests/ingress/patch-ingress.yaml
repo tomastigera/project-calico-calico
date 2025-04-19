@@ -19,7 +19,7 @@ spec:
               mountPath: /var/run/felix
       imagePullSecrets:
         - name: calico-pull-secret
-        - name: cnx-pull-secret
+        - name: tigera-pull-secret
       volumes:
         - name: ingress-logs
           emptyDir: {}

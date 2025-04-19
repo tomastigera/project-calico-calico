@@ -92,7 +92,7 @@ var _ = Context("Config update tests, after starting felix", func() {
 	updateConfig := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		err := client.EnsureInitialized(ctx, "a-new-version", "a-new-cnx-version", "updated-type")
+		err := client.EnsureInitialized(ctx, "a-new-version", "a-new-tigera-version", "updated-type")
 		Expect(err).NotTo(HaveOccurred())
 
 		config := api.NewFelixConfiguration()

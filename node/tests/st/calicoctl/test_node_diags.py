@@ -24,7 +24,7 @@ We're not trying to assert on the contents of the diags package.
 
 TODO We could check that the file is actually written (and doesn't just appear
 in the output) and is a decent size.
-TODO We could check collecting diags when cnx-node is actually running.
+TODO We could check collecting diags when calico-node is actually running.
 """
 
 

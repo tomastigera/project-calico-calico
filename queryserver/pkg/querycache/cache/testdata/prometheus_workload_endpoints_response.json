@@ -10,7 +10,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "kube-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api"
         },
         "value": [
@@ -25,7 +25,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "kube-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "failed"
         },
@@ -41,7 +41,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "kube-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unlabeled"
         },
@@ -57,7 +57,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "kube-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unprotected"
         },
@@ -73,7 +73,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "calico-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api"
         },
         "value": [
@@ -88,7 +88,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "calico-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "failed"
         },
@@ -104,7 +104,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "calico-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unlabeled"
         },
@@ -120,7 +120,7 @@
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
           "namespace": "calico-system",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unprotected"
         },
@@ -135,7 +135,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api"
         },
         "value": [
@@ -149,7 +149,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "failed"
         },
@@ -164,7 +164,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unlabeled"
         },
@@ -179,7 +179,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unprotected"
         },

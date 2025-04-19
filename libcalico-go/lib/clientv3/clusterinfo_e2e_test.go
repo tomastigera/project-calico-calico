@@ -40,14 +40,14 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 		ClusterGUID:    "test-cluster-guid1",
 		ClusterType:    "test-cluster-type1",
 		CalicoVersion:  "test-version1",
-		CNXVersion:     "cnx-test-version1",
+		CNXVersion:     "tigera-test-version1",
 		DatastoreReady: &readyTrue,
 	}
 	spec2 := apiv3.ClusterInformationSpec{
 		ClusterGUID:   "test-cluster-guid2",
 		ClusterType:   "test-cluster-type2",
 		CalicoVersion: "test-version2",
-		CNXVersion:    "cnx-test-version2",
+		CNXVersion:    "tigera-test-version2",
 	}
 
 	var c clientv3.Interface

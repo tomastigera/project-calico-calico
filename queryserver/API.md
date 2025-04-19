@@ -1,7 +1,7 @@
-## cnx-queryserver API Documentation
+## queryserver API Documentation
 
 This API documentation is not meant for external/public consumption and is
-targeted at internal use (cnx-manager/webapp only).
+targeted at internal use (manager/webapp only).
 
 ### Available APIS
 
@@ -35,7 +35,7 @@ targeted at internal use (cnx-manager/webapp only).
 
 ### Version
 
-Returns the version of `cnx-queryserver`.
+Returns the version of `queryserver`.
 
 #### URL
 
@@ -171,7 +171,7 @@ UI Req:
 view. In this view there is a choice of "trello" style lists, or a tabular view.
 Both the views show endpoint counts per policy. The tabular view can expand a
 policy to show some additional details about the policy. Most of the information
-is already obtained from the CNX-Apiserver and for each policy, this API should
+is already obtained from the Tigera apiserver and for each policy, this API should
 provide the number of endpoints and nodes.
 1. Intended to be used in a policy details view. This view shows a single policy
 and other fields of a policy including ingress and egress rules. This view shows
@@ -834,7 +834,7 @@ curl localhost:8080/nodes/rack1-host1
 
 ### License
 
-Returns the status of CNX cluster license.
+Returns the status of Calico Enterprise cluster license.
 There are 5 different possible scenarios:
 1. License not applied
 2. License applied, and valid
@@ -890,7 +890,7 @@ Returns a JSON object with the following fields.
 3. License applied, but expired (but still in the grace period)
  AND 
 4. License applied, but really expired (out of the grace period)
-(For CNX v2.1 both cases 3 and 4 are the same)
+(For Calico Enterprise v2.1 both cases 3 and 4 are the same)
 
 ```
 {

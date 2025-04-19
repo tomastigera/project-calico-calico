@@ -52,7 +52,7 @@ for c in $(ls); do
     export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
     export DATASTORE_TYPE=etcdv3
 
-    # Apply a working CNX license.
+    # Apply a working Calico Enterprise license.
     ${CALICOCTL} apply -f $TSEE_TEST_LICENSE
 
     # Apply the resources for the test case.
@@ -122,7 +122,7 @@ etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddre
 export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
 export DATASTORE_TYPE=etcdv3
 
-# Apply a working CNX license.
+# Apply a working Calico Enterprise license.
 ${CALICOCTL} apply -f $TSEE_TEST_LICENSE
 
 # Apply the resources for the test case. This includes some bad remote cluster configuration.

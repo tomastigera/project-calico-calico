@@ -122,8 +122,8 @@ echo
 
 # The GCR_IO_PULL_SECRET is not needed to install Calico, as we use locally loaded images. However,
 # it is still needed for some tests. Notably the EGW tests rely on this.
-${kubectl} get secret cnx-pull-secret -n tigera-operator ||
-  ${kubectl} -n tigera-operator create secret generic cnx-pull-secret \
+${kubectl} get secret tigera-pull-secret -n tigera-operator ||
+  ${kubectl} -n tigera-operator create secret generic tigera-pull-secret \
    --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
    --type=kubernetes.io/dockerconfigjson
 

@@ -454,7 +454,7 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cnx
 				clusterInfo.Spec.CNXVersion = cnxVersion
 				updateNeeded = true
 			} else {
-				log.WithField("CNXVersion", clusterInfo.Spec.CNXVersion).Debug("CNX version value already assigned")
+				log.WithField("CNXVersion", clusterInfo.Spec.CNXVersion).Debug("Calico Enterprise version value already assigned")
 			}
 		}
 

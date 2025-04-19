@@ -400,7 +400,7 @@ def wait_for_calico_node_pods_ready():
     _log.info("All calico-node pods are ready")
 
 def copy_cnx_pull_secret(ns):
-    out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")
+    out = run("kubectl get secret tigera-pull-secret -n tigera-operator -o json")
 
     # Remove revision and UID information so we can re-apply cleanly.
     # This used to be done with --export, but that option has been removed from kubectl.
