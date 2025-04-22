@@ -415,9 +415,10 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		}
 
 		resource, tier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
-		if !req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
+		if !req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) &&
+			!req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbList}) {
 			return nil, errors.ErrorOperationNotSupported{
-				Operation:  "Get",
+				Operation:  "Get or List",
 				Identifier: req.Policy,
 				Reason:     "User does not have required permissions to access this resource.",
 			}
@@ -511,7 +512,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 
 			// check authorization to the policy resource.
 			resource, tier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
-			if req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
+			if req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbList}) ||
+				req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
 				queryPolicy, err := c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector)
 				if err != nil {
 					return nil, err
