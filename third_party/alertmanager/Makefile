@@ -24,7 +24,7 @@ init-source: $(ALERTMANAGER_DOWNLOADED)
 $(ALERTMANAGER_DOWNLOADED):
 	mkdir -p alertmanager
 	curl -sfL https://github.com/prometheus/alertmanager/archive/refs/tags/$(ALERTMANAGER_VERSION).tar.gz | tar xz --strip-components 1 -C alertmanager
-	patch -d alertmanager -p1 < patches/0001-EV-5623-Upgrade-to-go-v1.23.patch
+	patch -d alertmanager -p1 < patches/0001-Update-libraries.patch
 	touch $@
 
 .PHONY: build
