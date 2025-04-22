@@ -32,6 +32,7 @@ LDFLAGS ?= -X $(PACKAGE_NAME)/cloud-on-k8s/pkg/about.version=$(VERSION) \
 # BUILD BINARY
 ###############################################################################
 ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded
+FILES_GENERATED=.eck-operator.generated
 
 FIPS ?= false
 
@@ -55,13 +56,20 @@ $(ECK_OPERATOR_DOWNLOADED):
 .PHONY: build
 build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 
-.PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
-bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): register $(ECK_OPERATOR_DOWNLOADED)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
+generate: $(FILES_GENERATED)
+$(FILES_GENERATED):
+	$(DOCKER_RUN) -e GOARCH=amd64 -e ARCH=amd64 $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && \
 			make go-generate && \
-			make generate-config-file && \
+			make generate-config-file'
+	touch $@
+
+.PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
+bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): register $(ECK_OPERATOR_DOWNLOADED) generate
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			cd cloud-on-k8s && \
 			go build -buildvcs=false -o ../$@ -v -tags $(TAGS) -ldflags="$(LDFLAGS) -s -w" cmd/main.go'
 ifeq ($(FIPS),true)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'strings bin/eck-operator-$(ARCH) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
@@ -105,5 +113,5 @@ cd: image-all cd-common
 .PHONY: clean
 clean:
 	rm -fr bin/ cloud-on-k8s/
-	rm -f $(ECK_OPERATOR_DOWNLOADED)
+	rm -f $(ECK_OPERATOR_DOWNLOADED) $(FILES_GENERATED)
 	-docker image rm -f $$(docker images $(ECK_OPERATOR_IMAGE) -a -q)
