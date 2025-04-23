@@ -25,7 +25,7 @@ init-source: $(PROMETHEUS_OPERATOR_DOWNLOADED)
 $(PROMETHEUS_OPERATOR_DOWNLOADED):
 	mkdir -p prometheus-operator
 	curl -sfL https://github.com/prometheus-operator/prometheus-operator/archive/refs/tags/$(PROMETHEUS_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C prometheus-operator
-	patch -d prometheus-operator -p1 < patches/0001-EV-5623-Upgrade-golang-x-crypto-and-net-to-v0.33.0-a.patch
+	patch -d prometheus-operator -p1 < patches/0001-Update-libraries.patch
 	touch $@
 
 build: bin/prometheus-operator-$(ARCH) bin/prometheus-config-reloader-$(ARCH)
