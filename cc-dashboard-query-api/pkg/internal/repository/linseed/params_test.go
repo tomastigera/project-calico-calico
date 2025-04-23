@@ -43,6 +43,10 @@ func TestParams(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
 
+	nestedField, found := collectionsMap[collections.CollectionNameDNS].Field("rrsets.type")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
+
 	t.Run("clusterIDs", func(t *testing.T) {
 		t.Run("non-empty", func(t *testing.T) {
 			subject, err := newQueryParams(0, []string{"fake-cluster"})
@@ -316,6 +320,33 @@ func TestParams(t *testing.T) {
 
 				err = setEqualsCriterion(t, "-1")
 				require.ErrorContains(t, err, `invalid equals criterion value "-1"`)
+			})
+
+			t.Run("nested fields", func(t *testing.T) {
+				subject, err := newQueryParams(0, []string{"fake-cluster"})
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewEquals(nestedField, "SOA", true),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, &queryParams{
+					selector:      `"rrsets.type" != "SOA"`,
+					policyMatches: nil,
+					domainMatches: map[lsv1.DomainMatchType][]string{
+						lsv1.DomainMatchQname:  nil,
+						lsv1.DomainMatchRRSet:  nil,
+						lsv1.DomainMatchRRData: nil,
+					},
+					linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
+					linseedQuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "start_time", Descending: true},
+						},
+					},
+				}, subject)
+
 			})
 		})
 
@@ -639,6 +670,21 @@ func TestParams(t *testing.T) {
 
 		require.Equal(t,
 			`client_name = "test-name1\" AND false" AND client_name != "\"test-name2\"OR 123" AND client_name != "test-name3' NOT 1=1\""`,
+			subject.selector)
+	})
+
+	t.Run("field name escaping", func(t *testing.T) {
+		subject, err := newQueryParams(0, []string{"fake-cluster"})
+		require.NoError(t, err)
+
+		err = subject.setCriteria(filters.Criteria{
+			filters.NewEquals(nestedField, `SOA`, false),
+			filters.NewEquals(nestedField, `CNAME`, true),
+		}, time.Time{})
+		require.NoError(t, err)
+
+		require.Equal(t,
+			`"rrsets.type" = "SOA" AND "rrsets.type" != "CNAME"`,
 			subject.selector)
 	})
 

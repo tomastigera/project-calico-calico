@@ -44,6 +44,15 @@
     type: text
   - name: rrsets.rdata
     type: text
+  - name: rrsets.type
+    type: enum
+    values:
+    - A
+    - AAAA
+    - CNAME
+    - OPT
+    - SOA
+    - SRV
   groupBys:
   - field: client_name_aggr
     nested:

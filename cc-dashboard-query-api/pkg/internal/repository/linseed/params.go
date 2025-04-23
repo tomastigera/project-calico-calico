@@ -151,17 +151,17 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 		return prefix + "( " + strings.Join(selectors, " OR ") + " )", nil
 	case *filters.CriterionRange:
 		gte := c.Gte()
-		field := c.Field()
+		fieldName := escapeFieldName(c.Field().Name())
 
 		selector := ""
 		if gte != nil {
-			selector += fmt.Sprintf(`%s >= %d`, field.Name(), *gte)
+			selector += fmt.Sprintf(`%s >= %d`, fieldName, *gte)
 		}
 		if lte := c.Lte(); lte != nil {
 			if gte != nil {
 				selector += " AND "
 			}
-			selector += fmt.Sprintf(`%s <= %d`, field.Name(), *lte)
+			selector += fmt.Sprintf(`%s <= %d`, fieldName, *lte)
 		}
 
 		if selector == "" {
@@ -174,11 +174,11 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 		return selector, nil
 	case *filters.CriterionExists:
 		// This selector does not match ES' exists exactly. TODO: Implement a linseed exists selector
-		field := c.Field()
+		fieldName := escapeFieldName(c.Field().Name())
 		if c.Negate() {
-			return fmt.Sprintf(`%s NOTIN {"*"}`, field.Name()), nil
+			return fmt.Sprintf(`%s NOTIN {"*"}`, fieldName), nil
 		} else {
-			return fmt.Sprintf(`%s IN {"*"}`, field.Name()), nil
+			return fmt.Sprintf(`%s IN {"*"}`, fieldName), nil
 		}
 	case *filters.CriterionIn:
 		var selectors []string
@@ -206,11 +206,11 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			return "", err
 		}
 
-		field := c.Field()
+		fieldName := escapeFieldName(c.Field().Name())
 		if c.Negate() {
-			return fmt.Sprintf(`%s < %s AND %s > %s`, field.Name(), from, field.Name(), to), nil
+			return fmt.Sprintf(`%s < %s AND %s > %s`, fieldName, from, fieldName, to), nil
 		}
-		return fmt.Sprintf(`%s >= %s AND %s <= %s`, field.Name(), from, field.Name(), to), nil
+		return fmt.Sprintf(`%s >= %s AND %s <= %s`, fieldName, from, fieldName, to), nil
 	case *filters.CriterionStartsWith:
 		value := strings.ReplaceAll(strings.ReplaceAll(c.Value(), `*`, `\*`), `?`, `\?`)
 		return selectorWildcard(c, c.Field().Name(), value+"*")
@@ -284,10 +284,12 @@ func selectorEqualsInt(c *filters.CriterionEquals, value int64) (string, error) 
 		return "", fmt.Errorf(`invalid equals criterion value "%v"`, c.Value())
 	}
 
+	fieldName := escapeFieldName(c.Field().Name())
+
 	if c.Negate() {
-		return fmt.Sprintf(`%s != %d`, c.Field().Name(), value), nil
+		return fmt.Sprintf(`%s != %d`, fieldName, value), nil
 	}
-	return fmt.Sprintf(`%s = %d`, c.Field().Name(), value), nil
+	return fmt.Sprintf(`%s = %d`, fieldName, value), nil
 }
 
 func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, value string) (string, error) {
@@ -297,9 +299,9 @@ func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, 
 	}
 
 	if c.Negate() {
-		return fmt.Sprintf(`%s != %s`, fieldName, value), nil
+		return fmt.Sprintf(`%s != %s`, escapeFieldName(fieldName), value), nil
 	}
-	return fmt.Sprintf(`%s = %s`, fieldName, value), nil
+	return fmt.Sprintf(`%s = %s`, escapeFieldName(fieldName), value), nil
 }
 
 func selectorWildcard(c filters.Criterion, fieldName collections.FieldName, pattern string) (string, error) {
@@ -309,9 +311,9 @@ func selectorWildcard(c filters.Criterion, fieldName collections.FieldName, patt
 	}
 
 	if c.Negate() {
-		return fmt.Sprintf(`%s NOTIN {%s}`, fieldName, value), nil
+		return fmt.Sprintf(`%s NOTIN {%s}`, escapeFieldName(fieldName), value), nil
 	}
-	return fmt.Sprintf(`%s IN {%s}`, fieldName, value), nil
+	return fmt.Sprintf(`%s IN {%s}`, escapeFieldName(fieldName), value), nil
 }
 
 func escapeSelectorValue(value string) (string, error) {
@@ -320,4 +322,12 @@ func escapeSelectorValue(value string) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func escapeFieldName(fieldName collections.FieldName) string {
+	if strings.ContainsRune(string(fieldName), '.') {
+		return fmt.Sprintf(`"%s"`, fieldName)
+	}
+
+	return string(fieldName)
 }
