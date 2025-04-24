@@ -30,7 +30,7 @@ type AuthService struct {
 func NewAuthService(
 	cfg *config.Config,
 	logger logging.Logger,
-	tenantID string,
+	tenantClaim string,
 	authorizer security.Authorizer,
 	k8sClient kubernetes.Interface,
 	k8sRestConfig *rest.Config,
@@ -43,7 +43,7 @@ func NewAuthService(
 			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
 			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
-			lmaauth.WithCalicoCloudTenantClaim(tenantID),
+			lmaauth.WithCalicoCloudTenantClaim(tenantClaim),
 		)
 
 		if cfg.OIDCAuthJWKSURL != "" {

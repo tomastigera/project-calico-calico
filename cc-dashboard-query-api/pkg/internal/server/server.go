@@ -38,10 +38,15 @@ func Start(
 	k8sRestConfig *rest.Config,
 	dynamicClient dynamic.Interface,
 ) error {
+	tenantClaim := cfg.CalicoCloudTenantClaim
+	if tenantClaim == "" {
+		tenantClaim = cfg.TenantID
+	}
+
 	authService, err := auth.NewAuthService(
 		cfg,
 		logger,
-		cfg.TenantID,
+		tenantClaim,
 		authorizer,
 		k8sClient,
 		k8sRestConfig,

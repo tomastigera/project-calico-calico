@@ -19,6 +19,8 @@ type Config struct {
 	TenantID        string `default:"" split_words:"true"`
 	TenantNamespace string `default:"" split_words:"true"`
 
+	CalicoCloudTenantClaim string `default:"" split_words:"true"`
+
 	// CorsOrigins allowed origins for CORS response. Separate multiple origins by a comma (e.g. origin1,origin2,origin3)
 	CorsOrigins string `default:"https://www.calicocloud.io" split_words:"true"`
 
