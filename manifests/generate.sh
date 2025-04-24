@@ -123,13 +123,6 @@ done) >>operator-crds.yaml
 ##########################################################################
 # Build CRDs files used in docs.
 ##########################################################################
-echo "# ECK operator CRDs." >eck-operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/eck/*.yaml; do
-  echo "---"
-  echo "# Source: tigera-operator/crds/eck/$(basename $file)"
-  cat $file
-done) >>eck-operator-crds.yaml
-
 echo "# Prometheus operator CRDs." >prometheus-operator-crds.yaml
 (for file in ../charts/tigera-prometheus-operator/crds/*.yaml; do
   echo "---"

@@ -56,8 +56,10 @@ $(ECK_OPERATOR_DOWNLOADED):
 .PHONY: build
 build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 
+.PHONY: generate
 generate: $(FILES_GENERATED)
-$(FILES_GENERATED):
+$(FILES_GENERATED): init-source
+	@echo "Generating ECK operator code and config"
 	$(DOCKER_RUN) -e GOARCH=amd64 -e ARCH=amd64 $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && \
