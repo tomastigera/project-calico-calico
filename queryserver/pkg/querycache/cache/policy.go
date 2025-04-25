@@ -706,33 +706,27 @@ func (d *policyData) GetResourceType() api.Resource {
 }
 
 func (d *policyData) IsKubernetesType() (bool, error) {
-	nameParts := strings.Split(d.GetResource().GetObjectMeta().GetName(), ".")
+	// since GroupVersionKind is all converted to calico types, we need to check the name prefix
+	// for identifying the kubernetes types.
+	name := d.GetResource().GetObjectMeta().GetName()
 
-	switch len(nameParts) {
-	case 1:
-		// calico policies in the default tier do not have to contain the default. prefix
-		switch d.GetResource().GetObjectKind().GroupVersionKind().Kind {
-		case apiv3.KindNetworkPolicy, apiv3.KindGlobalNetworkPolicy, apiv3.KindStagedNetworkPolicy, apiv3.KindStagedGlobalNetworkPolicy:
-			return true, nil
-		}
-		return false, nil
-	case 2:
-		return false, nil // calico policies' name consists of two parts: "tier.policyName"
-	case 3:
-		// we should check for contains since staged policies have "staged" tag as well: staged:knp
-		if strings.Contains(nameParts[0], "knp") || /* kubernetes network policies*/
-			strings.Contains(nameParts[0], "kanp") || /*kubernetes admin network policies*/
-			strings.Contains(nameParts[0], "kbanp") /* kubernetes baseline admin network policies*/ {
-			return true, nil
-		} else {
-			// policy type is unknown
-			log.Errorf("Unknown policy format: %s", nameParts[0])
-			return false, fmt.Errorf("unknown policy type: %s", nameParts[0])
-		}
-	default:
-		log.Errorf("Unknown policy name structure: %s", d.GetResource().GetObjectMeta().GetName())
-		return false, fmt.Errorf("unknown policy name structure")
+	// remove the staged: tag from the name (if exists)
+	if strings.Contains(name, "staged:") {
+		name = strings.Split(name, "staged:")[1]
 	}
+
+	if strings.HasPrefix(name, "knp") || strings.HasPrefix(name, "kanp") || strings.HasPrefix(name, "kbanp") {
+		return true, nil
+	}
+
+	// calico policy names cannot include a '.', thus the format should either be <tier>.<name> or <name>
+	nameParts := strings.Split(name, ".")
+	if len(nameParts) > 2 {
+		return false, fmt.Errorf("Policy name structure is unknown: %s", name)
+
+	}
+	return false, nil
+
 }
 
 // tierData is used to hold policy data in the cache, and also implements the Policy interface

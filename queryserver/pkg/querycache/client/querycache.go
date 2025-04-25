@@ -574,11 +574,12 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 	// Since the UUID conversion is reversable, we run the ConvertUID here again to get the original UUID in the api resource.
 	isKubeType, err := p.IsKubernetesType()
 	if err != nil {
-		return nil, err
-	}
-	if isKubeType {
+		log.WithError(err).Error("failed to identify the policy type.")
+	} else if isKubeType {
+		// only convert UID if policy type is kubernetes, otherwise (for calico and unknown) avoid UID conversion.
 		policy.UID, _ = conversion.ConvertUID(policy.UID)
 	}
+
 	if fieldSelector != nil {
 		updatedPolicy := new(Policy)
 		policyFields := reflect.TypeOf(policy)
