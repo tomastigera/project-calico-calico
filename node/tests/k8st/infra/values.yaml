@@ -2,12 +2,6 @@ installation:
   enabled: true
   variant: TigeraSecureEnterprise
   registry: docker.io
-  controlPlaneReplicas: 1
-  calicoNetwork:
-    ipPools:
-    - cidr: 192.168.0.0/16
-    - cidr: fd00:10:244::/64
-  registry: docker.io
 
   # Disable HA control plane.
   controlPlaneReplicas: 1
