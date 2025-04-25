@@ -107,16 +107,6 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 				p.domainMatches[lsv1.DomainMatchQname] = append(p.domainMatches[lsv1.DomainMatchQname], domain)
 			}
 			return "", nil
-		case collections.FieldTypeRRSetsName:
-			if domain, ok := c.Value().(string); ok {
-				p.domainMatches[lsv1.DomainMatchRRSet] = append(p.domainMatches[lsv1.DomainMatchRRSet], domain)
-			}
-			return "", nil
-		case collections.FieldTypeRRSetsData:
-			if domain, ok := c.Value().(string); ok {
-				p.domainMatches[lsv1.DomainMatchRRData] = append(p.domainMatches[lsv1.DomainMatchRRData], domain)
-			}
-			return "", nil
 		case collections.FieldTypeEnum:
 			collectionFieldEnum, ok := c.Field().(collections.CollectionFieldEnum)
 			if !ok {

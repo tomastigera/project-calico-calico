@@ -11,15 +11,14 @@ const (
 	CollectionNameDNS   = CollectionName("dns")
 	CollectionNameFlows = CollectionName("flows")
 
-	FieldTypeIP     = FieldType("ip")
-	FieldTypeText   = FieldType("text")
-	FieldTypeDate   = FieldType("date")
-	FieldTypeEnum   = FieldType("enum")
-	FieldTypeNumber = FieldType("number")
+	FieldTypeIP        = FieldType("ip")
+	FieldTypeText      = FieldType("text")
+	FieldTypeTextMatch = FieldType("text-match")
+	FieldTypeDate      = FieldType("date")
+	FieldTypeEnum      = FieldType("enum")
+	FieldTypeNumber    = FieldType("number")
 
-	FieldTypeQName      = FieldType("qname")
-	FieldTypeRRSetsData = FieldType("rrsets.data")
-	FieldTypeRRSetsName = FieldType("rrsets.name")
+	FieldTypeQName = FieldType("qname")
 
 	FieldNamePolicyType = FieldName("policy.type")
 
