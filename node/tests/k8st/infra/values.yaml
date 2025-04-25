@@ -2,19 +2,13 @@ installation:
   enabled: true
   variant: TigeraSecureEnterprise
   registry: docker.io
-  controlPlaneReplicas: 1
-  calicoNetwork:
-    ipPools:
-    - cidr: 192.168.0.0/16
-    - cidr: fd00:10:244::/64
-  registry: docker.io
 
   # Disable HA control plane.
   controlPlaneReplicas: 1
 
   # TODO: EGW tests use flex volume. Migrate to CSI.
-  flexVolumePath: "/usr/libexec/kubernetes/kubelet-plugins/volume/exec/"
   kubeletVolumePluginPath: "None"
+  flexVolumePath: "/usr/libexec/kubernetes/kubelet-plugins/volume/exec/"
 
   # Configure CIDRs to match kubeadm cluster.
   calicoNetwork:
