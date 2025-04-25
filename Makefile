@@ -59,17 +59,16 @@ clean:
 	rm -f manifests/ocp.tgz
 
 ci-preflight-checks:
-	echo "Temporarily skip!"
-	# $(MAKE) check-go-mod
-	# $(MAKE) check-dockerfiles
-	# $(MAKE) check-gotchas
-	# $(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
-	# $(MAKE) check-release-cut-promotions
-	# $(MAKE) generate
-	# $(MAKE) fix-all
-	# $(MAKE) check-ocp-no-crds
-	# $(MAKE) yaml-lint
-	# $(MAKE) check-dirty
+	$(MAKE) check-go-mod
+	$(MAKE) check-dockerfiles
+	$(MAKE) check-gotchas
+	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
+	$(MAKE) check-release-cut-promotions
+	$(MAKE) generate
+	$(MAKE) fix-all
+	$(MAKE) check-ocp-no-crds
+	$(MAKE) yaml-lint
+	$(MAKE) check-dirty
 
 check-gotchas:
 	@if grep github.com/projectcalico/api go.mod; then \
