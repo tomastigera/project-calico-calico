@@ -1513,70 +1513,11 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: Publish tigera/envoybinary images
-    run:
-      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Prerequisites
-    task:
-      agent:
-        machine:
-          type: f1-standard-4
-          os_image: ubuntu2204
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-          - cd third_party/envoybinary
-      jobs:
-        - name: Linux amd64
-          commands:
-            - ../../.semaphore/run-and-monitor build.log make cd ARCHES=amd64 CONFIRM=true
-  - name: Publish tigera/envoybinary images - native arm64 runner
-    run:
-      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Prerequisites
-    execution_time_limit:
-      hours: 8
-    task:
-      agent:
-        machine:
-          type: s1-aws-arm64-4
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-          - cd third_party/envoybinary
-      jobs:
-        - name: Linux arm64
-          commands:
-            - ../../.semaphore/run-and-monitor build-arm64.log make cd ARCHES=arm64 CONFIRM=true
-  - name: Publish tigera/envoybinary multi-arch manifests
-    run:
-      when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Publish tigera/envoybinary images
-      - Publish tigera/envoybinary images - native arm64 runner
-    task:
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-          - cd third_party/envoybinary
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - make push-manifest CONFIRM=true
-
   - name: l7-collector
     run:
       when: "false or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
-      - Publish tigera/envoybinary multi-arch manifests
+      - Prerequisites
     task:
       secrets:
         - name: google-service-account-for-gcr
