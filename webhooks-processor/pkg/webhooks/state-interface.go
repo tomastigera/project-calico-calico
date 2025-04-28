@@ -11,7 +11,6 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -29,8 +28,8 @@ type webhookDependencies struct {
 
 type ControllerState struct {
 	outUpdatesChan  chan *api.SecurityEventWebhook
-	webhooksTrail   map[types.UID]*webhookState
-	preventRestarts map[types.UID]bool
+	webhooksTrail   map[string]*webhookState
+	preventRestarts map[string]bool
 	config          *ControllerConfig
 	wg              sync.WaitGroup
 	cli             kubernetes.Interface
@@ -49,8 +48,8 @@ func (d webhookDependencies) CheckSecret(secretName string) bool {
 func NewControllerState() *ControllerState {
 	return &ControllerState{
 		outUpdatesChan:  make(chan *api.SecurityEventWebhook),
-		webhooksTrail:   make(map[types.UID]*webhookState),
-		preventRestarts: make(map[types.UID]bool),
+		webhooksTrail:   make(map[string]*webhookState),
+		preventRestarts: make(map[string]bool),
 	}
 }
 
@@ -67,7 +66,7 @@ func (s *ControllerState) WithK8sClient(client kubernetes.Interface) *Controller
 func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *api.SecurityEventWebhook) {
 	logEntry(webhook).Info("Processing incoming webhook update")
 
-	if trail, ok := s.webhooksTrail[webhook.UID]; ok {
+	if trail, ok := s.webhooksTrail[webhook.Name]; ok {
 		specHash := string(structhash.Md5(webhook.Spec, 1))
 		if trail.specHash == specHash {
 			trail.webhookUpdates <- webhook
@@ -77,9 +76,9 @@ func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *ap
 		s.Stop(ctx, webhook)
 	}
 
-	if _, preventRestart := s.preventRestarts[webhook.UID]; preventRestart {
+	if _, preventRestart := s.preventRestarts[webhook.Name]; preventRestart {
 		logEntry(webhook).Info("Webhook restart prevented")
-		delete(s.preventRestarts, webhook.UID)
+		delete(s.preventRestarts, webhook.Name)
 		return
 	}
 
@@ -108,9 +107,9 @@ func (s *ControllerState) CheckDependencies(changedObject runtime.Object) {
 }
 
 func (s *ControllerState) Stop(ctx context.Context, webhook *api.SecurityEventWebhook) {
-	if trail, ok := s.webhooksTrail[webhook.UID]; ok {
+	if trail, ok := s.webhooksTrail[webhook.Name]; ok {
 		trail.cancelFunc()
-		delete(s.webhooksTrail, webhook.UID)
+		delete(s.webhooksTrail, webhook.Name)
 		logEntry(webhook).Info("Webhook stopped")
 	}
 }
@@ -121,7 +120,7 @@ func (s *ControllerState) StopAll() {
 	}
 	logrus.Info("Waiting for all webhooks to terminate")
 	s.wg.Wait()
-	s.webhooksTrail = make(map[types.UID]*webhookState)
+	s.webhooksTrail = make(map[string]*webhookState)
 }
 
 func (s *ControllerState) OutgoingWebhookUpdates() <-chan *api.SecurityEventWebhook {
