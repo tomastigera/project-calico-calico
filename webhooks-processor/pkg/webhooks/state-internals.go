@@ -36,36 +36,36 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	logEntry(webhook).Info("Webhook validation process started")
 
 	if webhook.Spec.State == api.SecurityEventWebhookStateDisabled {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "WebhookState", time.Now(), errors.New("the webhook has been disabled"))
 		return
 	}
 	parsedQuery, err := query.ParseQuery(webhook.Spec.Query)
 	if err != nil {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "QueryParsing", time.Now(), err)
 		return
 	}
 	err = query.Validate(parsedQuery, query.IsValidEventsKeysAtom)
 	if err != nil {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "QueryValidation", time.Now(), err)
 		return
 	}
 	config, err := s.parseConfig(ctx, webhook.Spec.Config)
 	if err != nil {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "ConfigurationParsing", time.Now(), err)
 		return
 	}
 	provider, ok := s.config.Providers[webhook.Spec.Consumer]
 	if !ok {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "ConsumerDiscovery", time.Now(), fmt.Errorf("unknown consumer: %s", webhook.Spec.Consumer))
 		return
 	}
 	if err = provider.Validate(config); err != nil {
-		s.preventRestarts[webhook.UID] = true
+		s.preventRestarts[webhook.Name] = true
 		s.updateWebhookHealth(webhook, "ConsumerConfigurationValidation", time.Now(), err)
 		return
 	}
@@ -83,7 +83,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	webhookUpdateChan := make(chan *api.SecurityEventWebhook)
 	specHash := string(structhash.Md5(webhook.Spec, 1))
 
-	s.webhooksTrail[webhook.UID] = &webhookState{
+	s.webhooksTrail[webhook.Name] = &webhookState{
 		specHash:       specHash,
 		cancelFunc:     cancelFunc,
 		webhookUpdates: webhookUpdateChan,
