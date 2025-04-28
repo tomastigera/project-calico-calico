@@ -1,7 +1,7 @@
 version: v1.0
 name: Calico
 execution_time_limit:
-  hours: 8
+  hours: 3
 agent:
   machine:
     type: f1-standard-2
