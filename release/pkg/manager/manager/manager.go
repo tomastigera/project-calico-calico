@@ -155,10 +155,6 @@ func (m *Manager) make(target string, env []string) (string, error) {
 	return m.runner.Run("make", []string{"-C", m.dir, target}, env)
 }
 
-func (m *Manager) git(args ...string) (string, error) {
-	return command.GitInDir(m.dir, args...)
-}
-
 func Clone(org, repo, branch, dir string) error {
 	if org == "" {
 		org = DefaultOrg

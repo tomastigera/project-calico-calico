@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -11,7 +10,6 @@ import (
 	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
-	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
@@ -244,25 +242,6 @@ func validateReleaseVersion(c *cli.Context, ver string) error {
 	// Ensure the determined version and the version we are releasing matches.
 	if determinedVer.FormattedString() != ver {
 		return fmt.Errorf("version mismatch: determined %s, got %s", determinedVer, ver)
-	}
-	return nil
-}
-
-func triggerSemaphoreRelease(c *cli.Context, repoDirVersionMap map[string]string) error {
-	runner := command.RealCommandRunner{}
-	for dir, ver := range repoDirVersionMap {
-		if err := utils.CheckoutHashreleaseVersion(ver, dir); err != nil {
-			return err
-		}
-		env := append(os.Environ(), "CNX=true")
-		env = append(env, fmt.Sprintf("RELEASE_TAG=%s", ver))
-		env = append(env, fmt.Sprintf("RELEASE_VERSION=%s", c.String(releaseVersionFlag.Name)))
-		if c.Bool(confirmFlag.Name) {
-			env = append(env, "CONFIRM=true")
-		}
-		if _, err := runner.RunInDir(dir, "make", []string{"clean", "sem-cut-release"}, env); err != nil {
-			return fmt.Errorf("error triggering %s releaseon semaphore: %v", filepath.Base(dir), err)
-		}
 	}
 	return nil
 }
