@@ -87,7 +87,7 @@ var (
 
 	publishGitFlag = &cli.BoolFlag{
 		Name:    "publish-git",
-		Usage:   "Publish release git changes to GitHub i.e create a next dev tag",
+		Usage:   "Publish git changes to remote",
 		EnvVars: []string{"PUBLISH_GIT"},
 		Value:   true,
 	}
