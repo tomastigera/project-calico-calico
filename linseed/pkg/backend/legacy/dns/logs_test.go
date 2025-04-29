@@ -416,3 +416,255 @@ func TestPreserveIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestDNSLogFiltering(t *testing.T) {
+	type testCase struct {
+		Name   string
+		Params v1.DNSLogParams
+
+		// Configuration for which logs are expected to match.
+		ExpectLog1 bool
+		ExpectLog2 bool
+
+		// Whether to perform an equality comparison on the returned
+		// logs. Can be useful for tests where stats differ.
+		SkipComparison bool
+	}
+
+	numExpected := func(tc testCase) int {
+		num := 0
+		if tc.ExpectLog1 {
+			num++
+		}
+		if tc.ExpectLog2 {
+			num++
+		}
+		return num
+	}
+
+	testcases := []testCase{
+		{
+			Name: "should support selection based on host match",
+			Params: v1.DNSLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: `host = "my-host"`,
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection based on latency fields match",
+			Params: v1.DNSLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: `latency_count = 100 AND latency_mean = 200 AND latency_max = 300`,
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+	}
+
+	ip := net.ParseIP("10.0.1.1")
+	reqTime := time.Now().UTC()
+
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		for _, testcase := range testcases {
+			// Each testcase creates multiple dns logs, and then uses
+			// different filtering parameters provided in the params
+			// to query one or more dns logs.
+			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
+			RunAllModes(t, name, func(t *testing.T) {
+				clusterInfo1 := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+				clusterInfo2 := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+				clusterInfo3 := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
+
+				// Set the time range for the test. We set this per-test
+				// so that the time range captures the windows that the logs
+				// are created in.
+				tr := &lmav1.TimeRange{}
+				tr.From = time.Now().Add(-5 * time.Minute)
+				tr.To = time.Now().Add(5 * time.Minute)
+				params := testcase.Params
+				params.QueryParams.TimeRange = tr
+
+				logs := []v1.DNSLog{
+					{
+						StartTime:       reqTime,
+						EndTime:         reqTime,
+						Type:            v1.DNSLogTypeLog,
+						Count:           1,
+						ClientName:      "client-name",
+						ClientNameAggr:  "client-",
+						ClientNamespace: "default",
+						ClientIP:        &ip,
+						ClientLabels:    map[string]string{"pickles": "good"},
+						QName:           "qname",
+						QType:           v1.DNSType(layers.DNSTypeA),
+						QClass:          v1.DNSClass(layers.DNSClassIN),
+						RCode:           v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
+						RRSets:          v1.DNSRRSets{},
+						Servers: []v1.DNSServer{
+							{
+								Endpoint: v1.Endpoint{
+									Name:           "kube-dns-one",
+									AggregatedName: "kube-dns",
+									Namespace:      "kube-system",
+								},
+								IP:     net.ParseIP("10.0.0.10"),
+								Labels: map[string]string{"app": "dns"},
+							},
+						},
+						Latency: v1.DNSLatency{
+							Count: 15,
+							Mean:  5 * time.Second,
+							Max:   10 * time.Second,
+						},
+						Host: "my-host",
+					},
+					{
+						StartTime:       reqTime,
+						EndTime:         reqTime,
+						Type:            v1.DNSLogTypeLog,
+						Count:           1,
+						ClientName:      "client-name",
+						ClientNameAggr:  "client-",
+						ClientNamespace: "default",
+						ClientIP:        &ip,
+						ClientLabels:    map[string]string{"pickles": "good"},
+						QName:           "qname",
+						QType:           v1.DNSType(layers.DNSTypeA),
+						QClass:          v1.DNSClass(layers.DNSClassIN),
+						RCode:           v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
+						RRSets:          v1.DNSRRSets{},
+						Servers: []v1.DNSServer{
+							{
+								Endpoint: v1.Endpoint{
+									Name:           "kube-dns-one",
+									AggregatedName: "kube-dns",
+									Namespace:      "kube-system",
+								},
+								IP:     net.ParseIP("10.0.0.10"),
+								Labels: map[string]string{"app": "dns"},
+							},
+						},
+						Latency: v1.DNSLatency{
+							Count: 15,
+							Mean:  5 * time.Second,
+							Max:   10 * time.Second,
+						},
+						LatencyCount: 100,
+						LatencyMean:  200,
+						LatencyMax:   300,
+					},
+				}
+
+				for _, clusterInfo := range []bapi.ClusterInfo{clusterInfo1, clusterInfo2, clusterInfo3} {
+					response, err := lb.Create(ctx, clusterInfo, logs)
+					require.NoError(t, err)
+					require.Equal(t, []v1.BulkError(nil), response.Errors)
+					require.Equal(t, 0, response.Failed)
+
+					err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+					require.NoError(t, err)
+				}
+
+				t.Run("should query single cluster", func(t *testing.T) {
+					// Query for dns logs.
+					r, err := lb.List(ctx, clusterInfo1, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, numExpected(testcase))
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					// Try querying with a different tenant ID and make sure we don't
+					// get any dns logs back.
+					r2, err := lb.List(ctx, bapi.ClusterInfo{Cluster: cluster1, Tenant: "dummy-tenant"}, &params)
+					require.NoError(t, err)
+					require.Len(t, r2.Items, 0)
+
+					if !testcase.SkipComparison {
+						copyOfLogs := backendutils.AssertDNSLogsIDAndClusterAndReset(t, clusterInfo1.Cluster, r)
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, logs[0])
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, logs[1])
+						}
+					}
+				})
+
+				t.Run("should query multiple clusters", func(t *testing.T) {
+					selectedClusters := []string{cluster2, cluster3}
+					params.SetClusters(selectedClusters)
+					r, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, numExpected(testcase)*2) // 2 clusters so double the expected number of logs.
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					if !testcase.SkipComparison {
+						var copyOfLogs []v1.DNSLog
+						for _, item := range r.Items {
+							require.Contains(t, selectedClusters, item.Cluster)
+							backendutils.AssertDNSLogIDAndClusterAndReset(t, item.Cluster, &item)
+
+							copyOfLogs = append(copyOfLogs, item)
+						}
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, logs[0])
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, logs[1])
+						}
+					}
+
+					if numExpected(testcase) > 0 {
+						require.Falsef(t, backendutils.MatchIn(r.Items, backendutils.DNSLogClusterEquals(cluster1)), "found unexpected cluster %s", cluster1)
+						for i, cluster := range selectedClusters {
+							require.Truef(t, backendutils.MatchIn(r.Items, backendutils.DNSLogClusterEquals(cluster)), "didn't cluster %d: %s", i, cluster)
+						}
+					}
+				})
+
+				t.Run("should query all clusters", func(t *testing.T) {
+					params.SetAllClusters(true)
+					r, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+					require.NoError(t, err)
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					if !testcase.SkipComparison {
+						var copyOfLogs []v1.DNSLog
+						for _, item := range r.Items {
+							backendutils.AssertDNSLogIDAndClusterAndReset(t, item.Cluster, &item)
+							copyOfLogs = append(copyOfLogs, item)
+						}
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, logs[0])
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, logs[1])
+						}
+					}
+
+					if numExpected(testcase) > 0 {
+						allClusters := []string{cluster1, cluster2, cluster3}
+						for _, item := range r.Items {
+							require.Contains(t, allClusters, item.Cluster)
+						}
+					}
+				})
+			})
+		}
+	}
+}

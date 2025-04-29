@@ -21,7 +21,7 @@ import (
 func AssertFlowLogsIDAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.FlowLog]) []v1.FlowLog {
 	require.NotNil(t, r)
 
-	// Asert that we have an ID assigned from Elastic
+	// Assert that we have an ID assigned from Elastic
 	var copyOfLogs []v1.FlowLog
 	for _, item := range r.Items {
 		AssertFlowLogIDAndClusterAndReset(t, expectedCluster, &item)
@@ -64,6 +64,18 @@ func AssertEventIDAndClusterAndGeneratedTimeAndReset(t *testing.T, expectedClust
 func AssertEventClusterAndReset(t *testing.T, expectedCluster string, item *v1.Event) {
 	require.Equal(t, expectedCluster, item.Cluster)
 	item.Cluster = ""
+}
+
+func AssertDNSLogsIDAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.DNSLog]) []v1.DNSLog {
+	require.NotNil(t, r)
+
+	// Assert that we have an ID assigned from Elastic
+	var copyOfLogs []v1.DNSLog
+	for _, item := range r.Items {
+		AssertDNSLogIDAndClusterAndReset(t, expectedCluster, &item)
+		copyOfLogs = append(copyOfLogs, item)
+	}
+	return copyOfLogs
 }
 
 func AssertDNSLogIDAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.DNSLog) {
@@ -196,7 +208,7 @@ func AssertL7LogClusterAndReset(t *testing.T, expectedCluster string, item *v1.L
 func AssertEventsIDAndClusterAndGeneratedTimeAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.Event]) []v1.Event {
 	require.NotNil(t, r)
 
-	// Asert that we have an ID assigned from Elastic
+	// Assert that we have an ID assigned from Elastic
 	var copyOfEvents []v1.Event
 	for _, item := range r.Items {
 		item = AssertEventIDAndClusterAndGeneratedTimeAndReset(t, expectedCluster, item)

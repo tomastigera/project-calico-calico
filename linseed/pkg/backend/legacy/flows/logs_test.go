@@ -530,6 +530,51 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: true,
 		},
+		{
+			Name: "should support selection based on host match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: `host = "my-host"`,
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should support selection based on tcp match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "tcp_lost_packets = 100 AND tcp_mean_send_congestion_window = 101 AND " +
+						"tcp_min_send_congestion_window = 102 AND tcp_total_retransmissions = 103 AND tcp_unrecovered_to = 104",
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection based on tcp mss match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "tcp_mean_mss = 200 AND tcp_min_mss = 201",
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection based on tcp rtt fields match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "tcp_max_min_rtt = 300 AND tcp_max_smooth_rtt = 301 AND tcp_mean_min_rtt = 302 AND tcp_mean_smooth_rtt = 303",
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -570,7 +615,14 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1")
+					WithPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
+					WithTCPLostPackets(100).
+					WithTCPMeanSendCongestionWindow(101).
+					WithTCPMinSendCongestionWindow(102).
+					WithTCPTotalRetransmissions(103).
+					WithTCPUnrecoveredTo(104).
+					WithTCPMeanMSS(200).
+					WithTCPMinMSS(201)
 
 				fl1, err := bld.Build()
 				require.NoError(t, err)
@@ -592,7 +644,12 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("cheese=brie").
 					WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-					WithPolicy("1|custom-tier|custom-tier.my-deployment-dns|deny|1")
+					WithPolicy("1|custom-tier|custom-tier.my-deployment-dns|deny|1").
+					WithHost("my-host").
+					WithTCPMaxMinRTT(300).
+					WithTCPMaxSmoothRTT(301).
+					WithTCPMeanMinRTT(302).
+					WithTCPMeanSmoothRTT(303)
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 
@@ -642,6 +699,24 @@ func TestFlowLogFiltering(t *testing.T) {
 					require.Nil(t, r.AfterKey)
 					require.Empty(t, err)
 
+					if !testcase.SkipComparison {
+						var copyOfLogs []v1.FlowLog
+						for _, item := range r.Items {
+							require.Contains(t, selectedClusters, item.Cluster)
+							backendutils.AssertFlowLogIDAndClusterAndReset(t, item.Cluster, &item)
+
+							copyOfLogs = append(copyOfLogs, item)
+						}
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, *fl1)
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, *fl2)
+						}
+					}
+
 					if numExpected(testcase) > 0 {
 						require.Falsef(t, backendutils.MatchIn(r.Items, backendutils.FlowLogClusterEquals(cluster1)), "found unexpected cluster %s", cluster1)
 						for i, cluster := range selectedClusters {
@@ -656,6 +731,22 @@ func TestFlowLogFiltering(t *testing.T) {
 					require.NoError(t, err)
 					require.Nil(t, r.AfterKey)
 					require.Empty(t, err)
+
+					if !testcase.SkipComparison {
+						var copyOfLogs []v1.FlowLog
+						for _, item := range r.Items {
+							backendutils.AssertFlowLogIDAndClusterAndReset(t, item.Cluster, &item)
+							copyOfLogs = append(copyOfLogs, item)
+						}
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, *fl1)
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, *fl2)
+						}
+					}
 
 					if numExpected(testcase) > 0 {
 						allClusters := []string{cluster1, cluster2, cluster3}
