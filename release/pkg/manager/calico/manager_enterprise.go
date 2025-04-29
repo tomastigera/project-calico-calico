@@ -751,9 +751,6 @@ func (m *EnterpriseManager) PublishRelease() error {
 		if err := m.publishReleaseImages(); err != nil {
 			return err
 		}
-		if err := m.publishReleaseBinaries(); err != nil {
-			return err
-		}
 	}
 
 	if err := m.publishWindowsArchiveToGCS(); err != nil {
@@ -770,18 +767,19 @@ func (m *EnterpriseManager) PublishRelease() error {
 		return err
 	}
 
-	ver := version.Version(m.calicoVersion)
-	branchManager := branch.NewManager(branch.WithRepoRoot(m.repoRoot),
-		branch.WithRepoRemote(m.remote),
-		branch.WithMainBranch(fmt.Sprintf("%s-%s", m.releaseBranchPrefix, ver.Stream())),
-		branch.WithDevTagIdentifier(m.devTagSuffix),
-		branch.WithValidate(m.validate),
-		branch.WithPublish(m.publishTag))
+	if !m.isHashRelease {
+		// Create the next development tag.
+		ver := version.Version(m.calicoVersion)
+		branchManager := branch.NewManager(branch.WithRepoRoot(m.repoRoot),
+			branch.WithRepoRemote(m.remote),
+			branch.WithMainBranch(fmt.Sprintf("%s-%s", m.releaseBranchPrefix, ver.Stream())),
+			branch.WithDevTagIdentifier(m.devTagSuffix),
+			branch.WithValidate(m.validate),
+			branch.WithPublish(m.publishTag && !m.dryRun))
 
-	return branchManager.CreateNextDevelopmentTag()
-}
-
-func (m *EnterpriseManager) publishReleaseBinaries() error {
+		return branchManager.CreateNextDevelopmentTag()
+	}
+	return nil
 }
 
 func (m *EnterpriseManager) publishReleaseImages() error {

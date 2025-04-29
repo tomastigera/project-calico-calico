@@ -9,7 +9,6 @@ import (
 
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/registry"
-	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
@@ -59,7 +58,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 
 			// Clone the manager repository.
 			managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
-			if err := utils.Clone(fmt.Sprintf("git@github.com:%s/%s.git", c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name)), c.String(managerBranchFlag.Name), managerDir); err != nil {
+			if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
 				return fmt.Errorf("failed to clone manager repository: %v", err)
 			}
 
