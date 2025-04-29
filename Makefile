@@ -44,6 +44,15 @@ clean:
 	$(MAKE) -C typha clean
 	$(MAKE) -C release clean
 	$(MAKE) -C selinux clean
+	$(MAKE) -C third_party/alertmanager clean
+	$(MAKE) -C third_party/dex clean
+	$(MAKE) -C third_party/eck-operator clean
+	$(MAKE) -C third_party/elasticsearch clean
+	$(MAKE) -C third_party/fluentd-base clean
+	$(MAKE) -C third_party/kibana clean
+	$(MAKE) -C third_party/prometheus clean
+	$(MAKE) -C third_party/prometheus-operator clean
+	$(MAKE) -C third_party/snort3 clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive
@@ -57,6 +66,7 @@ ci-preflight-checks:
 	$(MAKE) check-release-cut-promotions
 	$(MAKE) generate
 	$(MAKE) fix-all
+	$(MAKE) check-ocp-no-crds
 	$(MAKE) yaml-lint
 	$(MAKE) check-dirty
 
@@ -99,6 +109,10 @@ check-release-cut-promotions:
 check-language:
 	./hack/check-language.sh
 
+check-ocp-no-crds:
+	@echo "Checking for files in manifests/ocp with CustomResourceDefinitions"
+	@CRD_FILES_IN_OCP_DIR=$$(grep "^kind: CustomResourceDefinition" manifests/ocp/* -l || true); if [ ! -z "$$CRD_FILES_IN_OCP_DIR" ]; then echo "ERROR: manifests/ocp should not have any CustomResourceDefinitions, these files should be removed:"; echo "$$CRD_FILES_IN_OCP_DIR"; exit 1; fi
+
 yaml-lint:
 	@docker run --rm $$(tty -s && echo "-it" || echo) -v $(PWD):/data cytopia/yamllint:latest .
 
@@ -118,10 +132,44 @@ generate:
 	$(MAKE) -C libcalico-go gen-files
 	$(MAKE) -C felix gen-files
 	$(MAKE) -C goldmane gen-files
+	$(MAKE) gen-prometheus-crds
+	$(MAKE) gen-eck-crds
 	$(MAKE) gen-manifests
 	$(MAKE) fix-changed
 
-gen-manifests: bin/helm bin/yq
+PROM_CRD_LOCATION=third_party/prometheus-operator/prometheus-operator/example/prometheus-operator-crd
+PROM_CRD_TARGET_LOCATION=charts/tigera-prometheus-operator/crds
+gen-prometheus-crds:
+	@echo "Generating prometheus operator CRDs..."
+	$(MAKE) -C third_party/prometheus-operator init-source
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_alertmanagerconfigs.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-alertmanagerconfigs.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_alertmanagers.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-alertmanagers.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_podmonitors.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-podmonitors.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_probes.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-probes.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_prometheusagents.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-prometheusagents.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_prometheuses.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-prometheuses.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_prometheusrules.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-prometheusrules.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_scrapeconfigs.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-scrapeconfigs.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_servicemonitors.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-servicemonitors.yaml
+	$(DOCKER_GO_BUILD) cp $(PROM_CRD_LOCATION)/monitoring.coreos.com_thanosrulers.yaml $(PROM_CRD_TARGET_LOCATION)/01-crd-thanosrulers.yaml
+	# Strip all description fields to reduce manifest size
+	$(DOCKER_GO_BUILD) /bin/bash -c "                                        \
+    		for file in $(PROM_CRD_TARGET_LOCATION)/* ;                                                 \
+            	do /usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' \$$file ; \
+            done"
+	$(MAKE) -C third_party/prometheus-operator clean
+
+gen-eck-crds:
+	@echo "Generating ECK operator CRDs..."
+	$(MAKE) -C third_party/eck-operator init-source
+	$(MAKE) -C third_party/eck-operator/cloud-on-k8s generate-manifests
+	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml
+	# Strip all description fields to reduce manifest size.
+	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml"
+	cp charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
+	$(MAKE) -C third_party/eck-operator clean
+
+gen-manifests: bin/helm bin/yq gen-prometheus-crds
 	# TODO: Ideally we don't need to do this, but the sub-charts
 	# mess up manifest generation if they are present.
 	rm -f $(SUB_CHARTS)

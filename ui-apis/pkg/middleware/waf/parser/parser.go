@@ -73,7 +73,7 @@ func Parse(f string) ([]Rule, error) {
 		if line[lineLen-1] == '\\' {
 			linebuffer.WriteString(strings.TrimSuffix(line, "\\"))
 		} else {
-			// handle chanin rules and rules that are one line next to each other
+			// handle chaining rules and rules that are one line next to each other
 			linebuffer.WriteString(line)
 			completeLine := linebuffer.String()
 			leading_spaces := len(completeLine) - len(strings.TrimLeft(completeLine, " "))

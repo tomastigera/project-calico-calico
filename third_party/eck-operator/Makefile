@@ -32,6 +32,7 @@ LDFLAGS ?= -X $(PACKAGE_NAME)/cloud-on-k8s/pkg/about.version=$(VERSION) \
 # BUILD BINARY
 ###############################################################################
 ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded
+FILES_GENERATED=.eck-operator.generated
 
 FIPS ?= false
 
@@ -49,19 +50,28 @@ $(ECK_OPERATOR_DOWNLOADED):
 	mkdir -p cloud-on-k8s
 	curl -sfL https://github.com/elastic/cloud-on-k8s/archive/refs/tags/$(ECK_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C cloud-on-k8s
 	patch -d cloud-on-k8s -p1 < patches/0001-Chown-for-elasticserach-folder-recursively.patch
-	patch -d cloud-on-k8s -p1 < patches/0002-Upgrade-x-net-crypto-to-v0.35.0-update-x-oauth-to-v0.patch
+	patch -d cloud-on-k8s -p1 < patches/0002-Update-libraries.patch
 	touch $@
 
 .PHONY: build
 build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 
-.PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
-bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): register $(ECK_OPERATOR_DOWNLOADED)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
+.PHONY: generate
+generate: $(FILES_GENERATED)
+$(FILES_GENERATED): init-source
+	@echo "Generating ECK operator code and config"
+	$(DOCKER_RUN) -e GOARCH=amd64 -e ARCH=amd64 $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && \
 			make go-generate && \
-			make generate-config-file && \
+			make generate-config-file'
+	touch $@
+
+.PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
+bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): register $(ECK_OPERATOR_DOWNLOADED) generate
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			cd cloud-on-k8s && \
 			go build -buildvcs=false -o ../$@ -v -tags $(TAGS) -ldflags="$(LDFLAGS) -s -w" cmd/main.go'
 ifeq ($(FIPS),true)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'strings bin/eck-operator-$(ARCH) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
@@ -105,5 +115,5 @@ cd: image-all cd-common
 .PHONY: clean
 clean:
 	rm -fr bin/ cloud-on-k8s/
-	rm -f $(ECK_OPERATOR_DOWNLOADED)
+	rm -f $(ECK_OPERATOR_DOWNLOADED) $(FILES_GENERATED)
 	-docker image rm -f $$(docker images $(ECK_OPERATOR_IMAGE) -a -q)

@@ -711,6 +711,11 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			genHEPUpdate(allInterfaces, hostEpNorm)()
 		})
 
+		It("should handle removing the HEP", func() {
+			genHEPUpdate()()
+			Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
+		})
+
 		It("should attach/detach programs when ifaces are added/deleted", func() {
 			dataIfacePattern = "^eth|bond*"
 			newBpfEpMgr(false)
@@ -1020,10 +1025,16 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			genHostMetadataUpdate("1.2.3.4")()
 			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(3))
 			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(3))
+			genHostMetadataUpdate("1.2.3.4")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(3))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(3))
 
 			genHostMetadataV6Update("1::5/128")()
 			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(4))
 			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(4))
+			genHostMetadataV6Update("1::4")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(5))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(5))
 			genHostMetadataV6Update("1::4")()
 			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(5))
 			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(5))

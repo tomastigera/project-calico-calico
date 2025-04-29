@@ -123,13 +123,6 @@ done) >>operator-crds.yaml
 ##########################################################################
 # Build CRDs files used in docs.
 ##########################################################################
-echo "# ECK operator CRDs." >eck-operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/eck/*.yaml; do
-  echo "---"
-  echo "# Source: tigera-operator/crds/eck/$(basename $file)"
-  cat $file
-done) >>eck-operator-crds.yaml
-
 echo "# Prometheus operator CRDs." >prometheus-operator-crds.yaml
 (for file in ../charts/tigera-prometheus-operator/crds/*.yaml; do
   echo "---"
@@ -180,11 +173,23 @@ ${HELM} template \
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
+
 # The rendered pull secret base64 encodes our dummy value - restore it to ensure doc references are valid.
 sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
 
+# Generating the upgrade manifest for OCP.
+# It excludes the CRs (01-*) and the specific BPF files to maintain compatibility with iptables.
+VALUES_FILES=$(ls ocp | grep -v -e '^01-' -e 'cluster-network-operator.yaml' -e '02-configmap-calico-resources.yaml')
+rm -f tigera-operator-ocp-upgrade.yaml
+for FILE in $VALUES_FILES; do
+  cat "ocp/$FILE" >> tigera-operator-ocp-upgrade.yaml
+  echo -e "---" >> tigera-operator-ocp-upgrade.yaml  # Add divisor
+done
+# Remove the last separator (last line)
+sed -i -e '$ d' tigera-operator-ocp-upgrade.yaml
+
 ##########################################################################
-# Replace versions for "static" Calico Enterprise manifests.
+# Replace image versions for "static" Calico manifests.
 ##########################################################################
 if [[ $CALICO_VERSION != master ]]; then
   echo "Replacing image tags for static enterprise manifests"

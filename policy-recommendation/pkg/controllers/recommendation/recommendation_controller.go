@@ -60,7 +60,7 @@ type recommendationController struct {
 	cache rcache.ResourceCache
 
 	// engine is the recommendation engine.
-	engine *recengine.RecommendationEngine
+	engine recengine.RecommendationEngine
 
 	// The number of workers threads used to read the queue for the recommendation cache.
 	numberOfWorkers int
@@ -76,7 +76,7 @@ type recommendationController struct {
 }
 
 func NewRecommendationController(
-	ctx context.Context, clusterID string, clientSet lmak8s.ClientSet, engine *recengine.RecommendationEngine, cache rcache.ResourceCache,
+	ctx context.Context, clusterID string, clientSet lmak8s.ClientSet, engine recengine.RecommendationEngine, cache rcache.ResourceCache,
 ) (controller.Controller, error) {
 	clog := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
@@ -174,7 +174,7 @@ func (c *recommendationController) Run(stopChan chan struct{}) {
 }
 
 // GetEngine returns the recommendation engine.
-func (c *recommendationController) GetEngine() *recengine.RecommendationEngine {
+func (c *recommendationController) GetEngine() recengine.RecommendationEngine {
 	return c.engine
 }
 

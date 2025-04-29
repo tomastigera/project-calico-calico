@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 8.17.1
+KIBANA_VERSION = 8.17.4
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -31,7 +31,6 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
 	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-only-linux-variant.patch
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
-	patch -d kibana -p1 < patches/0004-update-node-js-version-to-fix-cves.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/googletagmanager kibana/plugins/
 	touch $@

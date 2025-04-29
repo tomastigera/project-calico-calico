@@ -1,4 +1,5 @@
-// Copyright (c) 2024 Tigera Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera Inc. All rights reserved.
+
 package watcher
 
 import (
@@ -131,7 +132,7 @@ func (w *watcher) processNextItem() bool {
 
 	log.Debugf("Received '%v', and type: %s", key, reflect.TypeOf(w.resource.obj).String())
 	reqLogger := log.WithField("key", key)
-	reqLogger.Debug("Processing next item")
+	reqLogger.Debug("Processing next key")
 
 	keyStr, ok := key.(string)
 	if !ok {

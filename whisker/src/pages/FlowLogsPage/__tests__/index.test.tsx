@@ -8,6 +8,7 @@ import { fireEvent, renderWithRouter, screen } from '@/test-utils/helper';
 import FlowLogsPage from '..';
 
 import { useOmniFilterData } from '@/hooks/omniFilters';
+import { ListOmniFilterKeys, OmniFilterKeys } from '@/utils/omniFilter';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -71,7 +72,7 @@ jest.mock(
         },
 );
 
-jest.mock('@/hooks', () => ({ useSelectedOmniFilters: jest.fn() }));
+jest.mock('@/hooks', () => ({ useSelectedListOmniFilters: jest.fn() }));
 
 const useStreamStub = {
     stopStream: jest.fn(),
@@ -92,11 +93,19 @@ const omniFilterData = {
         filters: [],
         isLoading: false,
     },
-    src_name: {
+    source_name: {
         filters: [],
         isLoading: false,
     },
-    dst_name: {
+    source_namespace: {
+        filters: [],
+        isLoading: false,
+    },
+    dest_name: {
+        filters: [],
+        isLoading: false,
+    },
+    dest_namespace: {
         filters: [],
         isLoading: false,
     },
@@ -219,10 +228,18 @@ describe('FlowLogsPage', () => {
     });
 
     it('should request data for <OmniFilters />', () => {
-        const query = {
-            filterParam: 'xyz',
-            searchOption: '',
-        };
+        jest.mocked(useOmniFilterUrlState).mockReturnValue([
+            {},
+            {},
+            jest.fn(),
+            jest.fn(),
+        ] as any);
+        jest.mocked(useOmniFilterUrlState).mockReturnValue([
+            {},
+            {},
+            jest.fn(),
+            jest.fn(),
+        ] as any);
         const fetchDataMock = jest.fn();
         jest.mocked(useOmniFilterData).mockReturnValue([
             omniFilterData,
@@ -231,9 +248,18 @@ describe('FlowLogsPage', () => {
 
         renderWithRouter(<FlowLogsPage />);
 
-        MockOmniFilters.onRequestFilterData(query);
+        const userText = 'user-text';
+        MockOmniFilters.onRequestFilterData({
+            filterParam: OmniFilterKeys.dest_namespace,
+            searchOption: userText,
+        });
 
-        expect(fetchDataMock).toHaveBeenCalledWith(query.filterParam, query);
+        expect(fetchDataMock).toHaveBeenCalledWith(
+            ListOmniFilterKeys.dest_namespace,
+            JSON.stringify({
+                dest_namespaces: [{ type: 'Fuzzy', value: userText }],
+            }),
+        );
     });
 
     it('should fetch the next page for <OmniFilters />', () => {
@@ -247,7 +273,7 @@ describe('FlowLogsPage', () => {
 
         MockOmniFilters.onRequestNextPage(filterParam);
 
-        expect(fetchDataMock).toHaveBeenCalledWith(filterParam);
+        expect(fetchDataMock).toHaveBeenCalledWith(filterParam, null);
     });
 
     it('should show a toast message when opening a row', () => {

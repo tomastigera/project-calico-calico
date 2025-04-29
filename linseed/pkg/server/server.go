@@ -25,7 +25,7 @@ type Server struct {
 func NewServer(addr string, opts ...Option) *Server {
 	const (
 		defaultIdleTimeout = 120 * time.Second
-		defaultReadTimeout = 5 * time.Second
+		defaultReadTimeout = 60 * time.Second
 	)
 
 	mux := chi.NewRouter()

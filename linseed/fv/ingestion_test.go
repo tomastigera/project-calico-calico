@@ -437,10 +437,20 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 			Policies: &proto.PolicyTrace{
 				EnforcedPolicies: []*proto.PolicyHit{
 					{
-						Kind:   proto.PolicyKind_AdminNetworkPolicy,
-						Name:   "pol",
-						Tier:   "tier",
-						Action: proto.Action_Allow,
+						Kind:        proto.PolicyKind_AdminNetworkPolicy,
+						Name:        "pol",
+						Tier:        "tier",
+						Action:      proto.Action_Allow,
+						PolicyIndex: 1,
+						RuleIndex:   1,
+					},
+					{
+						Kind:        proto.PolicyKind_Profile,
+						Name:        "kns.calico-system",
+						Tier:        "",
+						Action:      proto.Action_Allow,
+						PolicyIndex: 0,
+						RuleIndex:   1,
 					},
 				},
 				PendingPolicies: []*proto.PolicyHit{
@@ -482,6 +492,13 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
+		// send a few more.
+		for range 10 {
+			res, resBody = doRequest(t, httpClient, spec)
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+			assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+		}
+
 		// Force a refresh in order to read the newly ingested data
 		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
@@ -498,10 +515,25 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 		resultList, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
-		require.Equal(t, int64(1), resultList.TotalHits)
+		require.Equal(t, int64(11), resultList.TotalHits)
 		require.NotNil(t, resultList.Items[0].Policies)
-		require.Len(t, resultList.Items[0].Policies.EnforcedPolicies, 1)
+		require.Len(t, resultList.Items[0].Policies.EnforcedPolicies, 2)
 		require.Len(t, resultList.Items[0].Policies.PendingPolicies, 1)
+
+		// We should be able to make a Flows request as well and get the same data.
+		flowParams := v1.L3FlowParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(0, 0),
+					To:   time.Unix(1675469001, 0),
+				},
+			},
+		}
+		flows, err := cli.L3Flows(cluster).List(ctx, &flowParams)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(flows.Items))
+		require.Equal(t, 2, len(flows.Items[0].EnforcedPolicies))
+		require.Equal(t, 1, len(flows.Items[0].PendingPolicies))
 	})
 }
 

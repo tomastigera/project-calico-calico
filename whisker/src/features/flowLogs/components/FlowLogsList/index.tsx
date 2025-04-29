@@ -112,6 +112,7 @@ const FlowLogsList: React.FC<FlowLogsListProps> = ({
                 noResultsStyles={{
                     py: 24,
                     '>div': { fontSize: 'sm' },
+                    borderBottom: 'none',
                 }}
                 expandRowComponent={renderRowSubComponent}
                 onRowClicked={(row) => onRowClicked(row)}
@@ -120,7 +121,7 @@ const FlowLogsList: React.FC<FlowLogsListProps> = ({
                 autoResetExpandedRow={true}
                 virtualisationProps={{
                     tableHeight: flowLogs?.length ? height : 0,
-                    subRowHeight: 630,
+                    subRowHeight: 700,
                     rowHeight: 35,
                     subRowStyles: subRowStyles,
                 }}

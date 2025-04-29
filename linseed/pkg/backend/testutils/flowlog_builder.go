@@ -461,6 +461,66 @@ func (b *FlowLogBuilder) WithRandomPacketStats() *FlowLogBuilder {
 	return b
 }
 
+func (b *FlowLogBuilder) WithHost(host string) *FlowLogBuilder {
+	b.activeLog.Host = host
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPLostPackets(tcpLostPackets int64) *FlowLogBuilder {
+	b.activeLog.TCPLostPackets = tcpLostPackets
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMeanSendCongestionWindow(tcpMeanSendCongestionWindow int64) *FlowLogBuilder {
+	b.activeLog.TCPMeanSendCongestionWindow = tcpMeanSendCongestionWindow
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMinSendCongestionWindow(tcpMinSendCongestionWindow int64) *FlowLogBuilder {
+	b.activeLog.TCPMinSendCongestionWindow = tcpMinSendCongestionWindow
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPTotalRetransmissions(tcpTotalRetransmissions int64) *FlowLogBuilder {
+	b.activeLog.TCPTotalRetransmissions = tcpTotalRetransmissions
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPUnrecoveredTo(tcpUnrecoveredTo int64) *FlowLogBuilder {
+	b.activeLog.TCPUnrecoveredTo = tcpUnrecoveredTo
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMeanMSS(tcpMeanMSS int64) *FlowLogBuilder {
+	b.activeLog.TCPMeanMSS = tcpMeanMSS
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMinMSS(tcpMinMSS int64) *FlowLogBuilder {
+	b.activeLog.TCPMinMSS = tcpMinMSS
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMaxMinRTT(tcpMaxMinRTT int64) *FlowLogBuilder {
+	b.activeLog.TCPMaxMinRTT = tcpMaxMinRTT
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMaxSmoothRTT(tcpMaxSmoothRTT int64) *FlowLogBuilder {
+	b.activeLog.TCPMaxSmoothRTT = tcpMaxSmoothRTT
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMeanMinRTT(tcpMeanMinRTT int64) *FlowLogBuilder {
+	b.activeLog.TCPMeanMinRTT = tcpMeanMinRTT
+	return b
+}
+
+func (b *FlowLogBuilder) WithTCPMeanSmoothRTT(tcpMeanSmoothRTT int64) *FlowLogBuilder {
+	b.activeLog.TCPMeanSmoothRTT = tcpMeanSmoothRTT
+	return b
+}
+
 // containsValue returns true if the value already exists in the slice.
 func containsValue(slice []string, value string) bool {
 	for _, item := range slice {

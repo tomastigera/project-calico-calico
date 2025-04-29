@@ -20,7 +20,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/projectcalico/calico/goldmane/pkg/internal/flowcache"
@@ -37,14 +36,13 @@ const (
 // just validates that it should be able to with the given parameters).
 //
 // If an error is returned, it means that no amount of retrying will create the client with the same parameters.
-func NewFlowClient(server, caFile string) (*FlowClient, error) {
+func NewFlowClient(server, cert, key, caFile string) (*FlowClient, error) {
 	// Get credentials.
-	// TODO: mTLS support.
 	opts := []grpc.DialOption{}
-	if caFile != "" {
-		creds, err := credentials.NewClientTLSFromFile(caFile, "")
+	if caFile != "" || cert != "" || key != "" {
+		creds, err := ClientCredentials(cert, key, caFile)
 		if err != nil {
-			logrus.WithError(err).Fatal("Failed to create goldmane TLS credentials.")
+			return nil, err
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
@@ -103,6 +101,7 @@ func (c *FlowClient) Connect(ctx context.Context) <-chan struct{} {
 		for {
 			// Send new Flows as they are received.
 			for flog := range c.inChan {
+				logrus.WithField("flow", flog).Debug("Sending flow")
 				// Add the flow to our cache. It will automatically be expired in the background.
 				// We don't need to pass in a value for scope, since the client is intrinsically scoped
 				// to a particular node.
@@ -193,6 +192,7 @@ func (c *FlowClient) connect(ctx context.Context) (grpc.BidiStreamingClient[prot
 
 func (c *FlowClient) Push(f *proto.Flow) {
 	// Make a copy of the flow to decouple the caller from the client.
+	logrus.Debug("Pushing flow to client")
 	cp := f
 	select {
 	case c.inChan <- cp:

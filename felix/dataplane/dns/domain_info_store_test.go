@@ -21,8 +21,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"
+	config "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/testutils"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -999,9 +999,10 @@ var _ = Describe("Domain Info Store", func() {
 
 		Context("with an epoch change", func() {
 			BeforeEach(func() {
-				domainStore.OnUpdate(&proto.ConfigUpdate{
-					Config: map[string]string{"DNSCacheEpoch": "2"},
-				})
+				conf := config.New()
+				_, err := conf.UpdateFrom(map[string]string{"DNSCacheEpoch": "2"}, config.DatastoreGlobal)
+				Expect(err).NotTo(HaveOccurred())
+				domainStore.OnUpdate(conf.ToConfigUpdate())
 				log.Info("Injected epoch change")
 			})
 
@@ -1018,9 +1019,10 @@ var _ = Describe("Domain Info Store", func() {
 	Context("with dynamic config update for 1h extra TTL", func() {
 		BeforeEach(func() {
 			domainStoreCreate()
-			domainStore.OnUpdate(&proto.ConfigUpdate{
-				Config: map[string]string{"DNSExtraTTL": "3600"},
-			})
+			conf := config.New()
+			_, err := conf.UpdateFrom(map[string]string{"DNSExtraTTL": "3600"}, config.DatastoreGlobal)
+			Expect(err).NotTo(HaveOccurred())
+			domainStore.OnUpdate(conf.ToConfigUpdate())
 			log.Info("Updated extra TTL to 1h")
 			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 		})
@@ -1290,7 +1292,7 @@ var _ = Describe("Domain Info Store", func() {
 		})
 
 		AfterEach(func() {
-			os.RemoveAll(tempDir)
+			_ = os.RemoveAll(tempDir)
 		})
 
 		It("should save mappings to file", func() {
@@ -1385,7 +1387,7 @@ var _ = Describe("Domain Info Store", func() {
 		})
 
 		AfterEach(func() {
-			os.RemoveAll(tempDir)
+			_ = os.RemoveAll(tempDir)
 		})
 
 		It("should save mappings to file", func() {

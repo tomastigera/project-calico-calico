@@ -143,6 +143,13 @@ func New(
 	)
 
 	w.AddWatch(
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.managedOperatorNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.VoltronLinseedPublicCert))),
+		&corev1.Secret{},
+		notifications...,
+	)
+
+	w.AddWatch(
 		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", r.managedOperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},
@@ -191,6 +198,12 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ESGatewayCertSecret))),
+			&corev1.Secret{},
+			notifications...,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.VoltronLinseedPublicCert))),
 			&corev1.Secret{},
 			notifications...,
 		)

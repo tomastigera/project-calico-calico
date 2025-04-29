@@ -1,3 +1,17 @@
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cryptoutils
 
 import (
@@ -10,11 +24,18 @@ import (
 	"time"
 )
 
-type CertificateOptions func(x509.Certificate) error
+type CertificateOptions func(*x509.Certificate) error
 
 func WithDNSNames(dnsNames ...string) CertificateOptions {
-	return func(c x509.Certificate) error {
+	return func(c *x509.Certificate) error {
 		c.DNSNames = dnsNames
+		return nil
+	}
+}
+
+func WithExtKeyUsages(keyUsages ...x509.ExtKeyUsage) CertificateOptions {
+	return func(c *x509.Certificate) error {
+		c.ExtKeyUsage = keyUsages
 		return nil
 	}
 }
@@ -29,7 +50,6 @@ func GenerateSelfSignedCert(opts ...CertificateOptions) ([]byte, []byte, error) 
 	// Create certificate template
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
-		DNSNames:     []string{"localhost"},
 
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(24 * time.Hour), // Certificate valid for 24 hours
@@ -39,7 +59,7 @@ func GenerateSelfSignedCert(opts ...CertificateOptions) ([]byte, []byte, error) 
 	}
 
 	for _, opt := range opts {
-		if err := opt(template); err != nil {
+		if err := opt(&template); err != nil {
 			return nil, nil, fmt.Errorf("failed to apply certificate options: %w", err)
 		}
 	}

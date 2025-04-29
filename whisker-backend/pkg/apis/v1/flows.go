@@ -17,6 +17,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/projectcalico/calico/goldmane/proto"
@@ -26,8 +29,43 @@ import (
 const (
 	sep = "/"
 
-	FlowsPath = sep + "flows"
+	FlowsPath            = sep + "flows"
+	FlowsFilterHintsPath = sep + "flows-filter-hints"
 )
+
+func init() {
+	// Register a decoder for the SortBys.
+	codec.RegisterCustomDecodeTypeFunc(func(vals []string) (SortBys, error) {
+		var values []SortBy
+		for _, v := range vals {
+			if sortBy, exists := proto.SortBy_value[v]; exists {
+				values = append(values, SortBy(sortBy))
+			} else {
+				return nil, fmt.Errorf("unknown sortBy value: %s", vals[0])
+			}
+		}
+		return values, nil
+	})
+
+	// Register a decoder for the FilterType.
+	codec.RegisterCustomDecodeTypeFunc(func(vals []string) (*FilterType, error) {
+		for _, v := range vals {
+			if filterType, exists := proto.FilterType_value["FilterType"+v]; exists {
+				t := FilterType(filterType)
+				return &t, nil
+			}
+		}
+
+		allowedValues := slices.Collect(maps.Keys(proto.FilterType_value))
+		for i, val := range allowedValues {
+			allowedValues[i] = strings.TrimPrefix(val, "FilterType")
+		}
+
+		return nil, fmt.Errorf("unknown filter type value %s; allowed values are '%s'", vals[0], strings.Join(allowedValues, "', '"))
+	})
+
+	codec.RegisterURLQueryJSONType[Filters]()
+}
 
 func marshalToBytes(str interface{ String() string }) ([]byte, error) {
 	return []byte(fmt.Sprintf("\"%s\"", str)), nil
@@ -56,6 +94,13 @@ func unmarshalProtoEnum[E ~int32](e **E, b []byte, m map[string]int32) error {
 }
 
 type Action proto.Action
+
+const (
+	ActionAllow Action = Action(proto.Action_Allow)
+	ActionDeny  Action = Action(proto.Action_Deny)
+	ActionPass  Action = Action(proto.Action_Pass)
+)
+
 type Actions []Action
 
 func (p Action) String() string                { return proto.Action(p).String() }
@@ -89,6 +134,11 @@ func (ps SortBys) AsProtos() []proto.SortBy {
 
 type MatchType proto.MatchType
 
+const (
+	MatchTypeExact = MatchType(proto.MatchType_Exact)
+	MatchTypeFuzzy = MatchType(proto.MatchType_Fuzzy)
+)
+
 func (p MatchType) String() string               { return proto.MatchType(p).String() }
 func (p MatchType) MarshalJSON() ([]byte, error) { return marshalToBytes(p) }
 func (p *MatchType) UnmarshalJSON(b []byte) error {
@@ -107,6 +157,21 @@ func (p Reporter) AsProto() proto.Reporter { return proto.Reporter(p) }
 
 type PolicyKind proto.PolicyKind
 
+const (
+	PolicyKindCalicoNetworkPolicy           = PolicyKind(proto.PolicyKind_CalicoNetworkPolicy)
+	PolicyKindGlobalNetworkPolicy           = PolicyKind(proto.PolicyKind_GlobalNetworkPolicy)
+	PolicyKindStagedNetworkPolicy           = PolicyKind(proto.PolicyKind_StagedNetworkPolicy)
+	PolicyKindStagedGlobalNetworkPolicy     = PolicyKind(proto.PolicyKind_StagedGlobalNetworkPolicy)
+	PolicyKindStagedKubernetesNetworkPolicy = PolicyKind(proto.PolicyKind_StagedKubernetesNetworkPolicy)
+
+	PolicyKindNetworkPolicy              = PolicyKind(proto.PolicyKind_NetworkPolicy)
+	PolicyKindAdminNetworkPolicy         = PolicyKind(proto.PolicyKind_AdminNetworkPolicy)
+	PolicyKindBaselineAdminNetworkPolicy = PolicyKind(proto.PolicyKind_BaselineAdminNetworkPolicy)
+
+	PolicyKindProfile   = PolicyKind(proto.PolicyKind_Profile)
+	PolicyKindEndOfTier = PolicyKind(proto.PolicyKind_EndOfTier)
+)
+
 func (p PolicyKind) String() string { return proto.PolicyKind(p).String() }
 
 func (p PolicyKind) MarshalJSON() ([]byte, error) { return marshalToBytes(p) }
@@ -115,22 +180,14 @@ func (p *PolicyKind) UnmarshalJSON(b []byte) error {
 }
 func (p PolicyKind) AsProto() proto.PolicyKind { return proto.PolicyKind(p) }
 
-func init() {
-	// Register a decoder for the listFlowsSortBy.
-	codec.RegisterCustomDecodeTypeFunc(func(vals []string) (SortBys, error) {
-		var values []SortBy
-		for _, v := range vals {
-			if sortBy, exists := proto.SortBy_value[v]; exists {
-				values = append(values, SortBy(sortBy))
-			} else {
-				return nil, fmt.Errorf("unknown sortBy value: %s", vals[0])
-			}
-		}
-		return values, nil
-	})
+type FilterType proto.FilterType
 
-	codec.RegisterURLQueryJSONType[Filters]()
+func (p FilterType) String() string               { return proto.FilterType(p).String() }
+func (p FilterType) MarshalJSON() ([]byte, error) { return marshalToBytes(p) }
+func (p *FilterType) UnmarshalJSON(b []byte) error {
+	return unmarshalProtoEnum(&p, b, proto.FilterType_value)
 }
+func (p FilterType) AsProto() proto.FilterType { return proto.FilterType(p) }
 
 type ListFlowsParams struct {
 	Watch        bool    `urlQuery:"watch"`
@@ -143,6 +200,10 @@ type ListFlowsParams struct {
 type FilterMatch[E comparable] struct {
 	V    E         `json:"value"`
 	Type MatchType `json:"type"`
+}
+
+func NewFilterMatch[E comparable](v E, matchType MatchType) FilterMatch[E] {
+	return FilterMatch[E]{V: v, Type: matchType}
 }
 
 type FilterMatches[E comparable] []FilterMatch[E]
@@ -159,6 +220,15 @@ type Filters struct {
 	Protocols        FilterMatches[string] `json:"protocols,omitempty"`
 	DestPorts        FilterMatches[int64]  `json:"dest_ports,omitempty"`
 	Actions          Actions               `json:"actions,omitempty"`
+	Policies         []PolicyMatch         `json:"policies,omitempty"`
+}
+
+type PolicyMatch struct {
+	Kind      PolicyKind          `json:"kind"`
+	Tier      FilterMatch[string] `json:"tier"`
+	Name      FilterMatch[string] `json:"name"`
+	Namespace FilterMatch[string] `json:"namespace"`
+	Action    Action              `json:"action"`
 }
 
 type FlowResponse struct {
@@ -195,4 +265,15 @@ type PolicyHit struct {
 	PolicyIndex int64      `json:"policy_index"`
 	RuleIndex   int64      `json:"rule_index"`
 	Trigger     *PolicyHit `json:"trigger"`
+}
+
+type FlowFilterHintsRequest struct {
+	// Type represents the filter type to get hints for.
+	// Note that this is a pointer because the 0 value of the Filter type fails the required check.
+	Type    *FilterType `urlQuery:"type" validate:"required"`
+	Filters Filters     `urlQuery:"filters"`
+}
+
+type FlowFilterHintResponse struct {
+	Value string `json:"value"`
 }

@@ -1,7 +1,6 @@
-import { useFlowLogsStream } from '@/features/flowLogs/api';
 import { FlowLogsContext } from '@/features/flowLogs/components/FlowLogsContainer';
 import OmniFilters from '@/features/flowLogs/components/OmniFilters';
-import { useSelectedOmniFilters } from '@/hooks';
+import { useSelectedListOmniFilters } from '@/hooks';
 import { useOmniFilterData } from '@/hooks/omniFilters';
 import PauseIcon from '@/icons/PauseIcon';
 import PlayIcon from '@/icons/PlayIcon';
@@ -11,7 +10,12 @@ import {
     OmniFilterChangeEvent,
     useOmniFilterUrlState,
 } from '@/libs/tigera/ui-components/components/common/OmniFilter';
-import { OmniFilterParam, OmniFilterProperties } from '@/utils/omniFilter';
+import {
+    FilterKey,
+    OmniFilterKeys,
+    OmniFilterProperties,
+    transformToFlowsFilterQuery,
+} from '@/utils/omniFilter';
 import {
     AlertStatus,
     Box,
@@ -28,6 +32,7 @@ import {
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { streamButtonStyles } from './styles';
+import { useFlowLogsStream } from '@/features/flowLogs/api';
 
 const toastProps = {
     duration: 7500,
@@ -41,12 +46,19 @@ const FlowLogsPage: React.FC = () => {
     const isDeniedSelected = location.pathname.includes('/denied-flows');
     const defaultTabIndex = isDeniedSelected ? 1 : 0;
 
-    const [urlFilterParams, , setFilterParam, clearFilterParams] =
-        useOmniFilterUrlState<typeof OmniFilterParam>(
-            OmniFilterParam,
-            OmniFilterProperties,
-        );
-
+    const [
+        urlFilterParams,
+        ,
+        setFilterParam,
+        clearFilterParams,
+        ,
+        ,
+        ,
+        setUrlParams,
+    ] = useOmniFilterUrlState<typeof OmniFilterKeys>(
+        OmniFilterKeys,
+        OmniFilterProperties,
+    );
     const onChange = (event: OmniFilterChangeEvent) => {
         setFilterParam(
             event.filterId,
@@ -61,11 +73,12 @@ const FlowLogsPage: React.FC = () => {
 
     const [omniFilterData, fetchFilter] = useOmniFilterData();
     const selectedOmniFilterData = {};
-    const selectedFilters = useSelectedOmniFilters(
+    const selectedFilters = useSelectedListOmniFilters(
         urlFilterParams,
         omniFilterData,
         selectedOmniFilterData,
     );
+
     const {
         stopStream,
         startStream,
@@ -74,7 +87,7 @@ const FlowLogsPage: React.FC = () => {
         error,
         isWaiting,
         hasStoppedStreaming,
-    } = useFlowLogsStream(urlFilterParams);
+    } = useFlowLogsStream(urlFilterParams, isDeniedSelected);
 
     const toast = useToast();
     const selectedRowIdRef = React.useRef<string | null>(null);
@@ -123,18 +136,34 @@ const FlowLogsPage: React.FC = () => {
     return (
         <Box pt={1}>
             <Flex justifyContent='space-between' alignItems='center' p={2}>
-                <OmniFilters
-                    onReset={onReset}
-                    onChange={onChange}
-                    selectedOmniFilters={selectedFilters}
-                    omniFilterData={omniFilterData}
-                    onRequestFilterData={(query) =>
-                        fetchFilter(query.filterParam, query)
-                    }
-                    onRequestNextPage={(filterParam) =>
-                        fetchFilter(filterParam)
-                    }
-                />
+                <Flex gap={2}>
+                    <OmniFilters
+                        onReset={onReset}
+                        onChange={onChange}
+                        selectedListOmniFilters={selectedFilters}
+                        omniFilterData={omniFilterData}
+                        onRequestFilterData={({ filterParam, searchOption }) =>
+                            fetchFilter(
+                                filterParam,
+                                transformToFlowsFilterQuery(
+                                    {
+                                        ...urlFilterParams,
+                                        ...(isDeniedSelected && {
+                                            action: ['Deny'],
+                                        }),
+                                    } as Record<FilterKey, string[]>,
+                                    filterParam,
+                                    searchOption,
+                                ),
+                            )
+                        }
+                        onRequestNextPage={(filterParam) =>
+                            fetchFilter(filterParam, null)
+                        }
+                        onMultiChange={setUrlParams}
+                        selectedValues={urlFilterParams}
+                    />
+                </Flex>
                 <Flex>
                     {isWaiting && (
                         <Flex gap={2} alignItems='center'>
@@ -182,23 +211,15 @@ const FlowLogsPage: React.FC = () => {
             ))} */}
             <Tabs defaultIndex={defaultTabIndex}>
                 <TabList>
-                    <Link to='flow-logs'>
+                    <Link to='/flow-logs'>
                         <Tab data-testid='all-flows-tab'>
-                            <TabTitle
-                                title='All Flows'
-                                hasNoData={false}
-                                // badgeCount={allFlowsCount}
-                            />
+                            <TabTitle title='All Flows' hasNoData={false} />
                         </Tab>
                     </Link>
 
                     <Link to='denied-flows'>
-                        <Tab data-testid='denied-flows-tab' isDisabled>
-                            <TabTitle
-                                title='Denied Flows'
-                                hasNoData={false}
-                                // badgeCount={deniedFlowsCount}
-                            />
+                        <Tab data-testid='denied-flows-tab'>
+                            <TabTitle title='Denied Flows' hasNoData={false} />
                         </Tab>
                     </Link>
                 </TabList>

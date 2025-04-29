@@ -25,7 +25,7 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = [
-    "docker load -q -i /code/cnx-node.tar",
+    "docker load -q -i /code/calico-node.tar",
 ]
 
 

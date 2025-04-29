@@ -18,7 +18,7 @@ class TestExternalNetwork(TestBase):
                   "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_EGRESSGATEWAYPOLLINTERVAL": "1",
                   "FELIX_ExternalNetworkSupport": "Enabled"}
-        update_ds_env("calico-node", "kube-system", newEnv)
+        update_ds_env("calico-node", "calico-system", newEnv)
 
         # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
         time.sleep(20)
@@ -282,10 +282,10 @@ EOF
             retry_until_success(_retry_connect, function_args=[client_no_gw, server_B_addr, "server B"])
 
             # Verify a route to the server exists in the externalnetwork's route table
-            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n kube-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
+            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
             # Restart Felix by updating log level.
-            log_level = self.get_ds_env("calico-node", "kube-system", "FELIX_LOGSEVERITYSCREEN")
+            log_level = self.get_ds_env("calico-node", "calico-system", "FELIX_LOGSEVERITYSCREEN")
             if log_level == "Debug":
                 new_log_level = "Info"
             else:
@@ -293,8 +293,8 @@ EOF
             _log.info("--- Start restarting calico/node ---")
             oldEnv = {"FELIX_LOGSEVERITYSCREEN": log_level}
             newEnv = {"FELIX_LOGSEVERITYSCREEN": new_log_level}
-            update_ds_env("calico-node", "kube-system", newEnv)
-            self.add_cleanup(lambda: update_ds_env("calico-node", "kube-system", oldEnv))
+            update_ds_env("calico-node", "calico-system", newEnv)
+            self.add_cleanup(lambda: update_ds_env("calico-node", "calico-system", oldEnv))
 
             # Verify that each client still reaches the correct expected external server
             retry_until_success(_retry_connect, function_args=[client_red, server_A_addr, "server A"])
@@ -305,7 +305,7 @@ EOF
             kubectl("delete externalnetwork rednet")
             retry_until_success(_retry_connect, function_args=[client_red, server_A_addr, "server B"])
             # Verify a route to the server exists in the externalnetwork's route table
-            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n kube-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
+            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
             # Recreate the externalnetwork and verify that client_red goes back to reaching server A
             kubectl("""apply -f - << EOF
@@ -319,7 +319,7 @@ EOF
 """)
             retry_until_success(_retry_connect, function_args=[client_red, server_A_addr, "server A"])
             # Verify a route to the server exists in the externalnetwork's route table
-            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n kube-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
+            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
             # Delete the BGPPeer and verify that client_red cannot connect
             # Remove revision and UID information so we can re-apply cleanly.
@@ -334,13 +334,13 @@ EOF
 
             client_red.cannot_connect(server_A_addr, 80, command="wget")
             # Verify a route to the server exists in the externalnetwork's route table
-            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n kube-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
+            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
             # Recreate the BGPPeer and verify that client_red can connect again
             run("echo '%s' | kubectl apply -f -" % peer_a1_in)
             retry_until_success(_retry_connect, function_args=[client_red, server_A_addr, "server A"])
             # Verify a route to the server exists in the externalnetwork's route table
-            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n kube-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
+            retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
     def _test_external_net_switchover(self, ipv4_encap):
         assert ipv4_encap in ["IPIP", "VXLAN", "None"]
@@ -470,8 +470,8 @@ EOF
             gw_green.wait_ready()
 
             # Add bootstrap route to the route table for greennet in the calico-node pod running on kind-worker
-            kubectl("exec -n kube-system %s -- ip route add 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"))
-            self.add_cleanup(lambda: kubectl("exec -n kube-system %s -- ip route del 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"), allow_fail=True))
+            kubectl("exec -n calico-system %s -- ip route add 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"))
+            self.add_cleanup(lambda: kubectl("exec -n calico-system %s -- ip route del 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"), allow_fail=True))
 
             # Add bootstrap route to the EGW IP pool on node-d1
             run("docker exec node-d1 ip route add %s via 172.31.41.4" % egress_pool_cidr)

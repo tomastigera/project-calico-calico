@@ -69,7 +69,7 @@ var (
 
 // NewStagedNetworkPolicy returns a pointer to a staged network policy.
 func NewStagedNetworkPolicy(name, namespace, tier string, uid ktypes.UID) *v3.StagedNetworkPolicy {
-	return &v3.StagedNetworkPolicy{
+	snp := &v3.StagedNetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v3.KindStagedNetworkPolicy,
 			APIVersion: v3.GroupVersionCurrent,
@@ -86,16 +86,6 @@ func NewStagedNetworkPolicy(name, namespace, tier string, uid ktypes.UID) *v3.St
 				"policyrecommendation.tigera.io/scope":  namespaceScope,
 				"projectcalico.org/spec.stagedAction":   "Learn",
 			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         v3.GroupVersionCurrent,
-					Kind:               policyRecommendationScopeKind,
-					Name:               types.PolicyRecommendationScopeName,
-					UID:                uid,
-					Controller:         &[]bool{true}[0],
-					BlockOwnerDeletion: &[]bool{false}[0],
-				},
-			},
 		},
 
 		Spec: v3.StagedNetworkPolicySpec{
@@ -107,6 +97,20 @@ func NewStagedNetworkPolicy(name, namespace, tier string, uid ktypes.UID) *v3.St
 			Types:        nil,
 		},
 	}
+
+	if uid != "" {
+		snp.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion:         v3.GroupVersionCurrent,
+				Kind:               policyRecommendationScopeKind,
+				Name:               types.PolicyRecommendationScopeName,
+				UID:                uid,
+				Controller:         &[]bool{true}[0],
+				BlockOwnerDeletion: &[]bool{false}[0],
+			},
+		}
+	}
+	return snp
 }
 
 // GetEgressToDomainV3Rule returns the egress traffic to domain rule. The destination entity rule

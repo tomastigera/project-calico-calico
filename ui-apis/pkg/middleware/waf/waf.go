@@ -13,6 +13,7 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
+	"github.com/projectcalico/calico/ui-apis/pkg/middleware/waf/ruleset"
 )
 
 // WAFRulesetsHandler handles requests related to WAF Rulesets.
@@ -40,15 +41,15 @@ func WAFRulesetsHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Handle
 			return
 		}
 
-		rs := rulesets{
-			client: k8sClient,
+		rs := ruleset.Ruleset{
+			Client: k8sClient,
 		}
 
 		handleWAFRulesetsRequest(w, r, rs)
 	})
 }
 
-func handleWAFRulesetsRequest(w http.ResponseWriter, r *http.Request, rulesets Rulesets) {
+func handleWAFRulesetsRequest(w http.ResponseWriter, r *http.Request, rulesets ruleset.Ruleset) {
 	// Create a context with timeout to ensure we don't block for too long with this query.
 	// This releases timer resources if the operation completes before the timeout.
 	ctx, cancel := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
@@ -96,15 +97,15 @@ func WAFRulesetHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Handler
 			return
 		}
 
-		rs := rulesets{
-			client: k8sClient,
+		rs := ruleset.Ruleset{
+			Client: k8sClient,
 		}
 
 		handleWAFRulesetRequest(w, r, rs)
 	})
 }
 
-func handleWAFRulesetRequest(w http.ResponseWriter, r *http.Request, rulesets Rulesets) {
+func handleWAFRulesetRequest(w http.ResponseWriter, r *http.Request, rulesets ruleset.Ruleset) {
 	rulesetID := r.PathValue("rulesetID")
 
 	// Create a context with timeout to ensure we don't block for too long with this query.
@@ -154,15 +155,15 @@ func WAFRuleDetailsHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Han
 			return
 		}
 
-		rs := rulesets{
-			client: k8sClient,
+		rs := ruleset.Ruleset{
+			Client: k8sClient,
 		}
 
 		handleWAFRuleDetails(w, r, rs)
 	})
 }
 
-func handleWAFRuleDetails(w http.ResponseWriter, r *http.Request, ruleset Rulesets) {
+func handleWAFRuleDetails(w http.ResponseWriter, r *http.Request, ruleset ruleset.Ruleset) {
 	rulesetID := r.PathValue("rulesetID")
 	ruleID := r.PathValue("ruleID")
 

@@ -32,7 +32,8 @@ type Config struct {
 	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
 
-	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
+	TenantNamespace    string `envconfig:"TENANT_NAMESPACE" default:""`
+	ManagedClusterType string `envconfig:"MANAGED_CLUSTER_TYPE" default:"enterprise"`
 }
 
 func LoadConfig() (*Config, error) {

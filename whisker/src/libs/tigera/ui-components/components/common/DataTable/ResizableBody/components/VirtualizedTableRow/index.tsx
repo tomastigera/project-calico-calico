@@ -46,12 +46,21 @@ const VirtualizedTableRow = ({
     const animate = shouldAnimate(row.original[keyProp]);
     const delay = index * 0.1 + 0.5;
 
+    React.useEffect(() => {
+        return () => {
+            if (animate) {
+                onCompleteAnimation(row.original[keyProp]);
+            }
+        };
+    }, []);
+
     return (
-        <Box position='relative'>
+        <Box position='relative' overflowX='clip'>
             <motion.div
                 style={{
                     position: 'absolute',
                     width: '100%',
+                    overflowX: 'clip',
                 }}
                 initial={
                     animate

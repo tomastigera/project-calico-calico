@@ -118,7 +118,16 @@ func main() {
 	}()
 
 	// Create the standalone or management cluster PolicyRecommendationScope controller.
-	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster, clientSet, linseedClient, metav1.Duration{Duration: minPollInterval})
+	rctrl, err := rscontroller.NewRecommendationScopeController(
+		ctx,
+		lmak8s.DefaultCluster,
+		clientSet,
+		linseedClient,
+		metav1.Duration{Duration: minPollInterval},
+		rscontroller.WatcherConfig{
+			WatchScope: true,
+		},
+	)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create PolicyRecommendationScope controller")
 	}
@@ -139,7 +148,22 @@ func main() {
 			}
 			clientFactory = clientFactory.Impersonate(&impersonationInfo)
 		}
-		mctrl, err = mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace, metav1.Duration{Duration: minPollInterval})
+
+		managedClusterRecScopeWatcherCfg := rscontroller.WatcherConfig{}
+		if config.ManagedClusterType == "calico" {
+			managedClusterRecScopeWatcherCfg.WatchTier = true
+		} else {
+			managedClusterRecScopeWatcherCfg.WatchScope = true
+		}
+		mctrl, err = mscontroller.NewManagedClusterController(
+			ctx,
+			client,
+			clientFactory,
+			linseedClient,
+			config.TenantNamespace,
+			metav1.Duration{Duration: minPollInterval},
+			managedClusterRecScopeWatcherCfg,
+		)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to create ManagedCluster controller")
 		}

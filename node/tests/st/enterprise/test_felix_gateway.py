@@ -30,7 +30,7 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = [
-    "docker load -i /code/cnx-node.tar",
+    "docker load -i /code/calico-node.tar",
     "docker load -i /code/busybox.tar",
     "docker load -i /code/workload.tar",
 ]
@@ -529,7 +529,7 @@ class TestFelixOnGateway(TestBase):
         # Use calicoctl with the modified data.
         host.writejson("new_data", data)
         host.calicoctl("%s -f new_data" % action)
-        
+
     def assert_host_can_curl_ext(self):
         try:
             self.host.execute("curl -m 2 %s" % self.ext_server_ip)

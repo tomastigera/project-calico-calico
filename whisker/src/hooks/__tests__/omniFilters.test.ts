@@ -1,9 +1,10 @@
 import { renderHook } from '@/test-utils/helper';
-import { useSelectedOmniFilters } from '..';
+import { useSelectedListOmniFilters } from '..';
 import {
     OmniFilterParam,
-    OmniFiltersData,
+    ListOmniFiltersData,
     SelectedOmniFilterData,
+    ListOmniFilterKeys,
 } from '@/utils/omniFilter';
 import { useOmniFilterData } from '../omniFilters';
 import { useInfiniteFilterQuery } from '@/features/flowLogs/api';
@@ -13,13 +14,16 @@ jest.mock('@/features/flowLogs/api', () => ({
 }));
 
 const urlFilterParams: Record<OmniFilterParam, string[]> = {
-    namespace: ['foo'],
+    dest_namespace: ['foo'],
     policy: [],
-    src_name: [],
-    dst_name: [],
+    source_name: [],
+    dest_name: [],
+    source_namespace: [],
+    port: [],
+    protocol: [],
 };
-const omniFilterData: OmniFiltersData = {
-    namespace: {
+const omniFilterData: ListOmniFiltersData = {
+    dest_namespace: {
         filters: [
             { label: 'Foo', value: 'foo' },
             { label: 'Bar', value: 'bar' },
@@ -30,27 +34,31 @@ const omniFilterData: OmniFiltersData = {
         filters: [],
         isLoading: false,
     },
-    dst_name: {
+    dest_name: {
         filters: [],
         isLoading: false,
     },
-    src_name: {
+    source_namespace: {
+        filters: [],
+        isLoading: false,
+    },
+    source_name: {
         filters: [],
         isLoading: false,
     },
 };
 const selectedOmniFilterData: SelectedOmniFilterData = {
-    namespace: {
+    dest_namespace: {
         filters: [{ label: 'Foo', value: 'foo' }],
         isLoading: false,
         total: 0,
     },
 };
 
-describe('useSelectedOmniFilters', () => {
+describe('useSelectedListOmniFilters', () => {
     it('should get selected option from selectedOmniFilterData', () => {
         const { result } = renderHook(() =>
-            useSelectedOmniFilters(
+            useSelectedListOmniFilters(
                 urlFilterParams,
                 omniFilterData,
                 selectedOmniFilterData,
@@ -58,16 +66,17 @@ describe('useSelectedOmniFilters', () => {
         );
 
         expect(result.current).toEqual({
-            namespace: [{ label: 'Foo', value: 'foo' }],
+            dest_namespace: [{ label: 'Foo', value: 'foo' }],
             policy: [],
-            dst_name: [],
-            src_name: [],
+            dest_name: [],
+            source_name: [],
+            source_namespace: [],
         });
     });
 
     it('should get selected option from omniFilterData', () => {
         const selectedOmniFilterData: SelectedOmniFilterData = {
-            namespace: {
+            dest_namespace: {
                 filters: [],
                 isLoading: false,
                 total: 0,
@@ -75,7 +84,7 @@ describe('useSelectedOmniFilters', () => {
         };
 
         const { result } = renderHook(() =>
-            useSelectedOmniFilters(
+            useSelectedListOmniFilters(
                 urlFilterParams,
                 omniFilterData,
                 selectedOmniFilterData,
@@ -83,16 +92,21 @@ describe('useSelectedOmniFilters', () => {
         );
 
         expect(result.current).toEqual({
-            namespace: [{ label: 'Foo', value: 'foo' }],
+            dest_namespace: [{ label: 'Foo', value: 'foo' }],
             policy: [],
-            dst_name: [],
-            src_name: [],
+            dest_name: [],
+            source_name: [],
+            source_namespace: [],
         });
     });
 
     it('should create an option from the value when there is no option omniFilterData', () => {
-        const omniFilterData: OmniFiltersData = {
-            namespace: {
+        const omniFilterData: ListOmniFiltersData = {
+            source_namespace: {
+                filters: [],
+                isLoading: false,
+            },
+            dest_namespace: {
                 filters: [],
                 isLoading: false,
             },
@@ -100,17 +114,17 @@ describe('useSelectedOmniFilters', () => {
                 filters: [],
                 isLoading: false,
             },
-            dst_name: {
+            dest_name: {
                 filters: [],
                 isLoading: false,
             },
-            src_name: {
+            source_name: {
                 filters: [],
                 isLoading: false,
             },
         };
         const selectedOmniFilterData: SelectedOmniFilterData = {
-            namespace: {
+            source_namespace: {
                 filters: [],
                 isLoading: false,
                 total: 0,
@@ -118,7 +132,7 @@ describe('useSelectedOmniFilters', () => {
         };
 
         const { result } = renderHook(() =>
-            useSelectedOmniFilters(
+            useSelectedListOmniFilters(
                 urlFilterParams,
                 omniFilterData,
                 selectedOmniFilterData,
@@ -126,10 +140,11 @@ describe('useSelectedOmniFilters', () => {
         );
 
         expect(result.current).toEqual({
-            namespace: [{ label: 'foo', value: 'foo' }],
+            dest_namespace: [{ label: 'foo', value: 'foo' }],
             policy: [],
-            dst_name: [],
-            src_name: [],
+            dest_name: [],
+            source_name: [],
+            source_namespace: [],
         });
     });
 });
@@ -145,7 +160,7 @@ describe('useOmniFilterData', () => {
         isFetchingNextPage: false,
     } as any;
 
-    it('should ', () => {
+    it('should return the expected data', () => {
         jest.mocked(useInfiniteFilterQuery).mockImplementation(
             (filterParam) => {
                 if (filterParam === 'policy') {
@@ -180,17 +195,22 @@ describe('useOmniFilterData', () => {
                 isLoading: false,
                 total: 0,
             },
-            namespace: {
+            source_namespace: {
                 filters: [],
                 isLoading: false,
                 total: 0,
             },
-            src_name: {
+            dest_namespace: {
                 filters: [],
                 isLoading: false,
                 total: 0,
             },
-            dst_name: {
+            source_name: {
+                filters: [],
+                isLoading: false,
+                total: 0,
+            },
+            dest_name: {
                 filters: [],
                 isLoading: false,
                 total: 0,
@@ -213,7 +233,7 @@ describe('useOmniFilterData', () => {
 
         const { result } = renderHook(() => useOmniFilterData());
 
-        result.current[1](OmniFilterParam.namespace);
+        result.current[1](ListOmniFilterKeys.source_namespace, null);
 
         expect(fetchNextPageMock).toHaveBeenCalledTimes(1);
     });

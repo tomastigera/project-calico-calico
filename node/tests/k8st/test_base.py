@@ -300,7 +300,7 @@ spec:
   - name: cnx-pull-secret
   initContainers:
   - name: egress-gateway-init
-    image: docker.io/tigera/egress-gateway:latest-amd64
+    image: docker.io/tigera/egress-gateway:test-build
     env:
     - name: EGRESS_POD_IPS
       valueFrom:
@@ -316,7 +316,7 @@ spec:
     command: ["/init-gateway.sh"]
   containers:
   - name: gateway
-    image: docker.io/tigera/egress-gateway:latest-amd64
+    image: docker.io/tigera/egress-gateway:test-build
     env:
     # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
     # gateway will report non-ready.
@@ -382,7 +382,7 @@ spec:
     def get_calico_node_pod(self, nodeName):
         """Get the calico-node pod name for a given kind node"""
         def fn():
-            calicoPod = kubectl("-n kube-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % nodeName)
+            calicoPod = kubectl("-n calico-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % nodeName)
             if calicoPod is None:
                 raise Exception('calicoPod is None')
             return calicoPod.strip()

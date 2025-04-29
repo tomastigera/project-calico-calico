@@ -35,7 +35,7 @@ func TestIsAllowed(t *testing.T) {
 { "field1" : "value1" }`
 		closePointInTimeBodyWithKibanaIndex = `{"id":"u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAANE4FnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA="}`
 		serchBodyWithKibanaIndex            = `{"pit":{"id":"u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAANE4FnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA="}}`
-		mgetBodySampleWithKibanaIndices     = `{"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".kibana_8.17.1"}]}`
+		mgetBodySampleWithKibanaIndices     = `{"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".kibana_8.17.4"}]}`
 		mgetBodyIndexWithNonKibanaIndices   = `{"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".anyIndex"}]}`
 	)
 

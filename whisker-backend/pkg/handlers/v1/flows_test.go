@@ -31,6 +31,7 @@ import (
 	protomock "github.com/projectcalico/calico/goldmane/proto/mocks"
 	"github.com/projectcalico/calico/lib/httpmachinery/pkg/apiutil"
 	"github.com/projectcalico/calico/lib/httpmachinery/pkg/testutil"
+	"github.com/projectcalico/calico/lib/std/ptr"
 	whiskerv1 "github.com/projectcalico/calico/whisker-backend/pkg/apis/v1"
 	hdlrv1 "github.com/projectcalico/calico/whisker-backend/pkg/handlers/v1"
 )
@@ -200,6 +201,13 @@ func TestWatchFlowsParameterConversion(t *testing.T) {
 					Protocols:        []whiskerv1.FilterMatch[string]{{V: "tcp"}},
 					DestPorts:        []whiskerv1.FilterMatch[int64]{{V: 6060}},
 					Actions:          whiskerv1.Actions{whiskerv1.Action(proto.Action_Pass), whiskerv1.Action(proto.Action_Allow)},
+					Policies: []whiskerv1.PolicyMatch{{
+						Kind:      whiskerv1.PolicyKindCalicoNetworkPolicy,
+						Tier:      whiskerv1.NewFilterMatch("default-tier", whiskerv1.MatchTypeExact),
+						Name:      whiskerv1.NewFilterMatch("name", whiskerv1.MatchTypeExact),
+						Namespace: whiskerv1.NewFilterMatch("namespace", whiskerv1.MatchTypeExact),
+						Action:    whiskerv1.ActionDeny,
+					}},
 				},
 			},
 			expected: &proto.FlowStreamRequest{
@@ -212,6 +220,13 @@ func TestWatchFlowsParameterConversion(t *testing.T) {
 					Protocols:        []*proto.StringMatch{{Value: "tcp"}},
 					DestPorts:        []*proto.PortMatch{{Port: 6060}},
 					Actions:          []proto.Action{proto.Action_Pass, proto.Action_Allow},
+					Policies: []*proto.PolicyMatch{{
+						Kind:      proto.PolicyKind_CalicoNetworkPolicy,
+						Tier:      "default-tier",
+						Name:      "name",
+						Namespace: "namespace",
+						Action:    proto.Action_Deny,
+					}},
 				},
 			},
 			configureFlowsCli: func(fsCli *climocks.FlowsClient) {
@@ -308,4 +323,32 @@ func TestListFlowsParameterConversion(t *testing.T) {
 			Expect(req.String()).Should(Equal(tc.expected.String()))
 		})
 	}
+}
+
+func TestListFilterHints(t *testing.T) {
+	sc := setupTest(t)
+
+	fsCli := new(climocks.FlowsClient)
+	fsCli.On("FiltersHints", mock.Anything, mock.Anything).Return([]*proto.FilterHint{
+		{Value: "foo"},
+		{Value: "bar"},
+	}, nil)
+
+	hdlr := hdlrv1.NewFlows(fsCli)
+	rsp := hdlr.ListFilterHints(sc.apiCtx, whiskerv1.FlowFilterHintsRequest{
+		Type: ptr.ToPtr(whiskerv1.FilterType(proto.FilterType_FilterTypeDestNamespace)),
+	})
+	Expect(rsp.Status()).Should(Equal(http.StatusOK))
+	recorder := httptest.NewRecorder()
+	Expect(rsp.ResponseWriter().WriteResponse(sc.apiCtx, http.StatusOK, recorder)).ShouldNot(HaveOccurred())
+	flows := testutil.MustUnmarshal[apiutil.List[whiskerv1.FlowFilterHintResponse]](t, recorder.Body.Bytes())
+
+	Expect(flows).Should(
+		Equal(&apiutil.List[whiskerv1.FlowFilterHintResponse]{
+			Total: 2,
+			Items: []whiskerv1.FlowFilterHintResponse{
+				{Value: "foo"},
+				{Value: "bar"},
+			},
+		}))
 }

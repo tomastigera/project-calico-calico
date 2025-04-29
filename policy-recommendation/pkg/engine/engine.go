@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2025 Tigera Inc. All rights reserved.
+
 package engine
 
 import (
@@ -33,7 +34,7 @@ const (
 	defaultLookback = 24 * time.Hour
 
 	// DefaultSelector is the default namespace selector.
-	defaultSelector = `(!projectcalico.org/name starts with "tigera-" && ` +
+	DefaultSelector = `(!projectcalico.org/name starts with "tigera-" && ` +
 		`!projectcalico.org/name starts with "calico-" && ` +
 		`!projectcalico.org/name starts with "kube-" && ` +
 		`!projectcalico.org/name starts with "openshift-")`
@@ -71,7 +72,16 @@ type recommendationScope struct {
 	clog *log.Entry
 }
 
-type RecommendationEngine struct {
+type RecommendationEngine interface {
+	Run(stopChan chan struct{})
+	AddNamespace(ns string)
+	RemoveNamespace(ns string)
+	GetNamespaces() set.Set[string]
+	GetFilteredNamespaces() set.Set[string]
+	ReceiveScopeUpdate(scope v3.PolicyRecommendationScope)
+}
+
+type recommendationEngine struct {
 	// Cache for storing the recommendations (SNPs)
 	cache rcache.ResourceCache
 
@@ -82,7 +92,7 @@ type RecommendationEngine struct {
 	filteredNamespaces set.Set[string]
 
 	// Channel for receiving PolicyRecommendationScope updates
-	UpdateChannel chan v3.PolicyRecommendationScope
+	updateChannel chan v3.PolicyRecommendationScope
 
 	// Context for the engine
 	ctx context.Context
@@ -126,7 +136,7 @@ func NewRecommendationEngine(
 	scope *v3.PolicyRecommendationScope,
 	minPollInterval metav1.Duration,
 	clock Clock,
-) *RecommendationEngine {
+) RecommendationEngine {
 	logEntry := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
 	clusterDomain, err := utils.GetClusterDomain(utils.DefaultResolveConfPath)
@@ -139,7 +149,7 @@ func NewRecommendationEngine(
 	sc := newRecommendationScope(minPollInterval, logEntry)
 	sc.updateScope(*scope)
 
-	return &RecommendationEngine{
+	return &recommendationEngine{
 		ctx:                ctx,
 		calico:             calico,
 		linseedClient:      linseedClient,
@@ -148,7 +158,7 @@ func NewRecommendationEngine(
 		namespaces:         set.New[string](),
 		cluster:            clusterID,
 		scope:              sc,
-		UpdateChannel:      make(chan v3.PolicyRecommendationScope),
+		updateChannel:      make(chan v3.PolicyRecommendationScope),
 		clock:              clock,
 		clusterDomain:      clusterDomain,
 		query:              query,
@@ -160,7 +170,7 @@ func NewRecommendationEngine(
 // Run starts the engine. It runs the engine loop and processes the recommendations. It also updates
 // the engine scope with the latest PolicyRecommendationScopeSpec. It stops the engine when the
 // stopChan is closed.
-func (e *RecommendationEngine) Run(stopChan chan struct{}) {
+func (e *recommendationEngine) Run(stopChan chan struct{}) {
 	interval := defaultInterval
 	if e.scope != nil {
 		if e.scope.interval >= e.scope.minPollInterval {
@@ -177,7 +187,7 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 
 	for {
 		select {
-		case update, ok := <-e.UpdateChannel:
+		case update, ok := <-e.updateChannel:
 			if !ok {
 				continue // Channel closed, exit the loop
 			}
@@ -236,7 +246,7 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 
 // AddNamespace adds the namespace for tracking, and if the filter is true, adds it to the
 // filtered namespaces.
-func (e *RecommendationEngine) AddNamespace(ns string) {
+func (e *recommendationEngine) AddNamespace(ns string) {
 	if !e.namespaces.Contains(ns) {
 		e.namespaces.Add(ns)
 		e.clog.WithField("namespace", ns).Debug("Namespace not found in namespaces set")
@@ -248,24 +258,28 @@ func (e *RecommendationEngine) AddNamespace(ns string) {
 	}
 }
 
+func (e *recommendationEngine) ReceiveScopeUpdate(scope v3.PolicyRecommendationScope) {
+	e.updateChannel <- scope
+}
+
 // GetScope returns the engine scope.
-func (e *RecommendationEngine) GetScope() *recommendationScope {
+func (e *recommendationEngine) GetScope() *recommendationScope {
 	return e.scope
 }
 
 // GetNamespaces returns the set of namespaces.
-func (e *RecommendationEngine) GetNamespaces() set.Set[string] {
+func (e *recommendationEngine) GetNamespaces() set.Set[string] {
 	return e.namespaces
 }
 
 // GetFilteredNamespaces returns the set of filtered namespaces.
-func (e *RecommendationEngine) GetFilteredNamespaces() set.Set[string] {
+func (e *recommendationEngine) GetFilteredNamespaces() set.Set[string] {
 	return e.filteredNamespaces
 }
 
 // RemoveNamespace removes the namespace from the tracked namespace, the filtered namespaces and the
 // cache.
-func (e *RecommendationEngine) RemoveNamespace(ns string) {
+func (e *recommendationEngine) RemoveNamespace(ns string) {
 	if e.namespaces.Contains(ns) {
 		e.namespaces.Discard(ns)
 	}
@@ -287,7 +301,7 @@ func (e *RecommendationEngine) RemoveNamespace(ns string) {
 }
 
 // filterNamespaces filters the namespaces based on the selector.
-func (e *RecommendationEngine) filterNamespaces(selector string) {
+func (e *recommendationEngine) filterNamespaces(selector string) {
 	parsedSelector, _ := libcselector.Parse(selector)
 	e.filteredNamespaces = set.New[string]() // Reset the filtered namespaces set.
 
@@ -307,7 +321,7 @@ func (e *RecommendationEngine) filterNamespaces(selector string) {
 
 // getRecommendation returns the recommendation for the namespace. If the recommendation does not
 // exist in the cache, it will create a new one.
-func (e *RecommendationEngine) getRecommendation(ns string) *v3.StagedNetworkPolicy {
+func (e *recommendationEngine) getRecommendation(ns string) *v3.StagedNetworkPolicy {
 	if item, found := e.cache.Get(ns); found {
 		if recommendation, ok := item.(v3.StagedNetworkPolicy); ok {
 			return &recommendation
@@ -331,7 +345,7 @@ func (e *RecommendationEngine) getRecommendation(ns string) *v3.StagedNetworkPol
 
 // update processes the flows logs into new rules and adds them to the recommendation. Returns true
 // if there is an update to recommendation (SNP).
-func (e *RecommendationEngine) update(snp *v3.StagedNetworkPolicy) bool {
+func (e *recommendationEngine) update(snp *v3.StagedNetworkPolicy) bool {
 	if snp == nil {
 		e.clog.Debug("Empty staged network policy")
 		return false
@@ -374,7 +388,7 @@ func (e *RecommendationEngine) update(snp *v3.StagedNetworkPolicy) bool {
 
 // getLookback returns the InitialLookback period if the policy is new and has not previously
 // been updated, otherwise use twice the engine-run interval (Default: 2.5min).
-func (e *RecommendationEngine) getLookback(snp v3.StagedNetworkPolicy) time.Duration {
+func (e *recommendationEngine) getLookback(snp v3.StagedNetworkPolicy) time.Duration {
 	initialLookback := defaultLookback
 	interval := defaultInterval
 	if e.scope != nil {
@@ -399,7 +413,7 @@ func (e *RecommendationEngine) getLookback(snp v3.StagedNetworkPolicy) time.Dura
 
 // removeRulesReferencingDeletedNamespace removes every rule from the staged network policy
 // referencing the passed in namespace.
-func (e *RecommendationEngine) removeRulesReferencingDeletedNamespace(snp *v3.StagedNetworkPolicy, namespace string) {
+func (e *recommendationEngine) removeRulesReferencingDeletedNamespace(snp *v3.StagedNetworkPolicy, namespace string) {
 	e.clog.Debugf("Remove all references to namespace: %s, from staged network policy: %s", namespace, snp.Name)
 	ingress := []v3.Rule{}
 	for i, rule := range snp.Spec.Ingress {
@@ -421,7 +435,7 @@ func (e *RecommendationEngine) removeRulesReferencingDeletedNamespace(snp *v3.St
 // recommendationScope
 
 func newRecommendationScope(minPollInterval metav1.Duration, lg *log.Entry) *recommendationScope {
-	parsedSelector, _ := libcselector.Parse(defaultSelector)
+	parsedSelector, _ := libcselector.Parse(DefaultSelector)
 	return &recommendationScope{
 		initialLookback:           defaultLookback,
 		interval:                  defaultInterval,
@@ -471,7 +485,7 @@ func (sc *recommendationScope) updateScope(new v3.PolicyRecommendationScope) {
 	parsedSelector, err := libcselector.Parse(new.Spec.NamespaceSpec.Selector)
 	if err != nil {
 		sc.clog.WithError(err).Warningf("failed to parse selector: %s, setting to default", new.Spec.NamespaceSpec.Selector)
-		parsedSelector, _ = libcselector.Parse(defaultSelector)
+		parsedSelector, _ = libcselector.Parse(DefaultSelector)
 	}
 	if sc.selector == nil || sc.selector.String() != parsedSelector.String() {
 		sc.selector = parsedSelector

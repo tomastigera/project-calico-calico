@@ -1,33 +1,48 @@
+import { useDebouncedCallback } from '@/hooks';
 import {
     OmniFilter,
     OmniFilterList,
 } from '@/libs/tigera/ui-components/components/common';
 import { OmniFilterChangeEvent } from '@/libs/tigera/ui-components/components/common/OmniFilter';
+import PortOmniFilter from '@/features/flowLogs/components/PortOmniFilter';
 import { OmniFilterDataQuery } from '@/types/api';
 import {
-    OmniFilterParam,
+    ListOmniFilterParam,
     OmniFilterProperties,
-    OmniFiltersData,
+    ListOmniFiltersData,
     SelectedOmniFilterOptions,
+    SelectedOmniFilters,
+    OmniFilterKeys,
+    CustomOmniFilterKeys,
+    ListOmniFilterKeys,
 } from '@/utils/omniFilter';
 import React from 'react';
 
-const omniFilterIds: OmniFilterParam[] = Object.values(OmniFilterParam);
+const listOmniFilterIds = Object.values(ListOmniFilterKeys);
+
+const omniFilterIds = [
+    ...listOmniFilterIds,
+    ...Object.values(CustomOmniFilterKeys),
+];
 
 type OmniFiltersProps = {
     onChange: (event: OmniFilterChangeEvent) => void;
+    onMultiChange: (filterIds: string[], values: (string | null)[]) => void;
     onReset: () => void;
-    omniFilterData: OmniFiltersData;
-    selectedOmniFilters: SelectedOmniFilterOptions;
+    omniFilterData: ListOmniFiltersData;
+    selectedValues: SelectedOmniFilters;
+    selectedListOmniFilters: SelectedOmniFilterOptions;
     onRequestFilterData: (query: OmniFilterDataQuery) => void;
-    onRequestNextPage: (filterId: OmniFilterParam) => void;
+    onRequestNextPage: (filterId: ListOmniFilterParam) => void;
 };
 
 const OmniFilters: React.FC<OmniFiltersProps> = ({
     onChange,
+    onMultiChange,
     onReset,
     omniFilterData,
-    selectedOmniFilters,
+    selectedListOmniFilters,
+    selectedValues,
     onRequestFilterData,
     onRequestNextPage,
 }) => {
@@ -39,6 +54,8 @@ const OmniFilters: React.FC<OmniFiltersProps> = ({
             operator: undefined,
         });
 
+    const debounce = useDebouncedCallback();
+
     return (
         <OmniFilterList
             gap={2}
@@ -47,40 +64,60 @@ const OmniFilters: React.FC<OmniFiltersProps> = ({
             onChangeVisible={() => undefined}
             onResetVisible={onReset}
         >
-            {omniFilterIds.map((filterId) => (
+            {listOmniFilterIds.map((filterId) => (
                 <OmniFilter
                     filterId={filterId}
                     filterLabel={OmniFilterProperties[filterId].label}
-                    filters={omniFilterData?.[filterId].filters ?? []}
-                    selectedFilters={selectedOmniFilters[filterId]}
+                    filters={omniFilterData[filterId].filters ?? []}
+                    selectedFilters={selectedListOmniFilters[filterId]}
                     onChange={onChange}
                     onClear={() => handleClear(filterId)}
                     showOperatorSelect={false}
                     listType='checkbox'
                     isLoading={omniFilterData[filterId].isLoading}
                     totalItems={omniFilterData[filterId].total}
-                    onReady={() => {
-                        if (omniFilterData[filterId].filters === null) {
+                    onReady={() =>
+                        onRequestFilterData({
+                            filterParam: filterId,
+                            searchOption: '',
+                        })
+                    }
+                    onRequestSearch={(filterId, searchOption) => {
+                        const requestData = () => {
                             onRequestFilterData({
-                                filterParam: filterId,
-                                page: 1,
-                                searchOption: '',
+                                filterParam: filterId as ListOmniFilterParam,
+                                searchOption,
                             });
+                        };
+
+                        if (searchOption.length >= 1) {
+                            debounce(searchOption, requestData);
+                        } else {
+                            requestData();
                         }
                     }}
-                    onRequestSearch={(filterId, searchOption) => {
-                        onRequestFilterData({
-                            filterParam: filterId as OmniFilterParam,
-                            page: 1,
-                            searchOption,
-                        });
-                    }}
                     onRequestMore={(filterId) =>
-                        onRequestNextPage(filterId as OmniFilterParam)
+                        onRequestNextPage(filterId as ListOmniFilterParam)
                     }
-                    isDisabled
                 />
             ))}
+
+            <PortOmniFilter
+                port={selectedValues.port?.[0] ?? ''}
+                protocol={selectedValues.protocol?.[0] ?? ''}
+                selectedFilters={[
+                    ...(selectedValues.port ?? []),
+                    ...(selectedValues.protocol ?? []),
+                ]}
+                onChange={({ protocol, port }) =>
+                    onMultiChange(
+                        [OmniFilterKeys.protocol, OmniFilterKeys.port],
+                        [protocol, port],
+                    )
+                }
+                filterId={CustomOmniFilterKeys.port}
+                filterLabel={OmniFilterProperties[OmniFilterKeys.port].label}
+            />
         </OmniFilterList>
     );
 };
