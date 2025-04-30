@@ -38,17 +38,23 @@ build: bin/eks-log-forwarder-startup-$(ARCH)
 ## build cloudwatch plugin initializer
 bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable"
+	mkdir -p $(@D)
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+	cp eks/$@ $@
 
 bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable for windows"
+	mkdir -p $(@D)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+	cp eks/$@ $@
 
 clean:
 	rm -rf eks/bin Makefile.common*
 	-docker image rm -f $$(docker images $(FLUENTD_IMAGE) -a -q)
+	rm -rf bin
+	rm -rf dist
 
 ###############################################################################
 # Image
