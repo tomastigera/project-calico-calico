@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
+	"github.com/projectcalico/calico/release/pkg/manager/branch"
 )
 
 var (
@@ -90,6 +91,59 @@ var (
 		"cnx-node-windows",
 	}
 
+	enterpriseImageReleaseDirs = []string{
+		"apiserver",
+		"app-policy",
+		"calicoctl",
+		"cni-plugin",
+		"kube-controllers",
+		"node",
+		"typha",
+		"calicoq",
+		"compliance",
+		"deep-packet-inspection",
+		"egress-gateway",
+		"elasticsearch-metrics",
+		"elasticsearch",
+		"es-gateway",
+		"ui-apis",
+		"firewall-integration",
+		"fluentd",
+		"ingress-collector",
+		"intrusion-detection-controller",
+		"key-cert-provisioner",
+		"kibana",
+		"l7-admission-controller",
+		"l7-collector",
+		"license-agent",
+		"linseed",
+		"packetcapture",
+		"pod2daemon",
+		"policy-recommendation",
+		"prometheus-service",
+		"queryserver",
+		"voltron",
+		"webhooks-processor",
+		"third_party/alertmanager",
+		"third_party/dex",
+		"third_party/eck-operator",
+		"third_party/envoy-gateway",
+		"third_party/envoy-proxy",
+		"third_party/envoy-ratelimit",
+		"third_party/prometheus-operator",
+		"third_party/prometheus",
+	}
+	enterpriseWindowsReleaseDirs = []string{
+		"cni-plugin",
+		"fluentd",
+		"node",
+	}
+
+	enterpriseBinaryReleaseDirs = []string{
+		"calicoctl",
+		"calicoq",
+	}
+
 	//go:embed templates/yum.conf.gotmpl
 	rpmRepoTemplate string
 	rhelVersions    = []string{"8", "9"}
@@ -104,7 +158,6 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 	defaultCalicoOpts := []Option{
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
 		WithBuildImages(false),
-		WithPublishImages(false),
 		WithPublishGitTag(false),
 		WithPublishGithubRelease(false),
 	}
@@ -138,6 +191,8 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 type EnterpriseManager struct {
 	CalicoManager
 
+	devTagSuffix string
+
 	// chartVersion is the version of the helm chart to build.
 	chartVersion string
 
@@ -148,6 +203,7 @@ type EnterpriseManager struct {
 	publishWindowsArchive bool
 	publishCharts         bool
 	publishToS3           bool
+	publishGitChanges     bool
 
 	rpm bool
 
@@ -664,16 +720,37 @@ func (m *EnterpriseManager) publishPrereqs() error {
 	if dirty, err := utils.GitIsDirty(m.repoRoot); dirty || err != nil {
 		return fmt.Errorf("there are uncommitted changes in the repository, please commit or stash them before publishing the release")
 	}
+	if err := m.validateGitVersion(); err != nil {
+		return err
+	}
 	if m.isHashRelease {
 		return m.hashreleasePrereqs()
 	}
 	return m.prepPrereqs()
 }
 
+// validateGitVersion checks that the git version contains the dev tag suffix.
+// This is used to ensure that we do not publish a release with the wrong dev tag.
+func (m *EnterpriseManager) validateGitVersion() error {
+	gitVersion := version.GitVersion()
+	if !version.HasDevTag(gitVersion, m.devTagSuffix) {
+		err := fmt.Errorf("git version %s does not contain dev tag suffix %s", gitVersion, m.devTagSuffix)
+		logrus.Error(err)
+		return err
+	}
+	return nil
+}
+
 func (m *EnterpriseManager) PublishRelease() error {
 	// Check that the environment has the necessary prereqs.
 	if err := m.publishPrereqs(); err != nil {
 		return err
+	}
+
+	if !m.isHashRelease {
+		if err := m.publishReleaseImages(); err != nil {
+			return err
+		}
 	}
 
 	if err := m.publishWindowsArchiveToGCS(); err != nil {
@@ -686,7 +763,111 @@ func (m *EnterpriseManager) PublishRelease() error {
 		return m.publishToHashreleaseServer()
 	}
 
-	return m.publishReleaseArtifacts()
+	if err := m.publishReleaseArtifacts(); err != nil {
+		return err
+	}
+
+	if !m.isHashRelease {
+		// Create the next development tag.
+		ver := version.Version(m.calicoVersion)
+		branchManager := branch.NewManager(branch.WithRepoRoot(m.repoRoot),
+			branch.WithRepoRemote(m.remote),
+			branch.WithMainBranch(fmt.Sprintf("%s-%s", m.releaseBranchPrefix, ver.Stream())),
+			branch.WithDevTagIdentifier(m.devTagSuffix),
+			branch.WithValidate(m.validate),
+			branch.WithPublish(m.publishTag && !m.dryRun))
+
+		return branchManager.CreateNextDevelopmentTag()
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) publishReleaseImages() error {
+	if !m.publishImages {
+		logrus.Info("Skipping publishing images")
+		return nil
+	}
+
+	env := append(os.Environ(),
+		"IMAGE_ONLY=true",
+		fmt.Sprintf("DEV_TAG=%s", m.enterpriseHashrelease.ProductVersion),
+		fmt.Sprintf("DEV_REGISTRIES=%s", registry.TigeraDevCIGCRRegistry),
+		fmt.Sprintf("RELEASE_TAG=%s", m.calicoVersion),
+	)
+	if m.dryRun {
+		env = append(env, "DRYRUN=true")
+	} else {
+		env = append(env, "CONFIRM=true")
+	}
+	// We allow for a certain number of retries when publishing each directory, since
+	// network flakes can occasionally result in images failing to push.
+	maxRetries := 1
+	for _, dir := range enterpriseImageReleaseDirs {
+		attempt := 0
+		for {
+			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "cut-release-image", env...)
+			if err != nil {
+				if attempt < maxRetries {
+					logrus.WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+					attempt++
+					continue
+				}
+				logrus.Error(out)
+				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+			}
+
+			// Success - move on to the next directory.
+			logrus.Info(out)
+			break
+		}
+	}
+	for _, dir := range enterpriseWindowsReleaseDirs {
+		attempt := 0
+		for {
+			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "cut-release-image", append(env, "WINDOWS_RELEASE=true")...)
+			if err != nil {
+				if attempt < maxRetries {
+					logrus.WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+					attempt++
+					continue
+				}
+				logrus.Error(out)
+				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+			}
+
+			// Success - move on to the next directory.
+			logrus.Info(out)
+			break
+		}
+	}
+	env = append(os.Environ(),
+		fmt.Sprintf("VERSION=%s", m.calicoVersion),
+	)
+	if m.dryRun {
+		env = append(env, "DRYRUN=true")
+	} else {
+		env = append(env, "CONFIRM=true")
+	}
+	for _, dir := range enterpriseBinaryReleaseDirs {
+		attempt := 0
+		for {
+			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "release-publish-binaries", env...)
+			if err != nil {
+				if attempt < maxRetries {
+					logrus.WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+					attempt++
+					continue
+				}
+				logrus.Error(out)
+				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+			}
+
+			// Success - move on to the next directory.
+			logrus.Info(out)
+			break
+		}
+	}
+	return nil
 }
 
 func (m *EnterpriseManager) publishReleaseArtifacts() error {

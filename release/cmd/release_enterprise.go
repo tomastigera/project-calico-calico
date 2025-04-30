@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -11,9 +10,9 @@ import (
 	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
-	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
 func enterpriseReleaseSubCommand(cfg *Config) []*cli.Command {
@@ -140,6 +139,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		releaseBranchPrefixFlag,
 		devTagSuffixFlag,
 		hashreleaseNameFlag,
+		publishImagesFlag,
+		publishGitFlag,
 		publishToS3Flag,
 		publishWindowsArchiveFlag,
 	}
@@ -164,8 +165,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 			}
 
 			// Clone the manager repository.
-			managerDir := filepath.Join(cfg.TmpDir, utils.TigeraManager)
-			if err := utils.Clone(fmt.Sprintf("git@github.com:%s/%s.git", c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name)), c.String(managerBranchFlag.Name), managerDir); err != nil {
+			managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
+			if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
 				return fmt.Errorf("failed to clone manager repository: %v", err)
 			}
 
@@ -175,13 +176,28 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
-			// Trigger the Semaphore pipeline to cut the release images.
-			if err := triggerSemaphoreRelease(c, map[string]string{
-				cfg.RepoRootDir: hashrel.ProductVersion,
-				managerDir:      hashrel.ManagerVersion,
-			}); err != nil {
-				return err
+			// Release the cnx-manager image(s).
+			managerOpts := []manager.Option{
+				manager.WithDirectory(managerDir),
+				manager.WithCalicoDirectory(cfg.RepoRootDir),
+				manager.WithRepoName(c.String(managerRepoFlag.Name)),
+				manager.WithRepoRemote(c.String(managerRemoteFlag.Name)),
+				manager.WithGithubOrg(c.String(managerOrgFlag.Name)),
+				manager.WithBranch(c.String(managerBranchFlag.Name)),
+				manager.WithDevTagIdentifier(c.String(managerDevTagSuffixFlag.Name)),
+				manager.WithValidate(!c.Bool(skipValidationFlag.Name)),
+				manager.WithPublish(!c.Bool(confirmFlag.Name)),
+				manager.WithVersion(ver.FormattedString()),
+				manager.WithHashreleaseVersion(hashrel.ManagerVersion),
 			}
+			manager, err := manager.NewManager(managerOpts...)
+			if err != nil {
+				return fmt.Errorf("failed to create cnx-manager manager: %v", err)
+			}
+			if err := manager.Publish(); err != nil {
+				return fmt.Errorf("failed to publish cnx-manager: %v", err)
+			}
+			logrus.Info("Published cnx-manager")
 
 			// Publish the rest of the release.
 			if _, err := command.GitInDir(cfg.RepoRootDir, "checkout", fmt.Sprintf("%s-%s", c.String(releaseBranchPrefixFlag.Name), ver.Stream())); err != nil {
@@ -195,12 +211,15 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
+				calico.WithPublishImages(c.Bool(publishImagesFlag.Name)),
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
+				calico.WithPublishGitChanges(c.Bool(publishGitFlag.Name)),
+				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 
@@ -223,25 +242,6 @@ func validateReleaseVersion(c *cli.Context, ver string) error {
 	// Ensure the determined version and the version we are releasing matches.
 	if determinedVer.FormattedString() != ver {
 		return fmt.Errorf("version mismatch: determined %s, got %s", determinedVer, ver)
-	}
-	return nil
-}
-
-func triggerSemaphoreRelease(c *cli.Context, repoDirVersionMap map[string]string) error {
-	runner := command.RealCommandRunner{}
-	for dir, ver := range repoDirVersionMap {
-		if err := utils.CheckoutHashreleaseVersion(ver, dir); err != nil {
-			return err
-		}
-		env := append(os.Environ(), "CNX=true")
-		env = append(env, fmt.Sprintf("RELEASE_TAG=%s", ver))
-		env = append(env, fmt.Sprintf("RELEASE_VERSION=%s", c.String(releaseVersionFlag.Name)))
-		if c.Bool(confirmFlag.Name) {
-			env = append(env, "CONFIRM=true")
-		}
-		if _, err := runner.RunInDir(dir, "make", []string{"clean", "sem-cut-release"}, env); err != nil {
-			return fmt.Errorf("error triggering %s releaseon semaphore: %v", filepath.Base(dir), err)
-		}
 	}
 	return nil
 }

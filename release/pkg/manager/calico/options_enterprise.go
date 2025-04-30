@@ -42,6 +42,13 @@ func WithPublishToS3(publish bool) EnterpriseOption {
 	}
 }
 
+func WithPublishGitChanges(publish bool) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.publishGitChanges = publish
+		return nil
+	}
+}
+
 func WithHelmRegistry(registry string) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.helmRegistry = registry

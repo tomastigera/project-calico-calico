@@ -1141,6 +1141,17 @@ ifndef IMAGE_ONLY
 		NEXT_RELEASE_VERSION=$(NEXT_RELEASE_VERSION) BRANCH=$(RELEASE_BRANCH) DEV_TAG=$(DEV_TAG)
 endif
 
+cut-release-image: var-require-one-of-CONFIRM-DRYRUN
+	$(eval DEV_TAG = $(if $(DEV_TAG),$(DEV_TAG),$(call git-dev-tag)))
+	$(eval RELEASE_TAG = $(if $(RELEASE_TAG),$(RELEASE_TAG),$(call git-release-tag-from-dev-tag)))
+	$(eval RELEASE_BRANCH = $(call release-branch-for-tag,$(DEV_TAG)))
+	$(eval IMAGE_DEV_TAG = $(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(DEV_TAG))
+	$(eval IMAGE_RELEASE_TAG = $(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(RELEASE_TAG))
+ifdef BUILD_IMAGES
+	$(MAKE) release-dev-images\
+		RELEASE_TAG=$(IMAGE_RELEASE_TAG) BRANCH=$(RELEASE_BRANCH) DEV_TAG=$(IMAGE_DEV_TAG)
+endif
+
 # maybe-tag-release calls the tag-release target only if the current commit is not tagged with the tag in RELEASE_TAG.
 # If the current commit is already tagged with the value in RELEASE_TAG then this is a NOOP.
 maybe-tag-release: var-require-all-RELEASE_TAG
