@@ -70,11 +70,11 @@ var _ checker.CheckProvider = (*Server)(nil)
 
 type Server struct {
 	coraza.WAF
-	evp            *wafEventsPipeline
+	evp            *WafEventsPipeline
 	perHostEnabled bool
 }
 
-func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline) (*Server, error) {
+func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *WafEventsPipeline) (*Server, error) {
 	srv := &Server{
 		evp:            evp,
 		perHostEnabled: tproxyEnabled,
@@ -124,8 +124,6 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 	}
 
 	attrs := checkReq.Attributes
-	req := attrs.Request
-	httpReq := req.Http
 	dstHost, dstPort, _ := peerToHostPort(attrs.Destination)
 	srcHost, srcPort, _ := peerToHostPort(attrs.Source)
 	if st != nil {
@@ -141,7 +139,15 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		}
 	}
 
-	tx := w.NewTransactionWithID(httpReq.Id)
+	request := toCheckRequest(checkReq)
+	request.DstPort = int32(dstPort)
+	request.SrcPort = int32(srcPort)
+
+	return w.CheckWAF(request)
+}
+
+func (w *Server) CheckWAF(req *CheckRequest) (*envoyauthz.CheckResponse, error) {
+	tx := w.NewTransactionWithID(req.Id)
 	//  process the http info for the events pipeline and close the
 	//  transaction
 	defer tx.Close()
@@ -150,23 +156,23 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		return OK, nil
 	}
 
-	defer w.evp.Process(checkReq, tx)
+	defer w.evp.Process(req, tx)
 
-	tx.ProcessConnection(srcHost, int(srcPort), dstHost, int(dstPort))
-	tx.ProcessURI(httpReq.Path, httpReq.Method, httpReq.Protocol)
-	for k, v := range httpReq.Headers {
+	tx.ProcessConnection(req.SrcHost, int(req.SrcPort), req.DstHost, int(req.DstPort))
+	tx.ProcessURI(req.Path, req.Method, req.Protocol)
+	for k, v := range req.Headers {
 		tx.AddRequestHeader(k, v)
 	}
-	if host := req.Http.Host; host != "" {
-		tx.AddRequestHeader("Host", host)
-		tx.SetServerName(host)
+	if req.Host != "" {
+		tx.AddRequestHeader("Host", req.Host)
+		tx.SetServerName(req.Host)
 	}
 	if it := tx.ProcessRequestHeaders(); it != nil {
 		return w.processInterruption(it)
 	}
 
 	if tx.IsRequestBodyAccessible() {
-		s := strings.NewReader(httpReq.Body)
+		s := strings.NewReader(req.Body)
 		switch it, _, err := tx.ReadRequestBodyFrom(s); {
 		case err != nil:
 			return nil, err

@@ -12,20 +12,20 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
-type wafEventsPipeline struct {
+type WafEventsPipeline struct {
 	mu            sync.Mutex
 	errorsByTx    map[string][]corazatypes.MatchedRule
 	flushCallback eventCallbackFn
 }
 
-func NewEventsPipeline(cb eventCallbackFn) *wafEventsPipeline {
-	return &wafEventsPipeline{
+func NewEventsPipeline(cb eventCallbackFn) *WafEventsPipeline {
+	return &WafEventsPipeline{
 		errorsByTx:    map[string][]corazatypes.MatchedRule{},
 		flushCallback: cb,
 	}
 }
 
-func (p *wafEventsPipeline) ProcessErrorRule(rule corazatypes.MatchedRule) {
+func (p *WafEventsPipeline) ProcessErrorRule(rule corazatypes.MatchedRule) {
 	txID := rule.TransactionID()
 
 	p.mu.Lock()
@@ -36,6 +36,45 @@ func (p *wafEventsPipeline) ProcessErrorRule(rule corazatypes.MatchedRule) {
 	p.errorsByTx[txID] = txErrs
 }
 
+type CheckRequest struct {
+	Id               string
+	Host             string
+	SrcHost          string
+	SrcPort          int32
+	DstHost          string
+	DstPort          int32
+	RouteName        string
+	Method           string
+	Path             string
+	Protocol         string
+	Headers          map[string]string
+	Body             string
+	TimestampSeconds int64
+	TimestampNanos   int32
+}
+
+func toCheckRequest(checkReq *envoyauthz.CheckRequest) *CheckRequest {
+	attr := checkReq.Attributes
+	req := attr.Request
+	http := req.Http
+
+	return &CheckRequest{
+		Id:               http.Id,
+		Host:             http.Host,
+		SrcHost:          attr.Source.Address.GetSocketAddress().Address,
+		SrcPort:          int32(attr.Source.Address.GetSocketAddress().GetPortValue()),
+		DstHost:          attr.Destination.Address.GetSocketAddress().Address,
+		DstPort:          int32(attr.Destination.Address.GetSocketAddress().GetPortValue()),
+		Method:           http.Method,
+		Path:             http.Path,
+		Protocol:         http.Protocol,
+		Headers:          http.Headers,
+		Body:             http.Body,
+		TimestampSeconds: req.Time.Seconds,
+		TimestampNanos:   req.Time.Nanos,
+	}
+}
+
 // Process can take two types of events:
 // - corazatypes.MatchedRule
 // - *txHttpInfo
@@ -44,7 +83,7 @@ func (p *wafEventsPipeline) ProcessErrorRule(rule corazatypes.MatchedRule) {
 //
 // if the cached entries do not have the missing info yet and flush comes along
 // that's okay, we'll just fill in the missing info with the default values
-func (p *wafEventsPipeline) Process(checkReq *envoyauthz.CheckRequest, tx corazatypes.Transaction) {
+func (p *WafEventsPipeline) Process(req *CheckRequest, tx corazatypes.Transaction) {
 	txID := tx.ID()
 
 	p.mu.Lock()
@@ -57,27 +96,26 @@ func (p *wafEventsPipeline) Process(checkReq *envoyauthz.CheckRequest, tx coraza
 	p.mu.Unlock()
 
 	log.WithField("rules", matchedRules).Debug("Processing matched rules")
-	attr := checkReq.Attributes
+
 	entry := &proto.WAFEvent{
 		TxId:    txID,
-		Host:    attr.Request.Http.Host,
-		SrcIp:   attr.Source.Address.GetSocketAddress().Address,
-		SrcPort: int32(attr.Source.Address.GetSocketAddress().GetPortValue()),
-		DstIp:   attr.Destination.Address.GetSocketAddress().Address,
-		DstPort: int32(attr.Destination.Address.GetSocketAddress().GetPortValue()),
+		Host:    req.Host,
+		SrcIp:   req.SrcHost,
+		SrcPort: req.SrcPort,
+		DstIp:   req.DstHost,
+		DstPort: req.DstPort,
 		Rules:   []*proto.WAFRuleHit{},
 	}
 
-	req := attr.Request
 	entry.Request = &proto.HTTPRequest{
-		Method:  req.Http.Method,
-		Path:    req.Http.Path,
-		Version: req.Http.Protocol,
-		Headers: req.Http.Headers,
+		Method:  req.Method,
+		Path:    req.Path,
+		Version: req.Protocol,
+		Headers: req.Headers,
 	}
 	entry.Timestamp = &timestamppb.Timestamp{
-		Seconds: req.Time.Seconds,
-		Nanos:   req.Time.Nanos,
+		Seconds: req.TimestampSeconds,
+		Nanos:   req.TimestampNanos,
 	}
 	entry.Action = "pass"
 	if in := tx.Interruption(); in != nil {
