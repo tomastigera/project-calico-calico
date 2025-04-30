@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/goldmane/pkg/client"
 	"github.com/projectcalico/calico/goldmane/proto"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 )
 
 type GoldmaneReporter struct {
@@ -270,16 +271,16 @@ func toFlowPolicySet(policies []*proto.PolicyHit) flowlog.FlowPolicySet {
 	return policySet
 }
 
-func ensureLabels(labels map[string]string) []string {
-	if labels == nil {
+func ensureLabels(labels uniquelabels.Map) []string {
+	if labels.IsNil() {
 		return nil
 	}
-	return utils.FlattenLabels(labels)
+	return utils.FlattenLabels(labels.RecomputeOriginalMap())
 }
 
-func ensureFlowLogLabels(lables []string) map[string]string {
+func ensureFlowLogLabels(lables []string) uniquelabels.Map {
 	if lables == nil {
-		return map[string]string{}
+		return uniquelabels.Empty
 	}
-	return utils.UnflattenLabels(lables)
+	return uniquelabels.Make(utils.UnflattenLabels(lables))
 }
