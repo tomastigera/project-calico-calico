@@ -13,7 +13,7 @@ const (
 
 	FieldTypeIP        = FieldType("ip")
 	FieldTypeText      = FieldType("text")
-	FieldTypeTextMatch = FieldType("text-match")
+	FieldTypeTextExact = FieldType("text-exact")
 	FieldTypeDate      = FieldType("date")
 	FieldTypeEnum      = FieldType("enum")
 	FieldTypeNumber    = FieldType("number")

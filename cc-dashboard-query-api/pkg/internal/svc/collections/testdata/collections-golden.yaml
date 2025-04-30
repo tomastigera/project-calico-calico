@@ -41,9 +41,9 @@
   - name: rcode
     type: text
   - name: rrsets.name
-    type: text-match
+    type: text-exact
   - name: rrsets.rdata
-    type: text-match
+    type: text-exact
   - name: rrsets.type
     type: enum
     values:
