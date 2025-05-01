@@ -34,24 +34,34 @@ func SingleIndexWAFLogs() Helper {
 
 // NewWAFLogsConverter returns a Converter instance defined for waf logs.
 func NewWAFLogsConverter() converter {
-	return converter{wafAtomToElastic}
+	return converter{wafAtomToElastic, wafSetOpTermToElastic}
 }
 
 // wafAtomToElastic returns a waf log atom as an elastic JsonObject.
 func wafAtomToElastic(a *query.Atom) JsonObject {
-	switch a.Key {
+	return wafQueryObjectToElastic(a, a.Key, basicAtomToElastic)
+}
+
+// wafSetOpTermToElastic returns a waf log setOpTerm as an elastic JsonObject.
+func wafSetOpTermToElastic(t *query.SetOpTerm) JsonObject {
+	return wafQueryObjectToElastic(t, t.Key, basicSetOpTermToElastic)
+}
+
+// wafQueryObjectToElastic returns a waf log queryObject object as an elastic JsonObject.
+func wafQueryObjectToElastic[E queryObject](o E, key string, basicConverter converterFunc[E]) JsonObject {
+	switch key {
 	case "rules.id", "rules.message", "rules.severity", "rules.file", "rules.disruptive", "rules.line":
 
-		path := a.Key[:strings.Index(a.Key, ".")]
+		path := key[:strings.Index(key, ".")]
 		return JsonObject{
 			"nested": JsonObject{
 				"path":  path,
-				"query": basicAtomToElastic(a),
+				"query": basicConverter(o),
 			},
 		}
 	}
 
-	return basicAtomToElastic(a)
+	return basicConverter(o)
 }
 
 func (h wafLogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*elastic.BoolQuery, error) {

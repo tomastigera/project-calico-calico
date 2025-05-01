@@ -35,22 +35,32 @@ type flowLogsIndexHelper struct {
 
 // NewFlowLogsConverter returns a Converter instance defined for flow logs.
 func NewFlowLogsConverter() converter {
-	return converter{flowLogsAtomToElastic}
+	return converter{flowLogsAtomToElastic, flowLogsSetOpTermToElastic}
 }
 
 // flowLogsAtomToElastic returns a flow log atom as an elastic JsonObject.
 func flowLogsAtomToElastic(a *query.Atom) JsonObject {
-	switch a.Key {
+	return flowLogsQueryObjectToElastic(a, a.Key, basicAtomToElastic)
+}
+
+// flowLogsSetOpTermToElastic returns a flow log setOpTerm as an elastic JsonObject.
+func flowLogsSetOpTermToElastic(t *query.SetOpTerm) JsonObject {
+	return flowLogsQueryObjectToElastic(t, t.Key, basicSetOpTermToElastic)
+}
+
+// flowLogsQueryObjectToElastic returns a flow log queryObject as an elastic JsonObject.
+func flowLogsQueryObjectToElastic[E queryObject](o E, key string, basicConverter converterFunc[E]) JsonObject {
+	switch key {
 	case "dest_labels.labels", "policies.all_policies", "source_labels.labels":
-		path := a.Key[:strings.Index(a.Key, ".")]
+		path := key[:strings.Index(key, ".")]
 		return JsonObject{
 			"nested": JsonObject{
 				"path":  path,
-				"query": basicAtomToElastic(a),
+				"query": basicConverter(o),
 			},
 		}
 	default:
-		return basicAtomToElastic(a)
+		return basicConverter(o)
 	}
 }
 

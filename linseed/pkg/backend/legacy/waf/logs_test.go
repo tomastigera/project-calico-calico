@@ -534,6 +534,13 @@ func TestWAFLogFiltering(t *testing.T) {
 			},
 			ExpectLogIndex: 0,
 		},
+		{
+			Name: "should support selection based on nested field match",
+			Params: v1.WAFLogParams{
+				Selector: "\"rules.file\" IN {\"*est-fi*\"}",
+			},
+			ExpectLogIndex: 0,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -554,7 +561,8 @@ func TestWAFLogFiltering(t *testing.T) {
 						Msg:       "Strawberry Fields Forever",
 						Rules: []v1.WAFRuleHit{
 							{
-								Id: "8",
+								Id:   "8",
+								File: "test-file",
 							},
 						},
 					},

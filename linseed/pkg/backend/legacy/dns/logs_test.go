@@ -465,6 +465,17 @@ func TestDNSLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: true,
 		},
+		{
+			Name: "should support selection based on nested field match",
+			Params: v1.DNSLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "\"servers.name\" IN {\"*be-dns-tw*\"}",
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
 	}
 
 	ip := net.ParseIP("10.0.1.1")
@@ -543,7 +554,7 @@ func TestDNSLogFiltering(t *testing.T) {
 						Servers: []v1.DNSServer{
 							{
 								Endpoint: v1.Endpoint{
-									Name:           "kube-dns-one",
+									Name:           "kube-dns-two",
 									AggregatedName: "kube-dns",
 									Namespace:      "kube-system",
 								},

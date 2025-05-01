@@ -34,7 +34,7 @@ func SingleIndexL7Logs() Helper {
 
 // NewL7LogsConverter returns a Converter instance defined for l7 logs.
 func NewL7LogsConverter() converter {
-	return converter{basicAtomToElastic}
+	return converter{basicAtomToElastic, basicSetOpTermToElastic}
 }
 
 func (h l7LogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*elastic.BoolQuery, error) {

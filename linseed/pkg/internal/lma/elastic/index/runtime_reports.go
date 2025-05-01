@@ -50,7 +50,7 @@ func (h runtimeReportsIndexHelper) NewSelectorQuery(selector string) (elastic.Qu
 			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
 		}
 	}
-	converter := converter{basicAtomToElastic}
+	converter := converter{basicAtomToElastic, basicSetOpTermToElastic}
 	return JsonObjectElasticQuery(converter.Convert(q)), nil
 }
 

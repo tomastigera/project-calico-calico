@@ -484,6 +484,50 @@ var _ = Describe("Query Converter", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
+
+		It("should handle a nested fields clause", func() {
+			result := JsonObject{
+				"bool": JsonObject{
+					"should": []JsonObject{
+						{
+							"nested": JsonObject{
+								"path": "servers",
+								"query": JsonObject{
+									"term": JsonObject{
+										"servers.name": JsonObject{
+											"value": "my-server",
+										},
+									},
+								},
+							},
+						},
+						{
+							"nested": JsonObject{
+								"path": "rrsets",
+								"query": JsonObject{
+									"bool": JsonObject{
+										"should": []JsonObject{
+											{
+												"wildcard": JsonObject{
+													"rrsets.name": JsonObject{
+														"value": "*hostname*",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			query := "\"servers.name\" = \"my-server\" OR \"rrsets.name\" IN {\"*hostname*\"}"
+			esquery, err := MultiIndexDNSLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
 	})
 
 	Context("Flow", func() {
@@ -599,6 +643,50 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "(action=allow OR action=deny) AND action=deny"
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+
+		It("should handle a nested fields clause", func() {
+			result := JsonObject{
+				"bool": JsonObject{
+					"should": []JsonObject{
+						{
+							"nested": JsonObject{
+								"path": "dest_labels",
+								"query": JsonObject{
+									"term": JsonObject{
+										"dest_labels.labels": JsonObject{
+											"value": "my-label=value",
+										},
+									},
+								},
+							},
+						},
+						{
+							"nested": JsonObject{
+								"path": "source_labels",
+								"query": JsonObject{
+									"bool": JsonObject{
+										"should": []JsonObject{
+											{
+												"wildcard": JsonObject{
+													"source_labels.labels": JsonObject{
+														"value": "*__PROFILE__*",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			query := "\"dest_labels.labels\" = \"my-label=value\" OR \"source_labels.labels\" IN {\"*__PROFILE__*\"}"
 			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -727,6 +815,52 @@ var _ = Describe("Query Converter", func() {
 			}
 			query := "(url=\"http://www.yolo.com\" OR method=methodval) AND dest_type=ns"
 			esquery, err := SingleIndexL7Logs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+	})
+
+	Context("WAF", func() {
+		It("should handle a nested fields clause", func() {
+			result := JsonObject{
+				"bool": JsonObject{
+					"should": []JsonObject{
+						{
+							"nested": JsonObject{
+								"path": "rules",
+								"query": JsonObject{
+									"term": JsonObject{
+										"rules.message": JsonObject{
+											"value": "waf-message",
+										},
+									},
+								},
+							},
+						},
+						{
+							"nested": JsonObject{
+								"path": "rules",
+								"query": JsonObject{
+									"bool": JsonObject{
+										"should": []JsonObject{
+											{
+												"wildcard": JsonObject{
+													"rules.file": JsonObject{
+														"value": "*filename*",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			query := "\"rules.message\" = \"waf-message\" OR \"rules.file\" IN {\"*filename*\"}"
+			esquery, err := SingleIndexWAFLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})

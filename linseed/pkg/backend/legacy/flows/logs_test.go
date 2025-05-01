@@ -575,6 +575,17 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: true,
 		},
+		{
+			Name: "should support selection based on nested field match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "\"source_labels.labels\" IN {\"*eese=chedd*\"}",
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.

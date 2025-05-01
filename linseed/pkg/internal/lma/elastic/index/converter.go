@@ -14,11 +14,18 @@ func (q JsonObjectElasticQuery) Source() (interface{}, error) {
 	return JsonObject(q), nil
 }
 
+type queryObject interface {
+	*query.Atom | *query.SetOpTerm
+}
+
+type converterFunc[E queryObject] func(queryObject E) JsonObject
+
 // Converter contains a single field that defines a function that will implement the query atom to
 // ealstic JsonObject. If the instance does not implement its own version of function, then the
 // instance can define the basicAtomToElastic as the atomToElastic.
 type converter struct {
-	atomToElastic func(atom *query.Atom) JsonObject
+	atomToElastic      func(atom *query.Atom) JsonObject
+	setOpTermToElastic func(s *query.SetOpTerm) JsonObject
 }
 
 // comparatorToElastic converts the comparator to an elastic JsonObject.
@@ -111,7 +118,7 @@ func (c converter) unaryOpTermToElastic(v *query.UnaryOpTerm) JsonObject {
 	return c.valueToElastic(v.Value)
 }
 
-func (c converter) setOpTermToElastic(s *query.SetOpTerm) JsonObject {
+func basicSetOpTermToElastic(s *query.SetOpTerm) JsonObject {
 	terms := []JsonObject{}
 	for _, k := range s.Members {
 		terms = append(terms, JsonObject{

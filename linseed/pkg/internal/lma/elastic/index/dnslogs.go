@@ -36,36 +36,46 @@ func (h dnsLogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*el
 
 // NewDnsLogsConverter returns a Converter instance defined for dns logs.
 func NewDnsLogsConverter() converter {
-	return converter{dnsAtomToElastic}
+	return converter{dnsAtomToElastic, dnsSetOpTermToElastic}
 }
 
 // dnsAtomToElastic returns a dns log atom as an elastic JsonObject.
 func dnsAtomToElastic(a *query.Atom) JsonObject {
-	switch a.Key {
+	return dnsQueryObjectToElastic(a, a.Key, basicAtomToElastic)
+}
+
+// dnsSetOpTermToElastic returns a flow log setOpTerm as an elastic JsonObject.
+func dnsSetOpTermToElastic(t *query.SetOpTerm) JsonObject {
+	return dnsQueryObjectToElastic(t, t.Key, basicSetOpTermToElastic)
+}
+
+// dnsQueryObjectToElastic returns a flow log queryObject object as an elastic JsonObject.
+func dnsQueryObjectToElastic[E queryObject](o E, key string, basicConverter converterFunc[E]) JsonObject {
+	switch key {
 	case "servers.name", "servers.name_aggr", "servers.namespace", "servers.ip",
 		"rrsets.name", "rrsets.type", "rrsets.class", "rrsets.rdata":
 
-		path := a.Key[:strings.Index(a.Key, ".")]
+		path := key[:strings.Index(key, ".")]
 		return JsonObject{
 			"nested": JsonObject{
 				"path":  path,
-				"query": basicAtomToElastic(a),
+				"query": basicConverter(o),
 			},
 		}
 	}
 
 	switch {
-	case strings.HasPrefix(a.Key, "servers.labels."):
+	case strings.HasPrefix(key, "servers.labels."):
 		return JsonObject{
 			"nested": JsonObject{
 				"path":  "servers",
-				"query": basicAtomToElastic(a),
+				"query": basicConverter(o),
 			},
 		}
-	case strings.HasPrefix(a.Key, "client_labels."):
-		return basicAtomToElastic(a)
+	case strings.HasPrefix(key, "client_labels."):
+		return basicConverter(o)
 	default:
-		return basicAtomToElastic(a)
+		return basicConverter(o)
 	}
 }
 
