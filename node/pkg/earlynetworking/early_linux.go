@@ -14,6 +14,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/netlinkutils"
 )
 
