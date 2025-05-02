@@ -51,6 +51,7 @@ func retrieveIPAddresses() ([]net.IPNet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to create netlink handle")
 	}
+	defer nl.Close()
 	linkAddresses, err := hostIPAddressRetriever(nl, nil, netlink.FAMILY_V4)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to list addresses")
