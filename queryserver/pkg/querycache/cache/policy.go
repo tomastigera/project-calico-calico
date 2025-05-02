@@ -715,7 +715,7 @@ func (d *policyData) IsKubernetesType() (bool, error) {
 		name = strings.Split(name, "staged:")[1]
 	}
 
-	if strings.HasPrefix(name, "knp") || strings.HasPrefix(name, "kanp") || strings.HasPrefix(name, "kbanp") {
+	if strings.HasPrefix(name, "knp.default.") || strings.HasPrefix(name, "kanp.adminnetworkpolicy.") || strings.HasPrefix(name, "kbanp.baselineadminnetworkpolicy.") {
 		return true, nil
 	}
 
@@ -723,8 +723,8 @@ func (d *policyData) IsKubernetesType() (bool, error) {
 	nameParts := strings.Split(name, ".")
 	if len(nameParts) > 2 {
 		return false, fmt.Errorf("Policy name structure is unknown: %s", name)
-
 	}
+
 	return false, nil
 
 }
