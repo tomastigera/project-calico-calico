@@ -354,6 +354,7 @@ rules:
       - kubecontrollersconfigurations
       - bgpconfigurations
       - externalnetworks
+      - clusterinformations
     verbs:
       - get
       - list
