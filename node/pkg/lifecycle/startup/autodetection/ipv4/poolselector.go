@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"github.com/projectcalico/calico/libcalico-go/lib/netlinkutils"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 	FALLBACK_IPPOOL_MAX      = 31
 )
 
-var hostIPAddressRetriever func(netlink.Link, int) ([]netlink.Addr, error) = netlink.AddrList
+var hostIPAddressRetriever func(*netlink.Handle, netlink.Link, int) ([]netlink.Addr, error) = netlinkutils.AddrListRetryEINTR
 
 // GetDefaultIPv4Pool detects host interfaces and selects default IP pool without overlapping
 func GetDefaultIPv4Pool(preferedPool *net.IPNet) (*net.IPNet, error) {
@@ -46,7 +47,11 @@ func GetDefaultIPv4Pool(preferedPool *net.IPNet) (*net.IPNet, error) {
 }
 
 func retrieveIPAddresses() ([]net.IPNet, error) {
-	linkAddresses, err := hostIPAddressRetriever(nil, netlink.FAMILY_V4)
+	nl, err := netlink.NewHandle()
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to create netlink handle")
+	}
+	linkAddresses, err := hostIPAddressRetriever(nl, nil, netlink.FAMILY_V4)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to list addresses")
 	}
