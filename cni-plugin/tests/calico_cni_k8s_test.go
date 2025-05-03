@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2025 Tigera, Inc. All rights reserved.
 
 package main_test
 
@@ -2800,11 +2800,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Otherwise, they should be the same.
 			resultSecondAdd.IPs = nil
 			result.IPs = nil
-			for _, iface := range result.Interfaces {
-				iface.Mac = ""
-			}
-			for _, iface := range resultSecondAdd.Interfaces {
-				iface.Mac = ""
+
+			// The MAC address will be different, since we create a new veth.
+			Expect(len(resultSecondAdd.Interfaces)).Should(Equal(len(result.Interfaces)))
+			for i := range resultSecondAdd.Interfaces {
+				Expect(resultSecondAdd.Interfaces[i].Mac).ShouldNot(Equal(result.Interfaces[i].Mac))
+				resultSecondAdd.Interfaces[i].Mac = ""
+				result.Interfaces[i].Mac = ""
 			}
 
 			Expect(resultSecondAdd).Should(Equal(result))

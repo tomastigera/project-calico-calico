@@ -606,7 +606,10 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// Add the interface created above to the CNI result.
 	result.Interfaces = append(result.Interfaces,
 		&cniv1.Interface{
-			Name: endpoint.Spec.InterfaceName,
+			Name:    endpoint.Spec.InterfaceName,
+			Mac:     endpoint.Spec.MAC,
+			Mtu:     conf.MTU,
+			Sandbox: args.Netns,
 		},
 		&cniv1.Interface{
 			Name:    args.IfName,
