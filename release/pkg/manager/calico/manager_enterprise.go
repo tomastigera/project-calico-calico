@@ -345,6 +345,9 @@ func (m *EnterpriseManager) Build() error {
 	}
 
 	if m.validate {
+		if err := m.validateGitVersion(); err != nil {
+			return err
+		}
 		if err := m.PreBuildValidation(); err != nil {
 			return fmt.Errorf("failed pre-build validation: %s", err)
 		}
