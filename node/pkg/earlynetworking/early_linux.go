@@ -14,6 +14,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/netlinkutils"
 )
 
 const (
@@ -153,9 +155,14 @@ func Run() {
 }
 
 func mustDetectNodeConfig(cfg *EarlyNetworkConfiguration) (nodeConfig *ConfigNode, routerID string) {
+	nl, err := netlink.NewHandle()
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create netlink handle")
+	}
+	defer nl.Close()
 	if cfg.Spec.Legacy.NodeIPFromDefaultRoute {
 		// Legacy behavior: searching routes for their source addrs to identify this node.
-		routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+		routes, err := netlinkutils.RouteListRetryEINTR(nl, nil, netlink.FAMILY_V4)
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to list routes")
 		}
@@ -208,7 +215,7 @@ func mustDetectNodeConfig(cfg *EarlyNetworkConfiguration) (nodeConfig *ConfigNod
 
 	} else {
 		// First try to list all links' addresses, and correlate them to config addresses.
-		ips, err := enumerateAllIPs()
+		ips, err := enumerateAllIPs(nl)
 		if err != nil {
 			logrus.WithError(err).Fatal("Couldn't auto-detect IP")
 		}
@@ -396,12 +403,12 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string, f
 		}
 	}
 
-	links, err := netlink.LinkList()
+	links, err := netlinkutils.LinkListRetryEINTR(nl)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to list all links")
 	}
 	for _, link := range links {
-		addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
+		addrs, err := netlinkutils.AddrListRetryEINTR(nl, link, netlink.FAMILY_V4)
 		if err != nil {
 			logrus.WithError(err).Fatalf("Failed to list addresses for link %+v", link)
 		}
@@ -526,14 +533,14 @@ func ensureRoute(route *netlink.Route, append bool) {
 }
 
 // enumerateAllIPs gets all addresses for all interfaces.
-func enumerateAllIPs() (ips []string, err error) {
-	links, err := netlink.LinkList()
+func enumerateAllIPs(nl *netlink.Handle) (ips []string, err error) {
+	links, err := netlinkutils.LinkListRetryEINTR(nl)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to list links: %w", err)
 	}
 
 	for _, l := range links {
-		lAddrs, err := netlink.AddrList(l, netlink.FAMILY_V4)
+		lAddrs, err := netlinkutils.AddrListRetryEINTR(nl, l, netlink.FAMILY_V4)
 		if err != nil {
 			logrus.WithField("link", l.Attrs().Name).Warn("Couldn't list addrs for link")
 			continue

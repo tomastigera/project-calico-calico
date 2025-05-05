@@ -82,7 +82,7 @@ var _ = Describe("IPv4 pool selector tests", func() {
 	})
 
 	Describe("Get default IPv4 pool tests", func() {
-		var originalRetriever func(netlink.Link, int) ([]netlink.Addr, error)
+		var originalRetriever func(*netlink.Handle, netlink.Link, int) ([]netlink.Addr, error)
 
 		BeforeEach(func() {
 			originalRetriever = hostIPAddressRetriever
@@ -93,7 +93,7 @@ var _ = Describe("IPv4 pool selector tests", func() {
 		})
 
 		It("unable to retrieve host addresses", func() {
-			hostIPAddressRetriever = func(netlink.Link, int) ([]netlink.Addr, error) {
+			hostIPAddressRetriever = func(*netlink.Handle, netlink.Link, int) ([]netlink.Addr, error) {
 				return []netlink.Addr{}, errors.New("fatal error")
 			}
 			_, preferredPool, _ := net.ParseCIDR("192.168.0.0/16")
@@ -104,7 +104,7 @@ var _ = Describe("IPv4 pool selector tests", func() {
 		})
 
 		It("select first from range because it is overlapping", func() {
-			hostIPAddressRetriever = func(netlink.Link, int) ([]netlink.Addr, error) {
+			hostIPAddressRetriever = func(*netlink.Handle, netlink.Link, int) ([]netlink.Addr, error) {
 				net := parseCIDR("192.168.64.2/24")
 				return []netlink.Addr{netlink.Addr{IPNet: &net}}, nil
 			}
