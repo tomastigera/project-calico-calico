@@ -33,21 +33,21 @@ EKS_VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
 	-X main.GIT_COMMIT=$(GIT_COMMIT)
 
 .PHONY: build
-build: bin/eks-log-forwarder-startup-$(ARCH)
+build: eks/bin/eks-log-forwarder-startup-$(ARCH)
 
 ## build cloudwatch plugin initializer
-bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
+eks/bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable"
 	$(DOCKER_GO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o bin/$(@F) -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
 
-bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
+eks/bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable for windows"
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o bin/$(@F) -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
 
 clean:
-	rm -rf eks/bin Makefile.common*
+	rm -rf eks/bin dist Makefile.common*
 	-docker image rm -f $$(docker images $(FLUENTD_IMAGE) -a -q)
 
 ###############################################################################
@@ -64,12 +64,12 @@ sub-image-%:
 image: $(FLUENTD_IMAGE)
 
 $(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
-$(FLUENTD_IMAGE_CREATED): Dockerfile bin/eks-log-forwarder-startup-$(ARCH)
+$(FLUENTD_IMAGE_CREATED): Dockerfile eks/bin/eks-log-forwarder-startup-$(ARCH)
 	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-WINDOWS_IMAGE_REQS := Dockerfile-windows bin/eks-log-forwarder-startup.exe
+WINDOWS_IMAGE_REQS := Dockerfile-windows eks/bin/eks-log-forwarder-startup.exe
 image-windows: $(WINDOWS_IMAGE_REQS)
 
 ###############################################################################
@@ -80,7 +80,7 @@ ifdef UNIT_TESTS
 endif
 
 ## test cloudwatch plugin initializer
-ut: bin/eks-log-forwarder-startup-$(ARCH)
+ut: eks/bin/eks-log-forwarder-startup-$(ARCH)
 ifeq ($(ARCH),amd64)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test -C eks $(UNIT_TEST_FLAGS)'
