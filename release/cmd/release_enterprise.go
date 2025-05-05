@@ -74,6 +74,7 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
 			}
 			enterpriseOpts := []calico.EnterpriseOption{
+				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
@@ -91,6 +92,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		orgFlag,
 		repoFlag,
 		repoRemoteFlag,
+		devTagSuffixFlag,
 		skipReleaseVersionCheckFlag,
 		skipValidationFlag,
 		confirmFlag,
@@ -123,6 +125,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 			}
 			entOpts := []calico.EnterpriseOption{
+				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(versions.HelmRelease),
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
@@ -214,6 +217,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithPublishImages(c.Bool(publishImagesFlag.Name)),
 			}
 			entOpts := []calico.EnterpriseOption{
+				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),

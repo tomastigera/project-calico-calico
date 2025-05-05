@@ -150,6 +150,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			enterpriseOpts := []calico.EnterpriseOption{
+				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, *hashreleaseServerConfig(c)),
 				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
@@ -167,6 +168,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
+		devTagSuffixFlag,
 		archFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
@@ -247,6 +249,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			calicoOpts = append(calicoOpts, calico.WithComponents(components))
 
 			enterpriseOpts := []calico.EnterpriseOption{
+				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(hashrel.ChartVersion),
 				calico.WithEnterpriseHashrelease(*hashrel, *serverCfg),
 				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),

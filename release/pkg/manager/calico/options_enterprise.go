@@ -4,6 +4,13 @@ import "github.com/projectcalico/calico/release/internal/hashreleaseserver"
 
 type EnterpriseOption func(*EnterpriseManager) error
 
+func WithDevTagIdentifier(devTagSuffix string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.devTagSuffix = devTagSuffix
+		return nil
+	}
+}
+
 func WithChartVersion(version string) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.chartVersion = version
