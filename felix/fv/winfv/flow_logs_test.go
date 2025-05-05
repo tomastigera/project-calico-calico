@@ -82,10 +82,6 @@ var _ = Describe("Windows flow logs test", func() {
 		// flow logs.
 		Eventually(func() error {
 			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, expectation.labels, expectation.policies, 80)
-			if fv.GetBackendType() == CalicoBackendVXLAN {
-				// Windows VXLAN can't complete a flow in time.
-				flowTester.IgnoreStartCompleteCount = true
-			}
 			err := flowTester.PopulateFromFlowLogs()
 			if err != nil {
 				return err

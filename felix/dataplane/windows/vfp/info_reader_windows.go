@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/kind/pkg/errors"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector"
+	collector "github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/rules"

@@ -46,6 +46,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
+	bpftimeouts "github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
@@ -66,6 +67,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
+	collectortypes "github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
@@ -248,7 +250,7 @@ type Config struct {
 	XDPEnabled                         bool
 	XDPAllowGeneric                    bool
 	BPFConntrackCleanupMode            apiv3.BPFConntrackMode
-	BPFConntrackTimeouts               bpfconntrack.Timeouts
+	BPFConntrackTimeouts               bpftimeouts.Timeouts
 	BPFCgroupV2                        string
 	BPFConnTimeLBEnabled               bool
 	BPFConnTimeLB                      string
@@ -1086,9 +1088,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		eventTcpStatsSink    *events.EventTcpStatsSink
 		eventProcessPathSink *events.EventProcessPathSink
 
-		collectorPacketInfoReader    collector.PacketInfoReader
-		collectorConntrackInfoReader collector.ConntrackInfoReader
-		processInfoCache             collector.ProcessInfoCache
+		collectorPacketInfoReader    collectortypes.PacketInfoReader
+		collectorConntrackInfoReader collectortypes.ConntrackInfoReader
+		processInfoCache             collectortypes.ProcessInfoCache
 		processPathInfoCache         *events.BPFProcessPathCache
 	)
 

@@ -20,7 +20,6 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/dns"
@@ -117,7 +116,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsServerIP
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
-		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		// Start felix instances.
 		tc, client = infrastructure.StartNNodeTopology(1, opts, infra)
@@ -238,14 +236,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		canWgetDomain("fake-microsoft.test")
 		cannotWgetDomain("www.fake-google.test")
 
-		if bpfEnabled {
-			// Make sure that conntrack scanning ticks at least once
-			time.Sleep(3 * conntrack.ScanPeriod)
-		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
-			// 10% leeway over the polling jitter of 10%)
-			time.Sleep(6 * time.Second)
-		}
+		flowlogs.WaitForConntrackScan(bpfEnabled)
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
@@ -480,7 +471,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSDESTDOMAINSBYCLIENT"] = "true"
 		opts.ExtraEnvVars["FELIX_DNSEXTRATTL"] = "300"
-		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		// Start felix instances.
 		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)
@@ -523,14 +513,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		canWgetDomain(ep2_1, "fake-github.test")
 		canWgetDomain(ep2_1, "fake-microsoft.test")
 
-		if bpfEnabled {
-			// Make sure that conntrack scanning ticks at least once
-			time.Sleep(3 * conntrack.ScanPeriod)
-		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack. (This is conntrack polling time plus
-			// 20%, which gives us 10% leeway over the polling jitter of 10%)
-			time.Sleep(6 * time.Second)
-		}
+		flowlogs.WaitForConntrackScan(bpfEnabled)
 
 		Eventually(func() error {
 			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)

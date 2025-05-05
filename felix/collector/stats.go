@@ -13,6 +13,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/boundedset"
 	"github.com/projectcalico/calico/felix/collector/types/counter"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
@@ -361,8 +362,8 @@ type Data struct {
 	httpReqDeniedCtr         counter.Counter
 
 	// Process information
-	sourceProcessData ProcessData
-	destProcessData   ProcessData
+	sourceProcessData types.ProcessData
+	destProcessData   types.ProcessData
 
 	TcpStats tcpStatsData
 
@@ -682,7 +683,7 @@ func (d *Data) NumUniqueOriginalSourceIPs() int {
 	return d.origSourceIPs.TotalCount()
 }
 
-func (d *Data) SourceProcessData() ProcessData {
+func (d *Data) SourceProcessData() types.ProcessData {
 	return d.sourceProcessData
 }
 
@@ -694,7 +695,7 @@ func (d *Data) SetSourceProcessData(name, args string, pid int) bool {
 		d.sourceProcessData.Pid != 0 && d.sourceProcessData.Pid != pid {
 		return false
 	}
-	d.sourceProcessData = ProcessData{
+	d.sourceProcessData = types.ProcessData{
 		Name:      name,
 		Pid:       pid,
 		Arguments: args,
@@ -704,7 +705,7 @@ func (d *Data) SetSourceProcessData(name, args string, pid int) bool {
 	return true
 }
 
-func (d *Data) DestProcessData() ProcessData {
+func (d *Data) DestProcessData() types.ProcessData {
 	return d.destProcessData
 }
 
@@ -716,7 +717,7 @@ func (d *Data) SetDestProcessData(name, args string, pid int) bool {
 		d.destProcessData.Pid != 0 && d.destProcessData.Pid != pid {
 		return false
 	}
-	d.destProcessData = ProcessData{
+	d.destProcessData = types.ProcessData{
 		Name:      name,
 		Pid:       pid,
 		Arguments: args,
@@ -955,7 +956,7 @@ func (d *Data) MetricUpdateOrigSourceIPs(ut metric.UpdateType) metric.Update {
 	return mu
 }
 
-func (d *Data) SetTcpSocketStats(tcpStats TcpStatsData) {
+func (d *Data) SetTcpSocketStats(tcpStats types.TcpStatsData) {
 	d.TcpStats.sendCongestionWnd = tcpStats.SendCongestionWnd
 	d.TcpStats.smoothRtt = tcpStats.SmoothRtt
 	d.TcpStats.minRtt = tcpStats.MinRtt

@@ -52,7 +52,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTTCPSTATS"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTPROCESSPATH"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTPROCESSINFO"] = "true"
-		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		// Start felix instances.
 		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)

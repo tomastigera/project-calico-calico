@@ -44,6 +44,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
@@ -3876,7 +3877,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									// increasing.
 									start := time.Now()
 									prevCount := pc.PongCount()
-									for time.Since(start) < 2*conntrack.ScanPeriod {
+									for time.Since(start) < 2*timeouts.ScanPeriod {
 										time.Sleep(time.Second)
 										newCount := pc.PongCount()
 										Expect(prevCount).Should(
@@ -3948,7 +3949,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									// it is alive by checking that the number of PONGs keeps
 									// increasing. The ct entry may not be old enough in the first
 									// iteration yet.
-									time.Sleep(3 * conntrack.ScanPeriod)
+									time.Sleep(3 * timeouts.ScanPeriod)
 									prevCount := pc.PongCount()
 
 									// Try log enough to see a ping-pong

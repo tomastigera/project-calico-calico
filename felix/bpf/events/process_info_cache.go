@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/collector/types"
+	collector "github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 )
