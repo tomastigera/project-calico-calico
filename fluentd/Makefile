@@ -64,12 +64,12 @@ sub-image-%:
 image: $(FLUENTD_IMAGE)
 
 $(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
-$(FLUENTD_IMAGE_CREATED): Dockerfile bin/eks-log-forwarder-startup-$(ARCH)
+$(FLUENTD_IMAGE_CREATED): Dockerfile eks/bin/eks-log-forwarder-startup-$(ARCH)
 	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-WINDOWS_IMAGE_REQS := Dockerfile-windows bin/eks-log-forwarder-startup.exe
+WINDOWS_IMAGE_REQS := Dockerfile-windows eks/bin/eks-log-forwarder-startup.exe
 image-windows: $(WINDOWS_IMAGE_REQS)
 
 ###############################################################################
@@ -80,7 +80,7 @@ ifdef UNIT_TESTS
 endif
 
 ## test cloudwatch plugin initializer
-ut: bin/eks-log-forwarder-startup-$(ARCH)
+ut: eks/bin/eks-log-forwarder-startup-$(ARCH)
 ifeq ($(ARCH),amd64)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test -C eks $(UNIT_TEST_FLAGS)'
