@@ -111,6 +111,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			operatorOpts := []operator.Option{
 				operator.WithOperatorDirectory(operatorDir),
 				operator.WithReleaseBranchPrefix(c.String(operatorReleaseBranchPrefixFlag.Name)),
+				operator.WithDevTagIdentifier(c.String(operatorDevTagSuffixFlag.Name)),
 				operator.IsHashRelease(),
 				operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 				operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
@@ -169,6 +170,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
 		devTagSuffixFlag,
+		operatorDevTagSuffixFlag,
 		archFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
@@ -210,6 +212,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			o := operator.NewEnterpriseManager(
 				operator.WithOperatorDirectory(filepath.Join(cfg.TmpDir, operator.DefaultRepoName)),
 				operator.IsHashRelease(),
+				operator.WithDevTagIdentifier(c.String(operatorDevTagSuffixFlag.Name)),
 				operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 				operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				operator.WithTempDirectory(cfg.TmpDir),
