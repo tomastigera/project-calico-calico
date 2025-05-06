@@ -170,11 +170,27 @@ func (o *OperatorManager) Build() error {
 	return o.docker.TagImage(currentTag, newTag)
 }
 
+func (o *OperatorManager) validateGitVersion() error {
+	gitVersion, err := command.GitVersion(o.dir, true)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get operator git version")
+	}
+	if !version.HasDevTag(version.New(gitVersion), o.devTagIdentifier) {
+		err := fmt.Errorf("git version %s does not contain dev tag suffix %s", gitVersion, o.devTagIdentifier)
+		logrus.Error(err)
+		return err
+	}
+	return nil
+}
+
 func (o *OperatorManager) PreBuildValidation(outputDir string) error {
 	if !o.isHashRelease {
 		return fmt.Errorf("operator manager builds only for hash releases")
 	}
 	var errStack error
+	if err := o.validateGitVersion(); err != nil {
+		errStack = errors.Join(errStack, err)
+	}
 	if o.validateBranch {
 		branch, err := utils.GitBranch(o.dir)
 		if err != nil {
@@ -261,10 +277,7 @@ func (o *OperatorManager) PrePublishValidation() error {
 		return fmt.Errorf("operator manager publishes only for hash releases")
 	}
 
-	gitVersion := version.GitVersion()
-	if !version.HasDevTag(gitVersion, o.devTagIdentifier) {
-		err := fmt.Errorf("git version %s does not contain dev tag suffix %s", gitVersion, o.devTagIdentifier)
-		logrus.Error(err)
+	if err := o.validateGitVersion(); err != nil {
 		return err
 	}
 	if len(o.architectures) == 0 {
