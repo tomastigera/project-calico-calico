@@ -236,6 +236,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithOutputDir(filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), hashrel.Hash)),
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
+				calico.WithPublishImages(false), // Enterprise does not publish images
 			}
 			componentRegistry := registry.TigeraDevCIGCRRegistry
 			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
