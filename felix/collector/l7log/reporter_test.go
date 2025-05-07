@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	net2 "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -39,27 +40,27 @@ var (
 		Name:     "cali1",
 		Mac:      utils.MustParseMac("01:02:03:04:05:06"),
 		IPv4Nets: []net2.IPNet{utils.MustParseNet("10.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"id": "local-ep-1",
-		},
+		}),
 	}
 	remoteWlEp1 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali3",
 		Mac:      utils.MustParseMac("02:02:03:04:05:06"),
 		IPv4Nets: []net2.IPNet{utils.MustParseNet("20.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"id": "remote-ep-1",
-		},
+		}),
 	}
 	remoteWlEp2 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali4",
 		Mac:      utils.MustParseMac("02:03:03:04:05:06"),
 		IPv4Nets: []net2.IPNet{utils.MustParseNet("20.0.0.2/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"id": "remote-ep-2",
-		},
+		}),
 	}
 )
 

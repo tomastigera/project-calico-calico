@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -304,13 +305,13 @@ var _ = Describe("DNS log type tests", func() {
 				DNSMeta: DNSMeta{},
 				DNSSpec: DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{}: {
+						{}: uniquelabels.Make(map[string]string{
 							"c": "d",
-						},
+						}),
 					},
-					ClientLabels: map[string]string{
+					ClientLabels: uniquelabels.Make(map[string]string{
 						"a": "b",
-					},
+					}),
 				},
 			}
 		})
@@ -347,24 +348,24 @@ var _ = Describe("DNS log type tests", func() {
 
 				a := DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{Endpoint: v1.Endpoint{Name: "ns1"}}: {"a": "b"},
-						{Endpoint: v1.Endpoint{Name: "ns2"}}: {"d": "e"},
+						{Endpoint: v1.Endpoint{Name: "ns1"}}: uniquelabels.Make(map[string]string{"a": "b"}),
+						{Endpoint: v1.Endpoint{Name: "ns2"}}: uniquelabels.Make(map[string]string{"d": "e"}),
 					},
-					ClientLabels: DNSLabels{
+					ClientLabels: uniquelabels.Make(map[string]string{
 						"0": "0",
-					},
+					}),
 					DNSStats: DNSStats{
 						Count: origCount,
 					},
 				}
 				b := DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{Endpoint: v1.Endpoint{Name: "ns1"}}: {"b": "c", "a": "h"},
-						{Endpoint: v1.Endpoint{Name: "ns3"}}: {"f": "g"},
+						{Endpoint: v1.Endpoint{Name: "ns1"}}: uniquelabels.Make(map[string]string{"b": "c", "a": "h"}),
+						{Endpoint: v1.Endpoint{Name: "ns3"}}: uniquelabels.Make(map[string]string{"f": "g"}),
 					},
-					ClientLabels: DNSLabels{
+					ClientLabels: uniquelabels.Make(map[string]string{
 						"1": "2",
-					},
+					}),
 					DNSStats: DNSStats{
 						Count: 5,
 					},
@@ -375,8 +376,8 @@ var _ = Describe("DNS log type tests", func() {
 				Expect(a.Count).Should(Equal(origCount + b.Count))
 				Expect(a.Servers).Should(Equal(map[EndpointMetadataWithIP]DNSLabels{
 					{Endpoint: v1.Endpoint{Name: "ns1"}}: {},
-					{Endpoint: v1.Endpoint{Name: "ns2"}}: {"d": "e"},
-					{Endpoint: v1.Endpoint{Name: "ns3"}}: {"f": "g"},
+					{Endpoint: v1.Endpoint{Name: "ns2"}}: uniquelabels.Make(map[string]string{"d": "e"}),
+					{Endpoint: v1.Endpoint{Name: "ns3"}}: uniquelabels.Make(map[string]string{"f": "g"}),
 				}))
 			})
 		})
@@ -403,9 +404,9 @@ var _ = Describe("DNS log type tests", func() {
 				ClientNameAggr:  "test-*",
 				ClientNamespace: "test-ns",
 				ClientIP:        ip,
-				ClientLabels: map[string]string{
+				ClientLabels: uniquelabels.Make(map[string]string{
 					"t1": "a",
-				},
+				}),
 				Servers: []v1.DNSServer{
 					{
 						Endpoint: v1.Endpoint{
@@ -415,9 +416,9 @@ var _ = Describe("DNS log type tests", func() {
 							AggregatedName: "test-*",
 						},
 						IP: net.ParseIP("192.168.0.1"),
-						Labels: map[string]string{
+						Labels: uniquelabels.Make(map[string]string{
 							"t2": "b",
-						},
+						}),
 					},
 				},
 				QName:  "tigera.io",
@@ -479,9 +480,9 @@ var _ = Describe("DNS log type tests", func() {
 				ClientNameAggr:  "test-*",
 				ClientNamespace: "test-ns",
 				ClientIP:        &clientIP,
-				ClientLabels: map[string]string{
+				ClientLabels: uniquelabels.Make(map[string]string{
 					"t1": "a",
-				},
+				}),
 				Servers: []v1.DNSServer{
 					{
 						Endpoint: v1.Endpoint{
@@ -491,9 +492,9 @@ var _ = Describe("DNS log type tests", func() {
 							AggregatedName: "test-*",
 						},
 						IP: net.ParseIP("192.168.0.1"),
-						Labels: map[string]string{
+						Labels: uniquelabels.Make(map[string]string{
 							"t2": "b",
-						},
+						}),
 					},
 				},
 				QName:  "www.xn--mlstrm-pua6k.com",

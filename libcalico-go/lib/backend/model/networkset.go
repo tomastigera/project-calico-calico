@@ -88,8 +88,8 @@ func (options NetworkSetListOptions) KeyFromDefaultPath(path string) Key {
 }
 
 type NetworkSet struct {
-	Nets                 []net.IPNet       `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
+	Nets                 []net.IPNet      `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
 	Labels               uniquelabels.Map `json:"labels,omitempty" validate:"omitempty,labels"`
-	ProfileIDs           []string          `json:"profile_ids"`
-	AllowedEgressDomains []string          `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,wildname"`
+	ProfileIDs           []string         `json:"profile_ids"`
+	AllowedEgressDomains []string         `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,wildname"`
 }

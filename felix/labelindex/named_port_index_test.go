@@ -1376,7 +1376,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 					Key: model.NetworkSetKey{Name: "blinky"},
 					Value: &model.NetworkSet{
 						AllowedEgressDomains: []string{"MICROSOFT.COM", "MiXeD.orG"},
-						Labels:               map[string]string{"villain": "ghost"},
+						Labels:               uniquelabels.Make(map[string]string{"villain": "ghost"}),
 					},
 				},
 			})
@@ -1433,7 +1433,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 				KVPair: model.KVPair{
 					Key: model.WorkloadEndpointKey{WorkloadID: "we1", Hostname: "test-host"},
 					Value: &model.WorkloadEndpoint{
-						Labels: map[string]string{"villain": "ghost"},
+						Labels: uniquelabels.Make(map[string]string{"villain": "ghost"}),
 						IPv4Nets: []calinet.IPNet{
 							{IPNet: net.IPNet{
 								IP:   net.IP{192, 168, 4, 10},
@@ -1453,7 +1453,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 								Mask: net.IPMask{255, 255, 0, 0},
 							}},
 						},
-						Labels:     map[string]string{"villain": "ghost"},
+						Labels:     uniquelabels.Make(map[string]string{"villain": "ghost"}),
 						ProfileIDs: []string{"doo"},
 					},
 				},

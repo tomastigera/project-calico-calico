@@ -128,11 +128,11 @@ var localWlEp1OnlyLabels = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id":                          "capture-loc-ep-1",
 		"label":                       "a",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -147,11 +147,11 @@ var localWlEp2OnlyLabels = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id":                          "capture-loc-ep-2",
 		"label":                       "b",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -770,9 +770,9 @@ var netSet1WithEgressDomains = NetworkSet{
 		"facebook.com",
 		"tigera.io",
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"a": "b",
-	},
+	}),
 }
 
 var (
@@ -793,9 +793,9 @@ var netSet2WithEgressDomains = NetworkSet{
 		mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
 		mustParseNet("13.1.0.0/24"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"a": "b",
-	},
+	}),
 	AllowedEgressDomains: []string{
 		"google.com",
 		"facebook.com",
@@ -855,17 +855,17 @@ var netSetDNSKey2 = NetworkSetKey{Name: "netset-domains-2"}
 
 var netSetDNS = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomains,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "microsoft"}),
 }
 
 var netSetDNSNoDupe = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomainsNoDupe,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "microsoft"}),
 }
 
 var netSetDNS2 = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomains2,
-	Labels:               map[string]string{"external-service-name": "google"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "google"}),
 }
 
 // Two GlobalNetworkPolicies, the first allows external access to microsoft.com and the second to any resource that
@@ -925,9 +925,9 @@ var localWlEpDNS = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"name": "dnspolicy",
-	},
+	}),
 }
 
 var (

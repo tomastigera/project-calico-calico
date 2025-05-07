@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -60,10 +61,10 @@ var _ = Describe("Test the GlobalNetworkSet update processor", func() {
 			Key: v1NetworkSetKey1,
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet},
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
 					apiv3.LabelKind: apiv3.KindNetworkSet,
-				},
+				}),
 			},
 			Revision: "abcde",
 		}))
@@ -84,10 +85,10 @@ var _ = Describe("Test the GlobalNetworkSet update processor", func() {
 			Key: v1NetworkSetKey1,
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet, *cidr2IPNet},
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
 					apiv3.LabelKind: apiv3.KindNetworkSet,
-				},
+				}),
 			},
 			Revision: "abcde",
 		}))
@@ -124,10 +125,10 @@ var _ = Describe("Test the GlobalNetworkSet update processor", func() {
 			Key: v1NetworkSetKey1,
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet},
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
 					apiv3.LabelKind: apiv3.KindNetworkSet,
-				},
+				}),
 			},
 			Revision: "abcde",
 		}))

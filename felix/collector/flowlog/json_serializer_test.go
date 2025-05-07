@@ -13,6 +13,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 )
 
 var _ = Describe("FlowLog JSON serialization", func() {
@@ -65,8 +66,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				},
 			},
 			FlowLabels: FlowLabels{
-				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
-				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
+				SrcLabels: uniquelabels.Make(map[string]string{"foo": "bar", "foo2": "bar2"}),
+				DstLabels: uniquelabels.Make(map[string]string{"foo": "bar", "foo2": "bar2"}),
 			},
 			FlowAllPolicySet:      policies,
 			FlowEnforcedPolicySet: policies,
@@ -162,8 +163,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				Reporter: "src",
 			},
 			FlowLabels: FlowLabels{
-				SrcLabels: nil,
-				DstLabels: nil,
+				SrcLabels: uniquelabels.Nil,
+				DstLabels: uniquelabels.Nil,
 			},
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{},
@@ -281,8 +282,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				Reporter: "src",
 			},
 			FlowLabels: FlowLabels{
-				SrcLabels: nil,
-				DstLabels: nil,
+				SrcLabels: uniquelabels.Nil,
+				DstLabels: uniquelabels.Nil,
 			},
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{},

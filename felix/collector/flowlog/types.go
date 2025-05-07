@@ -1179,7 +1179,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:           parts[4],
 		AggregatedName: parts[5],
 	}
-	f.SrcLabels = stringToLabels(parts[6])
+	f.SrcLabels = uniquelabels.Make(stringToLabels(parts[6]))
 	if srcType == endpoint.Ns {
 		namespace, name := utils.ExtractNamespaceFromNetworkSet(f.SrcMeta.AggregatedName)
 		f.SrcMeta.Namespace = namespace
@@ -1203,7 +1203,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:           parts[9],
 		AggregatedName: parts[10],
 	}
-	f.DstLabels = stringToLabels(parts[11])
+	f.DstLabels = uniquelabels.Make(stringToLabels(parts[11]))
 	if dstType == endpoint.Ns {
 		namespace, name := utils.ExtractNamespaceFromNetworkSet(f.DstMeta.AggregatedName)
 		f.DstMeta.Namespace = namespace

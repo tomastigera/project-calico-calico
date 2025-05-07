@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/testutils"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -95,12 +96,12 @@ var _ = Describe("DNS Log Reporter", func() {
 			&model.WorkloadEndpoint{
 				Name:         "test1-a345cf",
 				GenerateName: "test1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"group":    "test1",
 					"name":     "test1-a345cf",
 					"common":   "red",
 					"specific": "socks",
-				},
+				}),
 			},
 		)
 		client2 := calc.CalculateRemoteEndpoint(
@@ -113,12 +114,12 @@ var _ = Describe("DNS Log Reporter", func() {
 			&model.WorkloadEndpoint{
 				Name:         "test1-56dca3",
 				GenerateName: "test1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"group":    "test1",
 					"name":     "test1-56dca3",
 					"common":   "red",
 					"specific": "shoes",
-				},
+				}),
 			},
 		)
 		err := r.Report(Update{
