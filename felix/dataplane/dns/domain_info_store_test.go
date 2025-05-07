@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"
+	clttypes "github.com/projectcalico/calico/felix/collector/types"
 	config "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/testutils"
@@ -44,7 +45,7 @@ func (m *mockCollector) LogDNS(server, client net.IP, dns *layers.DNS, latency *
 	m.dnsLogs = append(m.dnsLogs, dnsLog{server, client, dns, latency})
 }
 
-func (m *mockCollector) SetDomainLookup(_ collector.EgressDomainCache) {
+func (m *mockCollector) SetDomainLookup(_ clttypes.EgressDomainCache) {
 	// no-op
 }
 

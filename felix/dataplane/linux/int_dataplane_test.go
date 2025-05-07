@@ -57,15 +57,15 @@ func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
 
 func (_ *mockCollector) RegisterMetricsReporter(types.Reporter) {}
 
-func (_ *mockCollector) SetDataplaneInfoReader(collector.DataplaneInfoReader) {}
+func (_ *mockCollector) SetDataplaneInfoReader(types.DataplaneInfoReader) {}
 
-func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
+func (_ *mockCollector) SetPacketInfoReader(types.PacketInfoReader) {}
 
-func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
+func (_ *mockCollector) SetConntrackInfoReader(types.ConntrackInfoReader) {}
 
-func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
+func (_ *mockCollector) SetProcessInfoCache(types.ProcessInfoCache) {}
 
-func (_ *mockCollector) SetDomainLookup(collector.EgressDomainCache) {}
+func (_ *mockCollector) SetDomainLookup(types.EgressDomainCache) {}
 
 func (_ *mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
 }

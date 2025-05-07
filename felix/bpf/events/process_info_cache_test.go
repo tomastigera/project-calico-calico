@@ -15,8 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/bpf/events"
-	"github.com/projectcalico/calico/felix/collector"
-	"github.com/projectcalico/calico/felix/collector/types"
+	collector "github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 )
@@ -302,7 +301,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		testProcessPathChan chan events.ProcessPath
 	)
 
-	eventuallyCheckCache := func(key tuple.Tuple, dir types.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
+	eventuallyCheckCache := func(key tuple.Tuple, dir collector.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
 		Eventually(func() lookupResult {
 			processInfo, ok := pic.Lookup(key, dir)
 			return lookupResult{processInfo, ok}
@@ -332,7 +331,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
 		expectedProcessInfo := collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testProcessChan <- processEvent1
@@ -356,7 +355,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("replacing the process info event")
 		testProcessChan <- processEvent1DifferentProcessName
@@ -379,13 +378,13 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 	})
 	It("Should cache process path information if available", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
 		expectedProcessInfo := collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event, path event")
 		testProcessPathChan <- processPathEvent1
@@ -413,12 +412,12 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 	})
 	It("Should expire cached process information", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
 		expectedProcessInfo := collector.ProcessInfo{}
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testProcessChan <- processEvent1
@@ -431,12 +430,12 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				Pid:  12345,
 			},
 		}
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("Checking that lookup expires process information")
 		expectedProcessInfo = collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 	})
 })
 

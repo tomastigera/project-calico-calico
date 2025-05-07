@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/file"
@@ -58,6 +59,7 @@ func New(
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 			IsBPFDataplane:               configParams.BPFEnabled,
 			DisplayDebugTraceLogs:        configParams.FlowLogsCollectorDebugTrace,
+			BPFConntrackTimeouts:         bpfconntrack.GetTimeouts(configParams.BPFConntrackTimeouts),
 		},
 	)
 

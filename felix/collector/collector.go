@@ -20,6 +20,7 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
+	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
@@ -134,6 +135,8 @@ type Config struct {
 	IsBPFDataplane               bool
 
 	DisplayDebugTraceLogs bool
+
+	BPFConntrackTimeouts bpfconntrack.Timeouts
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -143,11 +146,11 @@ type Config struct {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	dataplaneInfoReader   DataplaneInfoReader
-	packetInfoReader      PacketInfoReader
-	conntrackInfoReader   ConntrackInfoReader
-	processInfoCache      ProcessInfoCache
-	domainLookup          EgressDomainCache
+	dataplaneInfoReader   types.DataplaneInfoReader
+	packetInfoReader      types.PacketInfoReader
+	conntrackInfoReader   types.ConntrackInfoReader
+	processInfoCache      types.ProcessInfoCache
+	domainLookup          types.EgressDomainCache
 	luc                   *calc.LookupsCache
 	epStats               map[tuple.Tuple]*Data
 	ticker                jitter.TickerInterface
@@ -291,23 +294,23 @@ func (c *collector) LogMetrics(mu metric.Update) {
 	}
 }
 
-func (c *collector) SetDataplaneInfoReader(dir DataplaneInfoReader) {
+func (c *collector) SetDataplaneInfoReader(dir types.DataplaneInfoReader) {
 	c.dataplaneInfoReader = dir
 }
 
-func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
+func (c *collector) SetPacketInfoReader(pir types.PacketInfoReader) {
 	c.packetInfoReader = pir
 }
 
-func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
+func (c *collector) SetConntrackInfoReader(cir types.ConntrackInfoReader) {
 	c.conntrackInfoReader = cir
 }
 
-func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
+func (c *collector) SetProcessInfoCache(pic types.ProcessInfoCache) {
 	c.processInfoCache = pic
 }
 
-func (c *collector) SetDomainLookup(dlu EgressDomainCache) {
+func (c *collector) SetDomainLookup(dlu types.EgressDomainCache) {
 	c.domainLookup = dlu
 }
 
@@ -319,8 +322,8 @@ func (c *collector) AddNewDomainDataplaneToIpSetsManager(ipFamily ipsets.IPFamil
 
 func (c *collector) startStatsCollectionAndReporting() {
 	var (
-		pktInfoC        <-chan PacketInfo
-		ctInfoC         <-chan []ConntrackInfo
+		pktInfoC        <-chan types.PacketInfo
+		ctInfoC         <-chan []types.ConntrackInfo
 		wafEventsBatchC chan []*proto.WAFEvent
 	)
 
@@ -585,7 +588,9 @@ func (c *collector) checkEpStats() {
 	// We report stats at initial reporting delay after the last rule update. This aims to ensure we have the full set
 	// of data before we report the stats. As a minor finesse, pre-calculate the latest update time to consider reporting.
 	minLastRuleUpdatedAt := monotime.Now() - c.config.InitialReportingDelay
-	minExpirationAt := monotime.Now() - c.config.AgeTimeout
+
+	now := monotime.Now()
+	minExpirationAt := now - c.config.AgeTimeout
 
 	// For each entry
 	// - report metrics.  Metrics reported through the ticker processing will wait for the initial reporting delay
@@ -593,6 +598,24 @@ func (c *collector) checkEpStats() {
 	//   the flow is terminated or has changed.
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
+		if c.config.IsBPFDataplane {
+			switch data.Tuple.Proto {
+			case 6 /* TCP */ :
+				// We use reset because likely already cleaned it up as an expired
+				// connection if we haven't seen any update this long.
+				minExpirationAt = now - c.config.BPFConntrackTimeouts.TCPResetSeen
+			case 17 /* UDP */ :
+				minExpirationAt = now - c.config.BPFConntrackTimeouts.UDPTimeout
+			case 1 /* ICMP */, 58 /* ICMPv6 */ :
+				minExpirationAt = now - c.config.BPFConntrackTimeouts.ICMPTimeout
+			default:
+				minExpirationAt = now - c.config.BPFConntrackTimeouts.GenericTimeout
+			}
+			if minExpirationAt < 2*bpfconntrack.ScanPeriod {
+				minExpirationAt = now - 2*bpfconntrack.ScanPeriod
+			}
+		}
+
 		if data.IsDirty() && (data.Reported || data.RuleUpdatedAt() < minLastRuleUpdatedAt) {
 			c.checkPreDNATTuple(data)
 			c.reportMetrics(data, true)
@@ -832,7 +855,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 // This is important for services where the connection will have the cluster IP as the
 // pre-DNAT-ed destination, but we want the post-DNAT workload IP and port.
 // The pre-DNAT entry will also be used to lookup service related information.
-func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
+func (c *collector) handleCtInfo(ctInfo types.ConntrackInfo) {
 	// Get or create a data entry and update the counters. If no entry is returned then neither source nor dest are
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
@@ -855,7 +878,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	}
 }
 
-func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
+func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 	var (
 		localEp        calc.EndpointData
 		localMatchData *calc.MatchData
@@ -1470,8 +1493,8 @@ func NewNilProcessInfoCache() *NilProcessInfoCache {
 	return &NilProcessInfoCache{}
 }
 
-func (r *NilProcessInfoCache) Lookup(_ tuple.Tuple, _ types.TrafficDirection) (ProcessInfo, bool) {
-	return ProcessInfo{}, false
+func (r *NilProcessInfoCache) Lookup(_ tuple.Tuple, _ types.TrafficDirection) (types.ProcessInfo, bool) {
+	return types.ProcessInfo{}, false
 }
 
 func (r *NilProcessInfoCache) Start() error {
