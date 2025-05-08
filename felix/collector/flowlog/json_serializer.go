@@ -140,10 +140,11 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	if l.SrcLabels.IsNil() {
 		out.SourceLabels = nil
 	} else {
-		out.SourceLabels = &labelsJSONOutput{
-			// FIXME RecomputeOriginalMap
-			Labels: utils.FlattenLabels(l.SrcLabels.RecomputeOriginalMap()),
+		if out.SourceLabels == nil {
+			out.SourceLabels = &labelsJSONOutput{}
 		}
+		// Reuse the existing slice to avoid allocations if available.
+		out.SourceLabels.Labels = utils.FlattenUniqueLabelsInto(out.SourceLabels.Labels, l.SrcLabels)
 	}
 
 	out.NatOutgoingPorts = out.NatOutgoingPorts[:0]
@@ -174,7 +175,7 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 		out.DestLabels = nil
 	} else {
 		out.DestLabels = &labelsJSONOutput{
-			Labels: utils.FlattenLabels(l.DstLabels.RecomputeOriginalMap()),
+			Labels: utils.FlattenUniqueLabels(l.DstLabels),
 		}
 	}
 

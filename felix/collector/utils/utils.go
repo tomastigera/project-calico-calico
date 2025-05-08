@@ -133,13 +133,30 @@ func ExtractNamespaceFromNetworkSet(aggregatedName string) (string, string) {
 	return FieldNotIncluded, aggregatedName
 }
 
+func FlattenUniqueLabels(labels uniquelabels.Map) []string {
+	return FlattenUniqueLabelsInto(nil, labels)
+}
+
+func FlattenUniqueLabelsInto(s []string, labels uniquelabels.Map) []string {
+	if cap(s) >= labels.Len() {
+		s = s[:0]
+	} else {
+		s = make([]string, 0, labels.Len())
+	}
+	for k, v := range labels.AllStrings() {
+		l := fmt.Sprintf("%v=%v", k, v)
+		s = append(s, l)
+	}
+	return s
+}
+
 func FlattenLabels(labels map[string]string) []string {
-	respSlice := []string{}
+	s := make([]string, 0, len(labels))
 	for k, v := range labels {
 		l := fmt.Sprintf("%v=%v", k, v)
-		respSlice = append(respSlice, l)
+		s = append(s, l)
 	}
-	return respSlice
+	return s
 }
 
 func UnflattenLabels(labelSlice []string) map[string]string {

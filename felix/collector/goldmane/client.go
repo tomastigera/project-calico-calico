@@ -275,7 +275,7 @@ func ensureLabels(labels uniquelabels.Map) []string {
 	if labels.IsNil() {
 		return nil
 	}
-	return utils.FlattenLabels(labels.RecomputeOriginalMap())
+	return utils.FlattenUniqueLabels(labels)
 }
 
 func ensureFlowLogLabels(lables []string) uniquelabels.Map {
