@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
@@ -30,7 +31,7 @@ type EndpointData struct {
 	// The labels configured on the endpoint.
 	//TODO(rlb): When using the cached endpoint labels rather than the flow log labels, we should be able to cache the
 	//           selector values associated with these labels for the duration of the entire eumeration.
-	Labels map[string]string
+	Labels uniquelabels.Map
 
 	// ---- Internal data ----
 
@@ -122,21 +123,21 @@ func (e *EndpointCache) populateEndpointData(ed *EndpointData) {
 
 	// If our labels are nil, set them to be an empty map. We use nil to mean "unknown", but in this case we know that
 	// the labels are just empty.
-	if ed.Labels == nil {
-		ed.Labels = make(map[string]string)
+	if ed.Labels.IsNil() {
+		ed.Labels = uniquelabels.Empty
 	}
 }
 
 // populateEndpointDataPod populates the calculated endpoint data fields from a pod.
 func (e *EndpointCache) populateEndpointDataPod(pod *corev1.Pod, ed *EndpointData) {
-	ed.Labels = pod.Labels
+	ed.Labels = uniquelabels.Make(pod.Labels)
 	ed.NamedPorts = e.getPodPorts(pod)
 	ed.ServiceAccount = &pod.Spec.ServiceAccountName
 }
 
 // populateEndpointDataHEP populates the calculated endpoint data fields from a HEP.
 func (e *EndpointCache) populateEndpointDataHEP(meta *metav1.ObjectMeta, spec *v3.HostEndpointSpec, ed *EndpointData) {
-	ed.Labels = meta.Labels
+	ed.Labels = uniquelabels.Make(meta.Labels)
 	ed.NamedPorts = e.getHEPPorts(spec)
 }
 

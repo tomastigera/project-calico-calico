@@ -7,6 +7,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -128,7 +129,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string) []model.Key {
 	// Add a fake endpoint with the requested labels and profiles.
 	endpointId := policyQueryId(uuid.New())
-	c.index.UpdateLabels(endpointId, labels, profiles)
+	c.index.UpdateLabels(endpointId, uniquelabels.Make(labels), profiles)
 
 	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus
 	// our match map should now have the results we need.  All of the updates will be for this specific
@@ -144,7 +145,7 @@ func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string
 func (c *labelHandler) QueryRuleSelectors(labels map[string]string, profiles []string) []string {
 	// Add a fake endpoint with the requested labels and profiles.
 	endpointId := ruleQueryId(uuid.New())
-	c.index.UpdateLabels(endpointId, labels, profiles)
+	c.index.UpdateLabels(endpointId, uniquelabels.Make(labels), profiles)
 
 	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus
 	// our match map should now have the results we need.  All of the updates will be for this specific
@@ -233,7 +234,7 @@ func (c *labelHandler) onUpdateHostEndpoint(update dispatcherv1v3.Update) {
 		return
 	}
 	value := uv3.Value.(*v3.HostEndpoint)
-	c.index.UpdateLabels(uv3.Key, value.GetObjectMeta().GetLabels(), value.Spec.Profiles)
+	c.index.UpdateLabels(uv3.Key, uniquelabels.Make(value.GetObjectMeta().GetLabels()), value.Spec.Profiles)
 }
 
 // onUpdateProfile is called when the syncer has an update for a Profile.

@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
@@ -83,11 +84,11 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 			ActionFlag: api.ActionFlagAllow,
 			Source: api.FlowEndpointData{
 				Type:   api.EndpointTypeNet,
-				Labels: map[string]string{},
+				Labels: uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:   api.EndpointTypeNet,
-				Labels: map[string]string{},
+				Labels: uniquelabels.Empty,
 			},
 		}
 
@@ -1536,11 +1537,11 @@ var _ = Describe("Compiled tiers and gnpolicies tests", func() {
 			ActionFlag: api.ActionFlagAllow,
 			Source: api.FlowEndpointData{
 				Type:   api.EndpointTypeNet,
-				Labels: map[string]string{},
+				Labels: uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:   api.EndpointTypeNet,
-				Labels: map[string]string{},
+				Labels: uniquelabels.Empty,
 			},
 		}
 

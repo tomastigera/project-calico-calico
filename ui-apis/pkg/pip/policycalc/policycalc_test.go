@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
@@ -245,12 +246,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -266,7 +267,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{},
 			ActionFlag:  api.ActionFlagDeny,
@@ -283,12 +284,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeNs,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -304,12 +305,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeNs,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -326,7 +327,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagDeny,
 		}
@@ -371,12 +372,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -398,7 +399,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -443,12 +444,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -470,7 +471,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{},
 			ActionFlag:  api.ActionFlagAllow,
@@ -515,12 +516,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{"color": "red"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "red"}),
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{"color": "red"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "red"}),
 			},
 			ActionFlag: api.ActionFlagDeny,
 		}
@@ -542,12 +543,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{"color": "red"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "red"}),
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{"color": "blue"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "blue"}),
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -573,12 +574,12 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{"color": "blue"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "blue"}),
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{"color": "red"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "red"}),
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -601,7 +602,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
-				Labels:    map[string]string{"color": "purple"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "purple"}),
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -617,7 +618,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Source: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
-				Labels:    map[string]string{"color": "purple"},
+				Labels:    uniquelabels.Make(map[string]string{"color": "purple"}),
 			},
 			Destination: api.FlowEndpointData{},
 			ActionFlag:  api.ActionFlagDeny,

@@ -151,7 +151,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.ClientName).To(ContainSubstring("test1-"))
 			Expect(l.ClientIP).NotTo(BeNil())
 			Expect(*l.ClientIP).To(ContainSubstring("1.2.3."))
-			Expect(l.ClientLabels).To(BeNil())
+			Expect(l.ClientLabels.IsNil()).To(BeTrue())
 		}
 
 		// Logs with aggregation and labels.
@@ -161,7 +161,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.Count).To(BeNumerically("==", 2))
 			Expect(l.ClientName).To(Equal(utils.FieldNotIncluded))
 			Expect(l.ClientIP).To(BeNil())
-			Expect(l.ClientLabels).To(Equal(map[string]string{
+			Expect(l.ClientLabels.RecomputeOriginalMap()).To(Equal(map[string]string{
 				"group":  "test1",
 				"common": "red",
 			}))
@@ -175,7 +175,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.ClientName).To(ContainSubstring("test1-"))
 			Expect(l.ClientIP).NotTo(BeNil())
 			Expect(*l.ClientIP).To(ContainSubstring("1.2.3."))
-			Expect(l.ClientLabels).To(Or(
+			Expect(l.ClientLabels.RecomputeOriginalMap()).To(Or(
 				Equal(map[string]string{
 					"group":    "test1",
 					"name":     "test1-a345cf",

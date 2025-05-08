@@ -3,10 +3,9 @@
 package cache
 
 import (
-	"reflect"
-
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector/parser"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -15,7 +14,7 @@ import (
 // SelectorAndLabelCache caches Selector and Labels and keeps a mapping between them.
 type SelectorAndLabelCache interface {
 	UpdateSelector(dpiKey interface{}, sel *selector.Selector)
-	UpdateLabels(wepKey interface{}, labels parser.MapAsLabels)
+	UpdateLabels(wepKey interface{}, labels uniquelabels.Map)
 	DeleteSelector(wepKey interface{})
 	DeleteLabel(dpiKey interface{})
 }
@@ -24,7 +23,7 @@ type MatchCallback func(dpiKey, wepKey interface{})
 
 type selectorAndLabelCache struct {
 	// wepKeyToLabel has WEP key and its labels
-	wepKeyToLabel map[interface{}]parser.MapAsLabels
+	wepKeyToLabel map[interface{}]uniquelabels.Map
 	// dpiKeyToSelector has DPI key and its selector
 	dpiKeyToSelector map[interface{}]*selector.Selector
 
@@ -41,7 +40,7 @@ type selectorAndLabelCache struct {
 
 func NewSelectorAndLabelCache(onMatchStarted, onMatchStopped MatchCallback) SelectorAndLabelCache {
 	return &selectorAndLabelCache{
-		wepKeyToLabel:    make(map[interface{}]parser.MapAsLabels),
+		wepKeyToLabel:    make(map[interface{}]uniquelabels.Map),
 		dpiKeyToSelector: make(map[interface{}]*selector.Selector),
 		dpiKeysByWEPKey:  map[interface{}]set.Set[interface{}]{},
 		wepKeysByDPIKey:  map[interface{}]set.Set[interface{}]{},
@@ -56,11 +55,11 @@ func NewSelectorAndLabelCache(onMatchStarted, onMatchStopped MatchCallback) Sele
 
 // UpdateLabels takes WEP key and WEP labels as input, if WEP has new/updated labels
 // for each matching selector either calls OnMatchStarted or OnMatchStopped callback function.
-func (cache *selectorAndLabelCache) UpdateLabels(wepKey interface{}, labels parser.MapAsLabels) {
+func (cache *selectorAndLabelCache) UpdateLabels(wepKey interface{}, labels uniquelabels.Map) {
 	log.Debugf("Updating labels for %v", wepKey)
-	oldItm := cache.wepKeyToLabel[wepKey]
-	if oldItm != nil {
-		if reflect.DeepEqual(oldItm, labels) {
+	oldItm, ok := cache.wepKeyToLabel[wepKey]
+	if ok {
+		if oldItm.Equals(labels) {
 			log.Debug("Nothing to update - no change to label")
 			return
 		}

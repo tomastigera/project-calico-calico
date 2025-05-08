@@ -12,6 +12,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
@@ -267,7 +268,7 @@ func IsEmptyNamespace(namespace string) bool {
 // updateSelectorFromFlow extracts labels from relevant flows and updates the
 // main policy selector.
 func (ere *recommendationEngine) updateSelectorFromFlow(flow api.Flow) {
-	var labels map[string]string
+	var labels uniquelabels.Map
 	if ere.matchesSource(flow) {
 		labels = flow.Source.Labels
 	}
@@ -277,7 +278,7 @@ func (ere *recommendationEngine) updateSelectorFromFlow(flow api.Flow) {
 	if ere.policySelector != nil {
 		ere.policySelector.IntersectLabels(labels)
 	} else {
-		ere.policySelector = NewSelectorBuilder(labels)
+		ere.policySelector = NewSelectorBuilder(labels.RecomputeOriginalMap())
 	}
 }
 
@@ -329,7 +330,7 @@ func (ere *recommendationEngine) processRuleFromFlow(flow api.Flow) {
 			rule.selector.IntersectLabels(flow.Destination.Labels)
 		} else {
 			rule = entityRule{
-				selector: NewSelectorBuilder(flow.Destination.Labels),
+				selector: NewSelectorBuilder(flow.Destination.Labels.RecomputeOriginalMap()),
 				ports:    set.New[numorstring.Port](),
 			}
 		}
@@ -352,7 +353,7 @@ func (ere *recommendationEngine) processRuleFromFlow(flow api.Flow) {
 			rule.selector.IntersectLabels(flow.Source.Labels)
 		} else {
 			rule = entityRule{
-				selector: NewSelectorBuilder(flow.Source.Labels),
+				selector: NewSelectorBuilder(flow.Source.Labels.RecomputeOriginalMap()),
 				ports:    set.New[numorstring.Port](),
 			}
 		}
@@ -549,19 +550,19 @@ func NewSelectorBuilder(labels map[string]string) selectorBuilder {
 
 // IntersectLabels creates the intersection of current labels with additional
 // labels provided.
-func (sb selectorBuilder) IntersectLabels(labels map[string]string) {
+func (sb selectorBuilder) IntersectLabels(labels uniquelabels.Map) {
 	// If there are no labels present, intersection should be empty as well.
 	if len(sb) == 0 {
 		return
 	}
-	for k, v := range labels {
+	for k, v := range labels.AllStrings() {
 		value, ok := sb[k]
 		if ok && value != v {
 			delete(sb, k)
 		}
 	}
 	for k := range sb {
-		_, ok := labels[k]
+		_, ok := labels.GetString(k)
 		if !ok {
 			delete(sb, k)
 		}

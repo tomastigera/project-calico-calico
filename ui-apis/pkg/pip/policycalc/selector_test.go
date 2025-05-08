@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -32,9 +33,9 @@ var _ = Describe("Selector handler tests", func() {
 		By("matching endpoint against the two selectors (both successfully)")
 		ed := &api.FlowEndpointData{
 			Type: api.EndpointTypeHep,
-			Labels: map[string]string{
+			Labels: uniquelabels.Make(map[string]string{
 				"vegetable": "turnip",
-			},
+			}),
 		}
 		epc := endpointCache{selectors: sh.CreateSelectorCache()}
 
@@ -57,9 +58,9 @@ var _ = Describe("Selector handler tests", func() {
 		By("matching endpoint against the two selectors (only one successfully)")
 		ed = &api.FlowEndpointData{
 			Type: api.EndpointTypeNs,
-			Labels: map[string]string{
+			Labels: uniquelabels.Make(map[string]string{
 				"vegetable": "parsnip",
-			},
+			}),
 		}
 		epc = endpointCache{selectors: sh.CreateSelectorCache()}
 
@@ -82,7 +83,7 @@ var _ = Describe("Selector handler tests", func() {
 		By("matching endpoint where labels are unknown")
 		ed = &api.FlowEndpointData{
 			Type:   api.EndpointTypeHep,
-			Labels: nil,
+			Labels: uniquelabels.Nil,
 		}
 		epc = endpointCache{selectors: sh.CreateSelectorCache()}
 
@@ -105,7 +106,7 @@ var _ = Describe("Selector handler tests", func() {
 		By("matching endpoint where labels are not supported")
 		ed = &api.FlowEndpointData{
 			Type:   api.EndpointTypeNet,
-			Labels: nil,
+			Labels: uniquelabels.Nil,
 		}
 		epc = endpointCache{selectors: sh.CreateSelectorCache()}
 

@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
@@ -21,7 +22,7 @@ import (
 type LabelSelector interface {
 	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
 
-	UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string)
+	UpdateLabels(res apiv3.ResourceID, labels uniquelabels.Map, parentIDs []string)
 	DeleteLabels(res apiv3.ResourceID)
 	UpdateParentLabels(id string, labels map[string]string)
 	DeleteParentLabels(id string)
@@ -63,7 +64,7 @@ func (ls *labelSelector) RegisterCallbacks(kinds []metav1.TypeMeta, started Matc
 	}
 }
 
-func (ls *labelSelector) UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string) {
+func (ls *labelSelector) UpdateLabels(res apiv3.ResourceID, labels uniquelabels.Map, parentIDs []string) {
 	ls.index.UpdateLabels(res, labels, parentIDs)
 }
 

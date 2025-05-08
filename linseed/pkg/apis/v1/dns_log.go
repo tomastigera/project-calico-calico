@@ -750,8 +750,8 @@ type dnsServerEncoded struct {
 	// Type is not serialized for DNS servers.
 
 	// As well as any other DNSServer fields.
-	IP     string           `json:"ip"`
-	Labels uniquelabels.Map `json:"labels,omitempty"`
+	IP     string            `json:"ip"`
+	Labels *uniquelabels.Map `json:"labels,omitempty"`
 }
 
 func (d *DNSServer) MarshalJSON() ([]byte, error) {
@@ -764,13 +764,17 @@ func (d *DNSServer) MarshalJSON() ([]byte, error) {
 		ip = ""
 	}
 
-	return json.Marshal(&dnsServerEncoded{
+	toEncode := &dnsServerEncoded{
 		Name:      d.Name,
 		NameAggr:  d.AggregatedName,
 		Namespace: d.Namespace,
 		IP:        ip,
-		Labels:    d.Labels,
-	})
+	}
+	if d.Labels.Len() > 0 {
+		// omitempty only works with pointers and "real" maps/slices etc.
+		toEncode.Labels = &d.Labels
+	}
+	return json.Marshal(toEncode)
 }
 
 func (d *DNSServer) UnmarshalJSON(data []byte) error {
@@ -783,8 +787,11 @@ func (d *DNSServer) UnmarshalJSON(data []byte) error {
 	d.AggregatedName = dnsServerEncoded.NameAggr
 	d.Namespace = dnsServerEncoded.Namespace
 	d.IP = net.ParseIP(dnsServerEncoded.IP)
-	d.Labels = dnsServerEncoded.Labels
-
+	if dnsServerEncoded.Labels == nil {
+		d.Labels = uniquelabels.Nil
+	} else {
+		d.Labels = *dnsServerEncoded.Labels
+	}
 	return nil
 }
 

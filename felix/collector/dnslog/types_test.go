@@ -318,25 +318,25 @@ var _ = Describe("DNS log type tests", func() {
 
 		It("includes labels when desired", func() {
 			l := d.ToDNSLog(time.Time{}, time.Time{}, true)
-			Expect(l.ClientLabels).ShouldNot(HaveLen(0))
+			Expect(l.ClientLabels.RecomputeOriginalMap()).ShouldNot(HaveLen(0))
 			for _, s := range l.Servers {
-				Expect(s.Labels).ShouldNot(HaveLen(0))
+				Expect(s.Labels.RecomputeOriginalMap()).ShouldNot(HaveLen(0))
 			}
 		})
 
 		It("excludes labels when desired", func() {
 			l := d.ToDNSLog(time.Time{}, time.Time{}, false)
-			Expect(l.ClientLabels).Should(HaveLen(0))
+			Expect(l.ClientLabels.RecomputeOriginalMap()).Should(HaveLen(0))
 			for _, s := range l.Servers {
-				Expect(s.Labels).Should(HaveLen(0))
+				Expect(s.Labels.RecomputeOriginalMap()).Should(HaveLen(0))
 			}
 		})
 
 		It("excluding labels has no side effects", func() {
 			d.ToDNSLog(time.Time{}, time.Time{}, false)
-			Expect(d.ClientLabels).ShouldNot(HaveLen(0))
+			Expect(d.ClientLabels.RecomputeOriginalMap()).ShouldNot(HaveLen(0))
 			for _, l := range d.Servers {
-				Expect(l).ShouldNot(HaveLen(0))
+				Expect(l.RecomputeOriginalMap()).ShouldNot(HaveLen(0))
 			}
 		})
 	})
@@ -372,10 +372,10 @@ var _ = Describe("DNS log type tests", func() {
 				}
 
 				a.Merge(b)
-				Expect(a.ClientLabels).Should(HaveLen(0))
+				Expect(a.ClientLabels.RecomputeOriginalMap()).Should(HaveLen(0))
 				Expect(a.Count).Should(Equal(origCount + b.Count))
 				Expect(a.Servers).Should(Equal(map[EndpointMetadataWithIP]DNSLabels{
-					{Endpoint: v1.Endpoint{Name: "ns1"}}: {},
+					{Endpoint: v1.Endpoint{Name: "ns1"}}: uniquelabels.Empty,
 					{Endpoint: v1.Endpoint{Name: "ns2"}}: uniquelabels.Make(map[string]string{"d": "e"}),
 					{Endpoint: v1.Endpoint{Name: "ns3"}}: uniquelabels.Make(map[string]string{"f": "g"}),
 				}))

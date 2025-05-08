@@ -322,7 +322,7 @@ func (fp *policyCalculator) initializeFlowForCalculations(flow *api.Flow) {
 				flow.Source.NamedPorts = ed.NamedPorts
 			}
 
-			if len(flow.Source.Labels) == 0 {
+			if flow.Source.Labels.Len() == 0 {
 				log.Debugf("Augmenting source endpoint flow data with cached labels: %v", ed.Labels)
 				flow.Source.Labels = ed.Labels
 			}
@@ -342,7 +342,7 @@ func (fp *policyCalculator) initializeFlowForCalculations(flow *api.Flow) {
 				flow.Destination.NamedPorts = ed.NamedPorts
 			}
 
-			if len(flow.Destination.Labels) == 0 {
+			if flow.Destination.Labels.Len() == 0 {
 				log.Debugf("Augmenting destination endpoint flow data with cached labels: %v", ed.Labels)
 				flow.Destination.Labels = ed.Labels
 			}
@@ -354,10 +354,10 @@ func (fp *policyCalculator) newFlowCache(flow *api.Flow) *flowCache {
 	flowCache := &flowCache{}
 
 	// Initialize the caches if required.
-	if flow.Source.Labels != nil {
+	if !flow.Source.Labels.IsNil() {
 		flowCache.source.selectors = fp.CreateSelectorCache()
 	}
-	if flow.Destination.Labels != nil {
+	if !flow.Destination.Labels.IsNil() {
 		flowCache.destination.selectors = fp.CreateSelectorCache()
 	}
 	flowCache.policies = make(map[string]api.ActionFlag)
