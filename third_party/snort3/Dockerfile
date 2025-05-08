@@ -2,7 +2,7 @@
 
 FROM almalinux:8 AS snort
 
-ARG DAQ_VERSION=3.0.16
+ARG DAQ_VERSION=3.0.19
 ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
