@@ -17,19 +17,21 @@
     type: text
   - name: count
     type: number
+  - name: host
+    type: text
+  - name: latency_count
+    type: number
   - aggregationFunctionTypes:
     - avg
     - max
     - p50
     - p90
     - p95
-    filterDisabled: true
     name: latency_max
     type: number
   - aggregationFunctionTypes:
     - avg
     - min
-    filterDisabled: true
     name: latency_mean
     type: number
   - name: qclass
@@ -119,8 +121,7 @@
     - hep
     - ns
     - net
-  - filterDisabled: true
-    name: host
+  - name: host
     type: text
   - name: http_requests_allowed_in
     type: number
@@ -203,7 +204,6 @@
     - net
   - aggregationFunctionTypes:
     - sum
-    filterDisabled: true
     name: tcp_lost_packets
     type: number
   - aggregationFunctionTypes:
@@ -212,7 +212,6 @@
     - p90
     - p95
     - p100
-    filterDisabled: true
     name: tcp_max_min_rtt
     type: number
   - aggregationFunctionTypes:
@@ -221,36 +220,27 @@
     - p90
     - p95
     - p100
-    filterDisabled: true
     name: tcp_max_smooth_rtt
     type: number
-  - filterDisabled: true
-    name: tcp_mean_min_rtt
+  - name: tcp_mean_min_rtt
     type: number
-  - filterDisabled: true
-    name: tcp_mean_mss
+  - name: tcp_mean_mss
     type: number
-  - filterDisabled: true
-    name: tcp_mean_send_congestion_window
+  - name: tcp_mean_send_congestion_window
     type: number
-  - filterDisabled: true
-    name: tcp_mean_smooth_rtt
+  - name: tcp_mean_smooth_rtt
     type: number
-  - filterDisabled: true
-    name: tcp_min_mss
+  - name: tcp_min_mss
     type: number
-  - filterDisabled: true
-    name: tcp_min_send_congestion_window
+  - name: tcp_min_send_congestion_window
     type: number
   - aggregationFunctionTypes:
     - max
     - sum
-    filterDisabled: true
     name: tcp_total_retransmissions
     type: number
   - aggregationFunctionTypes:
     - sum
-    filterDisabled: true
     name: tcp_unrecovered_to
     type: number
   groupBys:

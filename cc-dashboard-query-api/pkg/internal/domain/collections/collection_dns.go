@@ -14,12 +14,11 @@ var collectionDNS = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "cluster", filterDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "count"},
 		collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "generated_time", internal: true},
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host", internal: true},
-		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "latency_count", internal: true},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
+		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "latency_count"},
 		collectionFieldGeneric{
-			fieldName:      "latency_max",
-			fieldType:      FieldTypeNumber,
-			filterDisabled: true,
+			fieldName: "latency_max",
+			fieldType: FieldTypeNumber,
 			aggregationFunctionTypes: []AggregationFunctionType{
 				AggregationFunctionTypeAvg,
 				AggregationFunctionTypeMax,
@@ -29,9 +28,8 @@ var collectionDNS = Collection{
 			},
 		},
 		collectionFieldGeneric{
-			fieldName:      "latency_mean",
-			fieldType:      FieldTypeNumber,
-			filterDisabled: true,
+			fieldName: "latency_mean",
+			fieldType: FieldTypeNumber,
 			aggregationFunctionTypes: []AggregationFunctionType{
 				AggregationFunctionTypeAvg,
 				AggregationFunctionTypeMin,
