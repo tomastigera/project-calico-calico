@@ -481,6 +481,7 @@ EOF
         self.name = name
         self.ns = ns
         self._ip = None
+        self._ipv6 = None
         self._hostip = None
         self._nodename = None
 
@@ -504,6 +505,19 @@ EOF
                 break
             time.sleep(0.1)
         return self._ip
+
+    @property
+    def ipv6(self):
+        start_time = time.time()
+        while not self._ipv6:
+            assert time.time() - start_time < 30, "Pod failed to get IP address within 30s"
+            ips = run("kubectl get po %s -n %s -o=jsonpath='{.status.podIPs[*].ip}'" % (self.name, self.ns)).strip().split(" ")
+            for ip in ips:
+                if ":" in ip:
+                    self._ipv6 = ip
+                    break
+            time.sleep(0.1)
+        return self._ipv6
 
     @property
     def hostip(self):
