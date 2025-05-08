@@ -136,7 +136,7 @@ endif
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.32.3" ]; then \
+	if [ "$(K8S_CLIENT_VERSION)" = "v0.32.4" ]; then \
 		echo "No need for kube-bench update"; \
 	else \
 		echo "************ \n"; \

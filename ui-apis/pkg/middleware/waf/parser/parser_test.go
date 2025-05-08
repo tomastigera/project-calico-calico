@@ -60,7 +60,7 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
 			Expect(rule.Id).To(Equal("921018"))
 			Expect(rule.Variables).To(Equal("TX:DETECTION_PARANOIA_LEVEL"))
 			Expect(rule.Message).To(Equal(""))
-			Expect(rule.Raw).To(Equal(`SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 4" "id:921018,phase:2,pass,nolog,tag:'OWASP_CRS',ver:'OWASP_CRS/4.7.0',skipAfter:END-REQUEST-921-PROTOCOL-ATTACK"`))
+			Expect(rule.Raw).To(Equal(`SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 4" "id:921018,phase:2,pass,nolog,tag:'OWASP_CRS',ver:'OWASP_CRS/4.11.0',skipAfter:END-REQUEST-921-PROTOCOL-ATTACK"`))
 		})
 
 		It("last SecRule in the file", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
     tag:'paranoia-level/4',\
     tag:'OWASP_CRS',\
     tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.7.0',\
+    ver:'OWASP_CRS/4.11.0',\
     severity:'CRITICAL',\
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
     setvar:'tx.inbound_anomaly_score_pl4=+%{tx.critical_anomaly_score}'"`))

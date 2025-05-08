@@ -162,7 +162,7 @@ var _ = Describe("WAF middleware tests", func() {
     tag:'paranoia-level/3',\
     tag:'OWASP_CRS',\
     tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.7.0',\
+    ver:'OWASP_CRS/4.11.0',\
     severity:'CRITICAL',\
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
     setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"`,
