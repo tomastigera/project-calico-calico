@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("SelectorAndLabelCache", func() {
 	var dpiKey1, dpiKey2 model.Key
-	var dpiSelector1, dpiSelector2 selector.Selector
+	var dpiSelector1, dpiSelector2 *selector.Selector
 	var wepKey1, wepKey2 model.WorkloadEndpointKey
 	var wepLabel1, wepLabel2 map[string]string
 	var err error

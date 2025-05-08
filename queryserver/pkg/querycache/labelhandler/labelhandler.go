@@ -302,7 +302,7 @@ func (c *labelHandler) onDeletePolicy(key model.ResourceKey) {
 }
 
 // registerSelector registers a selector with the InheritIndex helper.
-func (c *labelHandler) registerSelector(selectorId interface{}, selector selector.Selector) {
+func (c *labelHandler) registerSelector(selectorId interface{}, selector *selector.Selector) {
 	c.index.UpdateSelector(selectorId, selector)
 }
 

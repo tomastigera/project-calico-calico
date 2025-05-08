@@ -112,7 +112,7 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 	saNames := sa.Names
 	var saNamesPerNamespace map[string][]string
 
-	var parsedSel selector.Selector
+	var parsedSel *selector.Selector
 	if sa.Selector != "" {
 		// We have a selector, so initialize the names per namespace map.
 		saNamesPerNamespace = make(map[string][]string)
@@ -197,7 +197,7 @@ type namespaceData struct {
 }
 
 // getServiceAccounts gets the service accounts for this namespace that match the selector.
-func (n *namespaceData) getServiceAccounts(sel selector.Selector) (out []string) {
+func (n *namespaceData) getServiceAccounts(sel *selector.Selector) (out []string) {
 	for n, l := range n.serviceAccountLabels {
 		if sel.Evaluate(l) {
 			out = append(out, n)
