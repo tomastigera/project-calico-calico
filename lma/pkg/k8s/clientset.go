@@ -288,8 +288,14 @@ func (t *shortRequestTimeoutRoundTripper) RoundTrip(request *http.Request) (*htt
 		log.Debugf("Long-running request, not setting timeout: %v", request.URL)
 	} else {
 		log.Debugf("Short request, setting timeout to %v: %v", t.shortRequestTimeout, request.URL)
-		ctx, cancel := context.WithTimeout(request.Context(), t.shortRequestTimeout)
-		defer cancel()
+		parentCtx := request.Context()
+		ctx, cancel := context.WithTimeout(parentCtx, t.shortRequestTimeout)
+
+		// Important *not* to defer cancel() here because the context is
+		// supposed to outlive this function.  If we cancel the context, it
+		// closes the response body before the caller has read it.  We only
+		// want this context to be cancelled by its parent or the timeout.
+		_ = cancel
 
 		// Need to clone the request, we're not allowed to edit URL or context
 		// in place.

@@ -19,8 +19,8 @@ func TestShortRequestTimeoutRoundTripperWatch(t *testing.T) {
 	if rtErr != nil {
 		t.Errorf("Unexpected error: %v", rtErr)
 	}
-	if time.Since(start) > 900*time.Millisecond {
-		t.Errorf("Expected timeout to be >200ms, got %v", time.Since(start))
+	if time.Since(start) < 200*time.Millisecond {
+		t.Errorf("Expected timeout to be at least 200ms, got %v", time.Since(start))
 	}
 }
 
