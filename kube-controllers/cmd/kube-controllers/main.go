@@ -699,12 +699,12 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
 						kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
 						kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
-						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+						kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
 							return &addHeaderRoundTripper{
 								headers: map[string][]string{"x-cluster-id": {clustername}},
 								rt:      rt,
 							}
-						}
+						})
 						kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
 						if err != nil {
 							return kubeClientSet, nil, err
@@ -735,12 +735,12 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
 						kubeconfig.Host = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingEndpoint
 						kubeconfig.CAFile = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingCA
-						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+						kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
 							return &addHeaderRoundTripper{
 								headers: map[string][]string{"x-cluster-id": {clustername}},
 								rt:      rt,
 							}
-						}
+						})
 						userKubeControllers := user.DefaultInfo{
 							Name: "system:serviceaccount:calico-system:calico-kube-controllers",
 							Groups: []string{
