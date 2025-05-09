@@ -14,6 +14,7 @@ import (
 
 	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -211,7 +212,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpEndpoints())
 				Expect(ed.Key()).To(Equal(key), ec.DumpEndpoints())
 				if labels != nil {
-					Expect(ed.Labels()).To(Equal(labels), ec.DumpEndpoints())
+					Expect(ed.Labels()).To(Equal(uniquelabels.Make(labels)), ec.DumpEndpoints())
 				}
 			} else {
 				_, ok = ec.GetEndpoint(addrB)

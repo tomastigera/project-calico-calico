@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/ips"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	internalv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -46,7 +47,7 @@ var (
 type VersionedEndpointResource interface {
 	VersionedResource
 	GetFlowLogAggregationName() string
-	GetCalicoV1Labels() map[string]string
+	GetCalicoV1Labels() uniquelabels.Map
 	GetCalicoV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set[string], error)
 	getEnvoyEnabled(engine *endpointHandler) bool
@@ -145,7 +146,7 @@ func (v *versionedK8sPod) GetCalicoV1() interface{} {
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) GetCalicoV1Labels() map[string]string {
+func (v *versionedK8sPod) GetCalicoV1Labels() uniquelabels.Map {
 	return v.v1.Labels
 }
 
@@ -252,7 +253,7 @@ func (v *versionedCalicoHostEndpoint) GetCalicoV1() interface{} {
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) GetCalicoV1Labels() map[string]string {
+func (v *versionedCalicoHostEndpoint) GetCalicoV1Labels() uniquelabels.Map {
 	return v.v1.Labels
 }
 

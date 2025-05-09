@@ -7,15 +7,16 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 var _ = Describe("SelectorAndLabelCache", func() {
 	var dpiKey1, dpiKey2 model.Key
-	var dpiSelector1, dpiSelector2 selector.Selector
+	var dpiSelector1, dpiSelector2 *selector.Selector
 	var wepKey1, wepKey2 model.WorkloadEndpointKey
-	var wepLabel1, wepLabel2 map[string]string
+	var wepLabel1, wepLabel2 uniquelabels.Map
 	var err error
 	var c cache.SelectorAndLabelCache
 	var onMatchStartedCount, onMatchStoppedCount int
@@ -29,15 +30,14 @@ var _ = Describe("SelectorAndLabelCache", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		wepKey1 = model.WorkloadEndpointKey{WorkloadID: "wep1"}
 		wepKey2 = model.WorkloadEndpointKey{WorkloadID: "wep2"}
-		wepLabel1 = map[string]string{
+		wepLabel1 = uniquelabels.Make(map[string]string{
 			"label":                       "a",
 			"projectcalico.org/namespace": "default",
-		}
-		wepLabel2 = map[string]string{
+		})
+		wepLabel2 = uniquelabels.Make(map[string]string{
 			"label":                       "b",
 			"projectcalico.org/namespace": "default",
-		}
-
+		})
 	})
 
 	BeforeEach(func() {

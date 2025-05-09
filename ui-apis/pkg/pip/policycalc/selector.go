@@ -54,7 +54,7 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 				// This is an all() selector, so matches all endpoints - in this case it doesn't matter if we don't have
 				// the labels, match is true.
 				val = MatchTypeTrue
-			} else if ep.Labels == nil {
+			} else if ep.Labels.IsNil() {
 				// We don't have the labels, so match is uncertain.
 				val = MatchTypeUncertain
 			} else if parsedSel.EvaluateLabels(ep) {

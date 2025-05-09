@@ -220,9 +220,9 @@ var _ = Describe("DNS log aggregator", func() {
 							Expect(logs).Should(HaveLen(2))
 
 							for _, log := range logs {
-								Expect(log.ClientLabels).Should(HaveLen(0))
+								Expect(log.ClientLabels.RecomputeOriginalMap()).Should(HaveLen(0))
 								for _, server := range log.Servers {
-									Expect(server.Labels).Should(HaveLen(0))
+									Expect(server.Labels.RecomputeOriginalMap()).Should(HaveLen(0))
 								}
 							}
 						})

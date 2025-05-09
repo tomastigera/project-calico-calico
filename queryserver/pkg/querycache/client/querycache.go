@@ -808,7 +808,7 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 			return nil, nil, fmt.Errorf("endpoint %s is not valid: no policy is enforced on this endpoint", key)
 		}
 		wep := epv1.Value.(*model.WorkloadEndpoint)
-		labels = wep.Labels
+		labels = wep.Labels.RecomputeOriginalMap()
 		profiles = wep.ProfileIDs
 	}
 
@@ -846,7 +846,7 @@ func (c *cachedQuery) getNetworkSetLabelsAndProfiles(key model.Key) (map[string]
 				},
 			})
 			ns := nsv1.Value.(*model.NetworkSet)
-			labels = ns.Labels
+			labels = ns.Labels.RecomputeOriginalMap()
 			profiles = ns.ProfileIDs
 		}
 	}

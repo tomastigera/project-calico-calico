@@ -12,6 +12,7 @@ import (
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -337,7 +338,7 @@ func TestConvertDNSLogEventTime(t *testing.T) {
 		ClientNameAggr:  "client-8888-*",
 		ClientNamespace: "default",
 		ClientIP:        util.IPPtr("20.21.22.23"),
-		ClientLabels:    map[string]string{"foo": "bar"},
+		ClientLabels:    uniquelabels.Make(map[string]string{"foo": "bar"}),
 		Servers: []v1.DNSServer{
 			{
 				Endpoint: v1.Endpoint{
@@ -383,7 +384,7 @@ func TestConvertDNSLog_QName(t *testing.T) {
 		ClientNameAggr:  "client-8888-*",
 		ClientNamespace: "default",
 		ClientIP:        util.IPPtr("20.21.22.23"),
-		ClientLabels:    map[string]string{"foo": "bar"},
+		ClientLabels:    uniquelabels.Make(map[string]string{"foo": "bar"}),
 		Servers: []v1.DNSServer{
 			{
 				Endpoint: v1.Endpoint{
@@ -449,7 +450,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 		ClientNameAggr:  "client-8888-*",
 		ClientNamespace: "default",
 		ClientIP:        util.IPPtr("20.21.22.23"),
-		ClientLabels:    map[string]string{"foo": "bar"},
+		ClientLabels:    uniquelabels.Make(map[string]string{"foo": "bar"}),
 		Servers: []v1.DNSServer{
 			{
 				Endpoint: v1.Endpoint{
@@ -548,7 +549,7 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		ClientNameAggr:  "client-8888-*",
 		ClientNamespace: "default",
 		ClientIP:        util.IPPtr("20.21.22.23"),
-		ClientLabels:    map[string]string{"foo": "bar"},
+		ClientLabels:    uniquelabels.Make(map[string]string{"foo": "bar"}),
 		Servers: []v1.DNSServer{
 			{
 				Endpoint: v1.Endpoint{

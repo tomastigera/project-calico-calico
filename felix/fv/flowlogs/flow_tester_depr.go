@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 )
 
 // This flow tester makes too many assumptions about the tests, so isn't particularly useful for handling more
@@ -74,25 +75,25 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs() error {
 			// there.
 			labelsExpected := t.expectLabels
 			if labelsExpected {
-				if fl.FlowLabels.SrcLabels == nil {
+				if fl.FlowLabels.SrcLabels.IsNil() {
 					return fmt.Errorf("missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta)
 				}
-				if fl.FlowLabels.DstLabels == nil {
+				if fl.FlowLabels.DstLabels.IsNil() {
 					return fmt.Errorf("missing dst Labels in %v", fl.FlowLabels)
 				}
 			} else {
-				if fl.FlowLabels.SrcLabels != nil {
+				if !fl.FlowLabels.SrcLabels.IsNil() {
 					return fmt.Errorf("unexpected src Labels in %v", fl.FlowLabels)
 				}
-				if fl.FlowLabels.DstLabels != nil {
+				if !fl.FlowLabels.DstLabels.IsNil() {
 					return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 				}
 			}
 
 			// Now discard Labels so that our expectation code
 			// below doesn't ever have to specify them.
-			fl.FlowLabels.SrcLabels = nil
-			fl.FlowLabels.DstLabels = nil
+			fl.FlowLabels.SrcLabels = uniquelabels.Nil
+			fl.FlowLabels.DstLabels = uniquelabels.Nil
 
 			if t.expectPolicies {
 				if len(fl.FlowAllPolicySet) == 0 {

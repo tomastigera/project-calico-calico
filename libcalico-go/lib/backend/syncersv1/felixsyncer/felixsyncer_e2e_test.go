@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
@@ -602,11 +603,11 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectData(model.KVPair{
 				Key: model.NetworkSetKey{Name: "anetworkset"},
 				Value: &model.NetworkSet{
-					Labels: map[string]string{
+					Labels: uniquelabels.Make(map[string]string{
 						"a":             "b",
 						apiv3.LabelKind: apiv3.KindNetworkSet,
 						apiv3.LabelName: "anetworkset",
-					},
+					}),
 					Nets: []net.IPNet{
 						*expGNet,
 					},
@@ -645,12 +646,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectData(model.KVPair{
 				Key: model.NetworkSetKey{Name: "namespace-1/anetworkset"},
 				Value: &model.NetworkSet{
-					Labels: map[string]string{
+					Labels: uniquelabels.Make(map[string]string{
 						"a":                           "b",
 						apiv3.LabelName:               "anetworkset",
 						apiv3.LabelKind:               "NetworkSet",
 						"projectcalico.org/namespace": "namespace-1",
-					},
+					}),
 					Nets: []net.IPNet{
 						*expNet,
 					},
@@ -730,9 +731,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Name:              "eth0",
 					ExpectedIPv4Addrs: []net.IP{net.MustParseIP("1.2.3.4")},
 					ExpectedIPv6Addrs: []net.IP{net.MustParseIP("aa:bb::cc:dd")},
-					Labels: map[string]string{
+					Labels: uniquelabels.Make(map[string]string{
 						"label1": "value1",
-					},
+					}),
 					ProfileIDs: []string{"profile1", "profile2"},
 					Ports: []model.EndpointPort{
 						{

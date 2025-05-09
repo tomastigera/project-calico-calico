@@ -10,6 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
+	"github.com/projectcalico/calico/lib/std/uniquestr"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	net2 "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -113,19 +115,11 @@ func MustParseNet(n string) net2.IPNet {
 	return *cidr
 }
 
-func IntersectLabels(in, out map[string]string) map[string]string {
-	common := map[string]string{}
-	for k := range out {
+func IntersectAndFilterLabels(in, out uniquelabels.Map) uniquelabels.Map {
+	return uniquelabels.IntersectAndFilter(in, out, func(k uniquestr.Handle, _ uniquestr.Handle) bool {
 		// Skip Calico labels from the logs
-		if strings.HasPrefix(k, "projectcalico.org/") {
-			continue
-		}
-		if v, ok := in[k]; ok && v == out[k] {
-			common[k] = v
-		}
-	}
-
-	return common
+		return !strings.HasPrefix(k.Value(), "projectcalico.org/")
+	})
 }
 
 // There is support for both global and namespaced networkset. In case of
@@ -139,13 +133,30 @@ func ExtractNamespaceFromNetworkSet(aggregatedName string) (string, string) {
 	return FieldNotIncluded, aggregatedName
 }
 
+func FlattenUniqueLabels(labels uniquelabels.Map) []string {
+	return FlattenUniqueLabelsInto(nil, labels)
+}
+
+func FlattenUniqueLabelsInto(s []string, labels uniquelabels.Map) []string {
+	if cap(s) >= labels.Len() {
+		s = s[:0]
+	} else {
+		s = make([]string, 0, labels.Len())
+	}
+	for k, v := range labels.AllStrings() {
+		l := fmt.Sprintf("%v=%v", k, v)
+		s = append(s, l)
+	}
+	return s
+}
+
 func FlattenLabels(labels map[string]string) []string {
-	respSlice := []string{}
+	s := make([]string, 0, len(labels))
 	for k, v := range labels {
 		l := fmt.Sprintf("%v=%v", k, v)
-		respSlice = append(respSlice, l)
+		s = append(s, l)
 	}
-	return respSlice
+	return s
 }
 
 func UnflattenLabels(labelSlice []string) map[string]string {

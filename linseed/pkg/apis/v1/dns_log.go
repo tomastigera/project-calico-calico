@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/idna"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
@@ -54,27 +55,27 @@ type DNSAggregationParams struct {
 }
 
 type DNSLog struct {
-	StartTime       time.Time         `json:"start_time"`
-	EndTime         time.Time         `json:"end_time"`
-	Type            DNSLogType        `json:"type"`
-	Count           uint              `json:"count"`
-	ClientName      string            `json:"client_name"`
-	ClientNameAggr  string            `json:"client_name_aggr"`
-	ClientNamespace string            `json:"client_namespace"`
-	ClientIP        *net.IP           `json:"client_ip"`
-	ClientLabels    map[string]string `json:"client_labels"`
-	Servers         []DNSServer       `json:"servers"`
-	QName           QName             `json:"qname"`
-	QClass          DNSClass          `json:"qclass"`
-	QType           DNSType           `json:"qtype"`
-	RCode           DNSResponseCode   `json:"rcode"`
-	RRSets          DNSRRSets         `json:"rrsets"`
-	Latency         DNSLatency        `json:"latency"`
-	LatencyCount    int               `json:"latency_count"`
-	LatencyMean     time.Duration     `json:"latency_mean"`
-	LatencyMax      time.Duration     `json:"latency_max"`
-	Host            string            `json:"host"`
-	ID              string            `json:"id,omitempty"`
+	StartTime       time.Time        `json:"start_time"`
+	EndTime         time.Time        `json:"end_time"`
+	Type            DNSLogType       `json:"type"`
+	Count           uint             `json:"count"`
+	ClientName      string           `json:"client_name"`
+	ClientNameAggr  string           `json:"client_name_aggr"`
+	ClientNamespace string           `json:"client_namespace"`
+	ClientIP        *net.IP          `json:"client_ip"`
+	ClientLabels    uniquelabels.Map `json:"client_labels"`
+	Servers         []DNSServer      `json:"servers"`
+	QName           QName            `json:"qname"`
+	QClass          DNSClass         `json:"qclass"`
+	QType           DNSType          `json:"qtype"`
+	RCode           DNSResponseCode  `json:"rcode"`
+	RRSets          DNSRRSets        `json:"rrsets"`
+	Latency         DNSLatency       `json:"latency"`
+	LatencyCount    int              `json:"latency_count"`
+	LatencyMean     time.Duration    `json:"latency_mean"`
+	LatencyMax      time.Duration    `json:"latency_max"`
+	Host            string           `json:"host"`
+	ID              string           `json:"id,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
@@ -738,7 +739,7 @@ func toSOARecord(tokens []string) (*layers.DNSSOA, error) {
 type DNSServer struct {
 	Endpoint
 	IP     net.IP
-	Labels map[string]string
+	Labels uniquelabels.Map
 }
 
 type dnsServerEncoded struct {
@@ -750,7 +751,7 @@ type dnsServerEncoded struct {
 
 	// As well as any other DNSServer fields.
 	IP     string            `json:"ip"`
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels *uniquelabels.Map `json:"labels,omitempty"`
 }
 
 func (d *DNSServer) MarshalJSON() ([]byte, error) {
@@ -763,13 +764,17 @@ func (d *DNSServer) MarshalJSON() ([]byte, error) {
 		ip = ""
 	}
 
-	return json.Marshal(&dnsServerEncoded{
+	toEncode := &dnsServerEncoded{
 		Name:      d.Name,
 		NameAggr:  d.AggregatedName,
 		Namespace: d.Namespace,
 		IP:        ip,
-		Labels:    d.Labels,
-	})
+	}
+	if d.Labels.Len() > 0 {
+		// omitempty only works with pointers and "real" maps/slices etc.
+		toEncode.Labels = &d.Labels
+	}
+	return json.Marshal(toEncode)
 }
 
 func (d *DNSServer) UnmarshalJSON(data []byte) error {
@@ -782,8 +787,11 @@ func (d *DNSServer) UnmarshalJSON(data []byte) error {
 	d.AggregatedName = dnsServerEncoded.NameAggr
 	d.Namespace = dnsServerEncoded.Namespace
 	d.IP = net.ParseIP(dnsServerEncoded.IP)
-	d.Labels = dnsServerEncoded.Labels
-
+	if dnsServerEncoded.Labels == nil {
+		d.Labels = uniquelabels.Nil
+	} else {
+		d.Labels = *dnsServerEncoded.Labels
+	}
 	return nil
 }
 

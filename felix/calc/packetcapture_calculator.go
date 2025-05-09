@@ -140,7 +140,7 @@ func (pcc *PacketCaptureCalculator) hasOtherFieldsUpdated(old *v3.PacketCapture,
 	return false
 }
 
-func (pcc *PacketCaptureCalculator) parseSelector(capture *v3.PacketCapture) sel.Selector {
+func (pcc *PacketCaptureCalculator) parseSelector(capture *v3.PacketCapture) *sel.Selector {
 	// update the selector with the namespace selector
 	var updatedSelector = fmt.Sprintf("(%s) && (%s == '%s')", capture.Spec.Selector, v3.LabelNamespace, capture.Namespace)
 	sel, err := sel.Parse(updatedSelector)

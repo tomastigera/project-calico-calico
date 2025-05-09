@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -196,7 +197,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 			ClientNameAggr:  "my-deployment",
 			ClientNamespace: "default",
 			ClientIP:        &ip,
-			ClientLabels:    map[string]string{"pickles": "good"},
+			ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 			QName:           "qname",
 			QType:           v1.DNSType(layers.DNSTypeA),
 			QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -210,7 +211,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 						Type:           v1.WEP,
 					},
 					IP:     net.ParseIP("10.0.0.10"),
-					Labels: map[string]string{"app": "dns"},
+					Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 				},
 			},
 			RRSets: v1.DNSRRSets{},

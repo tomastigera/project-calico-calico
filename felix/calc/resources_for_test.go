@@ -27,6 +27,7 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -91,11 +92,11 @@ var localWlEp1 = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -127,11 +128,11 @@ var localWlEp1OnlyLabels = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id":                          "capture-loc-ep-1",
 		"label":                       "a",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -146,11 +147,11 @@ var localWlEp2OnlyLabels = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id":                          "capture-loc-ep-2",
 		"label":                       "b",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -169,11 +170,11 @@ var localWlEp1WithLabelsButNoProfiles = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -194,11 +195,11 @@ var localWlEp1WithDupeNamedPorts = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8081},
@@ -233,11 +234,11 @@ var localWlEp1DifferentIPs = WorkloadEndpoint{
 		mustParseNet("fc00:fe12::1/128"),
 		mustParseNet("fc00:fe12::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 }
 
 var ep1IPs = []string{
@@ -259,11 +260,11 @@ var localWlEp2 = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::2/128"),
 		mustParseNet("fc00:fe11::3/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
 		"b":  "b2",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 2345},
@@ -282,11 +283,11 @@ var localWlEp2WithLabelsButNoProfiles = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::2/128"),
 		mustParseNet("fc00:fe11::3/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
 		"b":  "b2",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 2345},
@@ -313,9 +314,9 @@ var remoteWlEp1New = WorkloadEndpoint{
 	Mac:        mustParseMac("01:02:03:04:05:06"),
 	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
 	IPv4Nets:   []net.IPNet{mustParseNet("10.0.0.5/32")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "rem-ep-1",
-	},
+	}),
 }
 
 var hostEpWithName = HostEndpoint{
@@ -329,11 +330,11 @@ var hostEpWithName = HostEndpoint{
 		mustParseIP("fc00:fe11::1"),
 		mustParseIP("fc00:fe11::2"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 }
 
 var hostEpWithNamedPorts = HostEndpoint{
@@ -347,11 +348,11 @@ var hostEpWithNamedPorts = HostEndpoint{
 		mustParseIP("fc00:fe11::1"),
 		mustParseIP("fc00:fe11::2"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
 		"b":  "b",
-	},
+	}),
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
@@ -375,11 +376,11 @@ var hostEp2NoName = HostEndpoint{
 		mustParseIP("fc00:fe11::2"),
 		mustParseIP("fc00:fe11::3"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
 		"b":  "b2",
-	},
+	}),
 }
 
 var hostEp2NoNameKey = HostEndpointKey{
@@ -736,9 +737,9 @@ var (
 			mustParseNet("feed:beef::/32"),
 			mustParseNet("feed:beef:0::/32"), // Non-canonical dupe.
 		},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"a": "b",
-		},
+		}),
 	}
 )
 
@@ -749,10 +750,10 @@ var netSet1WithBEqB = NetworkSet{
 		mustParseNet("12.1.0.0/24"),
 		mustParseNet("10.0.0.1/32"), // Overlaps with host endpoint.
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"foo": "bar",
 		"b":   "b",
-	},
+	}),
 }
 
 var netSet1WithEgressDomains = NetworkSet{
@@ -769,9 +770,9 @@ var netSet1WithEgressDomains = NetworkSet{
 		"facebook.com",
 		"tigera.io",
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"a": "b",
-	},
+	}),
 }
 
 var (
@@ -781,9 +782,9 @@ var (
 			mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
 			mustParseNet("13.1.0.0/24"),
 		},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"a": "b",
-		},
+		}),
 	}
 )
 
@@ -792,9 +793,9 @@ var netSet2WithEgressDomains = NetworkSet{
 		mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
 		mustParseNet("13.1.0.0/24"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"a": "b",
-	},
+	}),
 	AllowedEgressDomains: []string{
 		"google.com",
 		"facebook.com",
@@ -810,9 +811,9 @@ var (
 			mustParseNet("12.1.0.0/16"),
 			mustParseNet("12.1.0.0/8"),
 		},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"a": "b",
-		},
+		}),
 	}
 )
 
@@ -854,17 +855,17 @@ var netSetDNSKey2 = NetworkSetKey{Name: "netset-domains-2"}
 
 var netSetDNS = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomains,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "microsoft"}),
 }
 
 var netSetDNSNoDupe = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomainsNoDupe,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "microsoft"}),
 }
 
 var netSetDNS2 = NetworkSet{
 	AllowedEgressDomains: allowedEgressDomains2,
-	Labels:               map[string]string{"external-service-name": "google"},
+	Labels:               uniquelabels.Make(map[string]string{"external-service-name": "google"}),
 }
 
 // Two GlobalNetworkPolicies, the first allows external access to microsoft.com and the second to any resource that
@@ -924,9 +925,9 @@ var localWlEpDNS = WorkloadEndpoint{
 		mustParseNet("10.0.0.2/32")},
 	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
 		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"name": "dnspolicy",
-	},
+	}),
 }
 
 var (

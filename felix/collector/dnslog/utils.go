@@ -63,9 +63,8 @@ func aggregateEndpointMetadataWithIP(em EndpointMetadataWithIP, kind Aggregation
 
 func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWithIP, serverLabels DNSLabels, dns *layers.DNS, latencyIfKnown *time.Duration) DNSSpec {
 	spec := DNSSpec{
-		RRSets:       make(v1.DNSRRSets),
-		Servers:      make(map[EndpointMetadataWithIP]DNSLabels),
-		ClientLabels: nil,
+		RRSets:  make(v1.DNSRRSets),
+		Servers: make(map[EndpointMetadataWithIP]DNSLabels),
 		DNSStats: DNSStats{
 			Count: 1,
 		},

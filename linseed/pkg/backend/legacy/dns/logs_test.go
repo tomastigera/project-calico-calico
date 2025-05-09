@@ -14,6 +14,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -41,7 +42,7 @@ func TestCreateDNSLog(t *testing.T) {
 			ClientNameAggr:  "client-",
 			ClientNamespace: "default",
 			ClientIP:        &ip,
-			ClientLabels:    map[string]string{"pickles": "good"},
+			ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 			QName:           "qname",
 			QType:           v1.DNSType(layers.DNSTypeA),
 			QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -55,7 +56,7 @@ func TestCreateDNSLog(t *testing.T) {
 						Namespace:      "kube-system",
 					},
 					IP:     net.ParseIP("10.0.0.10"),
-					Labels: map[string]string{"app": "dns"},
+					Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 				},
 			},
 			Latency: v1.DNSLatency{
@@ -168,7 +169,7 @@ func TestAggregations(t *testing.T) {
 				ClientNameAggr:  "client-",
 				ClientNamespace: "default",
 				ClientIP:        &ip,
-				ClientLabels:    map[string]string{"pickles": "good"},
+				ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 				QName:           "qname",
 				QType:           v1.DNSType(layers.DNSTypeA),
 				QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -182,7 +183,7 @@ func TestAggregations(t *testing.T) {
 							Type:           v1.WEP,
 						},
 						IP:     net.ParseIP("10.0.0.10"),
-						Labels: map[string]string{"app": "dns"},
+						Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 					},
 				},
 				Latency: v1.DNSLatency{
@@ -280,7 +281,7 @@ func TestAggregations(t *testing.T) {
 				ClientNameAggr:  "client-",
 				ClientNamespace: "default",
 				ClientIP:        &ip,
-				ClientLabels:    map[string]string{"pickles": "good"},
+				ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 				QName:           "qname",
 				QType:           v1.DNSType(layers.DNSTypeA),
 				QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -294,7 +295,7 @@ func TestAggregations(t *testing.T) {
 							Type:           v1.WEP,
 						},
 						IP:     net.ParseIP("10.0.0.10"),
-						Labels: map[string]string{"app": "dns"},
+						Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 					},
 				},
 				Latency: v1.DNSLatency{
@@ -512,7 +513,7 @@ func TestDNSLogFiltering(t *testing.T) {
 						ClientNameAggr:  "client-",
 						ClientNamespace: "default",
 						ClientIP:        &ip,
-						ClientLabels:    map[string]string{"pickles": "good"},
+						ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 						QName:           "qname",
 						QType:           v1.DNSType(layers.DNSTypeA),
 						QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -526,7 +527,7 @@ func TestDNSLogFiltering(t *testing.T) {
 									Namespace:      "kube-system",
 								},
 								IP:     net.ParseIP("10.0.0.10"),
-								Labels: map[string]string{"app": "dns"},
+								Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 							},
 						},
 						Latency: v1.DNSLatency{
@@ -545,7 +546,7 @@ func TestDNSLogFiltering(t *testing.T) {
 						ClientNameAggr:  "client-",
 						ClientNamespace: "default",
 						ClientIP:        &ip,
-						ClientLabels:    map[string]string{"pickles": "good"},
+						ClientLabels:    uniquelabels.Make(map[string]string{"pickles": "good"}),
 						QName:           "qname",
 						QType:           v1.DNSType(layers.DNSTypeA),
 						QClass:          v1.DNSClass(layers.DNSClassIN),
@@ -559,7 +560,7 @@ func TestDNSLogFiltering(t *testing.T) {
 									Namespace:      "kube-system",
 								},
 								IP:     net.ParseIP("10.0.0.10"),
-								Labels: map[string]string{"app": "dns"},
+								Labels: uniquelabels.Make(map[string]string{"app": "dns"}),
 							},
 						},
 						Latency: v1.DNSLatency{

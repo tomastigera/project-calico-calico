@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
@@ -155,17 +156,17 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"any": "value",
-				},
+				}),
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"any": "value",
-				},
+				}),
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -238,17 +239,17 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"any": "value",
-				},
+				}),
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"any": "value",
-				},
+				}),
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
@@ -315,13 +316,13 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			Destination: api.FlowEndpointData{
 				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
-				Labels:    map[string]string{},
+				Labels:    uniquelabels.Empty,
 			},
 			ActionFlag: api.ActionFlagAllow,
 		}
