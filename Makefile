@@ -247,17 +247,18 @@ chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release 
 tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
-multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz
-bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz: bin/helm
+multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion).tgz
+bin/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	bin/helm package ./charts/multi-tenant-crds \
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
 publish-multi-tenant-crds: multi-tenant-crds-release
+	mv ./bin/multi-tenant-crds-$(RELEASE_STREAM).tgz ./bin/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 	aws --profile helm \
 		s3 cp \
-		bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz \
+		bin/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz \
 		s3://tigera-public/ee/charts/ \
 		--acl public-read
 
