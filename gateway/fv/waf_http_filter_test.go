@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/projectcalico/calico/gateway/pkg/waf"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/gateway/pkg/waf"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 func setupServer(t *testing.T, opts waf.ServerOptions) func() {

@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 
-	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/gateway/pkg/waf"
 )
 
 func main() {

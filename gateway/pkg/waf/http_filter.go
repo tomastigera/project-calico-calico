@@ -13,14 +13,15 @@ import (
 
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/projectcalico/calico/app-policy/waf"
-	"github.com/projectcalico/calico/felix/proto"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type ServerOptions struct {
