@@ -98,7 +98,7 @@ func (f *WafHTTPFilter) Start() error {
 		}
 
 		f.tcpGRPCServer = grpc.NewServer()
-		envoy_service_proc_v3.RegisterExternalProcessorServer(f.tcpGRPCServer, f.extProcServer)
+		envoy_service_proc_v3.RegisterExternalProcessorServer(f.tcpGRPCServer, f)
 
 		go func() {
 			err = f.tcpGRPCServer.Serve(lis)
@@ -110,9 +110,8 @@ func (f *WafHTTPFilter) Start() error {
 	if f.options.SocketPath != "" {
 		// Create Unix listener
 		f.unixGRPCServer = grpc.NewServer()
-		envoy_service_proc_v3.RegisterExternalProcessorServer(f.unixGRPCServer, f.extProcServer)
+		envoy_service_proc_v3.RegisterExternalProcessorServer(f.unixGRPCServer, f)
 
-		// udsAddr := "/var/run/ext-proc/extproc.sock"
 		if _, err := os.Stat(f.options.SocketPath); err == nil {
 			if err := os.RemoveAll(f.options.SocketPath); err != nil {
 				log.Fatalf("failed to remove: %v", err)
