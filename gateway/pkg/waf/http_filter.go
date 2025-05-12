@@ -144,9 +144,14 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
 
-		// TODO: Update with unix socket
-		// conn, err := grpc.Dial("unix://"+socketPath, opts...)
-		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", opts.TcpPort), dialOpts...)
+		var target string
+		if opts.TcpPort != 0 {
+			target = fmt.Sprintf("localhost:%d", opts.TcpPort)
+		} else {
+			target = "unix://" + opts.SocketPath
+		}
+
+		conn, err := grpc.NewClient(target, dialOpts...)
 		if err != nil {
 			log.Fatalf("Could not connect: %v", err)
 		}

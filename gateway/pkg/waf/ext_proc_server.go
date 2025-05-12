@@ -125,7 +125,7 @@ func (s *ExtProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 			// Future work will need to break up those 2 checks, but using the same transaction for the 2 phases.
 			wafResp, err := s.wafServer.CheckWAF(checkReq)
 			if err != nil {
-				logrus.Errorf("Error checking WAF: %#w", err)
+				logrus.Errorf("Error checking WAF: %#v", err)
 			}
 			logrus.Debugf("WAF result (status: %d %s): %#v", wafResp.Status.Code, wafResp.Status.Message, wafResp)
 			if wafResp.Status.Code == 0 {
@@ -156,9 +156,6 @@ func (s *ExtProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					},
 				}
 			}
-
-			break
-
 		case *envoy_service_proc_v3.ProcessingRequest_RequestBody:
 			resp = &envoy_service_proc_v3.ProcessingResponse{
 				Response: &envoy_service_proc_v3.ProcessingResponse_RequestBody{
@@ -169,7 +166,6 @@ func (s *ExtProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					},
 				},
 			}
-			break
 		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
 			resp = &envoy_service_proc_v3.ProcessingResponse{
 				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseHeaders{
@@ -180,7 +176,6 @@ func (s *ExtProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					},
 				},
 			}
-			break
 		default:
 			logrus.Printf("Unknown Request type %v\n", v)
 		}
