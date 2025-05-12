@@ -15,5 +15,6 @@ type QueryRequest struct {
 	ClusterIDs     []ManagedClusterName
 	Aggregations   aggregations.Aggregations
 	MaxDocuments   int
+	PageNum        int
 	CollectionName collections.CollectionName
 }

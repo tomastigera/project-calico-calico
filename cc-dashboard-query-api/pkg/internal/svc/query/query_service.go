@@ -139,9 +139,15 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		maxDocuments = min(*req.MaxDocs, MaxQueryDocumentsLimit)
 	}
 
+	pageNum := 0
+	if req.PageNum != nil && *req.PageNum >= 0 {
+		pageNum = *req.PageNum
+	}
+
 	repositoryRequest := domain.QueryRequest{
 		ClusterIDs:     clusterIDs,
 		MaxDocuments:   maxDocuments,
+		PageNum:        pageNum,
 		CollectionName: queryCollection.Name(),
 	}
 

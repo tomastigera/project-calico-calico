@@ -26,12 +26,15 @@ type queryParams struct {
 	requestedPeriod time.Duration
 }
 
-func newQueryParams(maxDocuments int, clusterIDs []string) (*queryParams, error) {
-	return &queryParams{
+func newQueryParams(maxDocuments, pageNum int, clusterIDs []string) (*queryParams, error) {
+	params := &queryParams{
 		linseedQueryParams: lsv1.QueryParams{
 			MaxPageSize: maxDocuments,
 			Clusters:    clusterIDs,
 			AllClusters: len(clusterIDs) == 0,
+			AfterKey: map[string]any{
+				"startFrom": pageNum * maxDocuments,
+			},
 		},
 		domainMatches: map[lsv1.DomainMatchType][]string{
 			lsv1.DomainMatchQname:  nil,
@@ -43,7 +46,9 @@ func newQueryParams(maxDocuments int, clusterIDs []string) (*queryParams, error)
 				{Field: "start_time", Descending: true},
 			},
 		},
-	}, nil
+	}
+
+	return params, nil
 }
 
 func (p *queryParams) setCriteria(criteria filters.Criteria, now time.Time) error {

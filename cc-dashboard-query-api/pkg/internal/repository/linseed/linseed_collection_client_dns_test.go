@@ -30,7 +30,7 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			repositoryQueryParams, err := newQueryParams(0, 0, []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
@@ -99,7 +99,7 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 			aggregations := map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
 
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, []string{"fake-cluster"})
+			repositoryQueryParams, err := newQueryParams(0, 0, []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{

@@ -118,7 +118,10 @@ func TestLinseedRepository(t *testing.T) {
 
 			require.Equal(t, &lsv1.DNSAggregationParams{
 				DNSLogParams: lsv1.DNSLogParams{
-					QueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
+					QueryParams: lsv1.QueryParams{
+						Clusters: []string{"fake-cluster"},
+						AfterKey: map[string]any{"startFrom": 0},
+					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
 							{Field: "start_time", Descending: true},
@@ -167,7 +170,10 @@ func TestLinseedRepository(t *testing.T) {
 
 			require.Equal(t, &lsv1.DNSAggregationParams{
 				DNSLogParams: lsv1.DNSLogParams{
-					QueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}},
+					QueryParams: lsv1.QueryParams{
+						Clusters: []string{"fake-cluster"},
+						AfterKey: map[string]any{"startFrom": 0},
+					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
 							{Field: "start_time", Descending: true},

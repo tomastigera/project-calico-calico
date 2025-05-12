@@ -322,6 +322,9 @@ components:
         maxDocs:
           format: int
           type: string
+        pageNum:
+          format: int
+          type: string
       type: object
     QueryRequestFilter:
       properties:

@@ -9,6 +9,9 @@ type QueryRequest struct {
 	// MaxDocs maximum number of documents in the response of non-aggregated requests
 	MaxDocs *int `json:"maxDocs"`
 
+	// PageNum specifies which page of results to return. Indexed from 0. [Default: 0]
+	PageNum *int `json:"pageNum"`
+
 	// CollectionName The collection being queried
 	CollectionName CollectionName `json:"collectionName"`
 

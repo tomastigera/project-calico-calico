@@ -70,7 +70,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		return result.QueryResult{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName))
 	}
 
-	linseedQueryParams, err := newQueryParams(req.MaxDocuments, slices.ToStrings(req.ClusterIDs))
+	linseedQueryParams, err := newQueryParams(req.MaxDocuments, req.PageNum, slices.ToStrings(req.ClusterIDs))
 	if err != nil {
 		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
 	}
