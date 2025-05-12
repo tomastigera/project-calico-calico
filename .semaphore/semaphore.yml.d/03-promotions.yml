@@ -75,6 +75,10 @@ promotions:
     pipeline_file: push-images/fluentd.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push gateway images
+    pipeline_file: push-images/gateway.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images
     pipeline_file: push-images/ingress-collector.yml
     auto_promote:
