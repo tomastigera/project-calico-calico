@@ -134,7 +134,12 @@ type Config struct {
 	CheckManagedClusterAuthorizationBeforeProxy bool `default:"false" split_words:"true"`
 
 	// CheckManagedClusterAuthorizationCacheTTL when >0 this will cache the authorization results for CheckManagedClusterAuthorizationBeforeProxy
+	//
+	// Note that CheckManagedClusterAuthorization uses a different RBACAuthorizer instance than the default auth.NewJWTAuth() instance
 	CheckManagedClusterAuthorizationCacheTTL time.Duration `default:"0" split_words:"true"`
+
+	// LMAAuthorizationCacheTTL used to configure authz caching when creating the `lma.auth.NewJWTAuth()` instance.
+	LMAAuthorizationCacheTTL time.Duration `default:"20s" split_words:"true"`
 
 	// enable logging of all http requests to the clusterMuxer
 	HTTPAccessLoggingEnabled bool `default:"false" split_words:"true"`

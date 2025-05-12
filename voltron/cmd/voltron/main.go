@@ -391,7 +391,10 @@ func main() {
 		jwtAuthOpts = append(jwtAuthOpts, auth.WithAuthenticator(cfg.OIDCAuthIssuer, oidcAuth))
 	}
 
-	jwtAuthOpts = append(jwtAuthOpts, auth.WithTokenReviewCacheTTL(ctx, cfg.OIDCTokenReviewCacheTTL))
+	jwtAuthOpts = append(jwtAuthOpts,
+		auth.WithTokenReviewCacheTTL(ctx, cfg.OIDCTokenReviewCacheTTL),
+		auth.WithAuthzCacheTTL(ctx, cfg.LMAAuthorizationCacheTTL),
+	)
 
 	authn, err := auth.NewJWTAuth(k8sConfig, k8s, jwtAuthOpts...)
 	if err != nil {
