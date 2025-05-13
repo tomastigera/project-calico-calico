@@ -38,7 +38,7 @@ const (
 )
 
 type Controller interface {
-	Run(<-chan struct{})
+	Run(<-chan struct{}) error
 }
 
 type ControllerOption func(*controller) error
@@ -312,14 +312,24 @@ const (
 	ReconcileSecrets
 )
 
+type ManagedClusterOperation string
+
+const (
+	ManagedClusterOperationCreate       ManagedClusterOperation = "create"
+	ManagedClusterOperationDelete       ManagedClusterOperation = "delete"
+	ManagedClusterOperationConnected    ManagedClusterOperation = "connected"
+	ManagedClusterOperationDisconnected ManagedClusterOperation = "disconnected"
+)
+
 // tokenEvent represents an event indicating that tokens and optionally secrets should be reconciled based on the provided fields.
 type tokenEvent struct {
-	mc              *v3.ManagedCluster
-	namespace       string
-	reconcileAction ReconcileAction
+	mc                      *v3.ManagedCluster
+	namespace               string
+	reconcileAction         ReconcileAction
+	managedClusterOperation ManagedClusterOperation
 }
 
-func (c *controller) Run(stopCh <-chan struct{}) {
+func (c *controller) Run(stopCh <-chan struct{}) error {
 	// TODO: Support multiple copies of this running.
 
 	// Start a watch on ManagedClusters, wait for it to sync, and then proceed.
@@ -328,34 +338,41 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	logrus.Info("Starting token controller")
 
 	// Make channels for sending updates.
-	updateChan := make(chan *tokenEvent, 100)
+	managedClusterChan := make(chan *tokenEvent, 100)
 	secretChan := make(chan *corev1.Secret, 100)
-	deleteChan := make(chan string, 100)
-	defer close(updateChan)
+	defer close(managedClusterChan)
 	defer close(secretChan)
-	defer close(deleteChan)
 
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				// Populate the deleteChan to remove the managed cluster entry from informerStopChans and permissionMap.
-				deleteChan <- mc.Name
+				managedClusterChan <- &tokenEvent{
+					mc:                      mc,
+					managedClusterOperation: ManagedClusterOperationDelete,
+				}
 			}
 		},
 		AddFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
 				mcObj := &tokenEvent{
-					mc: mc,
+					mc:                      mc,
+					managedClusterOperation: ManagedClusterOperationCreate,
 				}
-				updateChan <- mcObj
+				managedClusterChan <- mcObj
 			}
 		},
 		UpdateFunc: func(_, obj interface{}) {
-			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
+			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				mcObj := &tokenEvent{
 					mc: mc,
 				}
-				updateChan <- mcObj
+				if isConnected(mc) {
+					mcObj.managedClusterOperation = ManagedClusterOperationConnected
+				} else {
+					mcObj.managedClusterOperation = ManagedClusterOperationDisconnected
+				}
+				managedClusterChan <- mcObj
 			}
 		},
 	}
@@ -367,7 +384,8 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	mcInformer := cache.NewSharedIndexInformer(listWatcher, &v3.ManagedCluster{}, 0, cache.Indexers{})
 	_, err := mcInformer.AddEventHandler(managedClusterHandler)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to add ManagedCluster event handler")
+		logrus.WithError(err).Error("Failed to add ManagedCluster event handler")
+		return err
 	}
 
 	secretFactory := informers.NewSharedInformerFactory(c.managementK8sClient, 0)
@@ -397,7 +415,8 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	}
 	_, err = secretInformer.AddEventHandler(secretHandler)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to add Secret event handler")
+		logrus.WithError(err).Error("Failed to add Secret event handler")
+		return err
 	}
 
 	go mcInformer.Run(stopCh)
@@ -418,11 +437,12 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	// Start the token manager.
 	c.ManageTokens(
 		stopCh,
-		updateChan,
+		managedClusterChan,
 		secretChan,
-		deleteChan,
 		mcInformer,
 	)
+
+	return nil
 }
 
 func isConnected(mc *v3.ManagedCluster) bool {
@@ -461,7 +481,7 @@ func retryUpdate[T corev1.Secret | tokenEvent](rc *retryCalculator, id string, o
 	}()
 }
 
-func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, deleteChan chan string, mcInformer cache.SharedIndexInformer) {
+func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer) {
 	defer logrus.Info("Token manager shutting down")
 
 	// reconcileChan handles reconcilation of tokens and secrets.
@@ -507,52 +527,67 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 				c.reportHealth(&health.HealthReport{Live: true, Ready: true})
 			}
 		case event := <-updateChan:
-			// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated.
-			retry := retryUpdate[tokenEvent]
 			log := c.loggerForManagedCluster(event.mc)
 
-			// Ensure cluster exists before proceeding with the reconciliation.
-			// This prevents reconcilation of token and secrets for deleted managed clusters.
-			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
-				log.Info("Managed cluster does not exist")
+			switch event.managedClusterOperation {
+			case ManagedClusterOperationDelete, ManagedClusterOperationDisconnected:
+				c.deleteManagedCluster(event.mc.Name)
 				continue
-			}
+			case ManagedClusterOperationCreate, ManagedClusterOperationConnected:
+				// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated (connected or disconnected).
+				retry := retryUpdate[tokenEvent]
 
-			// Workaround to handle version skew where older managed clusters (<=3.19) might lack RBAC permissions to watch namespaces.
-			// TODO: cleanup this workaround around the 3.22 release.
-			hasPermission, err := c.supportNamespaceWatches(event.mc)
-			if err != nil {
-				log.WithError(err).Error("failed to check if namespace RBAC exist on the managed cluster")
-				retry(rc, event.mc.Name, *event, updateChan, stop)
-				continue
-			}
-
-			newEvent := &tokenEvent{
-				mc: event.mc,
-			}
-
-			// Check if the managed cluster has the required RBAC for Linseed to access its namespaces.
-			if hasPermission {
-				if _, exist := c.informerStopChans[event.mc.Name]; !exist {
-					// Create managed cluster informer if it does not exist.
-					// This would trigger reconciliation of tokens for all relevant namespaces.
-					namespaceInformer, err := c.createInformer(event.mc, reconcileChan)
-					if err != nil {
-						log.WithError(err).Error("failed to create namespace Informer for cluster")
-						continue
-					}
-					// Track the informers to clean up when the managed cluster is deleted.
-					mcStopCh := make(chan struct{})
-					c.informerStopChans[event.mc.Name] = mcStopCh
-					go namespaceInformer.Run(mcStopCh)
-
-					// The informer creation will handle token reconciliation within the managed clusters.
-					// Now trigger an event to reconcile only the secrets.
-					newEvent.reconcileAction = ReconcileSecrets
+				// Ensure cluster exists before proceeding with the reconciliation.
+				// This prevents reconcilation of token and secrets for deleted managed clusters.
+				if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
+					log.Info("Managed cluster does not exist")
+					continue
 				}
-			}
 
-			reconcileChan <- newEvent
+				// Workaround to handle version skew where older managed clusters (<=3.19) might lack RBAC permissions to watch namespaces.
+				// TODO: cleanup this workaround around the 3.22 release.
+				hasPermission, err := c.supportNamespaceWatches(event.mc)
+				if err != nil {
+					log.WithError(err).Error("failed to check if namespace RBAC exist on the managed cluster")
+					retry(rc, event.mc.Name, *event, updateChan, stop)
+					continue
+				}
+
+				newEvent := &tokenEvent{
+					mc: event.mc,
+				}
+
+				// Check if the managed cluster has the required RBAC for Linseed to access its namespaces.
+				if hasPermission {
+					if _, exist := c.informerStopChans[event.mc.Name]; !exist {
+						// Create managed cluster informer if it does not exist.
+						// This would trigger reconciliation of tokens for all relevant namespaces.
+						namespaceInformer, err := c.createInformer(event.mc, reconcileChan)
+						if err != nil {
+							log.WithError(err).Error("failed to create namespace informer")
+							continue
+						}
+						// Track the informers to clean up when the managed cluster is deleted.
+						mcStopCh := make(chan struct{})
+						c.informerStopChans[event.mc.Name] = mcStopCh
+						err = namespaceInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+							log.WithError(err).Errorf("Watch for %v failed ", r.TypeDescription())
+						})
+						if err != nil {
+							log.WithError(err).Error("failed to create watch error cluster informer")
+							return
+						}
+						go namespaceInformer.Run(mcStopCh)
+
+						// The informer creation will handle token reconciliation within the managed clusters.
+						// Now trigger an event to reconcile only the secrets.
+						newEvent.reconcileAction = ReconcileSecrets
+					}
+
+				}
+
+				reconcileChan <- newEvent
+			}
 
 		case event := <-reconcileChan:
 			retry := retryUpdate[tokenEvent]
@@ -616,23 +651,22 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 					retry(rc, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), *secret, secretChan, stop)
 				}
 			}
-
-		case mcName := <-deleteChan:
-			// Stop the informers when the managed clusters get deleted.
-			if mcStopCh, ok := c.informerStopChans[mcName]; ok {
-				close(mcStopCh)
-				delete(c.informerStopChans, mcName)
-				logrus.WithField("name", mcName).Info("removed informer for the deleted managed cluster")
-			}
-
-			// Remove the entry from permissionMap.
-			if _, ok := c.permissionMap[mcName]; ok {
-				delete(c.permissionMap, mcName)
-				logrus.WithField("name", mcName).Info("removed permissionMap entry for the deleted managed cluster")
-			} else {
-				logrus.WithField("name", mcName).Warn("no entry found in permissionMap for the deleted managed cluster")
-			}
 		}
+	}
+}
+
+func (c *controller) deleteManagedCluster(mcName string) {
+	// Stop the informers when the managed clusters get deleted.
+	if mcStopCh, ok := c.informerStopChans[mcName]; ok {
+		close(mcStopCh)
+		delete(c.informerStopChans, mcName)
+		logrus.WithField("name", mcName).Info("removed informer for the deleted/disconnected managed cluster")
+	}
+
+	// Remove the entry from permissionMap.
+	if _, ok := c.permissionMap[mcName]; ok {
+		delete(c.permissionMap, mcName)
+		logrus.WithField("name", mcName).Info("removed permissionMap entry for the deleted/disconnected managed cluster")
 	}
 }
 
@@ -1013,7 +1047,7 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 
 	_, err = namespaceInformer.AddEventHandler(namespaceHandler)
 	if err != nil {
-		logrus.WithError(err).Fatal("failed to add managed cluster namespace event handler")
+		logrus.WithError(err).Error("failed to add managed cluster namespace event handler")
 		return nil, err
 	}
 	return namespaceInformer, nil
