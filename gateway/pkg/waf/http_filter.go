@@ -216,11 +216,7 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 	logrus.Info("start Process()")
 
 	md, _ := metadata.FromIncomingContext(ctx)
-	logrus.WithField("md", md).Debug("gRPC context metadata")
-	var xForwardedFor string
-	if len(md["x-forwarded-for"]) > 0 {
-		xForwardedFor = md["x-forwarded-for"][0]
-	}
+	logrus.Debug("gRPC context metadata: %v", md)
 
 	for {
 		select {
@@ -254,8 +250,6 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				headersMap[key] = value
 			}
 
-			logrus.WithField("headersMap", headersMap).Info("Parsed headers")
-
 			id := headersMap["x-request-id"]
 
 			var protocol string
@@ -284,6 +278,10 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				TimestampNanos:   int32(nanos),
 			}
 
+			var xForwardedFor string
+			if len(md["x-forwarded-for"]) > 0 {
+				xForwardedFor = md["x-forwarded-for"][0]
+			}
 			checkReq.SrcHost = xForwardedFor
 
 			// This checks both headers and body (phas 1 and phase 2).
@@ -310,7 +308,7 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				},
 			}
 
-			logrus.WithField("blockedByWAF", blockedByWAF).Debug("Are we blocking?")
+			logrus.Debugf("blockedByWAF is set to %b", blockedByWAF)
 
 			if blockedByWAF {
 				resp.Response = &envoy_service_proc_v3.ProcessingResponse_ImmediateResponse{
@@ -343,10 +341,10 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				},
 			}
 		default:
-			logrus.Printf("Unknown Request type %v\n", v)
+			logrus.Infof("Unknown Request type %v\n", v)
 		}
 		if err := srv.Send(resp); err != nil {
-			logrus.Printf("send error %v", err)
+			logrus.Warnf("send error %v", err)
 		}
 	}
 }
