@@ -112,6 +112,10 @@ promotions:
     pipeline_file: push-images/fluentd.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push gateway images
+    pipeline_file: push-images/gateway.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images
     pipeline_file: push-images/ingress-collector.yml
     auto_promote:
@@ -1380,6 +1384,26 @@ blocks:
         - name: build windows image
           commands:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
+  - name: gateway
+    run:
+      when: "false or change_in(['/*', '/gateway/', '/app-policy', '/felix/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cd gateway
+      jobs:
+        - name: gateway tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: ingress-collector
     run:
       when: "false or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
