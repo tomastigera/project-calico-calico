@@ -49040,6 +49040,8 @@ rules:
       - gatewayapis
       - gatewayapis/finalizers
       - goldmanes
+      - goldmanes/finalizers
+      - goldmanes/status
       - imagesets
       - installations
       - installations/finalizers
@@ -49077,6 +49079,8 @@ rules:
       - tlspassthroughroutes
       - tlsterminatedroutes
       - whiskers
+      - whiskers/finalizers
+      - whiskers/status
     verbs:
       - get
       - list
