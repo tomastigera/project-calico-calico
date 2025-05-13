@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/goldmane/pkg/server"
-	"github.com/projectcalico/calico/goldmane/proto"
+	"github.com/projectcalico/calico/goldmane/pkg/types"
 )
 
 const (
@@ -32,20 +32,20 @@ const (
 
 type flowStore struct {
 	lock  sync.RWMutex
-	flows []*proto.Flow
+	flows []*types.Flow
 }
 
 func newFlowStore() *flowStore {
 	return &flowStore{}
 }
 
-func (s *flowStore) Receive(f *proto.FlowUpdate) {
+func (s *flowStore) Receive(f *types.Flow) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.flows = append(s.flows, f.Flow)
+	s.flows = append(s.flows, f)
 }
 
-func (s *flowStore) List() []*proto.Flow {
+func (s *flowStore) List() []*types.Flow {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	return s.flows
@@ -96,7 +96,7 @@ func (g *GoldmaneMock) Stop() {
 	g.grpcServer.GracefulStop()
 }
 
-func (g *GoldmaneMock) List() []*proto.Flow {
+func (g *GoldmaneMock) List() []*types.Flow {
 	return g.store.List()
 }
 
