@@ -316,7 +316,7 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 						Status: &envoy_type_v3.HttpStatus{
 							Code: envoy_type_v3.StatusCode_Forbidden,
 						},
-						Body: []byte(fmt.Sprintf("Sorry you've been WAF'ed!\r\n%v", wafResp.Status.Message)),
+						Body: []byte(wafResp.Status.Message),
 					},
 				}
 			}
