@@ -85,6 +85,7 @@ func (c ConfigMapStorage) Write(ctx context.Context, checkpoint time.Time) error
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      c.name,
 				Namespace: c.namespace,
+				Labels:    map[string]string{"generated-by": "oiler"},
 			},
 			Data: map[string]string{checkpointKey: checkpoint.UTC().Format(time.RFC3339)},
 		}
