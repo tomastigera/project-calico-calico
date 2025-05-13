@@ -4,8 +4,11 @@
   dependencies:
     - Prerequisites
   task:
+    secrets:
+      - name: google-service-account-for-gcr
     prologue:
       commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd gateway
     jobs:
       - name: gateway tests
