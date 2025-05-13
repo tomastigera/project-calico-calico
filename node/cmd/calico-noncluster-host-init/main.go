@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
 )
 
 var flagSet = flag.NewFlagSet("CalicoNonClusterHostInit", flag.ContinueOnError)
@@ -45,6 +46,18 @@ func main() {
 		logrus.Fatal("TyphaCertFile not found in configuration file")
 	}
 
+	if err := maybeRenewCertificate(caFile, pkFile, certFile); err != nil {
+		os.Exit(1)
+	}
+
+	if err := updateLabels(); err != nil {
+		os.Exit(1)
+	}
+
+	os.Exit(0)
+}
+
+func maybeRenewCertificate(caFile, pkFile, certFile string) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), *timeout)
 	defer cancel()
 
@@ -52,16 +65,16 @@ func main() {
 	defer close(resCh)
 
 	go func() {
-		certManager, err := newCertificateManager(ctx, caFile, pkFile, certFile)
+		certManager, err := nonclusterhost.NewCertificateManager(ctx, caFile, pkFile, certFile)
 		if err != nil {
 			resCh <- err
 			return
 		}
 
-		certValid, err := certManager.isCertificateValid(*renewalThreshold)
+		certValid, err := certManager.IsCertificateValid(*renewalThreshold)
 		if err != nil || !certValid {
 			// Rotate private key and request a new certificate when the current certificate is expired.
-			if err := certManager.requestAndWriteCertificate(); err != nil {
+			if err := certManager.RequestAndWriteCertificate(); err != nil {
 				resCh <- err
 			}
 		}
@@ -72,12 +85,30 @@ func main() {
 	case err := <-resCh:
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to obtain certificate")
+			return err
 		}
 	case <-ctx.Done():
 		if err := ctx.Err(); err != nil {
 			logrus.WithError(err).Fatal("Context canceled while obtaining certificate")
+			return err
 		}
 	}
+	return nil
+}
 
-	os.Exit(0)
+func updateLabels() error {
+	ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Minute)
+	defer cancel()
+
+	labelUpdater, err := nonclusterhost.NewLabelUpdater(ctx)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create label updater")
+		return err
+	}
+
+	if err := labelUpdater.UpdateLabels(); err != nil {
+		logrus.WithError(err).Fatal("Failed to update labels")
+		return err
+	}
+	return nil
 }

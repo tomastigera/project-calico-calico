@@ -1,6 +1,6 @@
 // Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
-package main
+package nonclusterhost
 
 import (
 	"context"
@@ -24,14 +24,14 @@ const (
 	configMapNamespace = "calico-system"
 )
 
-type certificateManager struct {
+type CertificateManager struct {
 	ctx context.Context
 	cfg *kcpcfg.Config
 
 	k8sClientSet *kubernetes.Clientset
 }
 
-func newCertificateManager(ctx context.Context, caFile, pkFile, certFile string) (*certificateManager, error) {
+func NewCertificateManager(ctx context.Context, caFile, pkFile, certFile string) (*CertificateManager, error) {
 	// Create k8s clientset
 	kubeConfigPath := os.Getenv("KUBECONFIG")
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
@@ -65,7 +65,7 @@ func newCertificateManager(ctx context.Context, caFile, pkFile, certFile string)
 		Signer:              "tigera.io/operator-signer",
 	}
 
-	return &certificateManager{
+	return &CertificateManager{
 		ctx: ctx,
 		cfg: kcpConfig,
 
@@ -73,7 +73,7 @@ func newCertificateManager(ctx context.Context, caFile, pkFile, certFile string)
 	}, nil
 }
 
-func (m *certificateManager) isCertificateValid(renewalThreshold time.Duration) (bool, error) {
+func (m *CertificateManager) IsCertificateValid(renewalThreshold time.Duration) (bool, error) {
 	certData, err := os.ReadFile(m.cfg.CertPath)
 	if err != nil {
 		return false, err
@@ -98,7 +98,7 @@ func (m *certificateManager) isCertificateValid(renewalThreshold time.Duration) 
 	return true, nil
 }
 
-func (m *certificateManager) requestAndWriteCertificate() error {
+func (m *CertificateManager) RequestAndWriteCertificate() error {
 	caCertPEM, err := m.requestCABundle()
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (m *certificateManager) requestAndWriteCertificate() error {
 	return nil
 }
 
-func (m *certificateManager) requestCABundle() ([]byte, error) {
+func (m *CertificateManager) requestCABundle() ([]byte, error) {
 	cm, err := m.k8sClientSet.CoreV1().ConfigMaps(configMapNamespace).Get(m.ctx, caBundleName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (m *certificateManager) requestCABundle() ([]byte, error) {
 
 	v, ok := cm.Data[caBundleName+".crt"]
 	if !ok {
-		err := errors.New("Tigera CA bundle key not found in ConfigMap")
+		err := errors.New("could not find Tigera CA bundle key in the ConfigMap")
 		return nil, err
 	}
 	return []byte(v), nil
