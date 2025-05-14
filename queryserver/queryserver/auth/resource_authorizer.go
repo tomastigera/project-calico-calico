@@ -205,7 +205,6 @@ func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 	authorizedResourceVerbs, err := auth.PerformAuthorizationReviewWithUser(user, cs, authReviewattributes)
 
 	if err != nil {
-		log.WithError(err).Error("Unable to perform authorization review.")
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
 			Msg:    "Unable to perform authorization review",

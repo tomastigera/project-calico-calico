@@ -2,8 +2,6 @@
 package k8s
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -12,10 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/authentication/user"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/server/filters"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -30,12 +25,6 @@ const (
 
 	// The tenant ID to include in the x-headers of the modified HTTP client.
 	XTenantIDHeader = "x-tenant-id"
-)
-
-var (
-	// ShortRequestTimeout is the time-out for short requests (i.e. normal
-	// get/list requests but not long-running requests like watches).
-	ShortRequestTimeout = 15 * time.Second
 )
 
 type ClientSetFactory interface {
@@ -125,12 +114,12 @@ func (f *clientSetFactory) NewRestConfigForApplication(clusterID string) *rest.C
 	if clusterID != "" && clusterID != DefaultCluster {
 		restConfig.Host = f.multiClusterForwardingEndpoint
 		restConfig.CAFile = f.multiClusterForwardingCA
-		restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
+		restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 			return &addHeaderRoundTripper{
 				headers: map[string][]string{XClusterIDHeader: {clusterID}},
 				rt:      rt,
 			}
-		})
+		}
 	}
 	return restConfig
 }
@@ -241,68 +230,6 @@ func MustGetConfig() *rest.Config {
 			log.WithError(err).Panic("Error processing kubeconfig file in environment variable KUBECONFIG")
 		}
 	}
-
-	// Automatically add a timeout to non-watch requests.
-	config.Wrap(wrapWithShortRequestTimeoutRoundTripper)
-
+	config.Timeout = 15 * time.Second
 	return config
-}
-
-func wrapWithShortRequestTimeoutRoundTripper(rt http.RoundTripper) http.RoundTripper {
-	// Piggy-back on the API server's logic for determining if a request is long-running.
-	resolver := &genericapirequest.RequestInfoFactory{
-		APIPrefixes:          sets.NewString("api", "apis"),
-		GrouplessAPIPrefixes: sets.NewString("api"),
-	}
-	longRunningFunc := filters.BasicLongRunningRequestCheck(
-		sets.NewString("watch", "proxy"),
-		sets.NewString("attach", "exec", "proxy", "log", "portforward"),
-	)
-	return &shortRequestTimeoutRoundTripper{
-		rt:                  rt,
-		resolver:            resolver,
-		longRunningFunc:     longRunningFunc,
-		shortRequestTimeout: ShortRequestTimeout,
-	}
-}
-
-// shortRequestTimeoutRoundTripper is a RoundTripper that sets a timeout for
-// "normal" requests, but allows long-running requests (such as watches) to
-// run with no timeout.
-type shortRequestTimeoutRoundTripper struct {
-	rt http.RoundTripper
-
-	shortRequestTimeout time.Duration
-
-	resolver        *genericapirequest.RequestInfoFactory
-	longRunningFunc genericapirequest.LongRunningRequestCheck
-}
-
-func (t *shortRequestTimeoutRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
-	reqInfo, err := t.resolver.NewRequestInfo(request)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request info: %w", err)
-	}
-	longRunning := t.longRunningFunc(request, reqInfo)
-	if longRunning {
-		log.Debugf("Long-running request, not setting timeout: %v", request.URL)
-	} else {
-		log.Debugf("Short request, setting timeout to %v: %v", t.shortRequestTimeout, request.URL)
-		parentCtx := request.Context()
-		ctx, cancel := context.WithTimeout(parentCtx, t.shortRequestTimeout)
-
-		// Important *not* to defer cancel() here because the context is
-		// supposed to outlive this function.  If we cancel the context, it
-		// closes the response body before the caller has read it.  We only
-		// want this context to be cancelled by its parent or the timeout.
-		_ = cancel
-
-		// Need to clone the request, we're not allowed to edit URL or context
-		// in place.
-		request = request.Clone(ctx)
-		query := request.URL.Query()
-		query.Set("timeout", t.shortRequestTimeout.String())
-		request.URL.RawQuery = query.Encode()
-	}
-	return t.rt.RoundTrip(request)
 }
