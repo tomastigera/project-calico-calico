@@ -77,6 +77,6 @@ func TestRequests(t *testing.T) {
 
 	testRequest(t, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "Sorry you've been WAF'ed!")
+		require.Contains(t, body, "deny (403)")
 	})
 }

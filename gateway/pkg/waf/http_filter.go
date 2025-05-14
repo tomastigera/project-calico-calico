@@ -216,7 +216,7 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 	logrus.Info("start Process()")
 
 	md, _ := metadata.FromIncomingContext(ctx)
-	logrus.Debug("gRPC context metadata: %v", md)
+	logrus.Debugf("gRPC context metadata: %v", md)
 
 	for {
 		select {
@@ -308,7 +308,7 @@ func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				},
 			}
 
-			logrus.Debugf("blockedByWAF is set to %b", blockedByWAF)
+			logrus.Debugf("blockedByWAF is set to %v", blockedByWAF)
 
 			if blockedByWAF {
 				resp.Response = &envoy_service_proc_v3.ProcessingResponse_ImmediateResponse{
