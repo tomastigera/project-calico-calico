@@ -697,6 +697,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			cc.controllerStates["ManagedCluster"] = &controllerState{
 				controller: managedcluster.New(
 					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
+						kubeconfig := restclient.CopyConfig(kubeconfig)
 						kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
 						kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
 						kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
@@ -733,6 +734,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			cc.controllerStates["ManagedClusterLicensing"] = &controllerState{
 				controller: managedcluster.New(
 					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
+						kubeconfig := restclient.CopyConfig(kubeconfig)
 						kubeconfig.Host = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingEndpoint
 						kubeconfig.CAFile = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingCA
 						kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
