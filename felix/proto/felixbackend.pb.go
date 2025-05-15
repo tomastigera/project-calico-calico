@@ -2966,9 +2966,10 @@ func (x *ServiceAccountMatch) GetNames() []string {
 }
 
 type HTTPMatch struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Methods       []string               `protobuf:"bytes,1,rep,name=methods,proto3" json:"methods,omitempty"`
-	Paths         []*HTTPMatch_PathMatch `protobuf:"bytes,2,rep,name=paths,proto3" json:"paths,omitempty"`
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Methods       []string                  `protobuf:"bytes,1,rep,name=methods,proto3" json:"methods,omitempty"`
+	Paths         []*HTTPMatch_PathMatch    `protobuf:"bytes,2,rep,name=paths,proto3" json:"paths,omitempty"`
+	Headers       []*HTTPMatch_HeadersMatch `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3013,6 +3014,13 @@ func (x *HTTPMatch) GetMethods() []string {
 func (x *HTTPMatch) GetPaths() []*HTTPMatch_PathMatch {
 	if x != nil {
 		return x.Paths
+	}
+	return nil
+}
+
+func (x *HTTPMatch) GetHeaders() []*HTTPMatch_HeadersMatch {
+	if x != nil {
+		return x.Headers
 	}
 	return nil
 }
@@ -8195,6 +8203,66 @@ func (*HTTPMatch_PathMatch_Exact) isHTTPMatch_PathMatch_PathMatch() {}
 
 func (*HTTPMatch_PathMatch_Prefix) isHTTPMatch_PathMatch_PathMatch() {}
 
+type HTTPMatch_HeadersMatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Header        string                 `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	Operator      string                 `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
+	Values        []string               `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HTTPMatch_HeadersMatch) Reset() {
+	*x = HTTPMatch_HeadersMatch{}
+	mi := &file_felixbackend_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HTTPMatch_HeadersMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HTTPMatch_HeadersMatch) ProtoMessage() {}
+
+func (x *HTTPMatch_HeadersMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_felixbackend_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HTTPMatch_HeadersMatch.ProtoReflect.Descriptor instead.
+func (*HTTPMatch_HeadersMatch) Descriptor() ([]byte, []int) {
+	return file_felixbackend_proto_rawDescGZIP(), []int{19, 1}
+}
+
+func (x *HTTPMatch_HeadersMatch) GetHeader() string {
+	if x != nil {
+		return x.Header
+	}
+	return ""
+}
+
+func (x *HTTPMatch_HeadersMatch) GetOperator() string {
+	if x != nil {
+		return x.Operator
+	}
+	return ""
+}
+
+func (x *HTTPMatch_HeadersMatch) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
 var File_felixbackend_proto protoreflect.FileDescriptor
 
 const file_felixbackend_proto_rawDesc = "" +
@@ -8385,15 +8453,20 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\bnot_icmp\"G\n" +
 	"\x13ServiceAccountMatch\x12\x1a\n" +
 	"\bselector\x18\x01 \x01(\tR\bselector\x12\x14\n" +
-	"\x05names\x18\x02 \x03(\tR\x05names\"\xa4\x01\n" +
+	"\x05names\x18\x02 \x03(\tR\x05names\"\xb9\x02\n" +
 	"\tHTTPMatch\x12\x18\n" +
 	"\amethods\x18\x01 \x03(\tR\amethods\x120\n" +
-	"\x05paths\x18\x02 \x03(\v2\x1a.felix.HTTPMatch.PathMatchR\x05paths\x1aK\n" +
+	"\x05paths\x18\x02 \x03(\v2\x1a.felix.HTTPMatch.PathMatchR\x05paths\x127\n" +
+	"\aheaders\x18\x03 \x03(\v2\x1d.felix.HTTPMatch.HeadersMatchR\aheaders\x1aK\n" +
 	"\tPathMatch\x12\x16\n" +
 	"\x05exact\x18\x01 \x01(\tH\x00R\x05exact\x12\x18\n" +
 	"\x06prefix\x18\x02 \x01(\tH\x00R\x06prefixB\f\n" +
 	"\n" +
-	"path_match\"\x96\x01\n" +
+	"path_match\x1aZ\n" +
+	"\fHeadersMatch\x12\x16\n" +
+	"\x06header\x18\x01 \x01(\tR\x06header\x12\x1a\n" +
+	"\boperator\x18\x02 \x01(\tR\boperator\x12\x16\n" +
+	"\x06values\x18\x03 \x03(\tR\x06values\"\x96\x01\n" +
 	"\fRuleMetadata\x12F\n" +
 	"\vannotations\x18\x01 \x03(\v2$.felix.RuleMetadata.AnnotationsEntryR\vannotations\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
@@ -8851,7 +8924,7 @@ func file_felixbackend_proto_rawDescGZIP() []byte {
 }
 
 var file_felixbackend_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
-var file_felixbackend_proto_msgTypes = make([]protoimpl.MessageInfo, 112)
+var file_felixbackend_proto_msgTypes = make([]protoimpl.MessageInfo, 113)
 var file_felixbackend_proto_goTypes = []any{
 	(IPVersion)(0),             // 0: felix.IPVersion
 	(RouteType)(0),             // 1: felix.RouteType
@@ -8969,13 +9042,14 @@ var file_felixbackend_proto_goTypes = []any{
 	nil,                                  // 113: felix.ConfigUpdate.SourceToRawConfigEntry
 	nil,                                  // 114: felix.RawConfig.ConfigEntry
 	(*HTTPMatch_PathMatch)(nil),          // 115: felix.HTTPMatch.PathMatch
-	nil,                                  // 116: felix.RuleMetadata.AnnotationsEntry
-	nil,                                  // 117: felix.WorkloadEndpoint.AnnotationsEntry
-	nil,                                  // 118: felix.HostMetadataV4V6Update.LabelsEntry
-	nil,                                  // 119: felix.ServiceAccountUpdate.LabelsEntry
-	nil,                                  // 120: felix.NamespaceUpdate.LabelsEntry
-	nil,                                  // 121: felix.HTTPRequest.HeadersEntry
-	(*timestamp.Timestamp)(nil),          // 122: google.protobuf.Timestamp
+	(*HTTPMatch_HeadersMatch)(nil),       // 116: felix.HTTPMatch.HeadersMatch
+	nil,                                  // 117: felix.RuleMetadata.AnnotationsEntry
+	nil,                                  // 118: felix.WorkloadEndpoint.AnnotationsEntry
+	nil,                                  // 119: felix.HostMetadataV4V6Update.LabelsEntry
+	nil,                                  // 120: felix.ServiceAccountUpdate.LabelsEntry
+	nil,                                  // 121: felix.NamespaceUpdate.LabelsEntry
+	nil,                                  // 122: felix.HTTPRequest.HeadersEntry
+	(*timestamp.Timestamp)(nil),          // 123: google.protobuf.Timestamp
 }
 var file_felixbackend_proto_depIdxs = []int32{
 	15,  // 0: felix.ToDataplane.in_sync:type_name -> felix.InSync
@@ -9063,89 +9137,90 @@ var file_felixbackend_proto_depIdxs = []int32{
 	29,  // 82: felix.Rule.http_match:type_name -> felix.HTTPMatch
 	30,  // 83: felix.Rule.metadata:type_name -> felix.RuleMetadata
 	115, // 84: felix.HTTPMatch.paths:type_name -> felix.HTTPMatch.PathMatch
-	116, // 85: felix.RuleMetadata.annotations:type_name -> felix.RuleMetadata.AnnotationsEntry
-	34,  // 86: felix.WorkloadEndpointUpdate.id:type_name -> felix.WorkloadEndpointID
-	37,  // 87: felix.WorkloadEndpointUpdate.endpoint:type_name -> felix.WorkloadEndpoint
-	45,  // 88: felix.WorkloadEndpoint.tiers:type_name -> felix.TierInfo
-	46,  // 89: felix.WorkloadEndpoint.ipv4_nat:type_name -> felix.NatInfo
-	46,  // 90: felix.WorkloadEndpoint.ipv6_nat:type_name -> felix.NatInfo
-	36,  // 91: felix.WorkloadEndpoint.egress_gateway_rules:type_name -> felix.EgressGatewayRule
-	117, // 92: felix.WorkloadEndpoint.annotations:type_name -> felix.WorkloadEndpoint.AnnotationsEntry
-	47,  // 93: felix.WorkloadEndpoint.application_layer:type_name -> felix.ApplicationLayer
-	38,  // 94: felix.WorkloadEndpoint.qos_controls:type_name -> felix.QoSControls
-	39,  // 95: felix.WorkloadEndpoint.local_bgp_peer:type_name -> felix.LocalBGPPeer
-	34,  // 96: felix.WorkloadEndpointRemove.id:type_name -> felix.WorkloadEndpointID
-	41,  // 97: felix.HostEndpointUpdate.id:type_name -> felix.HostEndpointID
-	43,  // 98: felix.HostEndpointUpdate.endpoint:type_name -> felix.HostEndpoint
-	45,  // 99: felix.HostEndpoint.tiers:type_name -> felix.TierInfo
-	45,  // 100: felix.HostEndpoint.untracked_tiers:type_name -> felix.TierInfo
-	45,  // 101: felix.HostEndpoint.pre_dnat_tiers:type_name -> felix.TierInfo
-	45,  // 102: felix.HostEndpoint.forward_tiers:type_name -> felix.TierInfo
-	41,  // 103: felix.HostEndpointRemove.id:type_name -> felix.HostEndpointID
-	41,  // 104: felix.HostEndpointStatusUpdate.id:type_name -> felix.HostEndpointID
-	50,  // 105: felix.HostEndpointStatusUpdate.status:type_name -> felix.EndpointStatus
-	41,  // 106: felix.HostEndpointStatusRemove.id:type_name -> felix.HostEndpointID
-	34,  // 107: felix.WorkloadEndpointStatusUpdate.id:type_name -> felix.WorkloadEndpointID
-	50,  // 108: felix.WorkloadEndpointStatusUpdate.status:type_name -> felix.EndpointStatus
-	37,  // 109: felix.WorkloadEndpointStatusUpdate.endpoint:type_name -> felix.WorkloadEndpoint
-	34,  // 110: felix.WorkloadEndpointStatusRemove.id:type_name -> felix.WorkloadEndpointID
-	0,   // 111: felix.WireguardStatusUpdate.ip_version:type_name -> felix.IPVersion
-	118, // 112: felix.HostMetadataV4V6Update.labels:type_name -> felix.HostMetadataV4V6Update.LabelsEntry
-	69,  // 113: felix.IPAMPoolUpdate.pool:type_name -> felix.IPAMPool
-	73,  // 114: felix.ServiceAccountUpdate.id:type_name -> felix.ServiceAccountID
-	119, // 115: felix.ServiceAccountUpdate.labels:type_name -> felix.ServiceAccountUpdate.LabelsEntry
-	73,  // 116: felix.ServiceAccountRemove.id:type_name -> felix.ServiceAccountID
-	76,  // 117: felix.NamespaceUpdate.id:type_name -> felix.NamespaceID
-	120, // 118: felix.NamespaceUpdate.labels:type_name -> felix.NamespaceUpdate.LabelsEntry
-	76,  // 119: felix.NamespaceRemove.id:type_name -> felix.NamespaceID
-	1,   // 120: felix.RouteUpdate.types:type_name -> felix.RouteType
-	2,   // 121: felix.RouteUpdate.ip_pool_type:type_name -> felix.IPPoolType
-	77,  // 122: felix.RouteUpdate.tunnel_type:type_name -> felix.TunnelType
-	32,  // 123: felix.DataplaneStats.protocol:type_name -> felix.Protocol
-	84,  // 124: felix.DataplaneStats.stats:type_name -> felix.Statistic
-	85,  // 125: felix.DataplaneStats.rules:type_name -> felix.RuleTrace
-	3,   // 126: felix.DataplaneStats.action:type_name -> felix.Action
-	86,  // 127: felix.DataplaneStats.http_data:type_name -> felix.HTTPData
-	5,   // 128: felix.Statistic.direction:type_name -> felix.Statistic.Direction
-	6,   // 129: felix.Statistic.relativity:type_name -> felix.Statistic.Relativity
-	7,   // 130: felix.Statistic.kind:type_name -> felix.Statistic.Kind
-	3,   // 131: felix.Statistic.action:type_name -> felix.Action
-	25,  // 132: felix.RuleTrace.policy:type_name -> felix.PolicyID
-	21,  // 133: felix.RuleTrace.profile:type_name -> felix.ProfileID
-	8,   // 134: felix.RuleTrace.direction:type_name -> felix.RuleTrace.Direction
-	94,  // 135: felix.PacketCaptureUpdate.id:type_name -> felix.PacketCaptureID
-	34,  // 136: felix.PacketCaptureUpdate.endpoint:type_name -> felix.WorkloadEndpointID
-	96,  // 137: felix.PacketCaptureUpdate.specification:type_name -> felix.PacketCaptureSpecification
-	94,  // 138: felix.PacketCaptureRemove.id:type_name -> felix.PacketCaptureID
-	34,  // 139: felix.PacketCaptureRemove.endpoint:type_name -> felix.WorkloadEndpointID
-	94,  // 140: felix.PacketCaptureStatusUpdate.id:type_name -> felix.PacketCaptureID
-	9,   // 141: felix.PacketCaptureStatusUpdate.state:type_name -> felix.PacketCaptureStatusUpdate.PacketCaptureState
-	122, // 142: felix.PacketCaptureSpecification.start_time:type_name -> google.protobuf.Timestamp
-	122, // 143: felix.PacketCaptureSpecification.end_time:type_name -> google.protobuf.Timestamp
-	122, // 144: felix.EgressPodStatusUpdate.maintenance_started:type_name -> google.protobuf.Timestamp
-	122, // 145: felix.EgressPodStatusUpdate.maintenance_finished:type_name -> google.protobuf.Timestamp
-	98,  // 146: felix.ServiceUpdate.ports:type_name -> felix.ServicePort
-	101, // 147: felix.ExternalNetworkUpdate.id:type_name -> felix.ExternalNetworkID
-	102, // 148: felix.ExternalNetworkUpdate.network:type_name -> felix.ExternalNetwork
-	101, // 149: felix.ExternalNetworkRemove.id:type_name -> felix.ExternalNetworkID
-	69,  // 150: felix.RemoteIPAMPoolUpdate.pool:type_name -> felix.IPAMPool
-	109, // 151: felix.WAFEvent.rules:type_name -> felix.WAFRuleHit
-	110, // 152: felix.WAFEvent.request:type_name -> felix.HTTPRequest
-	122, // 153: felix.WAFEvent.timestamp:type_name -> google.protobuf.Timestamp
-	108, // 154: felix.WAFRuleHit.rule:type_name -> felix.WAFRule
-	121, // 155: felix.HTTPRequest.headers:type_name -> felix.HTTPRequest.HeadersEntry
-	14,  // 156: felix.ConfigUpdate.SourceToRawConfigEntry.value:type_name -> felix.RawConfig
-	10,  // 157: felix.PolicySync.Sync:input_type -> felix.SyncRequest
-	83,  // 158: felix.PolicySync.Report:input_type -> felix.DataplaneStats
-	107, // 159: felix.PolicySync.ReportWAF:input_type -> felix.WAFEvent
-	11,  // 160: felix.PolicySync.Sync:output_type -> felix.ToDataplane
-	82,  // 161: felix.PolicySync.Report:output_type -> felix.ReportResult
-	111, // 162: felix.PolicySync.ReportWAF:output_type -> felix.WAFEventResult
-	160, // [160:163] is the sub-list for method output_type
-	157, // [157:160] is the sub-list for method input_type
-	157, // [157:157] is the sub-list for extension type_name
-	157, // [157:157] is the sub-list for extension extendee
-	0,   // [0:157] is the sub-list for field type_name
+	116, // 85: felix.HTTPMatch.headers:type_name -> felix.HTTPMatch.HeadersMatch
+	117, // 86: felix.RuleMetadata.annotations:type_name -> felix.RuleMetadata.AnnotationsEntry
+	34,  // 87: felix.WorkloadEndpointUpdate.id:type_name -> felix.WorkloadEndpointID
+	37,  // 88: felix.WorkloadEndpointUpdate.endpoint:type_name -> felix.WorkloadEndpoint
+	45,  // 89: felix.WorkloadEndpoint.tiers:type_name -> felix.TierInfo
+	46,  // 90: felix.WorkloadEndpoint.ipv4_nat:type_name -> felix.NatInfo
+	46,  // 91: felix.WorkloadEndpoint.ipv6_nat:type_name -> felix.NatInfo
+	36,  // 92: felix.WorkloadEndpoint.egress_gateway_rules:type_name -> felix.EgressGatewayRule
+	118, // 93: felix.WorkloadEndpoint.annotations:type_name -> felix.WorkloadEndpoint.AnnotationsEntry
+	47,  // 94: felix.WorkloadEndpoint.application_layer:type_name -> felix.ApplicationLayer
+	38,  // 95: felix.WorkloadEndpoint.qos_controls:type_name -> felix.QoSControls
+	39,  // 96: felix.WorkloadEndpoint.local_bgp_peer:type_name -> felix.LocalBGPPeer
+	34,  // 97: felix.WorkloadEndpointRemove.id:type_name -> felix.WorkloadEndpointID
+	41,  // 98: felix.HostEndpointUpdate.id:type_name -> felix.HostEndpointID
+	43,  // 99: felix.HostEndpointUpdate.endpoint:type_name -> felix.HostEndpoint
+	45,  // 100: felix.HostEndpoint.tiers:type_name -> felix.TierInfo
+	45,  // 101: felix.HostEndpoint.untracked_tiers:type_name -> felix.TierInfo
+	45,  // 102: felix.HostEndpoint.pre_dnat_tiers:type_name -> felix.TierInfo
+	45,  // 103: felix.HostEndpoint.forward_tiers:type_name -> felix.TierInfo
+	41,  // 104: felix.HostEndpointRemove.id:type_name -> felix.HostEndpointID
+	41,  // 105: felix.HostEndpointStatusUpdate.id:type_name -> felix.HostEndpointID
+	50,  // 106: felix.HostEndpointStatusUpdate.status:type_name -> felix.EndpointStatus
+	41,  // 107: felix.HostEndpointStatusRemove.id:type_name -> felix.HostEndpointID
+	34,  // 108: felix.WorkloadEndpointStatusUpdate.id:type_name -> felix.WorkloadEndpointID
+	50,  // 109: felix.WorkloadEndpointStatusUpdate.status:type_name -> felix.EndpointStatus
+	37,  // 110: felix.WorkloadEndpointStatusUpdate.endpoint:type_name -> felix.WorkloadEndpoint
+	34,  // 111: felix.WorkloadEndpointStatusRemove.id:type_name -> felix.WorkloadEndpointID
+	0,   // 112: felix.WireguardStatusUpdate.ip_version:type_name -> felix.IPVersion
+	119, // 113: felix.HostMetadataV4V6Update.labels:type_name -> felix.HostMetadataV4V6Update.LabelsEntry
+	69,  // 114: felix.IPAMPoolUpdate.pool:type_name -> felix.IPAMPool
+	73,  // 115: felix.ServiceAccountUpdate.id:type_name -> felix.ServiceAccountID
+	120, // 116: felix.ServiceAccountUpdate.labels:type_name -> felix.ServiceAccountUpdate.LabelsEntry
+	73,  // 117: felix.ServiceAccountRemove.id:type_name -> felix.ServiceAccountID
+	76,  // 118: felix.NamespaceUpdate.id:type_name -> felix.NamespaceID
+	121, // 119: felix.NamespaceUpdate.labels:type_name -> felix.NamespaceUpdate.LabelsEntry
+	76,  // 120: felix.NamespaceRemove.id:type_name -> felix.NamespaceID
+	1,   // 121: felix.RouteUpdate.types:type_name -> felix.RouteType
+	2,   // 122: felix.RouteUpdate.ip_pool_type:type_name -> felix.IPPoolType
+	77,  // 123: felix.RouteUpdate.tunnel_type:type_name -> felix.TunnelType
+	32,  // 124: felix.DataplaneStats.protocol:type_name -> felix.Protocol
+	84,  // 125: felix.DataplaneStats.stats:type_name -> felix.Statistic
+	85,  // 126: felix.DataplaneStats.rules:type_name -> felix.RuleTrace
+	3,   // 127: felix.DataplaneStats.action:type_name -> felix.Action
+	86,  // 128: felix.DataplaneStats.http_data:type_name -> felix.HTTPData
+	5,   // 129: felix.Statistic.direction:type_name -> felix.Statistic.Direction
+	6,   // 130: felix.Statistic.relativity:type_name -> felix.Statistic.Relativity
+	7,   // 131: felix.Statistic.kind:type_name -> felix.Statistic.Kind
+	3,   // 132: felix.Statistic.action:type_name -> felix.Action
+	25,  // 133: felix.RuleTrace.policy:type_name -> felix.PolicyID
+	21,  // 134: felix.RuleTrace.profile:type_name -> felix.ProfileID
+	8,   // 135: felix.RuleTrace.direction:type_name -> felix.RuleTrace.Direction
+	94,  // 136: felix.PacketCaptureUpdate.id:type_name -> felix.PacketCaptureID
+	34,  // 137: felix.PacketCaptureUpdate.endpoint:type_name -> felix.WorkloadEndpointID
+	96,  // 138: felix.PacketCaptureUpdate.specification:type_name -> felix.PacketCaptureSpecification
+	94,  // 139: felix.PacketCaptureRemove.id:type_name -> felix.PacketCaptureID
+	34,  // 140: felix.PacketCaptureRemove.endpoint:type_name -> felix.WorkloadEndpointID
+	94,  // 141: felix.PacketCaptureStatusUpdate.id:type_name -> felix.PacketCaptureID
+	9,   // 142: felix.PacketCaptureStatusUpdate.state:type_name -> felix.PacketCaptureStatusUpdate.PacketCaptureState
+	123, // 143: felix.PacketCaptureSpecification.start_time:type_name -> google.protobuf.Timestamp
+	123, // 144: felix.PacketCaptureSpecification.end_time:type_name -> google.protobuf.Timestamp
+	123, // 145: felix.EgressPodStatusUpdate.maintenance_started:type_name -> google.protobuf.Timestamp
+	123, // 146: felix.EgressPodStatusUpdate.maintenance_finished:type_name -> google.protobuf.Timestamp
+	98,  // 147: felix.ServiceUpdate.ports:type_name -> felix.ServicePort
+	101, // 148: felix.ExternalNetworkUpdate.id:type_name -> felix.ExternalNetworkID
+	102, // 149: felix.ExternalNetworkUpdate.network:type_name -> felix.ExternalNetwork
+	101, // 150: felix.ExternalNetworkRemove.id:type_name -> felix.ExternalNetworkID
+	69,  // 151: felix.RemoteIPAMPoolUpdate.pool:type_name -> felix.IPAMPool
+	109, // 152: felix.WAFEvent.rules:type_name -> felix.WAFRuleHit
+	110, // 153: felix.WAFEvent.request:type_name -> felix.HTTPRequest
+	123, // 154: felix.WAFEvent.timestamp:type_name -> google.protobuf.Timestamp
+	108, // 155: felix.WAFRuleHit.rule:type_name -> felix.WAFRule
+	122, // 156: felix.HTTPRequest.headers:type_name -> felix.HTTPRequest.HeadersEntry
+	14,  // 157: felix.ConfigUpdate.SourceToRawConfigEntry.value:type_name -> felix.RawConfig
+	10,  // 158: felix.PolicySync.Sync:input_type -> felix.SyncRequest
+	83,  // 159: felix.PolicySync.Report:input_type -> felix.DataplaneStats
+	107, // 160: felix.PolicySync.ReportWAF:input_type -> felix.WAFEvent
+	11,  // 161: felix.PolicySync.Sync:output_type -> felix.ToDataplane
+	82,  // 162: felix.PolicySync.Report:output_type -> felix.ReportResult
+	111, // 163: felix.PolicySync.ReportWAF:output_type -> felix.WAFEventResult
+	161, // [161:164] is the sub-list for method output_type
+	158, // [158:161] is the sub-list for method input_type
+	158, // [158:158] is the sub-list for extension type_name
+	158, // [158:158] is the sub-list for extension extendee
+	0,   // [0:158] is the sub-list for field type_name
 }
 
 func init() { file_felixbackend_proto_init() }
@@ -9239,7 +9314,7 @@ func file_felixbackend_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_felixbackend_proto_rawDesc), len(file_felixbackend_proto_rawDesc)),
 			NumEnums:      10,
-			NumMessages:   112,
+			NumMessages:   113,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
