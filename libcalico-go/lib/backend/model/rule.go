@@ -91,8 +91,9 @@ type Rule struct {
 }
 
 type HTTPMatch struct {
-	Methods []string         `json:"methods,omitempty" validate:"omitempty"`
-	Paths   []apiv3.HTTPPath `json:"paths,omitempty" validate:"omitempty"`
+	Methods []string                   `json:"methods,omitempty" validate:"omitempty"`
+	Paths   []apiv3.HTTPPath           `json:"paths,omitempty" validate:"omitempty"`
+	Headers []apiv3.HTTPHeaderCriteria `json:"headers,omitempty" validate:"omitempty"`
 }
 
 type RuleMetadata struct {
