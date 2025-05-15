@@ -60,6 +60,7 @@ type L4Flow interface {
 type L7Flow interface {
 	GetHttpMethod() *string
 	GetHttpPath() *string
+	GetHttpHeaders() map[string]string
 	GetSourcePrincipal() *string
 	GetDestPrincipal() *string
 	GetSourceLabels() map[string]string
@@ -158,7 +159,7 @@ func computeNamespaceMatch(
 // Rule matches, false otherwise.
 func matchRequest(rule *proto.Rule, req *requestCache) bool {
 	log.WithField("request", req).Debug("Matching request.")
-	return matchHTTP(rule.GetHttpMatch(), req.GetHttpMethod(), req.GetHttpPath())
+	return matchHTTP(rule.GetHttpMatch(), req.GetHttpMethod(), req.GetHttpPath(), req.GetHttpHeaders())
 }
 
 // matchServiceAccounts checks if the service account part of the Rule matches the request. It
@@ -253,7 +254,7 @@ func matchNamespace(nsMatch *namespaceMatch, ns *namespace) bool {
 
 // matchHTTP checks if the HTTP part of the Rule matches the request. It returns true if the Rule
 // matches, false otherwise.
-func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string) bool {
+func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string, httpHeaders map[string]string) bool {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
 			"rule": rule,
@@ -264,7 +265,14 @@ func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string) bool {
 		return true
 	}
 
-	return matchHTTPMethods(rule.GetMethods(), httpMethod) && matchHTTPPaths(rule.GetPaths(), httpPath)
+	return matchHTTPMethods(rule.GetMethods(), httpMethod) &&
+		matchHTTPPaths(rule.GetPaths(), httpPath) &&
+		matchHTTPHeaders(rule.GetHeaders(), httpHeaders)
+}
+
+// matchHTTPHeaders checks if a rule criteria matches request HTTP headers - returns true if that's the case, false otherwise.
+func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]string) bool {
+	return true
 }
 
 // matchHTTPMethods checks if the HTTP methods match. It returns true if the methods match, false

@@ -146,7 +146,7 @@ func TestMatchHTTPPaths(t *testing.T) {
 func TestMatchHTTPNil(t *testing.T) {
 	RegisterTestingT(t)
 
-	Expect(matchHTTP(nil, nil, nil)).To(BeTrue())
+	Expect(matchHTTP(nil, nil, nil, nil)).To(BeTrue())
 }
 
 // Test HTTPPaths panic on invalid data.
