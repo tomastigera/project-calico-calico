@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -39,6 +41,14 @@ func NewLabelUpdater(ctx context.Context) (*LabelUpdater, error) {
 	}, nil
 }
 
+// UpdateLabels adds standardized labels to all HostEndpoints on this node.
+//
+// Applies the NonClusterHost endpoint type classification and standard
+// Kubernetes node metadata labels (arch, os, hostname) to enable consistent
+// endpoint selection in policies and reporting.
+//
+// Returns nil on success or if no updates were needed.
+// Returns error if hostname can't be determined, endpoints can't be listed.
 func (lu *LabelUpdater) UpdateLabels() error {
 	hostname, err := names.Hostname()
 	if err != nil {
@@ -53,6 +63,13 @@ func (lu *LabelUpdater) UpdateLabels() error {
 		return err
 	}
 
+	backoff := wait.Backoff{
+		Duration: 100 * time.Millisecond,
+		Factor:   2.0,
+		Jitter:   0.1,
+		Steps:    3,
+	}
+
 	for _, hep := range hepList.Items {
 		// Update the labels to include the new host endpoint type
 		hep.Labels[names.HostEndpointTypeLabelKey] = string(names.HostEndpointTypeNonClusterHost)
@@ -62,9 +79,14 @@ func (lu *LabelUpdater) UpdateLabels() error {
 		hep.Labels["kubernetes.io/hostname"] = hostname
 		hep.Labels["kubernetes.io/os"] = runtime.GOOS
 
-		_, err := lu.calicoClientSet.ProjectcalicoV3().HostEndpoints().Update(lu.ctx, &hep, metav1.UpdateOptions{})
-		if err != nil {
-			logrus.WithError(err).WithField("hep", hep.Name).Warn("Failed to update non-cluster host labels")
+		if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+			if _, err := lu.calicoClientSet.ProjectcalicoV3().HostEndpoints().Update(lu.ctx, &hep, metav1.UpdateOptions{}); err != nil {
+				logrus.WithError(err).WithField("hep", hep.Name).Warn("failed to update HostEndpoint labels; will retry...")
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			return fmt.Errorf("failed to update HostEndpoint labels for %s: %w", hep.Name, err)
 		}
 	}
 	return nil
