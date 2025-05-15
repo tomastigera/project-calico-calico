@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/labelselector"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -83,9 +84,9 @@ var _ = Describe("label selector checks", func() {
 
 		By("Adding a matching selector/label")
 		t.l.UpdateSelector(policyID, "thing == 'yes'")
-		t.l.UpdateLabels(podID, map[string]string{
+		t.l.UpdateLabels(podID, uniquelabels.Make(map[string]string{
 			"thing": "yes",
-		}, nil)
+		}), nil)
 		Expect(t.policies.Equals(policySet)).To(BeTrue())
 		Expect(t.pods.Equals(podSet)).To(BeTrue())
 
@@ -103,16 +104,16 @@ var _ = Describe("label selector checks", func() {
 
 		By("Adding a matching selector/label")
 		t.l.UpdateSelector(policyID, "thing == 'boo'")
-		t.l.UpdateLabels(podID, map[string]string{
+		t.l.UpdateLabels(podID, uniquelabels.Make(map[string]string{
 			"thing": "boo",
-		}, nil)
+		}), nil)
 		Expect(t.policies.Len()).To(BeZero())
 		Expect(t.pods.Equals(podSet)).To(BeTrue())
 
 		By("Removing the match")
-		t.l.UpdateLabels(podID, map[string]string{
+		t.l.UpdateLabels(podID, uniquelabels.Make(map[string]string{
 			"thing": "foo",
-		}, nil)
+		}), nil)
 		Expect(t.policies.Len()).To(BeZero())
 		Expect(t.pods.Len()).To(BeZero())
 	})
@@ -125,16 +126,16 @@ var _ = Describe("label selector checks", func() {
 
 		By("Adding a matching selector/label")
 		t.l.UpdateSelector(policyID, "thing == 'boo'")
-		t.l.UpdateLabels(podID, map[string]string{
+		t.l.UpdateLabels(podID, uniquelabels.Make(map[string]string{
 			"thing": "boo",
-		}, nil)
+		}), nil)
 		Expect(t.policies.Equals(policySet)).To(BeTrue())
 		Expect(t.pods.Len()).To(BeZero())
 
 		By("Removing the match")
-		t.l.UpdateLabels(podID, map[string]string{
+		t.l.UpdateLabels(podID, uniquelabels.Make(map[string]string{
 			"thing": "foo",
-		}, nil)
+		}), nil)
 		Expect(t.policies.Len()).To(BeZero())
 		Expect(t.pods.Len()).To(BeZero())
 	})
@@ -151,12 +152,12 @@ var _ = Describe("label selector checks", func() {
 		t.l.UpdateParentLabels("parent", map[string]string{
 			"thing": "boo",
 		})
-		t.l.UpdateLabels(podID, nil, []string{"parent"})
+		t.l.UpdateLabels(podID, uniquelabels.Nil, []string{"parent"})
 		Expect(t.policies.Equals(policySet)).To(BeTrue())
 		Expect(t.pods.Equals(podSet)).To(BeTrue())
 
 		By("Removing the parent")
-		t.l.UpdateLabels(podID, nil, []string{"afakeparent"})
+		t.l.UpdateLabels(podID, uniquelabels.Nil, []string{"afakeparent"})
 		Expect(t.policies.Len()).To(BeZero())
 		Expect(t.pods.Len()).To(BeZero())
 	})

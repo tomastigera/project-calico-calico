@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
 	felixtypes "github.com/projectcalico/calico/felix/types"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	calinet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -543,11 +544,11 @@ var remoteWlEp1 = WorkloadEndpoint{
 	Mac:      mustParseMac("01:02:03:04:05:06"),
 	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"), mustParseNet("10.1.0.2/32")},
 	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"), mustParseNet("fe80:fe11::2/128")},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
 		"y":  "y",
-	},
+	}),
 }
 
 var remoteWlEp1NoIpv6 = WorkloadEndpoint{
@@ -558,11 +559,11 @@ var remoteWlEp1NoIpv6 = WorkloadEndpoint{
 		mustParseNet("10.1.0.1/32"),
 		mustParseNet("10.1.0.2/32"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
 		"y":  "y",
-	},
+	}),
 }
 
 var remoteWlEp1UpdatedLabels = WorkloadEndpoint{
@@ -577,12 +578,12 @@ var remoteWlEp1UpdatedLabels = WorkloadEndpoint{
 		mustParseNet("fe80:fe11::1/128"),
 		mustParseNet("fe80:fe11::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
 		"y":  "y",
 		"z":  "z",
-	},
+	}),
 }
 
 var remoteWlEp3 = WorkloadEndpoint{
@@ -597,11 +598,11 @@ var remoteWlEp3 = WorkloadEndpoint{
 		mustParseNet("fe80:fe22::1/128"),
 		mustParseNet("fe80:fe22::2/128"),
 	},
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"id": "rem-ep-2",
 		"x":  "x",
 		"y":  "y",
-	},
+	}),
 }
 
 var remoteWlEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
@@ -1034,28 +1035,28 @@ var (
 	gatewayEndpoint = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 		ProfileIDs: []string{"egress"},
 	}
 	gatewayEndpoint2 = &WorkloadEndpoint{
 		Name:     "gw2",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.2/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 		ProfileIDs: []string{"egress"},
 	}
 	gatewayEndpoint3 = &WorkloadEndpoint{
 		Name:     "gw3",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.10/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "not-sure",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 		ProfileIDs: []string{"egress"},
 	}
 	egressGatewayPolicy1    = "egw-policy1"
@@ -2041,19 +2042,19 @@ var (
 	activeGatewayEndpoint = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 	}
 
 	activeGatewayEndpointWithPort = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 		Ports: []EndpointPort{
 			{Name: "something", Port: 9090, Protocol: numorstring.ProtocolFromStringV1("tcp")},
 			{Name: "health", Port: 8080, Protocol: numorstring.ProtocolFromStringV1("tcp")},
@@ -2063,10 +2064,10 @@ var (
 	terminatingGatewayEndpoint = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
-		},
+		}),
 		DeletionTimestamp:          inSixtySecsTime,
 		DeletionGracePeriodSeconds: 60,
 	}

@@ -9,6 +9,8 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
+	"github.com/projectcalico/calico/lib/std/uniquestr"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -125,7 +127,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 }
 
 // GetLinseedFlowLabels extracts the flow endpoint labels from the composite aggregation key.
-func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
+func GetLinseedFlowLabels(labels []lapi.FlowLabels) uniquelabels.Map {
 	// Find the most frequently seen label value.
 	l := make(map[string]string)
 	for _, labelKey := range labels {
@@ -138,7 +140,7 @@ func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
 		}
 		l[labelKey.Key] = val
 	}
-	return l
+	return uniquelabels.Make(l)
 }
 
 // getIPs will extract net.IP from raw string
@@ -233,7 +235,7 @@ type FlowEndpointData struct {
 	Namespace string
 
 	// Labels - only relevant for Calico endpoints.
-	Labels map[string]string
+	Labels uniquelabels.Map
 
 	// IPs, or no data if unknown.
 	IPs []net.IP
@@ -278,21 +280,22 @@ func (e *FlowEndpointData) IsLabelledEndpoint() bool {
 	}
 }
 
+var (
+	labelNamespace = uniquestr.Make(apiv3.LabelNamespace)
+	labelOrch      = uniquestr.Make(apiv3.LabelOrchestrator)
+)
+
 // Implement the label Get method for use with the selector processing. This allows us to inject additional labels
 // without having to update the dictionary.
-func (e *FlowEndpointData) Get(labelName string) (value string, present bool) {
+func (e *FlowEndpointData) GetHandle(labelName uniquestr.Handle) (handle uniquestr.Handle, present bool) {
 	switch labelName {
-	case apiv3.LabelNamespace:
-		return e.Namespace, e.Namespace != ""
-	case apiv3.LabelOrchestrator:
-		return apiv3.OrchestratorKubernetes, e.Namespace != ""
+	case labelNamespace:
+		return uniquestr.Make(e.Namespace), e.Namespace != ""
+	case labelOrch:
+		return uniquestr.Make(apiv3.OrchestratorKubernetes), e.Namespace != ""
 	default:
-		if e.Labels != nil {
-			val, ok := e.Labels[labelName]
-			return val, ok
-		}
+		return e.Labels.GetHandle(labelName)
 	}
-	return "", false
 }
 
 // EndpointNamedPort encapsulates details about a named port on an endpoint.

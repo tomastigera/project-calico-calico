@@ -114,20 +114,51 @@ func WithAuthenticator(issuer string, authenticator Authenticator) JWTAuthOption
 // WithTokenReviewCacheTTL adds caching to TokenReview requests that are used for authenticating Service Accounts
 func WithTokenReviewCacheTTL(ctx context.Context, ttl time.Duration) JWTAuthOption {
 	return func(c *jwtAuthConfig) error {
-		if ttl > 0 {
-			if ttl > TokenReviewCacheMaxTTL {
-				return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", ttl, TokenReviewCacheMaxTTL)
-			}
-			expiringCache, err := cache.NewExpiring[string, authnv1.TokenReviewStatus](cache.ExpiringConfig{
-				Context: ctx,
-				Name:    "lma-token-reviewer",
-				TTL:     ttl,
-			})
-			if err != nil {
-				return err
-			}
-			c.tokenReviewer = newCachingTokenReviewer(expiringCache, c.tokenReviewer)
+		if ttl <= 0 {
+			return nil
+		} else if ttl > TokenReviewCacheMaxTTL {
+			return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", ttl, TokenReviewCacheMaxTTL)
+		} else if c.tokenReviewCacheTTL > 0 {
+			return fmt.Errorf("caching for TokenReview requests is already enabled with TTL of %v", c.tokenReviewCacheTTL)
 		}
+
+		expiringCache, err := cache.NewExpiring[string, authnv1.TokenReviewStatus](cache.ExpiringConfig{
+			Context: ctx,
+			Name:    "lma-token-reviewer",
+			TTL:     ttl,
+		})
+		if err != nil {
+			return err
+		}
+		c.tokenReviewer = newCachingTokenReviewer(expiringCache, c.tokenReviewer)
+		c.tokenReviewCacheTTL = ttl
+		return nil
+	}
+}
+
+// WithAuthzCacheTTL enables caching for Authorize() requests when ttl > 0 up to a maximum of AuthzCacheMaxTTL.
+func WithAuthzCacheTTL(ctx context.Context, ttl time.Duration) JWTAuthOption {
+	return func(c *jwtAuthConfig) error {
+		if ttl <= 0 {
+			return nil
+		} else if ttl > AuthzCacheMaxTTL {
+			return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", ttl, AuthzCacheMaxTTL)
+		} else if c.authzCacheTTL > 0 {
+			return fmt.Errorf("caching for Authorize() requests is already enabled with TTL of %v", c.authzCacheTTL)
+		}
+
+		expiringCache, err := cache.NewExpiring[string, bool](cache.ExpiringConfig{
+			Context: ctx,
+			Name:    "lma-authz-cache",
+			TTL:     ttl,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create authz cache: %v", err)
+		}
+		c.authorizer = NewCachingAuthorizer(expiringCache, c.authorizer)
+		c.authzCacheTTL = ttl
+		log.Infof("lma-authz-cache is enabled for jwtAuth.Authorize() requests with TTL of %v", ttl)
+
 		return nil
 	}
 }
@@ -153,6 +184,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 	cfg := &jwtAuthConfig{
 		authenticators: map[string]Authenticator{},
 		tokenReviewer:  newK8sTokenReviewer(k8sCli),
+		authorizer:     NewRBACAuthorizer(k8sCli),
 	}
 	for _, opt := range options {
 		err := opt(cfg)
@@ -170,7 +202,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 			// This user is used for tokens from impersonating users.
 			k8sIss: authn,
 		},
-		RBACAuthorizer: NewRBACAuthorizer(k8sCli),
+		RBACAuthorizer: cfg.authorizer,
 	}
 	for k, v := range cfg.authenticators {
 		jAuth.authenticators[k] = v
@@ -187,6 +219,11 @@ type jwtAuth struct {
 type jwtAuthConfig struct {
 	authenticators map[string]Authenticator
 	tokenReviewer  tokenReviewer
+	authorizer     RBACAuthorizer
+
+	// these values are stored to ensure their WithXXX functions are not run more than once
+	tokenReviewCacheTTL time.Duration
+	authzCacheTTL       time.Duration
 }
 
 // Authenticate checks if a request is authenticated. It accepts only JWT bearer tokens.

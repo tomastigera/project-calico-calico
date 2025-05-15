@@ -11,6 +11,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/calc/capture"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
@@ -19,30 +20,30 @@ var Wep2Key = model.WorkloadEndpointKey{WorkloadID: "wep2"}
 var WepWithProfileKey = model.WorkloadEndpointKey{WorkloadID: "wep-profile"}
 var Wep1Value = &model.WorkloadEndpoint{
 	Name: "wep1",
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"label":                       "a",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 }
 var Wep1UpdatedValue = &model.WorkloadEndpoint{
 	Name: "wep1",
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"label":                       "c",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 }
 var Wep2Value = &model.WorkloadEndpoint{
 	Name: "wep2",
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"label":                       "b",
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 }
 var WepWithProfileValue = &model.WorkloadEndpoint{
 	Name: "wep-profile",
-	Labels: map[string]string{
+	Labels: uniquelabels.Make(map[string]string{
 		"projectcalico.org/namespace": "default",
-	},
+	}),
 	ProfileIDs: []string{"profile-dev"},
 }
 

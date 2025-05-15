@@ -87,6 +87,9 @@ func validateCheckpoints(t *testing.T, dataType api.DataType, primary api.Cluste
 	require.NoError(t, err)
 	require.NotNil(t, configMap)
 	require.NotNil(t, configMap.Data)
+	require.NotEmpty(t, configMap.Labels)
+	require.Contains(t, configMap.Labels, "generated-by")
+	require.Equal(t, configMap.Labels["generated-by"], "oiler")
 	lastCheckpoint, ok := configMap.Data["checkpoint"]
 	require.True(t, ok)
 	val, err := time.Parse(time.RFC3339, lastCheckpoint)

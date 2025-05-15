@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/types"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -244,9 +245,9 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Mac:        mustParseMac("01:02:03:04:05:06"),
 		ProfileIDs: []string{},
 		IPv4Nets:   []net.IPNet{mustParseNet(ip + "/32")},
-		Labels: map[string]string{
+		Labels: uniquelabels.Make(map[string]string{
 			"id": "ep-" + name,
-		},
+		}),
 	}
 	kvp := KVPair{
 		Key:   key,

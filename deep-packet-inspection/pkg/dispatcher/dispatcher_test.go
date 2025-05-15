@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -300,7 +301,7 @@ func updateWEPResource(ctx context.Context, hndler dispatcher.Dispatcher, wepKey
 				Key: wepKey,
 				Value: &model.WorkloadEndpoint{
 					Name:   ifaceName,
-					Labels: labels,
+					Labels: uniquelabels.Make(labels),
 				},
 			},
 		},

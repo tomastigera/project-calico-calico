@@ -21,7 +21,7 @@ type FirewallPolicySyncOptions struct {
 	// Polling ticker.
 	Ticker *jitter.Ticker
 	// Filter selector parsed from Panorama input filter of tags.
-	FilterSelector selector.Selector
+	FilterSelector *selector.Selector
 	// Syncer callbacks.
 	Callbacks *calc.SyncerCallbacksDecoupler
 }

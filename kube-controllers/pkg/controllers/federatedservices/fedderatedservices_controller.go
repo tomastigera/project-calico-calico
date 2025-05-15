@@ -22,6 +22,7 @@ import (
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/federationsyncer"
@@ -107,7 +108,7 @@ type serviceID struct {
 // federatedServiceConfig contains the federation information configured through a services annotations.
 type federatedServiceConfig struct {
 	annotations map[string]string
-	selector    selector.Selector
+	selector    *selector.Selector
 }
 
 // NewFederatedServicesController returns a controller which manages FederatedServices objects.
@@ -521,7 +522,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 			// having federation configuration.
 			hasNoFederationConfig := !isFederated && entry.federationConfigErr == nil
 			if hasNoFederationConfig && entry.service != nil && entry.service.Labels != nil {
-				c.serviceLabelHandler.UpdateLabels(id, entry.service.Labels, nil)
+				c.serviceLabelHandler.UpdateLabels(id, uniquelabels.Make(entry.service.Labels), nil)
 			} else {
 				c.serviceLabelHandler.DeleteLabels(id)
 			}

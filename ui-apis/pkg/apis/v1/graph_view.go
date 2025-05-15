@@ -69,8 +69,8 @@ type Layer struct {
 }
 
 type NamedSelector struct {
-	Name     string            `json:"name" validate:"required"`
-	Selector selector.Selector `json:"selector" validate:"required"`
+	Name     string             `json:"name" validate:"required"`
+	Selector *selector.Selector `json:"selector" validate:"required"`
 }
 
 func (ns *NamedSelector) UnmarshalJSON(b []byte) error {

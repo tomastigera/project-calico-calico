@@ -14,6 +14,7 @@ import (
 
 const (
 	TokenReviewCacheMaxTTL = 20 * time.Second
+	AuthzCacheMaxTTL       = 20 * time.Second
 )
 
 type cachingAuthorizer struct {

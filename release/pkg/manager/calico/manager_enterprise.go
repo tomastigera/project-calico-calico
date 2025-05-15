@@ -21,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/branch"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
 var (
@@ -32,12 +33,10 @@ var (
 
 	s3Bucket = "s3://tigera-public/ee"
 
-	// images that should be expected for a release.
+	// images produced in this repo that should be expected for a release.
 	// This list needs to be kept up-to-date
-	// with the actual release artifacts produced for a release
 	// as images are added or removed.
 	enterpriseImages = []string{
-		"cnx-manager",
 		"voltron",
 		"guardian",
 		"cnx-apiserver",
@@ -86,6 +85,8 @@ var (
 		"csi",
 		"node-driver-registrar",
 		"key-cert-provisioner",
+	}
+	enterpriseWindowsImages = []string{
 		"fluentd-windows",
 		"cni-windows",
 		"cnx-node-windows",
@@ -448,11 +449,22 @@ func (m *EnterpriseManager) BuildMetadata(dir string) error {
 	if err != nil {
 		return err
 	}
+
+	// For releases, all images (including the manager, except operator) are the same version.
+	// For hash releases, the manager image is a different version.
+	var images []string
+	if m.isHashRelease {
+		images = releaseImages(append(enterpriseImages, enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+		images = append(images, fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.enterpriseHashrelease.ManagerVersion))
+	} else {
+		images = releaseImages(append(append(enterpriseImages, manager.DefaultImage), enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+	}
+
 	data := enterpriseMetadata{
 		metadata: metadata{
 			Version:          m.calicoVersion,
 			OperatorVersion:  m.operatorVersion,
-			Images:           releaseImages(enterpriseImages, m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry),
+			Images:           images,
 			HelmChartVersion: m.helmChartVersion(),
 		},
 		CalicoVersion: calicoVer,

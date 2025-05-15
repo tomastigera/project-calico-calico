@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/testutils"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -95,12 +96,12 @@ var _ = Describe("DNS Log Reporter", func() {
 			&model.WorkloadEndpoint{
 				Name:         "test1-a345cf",
 				GenerateName: "test1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"group":    "test1",
 					"name":     "test1-a345cf",
 					"common":   "red",
 					"specific": "socks",
-				},
+				}),
 			},
 		)
 		client2 := calc.CalculateRemoteEndpoint(
@@ -113,12 +114,12 @@ var _ = Describe("DNS Log Reporter", func() {
 			&model.WorkloadEndpoint{
 				Name:         "test1-56dca3",
 				GenerateName: "test1",
-				Labels: map[string]string{
+				Labels: uniquelabels.Make(map[string]string{
 					"group":    "test1",
 					"name":     "test1-56dca3",
 					"common":   "red",
 					"specific": "shoes",
-				},
+				}),
 			},
 		)
 		err := r.Report(Update{
@@ -150,7 +151,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.ClientName).To(ContainSubstring("test1-"))
 			Expect(l.ClientIP).NotTo(BeNil())
 			Expect(*l.ClientIP).To(ContainSubstring("1.2.3."))
-			Expect(l.ClientLabels).To(BeNil())
+			Expect(l.ClientLabels.IsNil()).To(BeTrue())
 		}
 
 		// Logs with aggregation and labels.
@@ -160,7 +161,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.Count).To(BeNumerically("==", 2))
 			Expect(l.ClientName).To(Equal(utils.FieldNotIncluded))
 			Expect(l.ClientIP).To(BeNil())
-			Expect(l.ClientLabels).To(Equal(map[string]string{
+			Expect(l.ClientLabels.RecomputeOriginalMap()).To(Equal(map[string]string{
 				"group":  "test1",
 				"common": "red",
 			}))
@@ -174,7 +175,7 @@ var _ = Describe("DNS Log Reporter", func() {
 			Expect(l.ClientName).To(ContainSubstring("test1-"))
 			Expect(l.ClientIP).NotTo(BeNil())
 			Expect(*l.ClientIP).To(ContainSubstring("1.2.3."))
-			Expect(l.ClientLabels).To(Or(
+			Expect(l.ClientLabels.RecomputeOriginalMap()).To(Or(
 				Equal(map[string]string{
 					"group":    "test1",
 					"name":     "test1-a345cf",

@@ -363,7 +363,12 @@ func run() {
 		// Start the token controller.
 		stop := make(chan struct{})
 		defer close(stop)
-		go tokenController.Run(stop)
+		go func() {
+			err := tokenController.Run(stop)
+			if err != nil {
+				logrus.WithError(err).Fatal("Failed to run token controller")
+			}
+		}()
 
 		// Add an authenticator for JWTs issued by this tenant's Linseed.
 		lsa := auth.NewLocalAuthenticator(token.LinseedIssuer, key.Public(), token.ParseClaimsLinseed)

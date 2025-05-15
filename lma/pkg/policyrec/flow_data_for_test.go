@@ -8,6 +8,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -50,41 +51,41 @@ var (
 	gns1Aggr      = "gns-1"
 
 	// Labels
-	pod1LabelsBlue = map[string]string{
+	pod1LabelsBlue = uniquelabels.Make(map[string]string{
 		"name":      pod1,
 		"namespace": namespace1,
 		"job-name":  "nagging",
 		"color":     "blue",
-	}
-	pod1LabelsRed = map[string]string{
+	})
+	pod1LabelsRed = uniquelabels.Make(map[string]string{
 		"name":      pod1,
 		"namespace": namespace1,
 		"job-name":  "badger",
 		"color":     "red",
-	}
-	pod2Labels = map[string]string{
+	})
+	pod2Labels = uniquelabels.Make(map[string]string{
 		"name":              pod2,
 		"namespace":         namespace1,
 		"pod-template-hash": "abcdef",
-	}
-	pod3Labels = map[string]string{
+	})
+	pod3Labels = uniquelabels.Make(map[string]string{
 		"pod-name":                 pod3,
 		"pod-namespace":            namespace2,
 		"controller-revision-hash": "xyz123",
-	}
-	pod4Rs1Labels = map[string]string{
+	})
+	pod4Rs1Labels = uniquelabels.Make(map[string]string{
 		"controller-revision-hash": "rs1",
-	}
-	pod4Rs2Labels = map[string]string{
+	})
+	pod4Rs2Labels = uniquelabels.Make(map[string]string{
 		"controller-revision-hash": "rs2",
-	}
-	ns1Labels = map[string]string{
+	})
+	ns1Labels = uniquelabels.Make(map[string]string{
 		"name":      ns1,
 		"namespace": namespace1,
-	}
-	gns1Labels = map[string]string{
+	})
+	gns1Labels = uniquelabels.Make(map[string]string{
 		"name": gns1,
-	}
+	})
 
 	// Flow Endpoints - source
 	flowEndpointNamespace1Pod1BlueSource = api.FlowEndpointData{

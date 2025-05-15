@@ -60,7 +60,7 @@ type recommendationScope struct {
 	stabilization time.Duration
 
 	// selector is the logical expression used to select namespaces for processing.
-	selector libcselector.Selector
+	selector *libcselector.Selector
 
 	// passIntraNamespaceTraffic is a flag to allow/pass intra-namespace traffic.
 	passIntraNamespaceTraffic bool
@@ -516,7 +516,7 @@ func (s *recommendationScope) GetStabilization() time.Duration {
 }
 
 // GetSelector returns the engine namespace selector.
-func (s *recommendationScope) GetSelector() libcselector.Selector {
+func (s *recommendationScope) GetSelector() *libcselector.Selector {
 	return s.selector
 }
 

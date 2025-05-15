@@ -15,6 +15,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
@@ -1696,10 +1697,10 @@ var _ = Describe("update", func() {
 				Source: api.FlowEndpointData{
 					Type:      api.FlowLogEndpointTypeWEP,
 					Namespace: "namespace1",
-					Labels: map[string]string{
+					Labels: uniquelabels.Make(map[string]string{
 						"projectcalico.org/namespace": "namespace1",
 						"projectcalico.org/name":      "pod-1-1",
-					},
+					}),
 				},
 				Destination: api.FlowEndpointData{
 					Type:    api.FlowLogEndpointTypeNetwork,
@@ -1815,10 +1816,10 @@ var _ = Describe("update", func() {
 				Source: api.FlowEndpointData{
 					Type:      api.FlowLogEndpointTypeWEP,
 					Namespace: "namespace1",
-					Labels: map[string]string{
+					Labels: uniquelabels.Make(map[string]string{
 						"projectcalico.org/namespace": "namespace1",
 						"projectcalico.org/name":      "pod-1-1",
-					},
+					}),
 				},
 				Destination: api.FlowEndpointData{
 					Type:    api.FlowLogEndpointTypeNetwork,

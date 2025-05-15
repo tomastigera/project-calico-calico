@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 )
 
 var protoNames = map[int]string{
@@ -136,12 +137,14 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
 
-	if l.SrcLabels == nil {
+	if l.SrcLabels.IsNil() {
 		out.SourceLabels = nil
 	} else {
-		out.SourceLabels = &labelsJSONOutput{
-			Labels: utils.FlattenLabels(l.SrcLabels),
+		if out.SourceLabels == nil {
+			out.SourceLabels = &labelsJSONOutput{}
 		}
+		// Reuse the existing slice to avoid allocations if available.
+		out.SourceLabels.Labels = utils.FlattenUniqueLabelsInto(out.SourceLabels.Labels, l.SrcLabels)
 	}
 
 	out.NatOutgoingPorts = out.NatOutgoingPorts[:0]
@@ -168,11 +171,11 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.DestNamespace = l.DstMeta.Namespace
 
 	out.DestType = string(l.DstMeta.Type)
-	if l.DstLabels == nil {
+	if l.DstLabels.IsNil() {
 		out.DestLabels = nil
 	} else {
 		out.DestLabels = &labelsJSONOutput{
-			Labels: utils.FlattenLabels(l.DstLabels),
+			Labels: utils.FlattenUniqueLabels(l.DstLabels),
 		}
 	}
 
@@ -323,9 +326,9 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 		AggregatedName: o.SourceNameAggr,
 	}
 	if o.SourceLabels == nil {
-		fl.SrcLabels = nil
+		fl.SrcLabels = uniquelabels.Nil
 	} else {
-		fl.SrcLabels = utils.UnflattenLabels(o.SourceLabels.Labels)
+		fl.SrcLabels = uniquelabels.Make(utils.UnflattenLabels(o.SourceLabels.Labels))
 	}
 
 	switch o.DestType {
@@ -355,9 +358,9 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	}
 
 	if o.DestLabels == nil {
-		fl.DstLabels = nil
+		fl.DstLabels = uniquelabels.Nil
 	} else {
-		fl.DstLabels = utils.UnflattenLabels(o.DestLabels.Labels)
+		fl.DstLabels = uniquelabels.Make(utils.UnflattenLabels(o.DestLabels.Labels))
 	}
 
 	if len(o.DestDomains) == 0 {

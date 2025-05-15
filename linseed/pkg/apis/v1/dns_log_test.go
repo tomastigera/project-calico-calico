@@ -11,6 +11,8 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 )
 
 var (
@@ -822,7 +824,7 @@ func TestDNSServer_MarshalJSON(t *testing.T) {
 			d := &DNSServer{
 				Endpoint: tt.fields.Endpoint,
 				IP:       tt.fields.IP,
-				Labels:   tt.fields.Labels,
+				Labels:   uniquelabels.Make(tt.fields.Labels),
 			}
 			got, err := d.MarshalJSON()
 			if (err != nil) != tt.wantErr {

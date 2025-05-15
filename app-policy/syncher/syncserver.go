@@ -125,6 +125,7 @@ func (s *SyncClient) OnWAFEvent(v *proto.WAFEvent) {
 func (s *SyncClient) sync(ctx context.Context) {
 	updateC := make(chan *proto.ToDataplane)
 	retryC := make(chan struct{})
+	log.Info("connecting and syncing with policy server")
 	s.connectSyncStream(ctx, updateC, retryC)
 
 	for {
@@ -133,13 +134,20 @@ func (s *SyncClient) sync(ctx context.Context) {
 			s.inSync = false
 			return
 		case <-retryC:
+			// Retry the connection to the sync stream.
+			log.Info("retrying connection to policy server")
 			s.connectSyncStream(ctx, updateC, retryC)
 		case update := <-updateC:
 			switch update.Payload.(type) {
 			case *proto.ToDataplane_InSync:
 				s.inSync = true
+				log.Info("connected and in sync with policy server.")
 				s.storeManager.OnInSync()
 			default:
+				// Process the update.
+				if log.IsLevelEnabled(log.DebugLevel) {
+					log.WithField("update", update).Debug("received update from policy server")
+				}
 				s.storeManager.DoWithLock(func(ps *policystore.PolicyStore) {
 					ps.ProcessUpdate(s.subscriptionType, update, false)
 				})
@@ -189,11 +197,12 @@ func (s *SyncClient) Readiness() (ready bool) {
 
 // sendStats is the main stats reporting loop.
 func (s *SyncClient) sendStats(ctx context.Context) {
-	log.Info("Starting sending DataplaneStats to Policy Sync server")
+	log.Debug("start: sendStats --> policySync server")
 readLoop:
 	for {
 		select {
 		case <-ctx.Done():
+			log.Debug("end: sendStats --x policySync server")
 			return
 		case a := <-s.stats:
 			for t, v := range a {

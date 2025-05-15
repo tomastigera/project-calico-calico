@@ -10,6 +10,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/utils"
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -45,12 +46,12 @@ type DNSSpec struct {
 func (a *DNSSpec) Merge(b DNSSpec) {
 	for e, l := range b.Servers {
 		if _, ok := a.Servers[e]; ok {
-			a.Servers[e] = utils.IntersectLabels(a.Servers[e], l)
+			a.Servers[e] = utils.IntersectAndFilterLabels(a.Servers[e], l)
 		} else {
 			a.Servers[e] = l
 		}
 	}
-	a.ClientLabels = utils.IntersectLabels(a.ClientLabels, b.ClientLabels)
+	a.ClientLabels = utils.IntersectAndFilterLabels(a.ClientLabels, b.ClientLabels)
 	a.Count += b.Count
 
 	// Latency merging.
@@ -70,7 +71,7 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 	a.Latency.Count += b.Latency.Count
 }
 
-type DNSLabels map[string]string
+type DNSLabels = uniquelabels.Map
 
 type DNSStats struct {
 	Count uint `json:"count"`
@@ -126,10 +127,10 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *v1
 	}
 
 	if !includeLabels {
-		res.ClientLabels = nil
+		res.ClientLabels = uniquelabels.Nil
 		res.Servers = nil
 		for _, server := range dnsServers {
-			server.Labels = nil
+			server.Labels = uniquelabels.Nil
 			res.Servers = append(res.Servers, server)
 		}
 	}

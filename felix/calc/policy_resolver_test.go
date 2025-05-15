@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -140,7 +141,10 @@ func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
 				},
 			},
 		}},
-	}, cmp.AllowUnexported(PolKV{})); d != "" {
+	},
+		cmp.AllowUnexported(PolKV{}),
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 }
@@ -185,11 +189,15 @@ func TestPolicyResolver_OnPolicyMatchStopped(t *testing.T) {
 	if len(recorder.updates) != 1 {
 		t.Fatal("Expected one update after Flush:", recorder.updates)
 	}
-	if d := cmp.Diff(recorder.updates[0], policyResolverUpdate{
-		Key:      endpointKey,
-		Endpoint: nil,
-		Tiers:    []TierInfo{},
-	}); d != "" {
+	if d := cmp.Diff(
+		recorder.updates[0],
+		policyResolverUpdate{
+			Key:      endpointKey,
+			Endpoint: nil,
+			Tiers:    []TierInfo{},
+		},
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 }
@@ -217,11 +225,15 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 	if len(recorder.updates) != 1 {
 		t.Fatal("Expected one update after Flush:", recorder.updates)
 	}
-	if d := cmp.Diff(recorder.updates[0], policyResolverUpdate{
-		Key:      we1Key,
-		Endpoint: wep,
-		Tiers:    []TierInfo{},
-	}); d != "" {
+	if d := cmp.Diff(
+		recorder.updates[0],
+		policyResolverUpdate{
+			Key:      we1Key,
+			Endpoint: wep,
+			Tiers:    []TierInfo{},
+		},
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 
@@ -232,14 +244,18 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 	if len(recorder.updates) != 2 {
 		t.Fatal("Expected one update after Flush:", recorder.updates)
 	}
-	if d := cmp.Diff(recorder.updates[1], policyResolverUpdate{
-		Key:      we1Key,
-		Endpoint: wep,
-		Tiers:    []TierInfo{},
-		EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
-			{IpSetID: "e:abcdef"},
-		}},
-	}); d != "" {
+	if d := cmp.Diff(
+		recorder.updates[1],
+		policyResolverUpdate{
+			Key:      we1Key,
+			Endpoint: wep,
+			Tiers:    []TierInfo{},
+			EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
+				{IpSetID: "e:abcdef"},
+			}},
+		},
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 
@@ -255,14 +271,17 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 	if len(recorder.updates) != 3 {
 		t.Fatal("Expected one update after Flush:", recorder.updates)
 	}
-	if d := cmp.Diff(recorder.updates[2], policyResolverUpdate{
-		Key:      we1Key,
-		Endpoint: wep,
-		Tiers:    []TierInfo{},
-		EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
-			{IpSetID: "e:abcdef"},
-		}},
-	}); d != "" {
+	if d := cmp.Diff(
+		recorder.updates[2],
+		policyResolverUpdate{
+			Key:      we1Key,
+			Endpoint: wep,
+			Tiers:    []TierInfo{},
+			EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
+				{IpSetID: "e:abcdef"},
+			}},
+		},
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) })); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 
@@ -273,11 +292,15 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 	if len(recorder.updates) != 4 {
 		t.Fatal("Expected one update after Flush:", recorder.updates)
 	}
-	if d := cmp.Diff(recorder.updates[3], policyResolverUpdate{
-		Key:      we1Key,
-		Endpoint: wep,
-		Tiers:    []TierInfo{},
-	}); d != "" {
+	if d := cmp.Diff(
+		recorder.updates[3],
+		policyResolverUpdate{
+			Key:      we1Key,
+			Endpoint: wep,
+			Tiers:    []TierInfo{},
+		},
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
 		t.Error("Incorrect update:", d)
 	}
 }

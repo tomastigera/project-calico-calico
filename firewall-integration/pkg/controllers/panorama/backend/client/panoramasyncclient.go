@@ -131,7 +131,7 @@ type PanoramaRuleClient struct {
 	// Panorama Rule client type name.
 	ClientType string
 	// Filter selector parsed from the a logical statement of Panorama tags.
-	Selector selector.Selector
+	Selector *selector.Selector
 }
 
 // List returns a filtered list of the pre, post and default Panorama rules in a given device group.
@@ -270,7 +270,7 @@ func (c *PanoramaRuleClient) List() (*model.KVPairList, error) {
 // filterRules returns the filtered list rules matching tags against a given selector.
 // If the  is empty, then no filter is applied and the entirety of the input rules are
 // returned in the responce.
-func filterRules(sel selector.Selector, rules []security.Entry) ([]security.Entry, error) {
+func filterRules(sel *selector.Selector, rules []security.Entry) ([]security.Entry, error) {
 	log.Debugf("Filter rules for match selector: %s", sel.String())
 
 	// Iterate through the list of rules, and filter out rules that don't match the tag expression.
