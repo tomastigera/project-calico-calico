@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	defaultEnterpriseRegistry = registry.QuayRegistry + "/tigera"
+	defaultEnterpriseRegistry = "quay.io/tigera"
 
 	windowsGCSBucket = "tigera-windows"
 
