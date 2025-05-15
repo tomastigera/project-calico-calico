@@ -107,6 +107,10 @@ promotions:
     pipeline_file: ../fluentd/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Gateway Release
+    pipeline_file: ../gateway/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Ingress Collector Release
     pipeline_file: ../ingress-collector/.semaphore/cut-release.yml
     auto_promote:
