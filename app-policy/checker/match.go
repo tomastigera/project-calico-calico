@@ -17,6 +17,7 @@ package checker
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -299,8 +300,7 @@ func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]
 		case "MatchesRegex":
 			headerCheck = matchHTTPHeaderMatchesRegex
 		default:
-			log.WithField("rule.Operator", rule.Operator).Error("unknown operator value to match HTTP headers - skipping")
-			continue
+			headerCheck = matchHTTPHeaderUnknownOperator
 		}
 		if !headerCheck(rule, headers) {
 			return false
@@ -309,31 +309,88 @@ func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]
 	return true
 }
 
-func matchHTTPHeaderExists(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+func matchHTTPHeaderExists(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	_, exists := h[r.Header]
+	return exists
+}
+
+func matchHTTPHeaderDoesNotExist(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	_, exists := h[r.Header]
+	return !exists
+}
+
+func matchHTTPHeaderHasPrefix(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, prefix := range r.Values {
+		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderHasSuffix(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, suffix := range r.Values {
+		if strings.HasSuffix(value, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, oneof := range r.Values {
+		if value == oneof {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, oneof := range r.Values {
+		if value == oneof {
+			return false
+		}
+	}
 	return true
 }
 
-func matchHTTPHeaderDoesNotExist(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
-	return true
+func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, regex := range r.Values {
+		compiledRegex, err := regexp.Compile(regex)
+		if err != nil {
+			log.WithError(err).WithField("regexp", regex).Error("unable to compile the regular expression - skipping")
+			continue
+		}
+		if compiledRegex.MatchString(value) {
+			return true
+		}
+	}
+	return false
 }
 
-func matchHTTPHeaderHasPrefix(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
-	return true
-}
-
-func matchHTTPHeaderHasSuffix(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
-	return true
-}
-
-func matchHTTPHeaderIn(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
-	return true
-}
-
-func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
-	return true
-}
-
-func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+func matchHTTPHeaderUnknownOperator(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	log.WithField("rule.Operator", r.Operator).Error("unknown operator value to match HTTP headers - skipping")
 	return true
 }
 
