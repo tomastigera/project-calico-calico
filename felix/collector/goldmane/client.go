@@ -278,11 +278,11 @@ func toFlowPolicySet(policies []*proto.PolicyHit) flowlog.FlowPolicySet {
 	return policySet
 }
 
-func ensureLabels(labels map[string]string) unique.Handle[string] {
-	if labels == nil {
+func ensureLabels(labels uniquelabels.Map) unique.Handle[string] {
+	if labels.IsNil() {
 		return unique.Make("")
 	}
-	flat := utils.FlattenLabels(labels)
+	flat := utils.FlattenLabels(labels.RecomputeOriginalMap())
 	sort.Strings(flat)
 	return unique.Make(strings.Join(flat, ","))
 }
