@@ -272,6 +272,68 @@ func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string, httpHeaders 
 
 // matchHTTPHeaders checks if a rule criteria matches request HTTP headers - returns true if that's the case, false otherwise.
 func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]string) bool {
+	if rules == nil {
+		return true
+	}
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	var headerCheck func(*proto.HTTPMatch_HeadersMatch, map[string]string) bool
+	for _, rule := range rules {
+		if rule.Values == nil {
+			rule.Values = []string{}
+		}
+		switch rule.Operator {
+		case "Exists":
+			headerCheck = matchHTTPHeaderExists
+		case "DoesNotExist":
+			headerCheck = matchHTTPHeaderDoesNotExist
+		case "HasPrefix":
+			headerCheck = matchHTTPHeaderHasPrefix
+		case "HasSuffix":
+			headerCheck = matchHTTPHeaderHasSuffix
+		case "In":
+			headerCheck = matchHTTPHeaderIn
+		case "NotIn":
+			headerCheck = matchHTTPHeaderNotIn
+		case "MatchesRegex":
+			headerCheck = matchHTTPHeaderMatchesRegex
+		default:
+			log.WithField("rule.Operator", rule.Operator).Error("unknown operator value to match HTTP headers - skipping")
+			continue
+		}
+		if !headerCheck(rule, headers) {
+			return false
+		}
+	}
+	return true
+}
+
+func matchHTTPHeaderExists(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderDoesNotExist(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderHasPrefix(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderHasSuffix(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderIn(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
+	return true
+}
+
+func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, m map[string]string) bool {
 	return true
 }
 
