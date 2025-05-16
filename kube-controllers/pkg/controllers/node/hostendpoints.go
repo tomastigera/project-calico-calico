@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"net"
 	"reflect"
 	"regexp"
@@ -37,6 +38,7 @@ import (
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
@@ -553,9 +555,7 @@ func (c *autoHostEndpointController) getExpectedIPs(node *libapi.Node) []string 
 // generateAutoHostEndpoint returns a HostEndpoint created based on the specific parameters
 func (c *autoHostEndpointController) generateAutoHostEndpoint(node *libapi.Node, templateLabels map[string]string, hepName string, expectedIPs []string, interfaceName string) *api.HostEndpoint {
 	hepLabels := make(map[string]string)
-	for k, v := range node.Labels {
-		hepLabels[k] = v
-	}
+	maps.Copy(hepLabels, node.Labels)
 	for k, v := range templateLabels {
 		if _, ok := hepLabels[k]; ok {
 			f := logrus.Fields{"key": k, "nodeVal": hepLabels[k], "userVal": v}
@@ -564,6 +564,7 @@ func (c *autoHostEndpointController) generateAutoHostEndpoint(node *libapi.Node,
 		hepLabels[k] = v
 	}
 	hepLabels[hepCreatedLabelKey] = hepCreatedLabelValue
+	hepLabels[names.HostEndpointTypeLabelKey] = string(names.HostEndpointTypeClusterNode)
 
 	hostEndpoint := &api.HostEndpoint{
 		TypeMeta: metav1.TypeMeta{

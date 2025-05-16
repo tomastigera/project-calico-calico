@@ -17,7 +17,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
 )
 
-var _ = Describe("NonClusterHost Tests", func() {
+var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 	var (
 		fakeDynamicClient *fake.FakeDynamicClient
 	)

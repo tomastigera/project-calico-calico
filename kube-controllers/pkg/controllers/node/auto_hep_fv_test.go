@@ -168,9 +168,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 
 		// Expect a wildcard hostendpoint to be created.
 		expectedHepLabels := map[string]string{
-			"label1":                       "value1",
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"label1":                              "value1",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		expectedIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		Eventually(func() error {
@@ -282,6 +283,7 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		// Expect a wildcard hostendpoint to be created.
 		expectedHepLabels := labels
 		expectedHepLabels["projectcalico.org/created-by"] = "calico-kube-controllers"
+		expectedHepLabels["hostendpoint.projectcalico.org/type"] = "clusternode"
 		expectedIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedHepName, expectedHepLabels, expectedIPs, autoHepProfiles, defaultInterfaceName)
@@ -367,8 +369,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		autoHepName := cNodeName + "-auto-hep"
 		expectedIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedHepLabels := map[string]string{
-			"auto":                         "hep",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"auto":                                "hep",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, autoHepName, expectedHepLabels, expectedIPs, autoHepProfiles, defaultInterfaceName)
@@ -407,9 +410,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		// Expect a wildcard hostendpoint to be created.
 		expectedIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedHepLabels := map[string]string{
-			"label1":                       "value1",
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"label1":                              "value1",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedHepName, expectedHepLabels, expectedIPs, autoHepProfiles, defaultInterfaceName)
@@ -442,8 +446,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName := cn.Name + "-auto-hep"
 		expectedDefaultIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -453,9 +458,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-auto-hep"
 		expectedTemplateIPs := []string{"192.168.100.1"}
 		expectedTemplateHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
@@ -493,8 +499,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName := cn.Name + "-auto-hep"
 		expectedDefaultIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -504,9 +511,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-auto-hep"
 		expectedTemplateIPs := []string{"192.168.100.1"}
 		expectedTemplateHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
@@ -519,9 +527,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 
 		// Default hostendpoint labels should be updated
 		expectedDefaultHepLabels = map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"calico-label1":                "calico-value1",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"calico-label1":                       "calico-value1",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -529,10 +538,11 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 
 		// Template host endpoint labels should be updated
 		expectedTemplateHepLabels = map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
-			"calico-label1":                "calico-value1",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
+			"calico-label1":                       "calico-value1",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
@@ -552,8 +562,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName := cn.Name + "-auto-hep"
 		expectedDefaultIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -563,9 +574,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-auto-hep"
 		expectedTemplateIPs := []string{"192.168.100.1"}
 		expectedTemplateHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
@@ -618,9 +630,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName1 := cn1.Name + "-auto-hep"
 		expectedDefaultIPs1 := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels1 := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"node1":                        "test-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"node1":                               "test-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName1, expectedDefaultHepLabels1, expectedDefaultIPs1, autoHepProfiles, defaultInterfaceName)
@@ -630,8 +643,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName2 := cn2.Name + "-auto-hep"
 		expectedDefaultIPs2 := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels2 := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName2, expectedDefaultHepLabels2, expectedDefaultIPs2, autoHepProfiles, defaultInterfaceName)
@@ -641,10 +655,11 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName1 := cn1.Name + "-template-auto-hep"
 		expectedTemplateIPs1 := []string{"192.168.100.1"}
 		expectedTemplateHepLabels1 := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
-			"node1":                        "test-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
+			"node1":                               "test-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName1, expectedTemplateHepLabels1, expectedTemplateIPs1, autoHepProfiles, templateInterfaceName)
@@ -654,9 +669,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName2 := cn2.Name + "-template-auto-hep"
 		expectedTemplateIPs2 := []string{"192.168.100.1"}
 		expectedTemplateHepLabels2 := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName2, expectedTemplateHepLabels2, expectedTemplateIPs2, autoHepProfiles, templateInterfaceName)
@@ -697,11 +713,12 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 
 		// Expect the template hostendpoints for node1 to be updated
 		expectedTemplateHepLabels1 = map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
-			"template-label2":              "template-value2",
-			"node1":                        "test-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
+			"template-label2":                     "template-value2",
+			"node1":                               "test-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName1, expectedTemplateHepLabels1, expectedTemplateIPs1, autoHepProfiles, templateInterfaceName)
@@ -711,9 +728,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName3 := cn1.Name + "-template2-auto-hep"
 		expectedTemplateIPs3 := []string{"192.168.100.1"}
 		expectedTemplateHepLabels3 := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"node1":                        "test-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"node1":                               "test-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName3, expectedTemplateHepLabels3, expectedTemplateIPs3, autoHepProfiles, templateInterfaceName)
@@ -754,8 +772,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName := cn.Name + "-auto-hep"
 		expectedDefaultIPs := []string{"172.16.1.1", "fe80::1", "192.168.100.1"}
 		expectedDefaultHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -765,9 +784,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-auto-hep"
 		expectedTemplateIPs := []string{"192.168.100.1"}
 		expectedTemplateHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
@@ -837,7 +857,8 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedDefaultHepName := cn.Name + "-auto-hep"
 		expectedDefaultIPs := []string{"172.16.1.1"}
 		expectedDefaultHepLabels := map[string]string{
-			"projectcalico.org/created-by": "calico-kube-controllers",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedDefaultHepName, expectedDefaultHepLabels, expectedDefaultIPs, autoHepProfiles, defaultInterfaceName)
@@ -857,9 +878,10 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-auto-hep"
 		expectedTemplateIPs := []string{"192.168.100.1"}
 		expectedTemplateHepLabels := map[string]string{
-			"calico-label":                 "calico-value",
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"calico-label":                        "calico-value",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"template-label":                      "template-value",
 		}
 		Eventually(func() error {
 			return testutils.ExpectHostendpoint(c, expectedTemplateHepName, expectedTemplateHepLabels, expectedTemplateIPs, autoHepProfiles, templateInterfaceName)
