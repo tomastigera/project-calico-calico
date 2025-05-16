@@ -167,6 +167,19 @@ var _ = Describe("FlowLog middleware", func() {
 					"dstName": {"destination"},
 				})),
 			)
+
+			It("should reset HostEndpoint namespaces to '-'", func() {
+				req := createFlowLogRequest(map[string][]string{
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeHEP}, "srcNamespace": {"hep-src-ns"},
+					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeHEP}, "dstNamespace": {"hep-dst-ns"},
+					"dstName": {"destination"},
+				})
+
+				params, err := parseAndValidateFlowRequest(req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(params.srcNamespace).To(Equal(api.GlobalEndpointType))
+				Expect(params.dstNamespace).To(Equal(api.GlobalEndpointType))
+			})
 		})
 	})
 
