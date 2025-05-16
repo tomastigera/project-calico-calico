@@ -377,12 +377,9 @@ func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, h map[string]s
 		return false
 	}
 	for _, regex := range r.Values {
-		compiledRegex, err := regexp.Compile(regex)
-		if err != nil {
+		if compiledRegex, err := regexp.Compile(regex); err != nil {
 			log.WithError(err).WithField("regexp", regex).Error("unable to compile the regular expression - skipping")
-			continue
-		}
-		if compiledRegex.MatchString(value) {
+		} else if compiledRegex.MatchString(value) {
 			return true
 		}
 	}
