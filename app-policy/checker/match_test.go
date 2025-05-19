@@ -1394,3 +1394,225 @@ func TestMatchDstIPPortSetIds(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchHTTPHeaderExists(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderExists(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+			},
+			map[string]string{
+				"forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaderExists(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+			},
+			map[string]string{
+				"forwarded-for":   "127.0.0.1",
+				"x-forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+}
+
+func TestMatchHTTPHeaderDoesNotExist(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderDoesNotExist(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+			},
+			map[string]string{
+				"forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaderDoesNotExist(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+			},
+			map[string]string{
+				"forwarded-for":   "127.0.0.1",
+				"x-forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+}
+
+func TestMatchHTTPHeaderHasPrefix(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderHasPrefix(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{"10.0.0."},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaderHasPrefix(
+			&proto.HTTPMatch_HeadersMatch{Header: "x-forwarded-for", Values: []string{"10.0.0.", "192.168.1."}},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+}
+
+func TestMatchHTTPHeaderHasSuffix(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderHasSuffix(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{".23", ".24"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaderHasSuffix(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{".24", ".22"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+}
+
+func TestMatchHTTPHeaderIn(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderIn(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{"192.168.0.100", "192.168.0.101"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.0.22",
+				"x-forwarded-for": "192.168.0.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaderIn(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{"192.168.0.100", "192.168.0.101"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.0.101",
+				"x-forwarded-for": "192.168.0.101",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+}
+
+func TestMatchHTTPHeaderNotIn(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderNotIn(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{"192.168.0.100", "192.168.0.101"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.0.22",
+				"x-forwarded-for": "192.168.0.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaderNotIn(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "x-forwarded-for",
+				Values: []string{"192.168.0.100", "192.168.0.101"},
+			},
+			map[string]string{
+				"forwarded-for":   "192.168.0.101",
+				"x-forwarded-for": "192.168.0.101",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+}
+
+func TestMatchHTTPHeaderMatchesRegex(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderMatchesRegex(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "user-agent",
+				Values: []string{"^AppleTV", "^Roku"},
+			},
+			map[string]string{
+				"user-agent": "Mozilla/5.0 (CrKey armv7l 1.5.16041) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.0 Safari/537.36",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaderMatchesRegex(
+			&proto.HTTPMatch_HeadersMatch{
+				Header: "user-agent",
+				Values: []string{"^AppleTV", "^Roku"},
+			},
+			map[string]string{
+				"user-agent": "AppleTV11,1/11.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+}
+
+func TestMatchHTTPHeaderUnknownOperator(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaderUnknownOperator(&proto.HTTPMatch_HeadersMatch{Operator: "Exists"}, nil),
+	).To(
+		BeTrue(),
+	)
+}

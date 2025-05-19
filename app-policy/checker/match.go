@@ -281,7 +281,9 @@ func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]
 	}
 	var headerCheck func(*proto.HTTPMatch_HeadersMatch, map[string]string) bool
 	for _, rule := range rules {
-		if rule.Values == nil {
+		if rule == nil {
+			continue
+		} else if rule.Values == nil {
 			rule.Values = []string{}
 		}
 		switch rule.Operator {
