@@ -10,7 +10,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	lmacache "github.com/projectcalico/calico/lma/pkg/cache"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/cache"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
@@ -24,7 +23,7 @@ type Authorizer interface {
 type rulesAuthorizer struct {
 	logger     logging.Logger
 	namespace  string
-	rulesCache cache.LoadingCache[string, []authzv1.ResourceRule]
+	rulesCache lmacache.LoadingCache[string, []authzv1.ResourceRule]
 }
 
 func NewAuthorizer(
@@ -52,7 +51,7 @@ func NewAuthorizer(
 		return nil, err
 	}
 
-	authorizer.rulesCache = cache.NewLoadingCache(expiringCache)
+	authorizer.rulesCache = lmacache.NewLoadingCache(expiringCache)
 
 	return authorizer, nil
 }
