@@ -257,7 +257,6 @@ var collectionFlows = Collection{
 				},
 			},
 		},
-		groupBy{field: "cluster"},
 		groupBy{field: "dest_namespace"},
 		groupBy{field: "dest_domains"},
 		groupBy{field: "dest_port"},

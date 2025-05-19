@@ -287,7 +287,6 @@
     - field: process_name
       nested:
       - field: process_args
-  - field: cluster
   - field: dest_namespace
   - field: dest_domains
   - field: dest_port
