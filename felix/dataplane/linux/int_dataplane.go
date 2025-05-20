@@ -3325,23 +3325,17 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 		go func(ipSets dpsets.IPSetsDataplane) {
 			defer ipSetsWG.Done()
 
-			// Apply the IPSet updates.  The filter is requesting that ApplyUpdates only returns the updates IP sets
-			// that contain egress domains. The filter does not change which IPSets are updated - all IPSets that have
-			// been modified will be updated.
-			programmedIPs := ipSets.ApplyUpdates(func(ipSetName string) bool {
-				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
-				ipSetID := ipsets.StripIPSetNamePrefix(ipSetName)
-				return strings.HasPrefix(ipSetID, "d:")
-			})
+			// Apply IP set updates, snooping on updates to domain IP sets so that we can
+			// report back to the domain info store.
+			dil := dns.NewDomainIPSetListener()
+			ipSets.ApplyUpdates(dil)
 
 			d.reportHealth()
 
-			if d.dnsDeniedPacketProcessor == nil || programmedIPs == nil {
+			if d.dnsDeniedPacketProcessor == nil || dil.DomainSetUpdates == nil {
 				return
 			}
-			if programmedIPs.Len() != 0 {
-				d.dnsDeniedPacketProcessor.OnIPSetMemberUpdates(programmedIPs)
-			}
+			d.dnsDeniedPacketProcessor.OnIPSetMemberUpdates(dil.DomainSetUpdates)
 		}(ipSets)
 	}
 	ipSetsWG.Wait()
