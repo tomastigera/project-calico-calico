@@ -590,6 +590,20 @@ func TestQueryService(t *testing.T) {
 				require.NoError(t, err)
 			})
 
+			t.Run("supported for qname field", func(t *testing.T) {
+				mockClient.SetResults(
+					lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
+				)
+				_, err := subject.Query(ctx, client.QueryRequest{
+					CollectionName: "dns",
+					Filters: []client.QueryRequestFilter{
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+						{Criterion: client.QueryRequestFilterCriterion{Type: "exists", Field: "qname"}},
+					},
+				})
+				require.NoError(t, err)
+			})
+
 			t.Run("not supported for non-text field", func(t *testing.T) {
 				for _, tc := range []string{
 					"start_time", "bytes_in", "num_flows", "policy.type",

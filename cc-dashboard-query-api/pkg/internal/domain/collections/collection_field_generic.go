@@ -54,3 +54,7 @@ func (c collectionFieldGeneric) DisplayType() FieldType {
 	}
 	return c.fieldType
 }
+
+func (c collectionFieldGeneric) SupportsExists() bool {
+	return c.fieldType == FieldTypeText || c.fieldType == FieldTypeQName
+}

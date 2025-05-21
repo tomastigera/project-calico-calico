@@ -40,3 +40,7 @@ func (c CollectionFieldEnum) DefaultValue() string {
 func (c CollectionFieldEnum) AggregationFunctionTypes() []AggregationFunctionType {
 	return c.aggregationFunctionTypes
 }
+
+func (c CollectionFieldEnum) SupportsExists() bool {
+	return false
+}

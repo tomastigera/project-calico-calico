@@ -317,7 +317,7 @@ func (s *QueryService) mapClientCriterion(
 		if err != nil {
 			return nil, err
 		}
-		if field.Type() != collections.FieldTypeText {
+		if !field.SupportsExists() {
 			// Exists field is not supported for non-text fields in linseed atm
 			// See https://tigera.atlassian.net/browse/TSLA-8361
 			// See https://tigera.atlassian.net/browse/TSLA-8406
