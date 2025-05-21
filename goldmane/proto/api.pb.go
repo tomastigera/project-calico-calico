@@ -32,6 +32,7 @@ const (
 	FilterType_FilterTypeDestNamespace   FilterType = 3
 	FilterType_FilterTypeSourceNamespace FilterType = 4
 	FilterType_FilterTypePolicyTier      FilterType = 5
+	FilterType_FilterTypePolicyName      FilterType = 6
 )
 
 // Enum value maps for FilterType.
@@ -43,6 +44,7 @@ var (
 		3: "FilterTypeDestNamespace",
 		4: "FilterTypeSourceNamespace",
 		5: "FilterTypePolicyTier",
+		6: "FilterTypePolicyName",
 	}
 	FilterType_value = map[string]int32{
 		"FilterTypeUnspecified":     0,
@@ -51,6 +53,7 @@ var (
 		"FilterTypeDestNamespace":   3,
 		"FilterTypeSourceNamespace": 4,
 		"FilterTypePolicyTier":      5,
+		"FilterTypePolicyName":      6,
 	}
 )
 
@@ -2447,7 +2450,7 @@ const file_api_proto_rawDesc = "" +
 	"\n" +
 	"passed_out\x18\n" +
 	" \x03(\x03R\tpassedOut\x12\f\n" +
-	"\x01x\x18\v \x03(\x03R\x01x*\xaf\x01\n" +
+	"\x01x\x18\v \x03(\x03R\x01x*\xc9\x01\n" +
 	"\n" +
 	"FilterType\x12\x19\n" +
 	"\x15FilterTypeUnspecified\x10\x00\x12\x16\n" +
@@ -2455,7 +2458,8 @@ const file_api_proto_rawDesc = "" +
 	"\x14FilterTypeSourceName\x10\x02\x12\x1b\n" +
 	"\x17FilterTypeDestNamespace\x10\x03\x12\x1d\n" +
 	"\x19FilterTypeSourceNamespace\x10\x04\x12\x18\n" +
-	"\x14FilterTypePolicyTier\x10\x05*>\n" +
+	"\x14FilterTypePolicyTier\x10\x05\x12\x18\n" +
+	"\x14FilterTypePolicyName\x10\x06*>\n" +
 	"\x06Action\x12\x15\n" +
 	"\x11ActionUnspecified\x10\x00\x12\t\n" +
 	"\x05Allow\x10\x01\x12\b\n" +
