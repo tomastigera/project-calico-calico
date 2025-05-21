@@ -389,8 +389,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 				AggregatedName: "pvt",
 			}
 
-			// This entry is different in OSS implemenatation due to differences of HEP flowlogs.
-			// In addition, flowlogs for HEP is also not enabled for this test.
+			// This entry is different in Enterprise implemenatation due to differences of HEP flowlogs.
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -482,6 +481,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 					},
 				})
 
+			// The following entries are not available in Enterprise implemenatation due to differences of HEP flowlogs.
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
