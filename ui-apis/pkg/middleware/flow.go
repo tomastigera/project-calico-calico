@@ -86,6 +86,17 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 		return nil, fmt.Errorf("dstType value '%s' is not a valid endpoint type", flowParams.dstType)
 	}
 
+	// As part of PMREQ-649, UI will categorize non-cluster hosts under a pseudo-namespace
+	// labeled "hosts". To simplify the UI implementation, Flow Visualizer requests
+	// will include this value in the namespace parameter for host endpoints. As HostEndpoints
+	// are not namespaced, we will ignore the namespace parameter and reset it back to "-".
+	if flowParams.srcType == api.EndpointTypeHep {
+		flowParams.srcNamespace = api.GlobalEndpointType
+	}
+	if flowParams.dstType == api.EndpointTypeHep {
+		flowParams.dstNamespace = api.GlobalEndpointType
+	}
+
 	if dateTimeStr := query.Get("startDateTime"); len(dateTimeStr) > 0 {
 		flowParams.startDateTime, _, err = timeutils.ParseTime(time.Now(), &dateTimeStr)
 		if err != nil {
