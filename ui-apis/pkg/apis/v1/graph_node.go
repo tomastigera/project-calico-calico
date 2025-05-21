@@ -15,9 +15,11 @@ const (
 	GraphNodeTypeServicePort  GraphNodeType = "svcport"
 	GraphNodeTypeReplicaSet   GraphNodeType = "rep"
 	GraphNodeTypeWorkload     GraphNodeType = "wep"
+	GraphNodeTypeClusterNodes GraphNodeType = "clusternodes"
+	GraphNodeTypeClusterNode  GraphNodeType = "clusternode"
 	GraphNodeTypeHosts        GraphNodeType = "hosts"
 	GraphNodeTypeHost         GraphNodeType = "host"
-	GraphNodeTypeHostEndpoint GraphNodeType = "hep" // Never exposed over the API, we expose these as Host
+	GraphNodeTypeHostEndpoint GraphNodeType = "hep" // Never exposed over the API, we expose these as Host or ClusterNode
 	GraphNodeTypeNetwork      GraphNodeType = "net"
 	GraphNodeTypeNetworkSet   GraphNodeType = "ns"
 	GraphNodeTypePort         GraphNodeType = "port"

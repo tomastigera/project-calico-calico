@@ -7,10 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
@@ -100,7 +99,7 @@ func GetL3FlowData(
 
 	// Create the list pager.
 	params := lsv1.L3FlowParams{QueryParams: lsv1.QueryParams{TimeRange: &tr}}
-	pager := client.NewListPager[lapi.L3Flow](&params)
+	pager := lsclient.NewListPager[lsv1.L3Flow](&params)
 	results, errors := pager.Stream(ctx, linseed.L3Flows(cluster).List)
 
 	var lastDestGp *FlowEndpoint
@@ -117,7 +116,7 @@ func GetL3FlowData(
 			}
 
 			source := FlowEndpoint{
-				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true),
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true, flow.SourceLabels),
 				NameAggr:  flow.Key.Source.AggregatedName,
 				Namespace: flow.Key.Source.Namespace,
 			}
@@ -134,7 +133,7 @@ func GetL3FlowData(
 				}
 			}
 			dest := FlowEndpoint{
-				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true),
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true, flow.DestinationLabels),
 				NameAggr:  flow.Key.Destination.AggregatedName,
 				Namespace: flow.Key.Destination.Namespace,
 				PortNum:   int(flow.Key.Destination.Port),
@@ -293,7 +292,7 @@ func blankToSingleDash(val string) string {
 	return val
 }
 
-func mapRawTypeToGraphNodeType(val string, agg bool) v1.GraphNodeType {
+func mapRawTypeToGraphNodeType(val string, agg bool, labels []lsv1.FlowLabels) v1.GraphNodeType {
 	switch val {
 	case "wep":
 		if agg {
@@ -301,6 +300,12 @@ func mapRawTypeToGraphNodeType(val string, agg bool) v1.GraphNodeType {
 		}
 		return v1.GraphNodeTypeWorkload
 	case "hep":
+		for _, label := range labels {
+			if label.Key == names.HostEndpointTypeLabelKey && len(label.Values) > 0 {
+				hepType := names.HostEndpointType(label.Values[0].Value)
+				return mapHostEndpointLabelToGraphNodeType(hepType)
+			}
+		}
 		return v1.GraphNodeTypeHost
 	case "net":
 		return v1.GraphNodeTypeNetwork
@@ -310,15 +315,26 @@ func mapRawTypeToGraphNodeType(val string, agg bool) v1.GraphNodeType {
 	return v1.GraphNodeTypeUnknown
 }
 
+func mapHostEndpointLabelToGraphNodeType(hepType names.HostEndpointType) v1.GraphNodeType {
+	switch hepType {
+	case names.HostEndpointTypeClusterNode:
+		return v1.GraphNodeTypeClusterNode
+	case names.HostEndpointTypeNonClusterHost:
+		return v1.GraphNodeTypeHost
+	default:
+		return v1.GraphNodeTypeHost
+	}
+}
+
 func mapGraphNodeTypeToRawType(val v1.GraphNodeType) (string, bool) {
 	switch val {
 	case v1.GraphNodeTypeWorkload:
 		return "wep", false
 	case v1.GraphNodeTypeReplicaSet:
 		return "wep", true
-	case v1.GraphNodeTypeHosts:
+	case v1.GraphNodeTypeClusterNodes, v1.GraphNodeTypeHosts:
 		return "hep", true
-	case v1.GraphNodeTypeHost:
+	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost:
 		return "hep", false
 	case v1.GraphNodeTypeNetwork:
 		return "net", true

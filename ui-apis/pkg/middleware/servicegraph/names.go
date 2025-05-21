@@ -117,7 +117,7 @@ func (ah *nameHelper) ConvertL3Flow(f L3Flow) L3Flow {
 	defer ah.lock.RUnlock()
 
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
-	if f.Edge.Source.Type == v1.GraphNodeTypeHost {
+	if f.Edge.Source.Type == v1.GraphNodeTypeClusterNode || f.Edge.Source.Type == v1.GraphNodeTypeHost {
 		f.Edge.Source.Name = f.Edge.Source.NameAggr
 		if nameAggr := ah.hostNameToAggrName[f.Edge.Source.Name]; nameAggr != "" {
 			f.Edge.Source.NameAggr = nameAggr
@@ -127,7 +127,7 @@ func (ah *nameHelper) ConvertL3Flow(f L3Flow) L3Flow {
 			ah.addAdditionalWildcardAggregatedNode(f.Edge.Source.Name)
 		}
 	}
-	if f.Edge.Dest.Type == v1.GraphNodeTypeHost {
+	if f.Edge.Dest.Type == v1.GraphNodeTypeClusterNode || f.Edge.Dest.Type == v1.GraphNodeTypeHost {
 		f.Edge.Dest.Name = f.Edge.Dest.NameAggr
 		if nameAggr := ah.hostNameToAggrName[f.Edge.Dest.Name]; nameAggr != "" {
 			f.Edge.Dest.NameAggr = nameAggr
@@ -148,7 +148,7 @@ func (ah *nameHelper) ConvertL7Flow(f L7Flow) L7Flow {
 	defer ah.lock.RUnlock()
 
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
-	if f.Edge.Source.Type == v1.GraphNodeTypeHost {
+	if f.Edge.Source.Type == v1.GraphNodeTypeClusterNode || f.Edge.Source.Type == v1.GraphNodeTypeHost {
 		f.Edge.Source.Name = f.Edge.Source.NameAggr
 		if nameAggr := ah.hostNameToAggrName[f.Edge.Source.Name]; nameAggr != "" {
 			f.Edge.Source.NameAggr = nameAggr
@@ -158,7 +158,7 @@ func (ah *nameHelper) ConvertL7Flow(f L7Flow) L7Flow {
 			ah.addAdditionalWildcardAggregatedNode(f.Edge.Source.Name)
 		}
 	}
-	if f.Edge.Dest.Type == v1.GraphNodeTypeHost {
+	if f.Edge.Dest.Type == v1.GraphNodeTypeClusterNode || f.Edge.Dest.Type == v1.GraphNodeTypeHost {
 		f.Edge.Dest.Name = f.Edge.Dest.NameAggr
 		if nameAggr := ah.hostNameToAggrName[f.Edge.Dest.Name]; nameAggr != "" {
 			f.Edge.Dest.NameAggr = nameAggr
@@ -182,7 +182,7 @@ func (ah *nameHelper) ConvertEvent(e Event) Event {
 	eps := e.Endpoints
 	e.Endpoints = make([]FlowEndpoint, len(eps))
 	for i, ep := range eps {
-		if ep.Type == v1.GraphNodeTypeHost {
+		if ep.Type == v1.GraphNodeTypeClusterNode || ep.Type == v1.GraphNodeTypeHost {
 			ep.Name = ep.NameAggr
 			if nameAggr := ah.hostNameToAggrName[ep.NameAggr]; nameAggr != "" {
 				ep.NameAggr = nameAggr

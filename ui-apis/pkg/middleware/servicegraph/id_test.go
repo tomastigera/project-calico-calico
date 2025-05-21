@@ -148,7 +148,19 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			"", "", "",
 			"rep/ns/repname", "", "", "",
 		),
-		Entry("Host endpoint",
+		Entry("Host endpoint (cluster node)",
+			IDInfo{
+				Endpoint: FlowEndpoint{
+					Type:     v1.GraphNodeTypeClusterNode,
+					Name:     "nodename",
+					NameAggr: "*",
+				},
+			},
+			"", "",
+			"", "", "",
+			"clusternodes/*", "clusternode/nodename/*", "", "",
+		),
+		Entry("Host endpoint (non-cluster host)",
 			IDInfo{
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeHost,
@@ -478,7 +490,17 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 				},
 			},
 		),
-		Entry("host endpoint",
+		Entry("host endpoint (cluster node)",
+			"clusternode/na1/*", IDInfo{
+				ParsedIDType: v1.GraphNodeTypeClusterNode,
+				Endpoint: FlowEndpoint{
+					Type:     v1.GraphNodeTypeClusterNode,
+					Name:     "na1",
+					NameAggr: "*",
+				},
+			},
+		),
+		Entry("host endpoint (non-cluster host)",
 			"host/na1/*", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeHost,
 				Endpoint: FlowEndpoint{
@@ -568,7 +590,16 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 				ServiceGroup: dummySg,
 			},
 		),
-		Entry("wildcarded hosts",
+		Entry("wildcard clusternodes",
+			"clusternodes/*", IDInfo{
+				ParsedIDType: v1.GraphNodeTypeClusterNodes,
+				Endpoint: FlowEndpoint{
+					Type:     v1.GraphNodeTypeClusterNodes,
+					NameAggr: "*",
+				},
+			},
+		),
+		Entry("wildcard hosts",
 			"hosts/*", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeHosts,
 				Endpoint: FlowEndpoint{

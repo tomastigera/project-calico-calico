@@ -34,7 +34,8 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 			Namespace: ep.Namespace,
 			NameAggr:  ep.NameAggr,
 		}
-	case v1.GraphNodeTypeHost, v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeNetwork:
+	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost,
+		v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeNetwork:
 		// Match on port and proto for these endpoint types since they do not truly represent a single microservice
 		// endpoint.  Also use the full name since the aggregated set does not represent a sensible grouping for
 		// services.

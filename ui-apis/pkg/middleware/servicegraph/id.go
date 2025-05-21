@@ -63,9 +63,11 @@ func GetNormalizedIDs(id v1.GraphNodeID, sgs ServiceGroups, splitIngressEgress b
 			return idi.GetNamespaceID()
 		case v1.GraphNodeTypeServiceGroup:
 			return idi.GetServiceGroupID()
-		case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
+		case v1.GraphNodeTypeReplicaSet,
+			v1.GraphNodeTypeClusterNodes, v1.GraphNodeTypeHosts,
+			v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
 			return idi.GetAggrEndpointID()
-		case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
+		case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
 			return idi.GetEndpointID()
 		case v1.GraphNodeTypePort:
 			if id := idi.GetEndpointPortID(); id != "" {
@@ -133,7 +135,7 @@ func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
 			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, dirId))
 		}
 		return v1.GraphNodeID(id)
-	case v1.GraphNodeTypeHosts:
+	case v1.GraphNodeTypeHosts, v1.GraphNodeTypeClusterNodes:
 		id := fmt.Sprintf("%s/%s", aggrType, idf.Endpoint.NameAggr)
 
 		// If there is a service group then include the service group.
@@ -156,6 +158,8 @@ func ConvertEndpointTypeToAggrEndpointType(t v1.GraphNodeType) v1.GraphNodeType 
 	switch t {
 	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeTypeReplicaSet
+	case v1.GraphNodeTypeClusterNode:
+		return v1.GraphNodeTypeClusterNodes
 	case v1.GraphNodeTypeHost:
 		return v1.GraphNodeTypeHosts
 	}
@@ -168,7 +172,7 @@ func (idf *IDInfo) GetEndpointID() v1.GraphNodeID {
 	switch idf.Endpoint.Type {
 	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s/%s", v1.GraphNodeTypeWorkload, idf.Endpoint.Namespace, idf.Endpoint.Name, idf.Endpoint.NameAggr))
-	case v1.GraphNodeTypeHost:
+	case v1.GraphNodeTypeHost, v1.GraphNodeTypeClusterNode:
 		id := fmt.Sprintf("%s/%s/%s", idf.Endpoint.Type, idf.Endpoint.Name, idf.Endpoint.NameAggr)
 
 		// If there is a service group then include the service group, otherwise if there is a Direction include that
@@ -295,8 +299,10 @@ var (
 		v1.GraphNodeTypeNamespace:    {{idpType, idpNamespace}},
 		v1.GraphNodeTypeServiceGroup: {{idpType}},
 		v1.GraphNodeTypeReplicaSet:   {{idpType, idpNamespace, idpNameAggr}},
+		v1.GraphNodeTypeClusterNode:  {{idpType, idpName, idpNameAggr}},
 		v1.GraphNodeTypeHost:         {{idpType, idpName, idpNameAggr}},
 		v1.GraphNodeTypeNetwork:      {{idpType, idpNameAggr}},
+		v1.GraphNodeTypeClusterNodes: {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeHosts:        {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeNetworkSet:   {{idpType, idpNameAggr}, {idpType, idpNamespace, idpNameAggr}},
 		v1.GraphNodeTypeWorkload:     {{idpType, idpNamespace, idpName, idpNameAggr}},
@@ -310,11 +316,14 @@ var (
 	// specific type.
 	allowedParentTypes = map[v1.GraphNodeType][]v1.GraphNodeType{
 		v1.GraphNodeTypePort: {
-			v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeHost,
+			v1.GraphNodeTypeReplicaSet,
+			v1.GraphNodeTypeWorkload, v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost,
 			v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet,
 		},
 		v1.GraphNodeTypeNetwork:      {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeNetworkSet:   {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
+		v1.GraphNodeTypeClusterNode:  {v1.GraphNodeTypeServiceGroup},
+		v1.GraphNodeTypeClusterNodes: {v1.GraphNodeTypeServiceGroup},
 		v1.GraphNodeTypeHost:         {v1.GraphNodeTypeServiceGroup},
 		v1.GraphNodeTypeHosts:        {v1.GraphNodeTypeServiceGroup},
 		v1.GraphNodeTypeServicePort:  {v1.GraphNodeTypeService},
@@ -479,7 +488,8 @@ func GetServiceGroupID(svcs []v1.NamespacedName) v1.GraphNodeID {
 // IsEndpointType returns true if the graph node type is considered an endpoint.
 func IsEndpointType(t v1.GraphNodeType) bool {
 	switch t {
-	case v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload,
+	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeClusterNodes, v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost,
+		v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload,
 		v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeNetwork:
 		return true
 	default:
