@@ -31,7 +31,10 @@ var (
 
 	docsURL = "https://docs.tigera.io"
 
-	s3Bucket = "s3://tigera-public/ee"
+	downloadURL = "https://downloads.tigera.io/ee"
+
+	s3Bucket        = "s3://tigera-public/ee"
+	s3ACLPublicRead = "--acl public-read"
 
 	// images produced in this repo that should be expected for a release.
 	// This list needs to be kept up-to-date
@@ -266,6 +269,7 @@ func (m *EnterpriseManager) modifyHelmChartsValues() error {
 }
 
 func (m *EnterpriseManager) BuildHelm() error {
+	logrus.Info("Building helm charts")
 	if m.isHashRelease {
 		// Reset the changes to the charts directory.
 		defer m.resetCharts()
@@ -277,6 +281,7 @@ func (m *EnterpriseManager) BuildHelm() error {
 
 	// Build the helm chart, passing the version to use.
 	env := append(os.Environ(), fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion))
+	env = append(env, fmt.Sprintf("RELEASE_STREAM=%s", m.calicoVersion))
 	if m.chartVersion != "" {
 		env = append(env, fmt.Sprintf("CHART_RELEASE=%s", m.chartVersion))
 	}
@@ -284,6 +289,7 @@ func (m *EnterpriseManager) BuildHelm() error {
 		return err
 	}
 
+	logrus.Info("Done building helm charts")
 	return nil
 }
 
@@ -338,8 +344,6 @@ func (m *EnterpriseManager) generateManifests() error {
 }
 
 func (m *EnterpriseManager) Build() error {
-	ver := m.calicoVersion
-
 	// Make sure output directory exists.
 	if err := os.MkdirAll(m.uploadDir(), utils.DirPerms); err != nil {
 		return fmt.Errorf("failed to create output dir: %s", err)
@@ -369,14 +373,8 @@ func (m *EnterpriseManager) Build() error {
 	if err := m.buildOCPBundle(); err != nil {
 		return err
 	}
-
-	// Build the Windows archive.
-	env := append(os.Environ(), fmt.Sprintf("VERSION=%s", ver))
-	if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, "node"), "release-windows-archive", env...); err != nil {
-		return fmt.Errorf("failed to build windows archive: %s", err)
-	}
-
-	if err := m.buildArchive(); err != nil {
+	// Build release archives
+	if err := m.buildArchives(); err != nil {
 		return err
 	}
 
@@ -484,8 +482,10 @@ func (m *EnterpriseManager) BuildMetadata(dir string) error {
 	return nil
 }
 
-func (m *EnterpriseManager) buildArchive() error {
+// buildArchives build windows and release archives.“
+func (m *EnterpriseManager) buildArchives() error {
 	// Build the release archive.
+	logrus.Info("Building release archive")
 	env := os.Environ()
 	if m.isHashRelease {
 		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
@@ -493,12 +493,19 @@ func (m *EnterpriseManager) buildArchive() error {
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "release-archive", env...); err != nil {
 		return err
 	}
+
+	// Build the windows archive.
+	logrus.Info("Building windows release archive")
+	env = append(os.Environ(), fmt.Sprintf("VERSION=%s", m.calicoVersion))
+	if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, "node"), "release-windows-archive", env...); err != nil {
+		return fmt.Errorf("failed to build windows archive: %s", err)
+	}
 	return nil
 }
 
 type rpmRepoData struct {
-	ReleaseURL string
-	Version    string
+	BaseURL string
+	Version string
 }
 
 func createRPMPackageList(dir, out string) error {
@@ -535,6 +542,8 @@ func (m *EnterpriseManager) assembleRPMs() error {
 		logrus.Info("Skipping building RPMs")
 		return nil
 	}
+
+	logrus.Info("Building RPMs")
 	outDir := filepath.Join(m.uploadDir(), "non-cluster-host-rpms")
 	if err := os.MkdirAll(outDir, utils.DirPerms); err != nil {
 		return err
@@ -544,8 +553,20 @@ func (m *EnterpriseManager) assembleRPMs() error {
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		rsyncOpts = append(rsyncOpts, "--verbose", "--progress")
 	}
+
+	ver := version.Version(m.calicoVersion)
+	if !m.isHashRelease {
+		// Get the metadata from the remote repo.
+		// This is needed as we publish based on vX.Y to ease upgrading.
+		logrus.Debug("Downloading RPM metadata from remote")
+		if err := m.s3Cp(fmt.Sprintf("%s/rpms/%s/", s3Bucket, ver.PrimaryStream()), outDir+"/", `--exclude "*.rpm"`); err != nil {
+			logrus.WithError(err).Errorf("Failed to download RPM metadata for %s", ver.PrimaryStream())
+			return fmt.Errorf("failed to download RPMs metadata for %s: %s", ver.PrimaryStream(), err)
+		}
+	}
+
 	for _, dir := range rpmDirs {
-		logrus.WithField("package", dir).Debug("Building RPM package")
+		logrus.WithField("package", dir).Info("Building RPM package")
 		if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, dir), "package"); err != nil {
 			logrus.WithError(err).Errorf("Failed to build RPM package for %s", dir)
 			return err
@@ -558,17 +579,31 @@ func (m *EnterpriseManager) assembleRPMs() error {
 			"destDir": destDir,
 		}).Debug("Copying RPM package")
 		if _, err := m.runner.Run("rsync", append(rsyncOpts, srcDir, destDir), nil); err != nil {
-			logrus.WithError(err).Errorf("Failed copy %s RPM to %s", dir, destDir)
+			logrus.WithFields(logrus.Fields{
+				"package": dir,
+				"sr":      srcDir,
+				"dest":    destDir,
+			}).WithError(err).Error("Failed copy RPMs")
 			return err
 		}
 	}
 
 	createrepo := "createrepo_c"
+	var rpmURLBase string
+	if m.isHashRelease {
+		rpmURLBase = fmt.Sprintf("%s/non-cluster-host-rpms", m.hashrelease.URL())
+	} else {
+		rpmURLBase = fmt.Sprintf("%s/rpms/%s", downloadURL, ver.PrimaryStream())
+	}
 
+	tmpl, err := template.New("yum.conf").Parse(rpmRepoTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to parse yum repo template: %s", err)
+	}
 	for _, version := range rhelVersions {
 		rhelDir := filepath.Join(outDir, fmt.Sprintf("rhel%s", version))
 		pkgListPath := filepath.Join(m.tmpDir, fmt.Sprintf("%s-rhel%s-pkglist.txt", m.calicoVersion, version))
-		rpmURL := fmt.Sprintf("%s/non-cluster-host-rpms/rhel%s", m.hashrelease.URL(), version)
+		rpmURL := rpmURLBase + fmt.Sprintf("rhel%s/", version)
 		if err := createRPMPackageList(rhelDir, pkgListPath); err != nil {
 			logrus.WithError(err).Errorf("Failed to create RPM package list for RHEL %s", version)
 			return fmt.Errorf("failed to create RPM package list for RHEL %s: %s", version, err)
@@ -579,35 +614,51 @@ func (m *EnterpriseManager) assembleRPMs() error {
 			"--recycle-pkglist",
 			fmt.Sprintf("--pkglist=%s", pkgListPath),
 			fmt.Sprintf("--baseurl=%s", rpmURL),
-			"--xz", ".",
+			"--xz",
 		}
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			args = append(args, "--verbose")
+		} else {
+			args = append(args, "--skip-stat")
 		}
+		args = append(args, ".")
 		if _, err := m.runner.RunInDir(rhelDir, createrepo, args, nil); err != nil {
 			logrus.WithError(err).Errorf("Failed to create repo for RHEL %s", version)
 			return fmt.Errorf("failed to create repo for RHEL %s: %s", version, err)
 		}
-		logrus.WithField("RHELVersion", version).Debug("Writing yum repo config file")
-		tmpl, err := template.New("yum.conf").Parse(rpmRepoTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse yum repo template: %s", err)
-		}
-		f, err := os.Create(filepath.Join(outDir, fmt.Sprintf("calico_rhel%s.repo", version)))
+		logrus.WithField("RHELVersion", version).Info("Writing yum repo config file")
+
+		repoFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("calico_rhel%s.repo", version)))
 		if err != nil {
 			return fmt.Errorf("failed to create yum repo config file: %s", err)
 		}
-		defer f.Close()
+		defer repoFile.Close()
 		data := &rpmRepoData{
-			ReleaseURL: rpmURL,
-			Version:    version,
+			BaseURL: rpmURLBase,
+			Version: version,
 		}
-		if err := tmpl.Execute(f, data); err != nil {
+		if err := tmpl.Execute(repoFile, data); err != nil {
 			logrus.WithField("version", version).WithError(err).Error("Failed to write yum repo config file")
 			return fmt.Errorf("failed to write yum repo config file: %s", err)
 		}
 		logrus.WithField("RHELVersion", version).Debug("Wrote yum repo config file")
 	}
+
+	// Add combined repo config file.
+	logrus.Infof("Creating yum repo config file for %s", ver.PrimaryStream())
+	combinedRepoFile, err := os.Create(filepath.Join(outDir, "calico_enterprise.repo"))
+	if err != nil {
+		return fmt.Errorf("failed to create combined yum repo config file: %s", err)
+	}
+	defer combinedRepoFile.Close()
+	data := &rpmRepoData{
+		BaseURL: rpmURLBase,
+	}
+	if err := tmpl.Execute(combinedRepoFile, data); err != nil {
+		logrus.WithError(err).Error("Failed to write combined yum repo config file")
+		return fmt.Errorf("failed to write combined yum repo config file: %s", err)
+	}
+	logrus.Debug("Wrote combined yum repo config file")
 	return nil
 }
 
@@ -650,7 +701,7 @@ func (m *EnterpriseManager) collectArtifacts() error {
 	}
 
 	// Add helm charts
-	charts, err := listCharts(filepath.Join(m.repoRoot, "bin"), m.helmChartVersion())
+	charts, err := listCharts(filepath.Join(m.repoRoot, "bin"), m.calicoVersion)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get list of charts")
 	}
@@ -660,11 +711,14 @@ func (m *EnterpriseManager) collectArtifacts() error {
 	}
 	for _, chart := range charts {
 		logrus.WithField("chart", chart).Debug("Copying chart")
-		if _, err := m.runner.Run("cp", []string{chart, chartsDir}, nil); err != nil {
+		chartName := filepath.Base(chart)
+		chartDest := filepath.Join(chartsDir, strings.ReplaceAll(chartName, m.calicoVersion, m.helmChartVersion()))
+		if err := utils.CopyFile(chart, chartDest); err != nil {
+			logrus.WithError(err).Error("Failed to copy chart")
 			return err
 		}
-		if strings.HasSuffix(chart, fmt.Sprintf("tigera-operator-%s.tgz", m.helmChartVersion())) {
-			if _, err := m.runner.Run("cp", []string{chart, uploadDir}, nil); err != nil {
+		if strings.Contains(chartName, "tigera-operator") {
+			if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{chartDest, uploadDir}, nil); err != nil {
 				return err
 			}
 		}
@@ -778,7 +832,7 @@ func (m *EnterpriseManager) PublishRelease() error {
 		return m.publishToHashreleaseServer()
 	}
 
-	if err := m.publishReleaseArtifacts(); err != nil {
+	if err := m.publishArtifactsToS3(); err != nil {
 		return err
 	}
 
@@ -799,10 +853,12 @@ func (m *EnterpriseManager) PublishRelease() error {
 
 func (m *EnterpriseManager) publishReleaseImages() error {
 	if !m.publishImages {
-		logrus.Info("Skipping publishing images")
+		logrus.Info("Skipping publishing release images and binaries")
 		return nil
 	}
 
+	// Publish release images (including windows images).
+	logrus.Info("Start publishing release images")
 	env := append(os.Environ(),
 		"IMAGE_ONLY=true",
 		fmt.Sprintf("DEV_TAG=%s", m.enterpriseHashrelease.ProductVersion),
@@ -832,7 +888,7 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 			}
 
 			// Success - move on to the next directory.
-			logrus.Info(out)
+			logrus.WithField("directory", dir).Info(out)
 			break
 		}
 	}
@@ -851,10 +907,13 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 			}
 
 			// Success - move on to the next directory.
-			logrus.Info(out)
+			logrus.WithField("directory", dir).Info(out)
 			break
 		}
 	}
+
+	// Publish release binaries.
+	logrus.Info("Start publishing release binaries")
 	env = append(os.Environ(),
 		fmt.Sprintf("VERSION=%s", m.calicoVersion),
 	)
@@ -878,29 +937,34 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 			}
 
 			// Success - move on to the next directory.
-			logrus.Info(out)
+			logrus.WithField("directory", dir).Info(out)
 			break
 		}
 	}
+	logrus.Info("Finished publishing release images and binaries")
 	return nil
 }
 
-func (m *EnterpriseManager) publishReleaseArtifacts() error {
+func (m *EnterpriseManager) publishArtifactsToS3() error {
 	if !m.publishToS3 {
-		logrus.Info("Skipping publishing manifests, release archive and RPMs to S3")
+		logrus.Info("Skipping publishing release artifacts to S3")
 		return nil
 	}
-	if err := m.uploadToS3(filepath.Join(m.uploadDir(), "manifests")+"/", fmt.Sprintf("%s/%s/manifests/", s3Bucket, m.calicoVersion)); err != nil {
+	logrus.Info("Start publishing release artifacts to S3")
+	logrus.WithField("artifact", "manifests").Info("Publishing artifacts to S3")
+	if err := m.s3Cp(filepath.Join(m.uploadDir(), "manifests")+"/", fmt.Sprintf("%s/%s/manifests/", s3Bucket, m.calicoVersion), s3ACLPublicRead); err != nil {
 		return fmt.Errorf("failed to publish manifests: %s", err)
 	}
-	if err := m.uploadToS3(filepath.Join(m.uploadDir(), fmt.Sprintf("release-%s-%s.tgz", m.calicoVersion, m.operatorVersion)), fmt.Sprintf("%s/archives/", s3Bucket)); err != nil {
+	logrus.WithField("artifact", "release archive").Info("Publishing artifacts to S3")
+	if err := m.s3Cp(filepath.Join(m.uploadDir(), fmt.Sprintf("release-%s-%s.tgz", m.calicoVersion, m.operatorVersion)), fmt.Sprintf("%s/archives/", s3Bucket), s3ACLPublicRead); err != nil {
 		return fmt.Errorf("failed to publish release archive: %s", err)
 	}
-	for _, rhelVer := range rhelVersions {
-		if err := m.uploadToS3(filepath.Join(m.uploadDir(), "non-cluster-host-rpms", fmt.Sprintf("rhel%s", rhelVer)), fmt.Sprintf("%s/rpms/%s/rhel%s", s3Bucket, m.calicoVersion, rhelVer)); err != nil {
-			return fmt.Errorf("failed to publish RHEL %s repo: %s", rhelVer, err)
-		}
+	logrus.WithField("artifact", "rpms").Info("Publishing artifacts to S3")
+	ver := version.Version(m.calicoVersion)
+	if err := m.s3Sync(filepath.Join(m.uploadDir(), "non-cluster-host-rpms")+"/", fmt.Sprintf("%s/rpms/%s/", s3Bucket, ver.PrimaryStream()), s3ACLPublicRead); err != nil {
+		return fmt.Errorf("failed to publish %s RHEL repo: %s", ver.PrimaryStream(), err)
 	}
+	logrus.Info("Finished publishing release artifacts to S3")
 	return nil
 }
 
@@ -909,6 +973,7 @@ func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
 		logrus.Info("Skipping publishing windows archive")
 		return nil
 	}
+	logrus.Info("Start publishing windows archive to GCS")
 
 	bucket := windowsGCSBucket
 	publishSuffix := m.calicoVersion
@@ -917,19 +982,14 @@ func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
 		publishSuffix = m.enterpriseHashrelease.Name
 	}
 
-	cmd := "gsutil"
-	args := []string{
-		"cp",
-		fmt.Sprintf("tigera-calico-windows-%s.zip", m.calicoVersion),
-		fmt.Sprintf("gs://%s/tigera-calico-windows-%s.zip", bucket, publishSuffix),
+	src := filepath.Join(m.tmpDir, fmt.Sprintf("tigera-calico-windows-%s.zip", m.calicoVersion))
+	dest := fmt.Sprintf("gs://%s/tigera-calico-windows-%s.zip", bucket, publishSuffix)
+
+	if err := m.gcsCp(src, dest); err != nil {
+		return fmt.Errorf("failed to publish windows archive to GCS: %s", err)
 	}
-	if m.dryRun {
-		logrus.WithField("cmd", fmt.Sprintf("%s %s", cmd, strings.Join(args, " "))).Info("Dry-run: would publish windows archive")
-		return nil
-	}
-	if _, err := m.runner.RunInDir(m.tmpDir, cmd, args, nil); err != nil {
-		return err
-	}
+
+	logrus.Info("Published windows archive to GCS")
 	return nil
 }
 
@@ -938,6 +998,7 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 		logrus.Info("Skipping publishing helm charts")
 		return nil
 	}
+	logrus.Info("Start publishing helm charts")
 	charts, err := listCharts(filepath.Join(m.uploadDir(), "charts"), m.helmChartVersion())
 	if err != nil {
 		return fmt.Errorf("failed to list charts: %s", err)
@@ -948,11 +1009,13 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 				return err
 			}
 		} else {
-			if err := m.uploadToS3(chart, fmt.Sprintf("%s/charts/", s3Bucket)); err != nil {
+			if err := m.s3Cp(chart, fmt.Sprintf("%s/charts/", s3Bucket), s3ACLPublicRead); err != nil {
 				return fmt.Errorf("failed to push chart %s: %s", chart, err)
 			}
 		}
+		logrus.WithField("chart", chart).Info("Published helm chart")
 	}
+	logrus.Info("Finished publishing helm charts")
 	return nil
 }
 
@@ -1066,18 +1129,16 @@ func (m *EnterpriseManager) modifyVersionsFile() error {
 	return nil
 }
 
-func (m *EnterpriseManager) uploadToS3(src, dest string) error {
+func (m *EnterpriseManager) s3Cp(src, dest string, additionalFlags ...string) error {
 	args := []string{
 		"--profile", m.awsProfile,
 		"s3", "cp",
 		src, dest,
-		"--acl", "public-read",
 	}
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
+	if len(additionalFlags) > 0 {
+		args = append(args, additionalFlags...)
 	}
-	if info.IsDir() {
+	if strings.HasSuffix(src, "/") {
 		args = append(args, "--recursive")
 	}
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -1088,6 +1149,52 @@ func (m *EnterpriseManager) uploadToS3(src, dest string) error {
 		logrus.WithField("cmd", fmt.Sprintf("aws %s", strings.Join(args, " "))).Info("Dry-run: upload to S3")
 	}
 	if _, err := m.runner.Run("aws", args, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) s3Sync(src, dest string, additionalFlags ...string) error {
+	args := []string{
+		"--profile", m.awsProfile,
+		"s3", "sync",
+		src, dest,
+	}
+	if len(additionalFlags) > 0 {
+		args = append(args, additionalFlags...)
+	}
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		args = append(args, "--debug")
+	}
+	if m.dryRun {
+		args = append(args, "--dryrun")
+		logrus.WithField("cmd", fmt.Sprintf("aws %s", strings.Join(args, " "))).Info("Dry-run: sync to S3")
+	}
+	if _, err := m.runner.Run("aws", args, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) gcsCp(src, dest string, additionalFlags ...string) error {
+	args := []string{
+		"storage", "cp",
+		src, dest,
+	}
+	if strings.HasSuffix(src, "/") {
+		args = append(args, "--recursive")
+	}
+	if len(additionalFlags) > 0 {
+		args = append(args, additionalFlags...)
+	}
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		args = append(args, "--verbosity=debug")
+	}
+	if m.dryRun {
+		logrus.WithField("cmd", fmt.Sprintf("gcloud %s", strings.Join(args, " "))).Info("Dry-run: upload to GCS")
+		return nil
+	}
+	if _, err := m.runner.Run("gcloud", args, nil); err != nil {
 		return err
 	}
 	return nil

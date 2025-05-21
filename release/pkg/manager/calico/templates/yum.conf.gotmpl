@@ -1,5 +1,5 @@
-[calico_{{.Version}}]
-name=Calico Enterprise for RHEL {{.Version}}
-baseurl={{.ReleaseURL}}/
+[calico{{if .Version}}_{{.Version}}{{end}}]
+name=Calico Enterprise for RHEL {{if .Version}}{{.Version}}{{else}}$releasever{{end}}
+baseurl={{.BaseURL}}/rhel{{if .Version}}{{.Version}}{{else}}$releasever{{end}}/
 enabled=1
 gpgcheck=0

@@ -64,6 +64,10 @@ func (v *EnterpriseVersionData) ManagerVersion() string {
 	return v.manager
 }
 
+func (v *Version) PrimaryStream() string {
+	return strings.Split(v.Stream(), "-")[0]
+}
+
 func (v *Version) NextReleaseVersion() (Version, error) {
 	ver := v.Semver()
 	ep, epVer := IsEarlyPreviewVersion(ver)
