@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"
+	"k8s.io/utils/ptr"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -61,9 +62,7 @@ type AggregatedEndpoint struct {
 }
 
 var (
-	hasDeniedTrafficTrue  = true
-	hasDeniedTrafficFalse = false
-	flowAccessWarning     = `user is missing required rbac verbs ("get") to resource "flows"`
+	flowAccessWarning = `user is missing required rbac verbs ("get") to resource "flows"`
 )
 
 // EndpointsAggregationHandler is a handler for /endpoints/aggregation api
@@ -239,10 +238,10 @@ func updateResults(endpointsResp *querycacheclient.QueryEndpointsResp,
 			epAggregate.HasFlowAccess = false
 			epAggregate.Warnings = append(epAggregate.Warnings, flowAccessWarning)
 		} else if epPatterns != nil && epPatterns.MatchString(epKey) {
-			epAggregate.HasDeniedTraffic = &hasDeniedTrafficTrue
+			epAggregate.HasDeniedTraffic = ptr.To(true)
 			epAggregate.HasFlowAccess = true
 		} else {
-			epAggregate.HasDeniedTraffic = &hasDeniedTrafficFalse
+			epAggregate.HasDeniedTraffic = ptr.To(false)
 			epAggregate.HasFlowAccess = true
 		}
 
