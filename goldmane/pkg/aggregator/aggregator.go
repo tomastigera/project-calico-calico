@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/goldmane/pkg/aggregator/bucketing"
@@ -36,9 +37,65 @@ const (
 	// channelDepth is the depth of the channel to use for flow updates.
 	channelDepth = 5000
 
+	// batchSize is the max number of flows to process per batch.
+	batchSize = 500
+
 	// healthName is the name of this component in the health aggregator.
 	healthName = "aggregator"
 )
+
+var (
+	receivedFlowCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "goldmane_aggr_received_flows_total",
+		Help: "Total number of flows received by Goldmane aggregator.",
+	})
+
+	flowIndexLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "goldmane_aggr_flow_process_latency",
+		Help: "Histogram measuring the time taken to index a flow.",
+	})
+
+	flowIndexBatchSize = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "goldmane_aggr_flow_index_batch_size",
+		Help: "Histogram measuring the number of flows processed in a batch.",
+	})
+
+	flowChannelSize = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "goldmane_aggr_flow_ingest_buffer_size",
+		Help: "Current size of the flow ingest buffer.",
+	})
+
+	rolloverLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "goldmane_aggr_rollover_latency_ms",
+		Help: "Histogram measuring the time until the next rollover.",
+	})
+
+	rolloverDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "goldmane_aggr_rollover_duration_ms",
+		Help: "Duration of the rollover process.",
+	})
+
+	numUniqueFlows = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "goldmane_aggr_num_unique_flows",
+		Help: "Number of unique flows in the aggregator.",
+	})
+
+	numDroppedFlows = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "goldmane_aggr_dropped_flows_total",
+		Help: "Total number of flows dropped by the aggregator.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(receivedFlowCounter)
+	prometheus.MustRegister(flowIndexLatency)
+	prometheus.MustRegister(flowIndexBatchSize)
+	prometheus.MustRegister(flowChannelSize)
+	prometheus.MustRegister(rolloverLatency)
+	prometheus.MustRegister(rolloverDuration)
+	prometheus.MustRegister(numUniqueFlows)
+	prometheus.MustRegister(numDroppedFlows)
+}
 
 // listRequest is an internal helper used to synchronously request matching flows from the aggregator.
 type listRequest struct {
@@ -200,7 +257,7 @@ func NewLogAggregator(opts ...Option) *LogAggregator {
 	return a
 }
 
-func (a *LogAggregator) flowSet(startGt, startLt int64) set.Set[types.FlowKey] {
+func (a *LogAggregator) flowSet(startGt, startLt int64) set.Set[*types.DiachronicFlow] {
 	return a.buckets.FlowSet(startGt, startLt)
 }
 
@@ -213,7 +270,7 @@ func (a *LogAggregator) Run(startTime int64) {
 	opts := []bucketing.BucketRingOption{
 		bucketing.WithBucketsToAggregate(a.bucketsToAggregate),
 		bucketing.WithPushAfter(a.pushIndex),
-		bucketing.WithLookup(func(k types.FlowKey) *types.DiachronicFlow { return a.diachronics[k] }),
+		bucketing.WithLookup(a.diachronicFlow),
 		bucketing.WithStreamReceiver(a.streams),
 	}
 	a.buckets = bucketing.NewBucketRing(
@@ -239,14 +296,16 @@ func (a *LogAggregator) Run(startTime int64) {
 	for {
 		select {
 		case f := <-a.recvChan:
-			a.handleFlowUpdate(f)
+			a.handleFlowBatch(f)
 		case <-rolloverCh:
+			start := time.Now()
 			rolloverCh = a.rolloverFunc(a.rollover())
 
 			a.buckets.EmitFlowCollections(a.sink)
 			if a.health != nil {
 				a.health.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 			}
+			rolloverDuration.Observe(time.Since(start).Seconds())
 		case req := <-a.listRequests:
 			req.respCh <- a.queryFlows(req.req)
 		case req := <-a.filterHintsRequests:
@@ -284,6 +343,7 @@ func (a *LogAggregator) Receive(f *types.Flow) {
 	select {
 	case a.recvChan <- f:
 	case <-timeout:
+		numDroppedFlows.Inc()
 		logrus.Warn("Output channel full, dropping flow")
 	}
 }
@@ -372,11 +432,13 @@ func (a *LogAggregator) backfill(stream *Stream, request *proto.FlowStreamReques
 	// Right now, the stream endpoint only supports aggregation windows of a single bucket interval.
 	err := a.buckets.IterBucketsTime(request.StartTimeGte, a.nowFunc().Unix(), func(bucket *bucketing.AggregationBucket) {
 		// Iterate all of the keys in this bucket.
-		bucket.FlowKeys.Iter(func(key types.FlowKey) error {
-			builder := bucketing.NewCachedFlowBuilder(a.diachronics[key], bucket.StartTime, bucket.EndTime)
+		bucket.Flows.Iter(func(d *types.DiachronicFlow) error {
+			builder := bucketing.NewCachedFlowBuilder(d, bucket.StartTime, bucket.EndTime)
 			if f, id := builder.Build(request.Filter); f != nil {
 				// The flow matches the filter and time range.
-				logrus.WithField("flow", key).Debug("Sending backfilled flow to stream")
+				if logrus.IsLevelEnabled(logrus.DebugLevel) {
+					logrus.WithFields(f.Key.Fields()).Debug("Sending backfilled flow to stream")
+				}
 				stream.Receive(&proto.FlowResult{
 					Id:   id,
 					Flow: types.FlowToProto(f),
@@ -593,9 +655,7 @@ func (a *LogAggregator) rollover() time.Duration {
 
 	// Update DiachronicFlows. We need to remove any windows from the DiachronicFlows that have expired.
 	// Find the oldest bucket's start time and remove any data from the DiachronicFlows that is older than that.
-	keys.Iter(func(k types.FlowKey) error {
-		d := a.diachronics[k]
-
+	keys.Iter(func(d *types.DiachronicFlow) error {
 		// Rollover the DiachronicFlow. This will remove any expired data from it.
 		d.Rollover(a.buckets.BeginningOfHistory())
 
@@ -629,6 +689,7 @@ func (a *LogAggregator) rollover() time.Duration {
 			"nextBucketStart": nextBucketStart.Unix(),
 		}).Warn("Falling behind, scheduling immediate rollover")
 		// We don't actually use 0 time, as it could starve the main routine. Use a small amount of delay.
+		rolloverLatency.Observe(float64(10))
 		return 10 * time.Millisecond
 	}
 
@@ -639,18 +700,50 @@ func (a *LogAggregator) rollover() time.Duration {
 		"now":             now.Unix(),
 		"rolloverIn":      rolloverIn,
 	}).Debug("Scheduling next rollover")
+	rolloverLatency.Observe(float64(rolloverIn.Milliseconds()))
 	return rolloverIn
 }
 
-func (a *LogAggregator) handleFlowUpdate(flow *types.Flow) {
+func (a *LogAggregator) handleFlowBatch(first *types.Flow) {
+	// Index the flow that triggered the batch.
+	a.indexFlow(first)
+
+	// While we're here, check to see if there are any other flows to process.
+	numHandled := 1
+	for range batchSize {
+		select {
+		case f := <-a.recvChan:
+			a.indexFlow(f)
+			numHandled++
+		default:
+			// No more flows to process.
+			break
+		}
+	}
+	logrus.WithField("num", numHandled).Debug("Processed flow batch")
+
+	// Set the number of unique flows in the aggregator based on the number of DiachronicFlows.
+	numUniqueFlows.Set(float64(len(a.diachronics)))
+	flowChannelSize.Set(float64(len(a.recvChan)))
+	flowIndexBatchSize.Observe(float64(numHandled))
+}
+
+func (a *LogAggregator) indexFlow(flow *types.Flow) {
+	flowStart := time.Now()
+
 	logrus.WithField("flow", flow).Debug("Received Flow")
+
+	// Increment the received flow counter.
+	receivedFlowCounter.Inc()
 
 	// Find the window for this Flow based on the global bucket ring. We use the ring to ensure
 	// that time windows are consistent across all DiachronicFlows.
 	start, end, err := a.buckets.Window(flow)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"start": start, "end": end}).
-			WithFields(flow.Key.Fields()).
+		logrus.WithFields(logrus.Fields{
+			"start": flow.StartTime,
+			"now":   a.nowFunc().Unix(),
+		}).WithFields(flow.Key.Fields()).
 			WithError(err).
 			Warn("Unable to sort flow into a bucket")
 		return
@@ -675,4 +768,7 @@ func (a *LogAggregator) handleFlowUpdate(flow *types.Flow) {
 
 	// Add the Flow to our bucket ring.
 	a.buckets.AddFlow(flow)
+
+	// Record time taken to process the flow.
+	flowIndexLatency.Observe(time.Since(flowStart).Seconds())
 }

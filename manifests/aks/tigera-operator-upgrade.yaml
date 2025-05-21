@@ -4400,6 +4400,7 @@ spec:
                               items:
                                 properties:
                                   generateName:
+                                    maxLength: 253
                                     type: string
                                   interfaceCIDRs:
                                     items:
@@ -4488,6 +4489,7 @@ spec:
                                   items:
                                     properties:
                                       generateName:
+                                        maxLength: 253
                                         type: string
                                       interfaceCIDRs:
                                         items:
@@ -49039,6 +49041,7 @@ rules:
       - egressgateways/status
       - gatewayapis
       - gatewayapis/finalizers
+      - gatewayapis/status
       - goldmanes
       - goldmanes/finalizers
       - goldmanes/status
@@ -49074,8 +49077,8 @@ rules:
       - policyrecommendations/finalizers
       - policyrecommendations/status
       - tigerastatuses
-      - tigerastatuses/finalizers
       - tigerastatuses/status
+      - tigerastatuses/finalizers
       - tlspassthroughroutes
       - tlsterminatedroutes
       - whiskers

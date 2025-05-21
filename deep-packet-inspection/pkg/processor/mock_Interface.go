@@ -72,6 +72,10 @@ func (_m *MockClientInterface) EnsureInitialized(ctx context.Context, calicoVers
 	return nil
 }
 
+func (_m *MockClientInterface) Close() error {
+	return nil
+}
+
 func (_m *MockClientInterface) FelixConfigurations() clientv3.FelixConfigurationInterface {
 	return nil
 }

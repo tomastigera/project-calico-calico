@@ -837,6 +837,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config,
 			dp.loopSummarizer,
 			4,
+			config.VXLANMTU,
 		)
 		dp.vxlanParentC = make(chan string, 1)
 		go dp.vxlanManager.KeepVXLANDeviceInSync(context.Background(), config.VXLANMTU, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second, dp.vxlanParentC)
@@ -1611,6 +1612,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config,
 				dp.loopSummarizer,
 				6,
+				config.VXLANMTUV6,
 			)
 			dp.vxlanParentCV6 = make(chan string, 1)
 			go dp.vxlanManagerV6.KeepVXLANDeviceInSync(context.Background(), config.VXLANMTUV6, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second, dp.vxlanParentCV6)
