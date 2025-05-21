@@ -258,6 +258,9 @@ func (r Rule) String() string {
 			if len(r.HTTPMatch.Paths) > 0 {
 				toParts = append(toParts, "httpPaths", fmt.Sprintf("%+v", r.HTTPMatch.Paths))
 			}
+			if len(r.HTTPMatch.Headers) > 0 {
+				toParts = append(toParts, "httpHeaders", fmt.Sprintf("%+v", r.HTTPMatch.Headers))
+			}
 		}
 
 		if len(toParts) > 0 {
