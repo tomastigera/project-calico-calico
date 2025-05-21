@@ -736,7 +736,7 @@ func (r *CalicoManager) assertImageVersions() error {
 			}
 		case "csi":
 			for _, reg := range r.imageRegistries {
-				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
+				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "org.opencontainers.image.version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
 				if err != nil {
 					return fmt.Errorf("failed to run get version from %s image: %s", img, err)
 				} else if !strings.Contains(out, r.calicoVersion) {
@@ -754,7 +754,7 @@ func (r *CalicoManager) assertImageVersions() error {
 			}
 		case "dikastes":
 			for _, reg := range r.imageRegistries {
-				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
+				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "org.opencontainers.image.version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
 				if err != nil {
 					return fmt.Errorf("failed to run get version from %s image: %s", img, err)
 				} else if !strings.Contains(out, r.calicoVersion) {
@@ -783,7 +783,7 @@ func (r *CalicoManager) assertImageVersions() error {
 			}
 		case "node-driver-registrar":
 			for _, reg := range r.imageRegistries {
-				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
+				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "org.opencontainers.image.version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
 				if err != nil {
 					return fmt.Errorf("failed to run get version from %s image: %s", img, err)
 				} else if !strings.Contains(out, r.calicoVersion) {
@@ -792,7 +792,7 @@ func (r *CalicoManager) assertImageVersions() error {
 			}
 		case "pod2daemon-flexvol":
 			for _, reg := range r.imageRegistries {
-				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
+				out, err := r.runner.Run("docker", []string{"inspect", `--format='{{ index .Config.Labels "org.opencontainers.image.version" }}'`, fmt.Sprintf("%s/%s:%s", reg, img, r.calicoVersion)}, nil)
 				if err != nil {
 					return fmt.Errorf("failed to run get version from %s image: %s", img, err)
 				} else if !strings.Contains(out, r.calicoVersion) {
