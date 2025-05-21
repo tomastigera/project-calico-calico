@@ -261,6 +261,10 @@ func (f fakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion, 
 	panic("implement me")
 }
 
+func (f fakeCalicoClient) Close() error {
+	return nil
+}
+
 func (f fakeCalicoClient) BFDConfigurations() clientv3.BFDConfigurationInterface {
 	panic("implement me")
 }
