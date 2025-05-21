@@ -605,6 +605,8 @@ rules:
     verbs:
       - create
       - list
+      - watch
+      - delete
   - apiGroups:
       - crd.projectcalico.org
     resources:
