@@ -181,7 +181,20 @@ func TestMatchRule(t *testing.T) {
 
 		HttpMatch: &proto.HTTPMatch{
 			Methods: []string{"GET", "POST"},
-			Paths:   []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/path"}}, {PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/pathlong"}}},
+			Paths: []*proto.HTTPMatch_PathMatch{
+				{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/path"}},
+				{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/pathlong"}},
+			},
+			Headers: []*proto.HTTPMatch_HeadersMatch{
+				&proto.HTTPMatch_HeadersMatch{
+					Header:   "x-forwarded-for",
+					Operator: "HasPrefix",
+					Values: []string{
+						"192.168.0.254",
+						"192.168.0.1",
+					},
+				},
+			},
 		},
 		Protocol: &proto.Protocol{
 			NumberOrName: &proto.Protocol_Name{
@@ -222,6 +235,9 @@ func TestMatchRule(t *testing.T) {
 			Http: &auth.AttributeContext_HttpRequest{
 				Method: "GET",
 				Path:   "/path",
+				Headers: map[string]string{
+					"x-forwarded-for": "192.168.0.254 192.168.0.100",
+				},
 			},
 		},
 	}}
@@ -294,6 +310,19 @@ func TestMatchRule(t *testing.T) {
 	rule.HttpMatch.Paths = []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/nopath"}}}
 	Expect(match("", rule, reqCache)).To(BeFalse())
 	rule.HttpMatch.Paths = ohp
+	Expect(match("", rule, reqCache)).To(BeTrue())
+
+	// HTTPHeader
+	ohh := rule.HttpMatch.Headers
+	rule.HttpMatch.Headers = []*proto.HTTPMatch_HeadersMatch{
+		&proto.HTTPMatch_HeadersMatch{
+			Header:   "x-forwarded-for",
+			Operator: "HasPrefix",
+			Values:   []string{"192.168.0.100"},
+		},
+	}
+	Expect(match("", rule, reqCache)).To(BeFalse())
+	rule.HttpMatch.Headers = ohh
 	Expect(match("", rule, reqCache)).To(BeTrue())
 
 	// Protocol
