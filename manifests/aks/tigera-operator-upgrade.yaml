@@ -49039,6 +49039,7 @@ rules:
       - egressgateways/status
       - gatewayapis
       - gatewayapis/finalizers
+      - gatewayapis/status
       - goldmanes
       - goldmanes/finalizers
       - goldmanes/status
@@ -49074,8 +49075,8 @@ rules:
       - policyrecommendations/finalizers
       - policyrecommendations/status
       - tigerastatuses
-      - tigerastatuses/finalizers
       - tigerastatuses/status
+      - tigerastatuses/finalizers
       - tlspassthroughroutes
       - tlsterminatedroutes
       - whiskers
