@@ -41,7 +41,7 @@ var collectionDNS = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "rcode"},
 		collectionFieldGeneric{fieldType: FieldTypeTextExact, fieldName: "rrsets.name"},
 		collectionFieldGeneric{fieldType: FieldTypeTextExact, fieldName: "rrsets.rdata"},
-		CollectionFieldEnum{fieldName: "rrsets.type", fieldValues: []string{"A", "AAAA", "CNAME", "OPT", "SOA", "SRV"}},
+		CollectionFieldEnum{fieldName: "rrsets.type", fieldValues: []string{"A", "AAAA", "CNAME", "SOA", "SRV"}},
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "servers.ip", internal: true},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "servers.name", internal: true},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "servers.name_aggr", internal: true},

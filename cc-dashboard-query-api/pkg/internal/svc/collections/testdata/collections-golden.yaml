@@ -52,7 +52,6 @@
     - A
     - AAAA
     - CNAME
-    - OPT
     - SOA
     - SRV
   groupBys:
