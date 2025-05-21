@@ -281,7 +281,6 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
-		etcd.Stop()
 		infra.Stop()
 		externalWorkload.Stop()
 		dnsServer.Stop()
