@@ -346,6 +346,13 @@ release-prep: release/bin/release bin/gh var-require-all-HASHRELEASE-RELEASE_VER
 bin/ghr:
 	$(DOCKER_RUN) -e GOBIN=/go/src/$(PACKAGE_NAME)/bin/ $(CALICO_BUILD) go install github.com/tcnksm/ghr@$(GHR_VERSION)
 
+# Install GitHub CLI
+bin/gh:
+	curl -sSL -o bin/gh.tgz https://github.com/cli/cli/releases/download/v$(GITHUB_CLI_VERSION)/gh_$(GITHUB_CLI_VERSION)_linux_amd64.tar.gz
+	tar -zxvf bin/gh.tgz -C bin/ gh_$(GITHUB_CLI_VERSION)_linux_amd64/bin/gh --strip-components=2
+	chmod +x $@
+	rm bin/gh.tgz
+
 # Build a release.
 release: release/bin/release
 	@release/bin/release release build
@@ -353,6 +360,9 @@ release: release/bin/release
 # Publish an already built release.
 release-publish: release/bin/release bin/gh
 	@release/bin/release release publish
+
+release-public: bin/gh release/bin/release
+	@release/bin/release release public
 
 # Create a release branch.
 create-release-branch: release/bin/release
