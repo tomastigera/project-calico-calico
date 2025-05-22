@@ -9,7 +9,7 @@ FROM scratch AS source
 
 ARG TARGETARCH
 
-# binary dependencies
+# Binary dependencies
 COPY --from=elastic /bin/bash /bin/bash
 COPY --from=elastic /bin/sh /bin/sh
 COPY --from=elastic /usr/bin/basename /usr/bin/basename
@@ -36,42 +36,32 @@ COPY --from=elastic /usr/sbin/chroot /usr/sbin/chroot
 COPY --from=elastic /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=elastic /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=elastic /lib64/libcap.so.2 /lib64/libcap.so.2
-COPY --from=elastic /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=elastic /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=elastic /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
-COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/libselinux.so.1 /lib64/libselinux.so.1
+COPY --from=elastic /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=elastic /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
-COPY --from=elastic /lib64/libzstd.so.1 /lib64/libzstd.so.1
-COPY --from=elastic /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
-COPY --from=elastic /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
-COPY --from=elastic /lib64/libsystemd.so.0 /lib64/libsystemd.so.0
-COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
-COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 
-COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
-COPY --from=elastic /lib64/liblz4.so.1 /lib64/liblz4.so.1
-COPY --from=elastic /lib64/libgcrypt.so.20 /lib64/libgcrypt.so.20
-COPY --from=elastic /lib64/libgpg-error.so.0 /lib64/libgpg-error.so.0
-
-COPY --from=elastic /lib64/libmount.so.1 /lib64/libmount.so.1
-COPY --from=elastic /lib64/libblkid.so.1 /lib64/libblkid.so.1
-COPY --from=elastic /lib64/libuuid.so.1 /lib64/libuuid.so.1
-
-# required by jvm
+# Required by jvm
+COPY --from=elastic /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=elastic /lib64/libm.so.6 /lib64/libm.so.6
+COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/libz.so.1 /lib64/libz.so.1
 
-# user and groups
+# Required by elasticsearch/lib/platform/linux-x64/*.so
+COPY --from=elastic /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
+COPY --from=elastic /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
+
+# User and groups
 COPY --from=elastic /etc/group /etc/group
 COPY --from=elastic /etc/passwd /etc/passwd
 COPY --from=elastic /etc/shadow /etc/shadow
 
-# elasticsearch jars and binaries
+# Elasticsearch jars and binaries
 COPY --from=elastic /usr/share/elasticsearch /usr/share/elasticsearch/
 COPY --from=elastic /usr/bin/tini /usr/bin/tini
 
-# tigera custom elasticsearch readiness-probe
+# Tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 
 FROM ${CALICO_BASE}
