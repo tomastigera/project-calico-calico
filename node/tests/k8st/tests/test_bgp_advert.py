@@ -950,6 +950,19 @@ spec:
         kubernetes.io/os: linux
         kubernetes.io/hostname: %s
 ---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+ name: loadbalancer-ip-pool
+spec:
+ cidr: 80.15.0.100/32
+ blockSize: 32
+ natOutgoing: true
+ disabled: false
+ assignmentMode: Automatic
+ allowedUses:
+  - LoadBalancer
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -959,7 +972,7 @@ metadata:
     app: nginx
     run: nginx-rr
   annotations:
-    metallb.universe.tf/loadBalancerIPs: 80.15.0.100
+    projectcalico.org/loadBalancerIPs: '["80.15.0.100"]'
 spec:
   ports:
   - port: 80
@@ -1021,3 +1034,4 @@ EOF
         load_balancer_ip = svc_dict['spec']['loadBalancerIP']
         retry_until_success(lambda: self.assertIn(cluster_ip, self.get_routes()))
         retry_until_success(lambda: self.assertIn(load_balancer_ip, self.get_routes()))
+        kubectl("delete ippool loadbalancer-ip-pool")
