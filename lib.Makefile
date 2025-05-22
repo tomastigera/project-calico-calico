@@ -286,10 +286,8 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel)
 CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 
 # The image to use for building calico/base-dependent modules (e.g. apiserver, typha).
-ifdef USE_UBI8_AS_CALICO_BASE
+ifdef USE_UBI_AS_CALICO_BASE
 CALICO_BASE ?= $(UBI_IMAGE)
-else ifdef USE_UBI9_AS_CALICO_BASE
-CALICO_BASE ?= $(UBI9_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif

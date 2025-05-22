@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG CALICO_BASE_UBI9
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0 AS fluentd
@@ -116,7 +116,7 @@ COPY inputs/ /fluentd/etc/inputs/
 COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
 
-FROM ${CALICO_BASE_UBI9}
+FROM ${CALICO_BASE}
 
 ENV PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 

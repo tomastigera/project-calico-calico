@@ -1,10 +1,10 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI9
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
-ARG UBI9_IMAGE
+ARG UBI_IMAGE
 
-FROM ${UBI9_IMAGE} AS ubi
+FROM ${UBI_IMAGE} AS ubi
 
 # Update base packages to pick up security updates. 
 RUN microdnf upgrade -y && microdnf install -y shadow-utils
@@ -47,7 +47,7 @@ COPY --from=envoy /etc/envoy/envoy.yaml /etc/envoy/envoy.yaml
 COPY --from=envoy /etc/group /etc/group
 COPY --from=envoy /etc/passwd /etc/passwd
 
-FROM ${CALICO_BASE_UBI9}
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 
