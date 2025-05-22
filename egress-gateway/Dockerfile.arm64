@@ -13,7 +13,6 @@
 # limitations under the License.
 
 ARG IPTABLES_VER=1.8.2-16
-ARG UBI_IMAGE
 
 # Use this build stage to build iptables rpm binaries.
 # We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
@@ -75,17 +74,17 @@ RUN sed -i '/%files$/a \
 # Finally rebuild iptables.
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
-FROM ${UBI_IMAGE} AS ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest AS ubi
 
 ARG IPTABLES_VER
 
 # Update base packages to pick up security updates.
-RUN microdnf upgrade -y
+RUN microdnf upgrade
 
 # Copy in our rpms
 COPY --from=almalinux /root/rpmbuild/RPMS/aarch64/* /tmp/rpms/
 
-RUN microdnf install -y \
+RUN microdnf install \
     # Don't install copious docs.
     --setopt=tsflags=nodocs \
     # Needed for iptables
@@ -109,7 +108,7 @@ RUN microdnf install -y \
 # we're using AlmaLinux repos for missing packages.
 COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
 
-RUN microdnf --enablerepo=baseos install -y \
+RUN microdnf --enablerepo=baseos install \
     iproute-tc \
     # Needed for conntrack
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
@@ -123,7 +122,7 @@ RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.aarch64.rpm && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-RUN microdnf clean all -y
+RUN microdnf clean all
 
 COPY bin/egressd-arm64 /egressd
 
