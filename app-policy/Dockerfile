@@ -18,7 +18,7 @@ ARG CALICO_BASE
 FROM ${UBI_IMAGE} AS builder
 
 # Update base packages to pick up security updates and embedding iptables
-RUN microdnf upgrade && microdnf install findutils iptables && \
+RUN microdnf upgrade -y && microdnf install -y findutils iptables && \
   ldd /sbin/iptables | tr -s '[:blank:]' '\n' | grep '^/' | \
   xargs -I % sh -c 'mkdir -p $(dirname /deps%); cp % /deps%;'
 
