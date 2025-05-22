@@ -40,7 +40,6 @@ COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
 COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=ubi /lib64/libsasl2.so.3 /lib64/libsasl2.so.3
 COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=ubi /lib64/libssh.so.4 /lib64/libssh.so.4
 COPY --from=ubi /lib64/libssl.so.3.2.2 /lib64/libssl.so.3.2.2
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 COPY --from=ubi /lib64/libunistring.so.2 /lib64/libunistring.so.2
