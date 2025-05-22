@@ -80,12 +80,12 @@ FROM ${UBI_IMAGE} AS ubi
 ARG IPTABLES_VER
 
 # Update base packages to pick up security updates.
-RUN microdnf upgrade
+RUN microdnf upgrade -y
 
 # Copy in our rpms
 COPY --from=almalinux /root/rpmbuild/RPMS/x86_64/* /tmp/rpms/
 
-RUN microdnf install \
+RUN microdnf install -y \
     # Don't install copious docs.
     --setopt=tsflags=nodocs \
     # Needed for iptables
@@ -109,7 +109,7 @@ RUN microdnf install \
 # we're using AlmaLinux repos for missing packages.
 COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
 
-RUN microdnf --enablerepo=baseos install \
+RUN microdnf --enablerepo=baseos install -y \
     iproute-tc \
     # Needed for conntrack
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
@@ -123,7 +123,7 @@ RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-RUN microdnf clean all
+RUN microdnf clean all -y
 
 COPY bin/egressd-amd64 /egressd
 
