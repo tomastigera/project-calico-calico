@@ -1,24 +1,23 @@
-/*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package stagedglobalpolicy
 
 import (
 	"context"
 
+	"github.com/google/uuid"
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -40,7 +39,9 @@ import (
 type REST struct {
 	*genericregistry.Store
 	rbac.CalicoResourceLister
-	authorizer authorizer.TierAuthorizer
+	authorizer   authorizer.TierAuthorizer
+	watchManager *util.WatchManager
+	shortNames   []string
 }
 
 // EmptyObject returns an empty instance
@@ -54,7 +55,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options, calicoResourceLister rbac.CalicoResourceLister) (*REST, error) {
+func NewREST(scheme *runtime.Scheme, opts server.Options, calicoResourceLister rbac.CalicoResourceLister, watchManager *util.WatchManager) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -104,7 +105,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options, calicoResourceLister r
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, calicoResourceLister, authorizer.NewTierAuthorizer(opts.Authorizer)}, nil
+	return &REST{store, calicoResourceLister, authorizer.NewTierAuthorizer(opts.Authorizer), watchManager, opts.ShortNames}, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
@@ -166,5 +167,18 @@ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptio
 		return nil, err
 	}
 
-	return r.Store.Watch(ctx, options)
+	w, err := r.Store.Watch(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+
+	record := util.WatchRecord{
+		ID:    uuid.New().String(),
+		Kind:  calico.KindStagedGlobalNetworkPolicy,
+		Watch: w,
+		Ctx:   ctx,
+	}
+	r.watchManager.AddWatch(record)
+
+	return w, nil
 }

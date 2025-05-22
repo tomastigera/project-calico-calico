@@ -1647,6 +1647,10 @@ func (c shimClient) LicenseKey() client.LicenseKeyInterface {
 	panic("not implemented")
 }
 
+func (c shimClient) Close() error {
+	return c.client.Close()
+}
+
 func (c shimClient) Tiers() client.TierInterface {
 	panic("not implemented")
 }

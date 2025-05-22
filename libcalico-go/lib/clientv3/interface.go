@@ -109,6 +109,10 @@ type Interface interface {
 	// method and so a general consumer of this API can assume that the datastore
 	// is already initialized.
 	EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error
+
+	// Close attempts to close any connections to the datastore.  Using the
+	// client after calling this method may result in undefined behavior.
+	Close() error
 }
 
 type NodesClient interface {

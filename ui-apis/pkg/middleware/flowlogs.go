@@ -17,6 +17,7 @@ import (
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -401,16 +402,18 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 }
 
 type bucket struct {
-	DocCount                 int64            `json:"doc_count"`
-	Key                      key              `json:"key"`
-	SumBytesIn               map[string]int64 `json:"sum_bytes_in"`
-	SumBytesOut              map[string]int64 `json:"sum_bytes_out"`
-	SumHttpRequestsAllowedIn map[string]int64 `json:"sum_http_requests_allowed_in"`
-	SumHttpRequestsDeniedIn  map[string]int64 `json:"sum_http_requests_denied_in"`
-	SumNumFlowsCompleted     map[string]int64 `json:"sum_num_flows_completed"`
-	SumNumFlowsStarted       map[string]int64 `json:"sum_num_flows_started"`
-	SumPacketsIn             map[string]int64 `json:"sum_packets_in"`
-	SumPacketsOut            map[string]int64 `json:"sum_packets_out"`
+	DocCount                 int64             `json:"doc_count"`
+	Key                      key               `json:"key"`
+	SourceLabels             map[string]string `json:"source_labels,omitempty"`
+	DestinationLabels        map[string]string `json:"destination_labels,omitempty"`
+	SumBytesIn               map[string]int64  `json:"sum_bytes_in"`
+	SumBytesOut              map[string]int64  `json:"sum_bytes_out"`
+	SumHttpRequestsAllowedIn map[string]int64  `json:"sum_http_requests_allowed_in"`
+	SumHttpRequestsDeniedIn  map[string]int64  `json:"sum_http_requests_denied_in"`
+	SumNumFlowsCompleted     map[string]int64  `json:"sum_num_flows_completed"`
+	SumNumFlowsStarted       map[string]int64  `json:"sum_num_flows_started"`
+	SumPacketsIn             map[string]int64  `json:"sum_packets_in"`
+	SumPacketsOut            map[string]int64  `json:"sum_packets_out"`
 }
 
 type key struct {
@@ -427,7 +430,7 @@ type key struct {
 // This is temporary logic to mimic the response we used to receive from
 // elasticsearch. Ultimately, we should update the UI to expect the new format, but for now
 // we will just convert the Linseed results into a format the UI understands.
-// Alternatively, maybe we should adjust the Linseed resposne format so that it matches
+// Alternatively, maybe we should adjust the Linseed response format so that it matches
 // what a flow used to look like from ES.
 func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelastic.FlowFilter) []bucket {
 	buckets := []bucket{}
@@ -468,6 +471,8 @@ func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelast
 				SourceNamespace: lmaelastic.EmptyToDash(f.Key.Source.Namespace),
 				SourceType:      string(f.Key.Source.Type),
 			},
+			SourceLabels:      make(map[string]string),
+			DestinationLabels: make(map[string]string),
 		}
 		if f.TrafficStats != nil {
 			bucket.SumBytesIn = map[string]int64{"value": f.TrafficStats.BytesIn}
@@ -484,6 +489,28 @@ func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelast
 			bucket.DocCount = f.LogStats.FlowLogCount
 			bucket.SumNumFlowsStarted = map[string]int64{"value": f.LogStats.Started}
 			bucket.SumNumFlowsCompleted = map[string]int64{"value": f.LogStats.Completed}
+		}
+		// Propagate labels from the HostEndpoint resource to the bucket so that Flow Visualizer
+		// can categorize and display them under pseudo-namespaces "hosts" or "cluster nodes".
+		if f.Key.Source.Type == lapi.HEP {
+			for _, label := range f.SourceLabels {
+				if label.Key == names.HostEndpointTypeLabelKey {
+					for _, v := range label.Values {
+						bucket.SourceLabels[label.Key] = v.Value
+						break
+					}
+				}
+			}
+		}
+		if f.Key.Destination.Type == lapi.HEP {
+			for _, label := range f.DestinationLabels {
+				if label.Key == names.HostEndpointTypeLabelKey {
+					for _, v := range label.Values {
+						bucket.DestinationLabels[label.Key] = v.Value
+						break
+					}
+				}
+			}
 		}
 		buckets = append(buckets, bucket)
 	}
