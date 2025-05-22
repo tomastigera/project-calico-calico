@@ -69,8 +69,9 @@ func buildSimpleInternalService(isAnnotated bool) (svc *v1.Service, ep *v1.Endpo
 	svc = &v1.Service{
 		ObjectMeta: meta,
 		Spec: v1.ServiceSpec{
-			Type:      v1.ServiceTypeClusterIP,
-			ClusterIP: "127.0.0.2",
+			Type:       v1.ServiceTypeClusterIP,
+			ClusterIP:  "127.0.0.2",
+			ClusterIPs: []string{"127.0.0.2"},
 		},
 	}
 
