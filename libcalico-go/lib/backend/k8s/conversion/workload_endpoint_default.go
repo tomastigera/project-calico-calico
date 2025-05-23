@@ -19,8 +19,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -41,7 +43,8 @@ var (
 	minBandwidth      = resource.MustParse("1k")
 	maxBandwidth      = resource.MustParse("1P")
 	minBurst          = resource.MustParse("1k")
-	maxBurst          = resource.MustParse("4Gi")
+	defaultBurst      = resource.MustParse("4Gi")                            // 512 Mi bytes
+	maxBurst          = resource.MustParse(strconv.Itoa(math.MaxUint32 * 8)) // 34359738360, approx. 4Gi bytes
 	minPeakrate       = resource.MustParse("1k")
 	maxPeakrate       = resource.MustParse("1P")
 	minMinburst       = resource.MustParse("1k")
@@ -596,10 +599,10 @@ func handleQoSControlsAnnotations(annotations map[string]string) (*libapiv3.QoSC
 
 	// default burst values if bandwidth is configured
 	if qosControls.IngressBandwidth != 0 && qosControls.IngressBurst == 0 {
-		qosControls.IngressBurst = maxBurst.Value()
+		qosControls.IngressBurst = defaultBurst.Value()
 	}
 	if qosControls.EgressBandwidth != 0 && qosControls.EgressBurst == 0 {
-		qosControls.EgressBurst = maxBurst.Value()
+		qosControls.EgressBurst = defaultBurst.Value()
 	}
 
 	// return nil if no control is configured
