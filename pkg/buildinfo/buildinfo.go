@@ -26,11 +26,21 @@ var (
 
 	// BuildDate is the date when the code was built.
 	BuildDate string
+
+	// OpenSourceBaseVersion is the version of Calico open source that this
+	// Enterprise release is based on.
+	OpenSourceBaseVersion string
+
+	// EnterpriseReleaseVersion is the versions that this code will/has been
+	// released as.  For dev builds, this is the upcoming release.
+	EnterpriseReleaseVersion string
 )
 
 // PrintVersion prints version and build information.
 func PrintVersion() {
-	fmt.Println("Version:     ", Version)
-	fmt.Println("Build date:  ", BuildDate)
-	fmt.Println("Git commit:  ", GitRevision)
+	fmt.Println("Version:                  ", Version)
+	fmt.Println("Release:                  ", EnterpriseReleaseVersion)
+	fmt.Println("Open source base version: ", OpenSourceBaseVersion)
+	fmt.Println("Build date:               ", BuildDate)
+	fmt.Println("Git commit:               ", GitRevision)
 }
