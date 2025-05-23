@@ -123,7 +123,7 @@ var (
 	vxlanModeRegex          = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
 	assignmentModeRegex     = regexp.MustCompile("^(Automatic|Manual)$")
 	assignIPsRegex          = regexp.MustCompile("^(AllServices|RequestedServicesOnly)$")
-	logLevelRegex           = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
+	logLevelRegex           = regexp.MustCompile("^(Trace|Debug|Info|Warning|Error|Fatal)$")
 
 	IPSeclogLevelRegex = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
 	IPSecModeRegex     = regexp.MustCompile("^(PSK)$")

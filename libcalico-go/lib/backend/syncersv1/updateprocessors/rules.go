@@ -229,7 +229,11 @@ func RuleAPIV3ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 		OriginalDstServiceAccountSelector: dstServiceAcctMatch.Selector,
 	}
 	if ar.HTTP != nil {
-		r.HTTPMatch = &model.HTTPMatch{Methods: ar.HTTP.Methods, Paths: ar.HTTP.Paths}
+		r.HTTPMatch = &model.HTTPMatch{
+			Methods: ar.HTTP.Methods,
+			Paths:   ar.HTTP.Paths,
+			Headers: ar.HTTP.Headers,
+		}
 	}
 	if ar.Metadata != nil {
 		if ar.Metadata.Annotations != nil {

@@ -22,7 +22,7 @@
         commands:
           - ../.semaphore/run-and-monitor make-fv-ubi.log make clean image fv
         env_vars:
-          - name: USE_UBI8_AS_CALICO_BASE
+          - name: USE_UBI_AS_CALICO_BASE
             value: "1"
     epilogue:
       always:

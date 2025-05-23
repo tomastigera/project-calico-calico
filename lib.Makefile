@@ -219,12 +219,7 @@ ifeq ($(BUILDARCH),amd64)
 	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 
-# calico/node continues to use UBI 8 as its base, and our toolchain is also built on RHEL/UBI 8.
-# Meanwhile other components (e.g. third_party/envoy-proxy) use UBI 9.  While it may be possible to
-# update calico/base to UBI 9, fully transitioning to UBI 9 would require dropping support for RHEL
-# 8.
-UBI_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:latest
-UBI9_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:latest
+UBI_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 ifeq ($(GIT_USE_SSH),true)
 	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
@@ -279,23 +274,23 @@ endif
 
 EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
 
-# Define go architecture flags to support arm variants
+# Define go architecture flags
 GOARCH_FLAGS :=-e GOARCH=$(ARCH)
+
+ifeq ($(ARCH),amd64)
+GOARCH_FLAGS += -e GOAMD64=v2
+endif
 
 # Location of certificates used in UTs.
 REPO_ROOT := $(shell git rev-parse --show-toplevel)
 CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 
 # The image to use for building calico/base-dependent modules (e.g. apiserver, typha).
-ifdef USE_UBI8_AS_CALICO_BASE
+ifdef USE_UBI_AS_CALICO_BASE
 CALICO_BASE ?= $(UBI_IMAGE)
-else ifdef USE_UBI9_AS_CALICO_BASE
-CALICO_BASE ?= $(UBI9_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
-# TODO Remove once CALICO_BASE is updated to UBI9
-CALICO_BASE_UBI9 ?= calico/base:$(CALICO_BASE_UBI9_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -306,10 +301,8 @@ endif
 # DOCKER_BUILD is the base build command used for building all images.
 DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
-	--build-arg UBI9_IMAGE=$(UBI9_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
-	--build-arg CALICO_BASE_UBI9=$(CALICO_BASE_UBI9) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
@@ -440,7 +433,7 @@ endef
 
 # update_calico_base_pin updates the CALICO_BASE_VER in metadata.mk.
 define update_calico_base_pin
-	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi8-[0-9]+$$" | sort -r | head -n 1))
+	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi9-[0-9]+$$" | sort -r | head -n 1))
 	$(eval old_ver := $(shell grep -E "^CALICO_BASE_VER" $(1) | cut -d'=' -f2 | xargs))
 
 	@echo "current CALICO_BASE_VER=$(old_ver)"
@@ -970,7 +963,7 @@ push-images-to-registry-%:
 # push-image-to-registry-% pushes the build / arch images specified by $* and VALIDARCHES to the registry
 # specified by REGISTRY.
 push-image-to-registry-%:
-	$(MAKE) $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
+	$(MAKE) -j6 $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
 
 # push-image-arch-to-registry-% pushes the build / arch image specified by $* and BUILD_IMAGE to the registry
 # specified by REGISTRY.

@@ -167,6 +167,21 @@ func parsedRuleToProtoRule(in *ParsedRule) *proto.Rule {
 		if len(in.HTTPMatch.Methods) > 0 {
 			out.HttpMatch.Methods = in.HTTPMatch.Methods
 		}
+		var httpHeaderMatches []*proto.HTTPMatch_HeadersMatch
+		for _, headerMatch := range in.HTTPMatch.Headers {
+			httpHeaderMatches = append(
+				httpHeaderMatches,
+				&proto.HTTPMatch_HeadersMatch{
+					Header:   headerMatch.Header,
+					Operator: headerMatch.Operator,
+					Values:   headerMatch.Values,
+				},
+			)
+
+		}
+		if len(httpHeaderMatches) > 0 {
+			out.HttpMatch.Headers = httpHeaderMatches
+		}
 	}
 
 	if in.Metadata != nil {

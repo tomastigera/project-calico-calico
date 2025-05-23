@@ -46,7 +46,6 @@ import (
 )
 
 const (
-	timer                        = 5 * time.Minute
 	hostEndpointNameSuffix       = "auto-hep"
 	defaultHostEndpointInterface = "*"
 )

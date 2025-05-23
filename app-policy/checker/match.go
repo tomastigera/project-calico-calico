@@ -17,6 +17,7 @@ package checker
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -60,6 +61,7 @@ type L4Flow interface {
 type L7Flow interface {
 	GetHttpMethod() *string
 	GetHttpPath() *string
+	GetHttpHeaders() map[string]string
 	GetSourcePrincipal() *string
 	GetDestPrincipal() *string
 	GetSourceLabels() map[string]string
@@ -158,7 +160,7 @@ func computeNamespaceMatch(
 // Rule matches, false otherwise.
 func matchRequest(rule *proto.Rule, req *requestCache) bool {
 	log.WithField("request", req).Debug("Matching request.")
-	return matchHTTP(rule.GetHttpMatch(), req.GetHttpMethod(), req.GetHttpPath())
+	return matchHTTP(rule.GetHttpMatch(), req.GetHttpMethod(), req.GetHttpPath(), req.GetHttpHeaders())
 }
 
 // matchServiceAccounts checks if the service account part of the Rule matches the request. It
@@ -253,7 +255,7 @@ func matchNamespace(nsMatch *namespaceMatch, ns *namespace) bool {
 
 // matchHTTP checks if the HTTP part of the Rule matches the request. It returns true if the Rule
 // matches, false otherwise.
-func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string) bool {
+func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string, httpHeaders map[string]string) bool {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
 			"rule": rule,
@@ -264,7 +266,131 @@ func matchHTTP(rule *proto.HTTPMatch, httpMethod, httpPath *string) bool {
 		return true
 	}
 
-	return matchHTTPMethods(rule.GetMethods(), httpMethod) && matchHTTPPaths(rule.GetPaths(), httpPath)
+	return matchHTTPMethods(rule.GetMethods(), httpMethod) &&
+		matchHTTPPaths(rule.GetPaths(), httpPath) &&
+		matchHTTPHeaders(rule.GetHeaders(), httpHeaders)
+}
+
+// matchHTTPHeaders checks if a rule criteria matches request HTTP headers - returns true if that's the case, false otherwise.
+func matchHTTPHeaders(rules []*proto.HTTPMatch_HeadersMatch, headers map[string]string) bool {
+	if rules == nil {
+		return true
+	}
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	var headerCheck func(*proto.HTTPMatch_HeadersMatch, map[string]string) bool
+	for _, rule := range rules {
+		if rule == nil {
+			continue
+		} else if rule.Values == nil {
+			rule.Values = []string{}
+		}
+		switch rule.Operator {
+		case "Exists":
+			headerCheck = matchHTTPHeaderExists
+		case "DoesNotExist":
+			headerCheck = matchHTTPHeaderDoesNotExist
+		case "HasPrefix":
+			headerCheck = matchHTTPHeaderHasPrefix
+		case "HasSuffix":
+			headerCheck = matchHTTPHeaderHasSuffix
+		case "In":
+			headerCheck = matchHTTPHeaderIn
+		case "NotIn":
+			headerCheck = matchHTTPHeaderNotIn
+		case "MatchesRegex":
+			headerCheck = matchHTTPHeaderMatchesRegex
+		default:
+			headerCheck = matchHTTPHeaderUnknownOperator
+		}
+		if !headerCheck(rule, headers) {
+			return false
+		}
+	}
+	return true
+}
+
+func matchHTTPHeaderExists(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	_, exists := h[r.Header]
+	return exists
+}
+
+func matchHTTPHeaderDoesNotExist(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	_, exists := h[r.Header]
+	return !exists
+}
+
+func matchHTTPHeaderHasPrefix(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, prefix := range r.Values {
+		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderHasSuffix(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, suffix := range r.Values {
+		if strings.HasSuffix(value, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, oneof := range r.Values {
+		if value == oneof {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, oneof := range r.Values {
+		if value == oneof {
+			return false
+		}
+	}
+	return true
+}
+
+func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	value, exists := h[r.Header]
+	if !exists {
+		return false
+	}
+	for _, regex := range r.Values {
+		if compiledRegex, err := regexp.Compile(regex); err != nil {
+			log.WithError(err).WithField("regexp", regex).Error("unable to compile the regular expression - skipping")
+		} else if compiledRegex.MatchString(value) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchHTTPHeaderUnknownOperator(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
+	log.WithField("rule.Operator", r.Operator).Error("unknown operator value to match HTTP headers - skipping")
+	return true
 }
 
 // matchHTTPMethods checks if the HTTP methods match. It returns true if the methods match, false

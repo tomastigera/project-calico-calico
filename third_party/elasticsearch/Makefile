@@ -39,7 +39,7 @@ else ifeq ($(ARCH),arm64)
 	override GRADLE_TASK=:distribution:archives:linux-aarch64-tar:assemble
 endif
 
-OPENJDK_BUILD=registry.access.redhat.com/ubi8/openjdk-17:latest
+OPENJDK_BUILD=registry.access.redhat.com/ubi9/openjdk-21:latest
 
 .PHONY: build
 build: init-elastic
