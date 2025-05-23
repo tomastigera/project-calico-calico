@@ -1,0 +1,28 @@
+resources:
+- "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+  name: upstream-service
+  type: STATIC
+  lb_policy: ROUND_ROBIN
+  load_assignment:
+    cluster_name: upstream-service
+    endpoints:
+    - lb_endpoints:
+      - endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: 8088
+- "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+  name: ext_proc-grpc-service
+  type: STATIC
+  lb_policy: ROUND_ROBIN
+  http2_protocol_options: {}
+  load_assignment:
+    cluster_name: ext_proc-grpc-service
+    endpoints:
+    - lb_endpoints:
+      - endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: 9002

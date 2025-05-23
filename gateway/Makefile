@@ -91,7 +91,7 @@ start-fv-deps: stop-fv-deps
 	docker run --rm --detach --net=host --name=echo-server ealen/echo-server:latest --port=8088
 	docker run --rm --detach --net=host --name=envoy \
 		-v $(REPO_ROOT)/gateway/fv/testdata:/shared \
-		gcr.io/unique-caldron-775/cnx/tigera/envoy-proxy:master-amd64 \
+		envoyproxy/envoy:v1.31-latest \
 		--config-path /shared/test-config.yaml \
 		--component-log-level ext_proc:trace
 
@@ -101,7 +101,13 @@ stop-fv-deps:
 ## Run the FVs
 fv: clean start-fv-deps fv-fast
 fv-fast:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -count 1'
+	# Mounting the fv/testdata directory as a /shared volume so that moving a file from a test 
+	# moves it on disk, and is picked up by the envoy proxy that's mounting the same directory 
+	# as a similar volume so that we can dynamically reconfigure envoy during tests. 
+	$(DOCKER_RUN) \
+	    -v $(REPO_ROOT)/gateway/fv/testdata:/shared \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go test ./fv -count 1'
 
 
 ###############################################################################
