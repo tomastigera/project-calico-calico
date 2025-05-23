@@ -87,10 +87,16 @@ var fullyLoadedParsedRule = ParsedRule{
 	OriginalDstServiceAccountSelector: "has(sa-dst)",
 	OriginalDstServiceAccountNames:    []string{"dst-1"},
 
-	HTTPMatch: &model.HTTPMatch{Methods: []string{"GET", "POST"}, Paths: []v3.HTTPPath{
-		{Exact: "/foo"},
-		{Prefix: "/bar"},
-	}},
+	HTTPMatch: &model.HTTPMatch{
+		Methods: []string{"GET", "POST"},
+		Paths: []v3.HTTPPath{
+			{Exact: "/foo"},
+			{Prefix: "/bar"},
+		},
+		Headers: []v3.HTTPHeaderCriteria{
+			{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.254", "192.168.0.1"}},
+		},
+	},
 
 	LogPrefix: "foobar",
 
@@ -156,10 +162,16 @@ var fullyLoadedProtoRule = &proto.Rule{
 		Names:    []string{"dst-1"},
 	},
 
-	HttpMatch: &proto.HTTPMatch{Methods: []string{"GET", "POST"},
-		Paths: []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}},
+	HttpMatch: &proto.HTTPMatch{
+		Methods: []string{"GET", "POST"},
+		Paths: []*proto.HTTPMatch_PathMatch{
+			{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}},
 			{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/bar"}},
-		}},
+		},
+		Headers: []*proto.HTTPMatch_HeadersMatch{
+			{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.254", "192.168.0.1"}},
+		},
+	},
 
 	LogPrefix: "foobar",
 

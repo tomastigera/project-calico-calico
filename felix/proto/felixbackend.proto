@@ -420,6 +420,12 @@ message HTTPMatch {
     }
   }
   repeated PathMatch paths = 2;
+  message HeadersMatch {
+    string header = 1;
+    string operator = 2;
+    repeated string values = 3;
+  }
+  repeated HeadersMatch headers = 3;
 }
 
 message RuleMetadata {

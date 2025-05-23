@@ -76,6 +76,13 @@ func (a *CheckRequestToFlowAdapter) GetHttpPath() *string {
 	return &path
 }
 
+func (a *CheckRequestToFlowAdapter) GetHttpHeaders() map[string]string {
+	if a.flow == nil || a.flow.GetAttributes().GetRequest().GetHttp() == nil {
+		return nil
+	}
+	return a.flow.GetAttributes().GetRequest().GetHttp().GetHeaders()
+}
+
 func (a *CheckRequestToFlowAdapter) GetSourcePrincipal() *string {
 	if a.flow == nil {
 		return nil
