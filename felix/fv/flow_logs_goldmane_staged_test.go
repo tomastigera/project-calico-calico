@@ -381,7 +381,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 			MatchEnforcedPolicies:  true,
 			MatchPendingPolicies:   true,
 			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
-			CheckBytes:             false,
 			CheckNumFlowsStarted:   true,
 		})
 
@@ -1000,7 +999,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			MatchLabels:            false,
 			MatchPendingPolicies:   false,
 			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
-			CheckBytes:             false,
 			CheckNumFlowsStarted:   true,
 		})
 
@@ -1126,7 +1124,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			MatchEnforcedPolicies:  true,
 			MatchPendingPolicies:   true,
 			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
-			CheckBytes:             false,
 			CheckNumFlowsStarted:   true,
 		})
 
@@ -1311,7 +1308,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			MatchPendingPolicies:   false,
 			MatchEnforcedPolicies:  false,
 			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
-			CheckBytes:             false,
 			CheckNumFlowsStarted:   true,
 		})
 
