@@ -76,7 +76,7 @@ import (
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
 	"github.com/projectcalico/calico/pkg/buildinfo"
-	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
+	"github.com/projectcalico/calico/pkg/cmdwrapper"
 	"github.com/projectcalico/calico/typha/pkg/tlsutils"
 )
 
@@ -222,7 +222,7 @@ func main() {
 		informers:        make([]cache.SharedIndexInformer, 0),
 	}
 
-	dataFeed := utils.NewDataFeed(calicoClient)
+	dataFeed := utils.NewDataFeed(calicoClient, cfg.DatastoreType)
 
 	var runCfg config.RunConfig
 	// flannelmigration doesn't use the datastore config API
@@ -261,7 +261,7 @@ func main() {
 		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder, dataFeed)
 	}
 
-	if cfg.DatastoreType == "etcdv3" {
+	if cfg.DatastoreType == utils.Etcdv3 {
 		// If configured to do so, start an etcdv3 compaction.
 		go startCompactor(ctx, runCfg.EtcdV3CompactionPeriod)
 	}
