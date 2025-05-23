@@ -115,7 +115,22 @@ func (c *policiesCache) GetOrderedPolicies(keys set.Set[model.Key]) []api.Tier {
 				name:     t.name,
 			}
 			for _, p := range t.orderedPolicies {
-				if keys.Contains(p.getKey()) {
+				// Temporary fix for policy name inconsistency between label inheritance and policy cache.
+				//
+				// Problem: When retrieving policies via label inheritance, they include the tier prefix
+				// (e.g., "default.policy1"), but the policy cache stores them with their original CRD name
+				// (e.g., "policy1"). This causes lookups like keys.Contains(p.getKey()) to fail.
+				//
+				// Solution:  For policies that don't contain a period, prepend "default." to match the format
+				// used by the label inheritance mechanism. This works because:
+				//   1. Calico policy names cannot contain periods except as tier separators
+				//   2. Policies without a period must be in the default tier
+				//   3. All other tiers explicitly include the tier name in the policy identifier
+				k := p.getKey().(model.ResourceKey)
+				if !strings.Contains(k.Name, ".") {
+					k.Name = fmt.Sprintf("default.%s", k.Name)
+				}
+				if keys.Contains(k) {
 					td.orderedPolicies = append(td.orderedPolicies, p)
 				}
 			}
