@@ -45,10 +45,10 @@ const (
 
 const (
 	// numBaseFelixConfigs should match the OS value.
-	numBaseFelixConfigs = 157
+	numBaseFelixConfigs = 162
 
 	// Add private-only fields to this count.
-	numPrivateOnlyFelixConfigs = 117
+	numPrivateOnlyFelixConfigs = 113
 )
 
 var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
