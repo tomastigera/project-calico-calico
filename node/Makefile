@@ -779,7 +779,6 @@ $(WINDOWS_INSTALL_SCRIPT):
 # recognized.
 WINDOWS_IMAGE_REQS := \
 	Dockerfile-windows \
-	dist/LICENSE \
 	$(WINDOWS_BINARY) \
 	$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1 \
 	$(WINDOWS_ARCHIVE_ROOT)/libs/calico/calico.psm1 \
