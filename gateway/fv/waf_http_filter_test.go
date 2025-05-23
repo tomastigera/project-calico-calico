@@ -18,12 +18,9 @@ import (
 
 func setupServer(t *testing.T, opts waf.ServerOptions) func() {
 	srv := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
-<<<<<<< HEAD
 
 	// We keep track of whether we're stopping the server to catch errors on startup
 	stopping := false
-=======
->>>>>>> c759147a41 (Update capitalisation for WAFHTTPFilter)
 
 	// Start the server. It will block until the listen socket is closed,
 	// so run it in a goroutine.
