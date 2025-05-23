@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@ package intdataplane
 import (
 	"fmt"
 	"net"
+	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
+	"github.com/projectcalico/calico/felix/dataplane/linux/dataplanedefs"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 )
@@ -47,11 +50,9 @@ type ipipManager struct {
 
 	writeProcSys procSysWriter
 
-	// Dataplane shim.
-	dataplane ipipDataplane
-
 	// Configured list of external node ip cidr's to be added to the ipset.
 	externalNodeCIDRs []string
+	nlHandle          netlinkHandle
 
 	dpConfig Config
 }
@@ -62,14 +63,15 @@ func newIPIPManager(
 	externalNodeCidrs []string,
 	dpConfig Config,
 ) *ipipManager {
-	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, writeProcSys, realIPIPNetlink{}, externalNodeCidrs, dpConfig)
+	nlHandle, _ := netlinkshim.NewRealNetlink()
+	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, writeProcSys, nlHandle, externalNodeCidrs, dpConfig)
 }
 
 func newIPIPManagerWithShim(
 	ipsetsDataplane dpsets.IPSetsDataplane,
 	maxIPSetSize int,
 	procSysWriter procSysWriter,
-	dataplane ipipDataplane,
+	nlHandle netlinkHandle,
 	externalNodeCIDRs []string,
 	dpConfig Config,
 ) *ipipManager {
@@ -77,13 +79,13 @@ func newIPIPManagerWithShim(
 		ipsetsDataplane:    ipsetsDataplane,
 		activeHostnameToIP: map[string]string{},
 		writeProcSys:       procSysWriter,
-		dataplane:          dataplane,
 		ipSetMetadata: ipsets.IPSetMetadata{
 			MaxSize: maxIPSetSize,
 			SetID:   rules.IPSetIDAllHostNets,
 			Type:    ipsets.IPSetTypeHashNet,
 		},
 		externalNodeCIDRs: externalNodeCIDRs,
+		nlHandle:          nlHandle,
 		dpConfig:          dpConfig,
 	}
 	return ipipMgr
@@ -92,11 +94,11 @@ func newIPIPManagerWithShim(
 // KeepIPIPDeviceInSync is a goroutine that configures the IPIP tunnel device, then periodically
 // checks that it is still correctly configured.
 func (d *ipipManager) KeepIPIPDeviceInSync(mtu int, address net.IP, xsumBroken bool) {
-	log.Info("IPIP thread started.")
+	logrus.Info("IPIP thread started.")
 	for {
 		err := d.configureIPIPDevice(mtu, address, xsumBroken)
 		if err != nil {
-			log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
+			logrus.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -106,25 +108,34 @@ func (d *ipipManager) KeepIPIPDeviceInSync(mtu int, address net.IP, xsumBroken b
 
 // configureIPIPDevice ensures the IPIP tunnel device is up and configures correctly.
 func (d *ipipManager) configureIPIPDevice(mtu int, address net.IP, xsumBroken bool) error {
-	logCxt := log.WithFields(log.Fields{
+	logCtx := logrus.WithFields(logrus.Fields{
 		"mtu":        mtu,
 		"tunnelAddr": address,
 	})
-	logCxt.Debug("Configuring IPIP tunnel")
-	link, err := d.dataplane.LinkByName("tunl0")
+	logCtx.Debug("Configuring IPIP tunnel")
+	link, err := d.nlHandle.LinkByName(dataplanedefs.IPIPIfaceName)
 	if err != nil {
-		log.WithError(err).Info("Failed to get IPIP tunnel device, assuming it isn't present")
+		logrus.WithError(err).Info("Failed to get IPIP tunnel device, assuming it isn't present")
 		// We call out to "ip tunnel", which takes care of loading the kernel module if
 		// needed.  The tunl0 device is actually created automatically by the kernel
 		// module.
-		err := d.dataplane.RunCmd("ip", "tunnel", "add", "tunl0", "mode", "ipip")
-		if err != nil {
-			log.WithError(err).Warning("Failed to add IPIP tunnel device")
+
+		la := netlink.NewLinkAttrs()
+		la.Name = dataplanedefs.IPIPIfaceName
+		ipip := &netlink.Iptun{
+			LinkAttrs: la,
+		}
+		if err := d.nlHandle.LinkAdd(ipip); err == syscall.EEXIST {
+			// Device already exists - likely a race.
+			logCtx.Debug("IPIP device already exists, likely created by someone else.")
+		} else if err != nil {
+			// Error other than "device exists" - return it.
 			return err
 		}
-		link, err = d.dataplane.LinkByName("tunl0")
+
+		link, err = d.nlHandle.LinkByName(dataplanedefs.IPIPIfaceName)
 		if err != nil {
-			log.WithError(err).Warning("Failed to get tunnel device")
+			logrus.WithError(err).Warning("Failed to get tunnel device")
 			return err
 		}
 	}
@@ -132,32 +143,32 @@ func (d *ipipManager) configureIPIPDevice(mtu int, address net.IP, xsumBroken bo
 	attrs := link.Attrs()
 	oldMTU := attrs.MTU
 	if oldMTU != mtu {
-		logCxt.WithField("oldMTU", oldMTU).Info("Tunnel device MTU needs to be updated")
-		if err := d.dataplane.LinkSetMTU(link, mtu); err != nil {
-			log.WithError(err).Warn("Failed to set tunnel device MTU")
+		logCtx.WithField("oldMTU", oldMTU).Info("Tunnel device MTU needs to be updated")
+		if err := d.nlHandle.LinkSetMTU(link, mtu); err != nil {
+			logrus.WithError(err).Warn("Failed to set tunnel device MTU")
 			return err
 		}
-		logCxt.Info("Updated tunnel MTU")
+		logCtx.Info("Updated tunnel MTU")
 	}
 
 	// If required, disable checksum offload.
 	if xsumBroken {
-		if err := ethtool.EthtoolTXOff("tunl0"); err != nil {
+		if err := ethtool.EthtoolTXOff(dataplanedefs.IPIPIfaceName); err != nil {
 			return fmt.Errorf("failed to disable checksum offload: %s", err)
 		}
 	}
 
 	if attrs.Flags&net.FlagUp == 0 {
-		logCxt.WithField("flags", attrs.Flags).Info("Tunnel wasn't admin up, enabling it")
-		if err := d.dataplane.LinkSetUp(link); err != nil {
-			log.WithError(err).Warn("Failed to set tunnel device up")
+		logCtx.WithField("flags", attrs.Flags).Info("Tunnel wasn't admin up, enabling it")
+		if err := d.nlHandle.LinkSetUp(link); err != nil {
+			logrus.WithError(err).Warn("Failed to set tunnel device up")
 			return err
 		}
-		logCxt.Info("Set tunnel admin up")
+		logCtx.Info("Set tunnel admin up")
 	}
 
-	if err := d.setLinkAddressV4("tunl0", address); err != nil {
-		log.WithError(err).Warn("Failed to set tunnel device IP")
+	if err := d.setLinkAddressV4(dataplanedefs.IPIPIfaceName, address); err != nil {
+		logrus.WithError(err).Warn("Failed to set tunnel device IP")
 		return err
 	}
 
@@ -181,39 +192,39 @@ func (d *ipipManager) configureIPIPDevice(mtu int, address net.IP, xsumBroken bo
 // setLinkAddressV4 updates the given link to set its local IP address.  It removes any other
 // addresses.
 func (d *ipipManager) setLinkAddressV4(linkName string, address net.IP) error {
-	logCxt := log.WithFields(log.Fields{
+	logCtx := logrus.WithFields(logrus.Fields{
 		"link": linkName,
 		"addr": address,
 	})
-	logCxt.Debug("Setting local IPv4 address on link.")
-	link, err := d.dataplane.LinkByName(linkName)
+	logCtx.Debug("Setting local IPv4 address on link.")
+	link, err := d.nlHandle.LinkByName(linkName)
 	if err != nil {
-		log.WithError(err).WithField("name", linkName).Warning("Failed to get device")
+		logrus.WithError(err).WithField("name", linkName).Warning("Failed to get device")
 		return err
 	}
 
-	addrs, err := d.dataplane.AddrList(link, netlink.FAMILY_V4)
+	addrs, err := d.nlHandle.AddrList(link, netlink.FAMILY_V4)
 	if err != nil {
-		log.WithError(err).Warn("Failed to list interface addresses")
+		logrus.WithError(err).Warn("Failed to list interface addresses")
 		return err
 	}
 
 	found := false
 	for _, oldAddr := range addrs {
 		if address != nil && oldAddr.IP.Equal(address) {
-			logCxt.Debug("Address already present.")
+			logCtx.Debug("Address already present.")
 			found = true
 			continue
 		}
-		logCxt.WithField("oldAddr", oldAddr).Info("Removing old address")
-		if err := d.dataplane.AddrDel(link, &oldAddr); err != nil {
-			log.WithError(err).Warn("Failed to delete address")
+		logCtx.WithField("oldAddr", oldAddr).Info("Removing old address")
+		if err := d.nlHandle.AddrDel(link, &oldAddr); err != nil {
+			logrus.WithError(err).Warn("Failed to delete address")
 			return err
 		}
 	}
 
 	if !found && address != nil {
-		logCxt.Info("Address wasn't present, adding it.")
+		logCtx.Info("Address wasn't present, adding it.")
 		mask := net.CIDRMask(32, 32)
 		ipNet := net.IPNet{
 			IP:   address.Mask(mask), // Mask the IP to match ParseCIDR()'s behaviour.
@@ -222,12 +233,12 @@ func (d *ipipManager) setLinkAddressV4(linkName string, address net.IP) error {
 		addr := &netlink.Addr{
 			IPNet: &ipNet,
 		}
-		if err := d.dataplane.AddrAdd(link, addr); err != nil {
-			log.WithError(err).WithField("addr", address).Warn("Failed to add address")
+		if err := d.nlHandle.AddrAdd(link, addr); err != nil {
+			logrus.WithError(err).WithField("addr", address).Warn("Failed to add address")
 			return err
 		}
 	}
-	logCxt.Debug("Address set.")
+	logCtx.Debug("Address set.")
 
 	return nil
 }
@@ -235,11 +246,11 @@ func (d *ipipManager) setLinkAddressV4(linkName string, address net.IP) error {
 func (d *ipipManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.HostMetadataUpdate:
-		log.WithField("hostname", msg.Hostname).Debug("Host update/create")
+		logrus.WithField("hostname", msg.Hostname).Debug("Host update/create")
 		d.activeHostnameToIP[msg.Hostname] = msg.Ipv4Addr
 		d.ipSetInSync = false
 	case *proto.HostMetadataRemove:
-		log.WithField("hostname", msg.Hostname).Debug("Host removed")
+		logrus.WithField("hostname", msg.Hostname).Debug("Host removed")
 		delete(d.activeHostnameToIP, msg.Hostname)
 		d.ipSetInSync = false
 	}
@@ -252,7 +263,7 @@ func (m *ipipManager) CompleteDeferredWork() error {
 		// would require reference counting the IPs because it's possible for two hosts
 		// to (at least transiently) share an IP.  That would add occupancy and make the
 		// code more complex.
-		log.Info("All-hosts IP set out-of sync, refreshing it.")
+		logrus.Info("All-hosts IP set out-of sync, refreshing it.")
 		members := make([]string, 0, len(m.activeHostnameToIP)+len(m.externalNodeCIDRs))
 		for _, ip := range m.activeHostnameToIP {
 			members = append(members, ip)

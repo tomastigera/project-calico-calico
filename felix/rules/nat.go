@@ -19,6 +19,8 @@ import (
 	"sort"
 	"strings"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	. "github.com/projectcalico/calico/felix/generictables"
 )
@@ -58,7 +60,10 @@ func (r *DefaultRuleRenderer) makeNATOutgoingRuleIPTables(ipVersion uint8, proto
 		SourceIPSet(masqIPsSetName).
 		NotDestIPSet(allIPsSetName)
 
-	if r.Config.IPSecEnabled && ipVersion == 4 {
+	check := apiv3.NATOutgoingExclusionsType(r.Config.NATOutgoingExclusions)
+
+	if check == apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs ||
+		r.Config.IPSecEnabled && ipVersion == 4 {
 		// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
 		// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
 		// tunneled traffic from the host itself so the SNATted traffic would be blocked.

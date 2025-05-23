@@ -34,16 +34,6 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
 endif
 
-APISERVER_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
-APISERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-APISERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-APISERVER_GIT_DESCRIPTION?=$(shell git describe --tags)
-
-LDFLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
-	-X $(PACKAGE_NAME)/cmd/apiserver/server.BUILD_DATE=$(APISERVER_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/cmd/apiserver/server.GIT_DESCRIPTION=$(APISERVER_GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/cmd/apiserver/server.GIT_REVISION=$(APISERVER_GIT_REVISION)
-
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -51,7 +41,6 @@ LDFLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
 ##############################################################################
 
 include ../lib.Makefile
-
 
 FIPS ?= false
 
@@ -82,6 +71,9 @@ endif
 ###############################################################################
 # Building the image
 ###############################################################################
+bin/LICENSE: ../LICENSE.md
+	cp ../LICENSE.md $@
+
 CONTAINER_CREATED=.apiserver.created-$(ARCH)
 CONTAINER_FIPS_CREATED=.apiserver.created-$(ARCH)-fips
 
@@ -92,12 +84,12 @@ sub-image-%:
 	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 $(API_SERVER_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH)
+$(CONTAINER_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH) bin/LICENSE
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(API_SERVER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH)
+$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH) bin/LICENSE
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(API_SERVER_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@

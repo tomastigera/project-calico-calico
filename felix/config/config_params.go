@@ -528,9 +528,10 @@ type Config struct {
 	WindowsDNSCacheFile             string        `config:"file;c:\\TigeraCalico\\felix-dns-cache.txt"`
 	WindowsDNSExtraTTL              time.Duration `config:"seconds;120"`
 
-	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
-	NATPortRange       numorstring.Port   `config:"portrange;"`
-	NATOutgoingAddress net.IP             `config:"ipv4;"`
+	KubeNodePortRanges    []numorstring.Port `config:"portrange-list;30000:32767"`
+	NATPortRange          numorstring.Port   `config:"portrange;"`
+	NATOutgoingAddress    net.IP             `config:"ipv4;"`
+	NATOutgoingExclusions string             `config:"oneof(IPPoolsOnly,IPPoolsAndHostIPs);IPPoolsOnly"`
 
 	// TSEE no longer does any usage reporting, but we still support the config fields
 	// so as not to break deployments that set them.  (In particular, not to break the
