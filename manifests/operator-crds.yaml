@@ -38050,6 +38050,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -38216,6 +38233,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -39627,6 +39661,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -39793,6 +39844,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -40436,6 +40504,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -40602,6 +40687,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -41072,6 +41174,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
@@ -41238,6 +41357,23 @@ spec:
                         type: object
                       http:
                         properties:
+                          headers:
+                            items:
+                              properties:
+                                header:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - header
+                                - operator
+                                - values
+                              type: object
+                            type: array
                           methods:
                             items:
                               type: string
