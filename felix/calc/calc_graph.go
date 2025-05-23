@@ -479,7 +479,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 
 	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled || conf.WireguardEnabledV6 ||
 		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
-		conf.AWSSecondaryIPSupport != "Disabled" {
+		conf.AWSSecondaryIPSupport != "Disabled" || conf.ProgramRoutesEnabled() {
 		// Calculate simple node-ownership routes.
 		//        ...
 		//     Dispatcher (all updates)

@@ -1898,8 +1898,8 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"IPPoolsAndHostIPs\"`, `\"IPPoolsOnly\"`.",
           "YAMLEnumValues": [
-            "`\"IPPoolsAndHostIPs\"`",
-            "`\"IPPoolsOnly\"`"
+            "IPPoolsAndHostIPs",
+            "IPPoolsOnly"
           ],
           "YAMLSchemaHTML": "One of: <code>\"IPPoolsAndHostIPs\"</code>, <code>\"IPPoolsOnly\"</code>.",
           "YAMLDefault": "IPPoolsOnly",
@@ -1909,7 +1909,8 @@
           "Description": "When a IP pool setting `natOutgoing` is true, packets sent from Calico networked containers in this IP pool to destinations will be masqueraded.\nConfigure which type of destinations is excluded from being masqueraded.\n- IPPoolsOnly: destinations outside of this IP pool will be masqueraded.\n- IPPoolsAndHostIPs: destinations outside of this IP pool and all hosts will be masqueraded.",
           "DescriptionHTML": "<p>When a IP pool setting <code>natOutgoing</code> is true, packets sent from Calico networked containers in this IP pool to destinations will be masqueraded.\nConfigure which type of destinations is excluded from being masqueraded.\n- IPPoolsOnly: destinations outside of this IP pool will be masqueraded.\n- IPPoolsAndHostIPs: destinations outside of this IP pool and all hosts will be masqueraded.</p>",
           "UserEditable": true,
-          "GoType": "*v3.NATOutgoingExclusionsType"
+          "GoType": "*v3.NATOutgoingExclusionsType",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2079,6 +2080,36 @@
           "DescriptionHTML": "<p>Used to by Felix to communicate policy changes to external services,\nlike Application layer policy.</p>",
           "UserEditable": true,
           "GoType": "string",
+          "OpenSourceOnly": false
+        },
+        {
+          "Group": "Dataplane: Common",
+          "GroupWithSortPrefix": "10 Dataplane: Common",
+          "NameConfigFile": "ProgramRoutes",
+          "NameEnvVar": "FELIX_ProgramRoutes",
+          "NameYAML": "programRoutes",
+          "NameGoAPI": "ProgramRoutes",
+          "StringSchema": "One of: `Disabled`, `Enabled` (case insensitive)",
+          "StringSchemaHTML": "One of: <code>Disabled</code>, <code>Enabled</code> (case insensitive)",
+          "StringDefault": "Disabled",
+          "ParsedDefault": "Disabled",
+          "ParsedDefaultJSON": "\"Disabled\"",
+          "ParsedType": "string",
+          "YAMLType": "string",
+          "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`.",
+          "YAMLEnumValues": [
+            "Disabled",
+            "Enabled"
+          ],
+          "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>.",
+          "YAMLDefault": "Disabled",
+          "Required": false,
+          "OnParseFailure": "ReplaceWithDefault",
+          "AllowedConfigSources": "All",
+          "Description": "Specifies whether Felix should program IPIP or unencapsulated routes instead of BIRD.\nFelix always programs VXLAN routes.",
+          "DescriptionHTML": "<p>Specifies whether Felix should program IPIP or unencapsulated routes instead of BIRD.\nFelix always programs VXLAN routes.</p>",
+          "UserEditable": true,
+          "GoType": "*string",
           "OpenSourceOnly": false
         },
         {
