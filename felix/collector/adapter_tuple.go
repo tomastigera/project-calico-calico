@@ -34,6 +34,10 @@ func (a *TupleAsFlow) GetHttpMethod() *string {
 	return nil
 }
 
+func (a *TupleAsFlow) GetHttpHeaders() map[string]string {
+	return nil
+}
+
 func (a *TupleAsFlow) GetHttpPath() *string {
 	return nil
 }

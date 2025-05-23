@@ -143,6 +143,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalThreatFeedSpec":                     schema_pkg_apis_projectcalico_v3_GlobalThreatFeedSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalThreatFeedStatus":                   schema_pkg_apis_projectcalico_v3_GlobalThreatFeedStatus(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPHeader":                               schema_pkg_apis_projectcalico_v3_HTTPHeader(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPHeaderCriteria":                       schema_pkg_apis_projectcalico_v3_HTTPHeaderCriteria(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPHeaderSource":                         schema_pkg_apis_projectcalico_v3_HTTPHeaderSource(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPMatch":                                schema_pkg_apis_projectcalico_v3_HTTPMatch(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPPath":                                 schema_pkg_apis_projectcalico_v3_HTTPPath(ref),
@@ -8545,6 +8546,48 @@ func schema_pkg_apis_projectcalico_v3_HTTPHeader(ref common.ReferenceCallback) c
 	}
 }
 
+func schema_pkg_apis_projectcalico_v3_HTTPHeaderCriteria(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "HTTPHeaderCriteria structure defines optional HTTP headers criterion for ALP.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"header": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"operator": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"values": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"header", "operator", "values"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_projectcalico_v3_HTTPHeaderSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8607,11 +8650,25 @@ func schema_pkg_apis_projectcalico_v3_HTTPMatch(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"headers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Headers is an optional field that restricts the rule to apply to HTTP headers. Multiple headers criteria are AND'd together. Criteria within a single headers rule ar OR'd together.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPHeaderCriteria"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPPath"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPHeaderCriteria", "github.com/tigera/api/pkg/apis/projectcalico/v3.HTTPPath"},
 	}
 }
 

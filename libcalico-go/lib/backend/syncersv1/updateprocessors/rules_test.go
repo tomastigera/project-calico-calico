@@ -71,6 +71,10 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 			HTTP: &apiv3.HTTPMatch{
 				Methods: []string{"GET", "PUT"},
 				Paths:   []apiv3.HTTPPath{{Exact: "/bar"}, {Prefix: "/foo1"}},
+				Headers: []apiv3.HTTPHeaderCriteria{
+					{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.254", "192.168.0.1"}},
+					{Header: "x-forwarded-for", Operator: "NotIn", Values: []string{"192.168.0.100"}},
+				},
 			},
 			Metadata: &apiv3.RuleMetadata{
 				Annotations: map[string]string{"fizz": "buzz"}},
@@ -120,6 +124,10 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 
 		Expect(rulev1.HTTPMatch.Methods).To(Equal([]string{"GET", "PUT"}))
 		Expect(rulev1.HTTPMatch.Paths).To(Equal([]apiv3.HTTPPath{{Exact: "/bar"}, {Prefix: "/foo1"}}))
+		Expect(rulev1.HTTPMatch.Headers).To(Equal([]apiv3.HTTPHeaderCriteria{
+			{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.254", "192.168.0.1"}},
+			{Header: "x-forwarded-for", Operator: "NotIn", Values: []string{"192.168.0.100"}},
+		}))
 
 		Expect(rulev1.Metadata.Annotations).To(Equal(map[string]string{"fizz": "buzz"}))
 

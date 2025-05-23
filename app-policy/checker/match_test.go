@@ -146,7 +146,7 @@ func TestMatchHTTPPaths(t *testing.T) {
 func TestMatchHTTPNil(t *testing.T) {
 	RegisterTestingT(t)
 
-	Expect(matchHTTP(nil, nil, nil)).To(BeTrue())
+	Expect(matchHTTP(nil, nil, nil, nil)).To(BeTrue())
 }
 
 // Test HTTPPaths panic on invalid data.
@@ -181,7 +181,20 @@ func TestMatchRule(t *testing.T) {
 
 		HttpMatch: &proto.HTTPMatch{
 			Methods: []string{"GET", "POST"},
-			Paths:   []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/path"}}, {PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/pathlong"}}},
+			Paths: []*proto.HTTPMatch_PathMatch{
+				{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/path"}},
+				{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/pathlong"}},
+			},
+			Headers: []*proto.HTTPMatch_HeadersMatch{
+				&proto.HTTPMatch_HeadersMatch{
+					Header:   "x-forwarded-for",
+					Operator: "HasPrefix",
+					Values: []string{
+						"192.168.0.254",
+						"192.168.0.1",
+					},
+				},
+			},
 		},
 		Protocol: &proto.Protocol{
 			NumberOrName: &proto.Protocol_Name{
@@ -222,6 +235,9 @@ func TestMatchRule(t *testing.T) {
 			Http: &auth.AttributeContext_HttpRequest{
 				Method: "GET",
 				Path:   "/path",
+				Headers: map[string]string{
+					"x-forwarded-for": "192.168.0.254 192.168.0.100",
+				},
 			},
 		},
 	}}
@@ -294,6 +310,19 @@ func TestMatchRule(t *testing.T) {
 	rule.HttpMatch.Paths = []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/nopath"}}}
 	Expect(match("", rule, reqCache)).To(BeFalse())
 	rule.HttpMatch.Paths = ohp
+	Expect(match("", rule, reqCache)).To(BeTrue())
+
+	// HTTPHeader
+	ohh := rule.HttpMatch.Headers
+	rule.HttpMatch.Headers = []*proto.HTTPMatch_HeadersMatch{
+		&proto.HTTPMatch_HeadersMatch{
+			Header:   "x-forwarded-for",
+			Operator: "HasPrefix",
+			Values:   []string{"192.168.0.100"},
+		},
+	}
+	Expect(match("", rule, reqCache)).To(BeFalse())
+	rule.HttpMatch.Headers = ohh
 	Expect(match("", rule, reqCache)).To(BeTrue())
 
 	// Protocol
@@ -1393,4 +1422,231 @@ func TestMatchDstIPPortSetIds(t *testing.T) {
 			Expect(matchDstIPPortSetIds(tc.rule, req)).To(Equal(tc.expected), "Test case: %s", tc.title)
 		})
 	}
+}
+
+func TestMatchHTTPHeaders(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "Exists",
+			}},
+			map[string]string{
+				"forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "Exists",
+			}},
+			map[string]string{
+				"forwarded-for":   "127.0.0.1",
+				"x-forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "DoesNotExist",
+			}},
+			map[string]string{
+				"forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "DoesNotExist",
+			}},
+			map[string]string{
+				"forwarded-for":   "127.0.0.1",
+				"x-forwarded-for": "127.0.0.1",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "HasPrefix",
+				Values:   []string{"10.0.0."},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "HasPrefix",
+				Values:   []string{"10.0.0.", "192.168.1."},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "HasSuffix",
+				Values:   []string{".23", ".24"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "HasSuffix",
+				Values:   []string{".24", ".22"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.1.22",
+				"x-forwarded-for": "192.168.1.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "In",
+				Values:   []string{"192.168.0.100", "192.168.0.101"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.0.22",
+				"x-forwarded-for": "192.168.0.22",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "In",
+				Values:   []string{"192.168.0.100", "192.168.0.101"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.0.101",
+				"x-forwarded-for": "192.168.0.101",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "NotIn",
+				Values:   []string{"192.168.0.100", "192.168.0.101"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.0.22",
+				"x-forwarded-for": "192.168.0.22",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "x-forwarded-for",
+				Operator: "NotIn",
+				Values:   []string{"192.168.0.100", "192.168.0.101"},
+			}},
+			map[string]string{
+				"forwarded-for":   "192.168.0.101",
+				"x-forwarded-for": "192.168.0.101",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "user-agent",
+				Operator: "MatchesRegex",
+				Values:   []string{"^AppleTV", "^Roku"},
+			}},
+			map[string]string{
+				"user-agent": "Mozilla/5.0 (CrKey armv7l 1.5.16041) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.0 Safari/537.36",
+			},
+		),
+	).To(
+		BeFalse(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{{
+				Header:   "user-agent",
+				Operator: "MatchesRegex",
+				Values:   []string{"^AppleTV", "^Roku"},
+			}},
+			map[string]string{
+				"user-agent": "AppleTV11,1/11.1",
+			},
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			[]*proto.HTTPMatch_HeadersMatch{
+				{
+					Operator: "Exits",
+				},
+				nil,
+			},
+			nil,
+		),
+	).To(
+		BeTrue(),
+	)
+	Expect(
+		matchHTTPHeaders(
+			nil,
+			nil,
+		),
+	).To(
+		BeTrue(),
+	)
 }

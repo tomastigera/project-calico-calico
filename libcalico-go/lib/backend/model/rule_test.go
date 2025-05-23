@@ -49,6 +49,9 @@ var ports2 = []numorstring.Port{
 var _, cidr, _ = net.ParseCIDR("10.0.0.0/16")
 var httpMethod = &model.HTTPMatch{Methods: []string{"GET", "PUT"}}
 var httpPath = &model.HTTPMatch{Paths: []apiv3.HTTPPath{{Exact: "/foo"}, {Prefix: "/bar"}}}
+var httpHeaders = &model.HTTPMatch{Headers: []apiv3.HTTPHeaderCriteria{
+	{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.1"}},
+}}
 
 var ruleStringTests = []ruleTest{
 	// Empty
@@ -98,6 +101,7 @@ var ruleStringTests = []ruleTest{
 	// Application layer rules.
 	{model.Rule{HTTPMatch: httpMethod}, "Allow to httpMethods [GET PUT]"},
 	{model.Rule{HTTPMatch: httpPath}, "Allow to httpPaths [{Exact:/foo Prefix:} {Exact: Prefix:/bar}]"},
+	{model.Rule{HTTPMatch: httpHeaders}, "Allow to httpHeaders [{Header:x-forwarded-for Operator:In Values:[192.168.0.1]}]"},
 
 	// Complex rule.
 	{model.Rule{Protocol: &tcpProto,
