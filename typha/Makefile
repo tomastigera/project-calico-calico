@@ -99,6 +99,9 @@ sub-image-%:
 TYPHA_IMAGE_WITH_TAG=$(TYPHA_IMAGE):latest-$(ARCH)
 TYPHA_IMAGE_ID=$(shell docker images -q $(TYPHA_IMAGE_WITH_TAG))
 
+docker-image/LICENSE: ../LICENSE.md
+	cp ../LICENSE.md $@
+
 # This target actually builds the image if any of its dependencies have changed or if it's
 # missing from docker.
 $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
