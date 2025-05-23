@@ -193,8 +193,8 @@ if $go_copyright_check_failed; then
   echo "be added to the ${skip_file} file"
 fi
 
-BPF_GPL_DIR='./bpf-gpl'
-BPF_APACHE_DIR='./bpf-apache'
+BPF_GPL_DIR='./felix/bpf-gpl'
+BPF_APACHE_DIR='./felix/bpf-apache'
 
 c_dual_license_check_failed=false
 c_apache_license_check_failed=false
@@ -224,7 +224,7 @@ echo "Checking C files for Apache/GPL license statements..."
 files=$(find $BPF_GPL_DIR -name "*.c" -o -name "*.h" | grep -v include)
 for file in $files; do
   if ! grep -q -E "SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later" "${file}"; then
-    echo "  File is missing Apache/GPL license: bpf-gpl/"`basename $file`
+    echo "  File is missing Apache/GPL license: felix/bpf-gpl/"`basename $file`
     c_dual_license_check_failed=true
   fi
 done
@@ -253,9 +253,9 @@ fi
 if $c_dual_license_check_failed; then
   echo
   echo "Apache/GPL dual license header should be"
-  echo 
+  echo
   echo "// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later"
-  echo 
+  echo
 fi
 
 if $c_apache_license_check_failed; then
