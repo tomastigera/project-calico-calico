@@ -17,7 +17,7 @@ func main() {
 	flag.StringVar(&opts.WafRulesetRootDir, "wafRulesetRootDir", "", "path to WAF ruleset")
 	flag.Parse()
 
-	filter := waf.NewWafHTTPFilter(opts, waf.DebugLogger)
+	filter := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
 	err := filter.Start()
 	if err != nil {
 		logrus.WithError(err).Fatal("Execution stopped with an error.")
