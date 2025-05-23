@@ -45,18 +45,18 @@ var flagSet = flag.NewFlagSet("Calico", flag.ContinueOnError)
 
 // Build the set of supported flags.
 var (
- version = flagSet.Bool("v", false, "Display version")
- runFelix = flagSet.Bool("felix", false, "Run Felix")
- runBPF = flagSet.Bool("bpf", false, "Run BPF debug tool")
- runInit = flagSet.Bool("init", false, "Do privileged initialisation of a new node (mount file systems etc).")
- bestEffort = flagSet.Bool("best-effort", false, "Used in combination with the init flag. Report errors but do not fail if an error occurs during initialisation.")
- runStartup = flagSet.Bool("startup", false, "Do non-privileged start-up routine.")
- runShutdown = flagSet.Bool("shutdown", false, "Do shutdown routine.")
- monitorAddrs = flagSet.Bool("monitor-addresses", false, "Monitor change in node IP addresses")
- runAllocateTunnelAddrs = flagSet.Bool("allocate-tunnel-addrs", false, "Configure tunnel addresses for this node")
- allocateTunnelAddrsRunOnce = flagSet.Bool("allocate-tunnel-addrs-run-once", false, "Run allocate-tunnel-addrs in oneshot mode")
- monitorToken = flagSet.Bool("monitor-token", false, "Watch for Kubernetes token changes, update CNI config")
- nonClusterHost = flagSet.Bool("noncluster-host", false, "Run in non-cluster host mode")
+	version                    = flagSet.Bool("v", false, "Display version")
+	runFelix                   = flagSet.Bool("felix", false, "Run Felix")
+	runBPF                     = flagSet.Bool("bpf", false, "Run BPF debug tool")
+	runInit                    = flagSet.Bool("init", false, "Do privileged initialisation of a new node (mount file systems etc).")
+	bestEffort                 = flagSet.Bool("best-effort", false, "Used in combination with the init flag. Report errors but do not fail if an error occurs during initialisation.")
+	runStartup                 = flagSet.Bool("startup", false, "Do non-privileged start-up routine.")
+	runShutdown                = flagSet.Bool("shutdown", false, "Do shutdown routine.")
+	monitorAddrs               = flagSet.Bool("monitor-addresses", false, "Monitor change in node IP addresses")
+	runAllocateTunnelAddrs     = flagSet.Bool("allocate-tunnel-addrs", false, "Configure tunnel addresses for this node")
+	allocateTunnelAddrsRunOnce = flagSet.Bool("allocate-tunnel-addrs-run-once", false, "Run allocate-tunnel-addrs in oneshot mode")
+	monitorToken               = flagSet.Bool("monitor-token", false, "Watch for Kubernetes token changes, update CNI config")
+	nonClusterHost             = flagSet.Bool("noncluster-host", false, "Run in non-cluster host mode")
 )
 
 // Felix flags
@@ -74,10 +74,10 @@ var (
 
 // Options for readiness checks.
 var (
- birdReady = flagSet.Bool("bird-ready", false, "Run BIRD readiness checks")
- bird6Ready = flagSet.Bool("bird6-ready", false, "Run BIRD6 readiness checks")
- felixReady = flagSet.Bool("felix-ready", false, "Run felix readiness checks")
- bgpMetricsReady = flagSet.Bool("bgp-metrics-ready", false, "Run BGP metrics server readiness checks")
+	birdReady       = flagSet.Bool("bird-ready", false, "Run BIRD readiness checks")
+	bird6Ready      = flagSet.Bool("bird6-ready", false, "Run BIRD6 readiness checks")
+	felixReady      = flagSet.Bool("felix-ready", false, "Run felix readiness checks")
+	bgpMetricsReady = flagSet.Bool("bgp-metrics-ready", false, "Run BGP metrics server readiness checks")
 )
 
 // thresholdTime is introduced for bird readiness check. Default value is 30 sec.
@@ -91,11 +91,11 @@ var (
 
 // confd flags
 var (
- runConfd = flagSet.Bool("confd", false, "Run confd")
- confdRunOnce = flagSet.Bool("confd-run-once", false, "Run confd in oneshot mode")
- confdKeep = flagSet.Bool("confd-keep-stage-file", false, "Keep stage file when running confd")
- confdConfDir = flagSet.String("confd-confdir", "/etc/calico/confd", "Confd configuration directory.")
- confdCalicoConfig = flagSet.String("confd-calicoconfig", "", "Calico configuration file.")
+	runConfd          = flagSet.Bool("confd", false, "Run confd")
+	confdRunOnce      = flagSet.Bool("confd-run-once", false, "Run confd in oneshot mode")
+	confdKeep         = flagSet.Bool("confd-keep-stage-file", false, "Keep stage file when running confd")
+	confdConfDir      = flagSet.String("confd-confdir", "/etc/calico/confd", "Confd configuration directory.")
+	confdCalicoConfig = flagSet.String("confd-calicoconfig", "", "Calico configuration file.")
 )
 
 // Early networking flags
