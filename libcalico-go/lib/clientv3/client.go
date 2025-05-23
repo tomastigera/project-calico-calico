@@ -380,6 +380,10 @@ func (c client) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion
 	return nil
 }
 
+func (c client) Close() error {
+	return c.backend.Close()
+}
+
 const globalClusterInfoName = "default"
 
 // ensureClusterInformation ensures that the ClusterInformation fields i.e. ClusterType,

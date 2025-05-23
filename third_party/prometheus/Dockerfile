@@ -18,32 +18,19 @@ ARG TARGETARCH
 COPY --from=ubi /bin/bash /bin/sh
 COPY --from=ubi /bin/curl /bin/curl
 
-COPY --from=ubi /lib64/libbrotlicommon.so.1 /lib64/libbrotlicommon.so.1
-COPY --from=ubi /lib64/libbrotlidec.so.1 /lib64/libbrotlidec.so.1
 COPY --from=ubi /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
-COPY --from=ubi /lib64/libcrypt.so.1 /lib64/libcrypt.so.1
-COPY --from=ubi /lib64/libcrypto.so.1.1 /lib64/libcrypto.so.1.1
+COPY --from=ubi /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
 COPY --from=ubi /lib64/libcurl.so.4 /lib64/libcurl.so.4
-COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=ubi /lib64/libgssapi_krb5.so.2 /lib64/libgssapi_krb5.so.2
-COPY --from=ubi /lib64/libidn2.so.0 /lib64/libidn2.so.0
 COPY --from=ubi /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
 COPY --from=ubi /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
 COPY --from=ubi /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
 COPY --from=ubi /lib64/libkrb5support.so.0 /lib64/libkrb5support.so.0
-COPY --from=ubi /lib64/liblber-2.4.so.2 /lib64/liblber-2.4.so.2
-COPY --from=ubi /lib64/libldap-2.4.so.2 /lib64/libldap-2.4.so.2
-COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=ubi /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
 COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
-COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
-COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
-COPY --from=ubi /lib64/libsasl2.so.3 /lib64/libsasl2.so.3
 COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=ubi /lib64/libssh.so.4 /lib64/libssh.so.4
-COPY --from=ubi /lib64/libssl.so.3.2.2 /lib64/libssl.so.3.2.2
+COPY --from=ubi /lib64/libssl.so.3 /lib64/libssl.so.3
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
-COPY --from=ubi /lib64/libunistring.so.2 /lib64/libunistring.so.2
 COPY --from=ubi /lib64/libz.so.1 /lib64/libz.so.1
 
 # prometheus files

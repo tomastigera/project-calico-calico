@@ -121,7 +121,8 @@ type Client interface {
 	// Clean removes Calico data from the backend datastore.  Used for test purposes.
 	Clean() error
 
-	// Close the client.
+	// Close attempts to close any connections to the datastore.  Using the
+	// client after calling this method may result in undefined behavior.
 	Close() error
 }
 

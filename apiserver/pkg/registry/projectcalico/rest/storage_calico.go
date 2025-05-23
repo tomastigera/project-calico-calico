@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ import (
 	calicotier "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/tier"
 	calicouisettings "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/uisettings"
 	calicouisettingsgroup "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/uisettingsgroup"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
 	calicostorage "github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 	"github.com/projectcalico/calico/apiserver/pkg/storage/etcd"
 	"github.com/projectcalico/calico/licensing/monitor"
@@ -86,6 +87,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	calculator rbac.Calculator,
 	licenseMonitor monitor.LicenseMonitor,
 	calicoLister rbac.CalicoResourceLister,
+	watchManager *util.WatchManager,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"), nil)
 	if err != nil {
@@ -1036,12 +1038,13 @@ func (p RESTStorageProvider) NewV3Storage(
 	)
 
 	storage := map[string]rest.Storage{}
-	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts, calicoLister))
-	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts, calicoLister))
+	storage["tiers"] = rESTInPeace(calicotier.NewREST(scheme, *tierOpts))
+	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts, calicoLister, watchManager))
+	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts, calicoLister, watchManager))
 	storage["stagedkubernetesnetworkpolicies"] = rESTInPeace(calicostagedk8spolicy.NewREST(scheme, *stagedk8spolicyOpts))
 	storage["tiers"] = rESTInPeace(calicotier.NewREST(scheme, *tierOpts))
-	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts, calicoLister))
-	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts, calicoLister))
+	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts, calicoLister, watchManager))
+	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts, calicoLister, watchManager))
 
 	policyRecommendationScopeStorage, policyRecommendationScopeStatusStorage, err := calicopolicyrecommendationscope.NewREST(
 		scheme,

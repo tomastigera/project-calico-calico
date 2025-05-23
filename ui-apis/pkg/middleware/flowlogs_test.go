@@ -15,9 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lapiv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -237,7 +237,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			params := &FlowLogsParams{}
 			flp := buildFlowParams(params)
 			Expect(flp).NotTo(BeNil())
-			Expect(*flp).To(Equal(lapi.L3FlowParams{}))
+			Expect(*flp).To(Equal(lapiv1.L3FlowParams{}))
 		})
 
 		It("should return params without filters when passed a params object with zero start and end time", func() {
@@ -247,7 +247,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			}
 			flp := buildFlowParams(params)
 			Expect(flp).NotTo(BeNil())
-			Expect(*flp).To(Equal(lapi.L3FlowParams{}))
+			Expect(*flp).To(Equal(lapiv1.L3FlowParams{}))
 		})
 
 		It("should return params with a nested filter for dest labels containing one term and two terms queries",
@@ -262,8 +262,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 				flp := buildFlowParams(params)
 				Expect(flp).NotTo(BeNil())
-				Expect(*flp).To(Equal(lapi.L3FlowParams{
-					DestinationSelectors: []lapi.LabelSelector{
+				Expect(*flp).To(Equal(lapiv1.L3FlowParams{
+					DestinationSelectors: []lapiv1.LabelSelector{
 						{Key: "key1", Operator: "=", Values: []string{"test"}},
 						{Key: "key2", Operator: "!=", Values: []string{"test", "test2"}},
 						{Key: "key3", Operator: "=", Values: []string{"test", "test2", "test3"}},
@@ -283,8 +283,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 				flp := buildFlowParams(params)
 				Expect(flp).NotTo(BeNil())
-				Expect(*flp).To(Equal(lapi.L3FlowParams{
-					SourceSelectors: []lapi.LabelSelector{
+				Expect(*flp).To(Equal(lapiv1.L3FlowParams{
+					SourceSelectors: []lapiv1.LabelSelector{
 						{Key: "key1", Operator: "=", Values: []string{"test"}},
 						{Key: "key2", Operator: "!=", Values: []string{"test", "test2"}},
 						{Key: "key3", Operator: "=", Values: []string{"test", "test2", "test3"}},
@@ -322,23 +322,23 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			flp := buildFlowParams(params)
 			Expect(flp).NotTo(BeNil())
-			Expect(*flp).To(Equal(lapi.L3FlowParams{
-				QueryParams: lapi.QueryParams{
+			Expect(*flp).To(Equal(lapiv1.L3FlowParams{
+				QueryParams: lapiv1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
 						From: *start,
 						To:   *end,
 					},
 				},
-				Actions:          []lapi.FlowAction{lapi.FlowActionAllow, lapi.FlowActionDeny, lapi.FlowActionUnknown},
-				SourceTypes:      []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP},
-				DestinationTypes: []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP},
-				NamespaceMatches: []lapi.NamespaceMatch{{Type: lapi.MatchTypeAny, Namespaces: []string{"tigera-elasticsearch"}}},
-				NameAggrMatches:  []lapi.NameMatch{{Type: lapi.MatchTypeAny, Names: []string{"coredns"}}},
-				SourceSelectors: []lapi.LabelSelector{
+				Actions:          []lapiv1.FlowAction{lapiv1.FlowActionAllow, lapiv1.FlowActionDeny, lapiv1.FlowActionUnknown},
+				SourceTypes:      []lapiv1.EndpointType{lapiv1.Network, lapiv1.NetworkSet, lapiv1.WEP, lapiv1.HEP},
+				DestinationTypes: []lapiv1.EndpointType{lapiv1.Network, lapiv1.NetworkSet, lapiv1.WEP, lapiv1.HEP},
+				NamespaceMatches: []lapiv1.NamespaceMatch{{Type: lapiv1.MatchTypeAny, Namespaces: []string{"tigera-elasticsearch"}}},
+				NameAggrMatches:  []lapiv1.NameMatch{{Type: lapiv1.MatchTypeAny, Names: []string{"coredns"}}},
+				SourceSelectors: []lapiv1.LabelSelector{
 					{Key: "key1", Operator: "=", Values: []string{"test", "test2"}},
 					{Key: "key2", Operator: "!=", Values: []string{"test", "test2"}},
 				},
-				DestinationSelectors: []lapi.LabelSelector{
+				DestinationSelectors: []lapiv1.LabelSelector{
 					{Key: "key1", Operator: "=", Values: []string{"test", "test2"}},
 					{Key: "key2", Operator: "!=", Values: []string{"test", "test2"}},
 				},
@@ -353,15 +353,118 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-				return &v1.List[lapi.L3Flow]{
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
+				return &lapiv1.List[lapiv1.L3Flow]{
 					// We don't actually assert on the contents, just that two entries are
 					// present. Use two empty flows - this also ensures we handle missing
-					// fields from Lisneed.
-					Items: []lapi.L3Flow{{}, {}},
+					// fields from Linseed.
+					Items: []lapiv1.L3Flow{
+						{
+							Key: lapiv1.L3FlowKey{
+								Action:   lapiv1.FlowActionAllow,
+								Reporter: lapiv1.FlowReporterSource,
+								Source: lapiv1.Endpoint{
+									Type:           lapiv1.HEP,
+									AggregatedName: "hep-src-name",
+								},
+								Destination: lapiv1.Endpoint{
+									Type:           lapiv1.WEP,
+									AggregatedName: "wep-dst-name",
+									Namespace:      "wep-dst-namespace",
+								},
+							},
+							SourceLabels: []lapiv1.FlowLabels{
+								{
+									// should not propagate to the bucket
+									Key: "some-key",
+									Values: []lapiv1.FlowLabelValue{
+										{
+											Value: "some-value",
+											Count: 3,
+										},
+									},
+								},
+								{
+									// should propagate to the bucket
+									Key: names.HostEndpointTypeLabelKey,
+									Values: []lapiv1.FlowLabelValue{
+										{
+											Value: string(names.HostEndpointTypeNonClusterHost),
+											Count: 1,
+										},
+									},
+								},
+							},
+						},
+						{
+							Key: lapiv1.L3FlowKey{
+								Action:   lapiv1.FlowActionDeny,
+								Reporter: lapiv1.FlowReporterDest,
+								Source: lapiv1.Endpoint{
+									Type:           lapiv1.WEP,
+									AggregatedName: "wep-src-name",
+									Namespace:      "wep-src-namespace",
+								},
+								Destination: lapiv1.Endpoint{
+									Type:           lapiv1.HEP,
+									AggregatedName: "hep-dst-name",
+								},
+							},
+							SourceLabels: []lapiv1.FlowLabels{
+								{
+									Key: names.HostEndpointTypeLabelKey,
+									Values: []lapiv1.FlowLabelValue{
+										{
+											// should not propagate to the bucket
+											Value: string(names.HostEndpointTypeClusterNode),
+											Count: 2,
+										},
+									},
+								},
+							},
+						},
+						{
+							Key: lapiv1.L3FlowKey{
+								Action:   lapiv1.FlowActionAllow,
+								Reporter: lapiv1.FlowReporterSource,
+								Source: lapiv1.Endpoint{
+									Type:           lapiv1.HEP,
+									AggregatedName: "hep-src-name",
+								},
+								Destination: lapiv1.Endpoint{
+									Type:           lapiv1.HEP,
+									AggregatedName: "hep-dst-name",
+								},
+							},
+							SourceLabels: []lapiv1.FlowLabels{
+								{
+									Key: names.HostEndpointTypeLabelKey,
+									Values: []lapiv1.FlowLabelValue{
+										{
+											// should not propagate to the bucket
+											Value: string(names.HostEndpointTypeClusterNode),
+											Count: 2,
+										},
+									},
+								},
+							},
+							DestinationLabels: []lapiv1.FlowLabels{
+								{
+									Key: names.HostEndpointTypeLabelKey,
+									Values: []lapiv1.FlowLabelValue{
+										{
+											// should not propagate to the bucket
+											Value: string(names.HostEndpointTypeNonClusterHost),
+											Count: 3,
+										},
+									},
+								},
+							},
+						},
+					},
 				}, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
@@ -383,7 +486,48 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(m).To(BeAssignableToTypeOf(map[string]interface{}{}))
 			b := m.(map[string]interface{})
 			Expect(b).To(HaveKey("buckets"))
-			Expect(b["buckets"]).To(HaveLen(2))
+			Expect(b["buckets"]).To(HaveLen(3))
+
+			// verify label propagation for host endpoints
+			Expect(b["buckets"]).To(BeAssignableToTypeOf([]bucket{}))
+			bb := b["buckets"].([]bucket)
+			Expect(bb[0].Key).To(Equal(key{
+				Action:          string(lapiv1.FlowActionAllow),
+				DestName:        "wep-dst-name",
+				DestNamespace:   "wep-dst-namespace",
+				DestType:        string(lapiv1.WEP),
+				Reporter:        string(lapiv1.FlowReporterSource),
+				SourceName:      "hep-src-name",
+				SourceNamespace: api.GlobalEndpointType,
+				SourceType:      string(lapiv1.HEP),
+			}))
+			Expect(bb[0].SourceLabels).To(HaveLen(1))
+			Expect(bb[0].SourceLabels).To(HaveKeyWithValue("hostendpoint.projectcalico.org/type", "nonclusterhost"))
+			Expect(bb[1].Key).To(Equal(key{
+				Action:          string(lapiv1.FlowActionDeny),
+				DestName:        "hep-dst-name",
+				DestNamespace:   api.GlobalEndpointType,
+				DestType:        string(lapiv1.HEP),
+				Reporter:        string(lapiv1.FlowReporterDest),
+				SourceName:      "wep-src-name",
+				SourceNamespace: "wep-src-namespace",
+				SourceType:      string(lapiv1.WEP),
+			}))
+			Expect(bb[1].SourceLabels).To(BeEmpty())
+			Expect(bb[2].Key).To(Equal(key{
+				Action:          string(lapiv1.FlowActionAllow),
+				DestName:        "hep-dst-name",
+				DestNamespace:   api.GlobalEndpointType,
+				DestType:        string(lapiv1.HEP),
+				Reporter:        string(lapiv1.FlowReporterSource),
+				SourceName:      "hep-src-name",
+				SourceNamespace: api.GlobalEndpointType,
+				SourceType:      string(lapiv1.HEP),
+			}))
+			Expect(bb[2].SourceLabels).To(HaveLen(1))
+			Expect(bb[2].SourceLabels).To(HaveKeyWithValue("hostendpoint.projectcalico.org/type", "clusternode"))
+			Expect(bb[2].DestinationLabels).To(HaveLen(1))
+			Expect(bb[2].DestinationLabels).To(HaveKeyWithValue("hostendpoint.projectcalico.org/type", "nonclusterhost"))
 		})
 
 		It("should fail to retrieve a search results object and return an error", func() {
@@ -391,10 +535,10 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
 				return nil, fmt.Errorf("mock server error")
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			pager := client.NewMockListPager(&p, listFn)
 
 			// Perform a search.
@@ -419,17 +563,17 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Build list of possible resposne items.
-			resp := v1.List[lapi.L3Flow]{}
+			resp := lapiv1.List[lapiv1.L3Flow]{}
 			err = json.Unmarshal(linseedResponse, &resp)
 			Expect(err).To(Not(HaveOccurred()))
 			i := 0
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(ctx context.Context, p v1.Params) (*v1.List[lapi.L3Flow], error) {
+			listFn := func(ctx context.Context, p lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
 				afterKey := map[string]interface{}{"": ""}
-				r := v1.List[lapi.L3Flow]{
-					Items: []v1.L3Flow{resp.Items[i]},
+				r := lapiv1.List[lapiv1.L3Flow]{
+					Items: []lapiv1.L3Flow{resp.Items[i]},
 				}
 				i++
 				if i == len(resp.Items) {
@@ -438,9 +582,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				r.AfterKey = afterKey
 				return &r, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			p.MaxPageSize = 1
-			opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](2)}
+			opts := []client.ListPagerOption[lapiv1.L3Flow]{client.WithMaxResults[lapiv1.L3Flow](2)}
 			pager := client.NewMockListPager(&p, listFn, opts...)
 			lsc := client.NewMockClient("")
 
@@ -495,13 +639,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-				resp := v1.List[lapi.L3Flow]{}
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
+				resp := lapiv1.List[lapiv1.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
 				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
@@ -540,13 +684,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-				resp := v1.List[lapi.L3Flow]{}
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
+				resp := lapiv1.List[lapiv1.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
 				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
@@ -585,13 +729,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-				resp := v1.List[lapi.L3Flow]{}
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
+				resp := lapiv1.List[lapiv1.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
 				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
@@ -620,10 +764,10 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
 				return nil, fmt.Errorf("mock linseed error")
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			pager := client.NewMockListPager(&p, listFn)
 
 			// PIP parameters.
@@ -651,13 +795,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
-			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-				resp := v1.List[lapi.L3Flow]{}
+			listFn := func(context.Context, lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
+				resp := lapiv1.List[lapiv1.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
 				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
-			p := lapi.L3FlowParams{}
+			p := lapiv1.L3FlowParams{}
 			pager := client.NewMockListPager(&p, listFn)
 
 			// PIP parameters.
