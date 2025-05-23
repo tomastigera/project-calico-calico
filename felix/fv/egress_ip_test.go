@@ -331,8 +331,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 		}
 		if overlay != OV_IPIP {
-			topologyOptions.IPIPEnabled = false
-			topologyOptions.IPIPRoutesEnabled = false
+			topologyOptions.IPIPMode = api.IPIPModeNever
+			topologyOptions.SimulateBIRDRoutes = false
 		}
 		tc, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 

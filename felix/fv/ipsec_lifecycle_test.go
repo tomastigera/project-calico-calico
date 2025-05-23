@@ -13,6 +13,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -44,7 +45,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
 		topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
 		topologyOptions.ExtraEnvVars["FELIX_IPSECREKEYTIME"] = "20"
-		topologyOptions.IPIPEnabled = false
+		topologyOptions.IPIPMode = api.IPIPModeNever
 
 		tc, _ = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 

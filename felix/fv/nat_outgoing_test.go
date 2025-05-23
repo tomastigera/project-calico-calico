@@ -118,7 +118,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("NATOutgoing remote cluster r
 			topologyOptions.VXLANMode = api.VXLANModeAlways
 			topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 			topologyOptions.WithTypha = true
-			topologyOptions.IPIPEnabled = false
+			topologyOptions.IPIPMode = api.IPIPModeNever
 			if i == 1 {
 				// Change CIDR of the default pool for the second datastore to prevent overlap.
 				topologyOptions.IPPoolCIDR = "10.75.0.0/16"
