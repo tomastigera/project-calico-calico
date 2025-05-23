@@ -51,7 +51,7 @@ const (
 	numPrivateOnlyFelixConfigs = 113
 )
 
-var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
+var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
 	// Define some common values
 	perNodeFelixKey := model.ResourceKey{
 		Kind: apiv3.KindFelixConfiguration,
