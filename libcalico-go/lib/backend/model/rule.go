@@ -91,8 +91,9 @@ type Rule struct {
 }
 
 type HTTPMatch struct {
-	Methods []string         `json:"methods,omitempty" validate:"omitempty"`
-	Paths   []apiv3.HTTPPath `json:"paths,omitempty" validate:"omitempty"`
+	Methods []string                   `json:"methods,omitempty" validate:"omitempty"`
+	Paths   []apiv3.HTTPPath           `json:"paths,omitempty" validate:"omitempty"`
+	Headers []apiv3.HTTPHeaderCriteria `json:"headers,omitempty" validate:"omitempty"`
 }
 
 type RuleMetadata struct {
@@ -256,6 +257,9 @@ func (r Rule) String() string {
 			}
 			if len(r.HTTPMatch.Paths) > 0 {
 				toParts = append(toParts, "httpPaths", fmt.Sprintf("%+v", r.HTTPMatch.Paths))
+			}
+			if len(r.HTTPMatch.Headers) > 0 {
+				toParts = append(toParts, "httpHeaders", fmt.Sprintf("%+v", r.HTTPMatch.Headers))
 			}
 		}
 

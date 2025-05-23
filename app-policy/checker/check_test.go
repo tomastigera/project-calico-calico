@@ -1097,3 +1097,7 @@ func (m *MockFlow) GetSourceLabels() map[string]string {
 func (m *MockFlow) GetDestLabels() map[string]string {
 	return m.DestLabels
 }
+
+func (m *MockFlow) GetHttpHeaders() map[string]string {
+	return nil
+}
