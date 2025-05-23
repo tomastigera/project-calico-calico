@@ -422,7 +422,7 @@ type InternalDataplane struct {
 	ipSets          []dpsets.IPSetsDataplane
 
 	ipipManager          *ipipManager
-	noEncapDeviceC chan string
+	noEncapDeviceC       chan string
 	allHostsIpsetManager *allHostsIpsetManager
 
 	ipSecPolTable  *ipsec.PolicyTable

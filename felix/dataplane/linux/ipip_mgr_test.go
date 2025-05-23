@@ -41,10 +41,10 @@ var (
 
 var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	var (
-		ipipMgr   *ipipManager
-		ipSets    *dpsets.MockIPSets
-		dataplane *mockIPIPDataplane
-		rt        *mockRouteTable
+		ipipMgr     *ipipManager
+		ipSets      *dpsets.MockIPSets
+		dataplane   *mockIPIPDataplane
+		rt          *mockRouteTable
 		mockProcSys *testProcSys
 	)
 
@@ -233,9 +233,9 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 var _ = Describe("ipipManager IP set updates", func() {
 	var (
-		ipipMgr *ipipManager
-		ipSets  *dpsets.MockIPSets
-		rt      *mockRouteTable
+		ipipMgr     *ipipManager
+		ipSets      *dpsets.MockIPSets
+		rt          *mockRouteTable
 		mockProcSys *testProcSys
 	)
 
