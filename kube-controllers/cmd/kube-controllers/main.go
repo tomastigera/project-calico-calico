@@ -75,6 +75,7 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
 	"github.com/projectcalico/calico/typha/pkg/tlsutils"
 )
@@ -113,9 +114,7 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 	return ha.rt.RoundTrip(r2)
 }
 
-// VERSION is filled out during the build process (using git describe output)
 var (
-	VERSION    string
 	version    bool
 	statusFile string
 
@@ -146,7 +145,7 @@ func main() {
 
 	flag.Parse()
 	if version {
-		fmt.Println(VERSION)
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 

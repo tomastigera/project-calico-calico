@@ -156,19 +156,8 @@ K8ST_REPORT_FILENAME ?= k8s-tests.xml
 # Filesystem of the node container that is checked in to this repository.
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
-# TODO(doublek): The various version variables in use here will need some cleanup.
-# VERSION is used by cmd/calico-ipam and cmd/calico
-# CNXVERSION is used by cmd/calico-node and pkg/lifecycle/startup
-# CALICO_VERSION is used by pkg/lifecycle/startup
-# All these are required for correct version reporting by the various binaries
-# as well as embedding this information within the ClusterInformation resource.
-LDFLAGS= -X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXRELEASEVERSION=$(NODE_RELEASE_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CALICOVERSION=$(CALICO_VERSION) \
-	-X main.VERSION=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
-	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)
+# Calculate a timestamp for any build artefacts.
+DATE:=$(shell date -u +'%FT%T%z')
 
 # Source golang files on which compiling the calico-node binary depends.
 SRC_FILES=$(shell find ./pkg -name '*.go') \
