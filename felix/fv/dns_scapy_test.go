@@ -230,7 +230,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// Now start etcd and Felix, with Felix trusting scapy's IP.
 				opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 				opts.EnableIPv6 = true
-				opts.IPIPEnabled = false
+				opts.IPIPMode = api.IPIPModeNever
 				if BPFMode() {
 					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = mode
 				} else {
@@ -989,7 +989,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
-		opts.IPIPEnabled = false
+		opts.IPIPMode = api.IPIPModeNever
 		tc, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
 		felix = tc.Felixes[0]
 		server = tc.Felixes[1]
