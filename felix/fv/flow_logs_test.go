@@ -1082,7 +1082,7 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 
 		opts.EnableIPv6 = true
 		opts.IPIPMode = api.IPIPModeNever
-		opts.SimulateBIRDRoutes = false
+		opts.SimulateBIRDRoutes = true
 		opts.NATOutgoingEnabled = true
 		opts.AutoHEPsEnabled = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"

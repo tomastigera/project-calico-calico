@@ -204,7 +204,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				if !ipip {
 					options.IPIPMode = api.IPIPModeNever
-					options.SimulateBIRDRoutes = false
+					options.SimulateBIRDRoutes = true
 				}
 
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
