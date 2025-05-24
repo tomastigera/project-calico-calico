@@ -73,6 +73,7 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 				MaxIPSetSize:       1024,
 				Hostname:           "node1",
 				ExternalNodesCidrs: nil,
+				EgressIPEnabled:    true,
 			},
 			opRecorder,
 			dataplane,

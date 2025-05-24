@@ -116,7 +116,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		useInvalidLicense = false
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
-		opts.IPIPEnabled = false
+		opts.IPIPMode = api.IPIPModeNever
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
@@ -1081,10 +1081,10 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 		opts.EnableIPv6 = true
-		opts.IPIPEnabled = false
+		opts.IPIPMode = api.IPIPModeNever
+		opts.SimulateBIRDRoutes = true
 		opts.NATOutgoingEnabled = true
 		opts.AutoHEPsEnabled = false
-		opts.IPIPRoutesEnabled = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_IPV6SUPPORT"] = "true"

@@ -764,8 +764,8 @@ func ipSecTopologyOptions() infrastructure.TopologyOptions {
 
 	// Set up IPIP configuration but routes as if IPIP was disabled.  This allows us to check that Felix correctly
 	// ignores IPIP configuration when IPsec is enabled.
-	topologyOptions.IPIPEnabled = true
-	topologyOptions.IPIPRoutesEnabled = false
+	topologyOptions.IPIPMode = api.IPIPModeAlways
+	topologyOptions.SimulateBIRDRoutes = false
 	// Turn on NAT outgoing because it interacts with IPsec; when a workload connects to a remote host with IPsec
 	// then we _do not_ SNAT the traffic because it is tunneled.  Otherwise, we _do_ NAT such traffic because
 	// we can't guarantee that the traffic won't get dropped by the fabric due to RPF.

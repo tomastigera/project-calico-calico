@@ -107,8 +107,8 @@ func describeALPTest(ipip bool) bool {
 				options.EnableIPv6 = false
 
 				if !ipip {
-					options.IPIPEnabled = false
-					options.IPIPRoutesEnabled = false
+					options.IPIPMode = api.IPIPModeNever
+					options.SimulateBIRDRoutes = false
 				}
 
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"

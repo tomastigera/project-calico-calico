@@ -32,7 +32,7 @@ type ServerOptions struct {
 	LogToFile         bool
 }
 
-type WafHTTPFilter struct {
+type WAFHTTPFilter struct {
 	options        ServerOptions
 	wafServer      *waf.Server
 	healthServer   *http.Server
@@ -40,7 +40,7 @@ type WafHTTPFilter struct {
 	unixGRPCServer *grpc.Server
 }
 
-func NewWafHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WafHTTPFilter {
+func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
 	// We hardcode the default configuration for now. Will update later.
 	directives := []string{
 		"Include @coraza.conf-recommended",
@@ -82,13 +82,13 @@ func NewWafHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WafHTTP
 		logrus.Panicf("cannot initialize WAF: %v", err)
 	}
 
-	return &WafHTTPFilter{
+	return &WAFHTTPFilter{
 		options:   opts,
 		wafServer: wafServer,
 	}
 }
 
-func (f *WafHTTPFilter) Start() error {
+func (f *WAFHTTPFilter) Start() error {
 	if f.options.TcpPort == 0 && f.options.SocketPath == "" {
 		return fmt.Errorf("please configure port or socketPath")
 	}
@@ -151,7 +151,7 @@ func (f *WafHTTPFilter) Start() error {
 	return f.healthServer.ListenAndServe()
 }
 
-func (f *WafHTTPFilter) Stop() error {
+func (f *WAFHTTPFilter) Stop() error {
 	if f.tcpGRPCServer != nil {
 		f.tcpGRPCServer.Stop()
 	}
@@ -211,7 +211,7 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 	}
 }
 
-func (s *WafHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_ProcessServer) error {
+func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_ProcessServer) error {
 	ctx := srv.Context()
 	logrus.Info("start Process()")
 
