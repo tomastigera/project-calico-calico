@@ -12,12 +12,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
+var wafEvents []*proto.WAFEvent
+
+func InMemoryLogger(wafEvent *proto.WAFEvent) {
+	logrus.Warnf("New WAF event! Need to do something about that! %v", wafEvent)
+	wafEvents = append(wafEvents, wafEvent)
+}
+
 func setupServer(t *testing.T, opts waf.ServerOptions) func() {
-	srv := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
+	srv := waf.NewWAFHTTPFilter(opts, InMemoryLogger)
 
 	// We keep track of whether we're stopping the server to catch errors on startup
 	stopping := false
@@ -33,6 +41,7 @@ func setupServer(t *testing.T, opts waf.ServerOptions) func() {
 
 	return func() {
 		stopping = true
+		wafEvents = nil
 		err := srv.Stop()
 		require.NoError(t, err)
 	}
@@ -80,6 +89,10 @@ func testRequest(t *testing.T, client *http.Client, verb string, url string, hea
 		req, err := http.NewRequest(verb, url, nil)
 		require.NoError(t, err)
 
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
+
 		resp, err := client.Do(req)
 		require.NoError(t, err)
 
@@ -105,11 +118,13 @@ func TestRequests(t *testing.T) {
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/nothing-suspicious", nil, "not WAF'ed", func(resp *http.Response, body string) {
 		require.Equal(t, 200, resp.StatusCode)
 		require.Contains(t, body, "/nothing-suspicious")
+		require.Empty(t, wafEvents)
 	})
 
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 1)
 	})
 }
 
@@ -124,6 +139,7 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 1)
 	})
 
 	// Replace config with one that does not use the waf-http-filter.
@@ -154,5 +170,7 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "No active WAF", func(resp *http.Response, body string) {
 		require.Equal(t, 200, resp.StatusCode)
 		require.Contains(t, body, "/subpath?artist=")
+		// The previous event in the same test
+		require.Len(t, wafEvents, 1)
 	})
 }

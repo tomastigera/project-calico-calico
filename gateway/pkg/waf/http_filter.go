@@ -299,7 +299,7 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 
 			checkReq := &waf.CheckRequest{
 				Id:               id,
-				Host:             headersMap[":host"],
+				Host:             headersMap[":authority"],
 				Method:           headersMap[":method"],
 				Path:             headersMap[":path"],
 				Protocol:         protocol,
