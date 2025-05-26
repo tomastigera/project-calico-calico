@@ -30,6 +30,7 @@ SKIP_SUBDIRS = [
     "selinux",
     "release",
     "oiler",
+    "hack",
 ]
 
 if sys.stdout.isatty():

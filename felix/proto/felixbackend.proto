@@ -465,6 +465,11 @@ message WorkloadEndpointUpdate {
   WorkloadEndpoint endpoint = 5;
 }
 
+enum WorkloadType {
+  REGULAR = 0;
+  VM = 1;
+}
+
 message EgressGatewayRule {
     string ip_set_id = 1;
     int32 max_next_hops = 2;
@@ -492,6 +497,7 @@ message WorkloadEndpoint {
   ApplicationLayer application_layer = 106;
   QoSControls qos_controls = 12;
   LocalBGPPeer local_bgp_peer = 13;
+  WorkloadType type = 14;
 }
 
 message QoSControls {
