@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -17,6 +19,7 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/handler"
+	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/metrics"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/repository/linseed"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
 	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/svc/auth"
@@ -107,6 +110,20 @@ func Start(
 	}
 
 	errCh := make(chan error)
+	if cfg.EnableMetrics {
+		rootHandler = metrics.Wrap(ctx, logger, rootHandler, cfg.TenantID)
+
+		go func() {
+			mux := http.NewServeMux()
+			mux.Handle("/metrics", promhttp.Handler())
+			metricsServer := &http.Server{
+				Addr:    cfg.MetricsAddr,
+				Handler: mux,
+			}
+			errCh <- metricsServer.ListenAndServeTLS(cfg.MetricsCert, cfg.MetricsKey)
+		}()
+	}
+
 	go func() {
 		healthServer := &http.Server{
 			// We only want the health url to be accessible from within the container.

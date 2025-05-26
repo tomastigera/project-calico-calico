@@ -60,6 +60,14 @@ type Config struct {
 
 	// MetadataAPIEndpoint dashboards metadata tds api endpoint
 	MetadataAPIEndpoint string `default:"https://api2.tesla.tigera.io/orgs/dashboards" split_words:"true"`
+
+	// Metrics endpoint configurations.
+	EnableMetrics bool   `default:"false" split_words:"true"`
+	MetricsAddr   string `default:":9095" split_words:"true"`
+
+	// Certificates used to secure metrics endpoint via TLS
+	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
+	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
 }
 
 func (c Config) String() string {
