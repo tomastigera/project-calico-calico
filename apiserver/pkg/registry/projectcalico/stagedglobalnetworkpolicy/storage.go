@@ -182,3 +182,7 @@ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptio
 
 	return w, nil
 }
+
+func (r *REST) ShortNames() []string {
+	return r.shortNames
+}

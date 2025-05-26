@@ -371,7 +371,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 		JustBeforeEach(func() {
 			infra = getInfra()
 			opts = infrastructure.DefaultTopologyOptions()
-			opts.IPIPEnabled = false
+			opts.IPIPMode = api.IPIPModeNever
 
 			testSetup()
 		})
@@ -426,8 +426,8 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 		JustBeforeEach(func() {
 			infra = getInfra()
 			opts = infrastructure.DefaultTopologyOptions()
-			opts.IPIPEnabled = false
 			opts.FlowLogSource = infrastructure.FlowLogSourceLocalSocket
+			opts.IPIPMode = api.IPIPModeNever
 
 			opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"

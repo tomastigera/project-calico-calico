@@ -45,13 +45,13 @@ const (
 
 const (
 	// numBaseFelixConfigs should match the OS value.
-	numBaseFelixConfigs = 158
+	numBaseFelixConfigs = 164
 
 	// Add private-only fields to this count.
-	numPrivateOnlyFelixConfigs = 117
+	numPrivateOnlyFelixConfigs = 113
 )
 
-var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
+var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
 	// Define some common values
 	perNodeFelixKey := model.ResourceKey{
 		Kind: apiv3.KindFelixConfiguration,

@@ -2876,6 +2876,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(numorstring.Port)
 		**out = **in
 	}
+	if in.NATOutgoingExclusions != nil {
+		in, out := &in.NATOutgoingExclusions, &out.NATOutgoingExclusions
+		*out = new(NATOutgoingExclusionsType)
+		**out = **in
+	}
 	if in.DeviceRouteProtocol != nil {
 		in, out := &in.DeviceRouteProtocol, &out.DeviceRouteProtocol
 		*out = new(int)
@@ -2884,6 +2889,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.RemoveExternalRoutes != nil {
 		in, out := &in.RemoveExternalRoutes, &out.RemoveExternalRoutes
 		*out = new(bool)
+		**out = **in
+	}
+	if in.ProgramRoutes != nil {
+		in, out := &in.ProgramRoutes, &out.ProgramRoutes
+		*out = new(string)
 		**out = **in
 	}
 	if in.ExternalNodesCIDRList != nil {

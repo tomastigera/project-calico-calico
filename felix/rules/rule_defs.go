@@ -509,6 +509,7 @@ type Config struct {
 	IptablesNATOutgoingInterfaceFilter string
 
 	NATOutgoingAddress             net.IP
+	NATOutgoingExclusions          string
 	BPFEnabled                     bool
 	BPFLogLevel                    string
 	BPFForceTrackPacketsFromIfaces []string

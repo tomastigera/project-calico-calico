@@ -37,7 +37,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/calico/felix/buildinfo"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
@@ -73,6 +72,7 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/pod2daemon/binder"
 	"github.com/projectcalico/calico/typha/pkg/discovery"
 	"github.com/projectcalico/calico/typha/pkg/syncclient"
@@ -132,14 +132,14 @@ func Run(configFile string, gitVersion, buildDate, gitRevision string, nonCluste
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if len(buildinfo.GitVersion) == 0 && len(gitVersion) != 0 {
-		buildinfo.GitVersion = gitVersion
+	if len(buildinfo.Version) == 0 && len(gitVersion) != 0 {
+		buildinfo.Version = gitVersion
 		buildinfo.BuildDate = buildDate
 		buildinfo.GitRevision = gitRevision
 	}
 
 	buildInfoLogCxt := log.WithFields(log.Fields{
-		"version":    buildinfo.GitVersion,
+		"version":    buildinfo.Version,
 		"release":    "CNX",
 		"builddate":  buildinfo.BuildDate,
 		"gitcommit":  buildinfo.GitRevision,
@@ -634,7 +634,7 @@ configRetry:
 		log.Info("Connecting to Typha.")
 		typhaConnection = syncclient.New(
 			typhaDiscoverer,
-			buildinfo.GitVersion,
+			buildinfo.Version,
 			configParams.FelixHostname,
 			fmt.Sprintf("Revision: %s; Build date: %s",
 				buildinfo.GitRevision, buildinfo.BuildDate),

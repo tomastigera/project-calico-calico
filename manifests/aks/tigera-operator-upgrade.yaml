@@ -2391,6 +2391,17 @@ spec:
                     is leaving the network. By default the address used is an address on the interface the traffic is leaving on
                     (i.e. it uses the iptables MASQUERADE target).
                   type: string
+                natOutgoingExclusions:
+                  description: |-
+                    When a IP pool setting `natOutgoing` is true, packets sent from Calico networked containers in this IP pool to destinations will be masqueraded.
+                    Configure which type of destinations is excluded from being masqueraded.
+                    - IPPoolsOnly: destinations outside of this IP pool will be masqueraded.
+                    - IPPoolsAndHostIPs: destinations outside of this IP pool and all hosts will be masqueraded.
+                    [Default: IPPoolsOnly]
+                  enum:
+                    - IPPoolsOnly
+                    - IPPoolsAndHostIPs
+                  type: string
                 natPortRange:
                   anyOf:
                     - type: integer
@@ -2482,6 +2493,14 @@ spec:
                   description: |-
                     PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services,
                     like Application layer policy. [Default: Empty]
+                  type: string
+                programRoutes:
+                  description: |-
+                    ProgramRoutes specifies whether Felix should program IPIP or unencapsulated routes instead of BIRD.
+                    Felix always programs VXLAN routes. [Default: Disabled]
+                  enum:
+                    - Enabled
+                    - Disabled
                   type: string
                 prometheusGoMetricsEnabled:
                   description: |-
@@ -31894,6 +31913,32 @@ spec:
                   items:
                     type: string
                   type: array
+                tlsCipherSuites:
+                  description:
+                    TLSCipherSuites defines the cipher suite list that the
+                    TLS protocol should use during secure communication.
+                  items:
+                    properties:
+                      name:
+                        description: This should be a valid TLS cipher suite name.
+                        enum:
+                          - TLS_AES_256_GCM_SHA384
+                          - TLS_CHACHA20_POLY1305_SHA256
+                          - TLS_AES_128_GCM_SHA256
+                          - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                          - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                          - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                          - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                          - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                          - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                          - TLS_RSA_WITH_AES_256_GCM_SHA384
+                          - TLS_RSA_WITH_AES_128_GCM_SHA256
+                          - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                          - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                          - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                        type: string
+                    type: object
+                  type: array
                 typhaAffinity:
                   description: |-
                     Deprecated. Please use Installation.Spec.TyphaDeployment instead.
@@ -40743,6 +40788,32 @@ spec:
                       items:
                         type: string
                       type: array
+                    tlsCipherSuites:
+                      description:
+                        TLSCipherSuites defines the cipher suite list that
+                        the TLS protocol should use during secure communication.
+                      items:
+                        properties:
+                          name:
+                            description: This should be a valid TLS cipher suite name.
+                            enum:
+                              - TLS_AES_256_GCM_SHA384
+                              - TLS_CHACHA20_POLY1305_SHA256
+                              - TLS_AES_128_GCM_SHA256
+                              - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                              - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                              - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                              - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                              - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                              - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                              - TLS_RSA_WITH_AES_256_GCM_SHA384
+                              - TLS_RSA_WITH_AES_128_GCM_SHA256
+                              - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                              - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                              - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                            type: string
+                        type: object
+                      type: array
                     typhaAffinity:
                       description: |-
                         Deprecated. Please use Installation.Spec.TyphaDeployment instead.
@@ -49256,6 +49327,8 @@ rules:
     resources:
       - installations
       - apiservers
+      - whiskers
+      - goldmanes
     verbs:
       - delete
   - apiGroups:

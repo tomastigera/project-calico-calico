@@ -304,6 +304,7 @@ type Config struct {
 	DeviceRouteSourceAddressIPv6       net.IP            `config:"ipv6;"`
 	DeviceRouteProtocol                int               `config:"int;3"`
 	RemoveExternalRoutes               bool              `config:"bool;true"`
+	ProgramRoutes                      string            `config:"oneof(Enabled,Disabled);Disabled"`
 	IPForwarding                       string            `config:"oneof(Enabled,Disabled);Enabled"`
 	IptablesRefreshInterval            time.Duration     `config:"seconds;180"`
 	IptablesPostWriteCheckIntervalSecs time.Duration     `config:"seconds;5"`
@@ -529,9 +530,10 @@ type Config struct {
 	WindowsDNSCacheFile             string        `config:"file;c:\\TigeraCalico\\felix-dns-cache.txt"`
 	WindowsDNSExtraTTL              time.Duration `config:"seconds;120"`
 
-	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
-	NATPortRange       numorstring.Port   `config:"portrange;"`
-	NATOutgoingAddress net.IP             `config:"ipv4;"`
+	KubeNodePortRanges    []numorstring.Port `config:"portrange-list;30000:32767"`
+	NATPortRange          numorstring.Port   `config:"portrange;"`
+	NATOutgoingAddress    net.IP             `config:"ipv4;"`
+	NATOutgoingExclusions string             `config:"oneof(IPPoolsOnly,IPPoolsAndHostIPs);IPPoolsOnly"`
 
 	// TSEE no longer does any usage reporting, but we still support the config fields
 	// so as not to break deployments that set them.  (In particular, not to break the
@@ -717,6 +719,10 @@ func (config *Config) FlowLogsLocalReporterEnabled() bool {
 func (config *Config) FlowLogsEnabled() bool {
 	// Flow logs is always enabled in Calico Enterprise, and Cloud.
 	return true
+}
+
+func (config *Config) ProgramRoutesEnabled() bool {
+	return config.ProgramRoutes == "Enabled"
 }
 
 // Copy makes a copy of the object.  Internal state is deep copied but config parameters are only shallow copied.
