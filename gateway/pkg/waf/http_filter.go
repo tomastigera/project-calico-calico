@@ -2,6 +2,7 @@ package waf
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -36,23 +37,22 @@ type ServerOptions struct {
 
 type WAFHTTPFilter struct {
 	options        ServerOptions
+	logger         func(*proto.WAFEvent)
 	wafServer      *waf.Server
 	healthServer   *http.Server
 	tcpGRPCServer  *grpc.Server
 	unixGRPCServer *grpc.Server
 }
 
-func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
-	// We hardcode the default configuration for now. Will update later.
-	directives := []string{
-		"Include @coraza.conf-recommended",
-		"Include @crs-setup.conf.example",
-		"Include @owasp_crs/*.conf",
-		"SecRuleEngine On",
+var Directives []string = []string{
+	"Include @coraza.conf-recommended",
+	"Include @crs-setup.conf.example",
+	"Include @owasp_crs/*.conf",
+	"SecRuleEngine On",
 
-		// Tigera CRS customizations
-		// Add some common content-types expected in micro-service traffic
-		`SecAction \
+	// Tigera CRS customizations
+	// Add some common content-types expected in micro-service traffic
+	`SecAction \
     "id:900220,\
     phase:1,\
     nolog,\
@@ -60,10 +60,24 @@ func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTP
     t:none,\
     setvar:'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/grpc| |application/grpc+proto| |application/grpc+json| |application/octet-stream|'"`,
 
-		//Removes the rule "Host header is a numeric IP address"
-		"SecRuleRemoveById 920350",
+	//Removes the rule "Host header is a numeric IP address"
+	"SecRuleRemoveById 920350",
+}
+
+func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
+	wafServer, err := newWAFServer(opts, Directives, logger)
+	if err != nil {
+		logrus.Panicf("cannot initialize WAF: %v", err)
 	}
 
+	return &WAFHTTPFilter{
+		options:   opts,
+		logger:    logger,
+		wafServer: wafServer,
+	}
+}
+
+func newWAFServer(opts ServerOptions, directives []string, logger func(*proto.WAFEvent)) (*waf.Server, error) {
 	var wafRulesetRootFS fs.FS
 
 	if opts.WafRulesetRootDir != "" {
@@ -79,15 +93,20 @@ func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTP
 
 	events := waf.NewEventsPipeline(logger)
 
-	wafServer, err := waf.New(wafRulesetRootFS, nil, directives, false, events)
-	if err != nil {
-		logrus.Panicf("cannot initialize WAF: %v", err)
-	}
+	return waf.New(wafRulesetRootFS, nil, directives, false, events)
+}
 
-	return &WAFHTTPFilter{
-		options:   opts,
-		wafServer: wafServer,
+func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) error {
+	logrus.Debugf("WAF directives: %v", directives)
+	wafServer, err := newWAFServer(f.options, directives, f.logger)
+	if err != nil {
+		logrus.Errorf("Error creating WAF Server with new config: %#v", err)
+		return err
+	} else {
+		logrus.Infof("Updating WAF Server with new directives: %#v", directives)
+		f.wafServer = wafServer
 	}
+	return nil
 }
 
 func (f *WAFHTTPFilter) Start() error {
@@ -248,6 +267,21 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 	md, _ := metadata.FromIncomingContext(ctx)
 	logrus.Debugf("gRPC context metadata: %v", md)
 
+	directivesJson := md["directivesjson"]
+
+	if len(directivesJson) > 0 {
+
+		var directives []string
+		err := json.Unmarshal([]byte(directivesJson[0]), &directives)
+		if err != nil {
+			logrus.Errorf("Error decoding directives: %#v", err)
+		}
+
+		// Update config in parallel so that we don't delay request processing
+		go s.UpdateWAFConfig(directives)
+	}
+
+	wafServer := s.wafServer
 	for {
 		select {
 		case <-ctx.Done():
@@ -269,6 +303,9 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		resp := &envoy_service_proc_v3.ProcessingResponse{}
 		switch v := req.Request.(type) {
 		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
+			// Use latest wafServer in case there was a config change since handlingthe previous request.
+			// We only do that as part of ProcessingRequest_RequestHeaders as it is the first step if the request lifecycle.
+			wafServer = s.wafServer
 			blockedByWAF := false
 
 			headersList := v.RequestHeaders.Headers.GetHeaders()
@@ -314,10 +351,11 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 			}
 			checkReq.SrcHost = xForwardedFor
 
+			logrus.Debugf("About to check WAF with %#v", checkReq)
 			// This checks both headers and body (phas 1 and phase 2).
 			// The body checks are useless for now as we don't have that information.
 			// Future work will need to break up those 2 checks, but using the same transaction for the 2 phases.
-			wafResp, err := s.wafServer.CheckWAF(checkReq)
+			wafResp, err := wafServer.CheckWAF(checkReq)
 			if err != nil {
 				logrus.Errorf("Error checking WAF: %#v", err)
 			}
