@@ -97,6 +97,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						Skip("Skipping NFT / BPF tests for etcdv3 backend.")
 					}
 
+<<<<<<< HEAD
 					topologyOptions := createVXLANBaseTopologyOptions(vxlanMode, enableIPv6, routeSource, brokenXSum)
 					topologyOptions.FelixLogSeverity = "Debug"
 					if infraFactories.IsRemoteSetup() {
@@ -111,8 +112,36 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							logrus.Info("OverlapTestType_Connect: local and remote clusters share IP pool CIDRs.")
 						} else if overlap == OverlapTestType_ConnectDisconnect {
 							logrus.Info("OverlapTestType_ConnectDisconnect: local and remote clusters share IP pool CIDRs.")
+=======
+				// Deploy the topology.
+				tc, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+
+				w, w6, hostW, hostW6 = setupWorkloads(infra, tc, topologyOptions, client, enableIPv6)
+				felixes = tc.Felixes
+
+				// Assign tunnel addresees in IPAM based on the topology.
+				assignTunnelAddresses(infra, tc, client)
+			})
+
+			JustAfterEach(func() {
+				if CurrentGinkgoTestDescription().Failed {
+					for _, felix := range felixes {
+						if NFTMode() {
+							logNFTDiags(felix)
+						} else {
+							felix.Exec("iptables-save", "-c")
+							felix.Exec("ipset", "list")
 						}
+						felix.Exec("ipset", "list")
+						felix.Exec("ip", "r")
+						felix.Exec("ip", "a")
+						if enableIPv6 {
+							felix.Exec("ip", "-6", "route")
+>>>>>>> fe9609c63a
+						}
+						felix.Exec("ip", "-d", "link")
 					}
+<<<<<<< HEAD
 
 					// Deploy the topology.
 					tc, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
@@ -215,6 +244,28 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 					c.infra.Stop()
 				}
+=======
+
+					infra.DumpErrorData()
+				}
+			})
+
+			AfterEach(func() {
+				for _, wl := range w {
+					wl.Stop()
+				}
+				for _, wl := range w6 {
+					wl.Stop()
+				}
+				for _, wl := range hostW {
+					wl.Stop()
+				}
+				for _, wl := range hostW6 {
+					wl.Stop()
+				}
+				tc.Stop()
+				infra.Stop()
+>>>>>>> fe9609c63a
 			})
 
 			if brokenXSum {
@@ -1047,6 +1098,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				}
 			})
 
+<<<<<<< HEAD
 			It("should configure the vxlan device correctly", func() {
 				if cs.IsRemoteSetup() {
 					Skip("Skipping host configuration tests for remote cluster scenarios")
@@ -1057,6 +1109,27 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					mtuStr := "mtu 1450"
 					mtuStrV6 := "mtu 1430"
 					for _, felix := range c.felixes {
+=======
+			_ = !BPFMode() && It("should configure the vxlan device correctly", func() {
+				// The VXLAN device should appear with default MTU, etc. FV environment uses MTU 1500,
+				// which means that we should expect 1450 after subtracting VXLAN overhead for IPv4 or 1430 for IPv6.
+				mtuStr := "mtu 1450"
+				mtuStrV6 := "mtu 1430"
+				for _, felix := range felixes {
+					Eventually(func() string {
+						out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+						return out
+					}, "60s", "500ms").Should(ContainSubstring(mtuStr))
+					Eventually(func() string {
+						out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+						return out
+					}, "10s", "100ms").Should(ContainSubstring("vxlan id 4096"))
+					Eventually(func() string {
+						out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+						return out
+					}, "10s", "100ms").Should(ContainSubstring("dstport 4789"))
+					if enableIPv6 {
+>>>>>>> fe9609c63a
 						Eventually(func() string {
 							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
 							return out
@@ -1172,6 +1245,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 			})
 
 			It("should delete the vxlan device when vxlan is disabled", func() {
+<<<<<<< HEAD
 				if cs.IsRemoteSetup() {
 					Skip("Skipping host configuration tests for remote cluster scenarios")
 				}
@@ -1184,6 +1258,46 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
 							return out
 						}, "60s", "500ms").Should(ContainSubstring(mtuStr))
+=======
+				// Wait for the VXLAN device to be created.
+				mtuStr := "mtu 1450"
+				mtuStrV6 := "mtu 1430"
+				if BPFMode() {
+					mtuStr = "mtu 1500"
+					mtuStrV6 = "mtu 1500"
+				}
+				for _, felix := range felixes {
+					Eventually(func() string {
+						out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+						return out
+					}, "60s", "500ms").Should(ContainSubstring(mtuStr))
+					if !BPFMode() && enableIPv6 {
+						Eventually(func() string {
+							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan-v6.calico")
+							return out
+						}, "60s", "500ms").Should(ContainSubstring(mtuStrV6))
+					}
+				}
+
+				// Disable VXLAN in Felix.
+				felixConfig := api.NewFelixConfiguration()
+				felixConfig.Name = "default"
+				enabled := false
+				felixConfig.Spec.VXLANEnabled = &enabled
+				_, err := client.FelixConfigurations().Create(context.Background(), felixConfig, options.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				if !BPFMode() || !enableIPv6 {
+					// Expect the ipv4 VXLAN device to be deleted. In BPFMode
+					// the same device is used for V6 as well
+					for _, felix := range felixes {
+						Eventually(func() string {
+							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+							return out
+						}, "60s", "500ms").ShouldNot(ContainSubstring(mtuStr))
+						// IPv6 ignores the VXLAN enabled flag and must be disabled at the pool level. As such the ipv6
+						// interfaces should still exist at this point
+>>>>>>> fe9609c63a
 						if enableIPv6 {
 							Eventually(func() string {
 								out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan-v6.calico")
@@ -1203,7 +1317,15 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					// Expect the ipv4 VXLAN device to be deleted.
 					for _, felix := range c.felixes {
 						Eventually(func() string {
+<<<<<<< HEAD
 							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+=======
+							if BPFMode() {
+								out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan.calico")
+								return out
+							}
+							out, _ := felix.ExecOutput("ip", "-d", "link", "show", "vxlan-v6.calico")
+>>>>>>> fe9609c63a
 							return out
 						}, "60s", "500ms").ShouldNot(ContainSubstring(mtuStr))
 						// IPv6 ignores the VXLAN enabled flag and must be disabled at the pool level. As such the ipv6
@@ -1291,8 +1413,10 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						felix.Exec("ipset", "list")
 						felix.Exec("ip", "r")
 						felix.Exec("ip", "a")
+						felix.Exec("calico-bpf", "routes", "dump")
 						if enableIPv6 {
 							felix.Exec("ip", "-6", "route")
+							felix.Exec("calico-bpf", "-6", "routes", "dump")
 						}
 					}
 				}
@@ -1425,6 +1549,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						if enableIPv6 {
 							felix.Exec("ip", "-6", "route")
 						}
+						felix.Exec("calico-bpf", "routes", "dump")
 					}
 				}
 
@@ -1494,6 +1619,7 @@ func createVXLANBaseTopologyOptions(vxlanMode api.VXLANMode, enableIPv6 bool, ro
 	// tested but we can verify the state with ethtool.
 	topologyOptions.ExtraEnvVars["FELIX_FeatureDetectOverride"] = fmt.Sprintf("ChecksumOffloadBroken=%t", brokenXSum)
 	topologyOptions.FelixDebugFilenameRegex = "vxlan|route_table|l3_route_resolver|int_dataplane"
+	topologyOptions.ExtraEnvVars["FELIX_BPFLogLevel"] = "off"
 	return topologyOptions
 }
 
@@ -1550,7 +1676,7 @@ func setupWorkloads(infra infrastructure.DatastoreInfra, tc infrastructure.Topol
 		return nil
 	}, "10s", "100ms").ShouldNot(HaveOccurred())
 
-	if enableIPv6 {
+	if enableIPv6 && !BPFMode() {
 		Eventually(func() error {
 			for i, f := range tc.Felixes {
 				out, err := f.ExecOutput("ip", "link")

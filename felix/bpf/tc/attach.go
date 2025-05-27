@@ -69,6 +69,7 @@ type AttachPoint struct {
 	NATout               uint32
 	UDPOnly              bool
 	FlowLogsEnabled      bool
+	OverlayTunnelID      uint32
 
 	// EE only
 	VethNS                  uint16
