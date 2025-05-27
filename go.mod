@@ -119,6 +119,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skeema/knownhosts v1.3.1
 	github.com/slack-go/slack v0.16.0
+	github.com/spf13/cast v1.7.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
@@ -375,7 +376,6 @@ require (
 	github.com/snowzach/rotatefilehook v0.0.0-20220211133110-53752135082d
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
-	github.com/spf13/cast v1.7.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
@@ -423,6 +423,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 	gorm.io/gorm v1.25.12 // indirect
+	helm.sh/helm/v3 v3.17.0
 	howett.net/plist v1.0.1 // indirect
 	k8s.io/cloud-provider v0.32.4 // indirect
 	k8s.io/component-helpers v0.32.4 // indirect
