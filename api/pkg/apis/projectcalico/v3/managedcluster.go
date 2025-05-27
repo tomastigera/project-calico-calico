@@ -55,6 +55,7 @@ type ManagedClusterSpec struct {
 
 type ManagedClusterStatus struct {
 	Conditions []ManagedClusterStatusCondition `json:"conditions,omitempty"`
+	Version    string                          `json:"version,omitempty"`
 }
 
 // Condition contains various status information
