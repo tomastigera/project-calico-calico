@@ -2,10 +2,7 @@ package version
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 func NewEnterpriseVersionData(calico Version, chartVersion, operator, manager string) Data {
@@ -66,25 +63,4 @@ func (v *EnterpriseVersionData) ManagerVersion() string {
 
 func (v *Version) PrimaryStream() string {
 	return strings.Split(v.Stream(), "-")[0]
-}
-
-func (v *Version) NextReleaseVersion() (Version, error) {
-	ver := v.Semver()
-	ep, epVer := IsEarlyPreviewVersion(ver)
-	if ep {
-		if epVer == 1 {
-			// EP 1 = increment EP version i.e vX.Y.Z-1.0 to vX.Y.Z-1.1
-			parts := strings.Split(ver.Prerelease(), ".")
-			minorEPver, err := strconv.Atoi(strings.Split(parts[1], "1")[0])
-			if err != nil {
-				logrus.WithError(err).Error("Failed to parse minor EP version")
-				return "", err
-			}
-			return New(fmt.Sprintf("v%d.%d.0-1.%d", ver.Major(), ver.Minor(), minorEPver+1)), nil
-		}
-		// EP 2 - increment to GA i.e vX.Y.Z-2.0 to vX.Y.1
-		return New(fmt.Sprintf("v%d.%d.1", ver.Major(), ver.Minor())), nil
-	}
-	// GA versions - increment patch version i.e vX.Y.Z to vX.Y.Z+1
-	return New(ver.IncPatch().String()), nil
 }

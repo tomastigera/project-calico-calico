@@ -26,11 +26,6 @@ type Component struct {
 	Registry string `yaml:"registry,omitempty"`
 }
 
-// ImageRef returns the image reference of the component.
-func (c Component) ImageRef() ImageRef {
-	return ParseImage(c.String())
-}
-
 // String returns the string representation of the component.
 // The string representation is in the format of registry/image:version.
 func (c Component) String() string {

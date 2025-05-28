@@ -461,6 +461,9 @@ update-pins: update-go-build-pin update-calico-base-pin
 ###############################################################################
 # Post-release validation
 ###############################################################################
+bin/gotestsum:
+	@GOBIN=$(REPO_ROOT)/bin go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+
 postrelease-checks: bin/yq
 	$(MAKE) -C hack/postrelease/calient docker-test_all \
 		CALICO_VERSION=$(call calico_versions_get_val,$(CALICO_VERSIONS_CALIENT_VERSION_KEY)) \
