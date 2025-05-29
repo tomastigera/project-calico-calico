@@ -7,3 +7,5 @@ report/
 release-notes-*
 Makefile.common*
 *.log
+*.mmdb
+/.mmdb.downloaded

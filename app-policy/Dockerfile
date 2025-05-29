@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ FROM scratch AS source
 
 ARG BIN_DIR
 ARG TARGETARCH
+
+# Copy default GeoIP MMDB binary files from DB-IP.
+COPY bin/database/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.

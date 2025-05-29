@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/app-policy/internal/util"
 )
 
 type Config struct {
@@ -28,6 +30,8 @@ type Config struct {
 	SubscriptionType   string      `json:"subscriptionType,omitempty"`
 	HTTPServerAddr     string      `json:"httpServerAddr,omitempty"`
 	HTTPServerPort     string      `json:"httpServerPort,omitempty"`
+	GeoDBPath          string      `json:"geoDBPath,omitempty"`
+	GeoDBType          string      `json:"geoDBType,omitempty"`
 	// envoy init config
 	EnvoyInboundPort      string `json:"envoyInboundPort,omitempty"`
 	EnvoyMetricsPort      string `json:"envoyMetricsPort,omitempty"`
@@ -64,68 +68,80 @@ func New() *Config {
 	fs.StringVar(
 		&cfg.LogLevel,
 		"log-level",
-		getEnv("LOG_LEVEL", "info"),
+		util.GetEnv("LOG_LEVEL", "info"),
 		"Log at specified level e.g. panic, fatal, info, debug, trace",
 	)
 
 	fs.StringVar(&cfg.SubscriptionType,
 		"subscription-type",
-		getEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-host-policies"),
+		util.GetEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-host-policies"),
 		"Subscription type e.g. per-pod-policies, per-host-policies",
 	)
 	fs.StringVar(
 		&cfg.HTTPServerAddr,
 		"http-server-addr",
-		getEnv("DIKASTES_HTTP_BIND_ADDR", "0.0.0.0"),
+		util.GetEnv("DIKASTES_HTTP_BIND_ADDR", "0.0.0.0"),
 		"HTTP server address",
 	)
 	fs.StringVar(
 		&cfg.HTTPServerPort,
 		"http-server-port",
-		getEnv("DIKASTES_HTTP_PORT", ""),
+		util.GetEnv("DIKASTES_HTTP_PORT", ""),
 		"HTTP server port",
+	)
+	fs.StringVar(
+		&cfg.GeoDBPath,
+		"geo-db-path",
+		util.GetEnv("GEOIP_DB_PATH", "/opt/geoip/dbip-city-lite.mmdb"),
+		"Path to .mmdb binary database file to use instead of embedded one",
+	)
+	fs.StringVar(
+		&cfg.GeoDBType,
+		"geo-db-type",
+		util.GetEnv("GEOIP_DB_TYPE", "city"),
+		"Type of geoip database provided. Must be of type city, or country",
 	)
 
 	// envoy init settings
 	fs.StringVar(
 		&cfg.EnvoyInboundPort,
 		"envoy-inbound-port",
-		getEnv("ENVOY_INBOUND_PORT", "16001"),
+		util.GetEnv("ENVOY_INBOUND_PORT", "16001"),
 		"Envoy inbound port",
 	)
 
 	fs.StringVar(
 		&cfg.EnvoyMetricsPort,
 		"envoy-metrics-port",
-		getEnv("ENVOY_METRICS_PORT", "9901"),
+		util.GetEnv("ENVOY_METRICS_PORT", "9901"),
 		"Envoy metrics port",
 	)
 
 	fs.StringVar(
 		&cfg.EnvoyLivenessPort,
 		"envoy-liveness-port",
-		getEnv("ENVOY_LIVENESS_PORT", "16004"),
+		util.GetEnv("ENVOY_LIVENESS_PORT", "16004"),
 		"Envoy liveness port",
 	)
 
 	fs.StringVar(
 		&cfg.EnvoyReadinessPort,
 		"envoy-readiness-port",
-		getEnv("ENVOY_READINESS_PORT", "16005"),
+		util.GetEnv("ENVOY_READINESS_PORT", "16005"),
 		"Envoy readiness port",
 	)
 
 	fs.StringVar(
 		&cfg.EnvoyStartupProbePort,
 		"envoy-startup-probe-port",
-		getEnv("ENVOY_STARTUP_PROBE_PORT", "16006"),
+		util.GetEnv("ENVOY_STARTUP_PROBE_PORT", "16006"),
 		"Envoy startup probe port",
 	)
 
 	fs.StringVar(
 		&cfg.EnvoyHealthCheckPort,
 		"envoy-health-check-port",
-		getEnv("ENVOY_HEALTH_CHECK_PORT", "16007"),
+		util.GetEnv("ENVOY_HEALTH_CHECK_PORT", "16007"),
 		"Envoy health check port",
 	)
 
@@ -185,11 +201,4 @@ func (i *stringArray) Value() []string {
 func (i *stringArray) Set(value string) error {
 	*i = append(*i, strings.Trim(value, "\"'"))
 	return nil
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }

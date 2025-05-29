@@ -28,6 +28,10 @@ processed.  We compute policy based on a global store which is distributed to Di
             Envoy readiness port (default "16005")
       -envoy-startup-probe-port string
             Envoy startup probe port (default "16006")
+      -geo-db-path string
+            Path to .mmdb binary database file to use instead of embedded one
+      -geo-db-type string
+            Type of geoip database provided. Must be of type city, country, etc. (default "city")
       -http-server-addr string
             HTTP server address (default "0.0.0.0")
       -http-server-port string
@@ -75,5 +79,12 @@ processed.  We compute policy based on a global store which is distributed to Di
 
       this can be set to any value. if set, it enables grpc service reflection. Used for debugging / development.
 
+    GEOIP_DB_PATH
+
+      a valid path to a Maxmind GeoIP Database (.mmdb). City, Country or ASN types are supported.
+
+    GEOIP_DB_TYPE
+
+      GeoIP DB type. "city", or "country" are supported. defaults to "city".
 
 

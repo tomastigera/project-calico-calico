@@ -51,6 +51,7 @@ clean:
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	rm -rf bin report
+	rm -f $(MMDB_FILES)
 	-docker image rm -f $$(docker images $(DIKASTES_IMAGE) -a -q)
 
 .PHONY: clean-generated
@@ -105,7 +106,7 @@ sub-image-%:
 	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH)
+$(CONTAINER_CREATED): mmdb Dockerfile $(BINDIR)/dikastes-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
@@ -122,7 +123,7 @@ bin/LICENSE: ../LICENSE.md
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: protobuf ut-exec
+ut: mmdb protobuf ut-exec
 
 ut-exec:
 	$(DOCKER_GO_BUILD) sh -c "gotestsum --junitfile report/tests.xml -- -count 1 ./..."
@@ -154,3 +155,17 @@ check-generated-files:
 .PHONY: cd
 ## Deploys images to registry
 cd: image-all cd-common
+
+###############################################################################
+MMDB_DIR=./bin/database
+MMDB_SRC_URL=https://download.db-ip.com/free/dbip-city-lite-2025-05.mmdb.gz
+MMDB_FILES=$(MMDB_DIR)/dbip-city-lite.mmdb
+$(MMDB_FILES):
+	@echo "[INFO] Downloading MMDB from DB-IP.com (city) $@ ..."
+	mkdir -p $(MMDB_DIR)
+	wget -O $(MMDB_DIR)/dbip-city-lite.mmdb.gz $(MMDB_SRC_URL)
+	gzip --force -d $(MMDB_DIR)/dbip-city-lite.mmdb.gz
+	cp $(MMDB_DIR)/dbip-city-lite.mmdb ./internal/testdata/geoip/
+
+.PHONY: mmdb
+mmdb: $(MMDB_FILES)

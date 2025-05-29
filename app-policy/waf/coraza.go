@@ -74,7 +74,13 @@ type Server struct {
 	perHostEnabled bool
 }
 
-func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *WafEventsPipeline) (*Server, error) {
+func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *WafEventsPipeline, initializers ...func() error) (*Server, error) {
+	for _, initFn := range initializers {
+		if err := initFn(); err != nil {
+			return nil, fmt.Errorf("failed to initialize WAF: %w", err)
+		}
+	}
+
 	srv := &Server{
 		evp:            evp,
 		perHostEnabled: tproxyEnabled,

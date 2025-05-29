@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/app-policy/waf/plugins/geoip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
@@ -33,6 +34,8 @@ type Dikastes struct {
 	wafRulesetRootFS             fs.FS
 	wafRulesetFiles              []string
 	wafDirectives                []string
+	geoIPDatabasePath            string
+	geoIPDatabaseType            string
 	grpcServerOptions            []grpc.ServerOption
 	policyStoreManager           policystore.PolicyStoreManager
 
@@ -85,6 +88,13 @@ func WithWAFConfig(enabled bool, rulesetRootDir string, files, directives []stri
 		}
 		ds.wafDirectives = directives
 		ds.wafRulesetFiles = files
+	}
+}
+
+func WithGeoIPConfig(dbPath, dbType string) DikastesServerOptions {
+	return func(ds *Dikastes) {
+		ds.geoIPDatabasePath = dbPath
+		ds.geoIPDatabaseType = dbType
 	}
 }
 
@@ -181,7 +191,10 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	)
 
 	events := waf.NewEventsPipeline(syncClient.OnWAFEvent)
-	wafServer, err := waf.New(s.wafRulesetRootFS, s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events)
+	initFns := []func() error{
+		geoip.GeoIPPluginInitializerFn(s.geoIPDatabasePath, s.geoIPDatabaseType),
+	}
+	wafServer, err := waf.New(s.wafRulesetRootFS, s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events, initFns...)
 	if err != nil {
 		log.Fatalf("cannot initialize WAF: %v", err)
 	}
