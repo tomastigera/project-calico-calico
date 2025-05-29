@@ -25,6 +25,11 @@ KIND_VERSION=v0.25.0
 GITHUB_CLI_VERSION=2.26.0
 GOTESTSUM_VERSION=v1.12.2
 
+# This gets embedded into node as the Calico version, the Enterprise release
+# is based off of. This should be updated everytime a new opensource Calico
+# release is merged into node-private.
+CALICO_VERSION=v3.29.1
+
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
 

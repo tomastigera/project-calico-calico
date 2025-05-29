@@ -239,11 +239,6 @@ BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
 GIT_DESCRIPTION=$(shell git describe --tags --dirty --always --abbrev=12 || echo '<unknown>')
 ENTERPRISE_VERSION?=$(call git-release-tag-from-dev-tag)
 
-# This gets embedded into node as the Calico version, the Enterprise release
-# is based off of. This should be updated everytime a new opensource Calico
-# release is merged into node-private.
-CALICO_VERSION=v3.29.1
-
 # Calculate a timestamp for any build artifacts.
 ifneq ($(OS),Windows_NT)
 DATE:=$(shell date -u +'%FT%T%z')
