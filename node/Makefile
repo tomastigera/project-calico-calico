@@ -30,11 +30,6 @@ LOCAL_CHECKS = LIBBPF_FILE_CREATED
 # Paths within the repository for BPF source.
 LIBBPF_A=../felix/bpf-gpl/libbpf/src/$(ARCH)/libbpf.a
 
-# This gets embedded into node as the Calico version, the Enterprise release
-# is based off of. This should be updated everytime a new opensource Calico
-# release is merged into node-private.
-CALICO_VERSION=v3.29.1
-
 # Complete list of files from other directories that we need to build calico/node.
 REMOTE_DEPS = $(LIBBPF_A) \
 	      filesystem/usr/lib/calico/bpf \
