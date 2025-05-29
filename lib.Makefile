@@ -254,7 +254,7 @@ LDFLAGS=-X github.com/projectcalico/calico/pkg/buildinfo.Version=$(GIT_DESCRIPTI
 	-X github.com/projectcalico/calico/pkg/buildinfo.GitRevision=$(GIT_COMMIT) \
 	-X github.com/projectcalico/calico/pkg/buildinfo.OpenSourceBaseVersion=$(CALICO_VERSION)
 
-# Add EnterpriseReleaseVersion
+# Add in flags that are not used in OSS builds. 
 LDFLAGS+=-X github.com/projectcalico/calico/pkg/buildinfo.EnterpriseReleaseVersion=$(ENTERPRISE_VERSION)
 
 # We use -B to insert a build ID note into the executable, without which, the
