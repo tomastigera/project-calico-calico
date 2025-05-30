@@ -72,6 +72,7 @@ func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct
 			config.WAFRulesetFiles.Value(),
 			config.WAFDirectives.Value(),
 		),
+		server.WithGeoIPConfig(config.GeoDBPath, config.GeoDBType),
 	)
 	go dikastesServer.Serve(ctx, readyCh...)
 

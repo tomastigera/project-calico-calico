@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/sirupsen/logrus"
@@ -19,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
@@ -191,7 +193,35 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 
 		err = processor.Send(&envoy_service_proc_v3.ProcessingRequest{
 			Request: &envoy_service_proc_v3.ProcessingRequest_RequestHeaders{
-				RequestHeaders: &envoy_service_proc_v3.HttpHeaders{},
+				RequestHeaders: &envoy_service_proc_v3.HttpHeaders{
+					Attributes: map[string]*structpb.Struct{
+						"envoy.filters.http.ext_proc": &structpb.Struct{
+							Fields: map[string]*structpb.Value{
+								"request.protocol": structpb.NewStringValue("http"),
+							},
+						},
+					},
+					Headers: &envoy_config_core_v3.HeaderMap{
+						Headers: []*envoy_config_core_v3.HeaderValue{
+							&envoy_config_core_v3.HeaderValue{
+								Key:      "x-request-id",
+								RawValue: []byte("metrics"),
+							},
+							&envoy_config_core_v3.HeaderValue{
+								Key:      ":host",
+								RawValue: []byte("127.0.0.1"),
+							},
+							&envoy_config_core_v3.HeaderValue{
+								Key:      ":method",
+								RawValue: []byte("GET"),
+							},
+							&envoy_config_core_v3.HeaderValue{
+								Key:      ":path",
+								RawValue: []byte("/"),
+							},
+						},
+					},
+				},
 			},
 		})
 		if err != nil {

@@ -1,6 +1,7 @@
 package fv
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -59,6 +60,19 @@ func setupTest(t *testing.T, opts waf.ServerOptions, filesToBackup []string) {
 		teardownServer()
 		logCancel()
 	})
+
+	// Make sure the filter is ready
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		client := &http.Client{}
+		healthUrl := fmt.Sprintf("http://127.0.0.1:%d/healthz", opts.HttpPort)
+		req, err := http.NewRequest("GET", healthUrl, nil)
+		require.NoError(c, err)
+
+		resp, err := client.Do(req)
+		require.NoError(c, err)
+
+		require.Equal(c, 200, resp.StatusCode)
+	}, 10*time.Second, 200*time.Millisecond)
 }
 
 func testRequest(t *testing.T, client *http.Client, verb string, url string, headers map[string]string, description string, tests func(resp *http.Response, body string)) {

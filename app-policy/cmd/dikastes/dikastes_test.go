@@ -69,6 +69,7 @@ func TestRunServer(t *testing.T) {
 		"-waf-ruleset-file", confPath,
 		"-waf-directive", "SecRuleEngine On",
 		"-subscription-type", "per-host-policies",
+		"-geo-db-path", "",
 	}
 
 	if err := config.Parse(args); err != nil {

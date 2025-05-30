@@ -10,11 +10,13 @@ import (
 	"testing/fstest"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
+	geo "github.com/corazawaf/coraza-geoip"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
 
+	geoiptestdata "github.com/projectcalico/calico/app-policy/internal/testdata/geoip"
 	"github.com/projectcalico/calico/app-policy/internal/util/testutils"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/waf"
@@ -87,7 +89,7 @@ func TestCorazaWAFAuthzScenarios(t *testing.T) {
 			name:  "deny - SQL injection 2, detection only with rootFS",
 			store: nil,
 			// In this test case, we setup a sample ruleset that only detects SQL injection.
-			// It's based on coraza-coreruleset, but only contains the 3 fiels we need.
+			// It's based on coraza-coreruleset, but only contains the 3 fields we need.
 			rootFS: func(t *testing.T) fs.FS {
 				corazaConf, err := fs.ReadFile(coreruleset.FS, "@coraza.conf-recommended")
 				if err != nil {
@@ -127,6 +129,93 @@ func TestCorazaWAFAuthzScenarios(t *testing.T) {
 		},
 	}
 
+	// geoip database tests
+	geoIPInitFn := func(t *testing.T) func() error {
+		return func() error {
+			if err := geo.RegisterGeoDatabase(geoiptestdata.DBIPCityLite, "city"); err != nil {
+				t.Fatalf("Failed to register GeoIP database: %s", err)
+				return err
+			}
+			return nil
+		}
+	}
+
+	corazaWAFScenarios = append(corazaWAFScenarios,
+		corazaWAFScenario{
+			name:    "geoip - deny certain countries",
+			initFns: []func() error{geoIPInitFn(t)},
+			store:   nil,
+			directives: []string{
+				"Include @coraza.conf-recommended",
+				"Include @crs-setup.conf.example",
+				"Include @owasp_crs/*.conf",
+				`SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:155,nolog,pass"`,
+				`SecRule &GEO "@eq 0" "phase:1,id:156,deny,msg:'Failed to lookup IP'"`,
+				`SecRule GEO:COUNTRY_CODE "@streq RU" "phase:1,id:157,deny,msg:'Access from Russia is not allowed'"`,
+				"SecRuleEngine On",
+			},
+			checkReq: testutils.NewCheckRequestBuilder(
+				testutils.WithMethod("GET"),
+				testutils.WithHost("my.loadbalancer.address"),
+				testutils.WithPath("/cart"),
+				testutils.WithSourceHostPort("95.173.136.1", 0), // Russian IP (Moscow, Moscow, Russia (RU), Europe)
+			),
+			expectedResponse: waf.DENY,
+			expectedErr:      nil,
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
+		},
+		corazaWAFScenario{
+			name:    "geoip - deny traffic that is not in the database (e.g. private IPs)",
+			initFns: []func() error{geoIPInitFn(t)},
+			store:   nil,
+			directives: []string{
+				"Include @coraza.conf-recommended",
+				"Include @crs-setup.conf.example",
+				"Include @owasp_crs/*.conf",
+				`SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:155,nolog,pass"`,
+				`SecRule &GEO "@eq 0" "phase:1,id:156,deny,msg:'Failed to lookup IP'"`,
+				"SecRuleEngine On",
+			},
+			checkReq: testutils.NewCheckRequestBuilder(
+				testutils.WithMethod("GET"),
+				testutils.WithHost("my.loadbalancer.address"),
+				testutils.WithPath("/cart"),
+				testutils.WithSourceHostPort("10.0.0.1", 0), // Private IP (not in geoip database)
+			),
+			expectedResponse: waf.DENY,
+			expectedErr:      nil,
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
+		},
+		corazaWAFScenario{
+			name:    "geoip - only deny traffic from Russia, allow all others including private IPs",
+			initFns: []func() error{geoIPInitFn(t)},
+			store:   nil,
+			directives: []string{
+				"Include @coraza.conf-recommended",
+				"Include @crs-setup.conf.example",
+				"Include @owasp_crs/*.conf",
+				`SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:155,nolog,pass"`,
+				`SecRule GEO:COUNTRY_CODE "@streq RU" "phase:1,id:157,deny,msg:'Access from Russia is not allowed'"`,
+				"SecRuleEngine On",
+			},
+			checkReq: testutils.NewCheckRequestBuilder(
+				testutils.WithMethod("GET"),
+				testutils.WithHost("my.loadbalancer.address"),
+				testutils.WithPath("/cart"),
+				testutils.WithSourceHostPort("10.0.0.1", 0), // Private IP (not in geoip database)
+			),
+			expectedResponse: waf.OK,
+			expectedErr:      nil,
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
+		},
+	)
+
 	for _, scenario := range corazaWAFScenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			runCorazaWAFAuthzScenario(t, &scenario)
@@ -159,6 +248,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 		scenario.directives,
 		true,
 		evp,
+		scenario.initFns...,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create WAF: %s", err)
@@ -196,4 +286,5 @@ type corazaWAFScenario struct {
 	expectedResponse      *envoyauthz.CheckResponse
 	expectedErr           error
 	expectedLogs          []*v1.WAFLog
+	initFns               []func() error
 }

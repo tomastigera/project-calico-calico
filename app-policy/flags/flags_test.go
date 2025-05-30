@@ -27,9 +27,11 @@ func TestFlagDefaults(t *testing.T) {
 		{config.LogLevel, "info"},
 		{config.PerHostWAFEnabled, false},
 		{config.WAFDirectives.Value(), []string{}},
+		{config.GeoDBPath, "/opt/geoip/dbip-city-lite.mmdb"},
+		{config.GeoDBType, "city"},
 	} {
 		if fmt.Sprint(v.loaded) != fmt.Sprint(v.expected) {
-			t.Errorf("Loaded flag is %v, but we expected %v", v.loaded, v.expected)
+			t.Errorf("Loaded flag is %v, but we expected '%v'", v.loaded, v.expected)
 		}
 	}
 }
