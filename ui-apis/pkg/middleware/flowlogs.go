@@ -1,3 +1,5 @@
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
+
 package middleware
 
 import (
@@ -495,6 +497,8 @@ func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelast
 		if f.Key.Source.Type == lapi.HEP {
 			for _, label := range f.SourceLabels {
 				if label.Key == names.HostEndpointTypeLabelKey && len(label.Values) > 0 {
+					// Only the first label value is used when extracting the host endpoint type.
+					// It is a programming error if there are multiple values for this label.
 					bucket.SourceLabels[label.Key] = label.Values[0].Value
 					break
 				}
@@ -503,6 +507,8 @@ func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelast
 		if f.Key.Destination.Type == lapi.HEP {
 			for _, label := range f.DestinationLabels {
 				if label.Key == names.HostEndpointTypeLabelKey && len(label.Values) > 0 {
+					// Only the first label value is used when extracting the host endpoint type.
+					// It is a programming error if there are multiple values for this label.
 					bucket.DestinationLabels[label.Key] = label.Values[0].Value
 					break
 				}

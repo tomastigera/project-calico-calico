@@ -1,4 +1,5 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+
 package servicegraph
 
 import (
@@ -300,13 +301,7 @@ func mapRawTypeToGraphNodeType(val string, agg bool, labels []lsv1.FlowLabels) v
 		}
 		return v1.GraphNodeTypeWorkload
 	case "hep":
-		for _, label := range labels {
-			if label.Key == names.HostEndpointTypeLabelKey && len(label.Values) > 0 {
-				hepType := names.HostEndpointType(label.Values[0].Value)
-				return mapHostEndpointLabelToGraphNodeType(hepType)
-			}
-		}
-		return v1.GraphNodeTypeHost
+		return determineHostEndpointGraphNodeType(labels)
 	case "net":
 		return v1.GraphNodeTypeNetwork
 	case "ns":
@@ -315,15 +310,25 @@ func mapRawTypeToGraphNodeType(val string, agg bool, labels []lsv1.FlowLabels) v
 	return v1.GraphNodeTypeUnknown
 }
 
-func mapHostEndpointLabelToGraphNodeType(hepType names.HostEndpointType) v1.GraphNodeType {
-	switch hepType {
-	case names.HostEndpointTypeClusterNode:
-		return v1.GraphNodeTypeClusterNode
-	case names.HostEndpointTypeNonClusterHost:
-		return v1.GraphNodeTypeHost
-	default:
-		return v1.GraphNodeTypeHost
+// determineHostEndpointGraphNodeType determines the type of host endpoint based on the labels.
+// It searches for HostEndpointTypeLabelKey and returns the corresponding GraphNodeType.
+// If the label is not found or the value is unknown, it defaults to v1.GraphNodeTypeHost.
+func determineHostEndpointGraphNodeType(labels []lsv1.FlowLabels) v1.GraphNodeType {
+	for _, label := range labels {
+		if label.Key == names.HostEndpointTypeLabelKey && len(label.Values) > 0 {
+			// Only the first label value is used when extracting the host endpoint type.
+			// It is a programming error if there are multiple values for this label.
+			switch names.HostEndpointType(label.Values[0].Value) {
+			case names.HostEndpointTypeClusterNode:
+				return v1.GraphNodeTypeClusterNode
+			case names.HostEndpointTypeNonClusterHost:
+				return v1.GraphNodeTypeHost
+			default:
+				return v1.GraphNodeTypeHost
+			}
+		}
 	}
+	return v1.GraphNodeTypeHost
 }
 
 func mapGraphNodeTypeToRawType(val v1.GraphNodeType) (string, bool) {
