@@ -237,6 +237,7 @@ BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
 # git tag at the time we build the binary.
 # Variables elsewhere that depend on this (such as LDFLAGS) must also be lazy.
 GIT_DESCRIPTION=$(shell git describe --tags --dirty --always --abbrev=12 || echo '<unknown>')
+ENTERPRISE_VERSION?=$(call git-release-tag-from-dev-tag)
 
 # Calculate a timestamp for any build artifacts.
 ifneq ($(OS),Windows_NT)
@@ -250,6 +251,10 @@ endif
 LDFLAGS=-X github.com/projectcalico/calico/pkg/buildinfo.Version=$(GIT_DESCRIPTION) \
 	-X github.com/projectcalico/calico/pkg/buildinfo.BuildDate=$(DATE) \
 	-X github.com/projectcalico/calico/pkg/buildinfo.GitRevision=$(GIT_COMMIT)
+
+# Add in flags that are not used in OSS builds.
+LDFLAGS+=-X github.com/projectcalico/calico/pkg/buildinfo.EnterpriseReleaseVersion=$(ENTERPRISE_VERSION)
+LDFLAGS+=-X github.com/projectcalico/calico/pkg/buildinfo.OpenSourceBaseVersion=$(CALICO_VERSION)
 
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
