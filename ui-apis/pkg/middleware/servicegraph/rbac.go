@@ -244,7 +244,7 @@ func (f *rbacFilter) IncludeEndpoint(e FlowEndpoint) bool {
 			return f.IncludeGlobalNetworkSets()
 		}
 		return f.IncludeNetworkSets(e.Namespace)
-	case v1.GraphNodeTypeHost:
+	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost:
 		return f.IncludeHostEndpoints()
 	case v1.GraphNodeTypeUnknown:
 		// The L7 summary logs will not contain an endpoint type.

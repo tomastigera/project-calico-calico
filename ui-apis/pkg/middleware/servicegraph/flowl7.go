@@ -77,7 +77,7 @@ func GetL7FlowData(ctx context.Context, lsClient client.Client, cluster string, 
 			progress.IncRaw()
 			code := flow.Code
 			source := FlowEndpoint{
-				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true),
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true, nil),
 				NameAggr:  flow.Key.Source.AggregatedName,
 				Namespace: flow.Key.Source.Namespace,
 			}
@@ -91,7 +91,7 @@ func GetL7FlowData(ctx context.Context, lsClient client.Client, cluster string, 
 				Port:     int(flow.Key.DestinationService.Port),
 			}
 			dest := FlowEndpoint{
-				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true),
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true, nil),
 				NameAggr:  flow.Key.Destination.AggregatedName,
 				Namespace: flow.Key.Destination.Namespace,
 				PortNum:   int(flow.Key.Destination.Port),
