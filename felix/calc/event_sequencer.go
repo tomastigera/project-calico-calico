@@ -479,6 +479,8 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 			EgressMinburst:        ep.QoSControls.EgressMinburst,
 			IngressPacketRate:     ep.QoSControls.IngressPacketRate,
 			EgressPacketRate:      ep.QoSControls.EgressPacketRate,
+			IngressPacketBurst:    ep.QoSControls.IngressPacketBurst,
+			EgressPacketBurst:     ep.QoSControls.EgressPacketBurst,
 			IngressMaxConnections: ep.QoSControls.IngressMaxConnections,
 			EgressMaxConnections:  ep.QoSControls.EgressMaxConnections,
 		}

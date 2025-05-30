@@ -658,8 +658,10 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 			EgressMinburst:        8000000,
 			IngressPacketRate:     9000000,
 			EgressPacketRate:      10000000,
-			IngressMaxConnections: 11000000,
-			EgressMaxConnections:  12000000,
+			IngressPacketBurst:    11000000,
+			EgressPacketBurst:     12000000,
+			IngressMaxConnections: 13000000,
+			EgressMaxConnections:  14000000,
 		}
 
 		kvps, err := up.Process(&model.KVPair{
@@ -694,8 +696,10 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 					EgressMinburst:        8000000,
 					IngressPacketRate:     9000000,
 					EgressPacketRate:      10000000,
-					IngressMaxConnections: 11000000,
-					EgressMaxConnections:  12000000,
+					IngressPacketBurst:    11000000,
+					EgressPacketBurst:     12000000,
+					IngressMaxConnections: 13000000,
+					EgressMaxConnections:  14000000,
 				},
 			},
 			Revision: "abcde",

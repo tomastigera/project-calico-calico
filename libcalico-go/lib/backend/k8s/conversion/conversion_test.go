@@ -1412,8 +1412,10 @@ var _ = Describe("Test Pod conversion", func() {
 					"qos.projectcalico.org/egressMinburst":        "8M",
 					"qos.projectcalico.org/ingressPacketRate":     "9M",
 					"qos.projectcalico.org/egressPacketRate":      "10M",
-					"qos.projectcalico.org/ingressMaxConnections": "11M",
-					"qos.projectcalico.org/egressMaxConnections":  "12M",
+					"qos.projectcalico.org/ingressPacketBurst":    "11M",
+					"qos.projectcalico.org/egressPacketBurst":     "12M",
+					"qos.projectcalico.org/ingressMaxConnections": "13M",
+					"qos.projectcalico.org/egressMaxConnections":  "14M",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -1441,8 +1443,10 @@ var _ = Describe("Test Pod conversion", func() {
 			EgressMinburst:        8000000,
 			IngressPacketRate:     9000000,
 			EgressPacketRate:      10000000,
-			IngressMaxConnections: 11000000,
-			EgressMaxConnections:  12000000,
+			IngressPacketBurst:    11000000,
+			EgressPacketBurst:     12000000,
+			IngressMaxConnections: 13000000,
+			EgressMaxConnections:  14000000,
 		}
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.QoSControls).To(BeEquivalentTo(expectedQoSControls))
 	})
@@ -1464,6 +1468,8 @@ var _ = Describe("Test Pod conversion", func() {
 					"qos.projectcalico.org/egressMinburst":        "8Gi",
 					"qos.projectcalico.org/ingressPacketRate":     "5",
 					"qos.projectcalico.org/egressPacketRate":      "60P",
+					"qos.projectcalico.org/ingressPacketBurst":    "0",
+					"qos.projectcalico.org/egressPacketBurst":     "70P",
 					"qos.projectcalico.org/ingressMaxConnections": "0",
 					"qos.projectcalico.org/egressMaxConnections":  "80P",
 				},
@@ -1493,6 +1499,8 @@ var _ = Describe("Test Pod conversion", func() {
 			EgressMinburst:        100000000,
 			IngressPacketRate:     10,
 			EgressPacketRate:      1000000000000,
+			IngressPacketBurst:    1,
+			EgressPacketBurst:     10000000,
 			IngressMaxConnections: 1,
 			EgressMaxConnections:  100000000000,
 		}
@@ -1562,6 +1570,33 @@ var _ = Describe("Test Pod conversion", func() {
 					"arbitrary":                             "annotation",
 					"qos.projectcalico.org/ingressMinburst": "3M",
 					"qos.projectcalico.org/egressMinburst":  "4M",
+				},
+				Labels: map[string]string{
+					"labelA": "valueA",
+					"labelB": "valueB",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.QoSControls).To(BeNil())
+	})
+
+	It("should ignore packet burst QoSControl annotation if packet rate is not present", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"arbitrary": "annotation",
+					"qos.projectcalico.org/ingressPacketBurst": "3M",
+					"qos.projectcalico.org/egressPacketBurst":  "4M",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
