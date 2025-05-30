@@ -135,6 +135,13 @@ func (s *dikastesTestSuite) TestDikastesRecov() {
 			Paths: []*proto.HTTPMatch_PathMatch{
 				{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/public"}},
 			},
+			Headers: []*proto.HTTPMatch_HeadersMatch{
+				&proto.HTTPMatch_HeadersMatch{
+					Header:   "x-forwarded-for",
+					Operator: "HasPrefix",
+					Values:   []string{"8.8.8.8"},
+				},
+			},
 		},
 	}
 
@@ -150,7 +157,10 @@ func (s *dikastesTestSuite) TestDikastesRecov() {
 				{
 					comment: "GET 10.0.0.1/public yields allow when profiles available",
 					inputReq: newRequest(
-						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/public", nil,
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/public",
+						map[string]string{
+							"x-forwarded-for": "8.8.8.8",
+						},
 						newPeer("10.0.0.1", "default", "default"),
 						newPeer("10.0.1.1", "default", "default"),
 					),
@@ -160,7 +170,23 @@ func (s *dikastesTestSuite) TestDikastesRecov() {
 				{
 					comment: "GET 10.0.0.1/public yields deny when profiles available",
 					inputReq: newRequest(
-						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied", nil,
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied",
+						map[string]string{
+							"x-forwarded-for": "10.0.0.1",
+						},
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedErr:  nil,
+				},
+				{
+					comment: "GET 10.0.0.1/public yields deny when profiles available",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied",
+						map[string]string{
+							"x-forwarded-for": "8.8.8.8",
+						},
 						newPeer("10.0.0.1", "default", "default"),
 						newPeer("10.0.1.1", "default", "default"),
 					),
