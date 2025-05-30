@@ -11,6 +11,7 @@ ExecStartPre=/usr/bin/calico-noncluster-host-init
 ExecStart=/usr/bin/calico-node -felix -felix-config /etc/calico/calico-node/calico-node.conf -noncluster-host
 NotifyAccess=main
 Restart=always
+RestartSec=5s
 WatchdogSec=60 
 
 [Install]
