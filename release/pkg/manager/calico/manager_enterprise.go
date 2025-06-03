@@ -25,9 +25,9 @@ import (
 )
 
 var (
-	defaultEnterpriseRegistry = "quay.io/tigera"
+	DefaultEnterpriseRegistry = "quay.io/tigera"
 
-	windowsGCSBucket = "tigera-windows"
+	WindowsGCSBucket = "tigera-windows"
 
 	docsURL = "https://docs.tigera.io"
 
@@ -150,7 +150,7 @@ var (
 
 	//go:embed templates/yum.conf.gotmpl
 	rpmRepoTemplate string
-	rhelVersions    = []string{"8", "9"}
+	RHELVersions    = []string{"8", "9"}
 	rpmDirs         = []string{
 		"node",
 		"fluent-bit",
@@ -160,7 +160,7 @@ var (
 
 func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
 	defaultCalicoOpts := []Option{
-		WithImageRegistries([]string{defaultEnterpriseRegistry}),
+		WithImageRegistries([]string{DefaultEnterpriseRegistry}),
 		WithBuildImages(false),
 		WithPublishGitTag(false),
 		WithPublishGithubRelease(false),
@@ -600,7 +600,7 @@ func (m *EnterpriseManager) assembleRPMs() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse yum repo template: %s", err)
 	}
-	for _, version := range rhelVersions {
+	for _, version := range RHELVersions {
 		rhelDir := filepath.Join(outDir, fmt.Sprintf("rhel%s", version))
 		pkgListPath := filepath.Join(m.tmpDir, fmt.Sprintf("%s-rhel%s-pkglist.txt", m.calicoVersion, version))
 		rpmURL := rpmURLBase + fmt.Sprintf("rhel%s/", version)
@@ -975,7 +975,7 @@ func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
 	}
 	logrus.Info("Start publishing windows archive to GCS")
 
-	bucket := windowsGCSBucket
+	bucket := WindowsGCSBucket
 	publishSuffix := m.calicoVersion
 	if m.isHashRelease {
 		bucket += "/dev"
