@@ -82,6 +82,8 @@ func setupTest(t *testing.T, opts waf.ServerOptions, filesToBackup []string) {
 
 		require.Equal(c, 200, resp.StatusCode)
 	}, 10*time.Second, 200*time.Millisecond)
+
+	require.Empty(t, wafEvents)
 }
 
 func testRequest(t *testing.T, client *http.Client, verb string, url string, headers map[string]string, description string, tests func(resp *http.Response, body string)) {

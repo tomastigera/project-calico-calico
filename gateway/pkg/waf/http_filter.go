@@ -208,7 +208,7 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 								RawValue: []byte("metrics"),
 							},
 							&envoy_config_core_v3.HeaderValue{
-								Key:      ":host",
+								Key:      ":authority",
 								RawValue: []byte("127.0.0.1"),
 							},
 							&envoy_config_core_v3.HeaderValue{
