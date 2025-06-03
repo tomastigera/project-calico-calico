@@ -1,0 +1,86 @@
+From 0274bb54a1624eaa4d49918a0de39460648afb98 Mon Sep 17 00:00:00 2001
+From: Rene Dekker <rene@tigera.io>
+Date: Mon, 2 Jun 2025 15:18:50 -0700
+Subject: [PATCH] Update babel and openpgp
+
+---
+ package.json                      |  2 +-
+ src/dev/license_checker/config.ts |  2 +-
+ yarn.lock                         | 21 +++++++--------------
+ 3 files changed, 9 insertions(+), 16 deletions(-)
+
+diff --git a/package.json b/package.json
+index e2d8fd69f..4d7f29eee 100644
+--- a/package.json
++++ b/package.json
+@@ -1201,7 +1201,7 @@
+     "object-hash": "^3.0.0",
+     "object-path-immutable": "^3.1.1",
+     "openai": "^4.72.0",
+-    "openpgp": "5.10.1",
++    "openpgp": "5.11.3",
+     "opn": "^5.5.0",
+     "ora": "^4.0.4",
+     "p-limit": "^3.0.1",
+diff --git a/src/dev/license_checker/config.ts b/src/dev/license_checker/config.ts
+index f6cebfcaa..54864de37 100644
+--- a/src/dev/license_checker/config.ts
++++ b/src/dev/license_checker/config.ts
+@@ -80,7 +80,7 @@ export const DEV_ONLY_LICENSE_ALLOWED = ['MPL-2.0', '(MPL-2.0 OR Apache-2.0)'];
+ // there are some licenses which should not be globally allowed
+ // but can be brought in on a per-package basis
+ export const PER_PACKAGE_ALLOWED_LICENSES = {
+-  'openpgp@5.10.1': ['LGPL-3.0+'],
++  'openpgp@5.11.': ['LGPL-3.0+'],
+ };
+ // Globally overrides a license for a given package@version
+ export const LICENSE_OVERRIDES = {
+diff --git a/yarn.lock b/yarn.lock
+index c79e533a5..5f78471c1 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -1875,11 +1875,9 @@
+   integrity sha512-x/rqGMdzj+fWZvCOYForTghzbtqPDZ5gPwaoNGHdgDfF2QA/XZbCBp4Moo5scrkAMPhB7z26XM/AaHuIJdgauA==
+ 
+ "@babel/runtime@^7.0.0", "@babel/runtime@^7.1.2", "@babel/runtime@^7.12.0", "@babel/runtime@^7.12.1", "@babel/runtime@^7.12.13", "@babel/runtime@^7.12.5", "@babel/runtime@^7.15.4", "@babel/runtime@^7.17.8", "@babel/runtime@^7.18.3", "@babel/runtime@^7.20.7", "@babel/runtime@^7.21.0", "@babel/runtime@^7.24.1", "@babel/runtime@^7.24.7", "@babel/runtime@^7.25.0", "@babel/runtime@^7.3.1", "@babel/runtime@^7.4.4", "@babel/runtime@^7.4.5", "@babel/runtime@^7.5.0", "@babel/runtime@^7.5.5", "@babel/runtime@^7.6.3", "@babel/runtime@^7.7.2", "@babel/runtime@^7.7.6", "@babel/runtime@^7.8.4", "@babel/runtime@^7.8.7", "@babel/runtime@^7.9.2":
+-  version "7.25.0"
+-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.25.0.tgz#3af9a91c1b739c569d5d80cc917280919c544ecb"
+-  integrity sha512-7dRy4DwXwtzBrPbZflqxnvfxLF8kdZXPkhymtDeFoFqE6ldzjQFgYTtYIFARcLEYDrqfBfYcZt1WqFxRoyC9Rw==
+-  dependencies:
+-    regenerator-runtime "^0.14.0"
++  version "7.27.1"
++  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.27.1.tgz#9fce313d12c9a77507f264de74626e87fd0dc541"
++  integrity sha512-1x3D2xEk2fRo3PAhwQwu5UubzgiVWSXTBfWpVd2Mx2AzRqJuDJCsgaDVZ7HB5iGzDW1Hl1sWN2mFyKjmR9uAog==
+ 
+ "@babel/template@^7.12.7", "@babel/template@^7.24.7", "@babel/template@^7.3.3":
+   version "7.24.7"
+@@ -25992,10 +25990,10 @@ opener@^1.5.2:
+   resolved "https://registry.yarnpkg.com/opener/-/opener-1.5.2.tgz#5d37e1f35077b9dcac4301372271afdeb2a13598"
+   integrity sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==
+ 
+-openpgp@5.10.1:
+-  version "5.10.1"
+-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-5.10.1.tgz#3b137470187b79281719ced16fb9e60b822cfd24"
+-  integrity sha512-SR5Ft+ej51d0+p53ld5Ney0Yiz0y8Mh1YYLJrvpRMbTaNhvS1QcDX0Oq1rW9sjBnQXtgrpWw2Zve3rm7K5C/pw==
++openpgp@5.11.3:
++  version "5.11.3"
++  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-5.11.3.tgz#a2532aa973f1f6413556eaf328b97a6955b1d8a3"
++  integrity sha512-jXOPfIteBUQ2zSmRG4+Y6PNntIIDEAvoM/lOYCnvpXAByJEruzrHQZWE/0CGOKHbubwUuty2HoPHsqBzyKHOpA==
+   dependencies:
+     asn1.js "^5.0.0"
+ 
+@@ -28696,11 +28694,6 @@ regenerator-runtime@^0.13.7:
+   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.11.tgz#f6dca3e7ceec20590d07ada785636a90cdca17f9"
+   integrity sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==
+ 
+-regenerator-runtime@^0.14.0:
+-  version "0.14.0"
+-  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.14.0.tgz#5e19d68eb12d486f797e15a3c6a918f7cec5eb45"
+-  integrity sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA==
+-
+ regenerator-transform@^0.15.2:
+   version "0.15.2"
+   resolved "https://registry.yarnpkg.com/regenerator-transform/-/regenerator-transform-0.15.2.tgz#5bbae58b522098ebdf09bca2f83838929001c7a4"
+-- 
+2.43.0
+
