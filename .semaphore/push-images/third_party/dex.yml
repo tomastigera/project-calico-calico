@@ -11,10 +11,11 @@ execution_time_limit:
 global_job_config:
   env_vars:
     - name: DEV_REGISTRIES
-      value: gcr.io/unique-caldron-775/cnx/tigera
+      value: gcr.io/unique-caldron-775/cnx/tigera quay.io/tigeradev
   secrets:
     - name: docker-hub
     - name: google-service-account-for-gcr
+    - name: quay-tigeradev-hashrelease
     - name: private-repo
   prologue:
     commands:
@@ -27,6 +28,7 @@ global_job_config:
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
       - retry git fetch --unshallow
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
       - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
