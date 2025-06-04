@@ -21,7 +21,7 @@ fi
 
 # Get versions to install.
 defaultCalicoVersion=$($YQ '.[0].title' ../calico/_data/versions.yml)
-CALICO_VERSION=${CALICO_VERSION:-$defaultCalicoVersion}
+CALICO_VERSION=${PRODUCT_VERSION:-$defaultCalicoVersion}
 
 defaultRegistry=gcr.io/unique-caldron-775/cnx
 REGISTRY=${REGISTRY:-$defaultRegistry}

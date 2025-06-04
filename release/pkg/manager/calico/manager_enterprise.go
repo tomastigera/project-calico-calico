@@ -329,7 +329,7 @@ func (m *EnterpriseManager) generateManifests() error {
 	// Manifests are expecting registry to be the Contaier registry platform.
 	reg := strings.TrimSuffix(m.imageRegistries[0], "/tigera")
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("CALICO_VERSION=%s", m.calicoVersion))
+	env = append(env, fmt.Sprintf("PRODUCT_VERSION=%s", m.calicoVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
 	env = append(env, fmt.Sprintf("REGISTRY_OPERATOR=%s", m.operatorRegistry))
 	env = append(env, fmt.Sprintf("REGISTRY=%s", reg))
