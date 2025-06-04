@@ -54,7 +54,8 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     tcpdump \
     wget \
-    iperf3
+    iperf3 \
+    iperf
 
 RUN apt-get install --no-install-recommends -y wireguard-tools
 
