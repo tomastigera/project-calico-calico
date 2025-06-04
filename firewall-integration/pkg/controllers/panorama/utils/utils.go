@@ -1,4 +1,4 @@
-// Copyright 2019-2022 Tigera Inc. All rights reserved.
+// Copyright 2019-2025 Tigera Inc. All rights reserved.
 package utils
 
 import (
@@ -75,7 +75,7 @@ type PanoramaApiClient struct {
 
 type AddressGroup struct {
 	Entry addrgrp.Entry
-	// The matching addressses to this address group.
+	// The matching addresses to this address group.
 	// Functionality maintains the address slices in sorted order.
 	Addresses Addresses
 	// An error encountered while processing.
@@ -83,13 +83,13 @@ type AddressGroup struct {
 }
 
 type Addresses struct {
-	// IpNetmasks type addressses.
+	// IpNetmasks type addresses.
 	IpNetmasks []string
-	// Fqdn type addressses.
+	// Fqdn type addresses.
 	Fqdns []string
-	// IpRange type addressses.
+	// IpRange type addresses.
 	IpRanges []string
-	// IpWildcard type addressses.
+	// IpWildcard type addresses.
 	IpWildcards []string
 }
 

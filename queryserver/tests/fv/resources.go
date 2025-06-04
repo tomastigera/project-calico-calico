@@ -471,6 +471,24 @@ var (
 		},
 	}
 
+	hep5_nonclusterhost = &apiv3.HostEndpoint{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindHostEndpoint,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "non-cluster-host-1-hep",
+			Labels: map[string]string{
+				"hostendpoint.projectcalico.org/type": "nonclusterhost",
+			},
+		},
+		Spec: apiv3.HostEndpointSpec{
+			Node:          "non-cluster-host-1",
+			InterfaceName: "eth0",
+			ExpectedIPs:   []string{"1.2.3.4"},
+		},
+	}
+
 	tier1 = &apiv3.Tier{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,

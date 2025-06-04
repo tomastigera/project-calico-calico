@@ -1,4 +1,4 @@
-// Copyright 2021-2022 Tigera Inc. All rights reserved.
+// Copyright 2021-2025 Tigera Inc. All rights reserved.
 package utils
 
 import (
@@ -1797,13 +1797,13 @@ var _ = DescribeTable(
 		"",
 		addressesDeviceGroup1Test,
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{}, // ordered
 		},
 	),
@@ -1812,25 +1812,25 @@ var _ = DescribeTable(
 		"tag1",
 		addressesDeviceGroup2Test,
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{ // ordered
 				"10.10.10.10/31",
 				"10.10.10.12/31",
 				"10.10.10.13/31",
 			}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{
 				"www.tigera-test1.gr",
 				"www.tigera-test4.gr",
 			}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{
 				"10.12.0.1-11.10.0.85",
 				"192.167.0.1-192.167.0.22",
 				"192.168.0.1-192.168.0.15",
 				"222.168.0.1-222.168.0.111",
 			}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{
 				"10.12.0.1/10.0.0.33",
 				"192.168.0.1/10.0.0.15",
@@ -1843,25 +1843,25 @@ var _ = DescribeTable(
 		"'%^@$&and%$*^OR(& () (__*+~`\"$# @!$'or tag1", // has(%^@$&and%$*^OR(& () (__*+~`\"$# @!$) || has(tag1)
 		addressesDeviceGroup3Test,
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{ // ordered
 				"10.10.10.10/31",
 				"10.10.10.12/31",
 				"10.10.10.13/31",
 			}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{
 				"www.tigera-test1.gr",
 				"www.tigera-test4.gr",
 			}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{
 				"10.12.0.1-11.10.0.85",
 				"192.167.0.1-192.167.0.22",
 				"192.168.0.1-192.168.0.15",
 				"222.168.0.1-222.168.0.111",
 			}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{
 				"10.12.0.1/10.0.0.33",
 				"192.168.0.1/10.0.0.15",
@@ -1874,20 +1874,20 @@ var _ = DescribeTable(
 		"(tag1 and 'tag2') or tag3",
 		addressesDeviceGroup4Test,
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{ // ordered
 				"10.10.10.10/31",
 				"10.10.10.11/31",
 				"10.10.10.12/31",
 				"10.10.10.14/31",
 			}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{
 				"www.tigera-test1.gr",
 				"www.tigera-test5.gr",
 				"www.tigera-test6.gr",
 			}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{
 				"10.168.0.1-10.168.0.34",
 				"111.9.0.1-111.9.0.111",
@@ -1895,7 +1895,7 @@ var _ = DescribeTable(
 				"192.168.0.1-192.168.0.15",
 				"222.168.0.1-222.168.0.111",
 			}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{
 				"10.168.0.1/10.0.0.15",
 				"111.9.0.1/9.0.0.15",
@@ -1910,25 +1910,25 @@ var _ = DescribeTable(
 		"(tag1 and 'tag2') or (tag3 and '8$`()5043jgfj$%#')",
 		addressesDeviceGroup5Test,
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{ // ordered
 				"10.10.10.10/31",
 				"10.10.10.12/31",
 				"10.10.10.14/31",
 			}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{
 				"www.tigera-test1.gr",
 				"www.tigera-test5.gr",
 			}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{
 				"111.9.0.1-111.9.0.111",
 				"192.167.0.1-192.167.0.22",
 				"192.168.0.1-192.168.0.15",
 				"222.168.0.1-222.168.0.111",
 			}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{
 				"192.168.0.1/10.0.0.15",
 			}, // ordered
@@ -2131,13 +2131,13 @@ var _ = DescribeTable(
 			},
 		},
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{}, // ordered
 		},
 	),
@@ -2324,25 +2324,25 @@ var _ = DescribeTable(
 			},
 		},
 		&Addresses{
-			// IpNetmasks type addressses.
+			// IpNetmasks type addresses.
 			IpNetmasks: []string{ // ordered
 				"10.10.10.10/31",
 				"10.10.10.12/31",
 				"10.10.10.13/31",
 			}, // ordered
-			// Fqdn type addressses.
+			// Fqdn type addresses.
 			Fqdns: []string{
 				"www.tigera-test1.gr",
 				"www.tigera-test4.gr",
 			}, // ordered
-			// IpRange type addressses.
+			// IpRange type addresses.
 			IpRanges: []string{
 				"10.12.0.1-11.10.0.85",
 				"192.167.0.1-192.167.0.22",
 				"192.168.0.1-192.168.0.15",
 				"222.168.0.1-222.168.0.111",
 			}, // ordered
-			// IpWildcard type addressses.
+			// IpWildcard type addresses.
 			IpWildcards: []string{
 				"10.12.0.1/10.0.0.33",
 				"192.168.0.1/10.0.0.15",

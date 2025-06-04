@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 package cache
 
 import (
@@ -91,9 +91,14 @@ func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 			nd = c.getOrCreateNodeData(c.getNodeFromWEPName(rk.Name))
 			c.updateEndpointsCounts(nd, 1, 0)
 		case apiv3.KindHostEndpoint:
-			nd = c.getOrCreateNodeData(uv3.Value.(*apiv3.HostEndpoint).Spec.Node)
-			c.updateEndpointsCounts(nd, 0, 1)
-			c.hostEndpoints[rk] = nd
+			hep := uv3.Value.(*apiv3.HostEndpoint)
+			v, ok := hep.Labels[names.HostEndpointTypeLabelKey]
+			// Exclude non-cluster host endpoints from the node cache.
+			if !ok || v != string(names.HostEndpointTypeNonClusterHost) {
+				nd = c.getOrCreateNodeData(hep.Spec.Node)
+				c.updateEndpointsCounts(nd, 0, 1)
+				c.hostEndpoints[rk] = nd
+			}
 		}
 	case bapi.UpdateTypeKVUpdated:
 		switch rk.Kind {
@@ -104,13 +109,18 @@ func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 			// The node of a HostEndpoint is adjustable, so to keep things simple add the
 			// endpoint from the old node and add it to the new one (it's possible the node
 			// hasn't changed, but this requires one less check).
-			ndOld := c.hostEndpoints[rk]
-			ndNew := c.getOrCreateNodeData(uv3.Value.(*apiv3.HostEndpoint).Spec.Node)
-			if ndOld != ndNew {
-				c.updateEndpointsCounts(ndOld, 0, -1)
-				c.updateEndpointsCounts(ndNew, 0, 1)
-				c.hostEndpoints[rk] = ndNew
-				c.maybeDelete(ndOld)
+			hep := uv3.Value.(*apiv3.HostEndpoint)
+			v, ok := hep.Labels[names.HostEndpointTypeLabelKey]
+			// Exclude non-cluster host endpoints from the node cache.
+			if !ok || v != string(names.HostEndpointTypeNonClusterHost) {
+				ndOld := c.hostEndpoints[rk]
+				ndNew := c.getOrCreateNodeData(hep.Spec.Node)
+				if ndOld != ndNew {
+					c.updateEndpointsCounts(ndOld, 0, -1)
+					c.updateEndpointsCounts(ndNew, 0, 1)
+					c.hostEndpoints[rk] = ndNew
+					c.maybeDelete(ndOld)
+				}
 			}
 		}
 	case bapi.UpdateTypeKVDeleted:
@@ -148,33 +158,35 @@ func (c *nodeCache) getOrCreateNodeData(name string) *nodeData {
 }
 
 func (c *nodeCache) maybeDelete(nd *nodeData) {
-	if nd.canDelete() {
+	if nd != nil && nd.canDelete() {
 		delete(c.nodes, nd.name)
 	}
 }
 
 func (c *nodeCache) updateEndpointsCounts(nd *nodeData, deltaWep, deltaHep int) {
-	beforeWep := nd.endpoints.NumWorkloadEndpoints
-	beforeHep := nd.endpoints.NumHostEndpoints
-	nd.endpoints.NumWorkloadEndpoints += deltaWep
-	nd.endpoints.NumHostEndpoints += deltaHep
-	afterWep := nd.endpoints.NumWorkloadEndpoints
-	afterHep := nd.endpoints.NumHostEndpoints
+	if nd != nil {
+		beforeWep := nd.endpoints.NumWorkloadEndpoints
+		beforeHep := nd.endpoints.NumHostEndpoints
+		nd.endpoints.NumWorkloadEndpoints += deltaWep
+		nd.endpoints.NumHostEndpoints += deltaHep
+		afterWep := nd.endpoints.NumWorkloadEndpoints
+		afterHep := nd.endpoints.NumHostEndpoints
 
-	if beforeWep+beforeHep == 0 {
-		c.numNodesWithEndpoints++
-	} else if afterWep+afterHep == 0 {
-		c.numNodesWithEndpoints--
-	}
-	if beforeWep == 0 && afterWep > 0 {
-		c.numNodesWithWorkloadEndpoints++
-	} else if beforeWep > 0 && afterWep == 0 {
-		c.numNodesWithWorkloadEndpoints--
-	}
-	if beforeHep == 0 && afterHep > 0 {
-		c.numNodesWithHostEndpoints++
-	} else if beforeHep > 0 && afterHep == 0 {
-		c.numNodesWithHostEndpoints--
+		if beforeWep+beforeHep == 0 {
+			c.numNodesWithEndpoints++
+		} else if afterWep+afterHep == 0 {
+			c.numNodesWithEndpoints--
+		}
+		if beforeWep == 0 && afterWep > 0 {
+			c.numNodesWithWorkloadEndpoints++
+		} else if beforeWep > 0 && afterWep == 0 {
+			c.numNodesWithWorkloadEndpoints--
+		}
+		if beforeHep == 0 && afterHep > 0 {
+			c.numNodesWithHostEndpoints++
+		} else if beforeHep > 0 && afterHep == 0 {
+			c.numNodesWithHostEndpoints--
+		}
 	}
 }
 
