@@ -78,7 +78,7 @@ func main() {
 	log.SetLevel(log.FatalLevel)
 
 	//nolint:staticcheck // Ignore SA1019 deprecated
-	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
+	arguments, err := docopt.Parse(usage, nil, true, buildinfo.Version, false)
 	if err != nil {
 		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
