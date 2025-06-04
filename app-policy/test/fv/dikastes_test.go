@@ -24,6 +24,25 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 		},
 	}
 
+	inboundRuleHTTPheaders := &proto.Rule{
+		Action: "Allow",
+		HttpMatch: &proto.HTTPMatch{
+			Methods: []string{"GET"},
+			Paths: []*proto.HTTPMatch_PathMatch{
+				{PathMatch: &proto.HTTPMatch_PathMatch_Prefix{Prefix: "/public"}},
+			},
+			Headers: []*proto.HTTPMatch_HeadersMatch{
+				&proto.HTTPMatch_HeadersMatch{
+					Header:   "x-forwarded-for",
+					Operator: "In",
+					Values: []string{
+						"10.0.0.1", "8.8.8.8",
+					},
+				},
+			},
+		},
+	}
+
 	steps := []dikastesTestCaseStep{
 		// be wary that within steps, dikastes retains data
 		{
@@ -84,9 +103,66 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 					expectedErr:  nil,
 				},
 				{
-					comment: "GET 10.0.0.1/public yields deny when profiles available",
+					comment: "GET 10.0.0.1/denied yields deny when profiles available",
 					inputReq: newRequest(
 						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied", nil,
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedErr:  nil,
+				},
+			},
+		},
+		{
+			comment: "basics: policy updated with HTTP headers criteria",
+			updates: append([]*proto.ToDataplane{
+				wepUpdate("pod-1", []string{"10.0.1.1"}, []string{"default"}),
+			}, policyAndProfileUpdate("secure", "default", inboundRuleHTTPheaders)...),
+			checks: []dikastesTestCaseData{
+				{
+					comment: "GET 10.0.0.1/public yields allow when HTTP headers are matching the criteria",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/public",
+						map[string]string{
+							"x-forwarded-for": "8.8.8.8",
+						},
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					expectedResp: newResponseWithStatus(int32(code.Code_OK)),
+					expectedErr:  nil,
+				},
+				{
+					comment: "GET 10.0.0.1/public yields deny when HTTP headers are mismatched",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/public",
+						map[string]string{
+							"x-forwarded-for": "10.0.0.2",
+						},
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedErr:  nil,
+				},
+				{
+					comment: "GET 10.0.0.1/denied yields deny when profiles available",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied", nil,
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedErr:  nil,
+				},
+				{
+					comment: "GET 10.0.0.1/denied yields deny even when HTTP headers are matching profiles available",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/denied",
+						map[string]string{
+							"x-forwarded-for": "8.8.8.8",
+						},
 						newPeer("10.0.0.1", "default", "default"),
 						newPeer("10.0.1.1", "default", "default"),
 					),
