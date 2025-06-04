@@ -8,7 +8,7 @@ FROM ${UBI_IMAGE} AS ubi
 RUN microdnf upgrade
 
 RUN mkdir /prometheus && \
-    ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/ /prometheus
+    ln -s /etc/prometheus /prometheus/prometheus
 
 FROM scratch AS source
 
@@ -40,8 +40,6 @@ COPY prometheus/.build/linux-${TARGETARCH}/prometheus /bin/prometheus
 COPY prometheus/.build/linux-${TARGETARCH}/promtool /bin/promtool
 COPY prometheus/LICENSE /LICENSE
 COPY prometheus/NOTICE /NOTICE
-COPY prometheus/console_libraries/ /usr/share/prometheus/console_libraries/
-COPY prometheus/consoles/ /usr/share/prometheus/consoles/
 COPY prometheus/documentation/examples/prometheus.yml /etc/prometheus/prometheus.yml
 COPY prometheus/npm_licenses.tar.bz2 /npm_licenses.tar.bz2
 
@@ -56,6 +54,4 @@ EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 ENTRYPOINT [ "/bin/prometheus" ]
 CMD        [ "--config.file=/etc/prometheus/prometheus.yml", \
-    "--storage.tsdb.path=/prometheus", \
-    "--web.console.libraries=/usr/share/prometheus/console_libraries", \
-    "--web.console.templates=/usr/share/prometheus/consoles" ]
+    "--storage.tsdb.path=/prometheus"]
