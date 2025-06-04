@@ -8,11 +8,6 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/calicoq
 CALICOQ_IMAGE         ?=calicoq
 BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
 
-LDFLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(DATE) \
-	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(GIT_VERSION)
-
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
@@ -76,11 +71,11 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 	$(DOCKER_BUILD) -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv .
 	touch $@
 
-.PHONY: ut 
+.PHONY: ut
 ut:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -cover -r --skipPackage calicoq/*'
 
-.PHONY: fv 
+.PHONY: fv
 fv: image run-etcd
 	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \

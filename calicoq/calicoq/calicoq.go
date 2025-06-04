@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	licClient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 const usage = `Calico query tool.
@@ -103,7 +104,10 @@ func main() {
 	}
 
 	for cmd, thunk := range map[string]func() error{
-		"version": commands.Version,
+		"version": func() error {
+			buildinfo.PrintVersion()
+			return nil
+		},
 		"eval": func() error {
 			// Show all the endpoints that match <selector>.
 			return commands.EvalSelector(

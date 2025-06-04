@@ -15,10 +15,10 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/controller"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/compliance/pkg/version"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 const (
@@ -45,7 +45,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		version.Version()
+		buildinfo.PrintVersion()
 		return
 	}
 

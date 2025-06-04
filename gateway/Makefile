@@ -21,13 +21,6 @@ include ../lib.Makefile
 ###############################################################################
 SRC_FILES = $(shell find pkg cmd -name '*.go')
 
-# We use -X to insert the version information into the placeholder variables
-# in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/config.BuildVersion=$(GIT_VERSION) \
-			-X $(PACKAGE_NAME)/pkg/config.BuildDate=$(DATE) \
-			-X $(PACKAGE_NAME)/pkg/config.GitTag=$(GIT_DESCRIPTION) \
-			-X $(PACKAGE_NAME)/pkg/config.GitCommit=$(GIT_COMMIT)
-
 ###############################################################################
 # BUILD BINARY
 ###############################################################################
@@ -101,9 +94,9 @@ stop-fv-deps:
 ## Run the FVs
 fv: clean start-fv-deps fv-fast
 fv-fast:
-	# Mounting the fv/testdata directory as a /shared volume so that moving a file from a test 
-	# moves it on disk, and is picked up by the envoy proxy that's mounting the same directory 
-	# as a similar volume so that we can dynamically reconfigure envoy during tests. 
+	# Mounting the fv/testdata directory as a /shared volume so that moving a file from a test
+	# moves it on disk, and is picked up by the envoy proxy that's mounting the same directory
+	# as a similar volume so that we can dynamically reconfigure envoy during tests.
 	$(DOCKER_RUN) \
 	    -v $(REPO_ROOT)/gateway/fv/testdata:/shared \
 		$(CALICO_BUILD) \

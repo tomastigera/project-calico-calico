@@ -23,10 +23,10 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/server"
 	"github.com/projectcalico/calico/compliance/pkg/tls"
-	"github.com/projectcalico/calico/compliance/pkg/version"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 var (
@@ -153,7 +153,7 @@ func initIniFlags() {
 func handleFlags() {
 	// --version
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 	// --disable_logfmt=true

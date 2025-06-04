@@ -20,11 +20,6 @@ include ../lib.Makefile
 SRC_FILES=$(shell find cmd pkg uds -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go')
 
-LDFLAGS = -X main.VERSION=$(GIT_VERSION) \
-			-X main.BUILD_DATE=$(DATE) \
-			-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-			-X main.GIT_REVISION=$(GIT_COMMIT)
-
 ###############################################################################
 # Building the binary
 ###############################################################################

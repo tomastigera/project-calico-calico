@@ -15,11 +15,6 @@ include ../lib.Makefile
 ##############################################################################
 # Build
 ##############################################################################
-LDFLAGS=-X main.VERSION=$(GIT_VERSION) \
-	-X main.BUILD_DATE=$(DATE) \
-	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(GIT_COMMIT)
-
 SRC_FILES=$(shell find cmd pkg -name '*.go') \
 	$(shell find ../felix/proto -name '*.go') \
 	$(shell find ../libcalico-go/lib -name '*.go')

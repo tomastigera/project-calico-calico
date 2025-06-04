@@ -25,13 +25,6 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go') \
 		$(shell find ../goldmane/proto/ '*.go')
 
-# We use -X to insert the version information into the placeholder variables
-# in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/config.BuildVersion=$(GIT_VERSION) \
-			-X $(PACKAGE_NAME)/pkg/config.BuildDate=$(DATE) \
-			-X $(PACKAGE_NAME)/pkg/config.GitTag=$(GIT_DESCRIPTION) \
-			-X $(PACKAGE_NAME)/pkg/config.GitCommit=$(GIT_COMMIT)
-
 ###############################################################################
 # BUILD BINARY
 ###############################################################################

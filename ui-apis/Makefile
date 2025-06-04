@@ -30,12 +30,6 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
-			-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(DATE) \
-			-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(GIT_DESCRIPTION) \
-			-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(GIT_COMMIT) \
-			-X main.VERSION=$(ES_PROXY_VERSION)
-
 ###############################################################################
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example

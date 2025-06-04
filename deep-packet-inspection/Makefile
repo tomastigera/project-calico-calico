@@ -25,13 +25,6 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../linseed/pkg -name '*.go') \
 		$(shell find ../typha/pkg -name '*.go')
 
-# We use -X to insert the version information into the placeholder variables
-# in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
 ###############################################################################
 # BUILD BINARY
 ###############################################################################

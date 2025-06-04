@@ -16,11 +16,6 @@ include ../lib.Makefile
 ###############################################################################
 SRC_FILES = $(shell find plugins -name '*.go')
 
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-	-X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
 build: out_linseed.so
 
 out_linseed.so: $(SRC_FILES)

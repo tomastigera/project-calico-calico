@@ -13,17 +13,12 @@ import (
 	"k8s.io/client-go/util/keyutil"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/ui-apis/pkg/server"
 )
 
 // This is filled out during the build process (using git describe output)
-var VERSION string
 var version bool
-
-func PrintVersion() error {
-	fmt.Println(VERSION)
-	return nil
-}
 
 func init() {
 	// Add a flag to check the version.
@@ -31,10 +26,9 @@ func init() {
 }
 
 func main() {
-
 	flag.Parse()
 	if version {
-		_ = PrintVersion()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 

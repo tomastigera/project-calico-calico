@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		Version()
+		buildinfo.PrintVersion()
 		return
 	}
 
@@ -68,7 +69,7 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	}
 	if cfg.ListenNetwork == "unix" {
 		// anyone on system can connect.
-		if err := os.Chmod(cfg.ListenAddress, 0777); err != nil {
+		if err := os.Chmod(cfg.ListenAddress, 0o777); err != nil {
 			log.Fatal("unable to set write permission on socket: ", err)
 		}
 	}

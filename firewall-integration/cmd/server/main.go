@@ -27,6 +27,7 @@ import (
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 const jsonContentType = "application/json"
@@ -36,16 +37,7 @@ const (
 )
 
 // These are filled out during the build process (using git describe output)
-var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
 var version bool
-
-func PrintVersion() error {
-	fmt.Println("Version:     ", VERSION)
-	fmt.Println("Build date:  ", BUILD_DATE)
-	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
-	fmt.Println("Git commit:  ", GIT_REVISION)
-	return nil
-}
 
 func init() {
 	// Add a flag to check the version.
@@ -53,10 +45,9 @@ func init() {
 }
 
 func main() {
-
 	flag.Parse()
 	if version {
-		_ = PrintVersion()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 
@@ -252,7 +243,6 @@ func getKubernetesClient(kubeconfig string) (*kubernetes.Clientset, error) {
 }
 
 func getCalicoClient(kubeconfig string) (clientv3.ProjectcalicoV3Interface, error) {
-
 	// Build the calico enterprise client
 	calicoConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {

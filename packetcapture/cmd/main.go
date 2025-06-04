@@ -21,11 +21,10 @@ import (
 	"github.com/projectcalico/calico/packetcapture/pkg/handlers"
 	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
 	"github.com/projectcalico/calico/packetcapture/pkg/version"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
-)
+var versionFlag = flag.Bool("version", false, "Print version information")
 
 func main() {
 	// Parse all command-line flags
@@ -33,7 +32,7 @@ func main() {
 
 	// For --version use case
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 
@@ -46,26 +45,26 @@ func main() {
 	config.ConfigureLogging(cfg.LogLevel)
 
 	// Boostrap components
-	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	var csFactory = lmak8s.NewClientSetFactory(
+	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	csFactory := lmak8s.NewClientSetFactory(
 		cfg.MultiClusterForwardingCA,
 		cfg.MultiClusterForwardingEndpoint)
-	var cache = cache2.NewClientCache(csFactory)
+	cache := cache2.NewClientCache(csFactory)
 
-	var stop = make(chan struct{})
+	stop := make(chan struct{})
 	defer close(stop)
 	go func() {
 		// Init the client cache with a default client
-		var err = cache.Init()
+		err := cache.Init()
 		if err != nil {
 			log.WithError(err).Fatal("Cannot init client cache")
 		}
 	}()
 	authn := mustGetAuthenticator(csFactory, cfg)
 	authz := middleware.NewAuthZ(cache)
-	var k8sCommands = capture.NewK8sCommands(cache)
-	var fileCommands = capture.NewFileCommands(cache)
-	var files = handlers.NewFiles(cache, k8sCommands, fileCommands)
+	k8sCommands := capture.NewK8sCommands(cache)
+	fileCommands := capture.NewFileCommands(cache)
+	files := handlers.NewFiles(cache, k8sCommands, fileCommands)
 
 	log.Infof("PacketCapture API listening for HTTPS requests at %s", addr)
 	// Define handlers

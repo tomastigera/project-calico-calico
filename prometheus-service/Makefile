@@ -10,16 +10,10 @@ BUILD_IMAGES          		?=$(PROMETHEUS_SERVICE_IMAGE)
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
-
 
 ##############################################################################
 # Include ../lib.Makefile before anything else

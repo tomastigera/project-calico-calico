@@ -25,17 +25,16 @@ import (
 	utilnet "github.com/projectcalico/calico/egress-gateway/util/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
-var (
-	VERSION   string // value is the build's GIT_VERSION
-	USAGE_FMT string = `Egress Daemon - L2 and L3 management daemon for Tigera egress gateways.
+var USAGE_FMT string = `Egress Daemon - L2 and L3 management daemon for Tigera egress gateways.
 
 Usage:
   %[1]s start <gateway-ips> [options]
   %[1]s (-h | --help)
   %[1]s --version
-	
+
 Options:
   --socket-path=<path>    Path to nodeagent-UDS over-which routing information is pulled [default: /var/run/nodeagent/socket]
   --log-severity=<trace|debug|info|warn|error|fatal>    Minimum reported log severity [default: info]
@@ -44,18 +43,17 @@ Options:
 Environment variables:
   HEALTH_PORT     Port on which to serve readiness/liveness health reports. [default: 8080]
 
-  HTTP_PROBE_URLS  Optional comma-delimited list of URLs to send periodic probes to;  If all probes fail then the 
+  HTTP_PROBE_URLS  Optional comma-delimited list of URLs to send periodic probes to;  If all probes fail then the
                    daemon will report non-ready on the health port.
   HTTP_PROBE_INTERVAL: Interval between HTTP probes; uses Go's interval format, examples: 10s 1m30s. [default: 10s]
   HTTP_PROBE_TIMEOUT: Timeout for HTTP probes; uses Go's interval format, examples: 10s 1m30s. [default: 10s]
 
-  ICMP_PROBE_IPS:      Comma-delimited list of IP addresses to send ICMP pings to.  If all probes fail then the 
+  ICMP_PROBE_IPS:      Comma-delimited list of IP addresses to send ICMP pings to.  If all probes fail then the
                        daemon will report non-ready on the health port.
   ICMP_PROBE_INTERVAL: Interval at which to send ICMP probes.
   ICMP_PROBE_TIMEOUT:  Timeout for the set of ICMP pings.  If no ping responses are received within the timeout
                        then the daemon will report non-ready.  Timeout should be longer than ICMP_PROBE_INTERVAL.
 `
-)
 
 type envConfig struct {
 	HealthPort int `split_words:"true" default:"8080"`
@@ -72,7 +70,7 @@ type envConfig struct {
 }
 
 func main() {
-	args, err := docopt.ParseArgs(fmt.Sprintf(USAGE_FMT, os.Args[0]), nil, VERSION)
+	args, err := docopt.ParseArgs(fmt.Sprintf(USAGE_FMT, os.Args[0]), nil, buildinfo.GitRevision)
 	if err != nil {
 		return
 	}
