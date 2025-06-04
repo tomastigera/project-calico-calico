@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+
 	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 

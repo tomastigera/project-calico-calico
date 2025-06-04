@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/projectcalico/calico/typha/pkg/buildinfo"
 	"github.com/spf13/cobra"
+
+	"github.com/projectcalico/calico/typha/pkg/buildinfo"
 )
 
 var VersionCmd = &cobra.Command{
