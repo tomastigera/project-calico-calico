@@ -30,16 +30,12 @@ resources:
               envoy_grpc:
                 cluster_name: ext_proc-grpc-service
               timeout: 10s
-              initial_metadata:
-                - key: "wafConfig"
-                  value: ""
-            "processing_mode": {
-              "request_header_mode": "SEND",
-              "response_header_mode": "SEND",
-              "request_body_mode": "STREAMED",
-              "request_trailer_mode": "SKIP",
-              "response_trailer_mode": "SKIP"
-            }
+            processing_mode: 
+              request_header_mode: SEND
+              response_header_mode: SEND
+              request_body_mode: STREAMED
+              request_trailer_mode: SKIP
+              response_trailer_mode: SKIP
             failure_mode_allow: false
             request_attributes: ["request.protocol", "xds.route_name"]
         - name: envoy.filters.http.router

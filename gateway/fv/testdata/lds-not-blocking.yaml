@@ -33,13 +33,12 @@ resources:
               initial_metadata:
                 - key: directivesJson
                   value: "[\"Include @coraza.conf-recommended\", \"Include @crs-setup.conf.example\", \"Include @owasp_crs/*.conf\", \"SecRuleEngine DetectionOnly\", \"SecAction \\\"id:900220,phase:1,nolog,pass,t:none,setvar:'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/grpc| |application/grpc+proto| |application/grpc+json| |application/octet-stream|'\\\"\", \"SecRuleRemoveById 920350\"]"
-            "processing_mode": {
-              "request_header_mode": "SEND",
-              "response_header_mode": "SEND",
-              "request_body_mode": "STREAMED",
-              "request_trailer_mode": "SKIP",
-              "response_trailer_mode": "SKIP"
-            }
+            processing_mode: 
+              request_header_mode: SEND
+              response_header_mode: SEND
+              request_body_mode: STREAMED
+              request_trailer_mode: SKIP
+              response_trailer_mode: SKIP
             failure_mode_allow: false
             request_attributes: ["request.protocol", "xds.route_name"]
         - name: envoy.filters.http.router
