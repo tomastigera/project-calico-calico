@@ -180,18 +180,18 @@ func (c *serviceController) getEndpointsForService(serviceKey string) *v1.Endpoi
 // If service should be created, it also returns the NetworkSet from service to networkset conversion and the NetworkSet from
 // endpoints to networkset conversion
 func (c *serviceController) shouldCreateNetworkSet(svc *v1.Service, ep *v1.Endpoints) (bool, *api.NetworkSet, *api.NetworkSet) {
-	//Both must be not present for a networkset to be eventually created.
+	// Both must be not present for a networkset to be eventually created.
 	if (svc != nil && ep == nil) || (ep != nil && svc == nil) {
 		return false, nil, nil
 	}
 
-	//Convert service to networkset
+	// Convert service to networkset
 	fromService, err := c.serviceConverter.Convert(svc)
 	if err != nil {
 		return false, nil, nil
 	}
 
-	//Convert endpoint to networkset
+	// Convert endpoint to networkset
 	fromEndpoints, err := c.endpointConverter.Convert(ep)
 	if err != nil {
 		return false, nil, nil
@@ -242,18 +242,17 @@ func (c *serviceController) convertToNetworkSet(nsFromSvc, nsFromEp *api.Network
 // setNetworkSetForSvc handles the main logic to check if a specified service or endpoint
 // should have corresponding calico networkset created
 func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) {
-
 	// ensure both are not nil
 	if svc == nil && ep == nil {
 		log.Error("both service and endpoint cannot be nil, passing...")
 		return
 	}
 
-	//Locking here to avoid scenarios like following one:
-	//1)SvcInformer sends update notification while corresponding Endpoints still exists (which should lead to creation of NetworkSet)
-	//2)EpInformer sends delete notification (which should lead to deletion of NetworkSet)
-	//3)Code triggered by SvcInformer update verifies Endpoints existance before #2 happens
-	//4)Code triggered by EpInformer delete takes the Lock first (which could happen if we don't lock here)
+	// Locking here to avoid scenarios like following one:
+	// 1)SvcInformer sends update notification while corresponding Endpoints still exists (which should lead to creation of NetworkSet)
+	// 2)EpInformer sends delete notification (which should lead to deletion of NetworkSet)
+	// 3)Code triggered by SvcInformer update verifies Endpoints existance before #2 happens
+	// 4)Code triggered by EpInformer delete takes the Lock first (which could happen if we don't lock here)
 	c.Lock()
 	defer c.Unlock()
 
@@ -274,7 +273,7 @@ func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoint
 	if !doCreate {
 		c.resourceCache.Delete(nsKey)
 	} else {
-		//create NetworkSet to be stored, which is a combination of the two
+		// create NetworkSet to be stored, which is a combination of the two
 		networkSet := c.convertToNetworkSet(nsFromSvc, nsFromEp)
 		c.resourceCache.Set(nsKey, *networkSet)
 	}
@@ -282,7 +281,6 @@ func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoint
 
 // unsetNetworkSetForSvc removes the NetworkSet created for this service.
 func (c *serviceController) unsetNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) {
-
 	// ensure both are not nil
 	if svc == nil && ep == nil {
 		log.Error("both service and endpoint cannot be nil, passing...")
@@ -348,8 +346,6 @@ func (c *serviceController) deleteFromDatastore(key string) error {
 	clog := log.WithField("key", key)
 
 	// The object no longer exists - delete from the datastore.
-	clog.Infof("Deleting NetworkSet from Calico datastore")
-
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		clog.WithError(err).Warning("Failed to get namespace/name from key")
@@ -422,20 +418,20 @@ func (c *serviceController) processNextItem() bool {
 	obj, exists := c.resourceCache.Get(key)
 	if !exists {
 		// The object no longer exists - delete from the datastore.
-		clog.Infof("Deleting NetworkSet from Calico datastore")
+		clog.Debug("Deleting NetworkSet from Calico datastore")
 		if err := c.deleteFromDatastore(key); err != nil {
 			c.handleErr(err, key)
 		} else {
-			clog.Infof("Successfully deleted NetworkSet")
+			clog.Debug("Successfully deleted NetworkSet")
 		}
 	} else {
 		// The object exists - update the datastore to reflect.
-		clog.Infof("Create/Update NetworkSet in Calico datastore")
+		clog.Debug("Create/Update NetworkSet in Calico datastore")
 		p := obj.(api.NetworkSet)
 		if err := c.updateDatastore(key, &p); err != nil {
 			c.handleErr(err, key)
 		} else {
-			clog.Infof("Successfully updated NetworkSet")
+			clog.Debug("Successfully updated NetworkSet")
 		}
 	}
 

@@ -441,7 +441,8 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 		for _, spd := range sg.ServicePorts {
 			for ep := range spd {
 				switch ep.Type {
-				case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
+				case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload,
+					v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
 					// for all the endpoints of type host, wep, rep, ns behind the service node add appropriate selector.
 					allEps[ep] = struct{}{}
 				default:
@@ -520,7 +521,8 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 	if sg != nil {
 		for ep := range sg.ServicePorts[sp] {
 			switch ep.Type {
-			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
+			case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload,
+				v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
 				// for all the endpoints of type host, wep, rep, ns behind the service port add appropriate selector.
 				allEps[ep] = struct{}{}
 			default:
@@ -551,7 +553,8 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 	for sp, eps := range sg.ServicePorts {
 		for ep := range eps {
 			switch ep.Type {
-			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+			case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload,
+				v1.GraphNodeTypeReplicaSet:
 				// prepare an endpoint-style selector if endpoint type is host, wep, or rep
 				allEps[ep] = struct{}{}
 			default:
@@ -620,7 +623,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		dnsDest = NewGraphSelectorConstructor(v1.OpNoMatch)
 	}
 
-	if epType == v1.GraphNodeTypeHosts {
+	if epType == v1.GraphNodeTypeClusterNodes || epType == v1.GraphNodeTypeHosts {
 		// Handle hosts separately. We provide an internal aggregation for these types, so when constructing a selector
 		// we have do do a rather brutal list of all host endpoints. We can at least skip namespace since hep types
 		// are only non-namespaced.
@@ -655,7 +658,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 				NewGraphSelectorConstructor(v1.OpIn, "dest_name_aggr", hosts),
 			)
 		}
-	} else if epType == v1.GraphNodeTypeHost {
+	} else if epType == v1.GraphNodeTypeClusterNode || epType == v1.GraphNodeTypeHost {
 		// Handle host separately. We provide an internal aggregation for these types which means we copy
 		// the aggregated name into the name and provide a calculated aggregated name.  Make sure we use the non
 		// aggregated name but use the aggregated name field for the selector.

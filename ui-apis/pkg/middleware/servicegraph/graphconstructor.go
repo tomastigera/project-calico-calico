@@ -409,7 +409,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 	}
 	shouldRetainEdges := func(nodeType v1.GraphNodeType) bool {
 		switch nodeType {
-		case v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost, v1.GraphNodeTypeHostEndpoint:
+		case v1.GraphNodeTypeClusterNodes, v1.GraphNodeTypeClusterNode,
+			v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost,
+			v1.GraphNodeTypeHostEndpoint:
 			return true
 		default:
 			return false

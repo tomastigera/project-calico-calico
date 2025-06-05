@@ -20,8 +20,8 @@ const (
 )
 
 func DetermineCalicoVersion(repoRoot string) (string, error) {
-	args := []string{"-Po", `CALICO_VERSION=\K(.*)`, "Makefile"}
-	out, err := command.RunInDir(filepath.Join(repoRoot, "node"), "grep", args)
+	args := []string{"-Po", `CALICO_VERSION=\K(.*)`, "metadata.mk"}
+	out, err := command.RunInDir(repoRoot, "grep", args)
 	if err != nil {
 		return "", err
 	}

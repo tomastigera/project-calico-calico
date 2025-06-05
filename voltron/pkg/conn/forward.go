@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +38,7 @@ func forwardConnection(srcConn net.Conn, dstCon net.Conn, wg *sync.WaitGroup) {
 	}()
 	defer wg.Done()
 
-	if _, err := io.Copy(dstCon, srcConn); err != nil && !isUseOfClosedNetworkErr(err) {
+	if _, err := io.Copy(dstCon, srcConn); err != nil && !isUseOfClosedNetworkErr(err) && !isConnectionResetErr(err) {
 		log.WithError(err).Error("failed to forward data")
 	}
 }
@@ -51,6 +52,18 @@ func isUseOfClosedNetworkErr(err error) bool {
 		if strings.Contains(err.Err.Error(), "use of closed network connection") {
 			return true
 		}
+	}
+	return false
+}
+
+// isConnectionResetErr returns true if the error is due to a connection reset. These are benign and do not warrant
+// a log statement. Done as a result of CI-1763.
+func isConnectionResetErr(err error) bool {
+	if errors.Is(err, syscall.ECONNRESET) {
+		return true
+	}
+	if strings.Contains(err.Error(), "connection reset by peer") {
+		return true
 	}
 	return false
 }

@@ -11,6 +11,7 @@ ExecStart=/usr/bin/calico-fluent-bit -c /etc/calico/calico-fluent-bit/calico-flu
 User=calico
 Group=calico
 Restart=always
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

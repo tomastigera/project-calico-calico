@@ -3,14 +3,6 @@ PACKAGE_NAME = github.com/projectcalico/calico
 include metadata.mk
 include lib.Makefile
 
-CALICO_VERSIONS_FILE := calico/_data/versions.yml
-
-CALICO_VERSIONS_CALIENT_VERSION_KEY := .[0].title
-CALICO_VERSIONS_OPERATOR_VERSION_KEY := .[0].tigera-operator.version
-CALICO_VERSIONS_HELM_RELEASE_KEY := .[0].helmRelease
-
-calico_versions_get_val = $(shell bin/yq "$(1)" $(CALICO_VERSIONS_FILE))
-
 DOCKER_RUN := mkdir -p ./.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
 		--net=host \
@@ -331,12 +323,8 @@ e2e-test-adminpolicy:
 release/bin/release: $(shell find ./release -type f -name '*.go')
 	$(MAKE) -C release
 
-# Install gh for interacting with GitHub.
-bin/gh:
-	curl -sSL -o bin/gh.tgz https://github.com/cli/cli/releases/download/v$(GITHUB_CLI_VERSION)/gh_$(GITHUB_CLI_VERSION)_linux_amd64.tar.gz
-	tar -zxvf bin/gh.tgz -C bin/ gh_$(GITHUB_CLI_VERSION)_linux_amd64/bin/gh --strip-components=2
-	chmod +x $@
-	rm bin/gh.tgz
+release/metadata: release/bin/release var-require-all-METADATA_DIR
+	@release/bin/release release metadata
 
 # Create updates for pre-release
 release-prep: release/bin/release bin/gh var-require-all-HASHRELEASE-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
@@ -450,12 +438,6 @@ endif
 		python:3 \
 		bash -c '/usr/local/bin/python release/get-contributors.py >> /code/AUTHORS.md'
 
-release/bin/release: $(shell find ./release -type f -name '*.go')
-	$(MAKE) -C release
-
-release/metadata: release/bin/release var-require-all-METADATA_DIR
-	@release/bin/release release metadata
-
 update-pins: update-go-build-pin update-calico-base-pin
 
 ###############################################################################
@@ -464,9 +446,6 @@ update-pins: update-go-build-pin update-calico-base-pin
 bin/gotestsum:
 	@GOBIN=$(REPO_ROOT)/bin go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 
-postrelease-checks: bin/yq
-	$(MAKE) -C hack/postrelease/calient docker-test_all \
-		CALICO_VERSION=$(call calico_versions_get_val,$(CALICO_VERSIONS_CALIENT_VERSION_KEY)) \
-		CHART_RELEASE=$(call calico_versions_get_val,$(CALICO_VERSIONS_HELM_RELEASE_KEY)) \
-		OPERATOR_VERSION=$(call calico_versions_get_val,$(CALICO_VERSIONS_OPERATOR_VERSION_KEY))
+postrelease-checks: release/bin/release bin/gotestsum
+	@release/bin/release release validate
 

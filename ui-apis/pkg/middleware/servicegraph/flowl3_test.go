@@ -721,6 +721,150 @@ func TestGetL3FlowData(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Translate host endpoint types by lables",
+			inputFlows: []lapi.L3Flow{
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "src",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "hep",
+							AggregatedName: "jwhuang-hep-rocky8-1",
+						},
+						Destination: lapi.Endpoint{
+							Type:           "hep",
+							AggregatedName: "jwhuang-hep-rocky9-1",
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/some/process",
+					},
+					SourceLabels: []lapi.FlowLabels{
+						{
+							Key: "hostendpoint.projectcalico.org/type",
+							Values: []lapi.FlowLabelValue{
+								{
+									Value: "nonclusterhost",
+									Count: 1,
+								},
+							},
+						},
+					},
+					DestinationLabels: []lapi.FlowLabels{
+						{
+							Key: "hostendpoint.projectcalico.org/type",
+							Values: []lapi.FlowLabelValue{
+								{
+									Value: "clusternode",
+									Count: 1,
+								},
+							},
+						},
+					},
+				},
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "dst",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "net",
+							AggregatedName: "pub",
+						},
+						Destination: lapi.Endpoint{
+							Type:           "hep",
+							AggregatedName: "jwhuang-hep-rocky8-1",
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/other/process",
+					},
+					DestinationLabels: []lapi.FlowLabels{
+						{
+							Key: "hostendpoint.projectcalico.org/type",
+							Values: []lapi.FlowLabelValue{
+								{
+									Value: "nonclusterhost",
+									Count: 1,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantL3Flows: []L3Flow{
+				{
+					Edge: FlowEdge{
+						Source: FlowEndpoint{
+							Type:     "host",
+							NameAggr: "jwhuang-hep-rocky8-1",
+						},
+						Dest: FlowEndpoint{
+							Type:     "clusternode",
+							NameAggr: "jwhuang-hep-rocky9-1",
+						},
+					},
+					Processes: &svapi.GraphProcesses{
+						Source: svapi.GraphEndpointProcesses{
+							"jwhuang-hep-rocky8-1:jwhuang-hep-rocky9-1:/some/process": {
+								Name:        "/some/process",
+								Source:      "jwhuang-hep-rocky8-1",
+								Destination: "jwhuang-hep-rocky9-1",
+							},
+						},
+					},
+					AggregatedProtoPorts: &svapi.AggregatedProtoPorts{
+						ProtoPorts:        []svapi.AggregatedPorts{{}},
+						NumOtherProtocols: 0,
+					},
+					Stats: svapi.GraphL3Stats{
+						Allowed:        &svapi.GraphPacketStats{},
+						DeniedAtSource: nil,
+						DeniedAtDest:   nil,
+						Connections: svapi.GraphConnectionStats{
+							TotalPerSampleInterval: -9223372036854775808,
+						},
+						TCP: nil,
+					},
+				},
+				{
+					Edge: FlowEdge{
+						Source: FlowEndpoint{
+							Type:     "net",
+							NameAggr: "pub",
+						},
+						Dest: FlowEndpoint{
+							Type:     "host",
+							NameAggr: "jwhuang-hep-rocky8-1",
+						},
+					},
+					Processes: &svapi.GraphProcesses{
+						Dest: svapi.GraphEndpointProcesses{
+							"pub:jwhuang-hep-rocky8-1:/other/process": {
+								Source:      "pub",
+								Name:        "/other/process",
+								Destination: "jwhuang-hep-rocky8-1",
+							},
+						},
+					},
+					AggregatedProtoPorts: &svapi.AggregatedProtoPorts{
+						ProtoPorts:        []svapi.AggregatedPorts{{}},
+						NumOtherProtocols: 0,
+					},
+					Stats: svapi.GraphL3Stats{
+						Allowed:        &svapi.GraphPacketStats{},
+						DeniedAtSource: nil,
+						DeniedAtDest:   nil,
+						Connections: svapi.GraphConnectionStats{
+							TotalPerSampleInterval: -9223372036854775808,
+						},
+						TCP: nil,
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

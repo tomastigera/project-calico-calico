@@ -350,7 +350,7 @@ func getEventEndpointsFromFlowEndpoint(epType, epNamespace, epName, epNameAggr s
 
 	eps := make([]FlowEndpoint, len(epTypes))
 	for i, epType := range epTypes {
-		eventEndpointType := mapRawTypeToGraphNodeType(epType, epName == "")
+		eventEndpointType := mapRawTypeToGraphNodeType(epType, epName == "", nil)
 		eventEndpointName := epName
 		eventEndpointNameAggr := epNameAggr
 

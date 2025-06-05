@@ -63,11 +63,14 @@ func (lu *LabelUpdater) UpdateLabels() error {
 		return err
 	}
 
+	// Configure exponential backoff with jitter for HostEndpoint label update retries.
+	// This helps prevent excessive load on systemd or the Kubernetes API server during outages.
+	// The configured backoff parameters result in a total retry duration of approximately one minute.
 	backoff := wait.Backoff{
-		Duration: 100 * time.Millisecond,
+		Duration: 2 * time.Second,
 		Factor:   2.0,
 		Jitter:   0.1,
-		Steps:    3,
+		Steps:    6,
 	}
 
 	for _, hep := range hepList.Items {

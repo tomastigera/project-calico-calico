@@ -34,24 +34,24 @@ import (
 )
 
 const (
-	//Any service with those annotations will be excluded from networkset management
+	// Any service with those annotations will be excluded from networkset management
 	ExcludeServiceAnnotation          = "networksets.projectcalico.org/exclude"
 	ExcludeFederetedServiceAnnotation = "federation.tigera.io/serviceSelector"
 )
 
 const (
-	//Following annotations will be added to NetworkSet created by service controller
+	// Following annotations will be added to NetworkSet created by service controller
 	NsServiceNameAnnotation = "endpoints.projectcalico.org/serviceName"
 	NsPortsAnnotation       = "endpoints.projectcalico.org/ports"
 	NsProtocolsAnnotation   = "endpoints.projectcalico.org/protocols"
 
-	//Following label will be added to NetworkSet created by service controller
+	// Following label will be added to NetworkSet created by service controller
 	NsServiceNameLabel = "endpoints.projectcalico.org/serviceName"
 
-	//NetworkSet created/managed by this controller will have following name prefix
+	// NetworkSet created/managed by this controller will have following name prefix
 	NetworkSetNamePrefix = "kse."
 
-	//HashedNameLength is the length of hashed service name
+	// HashedNameLength is the length of hashed service name
 	HashedNameLength = 10
 )
 
@@ -65,8 +65,7 @@ func (e *ErrorServiceMustBeIgnored) Error() string {
 	return e.err
 }
 
-type serviceConverter struct {
-}
+type serviceConverter struct{}
 
 // NewServiceConverter Constructor for serviceConverter
 func NewServiceConverter() Converter {
@@ -79,7 +78,7 @@ func (s *serviceConverter) isServiceToBeExcluded(service *corev1.Service) bool {
 	clog := log.WithField("key", key)
 
 	if len(service.Spec.Selector) != 0 {
-		clog.Info("Service has not empty selector. Ignoring it")
+		clog.Debug("Service has not empty selector. Ignoring it")
 		return true
 	}
 
@@ -173,7 +172,7 @@ func (s *serviceConverter) k8sServiceToNetworkSet(service *corev1.Service) (*mod
 		ns.ObjectMeta.Annotations[NsPortsAnnotation] = ""
 		ns.ObjectMeta.Annotations[NsProtocolsAnnotation] = ""
 
-		//Collect ports && protocol
+		// Collect ports && protocol
 		ports := make([]string, len(service.Spec.Ports))
 		protocols := make([]string, len(service.Spec.Ports))
 		for i := range service.Spec.Ports {
@@ -217,8 +216,7 @@ func (s *serviceConverter) k8sServiceToNetworkSet(service *corev1.Service) (*mod
 	}, nil
 }
 
-type endpointConverter struct {
-}
+type endpointConverter struct{}
 
 // NewEndpointConverter Constructor for endpointConverter
 func NewEndpointConverter() Converter {
@@ -277,8 +275,8 @@ func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*mode
 	key := s.GetKey(ep)
 	nsNamespace, nsName := s.DeleteArgsFromKey(key)
 
-	//TODO: mgianluc: what if
-	//1) Endpoints configuration does not match Service one, for instance Endpoint ports is different than Service targetPorts
+	// TODO: mgianluc: what if
+	// 1) Endpoints configuration does not match Service one, for instance Endpoint ports is different than Service targetPorts
 
 	// Create the NetworkSet: only fields used are name, namespace and subsets.
 	// If any other field is used when converting from Endpoints to NetworkSet, change also onEndpointsUpdate
@@ -288,9 +286,9 @@ func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*mode
 		Namespace: nsNamespace,
 	}
 
-	//Note that a NetworkSet does not include port and protocol information for each endpoint IP
-	//and they could be different for each endpoint in the service.
-	//We are collecting only IP addresses, ignoring ports
+	// Note that a NetworkSet does not include port and protocol information for each endpoint IP
+	// and they could be different for each endpoint in the service.
+	// We are collecting only IP addresses, ignoring ports
 	ipAddressMaps := make(map[string]bool)
 	for _, subset := range ep.Subsets {
 		for _, address := range subset.Addresses {

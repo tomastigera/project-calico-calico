@@ -3,8 +3,8 @@
 #################################################################################################
 
 # The version of calico/go-build and calico/base to use.
-GO_BUILD_VER=1.24.3-llvm18.1.8-k8s1.32.4
-CALICO_BASE_VER=ubi9-1746723662
+GO_BUILD_VER=1.24.3-llvm18.1.8-k8s1.32.5
+CALICO_BASE_VER=ubi9-1744398299
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
@@ -24,6 +24,11 @@ KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
 KIND_VERSION=v0.25.0
 GITHUB_CLI_VERSION=2.26.0
 GOTESTSUM_VERSION=v1.12.2
+
+# This gets embedded into node as the Calico version, the Enterprise release
+# is based off of. This should be updated everytime a new opensource Calico
+# release is merged into node-private.
+CALICO_VERSION=v3.30.1
 
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
