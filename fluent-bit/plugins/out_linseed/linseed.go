@@ -3,9 +3,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -24,9 +26,10 @@ import (
 import "C"
 
 const (
-	// This is the default net.connect_timeout suggested by the fluent-bit documentation.
+	// This is the default network configuration suggested by the fluent-bit documentation.
 	// https://docs.fluentbit.io/manual/administration/networking#configuration-options
-	defaultTimeout = 10 * time.Second
+	defaultConnectTimeout = 10 * time.Second
+	defaultTimeout        = 30 * time.Second
 )
 
 var (
@@ -70,6 +73,9 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 	client = &http.Client{
 		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return net.DialTimeout(network, addr, defaultConnectTimeout)
+			},
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecureSkipVerify,
 			},

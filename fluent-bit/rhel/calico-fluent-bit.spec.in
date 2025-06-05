@@ -108,7 +108,8 @@ rm -rvf %{buildroot}%{_includedir}
 
 %changelog
 * Wed Jun 4 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.3-1
-- Set request timeout for linseed out plugin to 10 seconds
+- Set the maximum connection timeout for linseed out plugin to 10 seconds
+- Set the overall request timeout for linseed out plugin to 30 seconds
 - Update version to 4.0.3
 
 * Thu Mar 27 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.10-1
