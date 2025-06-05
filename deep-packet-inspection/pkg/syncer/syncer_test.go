@@ -27,20 +27,19 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
 )
 
 var _ = Describe("Syncer", func() {
-
 	var ctx context.Context
-	var nodename = "127.0.0.1"
-	var healthCh = make(chan bool)
+	nodename := "127.0.0.1"
+	healthCh := make(chan bool)
 	var cfg apiconfig.CalicoAPIConfig
 	var calicoClient clientv3.Interface
 	var k8sClientset *kubernetes.Clientset
-	var namespace = "test-dpi"
+	namespace := "test-dpi"
 	var err error
 	name1 := "test-dpi-1"
 	name2 := "test-dpi-2"
@@ -239,7 +238,7 @@ var _ = Describe("Syncer", func() {
 		typhaConfig := syncclientutils.ReadTyphaConfig([]string{"DPI_"})
 		if syncclientutils.MustStartSyncerClientIfTyphaConfigured(
 			&typhaConfig, syncproto.SyncerTypeDPI,
-			buildinfo.GitVersion, nodename, fmt.Sprintf("dpi %s", buildinfo.GitVersion),
+			buildinfo.Version, nodename, fmt.Sprintf("dpi %s", buildinfo.Version),
 			s,
 		) {
 		} else {
