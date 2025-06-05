@@ -1,8 +1,45 @@
-# Lines starting with '#' are comments.
-# Each line is a file pattern followed by one or more owners.
+# For more information on the CODEOWNERS file format, see:
+# https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-code-owners
 
-# By default, changes require review from the core maintainers.
-*             @projectcalico/core-maintainers
+# Changes to this CODEOWNERS file will be reviewed by the codeowners-reviewers to help monitor and align 
+# on code ownership of this repo over time. 
+CODEOWNERS @tigera/codeowners-reviewers
 
-# The docs team will be the default owners for the docs directory.
-calico/*       @docs
+# The following require review from the oss-merge-queue-reviewers group because they impact merges from OSS. 
+# This is regardless of which team is the primary committer to these paths - additional reviewers may be 
+# needed for business logic. 
+/api/** @tigera/oss-merge-queue-reviewers 
+/apiserver/** @tigera/oss-merge-queue-reviewers
+/app-policy/** @tigera/oss-merge-queue-reviewers
+/calico/** @tigera/oss-merge-queue-reviewers
+/calicoctl/** @tigera/oss-merge-queue-reviewers
+/charts/** @tigera/oss-merge-queue-reviewers
+/cni-plugin/** @tigera/oss-merge-queue-reviewers
+/confd/** @tigera/oss-merge-queue-reviewers
+/crypto/** @tigera/oss-merge-queue-reviewers
+/devstack/** @tigera/oss-merge-queue-reviewers
+/e2e/** @tigera/oss-merge-queue-reviewers
+/felix/** @tigera/oss-merge-queue-reviewers
+/goldmane/** @tigera/oss-merge-queue-reviewers
+/guardian/** @tigera/oss-merge-queue-reviewers
+/hack/** @tigera/oss-merge-queue-reviewers
+/key-cert-provisioner/** @tigera/oss-merge-queue-reviewers
+/kube-controllers/** @tigera/oss-merge-queue-reviewers
+/lib/** @tigera/oss-merge-queue-reviewers
+/libcalico-go/** @tigera/oss-merge-queue-reviewers
+/licenses/** @tigera/oss-merge-queue-reviewers
+/manifests/** @tigera/oss-merge-queue-reviewers
+/networking-calico/** @tigera/oss-merge-queue-reviewers
+/node/** @tigera/oss-merge-queue-reviewers
+/pkg/** @tigera/oss-merge-queue-reviewers
+/pod2daemon/** @tigera/oss-merge-queue-reviewers
+/process/** @tigera/oss-merge-queue-reviewers
+/release/** @tigera/oss-merge-queue-reviewers
+/test-tools/mocknode/** @tigera/oss-merge-queue-reviewers
+/third_party/envoy-* @tigera/oss-merge-queue-reviewers
+/typha/** @tigera/oss-merge-queue-reviewers
+/whisker/** @tigera/oss-merge-queue-reviewers
+/whisker-backend/** @tigera/oss-merge-queue-reviewers
+
+/metadata.mk @tigera/oss-merge-queue-reviewers
+/lib.Makefile @tigera/oss-merge-queue-reviewers
