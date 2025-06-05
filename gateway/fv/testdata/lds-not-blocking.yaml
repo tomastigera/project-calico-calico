@@ -31,9 +31,9 @@ resources:
                 cluster_name: ext_proc-grpc-service
               timeout: 10s
               initial_metadata:
-                - key: directivesJson
-                  value: "[\"Include @coraza.conf-recommended\", \"Include @crs-setup.conf.example\", \"Include @owasp_crs/*.conf\", \"SecRuleEngine DetectionOnly\", \"SecAction \\\"id:900220,phase:1,nolog,pass,t:none,setvar:'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/grpc| |application/grpc+proto| |application/grpc+json| |application/octet-stream|'\\\"\", \"SecRuleRemoveById 920350\"]"
-            processing_mode: 
+              - key: directivesJson
+                value: "[\"Include @coraza.conf-recommended\", \"Include @crs-setup.conf.example\", \"Include @owasp_crs/*.conf\", \"SecRuleEngine DetectionOnly\", \"SecAction \\\"id:900220,phase:1,nolog,pass,t:none,setvar:'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/grpc| |application/grpc+proto| |application/grpc+json| |application/octet-stream|'\\\"\", \"SecRuleRemoveById 920350\"]"
+            processing_mode:
               request_header_mode: SEND
               response_header_mode: SEND
               request_body_mode: STREAMED

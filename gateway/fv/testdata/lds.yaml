@@ -30,7 +30,7 @@ resources:
               envoy_grpc:
                 cluster_name: ext_proc-grpc-service
               timeout: 10s
-            processing_mode: 
+            processing_mode:
               request_header_mode: SEND
               response_header_mode: SEND
               request_body_mode: STREAMED

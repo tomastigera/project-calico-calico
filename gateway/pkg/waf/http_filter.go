@@ -96,17 +96,15 @@ func newWAFServer(opts ServerOptions, directives []string, logger func(*proto.WA
 	return waf.New(wafRulesetRootFS, nil, directives, false, events)
 }
 
-func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) error {
+func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) {
 	logrus.Debugf("WAF directives: %v", directives)
 	wafServer, err := newWAFServer(f.options, directives, f.logger)
 	if err != nil {
 		logrus.Errorf("Error creating WAF Server with new config: %#v", err)
-		return err
 	} else {
 		logrus.Infof("Updating WAF Server with new directives: %#v", directives)
 		f.wafServer = wafServer
 	}
-	return nil
 }
 
 func (f *WAFHTTPFilter) Start() error {
@@ -281,7 +279,6 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		go s.UpdateWAFConfig(directives)
 	}
 
-	wafServer := s.wafServer
 	for {
 		select {
 		case <-ctx.Done():
@@ -305,7 +302,7 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
 			// Use latest wafServer in case there was a config change since handlingthe previous request.
 			// We only do that as part of ProcessingRequest_RequestHeaders as it is the first step if the request lifecycle.
-			wafServer = s.wafServer
+			wafServer := s.wafServer
 			blockedByWAF := false
 
 			headersList := v.RequestHeaders.Headers.GetHeaders()
