@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 func TestQueryResponse(t *testing.T) {
@@ -24,10 +22,10 @@ func TestQueryResponse(t *testing.T) {
 
 		t.Run("no columns set", func(t *testing.T) {
 			subject := QueryResponse{
-				Documents: slices.Map([]map[string]string{
+				Documents: []QueryResponseDocument{
 					{"test-key1": "test-value1"},
 					{"test-key2": "test-value2"},
-				}, func(m map[string]string) any { return m }),
+				},
 			}
 
 			w := &bytes.Buffer{}
@@ -39,9 +37,9 @@ func TestQueryResponse(t *testing.T) {
 
 		t.Run("document results", func(t *testing.T) {
 			subject := QueryResponse{
-				Documents: slices.Map([]map[string]string{
+				Documents: []QueryResponseDocument{
 					{"test-key1-0": "test-value1-0", "test-key1-1": "test-value1-1", "test-key1-2": "test-value1-2"},
-				}, func(m map[string]string) any { return m }),
+				},
 			}
 
 			testCases := []struct {
@@ -87,18 +85,18 @@ func TestQueryResponse(t *testing.T) {
 
 			subject := QueryResponse{
 				GroupValues: []QueryResponseGroupValue{
-					{Key: "g0:0", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+					{Key: "g0:0", NestedValues: []QueryResponseGroupValue{
 						{Key: "g0:0-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "100"}}},
 						{Key: "g0:0-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "200"}}},
-					})},
-					{Key: "g0:1", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+					}},
+					{Key: "g0:1", NestedValues: []QueryResponseGroupValue{
 						{Key: "g0:1-g1:0", Aggregations: nil},
 						{Key: "g0:1-g1:1", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "300"}}},
-					})},
-					{Key: "g0:2", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+					}},
+					{Key: "g0:2", NestedValues: []QueryResponseGroupValue{
 						{Key: "g0:2-g1:0", Aggregations: QueryResponseAggregations{"agg1": QueryResponseValueAsString{AsString: "400"}}},
 						{Key: "g0:2-g1:1", Aggregations: nil},
-					})},
+					}},
 					{Key: "g0:3", NestedValues: nil},
 				},
 			}
@@ -120,13 +118,13 @@ func TestQueryResponse(t *testing.T) {
 		t.Run("groups and aggregations results", func(t *testing.T) {
 			subject := QueryResponse{
 				GroupValues: []QueryResponseGroupValue{
-					{Key: "g0:0", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+					{Key: "g0:0", NestedValues: []QueryResponseGroupValue{
 						{Key: "g0:0:g1:0", Aggregations: map[string]QueryResponseValueAsString{
 							"agg1": {AsString: "100"},
 							"agg2": {AsString: "200"},
 						}},
-					})},
-					{Key: "g0:1", NestedValues: slices.ToSliceAny([]QueryResponseGroupValue{
+					}},
+					{Key: "g0:1", NestedValues: []QueryResponseGroupValue{
 						{Key: "g0:1:g1:0", Aggregations: map[string]QueryResponseValueAsString{
 							"agg1": {AsString: "300"},
 							"agg2": {AsString: "400"},
@@ -135,7 +133,7 @@ func TestQueryResponse(t *testing.T) {
 							"agg1": {AsString: "500"},
 							"agg2": {AsString: "600"},
 						}},
-					})},
+					}},
 				},
 			}
 

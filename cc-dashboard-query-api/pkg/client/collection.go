@@ -31,7 +31,5 @@ type CollectionGroupBy struct {
 	Field CollectionFieldName `json:"field"`
 
 	// Nested A slice of nested CollectionGroupBy
-	// TODO: set type to []CollectionGroupBy once tds-apiserver/pkg/http/handleradapters/openapi.go gets
-	// fixed to not panic with a slice field of the same type as the parent struct
-	Nested []any `json:"nested,omitempty"`
+	Nested []CollectionGroupBy `json:"nested,omitempty"`
 }

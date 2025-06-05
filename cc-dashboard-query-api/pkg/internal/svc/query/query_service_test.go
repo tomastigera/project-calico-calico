@@ -1310,8 +1310,8 @@ func TestQueryService(t *testing.T) {
 	})
 }
 
-func documentToFlowLogID(d any) string {
-	return d.(lsv1.FlowLog).ID
+func documentToFlowLogID(d client.QueryResponseDocument) string {
+	return d["id"].(string)
 }
 
 func jsonMarshal(t *testing.T, v interface{}) []byte {

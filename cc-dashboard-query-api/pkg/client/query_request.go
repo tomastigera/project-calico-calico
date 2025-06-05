@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/tigera/tds-apiserver/lib/slices"
+	"strconv"
 )
 
 // QueryRequest A query request
@@ -53,6 +53,10 @@ const (
 	CriterionTypeRelativeTimeRange = CriterionType("relativeTimeRange")
 )
 
+type QueryRequestFilterCriterionValue struct {
+	value any
+}
+
 // QueryRequestFilterCriterion A document filter criterion
 type QueryRequestFilterCriterion struct {
 
@@ -66,7 +70,7 @@ type QueryRequestFilterCriterion struct {
 	Pattern string `json:"pattern,omitempty"`
 
 	// Value Expected document Field value for the equals criterion
-	Value any `json:"value,omitempty"`
+	Value QueryRequestFilterCriterionValue `json:"value,omitempty"`
 
 	// Values Expected document values for the in criterion
 	Values []string `json:"values,omitempty"`
@@ -84,9 +88,7 @@ type QueryRequestFilterCriterion struct {
 	To string `json:"to,omitempty"`
 
 	// Criteria A list of QueryRequestFilterCriterion for CriterionType that support child criteria
-	// TODO: set type to []QueryRequestFilterCriterion once tds-apiserver/pkg/http/handleradapters/openapi.go gets
-	// fixed to not panic with a slice field of the same type as the parent struct
-	Criteria []any `json:"criteria,omitempty"`
+	Criteria []QueryRequestFilterCriterion `json:"criteria,omitempty"`
 }
 
 // QueryRequestGroup An aggregation group
@@ -133,19 +135,22 @@ type QueryRequestAggregationFunction struct {
 	Type AggregationFunctionType `json:"type"`
 }
 
-// GetCriteria returns a QueryRequestFilterCriterion criteria field
-func (c QueryRequestFilterCriterion) GetCriteria() ([]QueryRequestFilterCriterion, error) {
-	// See QueryRequestFilterCriterion.Criteria definition, this may be removed once QueryRequestFilterCriterion.Criteria
-	// type is changed
-	return slices.MapOrError(c.Criteria, func(criterionAny any) (QueryRequestFilterCriterion, error) {
-		jsonCriterion, err := json.Marshal(criterionAny)
-		if err != nil {
-			return QueryRequestFilterCriterion{}, err
-		}
-		var criterion QueryRequestFilterCriterion
-		if err := json.Unmarshal(jsonCriterion, &criterion); err != nil {
-			return QueryRequestFilterCriterion{}, err
-		}
-		return criterion, nil
-	})
+func (v *QueryRequestFilterCriterionValue) UnmarshalJSON(data []byte) error {
+
+	var valueString string
+	if val, err := strconv.ParseInt(string(data), 10, 64); err == nil {
+		v.value = val
+	} else if val, err := strconv.ParseFloat(string(data), 64); err == nil {
+		v.value = val
+	} else if err := json.Unmarshal(data, &valueString); err == nil {
+		v.value = valueString
+	} else {
+		return err
+	}
+
+	return nil
+}
+
+func (v QueryRequestFilterCriterionValue) Value() any {
+	return v.value
 }

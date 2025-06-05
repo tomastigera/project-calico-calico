@@ -206,6 +206,10 @@ components:
       properties:
         field:
           type: string
+        nested:
+          items:
+            $ref: '#/components/schemas/CollectionGroupBy'
+          type: array
       type: object
     Dashboard:
       properties:
@@ -321,9 +325,11 @@ components:
           type: array
         maxDocs:
           format: int
+          nullable: true
           type: string
         pageNum:
           format: int
+          nullable: true
           type: string
       type: object
     QueryRequestFilter:
@@ -335,6 +341,10 @@ components:
       type: object
     QueryRequestFilterCriterion:
       properties:
+        criteria:
+          items:
+            $ref: '#/components/schemas/QueryRequestFilterCriterion'
+          type: array
         field:
           type: string
         from:
@@ -349,10 +359,14 @@ components:
           type: string
         type:
           type: string
+        value:
+          $ref: '#/components/schemas/QueryRequestFilterCriterionValue'
         values:
           items:
             type: string
           type: array
+      type: object
+    QueryRequestFilterCriterionValue:
       type: object
     QueryRequestGroup:
       properties:
@@ -364,7 +378,9 @@ components:
           format: int
           type: string
         orderBy:
-          $ref: '#/components/schemas/QueryRequestGroupOrder'
+          oneOf:
+          - nullable: true
+          - $ref: '#/components/schemas/QueryRequestGroupOrder'
       type: object
     QueryRequestGroupOrder:
       properties:
@@ -380,6 +396,11 @@ components:
         aggregations:
           additionalProperties: {}
           type: object
+        documents:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
         groupValues:
           items:
             $ref: '#/components/schemas/QueryResponseGroupValue'
@@ -394,6 +415,10 @@ components:
           type: object
         key:
           type: string
+        nestedValues:
+          items:
+            $ref: '#/components/schemas/QueryResponseGroupValue'
+          type: array
       type: object
     QueryResponseTotals:
       properties:

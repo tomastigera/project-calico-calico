@@ -68,6 +68,6 @@ func mapCollectionField(from collections.CollectionField) (client.CollectionFiel
 func mapCollectionGroupBy(from collections.GroupBy) client.CollectionGroupBy {
 	return client.CollectionGroupBy{
 		Field:  client.CollectionFieldName(from.Field()),
-		Nested: slices.ToSliceAny(slices.Map(from.Nested(), mapCollectionGroupBy)),
+		Nested: slices.Map(from.Nested(), mapCollectionGroupBy),
 	}
 }

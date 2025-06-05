@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -205,7 +206,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		}
 	}
 
-	queryResponse.Documents = slices.Map(
+	queryResponse.Documents, err = slices.MapOrError(
 		slices.SortByComparing( // sort desc by start_time
 			queryResult.Documents,
 			comparators.Func[result.QueryResultDocument](func(doc1, doc2 result.QueryResultDocument) int {
@@ -215,9 +216,10 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 					return -1
 				}
 				return 1
-			})), func(doc result.QueryResultDocument) any {
-			return doc.Content
-		})
+			})), mapResultDocument)
+	if err != nil {
+		return client.QueryResponse{}, err
+	}
 
 	if len(queryResponse.Documents) > maxDocuments {
 		queryResponse.Documents = queryResponse.Documents[:maxDocuments]
@@ -301,15 +303,15 @@ func (s *QueryService) mapClientCriterion(
 		if err != nil {
 			return nil, err
 		}
-		return filters.NewEquals(field, from.Value, negate), nil
+		return filters.NewEquals(field, from.Value.Value(), negate), nil
 	case client.CriterionTypeStartsWith:
 		field, err := getCollectionField(from.Field)
 		if err != nil {
 			return nil, err
 		}
-		value, ok := from.Value.(string)
+		value, ok := from.Value.Value().(string)
 		if !ok {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid value '%v' for criterion type '%s'", from.Value, from.Type))
+			return nil, httpreply.ToBadRequest(fmt.Sprintf("invalid value '%v' for criterion type '%s'", from.Value.Value(), from.Type))
 		}
 		return filters.NewStartsWith(field, value, negate), nil
 	case client.CriterionTypeExists:
@@ -337,11 +339,7 @@ func (s *QueryService) mapClientCriterion(
 		}
 		return filters.NewWildcard(field, from.Pattern, negate), nil
 	case client.CriterionTypeOr:
-		fromCriteria, err := from.GetCriteria()
-		if err != nil {
-			return nil, httpreply.ToBadRequest(fmt.Sprintf("failed to parse or criteria: %v", err))
-		}
-		criteria, err := slices.MapOrError(fromCriteria, func(subCriterion client.QueryRequestFilterCriterion) (filters.Criterion, error) {
+		criteria, err := slices.MapOrError(from.Criteria, func(subCriterion client.QueryRequestFilterCriterion) (filters.Criterion, error) {
 			return s.mapClientCriterion(ctx, subCriterion, negate, queryCollection)
 		})
 		if err != nil {
@@ -511,13 +509,9 @@ func mapClientAggregation(
 
 func mapResultGroupValues(groupIndex int, repositoryRequestGroups groups.Groups, groupValues groups.GroupValues) []client.QueryResponseGroupValue {
 	values := slices.Map(groupValues, func(from *groups.GroupValue) client.QueryResponseGroupValue {
-		var nestedValues []any
+		var nestedValues []client.QueryResponseGroupValue
 		if from.SubGroupValues != nil {
-			nestedValues = slices.Map(
-				mapResultGroupValues(groupIndex+1, repositoryRequestGroups, from.SubGroupValues),
-				func(from client.QueryResponseGroupValue) any {
-					return from
-				})
+			nestedValues = mapResultGroupValues(groupIndex+1, repositoryRequestGroups, from.SubGroupValues)
 		}
 		return client.QueryResponseGroupValue{
 			Key:          from.Key,
@@ -556,6 +550,20 @@ func mapResultAggregations(resultAggregations aggregations.AggregationValues) cl
 		clientAggregations[aggKey] = responseValue
 	}
 	return clientAggregations
+}
+
+func mapResultDocument(doc result.QueryResultDocument) (client.QueryResponseDocument, error) {
+	jsonRepr, err := json.Marshal(doc.Content)
+	if err != nil {
+		return client.QueryResponseDocument{}, err
+	}
+
+	queryResponseDoc := make(client.QueryResponseDocument)
+	if err = json.Unmarshal(jsonRepr, &queryResponseDoc); err != nil {
+		return client.QueryResponseDocument{}, err
+	}
+
+	return queryResponseDoc, nil
 }
 
 func parseDateRangeTime(dateRangeTime string) (time.Time, error) {

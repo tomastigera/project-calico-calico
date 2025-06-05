@@ -18,10 +18,12 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 type QueryResponse struct {
 	Totals QueryResponseTotals `json:"totals"`
 
-	Documents    []any                     `json:"documents,omitempty"`
+	Documents    []QueryResponseDocument   `json:"documents,omitempty"`
 	Aggregations QueryResponseAggregations `json:"aggregations,omitempty"`
 	GroupValues  []QueryResponseGroupValue `json:"groupValues,omitempty"`
 }
+
+type QueryResponseDocument map[string]any
 
 // QueryResponseTotals Total document results
 type QueryResponseTotals struct {
@@ -38,10 +40,7 @@ type QueryResponseValueAsString struct {
 type QueryResponseGroupValue struct {
 	Key          string                    `json:"key"`
 	Aggregations QueryResponseAggregations `json:"aggregations,omitempty"`
-
-	// TODO: set type to []QueryResponseGroupValue once tds-apiserver/pkg/http/handleradapters/openapi.go gets
-	// fixed to not panic with a slice field of the same type as the parent struct
-	NestedValues []any `json:"nestedValues,omitempty"`
+	NestedValues []QueryResponseGroupValue `json:"nestedValues,omitempty"`
 }
 
 type AppendableQueryResponseGroupValue interface {
@@ -152,9 +151,7 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 		var err error
 		if len(groupValue.NestedValues) > 0 {
 			// process subgroup values
-			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, slices.Map(groupValue.NestedValues, func(gv any) QueryResponseGroupValue {
-				return gv.(QueryResponseGroupValue)
-			}))
+			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, groupValue.NestedValues)
 		} else {
 			// process aggregations if no subgroup values are available
 			err = q.writeCSVRecord(csvWriter, fields, func(field string) any {
