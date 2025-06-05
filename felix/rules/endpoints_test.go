@@ -1365,6 +1365,9 @@ var _ = Describe("Endpoints", func() {
 						EgressPacketBurst:  2000,
 						IngressPacketBurst: 4000,
 					},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -1460,6 +1463,9 @@ var _ = Describe("Endpoints", func() {
 						EgressMaxConnections:  10,
 						IngressMaxConnections: 20,
 					},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
