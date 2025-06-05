@@ -54,6 +54,15 @@ func nodeTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"single hep - non-cluster hosts are excluded from node cache",
+			[]resourcemgr.ResourceObject{hep5_nonclusterhost},
+			client.QueryNodesReq{},
+			&client.QueryNodesResp{
+				Count: 0,
+				Items: []client.Node{},
+			},
+		},
+		{
 			"single wep that will be filtered from policy out because it has no IPNetworks configured",
 			[]resourcemgr.ResourceObject{wep2_n1_ns1_filtered_out},
 			client.QueryNodesReq{},
@@ -134,7 +143,7 @@ func nodeTestQueryData() []testQueryData {
 		},
 		{
 			"multiple heps",
-			[]resourcemgr.ResourceObject{hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled},
+			[]resourcemgr.ResourceObject{hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, hep5_nonclusterhost},
 			client.QueryNodesReq{},
 			&client.QueryNodesResp{
 				Count: 3,
@@ -144,7 +153,7 @@ func nodeTestQueryData() []testQueryData {
 		{
 			"multiple nodes, weps, heps",
 			[]resourcemgr.ResourceObject{
-				node1, node2, hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2,
+				node1, node2, hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, hep5_nonclusterhost, wep4_n2_ns1, wep3_n1_ns2,
 				wep1_n1_ns1, wep5_n3_ns2_unlabelled,
 			},
 			client.QueryNodesReq{},

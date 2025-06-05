@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 package client
 
 import (
@@ -746,25 +746,19 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 	}
 
 	r := n.GetResource()
-
 	if r != nil {
-		nr := r.(*libapi.Node)
-
-		nodeAddresses := getNodeIPAddresses(nr)
-
-		node.Addresses = nodeAddresses
-
-		if nr.Spec.BGP != nil {
-
-			if len(nr.Spec.BGP.IPv4Address) > 0 {
-				node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv4Address)
-			}
-			if len(nr.Spec.BGP.IPv6Address) > 0 {
-				node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv6Address)
+		if nr, ok := r.(*libapi.Node); ok {
+			node.Addresses = getNodeIPAddresses(nr)
+			if nr.Spec.BGP != nil {
+				if len(nr.Spec.BGP.IPv4Address) > 0 {
+					node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv4Address)
+				}
+				if len(nr.Spec.BGP.IPv6Address) > 0 {
+					node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv6Address)
+				}
 			}
 		}
 	}
-
 	return node
 }
 

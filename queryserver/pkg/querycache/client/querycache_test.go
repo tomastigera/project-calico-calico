@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 package client
 
 import (
@@ -71,32 +71,27 @@ var _ = Describe("Tests QueryNodeReq", func() {
 		})
 
 		It("Populates Node.Addresses with NodeSpec.Addresses when they are received from API", func() {
-			localNodeAddressses := []v3.NodeAddress{
+			localNodeAddresses := []v3.NodeAddress{
 				{Address: LocalIPV4Address},
 				{Address: LocalIPV6Address},
 			}
 
-			nodeWithBGPIPs := &mockAPINode{}
-
 			getResource = func() api.Resource {
 				n := v3.NewNode()
 				n.Spec = v3.NodeSpec{
-					Addresses: localNodeAddressses,
+					Addresses: localNodeAddresses,
 				}
-
 				return n
 			}
 
+			nodeWithBGPIPs := &mockAPINode{}
 			result := testCachedQuery.apiNodeToQueryNode(nodeWithBGPIPs)
-			Expect(len(result.Addresses)).To(Equal(2))
+			Expect(result.Addresses).To(HaveLen(2))
 			Expect(result.Addresses).To(ContainElement(LocalIPV4Address))
 			Expect(result.Addresses).To(ContainElement(LocalIPV6Address))
 		})
 
 		It("Populates Node.BGPIPAddresses with NodeSpec.BGPIAddresses when they are received from API", func() {
-
-			nodeWithBGPIPs := &mockAPINode{}
-
 			getResource = func() api.Resource {
 				n := v3.NewNode()
 				n.Spec = v3.NodeSpec{
@@ -105,12 +100,12 @@ var _ = Describe("Tests QueryNodeReq", func() {
 						IPv6Address: LocalIPV6Address,
 					},
 				}
-
 				return n
 			}
 
+			nodeWithBGPIPs := &mockAPINode{}
 			result := testCachedQuery.apiNodeToQueryNode(nodeWithBGPIPs)
-			Expect(len(result.BGPIPAddresses)).To(Equal(2))
+			Expect(result.BGPIPAddresses).To(HaveLen(2))
 			Expect(result.BGPIPAddresses).To(ContainElement(LocalIPV4Address))
 			Expect(result.BGPIPAddresses).To(ContainElement(LocalIPV6Address))
 		})

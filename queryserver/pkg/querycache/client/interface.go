@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 package client
 
 import (
@@ -79,7 +79,7 @@ type QueryNodesResp struct {
 type Node struct {
 	Name                 string   `json:"name"`
 	BGPIPAddresses       []string `json:"bgpIPAddresses"`
-	Addresses            []string `json:"addressses"`
+	Addresses            []string `json:"addresses"`
 	NumHostEndpoints     int      `json:"numHostEndpoints"`
 	NumWorkloadEndpoints int      `json:"numWorkloadEndpoints"`
 }
