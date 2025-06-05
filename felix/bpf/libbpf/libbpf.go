@@ -26,7 +26,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/projectcalico/calico/felix/bpf/bpfutils"
+	"github.com/projectcalico/calico/felix/bpf/utils"
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/../../bpf-gpl/libbpf/src -I${SRCDIR}/../../bpf-gpl/libbpf/include/uapi -I${SRCDIR}/../../bpf-gpl -Werror
@@ -109,7 +109,7 @@ func (m *Map) IsJumpMap() bool {
 }
 
 func OpenObject(filename string) (*Obj, error) {
-	bpfutils.IncreaseLockedMemoryQuota()
+	utils.IncreaseLockedMemoryQuota()
 	cFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cFilename))
 	obj, err := C.bpf_obj_open(cFilename)
@@ -128,7 +128,7 @@ func OpenObjectWithLogBuffer(filename string, buf []byte) (*Obj, error) {
 		return OpenObject(filename)
 	}
 
-	bpfutils.IncreaseLockedMemoryQuota()
+	utils.IncreaseLockedMemoryQuota()
 	cFilename := C.CString(filename)
 
 	cBuf := (*C.char)(unsafe.Pointer(&buf[0]))
@@ -472,6 +472,7 @@ func (t *TcGlobalData) Set(m *Map) error {
 		C.ushort(t.Profiling),
 		C.uint(t.NatIn),
 		C.uint(t.NatOut),
+		C.uint(t.OverlayTunnelID),
 		C.ushort(t.EgwVxlanPort),
 		C.ushort(t.EgwHealthPort),
 		C.uint(t.LogFilterJmp),

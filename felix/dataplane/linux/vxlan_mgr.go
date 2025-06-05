@@ -27,6 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	bpfutils "github.com/projectcalico/calico/felix/bpf/utils"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ip"
@@ -80,8 +81,23 @@ type vxlanManager struct {
 	logCtx     *logrus.Entry
 	opRecorder logutils.OpRecorder
 
+	// In dual-stack setup in ebpf mode, for the sake of simplicity, we still
+	// run 2 instance of the vxlan manager, one for each ip version - like in
+	// the *tables mode. However, they share the same device. The device is
+	// created and maintained by the V4 manager and the V6 manager is
+	// responsible only for assigning the right V6 IP to the device.
+	maintainIPOnly bool
+
 	// Enterprise additions
 	conflictHandler VXLANConflictHandler
+}
+
+type vxlanMgrOption func(m *vxlanManager)
+
+func vxlanMgrWithDualStack() vxlanMgrOption {
+	return func(m *vxlanManager) {
+		m.maintainIPOnly = true
+	}
 }
 
 type VXLANFDB interface {
@@ -97,6 +113,7 @@ func newVXLANManager(
 	opRecorder logutils.OpRecorder,
 	ipVersion uint8,
 	mtu int,
+	opts ...vxlanMgrOption,
 ) *vxlanManager {
 	nlHandle, _ := netlinkshim.NewRealNetlink()
 	return newVXLANManagerWithShims(
@@ -110,6 +127,7 @@ func newVXLANManager(
 		nlHandle,
 		ipVersion,
 		mtu,
+		opts...,
 	)
 }
 
@@ -124,9 +142,10 @@ func newVXLANManagerWithShims(
 	nlHandle netlinkHandle,
 	ipVersion uint8,
 	mtu int,
+	opts ...vxlanMgrOption,
 ) *vxlanManager {
 	logCtx := logrus.WithField("ipVersion", ipVersion)
-	mgr := &vxlanManager{
+	m := &vxlanManager{
 		ipsetsDataplane: ipsetsDataplane,
 		ipSetMetadata: ipsets.IPSetMetadata{
 			MaxSize: dpConfig.MaxIPSetSize,
@@ -156,21 +175,25 @@ func newVXLANManagerWithShims(
 		opRecorder:        opRecorder,
 	}
 
-	mgr.conflictHandler = VXLANConflictHandler{
+	m.conflictHandler = VXLANConflictHandler{
 		ipVersion: ipVersion,
 		logCtx:    logCtx,
 		vtepAccessor: func(node string) *proto.VXLANTunnelEndpointUpdate {
-			if mgr.hostname == node {
-				return mgr.getLocalVTEP()
+			if m.hostname == node {
+				return m.getLocalVTEP()
 			} else {
-				return mgr.vtepsByNode[node]
+				return m.vtepsByNode[node]
 			}
 		},
 		vtepRoutesByDest: map[string]*proto.RouteUpdate{},
 		nodesByVTEPMAC:   map[string]set.Set[string]{},
 	}
 
-	return mgr
+	for _, o := range opts {
+		o(m)
+	}
+
+	return m
 }
 
 // isRemoteTunnelRoute returns true if the route update signifies a need to program
@@ -419,6 +442,7 @@ func (m *vxlanManager) updateNeighborsAndAllowedSources() {
 		})
 		allowedVXLANSources = append(allowedVXLANSources, parentDeviceIP)
 	}
+
 	m.logCtx.WithField("l2routes", l2routes).Debug("VXLAN manager sending L2 updates")
 	m.fdb.SetVTEPs(l2routes)
 	m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, allowedVXLANSources)
@@ -634,35 +658,44 @@ func (m *vxlanManager) configureVXLANDevice(
 ) error {
 	logCtx := m.logCtx.WithFields(logrus.Fields{"device": m.vxlanDevice})
 	logCtx.Debug("Configuring VXLAN tunnel device")
-	parent, err := m.getParentInterface(localVTEP)
-	if err != nil {
-		return err
-	}
+
 	mac, err := parseMacForIPVersion(localVTEP, m.ipVersion)
 	if err != nil {
 		return err
 	}
-	addr := localVTEP.Ipv4Addr
-	parentDeviceIP := localVTEP.ParentDeviceIp
-	if m.ipVersion == 6 {
-		addr = localVTEP.Ipv6Addr
-		parentDeviceIP = localVTEP.ParentDeviceIpv6
-	}
+
 	la := netlink.NewLinkAttrs()
 	la.Name = m.vxlanDevice
 	la.HardwareAddr = mac
 	vxlan := &netlink.Vxlan{
-		LinkAttrs:    la,
-		VxlanId:      m.vxlanID,
-		Port:         m.vxlanPort,
-		VtepDevIndex: parent.Attrs().Index,
-		SrcAddr:      ip.FromString(parentDeviceIP).AsNetIP(),
+		LinkAttrs: la,
+		Port:      m.vxlanPort,
+	}
+
+	if m.dpConfig.BPFEnabled && bpfutils.BTFEnabled {
+		vxlan.FlowBased = true
+	} else {
+		parent, err := m.getParentInterface(localVTEP)
+		if err != nil {
+			return err
+		}
+		parentDeviceIP := localVTEP.ParentDeviceIp
+		if m.ipVersion == 6 {
+			parentDeviceIP = localVTEP.ParentDeviceIpv6
+		}
+
+		vxlan.VxlanId = m.vxlanID
+		vxlan.VtepDevIndex = parent.Attrs().Index
+		vxlan.SrcAddr = ip.FromString(parentDeviceIP).AsNetIP()
 	}
 
 	// Try to get the device.
 	link, err := m.nlHandle.LinkByName(m.vxlanDevice)
 	if err != nil {
 		m.logCtx.WithError(err).Info("Failed to get VXLAN tunnel device, assuming it isn't present")
+		if m.maintainIPOnly {
+			return err
+		}
 		if err := m.nlHandle.LinkAdd(vxlan); err == syscall.EEXIST {
 			// Device already exists - likely a race.
 			m.logCtx.Debug("VXLAN device already exists, likely created by someone else.")
@@ -676,6 +709,12 @@ func (m *vxlanManager) configureVXLANDevice(
 		if err != nil {
 			return fmt.Errorf("can't locate created vxlan device %v", m.vxlanDevice)
 		}
+	}
+	if m.maintainIPOnly {
+		if err := m.ensureAddressOnLink(localVTEP.Ipv6Addr, link); err != nil {
+			return fmt.Errorf("failed to ensure address of interface: %s", err)
+		}
+		return nil
 	}
 
 	// At this point, we have successfully queried the existing device, or made sure it exists if it didn't
@@ -701,7 +740,7 @@ func (m *vxlanManager) configureVXLANDevice(
 	// Make sure the MTU is set correctly.
 	attrs := link.Attrs()
 	oldMTU := attrs.MTU
-	if oldMTU != mtu {
+	if mtu != 0 && oldMTU != mtu {
 		logCtx.WithFields(logrus.Fields{"old": oldMTU, "new": mtu}).Info("VXLAN device MTU needs to be updated")
 		if err := m.nlHandle.LinkSetMTU(link, mtu); err != nil {
 			m.logCtx.WithError(err).Warn("Failed to set vxlan tunnel device MTU")
@@ -711,6 +750,10 @@ func (m *vxlanManager) configureVXLANDevice(
 	}
 
 	// Make sure the IP address is configured.
+	addr := localVTEP.Ipv4Addr
+	if m.ipVersion == 6 {
+		addr = localVTEP.Ipv6Addr
+	}
 	if err := m.ensureAddressOnLink(addr, link); err != nil {
 		return fmt.Errorf("failed to ensure address of interface: %s", err)
 	}
@@ -804,7 +847,7 @@ func vxlanLinksIncompat(l1, l2 netlink.Link) string {
 		return fmt.Sprintf("vni: %v vs %v", v1.VxlanId, v2.VxlanId)
 	}
 
-	if v1.VtepDevIndex > 0 && v2.VtepDevIndex > 0 && v1.VtepDevIndex != v2.VtepDevIndex {
+	if v1.VtepDevIndex != v2.VtepDevIndex {
 		return fmt.Sprintf("vtep (external) interface: %v vs %v", v1.VtepDevIndex, v2.VtepDevIndex)
 	}
 

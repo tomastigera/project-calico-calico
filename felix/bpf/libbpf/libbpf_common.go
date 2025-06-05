@@ -27,26 +27,28 @@ type IPTDnsGlobalData struct {
 }
 
 type TcGlobalData struct {
-	IfaceName      string
-	HostIPv4       [16]byte
-	IntfIPv4       [16]byte
-	ExtToSvcMark   uint32
-	Tmtu           uint16
-	VxlanPort      uint16
-	PSNatStart     uint16
-	PSNatLen       uint16
-	HostTunnelIPv4 [16]byte
-	VethNS         uint16
-	Flags          uint32
-	WgPort         uint16
-	Wg6Port        uint16
-	Profiling      uint16
-	NatIn          uint32
-	NatOut         uint32
-	EgwVxlanPort   uint16
-	EgwHealthPort  uint16
-	LogFilterJmp   uint32
-	Jumps          [40]uint32
+	IfaceName       string
+	HostIPv4        [16]byte
+	IntfIPv4        [16]byte
+	ExtToSvcMark    uint32
+	Tmtu            uint16
+	VxlanPort       uint16
+	PSNatStart      uint16
+	PSNatLen        uint16
+	HostTunnelIPv4  [16]byte
+	VethNS          uint16
+	Flags           uint32
+	WgPort          uint16
+	Wg6Port         uint16
+	Profiling       uint16
+	NatIn           uint32
+	NatOut          uint32
+	OverlayTunnelID uint32
+	EgwVxlanPort    uint16
+	EgwHealthPort   uint16
+	LogFilterJmp    uint32
+	Jumps           [40]uint32
+
 	HostIPv6       [16]byte
 	IntfIPv6       [16]byte
 	HostTunnelIPv6 [16]byte
