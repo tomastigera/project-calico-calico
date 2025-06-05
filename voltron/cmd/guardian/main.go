@@ -17,10 +17,10 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/version"
 )
 
 const (
@@ -28,9 +28,7 @@ const (
 	EnvConfigPrefix = "GUARDIAN"
 )
 
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
-)
+var versionFlag = flag.Bool("version", false, "Print version information")
 
 // Config is a configuration used for Guardian
 type config struct {
@@ -80,7 +78,7 @@ func main() {
 
 	// For --version use case
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 
@@ -201,7 +199,6 @@ func main() {
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
 		client.WithHTTPProxyURL(proxyURL),
 	)
-
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)
 	}

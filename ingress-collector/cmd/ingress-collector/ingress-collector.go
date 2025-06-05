@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/ingress-collector/pkg/config"
 	"github.com/projectcalico/calico/ingress-collector/pkg/felixclient"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		Version()
+		buildinfo.PrintVersion()
 		return
 	}
 

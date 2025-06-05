@@ -4,7 +4,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -12,20 +11,13 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/license-agent/pkg/config"
 	"github.com/projectcalico/calico/license-agent/pkg/metrics"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 // Below variables are filled out during the build process (using git describe output)
-var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
-var version bool
-
-func PrintBuildVersion() {
-	fmt.Println("************************************")
-	fmt.Println("Version:     ", VERSION)
-	fmt.Println("Build date:  ", BUILD_DATE)
-	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
-	fmt.Println("Git commit:  ", GIT_REVISION)
-	fmt.Println("************************************")
-}
+var (
+	version bool
+)
 
 func init() {
 	// Add a flag to check the version.
@@ -33,10 +25,9 @@ func init() {
 }
 
 func main() {
-
 	flag.Parse()
 	if version {
-		PrintBuildVersion()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 

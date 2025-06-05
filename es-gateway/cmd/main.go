@@ -19,7 +19,7 @@ import (
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 	"github.com/projectcalico/calico/es-gateway/pkg/server"
-	"github.com/projectcalico/calico/es-gateway/pkg/version"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 var (
@@ -40,7 +40,7 @@ func init() {
 
 	// For --version use case (display version information and exit program).
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 
@@ -100,7 +100,6 @@ func init() {
 
 // Start up HTTPS server for ES Gateway.
 func main() {
-
 	if *challengerFlag {
 		runChallenger()
 	} else {

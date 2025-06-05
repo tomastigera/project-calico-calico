@@ -5,8 +5,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 type version struct {
@@ -19,10 +19,10 @@ type version struct {
 // VersionCheck returns the version in json format
 func VersionCheck() http.HandlerFunc {
 	v := version{
-		BuildDate:    config.BuildDate,
-		GitCommit:    config.GitCommit,
-		GitTag:       config.GitTag,
-		BuildVersion: config.BuildVersion,
+		BuildDate:    buildinfo.BuildDate,
+		GitCommit:    buildinfo.GitRevision,
+		GitTag:       buildinfo.Version,
+		BuildVersion: buildinfo.Version,
 	}
 
 	return func(w http.ResponseWriter, req *http.Request) {

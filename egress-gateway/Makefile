@@ -56,8 +56,6 @@ protobuf ../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
 # Building the binary
 ###############################################################################
 
-LDFLAGS = -X main.VERSION=$(GIT_VERSION)
-
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 build-all: $(addprefix bin/egressd-,$(VALIDARCHES))

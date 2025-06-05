@@ -3,7 +3,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/queryserver/pkg/clientmgr"
 	authjwt "github.com/projectcalico/calico/queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/queryserver/queryserver/config"
@@ -25,16 +25,7 @@ import (
 const cfFromEnv = ""
 
 // These are filled out during the build process (using git describe output)
-var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
 var version bool
-
-func PrintVersion() error {
-	fmt.Println("Version:     ", VERSION)
-	fmt.Println("Build date:  ", BUILD_DATE)
-	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
-	fmt.Println("Git commit:  ", GIT_REVISION)
-	return nil
-}
 
 func init() {
 	// Add a flag to check the version.
@@ -44,7 +35,7 @@ func init() {
 func main() {
 	flag.Parse()
 	if version {
-		_ = PrintVersion()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 

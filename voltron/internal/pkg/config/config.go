@@ -11,7 +11,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/projectcalico/calico/voltron/pkg/version"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 const (
@@ -186,7 +186,7 @@ func (cfg Config) String() string {
 
 	// For --version use case
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 

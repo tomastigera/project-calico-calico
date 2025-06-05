@@ -19,11 +19,6 @@ SRC_FILES      = $(shell sh -c "find pkg cmd -name \\*.go") \
 			$(shell find ../libcalico-go/lib -name '*.go') \
 			$(shell find ../licensing/client -name '*.go')
 
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-			-X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-			-X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-			-X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
 ###############################################################################
 # This section builds the output binaries.
 ###############################################################################

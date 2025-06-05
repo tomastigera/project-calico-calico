@@ -22,13 +22,12 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/syncer"
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
-	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
 )
@@ -47,7 +46,7 @@ func main() {
 
 	// For --version use case
 	if *versionFlag {
-		version.Version()
+		buildinfo.PrintVersion()
 		os.Exit(0)
 	}
 
@@ -111,7 +110,7 @@ func main() {
 	typhaConfig := syncclientutils.ReadTyphaConfig([]string{"DPI_"})
 	if syncclientutils.MustStartSyncerClientIfTyphaConfigured(
 		&typhaConfig, syncproto.SyncerTypeDPI,
-		buildinfo.GitVersion, cfg.NodeName, fmt.Sprintf("dpi %s", buildinfo.GitVersion),
+		buildinfo.Version, cfg.NodeName, fmt.Sprintf("dpi %s", buildinfo.GitRevision),
 		syncerCb,
 	) {
 		log.Debug("Using typha syncerClient")

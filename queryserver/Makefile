@@ -30,13 +30,6 @@ SRC_FILES = $(shell find queryserver pkg -type f -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../licensing/client -name '*.go')
 
-# We use -X to insert the version information into the placeholder variables
-# in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
 ###############################################################################
 # BUILD BINARY
 ###############################################################################

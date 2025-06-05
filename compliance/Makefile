@@ -34,20 +34,8 @@ include ../lib.Makefile
 ##############################################################################
 # Define some constants
 ##############################################################################
-# Linker flags for building Compliance Server.
-#
-# We use -X to insert the version information into the placeholder variables
-# in the buildinfo package.
-#
-# We use -B to insert a build ID note into the executable, without which, the
-# RPM build tools complain.
-LDFLAGS = 	-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
-				-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
-				-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-				-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
-				-B 0x$(BUILD_ID)
-
 NON_SRC_DIRS = test
+
 # All Compliance Server go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) -type f -name '*.go') \
 		$(shell find ../api/pkg -name '*.go') \
