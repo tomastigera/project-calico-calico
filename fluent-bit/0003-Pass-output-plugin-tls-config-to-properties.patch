@@ -1,6 +1,6 @@
-From aa676ef6f3e8dd24991391ddf1cfae80247361db Mon Sep 17 00:00:00 2001
+From 1dbf58f7b780b54c1f61bbadc02e17e049c14f78 Mon Sep 17 00:00:00 2001
 From: Jiawei Huang <jiawei@tigera.io>
-Date: Sun, 18 Aug 2024 00:34:26 -0700
+Date: Wed, 4 Jun 2025 19:26:12 -0700
 Subject: [PATCH] Pass output plugin tls config to properties
 
 ---
@@ -8,10 +8,10 @@ Subject: [PATCH] Pass output plugin tls config to properties
  1 file changed, 4 insertions(+)
 
 diff --git a/src/flb_output.c b/src/flb_output.c
-index 1c7853f79..59b3f2c54 100644
+index cb3cd1b6b..42906145e 100644
 --- a/src/flb_output.c
 +++ b/src/flb_output.c
-@@ -871,6 +871,10 @@ int flb_output_set_property(struct flb_output_instance *ins,
+@@ -938,6 +938,10 @@ int flb_output_set_property(struct flb_output_instance *ins,
      }
      else if (prop_key_check("tls.verify", k, len) == 0 && tmp) {
          ins->tls_verify = flb_utils_bool(tmp);
@@ -23,5 +23,5 @@ index 1c7853f79..59b3f2c54 100644
      }
      else if (prop_key_check("tls.verify_hostname", k, len) == 0 && tmp) {
 -- 
-2.46.0
+2.49.0
 

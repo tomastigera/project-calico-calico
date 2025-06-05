@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/fluent/fluent-bit-go/output"
@@ -22,8 +23,14 @@ import (
 
 import "C"
 
+const (
+	// This is the default net.connect_timeout suggested by the fluent-bit documentation.
+	// https://docs.fluentbit.io/manual/administration/networking#configuration-options
+	defaultTimeout = 10 * time.Second
+)
+
 var (
-	cfg                *config.Config
+	client             *http.Client
 	tk                 *token.Token
 	endpointController *endpoint.EndpointController
 
@@ -39,9 +46,7 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 
 //export FLBPluginInit
 func FLBPluginInit(plugin unsafe.Pointer) int {
-	var err error
-
-	cfg, err = config.NewConfig(plugin, output.FLBPluginConfigKey)
+	cfg, err := config.NewConfig(plugin, output.FLBPluginConfigKey)
 	if err != nil {
 		logrus.WithError(err).Error("failed to create config")
 		return output.FLB_ERROR
@@ -57,6 +62,19 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	if err != nil {
 		logrus.WithError(err).Error("failed to initialize endpoint controller")
 		return output.FLB_ERROR
+	}
+
+	insecureSkipVerify := false
+	if cfg != nil {
+		insecureSkipVerify = cfg.InsecureSkipVerify
+	}
+	client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: insecureSkipVerify,
+			},
+		},
+		Timeout: defaultTimeout,
 	}
 
 	stopCh = make(chan struct{})
@@ -144,15 +162,6 @@ func doRequest(endpoint, tag, token string, ndjsonBuffer *bytes.Buffer) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	req.Header.Set("Content-Type", "application/x-ndjson")
 
-	insecureSkipVerify := false
-	if cfg != nil {
-		insecureSkipVerify = cfg.InsecureSkipVerify
-	}
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: insecureSkipVerify,
-		},
-	}}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

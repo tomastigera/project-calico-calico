@@ -2,7 +2,7 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/fluent-bit
 
-FLUENT_BIT_VERSION = 3.2.10
+FLUENT_BIT_VERSION = 4.0.3
 
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
@@ -88,7 +88,5 @@ fv: package
 ###############################################################################
 # CI
 ###############################################################################
-LINT_ARGS += --exclude-dirs="(^|/)package($$|/)"
-
 .PHONY: ci
-ci: clean ut fv static-checks
+ci: clean ut static-checks fv

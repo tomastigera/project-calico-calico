@@ -46,6 +46,7 @@ var _ = Describe("Linseed out plugin tests", func() {
 			}))
 			defer server.Close()
 
+			client = server.Client()
 			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -62,6 +63,7 @@ var _ = Describe("Linseed out plugin tests", func() {
 			}))
 			defer server.Close()
 
+			client = server.Client()
 			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error response from server"))

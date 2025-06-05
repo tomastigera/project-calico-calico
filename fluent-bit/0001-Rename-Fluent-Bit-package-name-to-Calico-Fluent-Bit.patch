@@ -1,6 +1,6 @@
-From 20eab8af50d193819a20ea1275a86139c1bf6f5b Mon Sep 17 00:00:00 2001
+From 5fcca4b9657ee5e64664f8fe1fdd7288b9704858 Mon Sep 17 00:00:00 2001
 From: Jiawei Huang <jiawei@tigera.io>
-Date: Sat, 27 Jul 2024 14:54:05 -0700
+Date: Wed, 4 Jun 2025 19:25:06 -0700
 Subject: [PATCH] Rename Fluent Bit package name to Calico Fluent Bit
 
 ---
@@ -8,10 +8,10 @@ Subject: [PATCH] Rename Fluent Bit package name to Calico Fluent Bit
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 7dfc56ef1..6e1b36276 100644
+index bc5990edb..5d70cd6e3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -814,8 +814,8 @@ else()
+@@ -1039,8 +1039,8 @@ else()
  
  endif()
  
@@ -23,5 +23,5 @@ index 7dfc56ef1..6e1b36276 100644
  if(FLB_PROXY_GO)
    FLB_DEFINITION(FLB_HAVE_PROXY_GO)
 -- 
-2.45.2
+2.49.0
 

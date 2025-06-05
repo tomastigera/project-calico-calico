@@ -1,6 +1,6 @@
-From 93817714eedbceb2170d1ba0af728e0b86ca3a8b Mon Sep 17 00:00:00 2001
+From 1c66dc36e1017934d4e262a38fe1872f32a031de Mon Sep 17 00:00:00 2001
 From: Jiawei Huang <jiawei@tigera.io>
-Date: Sat, 27 Jul 2024 14:54:49 -0700
+Date: Wed, 4 Jun 2025 19:25:26 -0700
 Subject: [PATCH] Move config files to /etc/calico/calico-fluent-bit
 
 ---
@@ -8,10 +8,10 @@ Subject: [PATCH] Move config files to /etc/calico/calico-fluent-bit
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 6e1b36276..863df91e7 100644
+index 5d70cd6e3..74f81d3ce 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -1043,7 +1043,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+@@ -1353,7 +1353,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
  else()
    set(FLB_INSTALL_BINDIR ${CMAKE_INSTALL_FULL_BINDIR})
    set(FLB_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}/${FLB_OUT_NAME}")
@@ -21,5 +21,5 @@ index 6e1b36276..863df91e7 100644
  endif()
  
 -- 
-2.45.2
+2.49.0
 
