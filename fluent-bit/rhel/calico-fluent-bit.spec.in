@@ -49,6 +49,7 @@ family operating systems. It's part of the Fluentd Ecosystem and a CNCF sub-proj
     -DFLB_FILTER_RECORD_MODIFIER=On \
     -DFLB_IN_STORAGE_BACKLOG=On \
     -DFLB_IN_TAIL=On \
+    -DFLB_KAFKA=Off \
     -DFLB_LUAJIT=On \
     -DFLB_MINIMAL=On \
     -DFLB_PROXY_GO=On \
@@ -106,16 +107,21 @@ rm -rvf %{buildroot}%{_includedir}
 %exclude /usr/lib64/libluajit.a
 
 %changelog
+* Wed Jun 4 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.3-1
+- Set the maximum connection timeout for linseed out plugin to 10 seconds
+- Set the overall request timeout for linseed out plugin to 30 seconds
+- Update version to 4.0.3
+
 * Thu Mar 27 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.10-1
 - Update version to 3.2.10
 
-* Tue Mar 13 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.8-1
+* Thu Mar 13 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.8-1
 - Update version to 3.2.8
 
-* Tue Feb 10 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.5-1
+* Mon Feb 10 2025 Jiawei Huang <jiawei@tigera.io> - 3.2.5-1
 - Update version to 3.2.5
 
-* Tue Nov 28 2024 Jiawei Huang <jiawei@tigera.io> - 3.1.10-1
+* Thu Nov 28 2024 Jiawei Huang <jiawei@tigera.io> - 3.1.10-1
 - Update version to 3.1.10
 
 * Wed Sep 25 2024 Jiawei Huang <jiawei@tigera.io> - 3.1.8-1
