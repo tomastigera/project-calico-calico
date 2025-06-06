@@ -1,6 +1,6 @@
 - name: fluent-bit
   run:
-    when: "${FORCE_RUN} or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:

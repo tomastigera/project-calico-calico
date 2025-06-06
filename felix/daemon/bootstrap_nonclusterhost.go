@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
+	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
 func bootstrapNonClusterHostTyphaAddress(ctx context.Context) (string, error) {

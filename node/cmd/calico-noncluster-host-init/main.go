@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/config"
-	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
+	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
 var flagSet = flag.NewFlagSet("CalicoNonClusterHostInit", flag.ContinueOnError)

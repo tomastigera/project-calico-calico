@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/config"
-	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
+	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
 type EndpointController struct {

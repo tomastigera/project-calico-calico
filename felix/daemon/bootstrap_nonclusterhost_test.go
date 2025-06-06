@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
+	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
 var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
