@@ -12,7 +12,7 @@ import (
 
 func TestHealthCheckService(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel) // Set log level to debug for detailed output
-	//sockPath := filepath.Join(t.TempDir(), "waf.sock")
+
 	opts := waf.ServerOptions{
 		TcpPort:           5555,
 		HttpPort:          8080,
