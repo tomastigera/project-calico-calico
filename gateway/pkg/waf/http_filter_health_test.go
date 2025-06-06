@@ -31,15 +31,19 @@ func TestHealthCheckService(t *testing.T) {
 
 	// Wait for the WAF HTTP filter to be listening on the TCP port
 	go func() {
-		var err error
-		for err != nil {
+		for {
 			// Attempt to connect to the WAF HTTP filter
-			_, err = net.DialTCP("tcp", nil, &net.TCPAddr{
+			conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{
 				Port: opts.TcpPort,
 			})
-			<-time.After(100 * time.Millisecond) // Wait before retrying
+			if err != nil {
+				<-time.After(100 * time.Millisecond) // Wait before retrying
+				continue                             // If connection fails, retry
+			}
+			conn.Close()   // Close the connection if successful
+			close(readyCh) // Signal that the WAF HTTP filter is ready
+			return
 		}
-		close(readyCh)
 	}()
 
 	// Wait for the WAF HTTP filter to be ready or to encounter an error
