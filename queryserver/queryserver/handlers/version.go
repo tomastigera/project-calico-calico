@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/projectcalico/calico/pkg/buildinfo"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 type version struct {
