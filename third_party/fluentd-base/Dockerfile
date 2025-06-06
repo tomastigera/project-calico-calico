@@ -36,7 +36,7 @@ RUN gem install elasticsearch-api -v 7.17.11 && \
 RUN gem sources --clear-all
 RUN rm -fr /tmp/* /usr/local/share/gems/cache/*.gem
 RUN rm -fr /usr/local/share/gems/gems/fluentd-${FLUENTD_VERSION}/test/
-RUN rm -fr /usr/share/gems/specifications/default/net-imap-0.1.1.gemspec ./usr/local/share/gems/doc/net-imap-0.1.1
+RUN rm -fr /usr/share/gems/specifications/default/net-imap-0.1.1.gemspec /usr/local/share/gems/doc/net-imap-0.1.1
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports
