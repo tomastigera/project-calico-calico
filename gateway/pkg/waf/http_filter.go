@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
-	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -42,6 +42,9 @@ type WAFHTTPFilter struct {
 	healthServer   *http.Server
 	tcpGRPCServer  *grpc.Server
 	unixGRPCServer *grpc.Server
+
+	healthzv1.HealthServer
+	grpcListenAddr net.Addr
 }
 
 var Directives []string = []string{
@@ -71,9 +74,10 @@ func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTP
 	}
 
 	return &WAFHTTPFilter{
-		options:   opts,
-		logger:    logger,
-		wafServer: wafServer,
+		options:      opts,
+		logger:       logger,
+		wafServer:    wafServer,
+		HealthServer: health.NewHealthCheckService(&alwaysReadyReporter{}),
 	}
 }
 
@@ -107,7 +111,7 @@ func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) {
 	}
 }
 
-func (f *WAFHTTPFilter) Start() error {
+func (f *WAFHTTPFilter) Start(readyCh ...chan struct{}) error {
 	if f.options.TcpPort == 0 && f.options.SocketPath == "" {
 		return fmt.Errorf("please configure port or socketPath")
 	}
@@ -116,9 +120,11 @@ func (f *WAFHTTPFilter) Start() error {
 		if err != nil {
 			return fmt.Errorf("failed to listen: %v", err)
 		}
+		f.grpcListenAddr = lis.Addr()
 
 		f.tcpGRPCServer = grpc.NewServer()
 		envoy_service_proc_v3.RegisterExternalProcessorServer(f.tcpGRPCServer, f)
+		healthzv1.RegisterHealthServer(f.tcpGRPCServer, f)
 
 		go func() {
 			err = f.tcpGRPCServer.Serve(lis)
@@ -163,6 +169,10 @@ func (f *WAFHTTPFilter) Start() error {
 		}()
 	}
 
+	for _, ch := range readyCh {
+		close(ch)
+	}
+
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", getHealthCheckHandler(f.options))
 
@@ -199,62 +209,36 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 
 		conn, err := grpc.NewClient(target, dialOpts...)
 		if err != nil {
-			log.Fatalf("Could not connect: %v", err)
-		}
-		client := envoy_service_proc_v3.NewExternalProcessorClient(conn)
-
-		processor, err := client.Process(context.Background())
-		if err != nil {
-			log.Fatalf("Could not check: %v", err)
-		}
-
-		err = processor.Send(&envoy_service_proc_v3.ProcessingRequest{
-			Request: &envoy_service_proc_v3.ProcessingRequest_RequestHeaders{
-				RequestHeaders: &envoy_service_proc_v3.HttpHeaders{
-					Attributes: map[string]*structpb.Struct{
-						"envoy.filters.http.ext_proc": &structpb.Struct{
-							Fields: map[string]*structpb.Value{
-								"request.protocol": structpb.NewStringValue("http"),
-							},
-						},
-					},
-					Headers: &envoy_config_core_v3.HeaderMap{
-						Headers: []*envoy_config_core_v3.HeaderValue{
-							&envoy_config_core_v3.HeaderValue{
-								Key:      "x-request-id",
-								RawValue: []byte("metrics"),
-							},
-							&envoy_config_core_v3.HeaderValue{
-								Key:      ":authority",
-								RawValue: []byte("127.0.0.1"),
-							},
-							&envoy_config_core_v3.HeaderValue{
-								Key:      ":method",
-								RawValue: []byte("GET"),
-							},
-							&envoy_config_core_v3.HeaderValue{
-								Key:      ":path",
-								RawValue: []byte("/"),
-							},
-						},
-					},
-				},
-			},
-		})
-		if err != nil {
-			log.Fatalf("Could not check: %v", err)
-		}
-
-		response, err := processor.Recv()
-		if err != nil {
-			log.Fatalf("Could not check: %v", err)
-		}
-
-		if response != nil && response.GetRequestHeaders().Response.Status == envoy_service_proc_v3.CommonResponse_CONTINUE {
-			w.WriteHeader(http.StatusOK)
-		} else {
+			log.Errorf("Could not connect: %v", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintln(w, "service connection failed")
+			return
 		}
+		client := healthzv1.NewHealthClient(conn)
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Errorf("Could not close connection: %v", err)
+			}
+		}()
+
+		// Check health
+		log.Debugf("Checking health for %s", target)
+		healthResp, err := client.Check(context.Background(), &healthzv1.HealthCheckRequest{})
+		if err != nil {
+			log.Errorf("Could not check health: %v", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintln(w, "health check failed")
+			return
+		}
+		if healthResp.Status != healthzv1.HealthCheckResponse_SERVING {
+			log.Errorf("Health check failed: %v", healthResp.Status)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintln(w, "service not ready")
+			return
+		}
+		log.Debugf("Health check passed: %v", healthResp.Status)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "OK")
 	}
 }
 
@@ -413,3 +397,7 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		}
 	}
 }
+
+type alwaysReadyReporter struct{}
+
+func (a *alwaysReadyReporter) Readiness() bool { return true }
