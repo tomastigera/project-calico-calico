@@ -110,7 +110,7 @@ func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) {
 	}
 }
 
-func (f *WAFHTTPFilter) Start(readyCh ...chan struct{}) error {
+func (f *WAFHTTPFilter) Start() error {
 	if f.options.TcpPort == 0 && f.options.SocketPath == "" {
 		return fmt.Errorf("please configure port or socketPath")
 	}
@@ -166,10 +166,6 @@ func (f *WAFHTTPFilter) Start(readyCh ...chan struct{}) error {
 				log.Fatalf("failed to serve: %v", err)
 			}
 		}()
-	}
-
-	for _, ch := range readyCh {
-		close(ch)
 	}
 
 	healthMux := http.NewServeMux()

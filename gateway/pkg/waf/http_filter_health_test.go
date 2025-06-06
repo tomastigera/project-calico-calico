@@ -1,8 +1,10 @@
 package waf_test
 
 import (
+	"net"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/sirupsen/logrus"
@@ -22,10 +24,25 @@ func TestHealthCheckService(t *testing.T) {
 	errorCh := make(chan error, 1)
 	wf := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
 	go func() {
-		if err := wf.Start(readyCh); err != nil {
+		if err := wf.Start(); err != nil {
 			errorCh <- err
 		}
 	}()
+
+	// Wait for the WAF HTTP filter to be listening on the TCP port
+	go func() {
+		var err error
+		for err != nil {
+			// Attempt to connect to the WAF HTTP filter
+			_, err = net.DialTCP("tcp", nil, &net.TCPAddr{
+				Port: opts.TcpPort,
+			})
+			<-time.After(100 * time.Millisecond) // Wait before retrying
+		}
+		close(readyCh)
+	}()
+
+	// Wait for the WAF HTTP filter to be ready or to encounter an error
 	select {
 	case <-readyCh:
 		t.Log("WAF HTTP filter is ready")
