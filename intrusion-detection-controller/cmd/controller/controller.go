@@ -39,7 +39,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	lclient "github.com/projectcalico/calico/licensing/client"
@@ -48,6 +47,7 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 const (
@@ -76,7 +76,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		version.Version()
+		buildinfo.PrintVersion()
 		return
 	}
 

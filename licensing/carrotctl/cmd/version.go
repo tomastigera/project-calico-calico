@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 var VersionCmd = &cobra.Command{
@@ -14,7 +14,7 @@ var VersionCmd = &cobra.Command{
 	SuggestFor: []string{"versio", "covfefe"},
 	Short:      "carrotctl version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Build Version:    ", buildinfo.GitVersion)
+		fmt.Println("Build Version:    ", buildinfo.Version)
 		fmt.Println("Build date:       ", buildinfo.BuildDate)
 		fmt.Println("Git commit:       ", buildinfo.GitRevision)
 	},
