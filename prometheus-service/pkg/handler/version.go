@@ -4,9 +4,9 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-)
 
-var BUILD_DATE, GIT_COMMIT, GIT_TAG, VERSION string
+	"github.com/projectcalico/calico/pkg/buildinfo"
+)
 
 type version struct {
 	BuildDate string `json:"buildDate"`
@@ -17,10 +17,10 @@ type version struct {
 
 func VersionHandler(w http.ResponseWriter, r *http.Request) {
 	v := version{
-		BuildDate: BUILD_DATE,
-		GitCommit: GIT_COMMIT,
-		GitTag:    GIT_TAG,
-		Version:   VERSION,
+		BuildDate: buildinfo.BuildDate,
+		GitCommit: buildinfo.GitRevision,
+		GitTag:    buildinfo.Version,
+		Version:   buildinfo.Version,
 	}
 
 	js, err := json.MarshalIndent(v, "", "  ")

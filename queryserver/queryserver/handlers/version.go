@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/projectcalico/calico/pkg/buildinfo"
 	log "github.com/sirupsen/logrus"
 )
-
-var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
 
 type version struct {
 	Version   string `json:"version"`
@@ -19,17 +18,17 @@ type version struct {
 
 func VersionHandler(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{
-		"Version":   VERSION,
-		"BuildDate": BUILD_DATE,
-		"GitTagRef": GIT_DESCRIPTION,
-		"GitCommit": GIT_REVISION,
+		"Version":   buildinfo.Version,
+		"BuildDate": buildinfo.BuildDate,
+		"GitTagRef": buildinfo.GitRevision,
+		"GitCommit": buildinfo.GitRevision,
 	}).Debug("Handling version request")
 
 	v := version{
-		Version:   VERSION,
-		BuildDate: BUILD_DATE,
-		GitTagRef: GIT_DESCRIPTION,
-		GitCommit: GIT_REVISION,
+		Version:   buildinfo.Version,
+		BuildDate: buildinfo.BuildDate,
+		GitTagRef: buildinfo.GitRevision,
+		GitCommit: buildinfo.GitRevision,
 	}
 
 	js, err := json.MarshalIndent(v, "", "  ")
