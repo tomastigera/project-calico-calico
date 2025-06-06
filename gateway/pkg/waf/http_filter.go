@@ -1,7 +1,6 @@
 package waf
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -223,7 +222,7 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 
 		// Check health
 		log.Debugf("Checking health for %s", target)
-		healthResp, err := client.Check(context.Background(), &healthzv1.HealthCheckRequest{})
+		healthResp, err := client.Check(r.Context(), &healthzv1.HealthCheckRequest{})
 		if err != nil {
 			log.Errorf("Could not check health: %v", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
