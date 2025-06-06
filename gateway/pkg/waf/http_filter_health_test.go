@@ -18,7 +18,6 @@ func TestHealthCheckService(t *testing.T) {
 		HttpPort:          8080,
 		SocketPath:        "",
 		WafRulesetRootDir: "",
-		LogToFile:         false,
 	}
 	readyCh := make(chan struct{})
 	errorCh := make(chan error, 1)
