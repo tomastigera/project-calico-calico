@@ -522,8 +522,6 @@ blocks:
             - env_var: ARCH
               values:
                 - arm64
-                - ppc64le
-                - s390x
           commands:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
   - name: envoy-ratelimit
@@ -843,7 +841,7 @@ blocks:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: "Node: Build"
     run:
-      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/pkg/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -869,7 +867,7 @@ blocks:
             - test-results publish ./report/nosetests.xml --name "node-ci" || true
   - name: "Node: multi-arch build"
     run:
-      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/pkg/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - "Node: Build"
     task:
@@ -890,7 +888,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
   - name: "Node: Build - native arm64 runner"
     run:
-      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/pkg/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - "Node: Build"
     task:
@@ -943,6 +941,19 @@ blocks:
         - name: google-service-account-for-gce
         - name: tigera-dev-ci-pull-credentials
         - name: test-customer-license
+  - name: pkg
+    run:
+      when: "false or change_in(['/pkg/'])"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cd pkg
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: pod2daemon
     run:
       when: "false or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1871,7 +1882,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: fluent-bit
     run:
-      when: "false or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
