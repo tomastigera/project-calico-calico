@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/gateway/pkg/waf"
 )
 
 func TestHealthCheckService(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel) // Set log level to debug for detailed output
 
 	opts := waf.ServerOptions{
-		TcpPort:           5555,
-		HttpPort:          8080,
-		SocketPath:        "",
-		WafRulesetRootDir: "",
+		TcpPort:  5555,
+		HttpPort: 8080,
 	}
+
 	readyCh := make(chan struct{})
 	errorCh := make(chan error, 1)
 	wf := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
