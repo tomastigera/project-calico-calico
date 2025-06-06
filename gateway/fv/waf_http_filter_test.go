@@ -12,12 +12,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
+var wafEvents []*proto.WAFEvent
+
+func InMemoryLogger(wafEvent *proto.WAFEvent) {
+	logrus.Warnf("New WAF event! Need to do something about that! %v", wafEvent)
+	wafEvents = append(wafEvents, wafEvent)
+}
+
 func setupServer(t *testing.T, opts waf.ServerOptions) func() {
-	srv := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
+	srv := waf.NewWAFHTTPFilter(opts, InMemoryLogger)
 
 	// We keep track of whether we're stopping the server to catch errors on startup
 	stopping := false
@@ -33,11 +41,36 @@ func setupServer(t *testing.T, opts waf.ServerOptions) func() {
 
 	return func() {
 		stopping = true
+		wafEvents = nil
 		err := srv.Stop()
 		require.NoError(t, err)
 	}
 }
 
+func waitForConfigChange(t require.TestingT, tests func(tt require.TestingT, body string)) {
+	client := &http.Client{}
+
+	// Wait until the envoy config has changed
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		req, err := http.NewRequest("GET", "http://127.0.0.1:8001/config_dump", nil)
+		require.NoError(c, err)
+
+		resp, err := client.Do(req)
+		require.NoError(c, err)
+
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(c, err)
+
+		tests(c, string(body))
+
+	}, 30*time.Second, 1*time.Second)
+
+	// Close idle connection so that we use a new connection and use the latest envoy config.
+	// This is needed because the default http.Client use http.DefaultTransport.
+	client.CloseIdleConnections()
+}
 func setupTest(t *testing.T, opts waf.ServerOptions, filesToBackup []string) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -57,6 +90,10 @@ func setupTest(t *testing.T, opts waf.ServerOptions, filesToBackup []string) {
 			require.NoError(t, err)
 		}
 
+		waitForConfigChange(t, func(t require.TestingT, config string) {
+			require.Contains(t, config, "type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor")
+		})
+
 		teardownServer()
 		logCancel()
 	})
@@ -73,12 +110,18 @@ func setupTest(t *testing.T, opts waf.ServerOptions, filesToBackup []string) {
 
 		require.Equal(c, 200, resp.StatusCode)
 	}, 10*time.Second, 200*time.Millisecond)
+
+	require.Empty(t, wafEvents)
 }
 
-func testRequest(t *testing.T, client *http.Client, verb string, url string, headers map[string]string, description string, tests func(resp *http.Response, body string)) {
+func testRequest(t *testing.T, client *http.Client, verb string, url string, headers map[string]string, description string, tests func(tt require.TestingT, resp *http.Response, body string)) {
 	t.Run(description, func(t *testing.T) {
 		req, err := http.NewRequest(verb, url, nil)
 		require.NoError(t, err)
+
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
 
 		resp, err := client.Do(req)
 		require.NoError(t, err)
@@ -88,7 +131,31 @@ func testRequest(t *testing.T, client *http.Client, verb string, url string, hea
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		tests(resp, string(body))
+		tests(t, resp, string(body))
+	})
+}
+
+func testRequestEventually(t *testing.T, client *http.Client, verb string, url string, headers map[string]string, description string, tests func(tt require.TestingT, resp *http.Response, body string)) {
+	t.Run(description, func(t *testing.T) {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			req, err := http.NewRequest(verb, url, nil)
+			require.NoError(c, err)
+
+			for key, value := range headers {
+				req.Header.Set(key, value)
+			}
+
+			resp, err := client.Do(req)
+			require.NoError(c, err)
+
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(c, err)
+
+			tests(c, resp, string(body))
+		}, 30*time.Second, 1*time.Second)
+
 	})
 }
 
@@ -102,14 +169,16 @@ func TestRequests(t *testing.T) {
 
 	client := &http.Client{}
 
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/nothing-suspicious", nil, "not WAF'ed", func(resp *http.Response, body string) {
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/nothing-suspicious", nil, "not WAF'ed", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 200, resp.StatusCode)
 		require.Contains(t, body, "/nothing-suspicious")
+		require.Empty(t, wafEvents)
 	})
 
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(resp *http.Response, body string) {
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 1)
 	})
 }
 
@@ -117,13 +186,15 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	setupTest(t, waf.ServerOptions{
 		TcpPort:  9002,
 		HttpPort: 8080,
-	}, []string{"testdata/lds.yaml", "testdata/lds-no-filter.yaml"})
+	}, []string{"testdata/lds-no-filter.yaml", "testdata/lds.yaml"})
 
 	client := &http.Client{}
 
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(resp *http.Response, body string) {
+	require.Len(t, wafEvents, 0)
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 1)
 	})
 
 	// Replace config with one that does not use the waf-http-filter.
@@ -132,27 +203,50 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	_, err := cmd.Output()
 	require.NoError(t, err)
 
-	// Wait until the envoy config has changed (i.e. the ext_proc filter is no longer used)
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		req, err := http.NewRequest("GET", "http://127.0.0.1:8001/config_dump", nil)
-		require.NoError(c, err)
+	waitForConfigChange(t, func(t require.TestingT, config string) {
+		require.NotContains(t, config, "type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor")
+	})
 
-		resp, err := client.Do(req)
-		require.NoError(c, err)
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "No active WAF", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "/subpath?artist=")
+		// The previous event in the same test
+		require.Len(t, wafEvents, 1)
+	})
+}
 
-		defer resp.Body.Close()
+func TestWAFConfig(t *testing.T) {
+	setupTest(t, waf.ServerOptions{
+		TcpPort:  9002,
+		HttpPort: 8080,
+	}, []string{"testdata/lds.yaml", "testdata/lds-not-blocking.yaml"})
 
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(c, err)
+	client := &http.Client{}
 
-		require.NotContains(c, body, "type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor")
-	}, 30*time.Second, 1*time.Second)
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 1)
+	})
 
-	// Close idle connection so that we use a new connection and use the latest envoy config
-	client.CloseIdleConnections()
+	// Replace the waf-http-filter config with a non-blocking WAF.
+	cmd := exec.Command("mv", "testdata/lds-not-blocking.yaml", "testdata/lds.yaml")
+	_, err := cmd.Output()
+	require.NoError(t, err)
 
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "No active WAF", func(resp *http.Response, body string) {
+	waitForConfigChange(t, func(t require.TestingT, config string) {
+		require.Contains(t, config, "SecRuleEngine DetectionOnly")
+	})
+
+	testRequestEventually(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user1", nil, "Non-blocking WAF", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 200, resp.StatusCode)
 		require.Contains(t, body, "/subpath?artist=")
 	})
+
+	// Initial sanity test with blocking WAF
+	require.Equal(t, wafEvents[0].Action, "deny")
+	// First request with new config (but used old config because update happens in the background so that we don't hold up traffic)
+	require.Equal(t, wafEvents[1].Action, "deny")
+	// Eventually the new config is used
+	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "pass")
 }
