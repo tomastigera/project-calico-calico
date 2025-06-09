@@ -74,26 +74,30 @@ func NewCertificateManager(ctx context.Context, caFile, pkFile, certFile string)
 }
 
 func (m *CertificateManager) IsCertificateValid(renewalThreshold time.Duration) (bool, error) {
-	certData, err := os.ReadFile(m.cfg.CertPath)
-	if err != nil {
-		return false, err
-	}
+	// Validate both the certificate and CA bundle
+	certs := []string{m.cfg.CertPath, m.cfg.CACertPath}
+	for _, cert := range certs {
+		certData, err := os.ReadFile(cert)
+		if err != nil {
+			return false, err
+		}
 
-	block, _ := pem.Decode(certData)
-	if block == nil || block.Type != "CERTIFICATE" {
-		return false, errors.New("failed to decode certificate")
-	}
+		block, _ := pem.Decode(certData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			return false, errors.New("failed to decode certificate")
+		}
 
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return false, err
-	}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return false, err
+		}
 
-	now := time.Now()
-	if now.Before(cert.NotBefore) {
-		return false, errors.New("certificate is not valid yet")
-	} else if now.After(cert.NotAfter.Add(-renewalThreshold)) {
-		return false, errors.New("certificate has reached its renewal threshold or has expired")
+		now := time.Now()
+		if now.Before(cert.NotBefore) {
+			return false, errors.New("certificate is not valid yet")
+		} else if now.After(cert.NotAfter.Add(-renewalThreshold)) {
+			return false, errors.New("certificate has reached its renewal threshold or has expired")
+		}
 	}
 	return true, nil
 }
