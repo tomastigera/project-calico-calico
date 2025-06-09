@@ -12,7 +12,7 @@ spec:
       scheme: https
       scrapeTimeout: 5s
       tlsConfig:
-        caFile: /etc/pki/tigera/tigera-ca-bundle.crt
+        caFile: /etc/pki/tigera/ca.crt
         certFile: /calico-node-prometheus-client-tls/tls.crt
         keyFile: /calico-node-prometheus-client-tls/tls.key
         serverName: tigera-fluentd-prometheus-tls

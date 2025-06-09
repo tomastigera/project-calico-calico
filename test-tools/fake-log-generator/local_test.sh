@@ -5,7 +5,7 @@ make VALIDARCHES=amd64 image-all
 
 mkdir -p certs
 podname=$(kubectl get po -n  "tigera-fluentd" -l k8s-app=fluentd-node --no-headers -o custom-columns=":metadata.name" | tail -1)
-kubectl exec -n "tigera-fluentd" "$podname" -- cat /etc/pki/tls/certs/tigera-ca-bundle.crt > certs/cacert.crt
+kubectl exec -n "tigera-fluentd" "$podname" -- cat /etc/pki/tls/certs/ca.crt > certs/cacert.crt
 kubectl exec -n "tigera-fluentd" "$podname" -- cat /tigera-fluentd-prometheus-tls/tls.key > certs/tls.key
 kubectl exec -n "tigera-fluentd" "$podname" -- cat /tigera-fluentd-prometheus-tls/tls.crt > certs/tls.crt
 kubectl exec -n "tigera-fluentd" "$podname" -- cat /var/run/secrets/tigera.io/linseed/token > certs/token

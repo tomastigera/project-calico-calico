@@ -62,7 +62,7 @@ type Config struct {
 
 	// Configuration for Voltron access.
 	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
-	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	// Configuration for health port.
 	HealthPort int `default:"8080" split_words:"true"`
