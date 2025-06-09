@@ -16,6 +16,9 @@
     voltron:
       image: tigera/voltron
       version: master
+    waf-http-filter:
+      image: tigera/waf-http-filter
+      version: master
     guardian:
       image: tigera/guardian
       version: master
