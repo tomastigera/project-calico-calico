@@ -2,8 +2,8 @@ package query
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"net"
 	"strconv"
 	"testing"
 	"time"
@@ -14,6 +14,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -1264,6 +1265,45 @@ func TestQueryService(t *testing.T) {
 						})
 						require.Empty(t, params.QueryParams.TimeRange.Field)
 					})
+				})
+
+				t.Run("json unmarshal", func(t *testing.T) {
+					subject := NewQueryService(
+						logger,
+						repository,
+						managedClusterLister,
+						Config{
+							QueryTimeout:           time.Duration(2) * time.Minute,
+							MaxRequestFilters:      10,
+							MaxRequestAggregations: 5,
+						},
+					)
+
+					dnsName := lsv1.DNSName{
+						Name:  "test-name.svc.cluster.local",
+						Class: 1,
+						Type:  1,
+					}
+					mockClient.SetResults(
+						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.DNSLog]{TotalHits: 1, Items: []lsv1.DNSLog{
+							{ID: "dns-log1", RRSets: lsv1.DNSRRSets{dnsName: lsv1.DNSRDatas{{Decoded: net.ParseIP("127.0.0.1")}}}},
+						}})},
+					)
+
+					resp, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "dns",
+						MaxDocs:        intp(10),
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
+						},
+					})
+
+					require.NoError(t, err)
+					require.Len(t, resp.Documents, 1)
+					require.Contains(t, resp.Documents[0], "rrsets")
+					require.Equal(t, []any{
+						map[string]any{"class": "IN", "name": "test-name.svc.cluster.local", "type": "A", "rdata": []any{"127.0.0.1"}},
+					}, resp.Documents[0]["rrsets"])
 				})
 			})
 		})
