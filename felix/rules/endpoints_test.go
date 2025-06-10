@@ -2621,8 +2621,10 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					&proto.QoSControls{
-						EgressPacketRate:  1000,
-						IngressPacketRate: 2000,
+						EgressPacketRate:   1000,
+						IngressPacketRate:  2000,
+						EgressPacketBurst:  2000,
+						IngressPacketBurst: 4000,
 					},
 					NotAnEgressGateway,
 					0,
@@ -2639,7 +2641,7 @@ var _ = Describe("Endpoints", func() {
 							},
 							{
 								Match:   Match(),
-								Action:  LimitPacketRateAction{Rate: 2000, Mark: 0x20},
+								Action:  LimitPacketRateAction{Rate: 2000, Burst: 4000, Mark: 0x20},
 								Comment: []string{"Mark packets within ingress packet rate limit"},
 							},
 							{
@@ -2679,7 +2681,7 @@ var _ = Describe("Endpoints", func() {
 							},
 							{
 								Match:   Match(),
-								Action:  LimitPacketRateAction{Rate: 1000, Mark: 0x20},
+								Action:  LimitPacketRateAction{Rate: 1000, Burst: 2000, Mark: 0x20},
 								Comment: []string{"Mark packets within egress packet rate limit"},
 							},
 							{
