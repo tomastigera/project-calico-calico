@@ -733,7 +733,7 @@ func releaseIPAddrs(ipAddrs []string, calico calicoclient.Interface, logger *log
 		if err != nil {
 			return err
 		}
-		unallocated, err := calico.IPAM().ReleaseIPs(context.Background(), libipam.ReleaseOptions{Address: cip.String()})
+		unallocated, _, err := calico.IPAM().ReleaseIPs(context.Background(), libipam.ReleaseOptions{Address: cip.String()})
 		if err != nil {
 			log.WithError(err).Error("Failed to release explicit IP")
 			return err
