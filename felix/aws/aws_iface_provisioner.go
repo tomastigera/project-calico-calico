@@ -46,7 +46,7 @@ const (
 // ipamInterface is just the parts of the IPAM interface that we need.
 type ipamInterface interface {
 	AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*ipam.IPAMAssignments, *ipam.IPAMAssignments, error)
-	ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]calinet.IP, error)
+	ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]calinet.IP, []ipam.ReleaseOptions, error)
 	IPsByHandle(ctx context.Context, handleID string) ([]calinet.IP, error)
 }
 
@@ -582,7 +582,6 @@ func (m *SecondaryIfaceProvisioner) matchAWSToCalicoState(
 	awsState *awsState,
 	localSubnetsByID map[string]ec2types.Subnet,
 ) ([]AddrInfo, string, error) {
-
 	allCalicoRoutesNotInAWS := m.findRoutesWithNoAWSAddr(awsState, localSubnetsByID)
 
 	// We only support a single local subnet, choose one based on some heuristics.
@@ -784,7 +783,7 @@ func (m *SecondaryIfaceProvisioner) maybeUpdateAWSSubnetFile(subnets map[string]
 		logrus.WithError(err).Debug("Failed to read old aws-subnets file.  Rewriting it...")
 	}
 
-	err = os.WriteFile(m.awsSubnetsFilename, encoded, 0644)
+	err = os.WriteFile(m.awsSubnetsFilename, encoded, 0o644)
 	if err != nil {
 		return err
 	}
@@ -1344,7 +1343,7 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) 
 		logrus.WithField("addr", addr).Info(
 			"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
 		ctx, cancel := m.newContext()
-		_, err := m.ipamClient.ReleaseIPs(ctx, ipam.ReleaseOptions{Address: addr.String()})
+		_, _, err := m.ipamClient.ReleaseIPs(ctx, ipam.ReleaseOptions{Address: addr.String()})
 		cancel()
 		if err != nil {
 			logrus.WithError(err).WithField("ip", addr).Error(
