@@ -85,10 +85,10 @@ type Config struct {
 	PrometheusEndpoint           string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
 	QueryserverPath              string `default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/" split_words:"true"`
 	QueryserverEndpoint          string `default:"https://tigera-api.tigera-system.svc:8080" split_words:"true"`
-	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	LinseedEndpoint     string `default:"https://tigera-linseed.tigera-elasticsearch.svc.cluster.local" split_words:"true"`
-	LinseedCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	LinseedCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	EnableCalicoCloudRbacApi       bool   `split_words:"true"`
 	CalicoCloudRbacApiCABundlePath string `split_words:"true"`
@@ -173,7 +173,7 @@ type Config struct {
 
 	// GoldmaneEndpoint is the endpoint for the Goldmane service in the local cluster.
 	GoldmaneEndpoint     string `default:"https://goldmane.calico-system.svc.cluster.local" split_words:"true"`
-	GoldmaneCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	GoldmaneCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	// Whether or not the managed cluster supports impersonation. If not, Voltron will strip impersonation headers
 	// from requests before forwarding them to the managed cluster.

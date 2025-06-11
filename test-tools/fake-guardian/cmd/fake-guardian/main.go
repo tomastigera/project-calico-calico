@@ -62,7 +62,7 @@ type config struct {
 	ClusterID              int    `default:"0" split_words:"true"`
 	ProxyListenPort        int    `default:"0" split_words:"true"`
 	MetricsPort            int    `default:"2112" split_words:"true"`
-	RealTigeraCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	RealTigeraCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 	RealSATokenPath        string `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" split_words:"true"`
 	RealAPIServerCAPath    string `default:"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" split_words:"true"`
 	RealAPIServerURL       string `default:"https://kubernetes.default" split_words:"true"`

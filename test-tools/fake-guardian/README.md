@@ -44,7 +44,7 @@ k -n fake-guardian scale statefulset fake-guardian-ss --replicas 5
 ```shell
 
 k -n fake-guardian get secret fake-guardian-sa-token -o json | jq -r '.data.token|@base64d' | tr -d '\n' > /tmp/fake-guardian.token
-k -n fake-guardian get cm tigera-ca-bundle -o json | jq -rc '.data["tigera-ca-bundle.crt"]' > /tmp/fake-guardian-ca.crt
+k -n fake-guardian get cm tigera-ca-bundle -o json | jq -rc '.data["ca.crt"]' > /tmp/fake-guardian-ca.crt
 
 cat $KUBECONFIG| yq read - -j | jq '.clusters[0].cluster["certificate-authority-data"]|@base64d' -r > /tmp/real-apiserver.crt
 ```
