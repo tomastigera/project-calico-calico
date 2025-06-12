@@ -258,14 +258,16 @@ func TestFileLogger(t *testing.T) {
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
 	opts := waf.ServerOptions{
-		TcpPort:          9002,
-		HttpPort:         8080,
-		LogFileDirectory: "testdata",
-		LogFileName:      "waf.log",
+		TcpPort:              9002,
+		HttpPort:             8080,
+		LogFileDirectory:     "testdata",
+		LogFileName:          "waf.log",
+		LogAggregationPeriod: 100 * time.Millisecond,
+		MustKeepFields:       []string{"rules"},
 	}
 
 	// Create a file logger that writes to a file in the testdata directory.
-	fileLogger, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName)
+	fileLogger, stopAggController, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName, opts.LogAggregationPeriod, opts.MustKeepFields)
 	require.NoError(t, err)
 
 	logFilePath := fmt.Sprintf("%s/%s", opts.LogFileDirectory, opts.LogFileName)
@@ -286,13 +288,13 @@ func TestFileLogger(t *testing.T) {
 
 	teardownServer := func() {
 		stopping = true
-		wafEvents = nil
 		err := srv.Stop()
 		require.NoError(t, err)
 	}
 
 	t.Cleanup(func() {
 		teardownServer()
+		stopAggController()
 		logCancel()
 		_ = os.Remove(logFilePath)
 	})
@@ -320,6 +322,12 @@ func TestFileLogger(t *testing.T) {
 		require.Contains(t, body, "deny (403)")
 	})
 
+	// Second request to cover log aggreagation too
+	testRequest(t, client, "POST", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+	})
+
 	// Check that the log file is eventually created and contains the WAF event.
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		data, err := os.ReadFile(logFilePath)
@@ -329,6 +337,7 @@ func TestFileLogger(t *testing.T) {
 		require.Len(t, lines, 2)
 		require.Contains(c, lines[0], "WAF detected 2 violations [deny]")
 		require.Contains(c, lines[0], "SQL Injection Attack Detected via libinjection")
+		require.Contains(c, lines[0], `"count":2`)
 		require.Empty(t, lines[1])
 	}, 30*time.Second, 1*time.Second)
 }

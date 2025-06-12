@@ -15,7 +15,7 @@ func DebugLogger(wafEvent *proto.WAFEvent) {
 	logrus.Warnf("New WAF event! Need to do something about that! %v", wafEvent)
 }
 
-func NewFileLogger(directory string, filename string) (func(wafEvent *proto.WAFEvent), error) {
+func NewFileLogger(directory string, filename string, aggregationPeriod time.Duration, mustKeepFields []string) (func(wafEvent *proto.WAFEvent), func(), error) {
 
 	fileReporter := file.NewReporter(
 		directory,
@@ -25,22 +25,33 @@ func NewFileLogger(directory string, filename string) (func(wafEvent *proto.WAFE
 	)
 	err := fileReporter.Start()
 	if err != nil {
-		return nil, fmt.Errorf("failed to start file reporter: %w", err)
+		return nil, nil, fmt.Errorf("failed to start file reporter: %w", err)
 	}
+
+	aggController, err := NewAggregatorController(
+		aggregationPeriod,
+		mustKeepFields,
+		func(logs []*v1.WAFLog) {
+			err := fileReporter.Report(logs)
+			if err != nil {
+				logrus.Errorf("Failed to report WAF log: %v", err)
+			}
+
+		},
+	)
+
+	go aggController.Run()
 
 	return func(wafEvent *proto.WAFEvent) {
 		wafLog := ConvertWAFEventToWAFLog(wafEvent)
-
-		err := fileReporter.Report([]*v1.WAFLog{wafLog})
-		if err != nil {
-			logrus.Errorf("Failed to report WAF log: %v", err)
-		}
-	}, nil
+		aggController.AddLog(wafLog)
+	}, aggController.Stop, nil
 }
 
 func ConvertWAFEventToWAFLog(r *proto.WAFEvent) *v1.WAFLog {
 	wafLog := &v1.WAFLog{
 		Timestamp: time.Unix(r.Timestamp.Seconds, int64(r.Timestamp.Nanos)).UTC(),
+		Count:     1,
 		Method:    r.Request.Method,
 		Msg:       fmt.Sprintf("WAF detected %d violations [%s]", len(r.Rules), r.Action),
 		Path:      r.Request.Path,
