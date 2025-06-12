@@ -3600,7 +3600,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					releaseOpts = append(releaseOpts, ipam.ReleaseOptions{Address: address.IP.String()})
 				}
 
-				_, err = calicoClient.IPAM().ReleaseIPs(ctx, releaseOpts...)
+				_, _, err = calicoClient.IPAM().ReleaseIPs(ctx, releaseOpts...)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				ids := names.WorkloadEndpointIdentifiers{
