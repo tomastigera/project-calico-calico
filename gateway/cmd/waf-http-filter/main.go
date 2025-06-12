@@ -15,10 +15,17 @@ func main() {
 	flag.IntVar(&opts.HttpPort, "httpPort", 8080, "HTTP port (health monitoring)")
 	flag.StringVar(&opts.SocketPath, "socketPath", "", "path to extProcServer unix socket")
 	flag.StringVar(&opts.WafRulesetRootDir, "wafRulesetRootDir", "", "path to WAF ruleset")
+	flag.StringVar(&opts.LogFileDirectory, "logFileDirectory", "", "log file directory")
+	flag.StringVar(&opts.LogFileName, "logFileName", "", "log file name")
 	flag.Parse()
 
-	filter := waf.NewWAFHTTPFilter(opts, waf.DebugLogger)
-	err := filter.Start()
+	fileLogger, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName)
+	if err != nil {
+		logrus.WithError(err).Fatal("Execution stopped with an error.")
+	}
+
+	filter := waf.NewWAFHTTPFilter(opts, fileLogger)
+	err = filter.Start()
 	if err != nil {
 		logrus.WithError(err).Fatal("Execution stopped with an error.")
 	}
