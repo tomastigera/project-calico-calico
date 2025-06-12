@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/felix/proto"
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/projectcalico/calico/felix/proto"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 func TestConvertWAFEventToWAFLog(t *testing.T) {
