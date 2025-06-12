@@ -41,6 +41,7 @@ type WAFLogAggregationParams struct {
 
 type WAFLog struct {
 	Timestamp   time.Time    `json:"@timestamp"`
+	Count       int          `json:"count,omitempty"`
 	Destination *WAFEndpoint `json:"destination"`
 	Level       string       `json:"level"`
 	Method      string       `json:"method"`
