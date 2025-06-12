@@ -15,6 +15,9 @@ installation:
   # Example: --set installation.imagePullSecrets[0].name=my-existing-secret
   imagePullSecrets: []
 
+  # Disable CSI driver by default.
+  kubeletVolumePluginPath: "None"
+
 # apiServer configures the Calico API server, needed for interacting with
 # the projectcalico.org/v3 suite of APIs.
 apiServer:
@@ -168,7 +171,7 @@ techPreviewOptions:
   # set to name of desired apparmor policy for the calico-node container and
   # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
   nodeApparmorPolicyName: ""
-kubeletVolumePluginPath: /var/lib/kubelet
+
 # Optionally configure the host and port used to access the Kubernetes API server.
 kubernetesServiceEndpoint:
   host: ""
