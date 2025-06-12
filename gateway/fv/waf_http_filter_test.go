@@ -300,22 +300,19 @@ func TestFileLogger(t *testing.T) {
 	})
 
 	// Make sure the filter is ready
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		client := &http.Client{}
 		healthUrl := fmt.Sprintf("http://127.0.0.1:%d/healthz", opts.HttpPort)
 		req, err := http.NewRequest("GET", healthUrl, nil)
-		require.NoError(c, err)
+		require.NoError(t, err)
 
 		resp, err := client.Do(req)
-		require.NoError(c, err)
+		require.NoError(t, err)
 
-		require.Equal(c, 200, resp.StatusCode)
+		require.Equal(t, 200, resp.StatusCode)
 	}, 10*time.Second, 200*time.Millisecond)
 
 	client := &http.Client{}
-
-	logrus.Warn("Is the log file there?")
-	time.Sleep(10 * time.Second)
 
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
@@ -329,15 +326,15 @@ func TestFileLogger(t *testing.T) {
 	})
 
 	// Check that the log file is eventually created and contains the WAF event.
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		data, err := os.ReadFile(logFilePath)
-		require.NoError(c, err)
+		require.NoError(t, err)
 
 		lines := strings.Split(string(data), "\n")
 		require.Len(t, lines, 2)
-		require.Contains(c, lines[0], "WAF detected 2 violations [deny]")
-		require.Contains(c, lines[0], "SQL Injection Attack Detected via libinjection")
-		require.Contains(c, lines[0], `"count":2`)
+		require.Contains(t, lines[0], "WAF detected 2 violations [deny]")
+		require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
+		require.Contains(t, lines[0], `"count":2`)
 		require.Empty(t, lines[1])
 	}, 30*time.Second, 1*time.Second)
 }
