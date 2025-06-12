@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -249,4 +251,84 @@ func TestWAFConfig(t *testing.T) {
 	require.Equal(t, wafEvents[1].Action, "deny")
 	// Eventually the new config is used
 	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "pass")
+}
+
+func TestFileLogger(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
+	opts := waf.ServerOptions{
+		TcpPort:          9002,
+		HttpPort:         8080,
+		LogFileDirectory: "testdata",
+		LogFileName:      "waf.log",
+	}
+
+	// Create a file logger that writes to a file in the testdata directory.
+	fileLogger, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName)
+	require.NoError(t, err)
+
+	logFilePath := fmt.Sprintf("%s/%s", opts.LogFileDirectory, opts.LogFileName)
+
+	srv := waf.NewWAFHTTPFilter(opts, fileLogger)
+
+	// We keep track of whether we're stopping the server to catch errors on startup
+	stopping := false
+
+	// Start the server. It will block until the listen socket is closed,
+	// so run it in a goroutine.
+	go func() {
+		err := srv.Start()
+		if !stopping {
+			require.NoError(t, err)
+		}
+	}()
+
+	teardownServer := func() {
+		stopping = true
+		wafEvents = nil
+		err := srv.Stop()
+		require.NoError(t, err)
+	}
+
+	t.Cleanup(func() {
+		teardownServer()
+		logCancel()
+		_ = os.Remove(logFilePath)
+	})
+
+	// Make sure the filter is ready
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		client := &http.Client{}
+		healthUrl := fmt.Sprintf("http://127.0.0.1:%d/healthz", opts.HttpPort)
+		req, err := http.NewRequest("GET", healthUrl, nil)
+		require.NoError(c, err)
+
+		resp, err := client.Do(req)
+		require.NoError(c, err)
+
+		require.Equal(c, 200, resp.StatusCode)
+	}, 10*time.Second, 200*time.Millisecond)
+
+	client := &http.Client{}
+
+	logrus.Warn("Is the log file there?")
+	time.Sleep(10 * time.Second)
+
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+	})
+
+	// Check that the log file is eventually created and contains the WAF event.
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		data, err := os.ReadFile(logFilePath)
+		require.NoError(c, err)
+
+		lines := strings.Split(string(data), "\n")
+		require.Len(t, lines, 2)
+		require.Contains(c, lines[0], "WAF detected 2 violations [deny]")
+		require.Contains(c, lines[0], "SQL Injection Attack Detected via libinjection")
+		require.Empty(t, lines[1])
+	}, 30*time.Second, 1*time.Second)
 }

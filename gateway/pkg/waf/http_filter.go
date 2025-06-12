@@ -31,7 +31,8 @@ type ServerOptions struct {
 	HttpPort          int
 	SocketPath        string
 	WafRulesetRootDir string
-	LogToFile         bool
+	LogFileDirectory  string
+	LogFileName       string
 }
 
 type WAFHTTPFilter struct {
