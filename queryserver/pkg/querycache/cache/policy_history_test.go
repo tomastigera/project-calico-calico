@@ -71,17 +71,13 @@ var _ = Describe("Querycache policy historical cache tests", func() {
 
 			pcm := policyCache.TotalNetworkPoliciesByNamespace()
 			wg.Wait()
-			Expect(pcm).To(HaveLen(3))
+			Expect(pcm).To(HaveLen(2))
 
-			Expect(pcm).To(HaveKeyWithValue("calico-system", api.PolicySummary{
-				Total:        1,
-				NumUnmatched: 2,
-			}))
 			Expect(pcm).To(HaveKeyWithValue("kube-system", api.PolicySummary{
 				Total:        3,
 				NumUnmatched: 4,
 			}))
-			Expect(pcm).To(HaveKeyWithValue("tigera-system", api.PolicySummary{
+			Expect(pcm).To(HaveKeyWithValue("calico-system", api.PolicySummary{
 				Total:        5,
 				NumUnmatched: 6,
 			}))

@@ -3424,11 +3424,11 @@ func createCASecret(t *testing.T) {
 		t.Errorf("failed to create CA %s", err.Error())
 		t.Fail()
 	}
-	secret := ToSecret("tigera-management-cluster-connection", "tigera-system", caPem, caKeyPem)
+	secret := ToSecret("tigera-management-cluster-connection", "calico-system", caPem, caKeyPem)
 	namespace := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tigera-system",
+			Name: "calico-system",
 		},
 	}
 

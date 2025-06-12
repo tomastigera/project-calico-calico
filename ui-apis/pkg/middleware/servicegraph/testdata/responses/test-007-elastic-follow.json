@@ -289,6 +289,92 @@
       }
     },
     {
+      "id": "namespace/calico-system",
+      "type": "namespace",
+      "name": "calico-system",
+      "service_ports": [
+        {
+          "namespace": "calico-system",
+          "name": "tigera-api",
+          "protocol": "tcp",
+          "port_name": "apiserver",
+          "port": 443
+        }
+      ],
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 20,
+              "packet_out": 23,
+              "bytes_in": 3762,
+              "bytes_out": 2342
+            },
+            "connections": {
+              "total_per_sample_interval": 2,
+              "started": 2,
+              "completed": 1
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 1951,
+              "max_min_rtt": 218,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1885,
+              "mean_min_mss": 182,
+              "mean_mss": 1388,
+              "count": 1
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ],
+            "dest": [
+              {
+                "name": "apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "selectors": {
+        "l3_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
+        "l7_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR src_namespace = \"calico-system\"",
+        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR client_namespace = \"calico-system\"",
+        "alerts": "dest_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
+        "packet_capture": "all()"
+      }
+    },
+    {
       "id": "namespace/kube-system",
       "type": "namespace",
       "name": "kube-system",
@@ -1093,92 +1179,6 @@
       }
     },
     {
-      "id": "namespace/tigera-system",
-      "type": "namespace",
-      "name": "tigera-system",
-      "service_ports": [
-        {
-          "namespace": "tigera-system",
-          "name": "tigera-api",
-          "protocol": "tcp",
-          "port_name": "apiserver",
-          "port": 443
-        }
-      ],
-      "stats_ingress": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 20,
-              "packet_out": 23,
-              "bytes_in": 3762,
-              "bytes_out": 2342
-            },
-            "connections": {
-              "total_per_sample_interval": 2,
-              "started": 2,
-              "completed": 1
-            },
-            "tcp": {
-              "sum_total_retransmissions": 0,
-              "sum_lost_packets": 0,
-              "sum_unrecovered_to": 0,
-              "min_send_congestion_window": 10,
-              "min_mss": 1388,
-              "max_smooth_rtt": 1951,
-              "max_min_rtt": 218,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1885,
-              "mean_min_mss": 182,
-              "mean_mss": 1388,
-              "count": 1
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "name": "kube-apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ],
-            "dest": [
-              {
-                "name": "apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              },
-              {
-                "name": "cnx-queryserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ]
-          }
-        }
-      ],
-      "expandable": true,
-      "selectors": {
-        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-system\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
-        "alerts": "dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "packet_capture": "all()"
-      }
-    },
-    {
       "id": "net/pub",
       "type": "net",
       "name": "pub",
@@ -1413,6 +1413,106 @@
     {
       "id": {
         "source_node_id": "hosts/*",
+        "dest_node_id": "namespace/calico-system"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 20,
+              "packet_out": 23,
+              "bytes_in": 3762,
+              "bytes_out": 2342
+            },
+            "connections": {
+              "total_per_sample_interval": 2,
+              "started": 2,
+              "completed": 1
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 1951,
+              "max_min_rtt": 218,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1885,
+              "mean_min_mss": 182,
+              "mean_mss": 1388,
+              "count": 1
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ],
+            "dest": [
+              {
+                "name": "apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"calico-system\""
+      },
+      "service_ports": [
+        {
+          "namespace": "calico-system",
+          "name": "tigera-api",
+          "protocol": "tcp",
+          "port_name": "apiserver",
+          "port": 443
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 5443,
+                "max_port": 5443
+              },
+              {
+                "min_port": 8080,
+                "max_port": 8080
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "hosts/*",
         "dest_node_id": "namespace/kube-system"
       },
       "stats": [
@@ -1518,106 +1618,6 @@
           {
             "protocol": "tcp",
             "port_ranges": [
-              {
-                "min_port": 8080,
-                "max_port": 8080
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "hosts/*",
-        "dest_node_id": "namespace/tigera-system"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 20,
-              "packet_out": 23,
-              "bytes_in": 3762,
-              "bytes_out": 2342
-            },
-            "connections": {
-              "total_per_sample_interval": 2,
-              "started": 2,
-              "completed": 1
-            },
-            "tcp": {
-              "sum_total_retransmissions": 0,
-              "sum_lost_packets": 0,
-              "sum_unrecovered_to": 0,
-              "min_send_congestion_window": 10,
-              "min_mss": 1388,
-              "max_smooth_rtt": 1951,
-              "max_min_rtt": 218,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1885,
-              "mean_min_mss": 182,
-              "mean_mss": 1388,
-              "count": 1
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "name": "kube-apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ],
-            "dest": [
-              {
-                "name": "apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              },
-              {
-                "name": "cnx-queryserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ]
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\"",
-        "alerts": "dest_namespace = \"tigera-system\""
-      },
-      "service_ports": [
-        {
-          "namespace": "tigera-system",
-          "name": "tigera-api",
-          "protocol": "tcp",
-          "port_name": "apiserver",
-          "port": 443
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 5443,
-                "max_port": 5443
-              },
               {
                 "min_port": 8080,
                 "max_port": 8080
@@ -2300,6 +2300,6 @@
     "l3_flows": "(source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\") OR dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-elasticsearch\" OR source_type = \"hep\"",
     "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR src_namespace = \"kube-system\" OR src_namespace = \"storefront\" OR src_namespace = \"tigera-elasticsearch\"",
     "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"kube-system\" OR client_namespace = \"storefront\" OR client_namespace = \"tigera-elasticsearch\"",
-    "alerts": "(source_name_aggr = \"pub\" AND source_namespace = \"-\") OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-system\""
+    "alerts": "(source_name_aggr = \"pub\" AND source_namespace = \"-\") OR source_namespace = \"calico-system\" OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-manager\""
   }
 }

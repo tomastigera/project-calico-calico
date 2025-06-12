@@ -20,6 +20,7 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/coreos/go-semver/semver"
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -603,6 +604,18 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Older managed clusters still run the API server in the "tigera-system" namespace.
+	// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
+	// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
+	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:tigera-api") {
+		isOlderCluster := isOlderManagedCluster(c)
+		if isOlderCluster {
+			logrus.Debugf("Redirecting request path for older managed cluster: %s", clusterID)
+			re := regexp.MustCompile(`/namespaces/calico-system/services/https:tigera-api`)
+			r.URL.Path = re.ReplaceAllString(r.URL.Path, `/namespaces/tigera-system/services/https:tigera-api`)
+		}
+	}
+
 	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
 	// XXX What if we set http2.Transport.AllowHTTP = true ?
 	r.URL.Scheme = "http"
@@ -615,6 +628,31 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	r.URL.Host = "voltron-tunnel"
 	r.Header.Del(utils.ClusterHeaderField)
 	c.ServeHTTP(w, r)
+}
+
+func isOlderManagedCluster(cluster *cluster) bool {
+	if len(cluster.Version) == 0 {
+		logrus.Debugf("ManagedCluster %s has no version info; treating as older cluster", cluster.ID)
+		return true
+	}
+
+	// ignore the prerelease version for semver compare
+	version := strings.Split(cluster.Version, "-")
+	if len(version) == 0 {
+		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		// Treat it as a new cluster for now; this behavior may change in the future.
+		return false
+	}
+
+	clusterVersion, err := semver.NewVersion(strings.TrimPrefix(version[0], "v"))
+	if err != nil {
+		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		// Treat it as a new cluster for now; this behavior may change in the future.
+		return false
+	}
+
+	featureVersion, _ := semver.NewVersion("3.22.0")
+	return clusterVersion.LessThan(*featureVersion)
 }
 
 // Determine whether or not the given request should use the tunnel proxying

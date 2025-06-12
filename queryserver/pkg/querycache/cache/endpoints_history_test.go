@@ -72,21 +72,15 @@ var _ = Describe("Querycache endpoints historical cache tests", func() {
 
 			epsm := endpointCache.TotalWorkloadEndpointsByNamespace()
 			wg.Wait()
-			Expect(epsm).To(HaveLen(3))
+			Expect(epsm).To(HaveLen(2))
 
-			Expect(epsm).To(HaveKeyWithValue("calico-system", api.EndpointSummary{
-				Total:             1,
-				NumFailed:         2,
-				NumWithNoLabels:   3,
-				NumWithNoPolicies: 4,
-			}))
 			Expect(epsm).To(HaveKeyWithValue("kube-system", api.EndpointSummary{
 				Total:             5,
 				NumFailed:         6,
 				NumWithNoLabels:   7,
 				NumWithNoPolicies: 8,
 			}))
-			Expect(epsm).To(HaveKeyWithValue("tigera-system", api.EndpointSummary{
+			Expect(epsm).To(HaveKeyWithValue("calico-system", api.EndpointSummary{
 				Total:             9,
 				NumFailed:         10,
 				NumWithNoLabels:   11,

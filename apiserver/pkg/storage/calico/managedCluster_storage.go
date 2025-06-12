@@ -72,12 +72,12 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		// Determine which CA key / cert to use for signing the managed cluster's guardian certificate.
 		// By default, we use the cluster-scoped one provided by the caller. In multi-tenant mode, will instead use
 		// the per-tenant secret.
-		namespace := "tigera-system"
+		namespace := "calico-system"
 		if MultiTenantEnabled {
 			namespace = res.Namespace
 		}
 
-		// Query the CA secret from the tenant's namespace or from tigera-system. Note that we use the same certificate as both the CA for signing guardian
+		// Query the CA secret from the tenant's namespace or from calico-system. Note that we use the same certificate as both the CA for signing guardian
 		// certificates, as well the Voltron tunnel server certificate.
 		secret, err := resources.K8sClient.CoreV1().Secrets(namespace).Get(ctx, resources.TunnelSecretName, metav1.GetOptions{})
 		if err != nil {
