@@ -8,6 +8,7 @@
 FAILED=0
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 mkdir -p "$TEST_DIR/tmp"
+openssl req -new -newkey rsa:2048  -subj "/C=CA/ST=British Columbia/L=Vancouver/O=Tigera/CN=localhost" -days 365 -nodes -x509 -keyout $TEST_DIR/tmp/tls.key -out $TEST_DIR/tmp/tls.crt
 
 ADDITIONAL_MOUNT=""
 
@@ -15,7 +16,14 @@ function generateAndCollectConfig() {
   ENV_FILE=$1
   OUT_FILE=$2
 
-  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file "$ENV_FILE" "${IMAGE}:${IMAGETAG}" >/dev/null
+  docker run -d \
+    --name generate-fluentd-config \
+    -v $TEST_DIR/tmp/tls.key:/tigera-fluentd-prometheus-tls/tls.key \
+    -v $TEST_DIR/tmp/tls.crt:/tigera-fluentd-prometheus-tls/tls.crt \
+    $ADDITIONAL_MOUNT \
+    --hostname config.generator \
+    --env-file "$ENV_FILE" \
+    "${IMAGE}:${IMAGETAG}" >/dev/null
   sleep 5
 
   if ! docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' >"$OUT_FILE"; then
@@ -242,6 +250,8 @@ checkConfiguration "$TEST_DIR/tmp/disable-some-es-unsecure.env" disable-some-es-
 cat >"$TEST_DIR/tmp/es-secure-with-s3.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_S3=true
+FORWARD_NON_CLUSTER_LOGS_TO_S3=true
 $ES_SECURE_VARS
 $S3_VARS
 EOM
@@ -252,6 +262,8 @@ checkConfiguration "$TEST_DIR/tmp/es-secure-with-s3.env" es-secure-with-s3 "ES s
 cat >"$TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
 $SYSLOG_NO_TLS_VARS
 EOM
 
@@ -261,6 +273,8 @@ checkConfiguration "$TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env" es-no-sec
 cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
 $ES_SECURE_VARS
 $SYSLOG_TLS_VARS
 EOM
@@ -273,6 +287,8 @@ checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" es-secure-
 cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
 $ES_SECURE_VARS
 $SYSLOG_TLS_VARS_ALL_LOG_TYPES
 EOM
@@ -285,6 +301,10 @@ checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.e
 cat >"$TEST_DIR/tmp/es-secure-with-syslog-and-s3.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_CLUSTER_LOGS_TO_S3=true
+FORWARD_NON_CLUSTER_LOGS_TO_S3=true
 $ES_SECURE_VARS
 $SYSLOG_TLS_VARS
 $S3_VARS
@@ -321,6 +341,8 @@ EOM
 # Test with Splunk, normal server with http https
 cat >"$TEST_DIR/tmp/splunk-trusted-http-https.env" <<EOM
 $SPLUNK_COMMON_VARS
+FORWARD_CLUSTER_LOGS_TO_SPLUNK=true
+FORWARD_NON_CLUSTER_LOGS_TO_SPLUNK=true
 EOM
 
 checkConfiguration "$TEST_DIR/tmp/splunk-trusted-http-https.env" splunk-trusted-http-https "Splunk - with http and https"
@@ -336,6 +358,70 @@ EOM
 
 TMP=$(mktemp)
 checkConfiguration "$TEST_DIR/tmp/linseed.env" linseed "LINSEED API with default params"
+
+# Test with S3 and ES secure, non-cluster only
+cat >"$TEST_DIR/tmp/es-secure-with-s3.env" <<EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_S3=false
+FORWARD_NON_CLUSTER_LOGS_TO_S3=true
+$ES_SECURE_VARS
+$S3_VARS
+EOM
+
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-s3.env" es-secure-with-s3-nch "ES secure with S3 non-cluster only"
+
+# Test with ES secure and s3 and syslog with tls, non-cluster only
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-and-s3.env" <<EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=false
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
+FORWARD_CLUSTER_LOGS_TO_S3=false
+FORWARD_NON_CLUSTER_LOGS_TO_S3=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS
+$S3_VARS
+EOM
+
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-and-s3.env" es-secure-with-syslog-and-s3-nch "ES secure with syslog and S3 non-cluster only"
+
+# Test with ES secure and syslog with tls, non-cluster only
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" <<EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=false
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS
+EOM
+
+TMP=$(mktemp)
+ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" es-secure-with-syslog-with-tls-nch "ES secure with syslog with TLS non-cluster only"
+
+# Test with ES secure and syslog with tls with all log types, non-cluster only
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env" <<EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+FORWARD_CLUSTER_LOGS_TO_SYSLOG=false
+FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS_ALL_LOG_TYPES
+EOM
+
+TMP=$(mktemp)
+ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env" es-secure-with-syslog-with-tls-all-log-types-nch "ES secure with syslog with TLS with all log types non-cluster only"
+
+# Test with Splunk, normal server with http https, non-cluster only
+cat >"$TEST_DIR/tmp/splunk-trusted-http-https.env" <<EOM
+$SPLUNK_COMMON_VARS
+FORWARD_CLUSTER_LOGS_TO_SPLUNK=false
+FORWARD_NON_CLUSTER_LOGS_TO_SPLUNK=true
+EOM
+
+checkConfiguration "$TEST_DIR/tmp/splunk-trusted-http-https.env" splunk-trusted-http-https-nch "Splunk - with http and https non-cluster only"
 
 rm -f "$TMP"
 

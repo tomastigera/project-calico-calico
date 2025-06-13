@@ -33,12 +33,14 @@ import (
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1355,6 +1357,153 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				ServerName:   "voltron",
 			}, 5*time.Second, nil)
 			Expect(err).Should(MatchError("TLS dial failed: tls: failed to verify certificate: x509: certificate specifies an incompatible key usage"))
+		})
+	})
+
+	Context("paths with authorization enabled", func() {
+		var (
+			cancelFunc            context.CancelFunc
+			srvWg                 *sync.WaitGroup
+			srv                   *server.Server
+			defaultServer         *httptest.Server
+			httpsAddr             string
+			publicHTTPClient      *http.Client
+			defaultProxy          *proxy.Proxy
+			authorizerInvocations int
+		)
+
+		const (
+			authCacheTTL = 500 * time.Millisecond
+		)
+
+		BeforeEach(func() {
+			var err error
+			var ctx context.Context
+			ctx, cancelFunc = context.WithCancel(context.Background())
+			watchSync = make(chan error)
+
+			// Configure authentication and authorization.
+			authorizerInvocations = 0
+			authenticator, err := auth.NewJWTAuth(
+				&rest.Config{BearerToken: janeBearerToken.ToString()},
+				k8sAPI,
+				auth.WithTokenReviewCacheTTL(ctx, authCacheTTL),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			testing.SetTokenReviewsReactor(fakeK8s, janeBearerToken, bobBearerToken)
+			testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
+				testing.UserPermissions{
+					Username: janeBearerToken.UserName(),
+					Attrs: []authzv1.ResourceAttributes{
+						{
+							Verb:      "create",
+							Group:     "linseed.tigera.io",
+							Resource:  "flowlogs",
+							Namespace: clusterNS,
+						},
+					},
+				},
+				testing.UserPermissions{
+					Username: bobBearerToken.UserName(),
+					// Bob has no privilege :)
+					Attrs: []authzv1.ResourceAttributes{},
+				},
+			)
+			incrementAuthorizationCount := func(action k8stesting.Action) (bool, runtime.Object, error) {
+				authorizerInvocations++
+				return false, nil, nil
+			}
+			fakeK8s.Fake.PrependReactor("create", "subjectaccessreviews", incrementAuthorizationCount)
+			fakeK8s.Fake.PrependReactor("create", "localsubjectaccessreviews", incrementAuthorizationCount)
+
+			// Set up the proxy.
+			defaultServer = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					log.Info("request received, path=", r.URL.Path)
+					w.WriteHeader(http.StatusOK)
+				}))
+			defaultURL, err := url.Parse(defaultServer.URL)
+			Expect(err).NotTo(HaveOccurred())
+			defaultProxy, err = proxy.New([]proxy.Target{
+				{Path: "/authorization-required", Dest: defaultURL},
+				{Path: "/no-authorization-required", Dest: defaultURL},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			srv, httpsAddr, _, _, srvWg = createAndStartServer(
+				k8sAPI,
+				fakeClient,
+				config,
+				authenticator,
+				clusterNS,
+				server.WithTunnelSigningCreds(voltronTunnelCert),
+				server.WithTunnelCert(voltronTunnelTLSCert),
+				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
+				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
+				server.WithDefaultProxy(defaultProxy),
+				server.WithAuthAttributesMap(map[string]*proxy.AuthorizationDetails{
+					"/authorization-required": {
+						Authorizer: auth.NewNamespacedRBACAuthorizer(k8sAPI, clusterNS),
+						AttributesFunc: func(request *http.Request) (*authzv1.ResourceAttributes, *authzv1.NonResourceAttributes, error) {
+							return &authzv1.ResourceAttributes{
+								Verb:     "create",
+								Group:    "linseed.tigera.io",
+								Resource: "flowlogs",
+							}, nil, nil
+						},
+					},
+				}),
+			)
+
+			publicHTTPClient = &http.Client{
+				Transport: &http2.Transport{
+					TLSClientConfig: &tls.Config{
+						NextProtos: []string{"h2"},
+						RootCAs:    voltronHttpsCAs,
+						ServerName: "localhost",
+					},
+				},
+			}
+		})
+
+		AfterEach(func() {
+			cancelFunc()
+			Expect(srv.Close()).NotTo(HaveOccurred())
+			defaultServer.Close()
+			srvWg.Wait()
+		})
+
+		It("should allow jane to access the authorized path", func() {
+			req, err := http.NewRequest(http.MethodPost, "https://"+httpsAddr+"/authorization-required", strings.NewReader("foo"))
+			Expect(err).ToNot(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := publicHTTPClient.Do(req)
+			Expect(authorizerInvocations).To(Equal(1))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		It("should NOT allow bob to access the authorized path", func() {
+			req, err := http.NewRequest(http.MethodPost, "https://"+httpsAddr+"/authorization-required", strings.NewReader("foo"))
+			Expect(err).ToNot(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, bobBearerToken.BearerTokenHeader())
+
+			resp, err := publicHTTPClient.Do(req)
+			Expect(authorizerInvocations).To(Equal(1))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+
+		It("should NOT invoke an authorizer for an path that is not configured for authorization", func() {
+			req, err := http.NewRequest(http.MethodPost, "https://"+httpsAddr+"/no-authorization-required", strings.NewReader("foo"))
+			Expect(err).ToNot(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := publicHTTPClient.Do(req)
+			Expect(authorizerInvocations).To(Equal(0))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
 	})
 })

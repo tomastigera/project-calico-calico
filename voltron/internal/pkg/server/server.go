@@ -86,6 +86,8 @@ type Server struct {
 	config        *rest.Config
 	authenticator auth.JWTAuth
 
+	authDetailsMap map[string]*proxy.AuthorizationDetails
+
 	// defaultProxy handles requests received by voltron which are destined to the management cluster itself.
 	// this primarily serves requests made by the user's browser.
 	// when nil, the server will returns a 400 error for requests that do not have the x-cluster-id header set.
@@ -513,11 +515,37 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Perform authentication.
 	usr, status, err := s.authenticator.Authenticate(r)
 	if err != nil {
 		logrus.Errorf("Could not authenticate user from request: %s", err)
 		http.Error(w, err.Error(), status)
 		return
+	}
+
+	// Perform authorization if an authorizer has been registered for the path.
+	authorizationDetails := s.getAuthorizationDetails(r)
+	if authorizationDetails.FullySet() {
+		resAttrs, nonResAttrs, err := authorizationDetails.AttributesFunc(r)
+		if err != nil {
+			logrus.Errorf("Failed to resolve authorization attributes from request: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		authorized, err := authorizationDetails.Authorizer.Authorize(usr, resAttrs, nonResAttrs)
+		if err != nil {
+			logrus.Errorf("Failed to authorize user from request: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !authorized {
+			msg := "User was not authorized to perform request at this path"
+			logrus.Error(msg)
+			http.Error(w, msg, http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// If shouldUseTunnel=true, we do impersonation and the request will be sent to guardian.
@@ -720,6 +748,14 @@ func (s *Server) FlushAccessLogs() {
 	if s.accessLogger != nil {
 		s.accessLogger.Flush()
 	}
+}
+
+func (s *Server) getAuthorizationDetails(r *http.Request) *proxy.AuthorizationDetails {
+	if s.authDetailsMap == nil || s.defaultProxy == nil {
+		return nil
+	}
+
+	return s.authDetailsMap[s.defaultProxy.GetTargetPath(r)]
 }
 
 func authorizationHeaderBearerToken(r *http.Request) string {

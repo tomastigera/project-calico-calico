@@ -5,7 +5,12 @@ if [ "${SYSLOG_TLS}" == "false" ]; then
   sed -i 's|ca_file .*||g' "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf"
 fi
 if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
-  cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-syslog.conf"
+  if [ "${FORWARD_CLUSTER_LOGS_TO_SYSLOG}" == "true" ]; then
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-syslog.conf"
+  fi
+  if [ "${FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG}" == "true" ]; then
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-syslog.conf"
+  fi
 fi
 if [ "${SYSLOG_DNS_LOG}" == "true" ]; then
   cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_dns/out-syslog.conf"

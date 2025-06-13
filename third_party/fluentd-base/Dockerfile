@@ -42,6 +42,7 @@ RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports
 RUN mkdir -p /fluentd/etc/output_dns
 RUN mkdir -p /fluentd/etc/output_flows
+RUN mkdir -p /fluentd/etc/output_non_cluster_flows
 RUN mkdir -p /fluentd/etc/output_ids_events
 RUN mkdir -p /fluentd/etc/output_kube_audit
 RUN mkdir -p /fluentd/etc/output_l7

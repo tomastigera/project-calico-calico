@@ -7,14 +7,17 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/cache"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
@@ -222,6 +225,20 @@ func main() {
 		opts = append(opts, server.WithHTTPAccessLogging(logOpts...))
 	}
 
+	// Create a shared authorizer for targets to use.
+	var authorizer auth.RBACAuthorizer
+	if cfg.TargetAuthorizerCacheTTL > 0 {
+		authCache, err := cache.NewExpiring[string, bool](cache.ExpiringConfig{
+			Context: ctx,
+			Name:    "target-authorizer",
+			TTL:     cfg.TargetAuthorizerCacheTTL,
+		})
+		if err != nil {
+			log.WithError(err).Panic("Unable to create target authorizer")
+		}
+		authorizer = auth.NewCachingAuthorizer(authCache, auth.NewNamespacedRBACAuthorizer(k8s, cfg.TenantNamespace))
+	}
+
 	targetList := bootstrap.Targets{
 		{
 			Path:         "/api/",
@@ -332,12 +349,20 @@ func main() {
 	if cfg.EnableNonclusterHost {
 		targetList = append(targetList, bootstrap.Target{
 			Path:           "/ingestion/api/v1/",
-			Dest:           cfg.LinseedEndpoint,
-			CABundlePath:   cfg.LinseedCABundlePath,
+			PathRegexp:     []byte("^/ingestion/api/v1/flows/logs/bulk"),
+			PathReplace:    []byte("/non-cluster-flows"),
+			Dest:           cfg.FluentdHTTPPath,
+			CABundlePath:   cfg.FluentdCABundlePath,
 			ClientKeyPath:  cfg.InternalHTTPSKey,
 			ClientCertPath: cfg.InternalHTTPSCert,
-			PathRegexp:     []byte("^/ingestion/api/v1/?"),
-			PathReplace:    []byte("/api/v1/"),
+			Authorizer:     authorizer,
+			AuthorizationAttributesFunc: func(request *http.Request) (*authzv1.ResourceAttributes, *authzv1.NonResourceAttributes, error) {
+				return &authzv1.ResourceAttributes{
+					Verb:     "create",
+					Group:    "linseed.tigera.io",
+					Resource: "flowlogs",
+				}, nil, nil
+			},
 		})
 	}
 
@@ -417,6 +442,9 @@ func main() {
 		log.WithError(err).Fatalf("Failed to create a default k8s proxy.")
 	}
 	opts = append(opts, server.WithDefaultProxy(defaultProxy))
+
+	authorizationDetailsByPath := bootstrap.AuthorizationDetailsByPath(targetList)
+	opts = append(opts, server.WithAuthAttributesMap(authorizationDetailsByPath))
 
 	srv, err := server.New(
 		k8s,

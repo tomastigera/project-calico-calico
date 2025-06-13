@@ -138,8 +138,10 @@ echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 if [ -z "${DISABLE_ES_FLOW_LOG}" ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ]; then
   if [ -z "${LINSEED_ENABLED}" ] || [ "${LINSEED_ENABLED}" == "false" ]; then
     cp "${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-es.conf"
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-es.conf"
   else
     cp "${ROOT_DIR}/fluentd/etc/outputs/out-linseed-flows.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-linseed-flows.conf"
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-linseed-flows.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-linseed-flows.conf"
   fi
 fi
 if [ -z "${DISABLE_ES_DNS_LOG}" ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ]; then
@@ -199,7 +201,12 @@ if [ -z "${FLUENTD_ES_SECURE}" ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
 fi
 
 if [ "${S3_STORAGE}" == "true" ]; then
-  cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-flows.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-s3.conf"
+  if [ "${FORWARD_CLUSTER_LOGS_TO_S3}" == "true" ]; then
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-flows.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-s3.conf"
+  fi
+  if [ "${FORWARD_NON_CLUSTER_LOGS_TO_S3}" == "true" ]; then
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-flows.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-s3.conf"
+  fi
   cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-dns.conf" "${ROOT_DIR}/fluentd/etc/output_dns/out-s3.conf"
   cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-tsee-audit.conf" "${ROOT_DIR}/fluentd/etc/output_tsee_audit/out-s3.conf"
   cp "${ROOT_DIR}/fluentd/etc/outputs/out-s3-kube-audit.conf" "${ROOT_DIR}/fluentd/etc/output_kube_audit/out-s3.conf"
@@ -222,6 +229,7 @@ source "${ROOT_DIR}/bin/sumo-config.sh"
 # Include output destination for flow logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for flows is turned on.
 if [ -z "${DISABLE_ES_FLOW_LOG}" ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ] || [ "${SYSLOG_FLOW_LOG}" == "true" ] || [ "${SPLUNK_FLOW_LOG}" == "true" ] || [ "${SUMO_FLOW_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
   cat "${ROOT_DIR}/fluentd/etc/output_match/flows.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+  cat "${ROOT_DIR}/fluentd/etc/output_match/non-cluster-flows.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
   echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 fi
 
