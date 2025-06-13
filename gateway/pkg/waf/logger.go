@@ -39,6 +39,9 @@ func NewFileLogger(directory string, filename string, aggregationPeriod time.Dur
 
 		},
 	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create aggreagation controller: %w", err)
+	}
 
 	go aggController.Run()
 
