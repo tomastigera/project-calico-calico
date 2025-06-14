@@ -568,22 +568,39 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if shouldUseTunnel && !s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
-		// If the request is going to a managed cluster, but the managed cluster does not support impersonation,
-		// remove impersonation headers. This isn't strictly necessary - the managed cluster will ignore the headers
-		// if they are present - but it's cleaner to remove them.
-		logrus.Debug("Removing impersonation headers")
-		r.Header.Del(authnv1.ImpersonateUserHeader)
-		r.Header.Del(authnv1.ImpersonateGroupHeader)
+	// Note, we expect the value passed in the request header field to be the resource
+	// name for a ManagedCluster resource (which will be human-friendly and unique)
+	clusterID := r.Header.Get(utils.ClusterHeaderField)
+	c := s.clusters.get(clusterID)
+	isOlderCluster := false
+
+	// For the management cluster, the cluster object is nil, so skip version check.
+	if c != nil {
+		// TODO: Clean up this logic in v3.25 or v3.26, since only two minor versions are supported.
+		isOlderCluster = isOlderManagedCluster(c)
+	}
+
+	if shouldUseTunnel {
+		userName := usr.GetName()
+
+		// Strip impersonation headers if the request is destined for a managed cluster and either:
+		// - The cluster is a newer version (v3.22+) that uses consolidated Guardian RBAC,
+		//   and the request originates from a management cluster backend component
+		// - The cluster does not support impersonation at all (e.g., free tier)
+		if !isOlderCluster &&
+			(strings.HasPrefix(userName, "system:serviceaccount:tigera-") ||
+				strings.HasPrefix(userName, "system:serviceaccount:calico-") ||
+				strings.HasPrefix(userName, "system:serviceaccount:cc-tenant-")) ||
+			!s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
+			logrus.Debugf("Removing impersonation headers from request (%s)", userName)
+			r.Header.Del(authnv1.ImpersonateUserHeader)
+			r.Header.Del(authnv1.ImpersonateGroupHeader)
+		}
 	}
 
 	// Always remove the auth headers before proxying the request. Management cluster requests will
 	// use impersonation, and tunneled requests will either use impersonation or Guardian's AuthN.
 	removeAuthHeaders(r)
-
-	// Note, we expect the value passed in the request header field to be the resource
-	// name for a ManagedCluster resource (which will be human-friendly and unique)
-	clusterID := r.Header.Get(utils.ClusterHeaderField)
 
 	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
 	// requests with this value in the ClusterHeaderField.
@@ -602,8 +619,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
-
-	c := s.clusters.get(clusterID)
 
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
@@ -636,7 +651,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
 	// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
 	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:tigera-api") {
-		isOlderCluster := isOlderManagedCluster(c)
 		if isOlderCluster {
 			logrus.Debugf("Redirecting request path for older managed cluster: %s", clusterID)
 			re := regexp.MustCompile(`/namespaces/calico-system/services/https:tigera-api`)
@@ -663,7 +677,6 @@ func isOlderManagedCluster(cluster *cluster) bool {
 		logrus.Debugf("ManagedCluster %s has no version info; treating as older cluster", cluster.ID)
 		return true
 	}
-
 	// ignore the prerelease version for semver compare
 	version := strings.Split(cluster.Version, "-")
 	if len(version) == 0 {
