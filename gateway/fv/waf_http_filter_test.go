@@ -200,7 +200,7 @@ func TestRequests(t *testing.T) {
 }
 
 func TestDisablingWAFHTTPFilter(t *testing.T) {
-	t.Skip("this test is kinda broken. config doesn't change, so the filter is never removed. It just stops blocking requests.")
+	// t.Skip("this test is kinda broken. config doesn't change, so the filter is never removed. It just stops blocking requests.")
 	setupTest(t, waf.ServerOptions{
 		TcpPort:  9002,
 		HttpPort: 8080,
@@ -225,11 +225,19 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 		require.NotContains(t, config, "type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor")
 	})
 
+	// First request with the new config still uses the old config because update happens in the background so that we don't hold up traffic.
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking) using old config", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, 2)
+	})
+
+	// By now the new config should be used.
 	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "No active WAF", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 200, resp.StatusCode)
 		require.Contains(t, body, "/subpath?artist=")
 		// The previous event in the same test
-		require.Len(t, wafEvents, 1)
+		require.Len(t, wafEvents, 2)
 	})
 }
 

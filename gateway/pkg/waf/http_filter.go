@@ -233,8 +233,6 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 	go s.handleDirectivesUpdate(md["directivesjson"])
 
 	// Use latest wafServer in case there was a config change since handling the previous request.
-	// We only do that as part of ProcessingRequest_RequestHeaders as it is the first step if the request lifecycle.
-
 	errCh := make(chan error, 1)
 	s.wafServerManager.Read(func(w coraza.WAF, evp *waf.WafEventsPipeline) {
 		if w == nil {
