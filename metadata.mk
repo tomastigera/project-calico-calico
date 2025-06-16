@@ -105,3 +105,6 @@ OPERATOR_BRANCH=master
 
 # The libbpf version to use
 LIBBPF_VERSION=v1.4.6
+
+# quay.io expiry time for hashrelease/dev images
+QUAY_EXPIRE_DAYS=90
