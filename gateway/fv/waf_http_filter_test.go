@@ -334,15 +334,20 @@ func TestFileLogger(t *testing.T) {
 		require.Equal(t, 200, resp.StatusCode)
 	}, 10*time.Second, 200*time.Millisecond)
 
-	client := &http.Client{}
+	transport := &http.Transport{
+		DialContext: dialContextFromLocalPort(8000),
+	}
+	client := &http.Client{
+		Transport: transport,
+	}
 
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
 	})
 
 	// Second request to cover log aggreagation too
-	testRequest(t, client, "POST", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+	testRequest(t, client, "POST", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
 		require.Equal(t, 403, resp.StatusCode)
 		require.Contains(t, body, "deny (403)")
 	})
@@ -354,7 +359,7 @@ func TestFileLogger(t *testing.T) {
 
 		lines := strings.Split(string(data), "\n")
 		require.Len(t, lines, 2)
-		require.Contains(t, lines[0], "WAF detected 3 violations [deny]")
+		require.Contains(t, lines[0], "WAF detected 2 violations [deny]")
 		require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
 		require.Contains(t, lines[0], `"count":2`)
 		require.Empty(t, lines[1])
