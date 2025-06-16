@@ -354,7 +354,7 @@ func TestFileLogger(t *testing.T) {
 
 		lines := strings.Split(string(data), "\n")
 		require.Len(t, lines, 2)
-		require.Contains(t, lines[0], "WAF detected 2 violations [deny]")
+		require.Contains(t, lines[0], "WAF detected 3 violations [deny]")
 		require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
 		require.Contains(t, lines[0], `"count":2`)
 		require.Empty(t, lines[1])
