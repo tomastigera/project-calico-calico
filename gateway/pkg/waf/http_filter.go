@@ -8,10 +8,10 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
+	"github.com/corazawaf/coraza/v3"
+	corazatypes "github.com/corazawaf/coraza/v3/types"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
-	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -24,6 +24,8 @@ import (
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/gateway/pkg/waf/service"
+	"github.com/projectcalico/calico/gateway/pkg/waf/transaction"
 )
 
 type ServerOptions struct {
@@ -38,52 +40,19 @@ type ServerOptions struct {
 }
 
 type WAFHTTPFilter struct {
-	options        ServerOptions
-	logger         func(*proto.WAFEvent)
-	wafServer      *waf.Server
-	healthServer   *http.Server
-	tcpGRPCServer  *grpc.Server
-	unixGRPCServer *grpc.Server
+	options          ServerOptions
+	logger           func(*proto.WAFEvent)
+	wafServerManager *service.WAFServiceManager
+	healthServer     *http.Server
+	tcpGRPCServer    *grpc.Server
+	unixGRPCServer   *grpc.Server
 
 	healthzv1.HealthServer
 	grpcListenAddr net.Addr
 }
 
-var Directives []string = []string{
-	"Include @coraza.conf-recommended",
-	"Include @crs-setup.conf.example",
-	"Include @owasp_crs/*.conf",
-	"SecRuleEngine On",
-
-	// Tigera CRS customizations
-	// Add some common content-types expected in micro-service traffic
-	`SecAction \
-    "id:900220,\
-    phase:1,\
-    nolog,\
-    pass,\
-    t:none,\
-    setvar:'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/grpc| |application/grpc+proto| |application/grpc+json| |application/octet-stream|'"`,
-
-	//Removes the rule "Host header is a numeric IP address"
-	"SecRuleRemoveById 920350",
-}
-
 func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
-	wafServer, err := newWAFServer(opts, Directives, logger)
-	if err != nil {
-		logrus.Panicf("cannot initialize WAF: %v", err)
-	}
 
-	return &WAFHTTPFilter{
-		options:      opts,
-		logger:       logger,
-		wafServer:    wafServer,
-		HealthServer: health.NewHealthCheckService(&alwaysReadyReporter{}),
-	}
-}
-
-func newWAFServer(opts ServerOptions, directives []string, logger func(*proto.WAFEvent)) (*waf.Server, error) {
 	var wafRulesetRootFS fs.FS
 
 	if opts.WafRulesetRootDir != "" {
@@ -97,20 +66,17 @@ func newWAFServer(opts ServerOptions, directives []string, logger func(*proto.WA
 		wafRulesetRootFS = nil // Uses default coraza config
 	}
 
-	events := waf.NewEventsPipeline(logger)
+	wafServerManager := service.NewWAFServiceManager(wafRulesetRootFS, logger)
+	wafServerManager.OnUpdate(DefaultDirectives) // will panic if directives are not valid
 
-	return waf.New(wafRulesetRootFS, nil, directives, false, events)
-}
-
-func (f *WAFHTTPFilter) UpdateWAFConfig(directives []string) {
-	logrus.Debugf("WAF directives: %v", directives)
-	wafServer, err := newWAFServer(f.options, directives, f.logger)
-	if err != nil {
-		logrus.Errorf("Error creating WAF Server with new config: %#v", err)
-	} else {
-		logrus.Infof("Updating WAF Server with new directives: %#v", directives)
-		f.wafServer = wafServer
+	res := &WAFHTTPFilter{
+		options:          opts,
+		logger:           logger,
+		wafServerManager: wafServerManager,
+		HealthServer:     health.NewHealthCheckService(&alwaysReadyReporter{}),
 	}
+
+	return res
 }
 
 func (f *WAFHTTPFilter) Start() error {
@@ -240,160 +206,83 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 	}
 }
 
+// handleDirectivesUpdate processes the directivesJson metadata from the gRPC context.
+// IMPORTANT: this function is coded to be run in a goroutine
+func (s *WAFHTTPFilter) handleDirectivesUpdate(directivesJson []string) {
+	logrus.Debugf("handleDirectivesUpdate called with directivesJson: %v", directivesJson)
+	if len(directivesJson) > 0 {
+		var directives []string
+		err := json.Unmarshal([]byte(directivesJson[0]), &directives)
+		if err != nil {
+			logrus.Errorf("Error decoding directives: %#v", err)
+		}
+		s.wafServerManager.OnUpdate(directives)
+	}
+}
+
 func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_ProcessServer) error {
 	ctx := srv.Context()
 	logrus.Info("start Process()")
 
 	md, _ := metadata.FromIncomingContext(ctx)
 	logrus.Debugf("gRPC context metadata: %v", md)
+	xForwardedFor := md["x-forwarded-for"]
 
-	directivesJson := md["directivesjson"]
+	// Update config in parallel so that we don't delay request processing
+	go s.handleDirectivesUpdate(md["directivesjson"])
 
-	if len(directivesJson) > 0 {
+	// Use latest wafServer in case there was a config change since handling the previous request.
+	// We only do that as part of ProcessingRequest_RequestHeaders as it is the first step if the request lifecycle.
 
-		var directives []string
-		err := json.Unmarshal([]byte(directivesJson[0]), &directives)
+	errCh := make(chan error, 1)
+	s.wafServerManager.Read(func(w coraza.WAF, evp *waf.WafEventsPipeline) {
+		if w == nil {
+			logrus.Panic("wafServerManager returned nil WAF service")
+		}
+		// Create a request processor that will handle the WAF checks using the current WAF config.
+		requestProcessor, err := transaction.NewRequestHandler(
+			w,
+			xForwardedFor,
+			[]func(*proto.WAFEvent, corazatypes.Transaction){
+				evp.ProcessProtoEvent,
+				func(event *proto.WAFEvent, tx corazatypes.Transaction) {
+					logrus.Debugf("WAF event: %s", event.String())
+				},
+			},
+		)
 		if err != nil {
-			logrus.Errorf("Error decoding directives: %#v", err)
+			logrus.Errorf("Error creating request processor: %v", err)
+			errCh <- status.Errorf(codes.Internal, "cannot create request processor: %v", err)
 		}
 
-		// Update config in parallel so that we don't delay request processing
-		go s.UpdateWAFConfig(directives)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			e := ctx.Err()
-			logrus.WithError(e).Info("Done!")
-			return e
-		default:
-		}
-		req, err := srv.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return status.Errorf(codes.Unknown, "cannot receive stream request: %v", err)
-		}
-
-		logrus.Infof("Processing request %v", req)
-
-		resp := &envoy_service_proc_v3.ProcessingResponse{}
-		switch v := req.Request.(type) {
-		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
-			// Use latest wafServer in case there was a config change since handlingthe previous request.
-			// We only do that as part of ProcessingRequest_RequestHeaders as it is the first step if the request lifecycle.
-			wafServer := s.wafServer
-			blockedByWAF := false
-
-			headersList := v.RequestHeaders.Headers.GetHeaders()
-			headersMap := make(map[string]string)
-			for _, headerValue := range headersList {
-				key := headerValue.GetKey()
-				value := string(headerValue.GetRawValue())
-				logrus.Debugf("Adding %s=%s to headersMap", key, value)
-				headersMap[key] = value
+		for {
+			select {
+			case <-ctx.Done():
+				e := ctx.Err()
+				logrus.WithError(e).Info("Done!")
+				errCh <- status.Errorf(codes.Canceled, "context canceled: %v", e)
+				return
+			default:
 			}
-
-			id := headersMap["x-request-id"]
-
-			var protocol string
-			if req.Attributes != nil {
-				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
-					if rqa, ok := epa.Fields["request.protocol"]; ok {
-						protocol = rqa.GetStringValue()
-					} else {
-						logrus.Warn("Cound not read request.protocol")
-					}
-				}
+			req, err := srv.Recv()
+			if err == io.EOF {
+				errCh <- err
+				return
 			}
-
-			now := time.Now()
-			seconds := now.Unix()
-			nanos := now.Nanosecond()
-
-			checkReq := &waf.CheckRequest{
-				Id:               id,
-				Host:             headersMap[":authority"],
-				Method:           headersMap[":method"],
-				Path:             headersMap[":path"],
-				Protocol:         protocol,
-				Headers:          headersMap,
-				TimestampSeconds: seconds,
-				TimestampNanos:   int32(nanos),
-			}
-
-			var xForwardedFor string
-			if len(md["x-forwarded-for"]) > 0 {
-				xForwardedFor = md["x-forwarded-for"][0]
-			}
-			checkReq.SrcHost = xForwardedFor
-
-			logrus.Debugf("About to check WAF with %#v", checkReq)
-			// This checks both headers and body (phas 1 and phase 2).
-			// The body checks are useless for now as we don't have that information.
-			// Future work will need to break up those 2 checks, but using the same transaction for the 2 phases.
-			wafResp, err := wafServer.CheckWAF(checkReq)
 			if err != nil {
-				logrus.Errorf("Error checking WAF: %#v", err)
-			}
-			logrus.Debugf("WAF result (status: %d %s): %#v", wafResp.Status.Code, wafResp.Status.Message, wafResp)
-			if wafResp.Status.Code == 0 {
-				blockedByWAF = false
-			} else {
-				blockedByWAF = true
+				errCh <- status.Errorf(codes.Unknown, "cannot receive stream request: %v", err)
+				return
 			}
 
-			resp = &envoy_service_proc_v3.ProcessingResponse{
-				Response: &envoy_service_proc_v3.ProcessingResponse_RequestHeaders{
-					RequestHeaders: &envoy_service_proc_v3.HeadersResponse{
-						Response: &envoy_service_proc_v3.CommonResponse{
-							Status: envoy_service_proc_v3.CommonResponse_CONTINUE,
-						},
-					},
-				},
+			logrus.Infof("Processing request %v", req)
+			resp := requestProcessor.Process(req)
+			if err := srv.Send(resp); err != nil {
+				logrus.Warnf("send error %v", err)
 			}
-
-			logrus.Debugf("blockedByWAF is set to %v", blockedByWAF)
-
-			if blockedByWAF {
-				resp.Response = &envoy_service_proc_v3.ProcessingResponse_ImmediateResponse{
-					ImmediateResponse: &envoy_service_proc_v3.ImmediateResponse{
-						Status: &envoy_type_v3.HttpStatus{
-							Code: envoy_type_v3.StatusCode_Forbidden,
-						},
-						Body: []byte(wafResp.Status.Message),
-					},
-				}
-			}
-		case *envoy_service_proc_v3.ProcessingRequest_RequestBody:
-			resp = &envoy_service_proc_v3.ProcessingResponse{
-				Response: &envoy_service_proc_v3.ProcessingResponse_RequestBody{
-					RequestBody: &envoy_service_proc_v3.BodyResponse{
-						Response: &envoy_service_proc_v3.CommonResponse{
-							Status: envoy_service_proc_v3.CommonResponse_CONTINUE,
-						},
-					},
-				},
-			}
-		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
-			resp = &envoy_service_proc_v3.ProcessingResponse{
-				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseHeaders{
-					ResponseHeaders: &envoy_service_proc_v3.HeadersResponse{
-						Response: &envoy_service_proc_v3.CommonResponse{
-							Status: envoy_service_proc_v3.CommonResponse_CONTINUE,
-						},
-					},
-				},
-			}
-		default:
-			logrus.Infof("Unknown Request type %v\n", v)
 		}
-		if err := srv.Send(resp); err != nil {
-			logrus.Warnf("send error %v", err)
-		}
-	}
+	})
+
+	return <-errCh
 }
 
 type alwaysReadyReporter struct{}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3"
+	corazatypes "github.com/corazawaf/coraza/v3/types"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	log "github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ type requestHandler struct {
 	transaction   *Transaction
 	xForwardedFor []string
 
-	eventCallbacks []func(*proto.WAFEvent)
+	eventCallbacks []func(*proto.WAFEvent, corazatypes.Transaction)
 }
 
 type RequestHandler interface {
@@ -28,7 +29,7 @@ type RequestHandler interface {
 	Process(*envoy_service_proc_v3.ProcessingRequest) *envoy_service_proc_v3.ProcessingResponse
 }
 
-func NewRequestHandler(instance coraza.WAF, xForwardedFor []string, eventCallbacks []func(*proto.WAFEvent)) (*requestHandler, error) {
+func NewRequestHandler(instance coraza.WAF, xForwardedFor []string, eventCallbacks []func(*proto.WAFEvent, corazatypes.Transaction)) (*requestHandler, error) {
 	if instance == nil {
 		return nil, errors.New("waf instance cannot be nil")
 	}
@@ -45,6 +46,7 @@ func NewRequestHandler(instance coraza.WAF, xForwardedFor []string, eventCallbac
 
 // Process processes a single ProcessingRequest and returns a ProcessingResponse.
 func (h *requestHandler) Process(req *envoy_service_proc_v3.ProcessingRequest) *envoy_service_proc_v3.ProcessingResponse {
+	defer h.currentTransactionEmitToCallbacks()
 	switch v := req.Request.(type) {
 	case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
 		log.Tracef("--> Processing request headers: %v", v)
@@ -81,6 +83,7 @@ func (h *requestHandler) ProcessAll(reqs ...*envoy_service_proc_v3.ProcessingReq
 		log.Debugf("Received response: %T", res.Response)
 		if !utils.IsContinueResponse(res) {
 			log.Debugf("Received non-continue response: '%s'", res.String())
+			h.transaction.ProcessLogging()
 			return res
 		}
 		log.Debugf("Received continue response, continuing to next request")
@@ -141,7 +144,6 @@ func (h *requestHandler) handleRequestHeaders(reqHeaders *envoy_service_proc_v3.
 
 	it, status, msg := h.transaction.ProcessRequestHeaders()
 	if it != nil {
-		defer h.currentTransactionEmitToCallbacks()
 		res.Response = utils.NewImmediateResponse(
 			status,
 			[]byte(msg),
@@ -172,7 +174,6 @@ func (h *requestHandler) handleRequestBody(reqBody *envoy_service_proc_v3.Proces
 
 	switch {
 	case it != nil:
-		defer h.currentTransactionEmitToCallbacks()
 		res.Response = utils.NewImmediateResponse(
 			status,
 			[]byte(msg),
@@ -185,7 +186,6 @@ func (h *requestHandler) handleRequestBody(reqBody *envoy_service_proc_v3.Proces
 			[]byte("internal error processing request body chunk"),
 		)
 	}
-
 	return
 }
 
@@ -209,7 +209,6 @@ func (h *requestHandler) handleResponseHeaders(resHeaders *envoy_service_proc_v3
 
 	it, status, msg := h.transaction.ProcessResponseHeaders(headersMap)
 	if it != nil {
-		defer h.currentTransactionEmitToCallbacks()
 		res.Response = utils.NewImmediateResponse(
 			status,
 			[]byte(msg),
@@ -242,7 +241,6 @@ func (h *requestHandler) handleResponseBody(resBody *envoy_service_proc_v3.Proce
 
 	switch {
 	case it != nil:
-		defer h.currentTransactionEmitToCallbacks()
 		res.Response = utils.NewImmediateResponse(
 			status,
 			[]byte(msg),
@@ -270,6 +268,6 @@ func (h *requestHandler) currentTransactionEmitToCallbacks() {
 
 func (h *requestHandler) emitEvent(event *proto.WAFEvent) {
 	for _, cb := range h.eventCallbacks {
-		cb(event)
+		cb(event, h.transaction.GetTransaction())
 	}
 }
