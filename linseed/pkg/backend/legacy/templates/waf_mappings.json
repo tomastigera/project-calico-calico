@@ -7,6 +7,9 @@
     "@timestamp": {
       "type": "date"
     },
+    "count": {
+      "type": "integer"
+    } ,
     "source": {
       "properties": {
         "ip": {

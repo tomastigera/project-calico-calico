@@ -27,11 +27,14 @@ import (
 )
 
 type ServerOptions struct {
-	TcpPort           int
-	HttpPort          int
-	SocketPath        string
-	WafRulesetRootDir string
-	LogToFile         bool
+	TcpPort              int
+	HttpPort             int
+	SocketPath           string
+	WafRulesetRootDir    string
+	LogFileDirectory     string
+	LogFileName          string
+	LogAggregationPeriod time.Duration
+	MustKeepFields       []string
 }
 
 type WAFHTTPFilter struct {

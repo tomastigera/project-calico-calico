@@ -11,7 +11,7 @@ import (
 type AggregatorController struct {
 	agg    *Aggregator
 	period time.Duration
-	sink   func([]*AggregatedWAFLog)
+	sink   func([]*v1.WAFLog)
 	mu     sync.Mutex
 	// stopCh is used to signal the controller to stop.
 	stopCh chan struct{}
@@ -20,7 +20,7 @@ type AggregatorController struct {
 }
 
 // NewAggregatorController creates a new AggregatorController.
-func NewAggregatorController(period time.Duration, mustKeepFields []string, sink func([]*AggregatedWAFLog)) (*AggregatorController, error) {
+func NewAggregatorController(period time.Duration, mustKeepFields []string, sink func([]*v1.WAFLog)) (*AggregatorController, error) {
 	agg, err := NewAggregator(mustKeepFields)
 	if err != nil {
 		return nil, err
