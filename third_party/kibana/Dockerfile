@@ -4,22 +4,21 @@ ARG TARGETARCH
 
 FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH}
 
-USER 0
+ARG KIBANA_VERSION
 
-ARG GTM_INTEGRATION
-ARG LATEST_IMAGE_TAG
+USER 0
 
 ENV PATH=/usr/share/kibana/bin:$PATH
 
 WORKDIR /usr/share/kibana
 
-COPY kibana/plugins/tigera/build/tigera-${LATEST_IMAGE_TAG}.zip /tmp/tigera-${LATEST_IMAGE_TAG}.zip
-RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/tigera-${LATEST_IMAGE_TAG}.zip && \
-    rm -f /tmp/tigera-${LATEST_IMAGE_TAG}.zip
+COPY kibana/plugins/tigera/build/tigera-${KIBANA_VERSION}.zip /tmp/tigera-${KIBANA_VERSION}.zip
+RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/tigera-${KIBANA_VERSION}.zip && \
+    rm -f /tmp/tigera-${KIBANA_VERSION}.zip
 
-COPY kibana/plugins/googletagmanager/build/googletagmanager-${LATEST_IMAGE_TAG}.zip /tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip
-RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip && \ 
-    rm -f /tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip
+COPY kibana/plugins/googletagmanager/build/googletagmanager-${KIBANA_VERSION}.zip /tmp/googletagmanager-${KIBANA_VERSION}.zip
+RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/googletagmanager-${KIBANA_VERSION}.zip && \ 
+    rm -f /tmp/googletagmanager-${KIBANA_VERSION}.zip
 
 
 CMD ["/usr/local/bin/kibana-docker"]

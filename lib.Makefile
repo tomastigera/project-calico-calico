@@ -126,12 +126,12 @@ MANIFEST_REGISTRIES         ?= $(DEV_REGISTRIES)
 THIRD_PARTY_RELEASE_BRANCH ?= $(if $(SEMAPHORE_GIT_BRANCH),$(SEMAPHORE_GIT_BRANCH),master)
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), branch)
     # on master and release-calient branches
-    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/cnx/tigera/third-party/$(THIRD_PARTY_RELEASE_BRANCH)
+    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/cnx/tigera/third-party
 else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
     # on pull requests
-    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/third-party-ci/$(THIRD_PARTY_RELEASE_BRANCH)
+    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/third-party-ci
 else
-    THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci/$(THIRD_PARTY_RELEASE_BRANCH)
+    THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
 endif
 
 PUSH_MANIFEST_IMAGES := $(foreach registry,$(MANIFEST_REGISTRIES),$(foreach image,$(BUILD_IMAGES),$(call filter-registry,$(registry))$(image)))
@@ -336,6 +336,10 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
+
+DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
+	--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
+	--build-arg THIRD_PARTY_RELEASE_BRANCH=$(THIRD_PARTY_RELEASE_BRANCH)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -1716,6 +1720,7 @@ windows-sub-image-%: var-require-all-GIT_VERSION-WINDOWS_IMAGE-WINDOWS_DIST-WIND
 		-t $(WINDOWS_IMAGE):latest \
 		--build-arg GIT_VERSION=$(GIT_VERSION) \
 		--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
+		--build-arg THIRD_PARTY_RELEASE_BRANCH=$(THIRD_PARTY_RELEASE_BRANCH) \
 		--build-arg WINDOWS_LTSC_VERSION=$(WINDOWS_LTSC_VERSION_$*) \
 		--build-arg WINDOWS_VERSION=$* \
 		-f Dockerfile-windows .
