@@ -33,6 +33,7 @@ const (
 	ThreatDefense          = "threat-defense"
 	PacketCapture          = "packet-capture"
 	MultiClusterManagement = "multi-cluster-management"
+	IngressGateway         = "ingress-gateway"
 )
 
 type set map[string]bool
@@ -182,3 +183,7 @@ var EnterpriseAPIs = merge(CloudProAPIs, set{
 
 // EnterpriseFeatures package contains all available features
 var EnterpriseFeatures = merge(CloudProFeatures, set{ComplianceReports: true, ThreatDefense: true})
+
+var AddOnFeatures = set{
+	IngressGateway: true,
+}

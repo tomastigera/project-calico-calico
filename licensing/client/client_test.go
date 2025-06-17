@@ -32,6 +32,28 @@ var (
 
 	numNodes1 = 555
 	numNodes2 = 420
+
+	// BaseFeatures package contains all available features in a standard license
+	BaseFeatures = map[string]bool{
+		features.ManagementPortal:       true,
+		features.PolicyRecommendation:   true,
+		features.PolicyPreview:          true,
+		features.PolicyManagement:       true,
+		features.FileOutputFlowLogs:     true,
+		features.PrometheusMetrics:      true,
+		features.MultiClusterManagement: true,
+		features.ComplianceReports:      true,
+		features.ThreatDefense:          true,
+		features.EgressAccessControl:    true,
+		features.Tiers:                  true,
+		features.FederatedServices:      true,
+		features.ExportLogs:             true,
+		features.AlertManagement:        true,
+		features.TopologicalGraph:       true,
+		features.KibanaDashboard:        true,
+		features.FileOutputL7Logs:       true,
+		features.PacketCapture:          true,
+	}
 )
 
 func init() {
@@ -415,6 +437,51 @@ func TestFeatureFlags(t *testing.T) {
 		for f := range features.CloudProFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
 		}
+	})
+
+	t.Run("a license with 'cnx|all' package states ingress is disabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", "all"}
+
+		for f := range BaseFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeFalse())
+	})
+
+	t.Run("a license with 'cnx|all|ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", "all", features.IngressGateway}
+
+		for f := range BaseFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
+	})
+
+	t.Run("a license with 'ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{features.IngressGateway}
+
+		for f := range BaseFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeFalse())
+		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
+	})
+
+	t.Run("validate a new base feature", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", "all"}
+
+		Expect(claims.ValidateFeature("new-base-feature")).To(BeTrue())
 	})
 }
 
