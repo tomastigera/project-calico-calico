@@ -1,17 +1,16 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
-ARG THIRD_PARTY_REGISTRY
 ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} AS ubi
 
-# Update base packages to pick up security updates. 
+# Update base packages to pick up security updates.
 RUN microdnf upgrade -y && microdnf install -y shadow-utils
 
-FROM envoyproxy/envoy:v1.29.9 AS envoy
+FROM envoyproxy/envoy:v1.33.1 AS envoy
 
-FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.29.9 AS envoybinary
+FROM quay.io/tigera/envoybinary:d09f1c3f01d046ddcd1a1beb1249a178795d3c49 AS envoybinary
 
 FROM scratch AS source
 
