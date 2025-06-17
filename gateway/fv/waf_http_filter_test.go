@@ -200,7 +200,6 @@ func TestRequests(t *testing.T) {
 }
 
 func TestDisablingWAFHTTPFilter(t *testing.T) {
-	// t.Skip("this test is kinda broken. config doesn't change, so the filter is never removed. It just stops blocking requests.")
 	setupTest(t, waf.ServerOptions{
 		TcpPort:  9002,
 		HttpPort: 8080,
