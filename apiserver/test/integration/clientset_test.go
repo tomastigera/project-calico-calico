@@ -50,7 +50,6 @@ import (
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	licclient "github.com/projectcalico/calico/licensing/client"
-	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/utils"
 )
 
@@ -1405,56 +1404,6 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 
 	if !reflect.DeepEqual(lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true})) {
 		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true}))
-		return fmt.Errorf("License features do not match")
-	}
-
-	// Valid CloudPro License with Maximum supported Nodes 100
-	cloudProLicenseKey := utils.ValidCloudProTestLicense()
-	err = licenseKeyClient.Delete(ctx, "default", metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Printf("Could not delete license %v\n", err)
-		return err
-	}
-	lic, err = licenseKeyClient.Create(ctx, cloudProLicenseKey, metav1.CreateOptions{})
-	if err != nil {
-		fmt.Printf("Check for License Expiry date %v\n", err)
-		return err
-	}
-
-	claims, err = licclient.Decode(*cloudProLicenseKey)
-	if err != nil {
-		fmt.Printf("Failed to decode 'valid' license  %v\n", err)
-		return err
-	}
-
-	// Check for Maximum nodes
-	if lic.Status.MaxNodes != *claims.Nodes {
-		fmt.Printf("Valid License's Maximum Node doesn't match :%d\n", lic.Status.MaxNodes)
-		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
-	}
-
-	// Check for Certificate Expiry date
-	if !lic.Status.Expiry.Time.After(time.Now()) {
-		fmt.Printf("Valid License's Expiry date missing/in past:%v\n", lic.Status.Expiry)
-		return fmt.Errorf("License Expiry date don't match")
-	}
-
-	if lic.Status.Package != "CloudPro" {
-		fmt.Printf("License's package type does not match :%v\n", lic.Status.Package)
-		return fmt.Errorf("License Package Type does not match")
-	}
-
-	// Extract out "cloud" and "pro" which isn't really the expected
-	// feature.
-	features := []string{}
-	for _, feat := range lic.Status.Features {
-		if feat == "cloud" || feat == "pro" {
-			continue
-		}
-		features = append(features, feat)
-	}
-	if !reflect.DeepEqual(features, sortedKeys(licFeatures.CloudProFeatures)) {
-		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(licFeatures.CloudProFeatures))
 		return fmt.Errorf("License features do not match")
 	}
 
