@@ -9,7 +9,7 @@ KIBANA_VERSION = 8.18.1
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = v$(KIBANA_VERSION)
+BRANCH_NAME = v$(KIBANA_VERSION)-$(THIRD_PARTY_RELEASE_BRANCH)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################
@@ -59,7 +59,7 @@ build: register $(KIBANA_DOWNLOADED)
 tigera-plugin:
 	cd kibana/plugins/tigera/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
-	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
+	yarn kbn bootstrap && yarn build --kibana-version $(KIBANA_VERSION)
 
 
 # Build Google Tag Manager plugin
@@ -67,7 +67,7 @@ tigera-plugin:
 gtm-plugin:
 	cd kibana/plugins/googletagmanager/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
-	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
+	yarn kbn bootstrap && yarn build --kibana-version $(KIBANA_VERSION)
 
 
 .PHONY: clean
@@ -94,7 +94,6 @@ $(KIBANA_IMAGE): $(KIBANA_IMAGE_MARKER)
 $(KIBANA_IMAGE_MARKER): tigera-plugin gtm-plugin
 	docker buildx build --load --platform=linux/$(ARCH) \
 		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
-		--build-arg LATEST_IMAGE_TAG=$(LATEST_IMAGE_TAG) \
 		-t $(KIBANA_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) \
 		-f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)

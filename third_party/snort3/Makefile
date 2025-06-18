@@ -14,7 +14,7 @@ SNORT3_VERSION = 3.7.3.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = v$(SNORT3_VERSION)
+BRANCH_NAME = v$(SNORT3_VERSION)-$(THIRD_PARTY_RELEASE_BRANCH)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################

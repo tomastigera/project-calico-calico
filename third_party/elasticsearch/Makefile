@@ -10,7 +10,7 @@ TINI_VERSION=0.19.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = v$(ELASTIC_VERSION)
+BRANCH_NAME = v$(ELASTIC_VERSION)-$(THIRD_PARTY_RELEASE_BRANCH)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################
