@@ -6,26 +6,32 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
+	"github.com/projectcalico/calico/release/internal/registry"
 )
 
-//go:embed templates/images.go
-var componentsImagesFile []byte
+//go:embed template/enterprise-images.go.gotmpl
+var enterpriseComponentImagesFileTemplate string
 
-type EntepriseOperatorManager struct {
+type EnterpriseOperatorManager struct {
 	OperatorManager
 }
 
-func NewEnterpriseManager(opts ...Option) *EntepriseOperatorManager {
-	return &EntepriseOperatorManager{
-		OperatorManager: *NewManager(opts...),
+func NewEnterpriseManager(opts ...Option) *EnterpriseOperatorManager {
+	defaultOpts := []Option{
+		WithProductRegistry(registry.DefaultEnterpriseRegistry),
+	}
+	return &EnterpriseOperatorManager{
+		OperatorManager: *NewManager(append(defaultOpts, opts...)...),
 	}
 }
 
-func (o *EntepriseOperatorManager) Build() error {
+func (o *EnterpriseOperatorManager) Build() error {
 	if !o.isHashRelease {
 		return fmt.Errorf("operator manager builds only for hash releases")
 	}
@@ -82,15 +88,25 @@ func (o *EntepriseOperatorManager) Build() error {
 // modifyComponentsImagesFile overwrites the pkg/components/images.go file
 // with the contents of the embedded file to ensure that operator has the right registries.
 // This is ONLY used by hashreleases because the operator uses the images.go file to determine the registry.
-func (o *OperatorManager) modifyComponentsImagesFile() error {
-	destFilePath := filepath.Join(o.dir, "pkg", "components", "images.go")
+func (o *EnterpriseOperatorManager) modifyComponentsImagesFile() error {
+	destFilePath := filepath.Join(o.dir, componentImagesFilePath)
 	dest, err := os.OpenFile(destFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		logrus.WithError(err).Errorf("Failed to open file %s", destFilePath)
 		return err
 	}
 	defer dest.Close()
-	if _, err := dest.Write(componentsImagesFile); err != nil {
+	tmpl, err := template.New("pkg/components/images.go").Parse(enterpriseComponentImagesFileTemplate)
+	if err != nil {
+		logrus.WithError(err).Errorf("Failed to parse template to overwrite %s file", destFilePath)
+		return err
+	}
+
+	if err := tmpl.Execute(dest, map[string]string{
+		"Registry":        o.registry,
+		"ProductRegistry": o.productRegistry,
+		"Year":            time.Now().Format("2006"),
+	}); err != nil {
 		logrus.WithError(err).Errorf("Failed to write to file %s", destFilePath)
 		return err
 	}
