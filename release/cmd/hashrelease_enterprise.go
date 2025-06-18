@@ -107,6 +107,11 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				return fmt.Errorf("failed to load hashrelease from pinned file: %v", err)
 			}
 
+			productRegistries := c.StringSlice(registryFlag.Name)
+			if len(productRegistries) == 0 {
+				productRegistries = []string{registry.TigeraDevCIGCRRegistry}
+			}
+
 			// Build the operator
 			operatorOpts := []operator.Option{
 				operator.WithOperatorDirectory(operatorDir),
@@ -120,6 +125,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
 				operator.WithTempDirectory(cfg.TmpDir),
 				operator.WithOutputDirectory(hashreleaseDir),
+				operator.WithRegistry(c.String(operatorRegistryFlag.Name)),
+				operator.WithProductRegistry(productRegistries[0]),
 			}
 			if !c.Bool(skipOperatorFlag.Name) {
 				o := operator.NewEnterpriseManager(operatorOpts...)
@@ -143,11 +150,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithArchitectures(c.StringSlice(archFlag.Name)),
-			}
-			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
-				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
-			} else {
-				calicoOpts = append(calicoOpts, calico.WithImageRegistries([]string{registry.TigeraDevCIGCRRegistry}))
+				calico.WithImageRegistries(productRegistries),
 			}
 
 			enterpriseOpts := []calico.EnterpriseOption{
