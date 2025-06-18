@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	linseedService     = "tigera-linseed.tigera-elasticsearch.svc"
-	linseedServiceFQDN = linseedService + ".cluster.local"
+	linseedFluentdService = "tigera-linseed"
+	linseedService        = "tigera-linseed.tigera-elasticsearch.svc"
+	linseedServiceFQDN    = linseedService + ".cluster.local"
 )
 
 // Proxy allows you to proxy https connections with redirection based on the SNI in the client hello
@@ -193,7 +194,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 		}
 	}
 
-	if serverName == linseedService || serverName == linseedServiceFQDN {
+	if serverName == linseedService || serverName == linseedServiceFQDN || serverName == linseedFluentdService {
 		// This connection is destined to Linseed from over the mTLS tunnel with Guardian.
 		// Rather than forward the connection, we should handle it ourselves. Terminate TLS and proxy onwards.
 		c := NewLocalConnection(srcConn, bytesRead)
