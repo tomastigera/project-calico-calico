@@ -774,5 +774,6 @@ func RemoveRemoteClusterPrefix(nodeName string) string {
 //
 // XXX not applicable to EE and should be a noop.
 func determinePolicyName(name, tier string, annotations map[string]string) (string, map[string]string, error) {
+	delete(annotations, metadataAnnotation)
 	return name, annotations, nil
 }
