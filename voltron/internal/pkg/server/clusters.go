@@ -420,6 +420,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 			ID:                id,
 			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 			Certificate:       managedCluster.Spec.Certificate,
+			Version:           managedCluster.Status.Version,
 		}
 
 		known[id] = struct{}{}
