@@ -16,7 +16,7 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
-const LinseedServerName = "tigera-linseed.tigera-elasticsearch.svc"
+const LinseedServerName = "tigera-linseed"
 
 // RESTClient is a helper for building HTTP requests for the Linseed API.
 type RESTClient interface {
