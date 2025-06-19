@@ -720,7 +720,7 @@ func (d *mockDataplane) NewNetlinkHandle() (HandleIface, error) {
 	return d, nil
 }
 
-func (d *mockDataplane) Delete() {
+func (d *mockDataplane) Close() {
 	Expect(d.NetlinkOpen).To(BeTrue())
 	d.NetlinkOpen = false
 }

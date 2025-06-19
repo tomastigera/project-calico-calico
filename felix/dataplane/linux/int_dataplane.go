@@ -1870,6 +1870,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv4")
 		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV6, ipsetsManagerV6)
 		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv6")
+		netlink, err := netlinkshim.NewRealNetlink()
+		if err == nil {
+			config.Collector.SetNetlinkHandle(netlink)
+			log.Info("Netlink handle added to collector")
+		}
 	}
 
 	if bpfEventPoller != nil {
@@ -1903,7 +1908,7 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 		return 0, err
 	}
 
-	defer nlHandle.Delete()
+	defer nlHandle.Close()
 	links, err := nlHandle.LinkList()
 	if err != nil {
 		log.WithError(err).Error("Failed to list interfaces. Unable to auto-detect MTU.")

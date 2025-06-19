@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -79,9 +79,11 @@ func (c *CollectorPolicyListener) run() {
 		}
 
 		pktInfo := collector.PacketInfo{
-			IsDNAT:   !e.DstAddr.Equal(e.PostNATDstAddr) || e.DstPort != e.PostNATDstPort,
-			Tuple:    makeTuple(e.SrcAddr, e.PostNATDstAddr, e.IPProto, e.SrcPort, e.PostNATDstPort),
-			RuleHits: make([]collector.RuleHit, e.RulesHit),
+			IsDNAT:         !e.DstAddr.Equal(e.PostNATDstAddr) || e.DstPort != e.PostNATDstPort,
+			Tuple:          makeTuple(e.SrcAddr, e.PostNATDstAddr, e.IPProto, e.SrcPort, e.PostNATDstPort),
+			RuleHits:       make([]collector.RuleHit, e.RulesHit),
+			InDeviceIndex:  int(e.InDeviceIndex),
+			OutDeviceIndex: int(e.OutDeviceIndex),
 		}
 
 		if pktInfo.IsDNAT {

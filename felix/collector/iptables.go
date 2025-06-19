@@ -146,6 +146,9 @@ func (r *NFLogReader) ConvertNflogPkt(dir rules.RuleDir, nPktAggr *nfnetlink.Nfl
 		})
 	}
 
+	info.InDeviceIndex = nPktAggr.InDeviceIndex
+	info.OutDeviceIndex = nPktAggr.OutDeviceIndex
+
 	return info
 }
 

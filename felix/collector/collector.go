@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -35,10 +35,12 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	libnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -129,6 +131,7 @@ type Config struct {
 	EnableServices            bool
 	EnableDestDomainsByClient bool
 	PolicyEvaluationMode      string
+	PolicyScope               string
 	FlowLogsFlushInterval     time.Duration
 
 	MaxOriginalSourceIPsIncluded int
@@ -137,6 +140,7 @@ type Config struct {
 	DisplayDebugTraceLogs bool
 
 	BPFConntrackTimeouts bpfconntrack.Timeouts
+	FelixHostName        string
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -167,6 +171,8 @@ type collector struct {
 	wafEventsReporter     types.Reporter
 	policyStoreManager    policystore.PolicyStoreManager
 	displayDebugTraceLogs bool
+	felixHostName         string
+	netlinkList           netlinkshim.Interface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -185,6 +191,7 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		wafEvents:             []*proto.WAFEvent{},
 		policyStoreManager:    policystore.NewPolicyStoreManager(),
 		displayDebugTraceLogs: cfg.DisplayDebugTraceLogs,
+		felixHostName:         cfg.FelixHostName,
 	}
 
 	if apiv3.FlowLogsPolicyEvaluationModeType(cfg.PolicyEvaluationMode) == apiv3.FlowLogsPolicyEvaluationModeContinuous {
@@ -320,6 +327,16 @@ func (c *collector) AddNewDomainDataplaneToIpSetsManager(ipFamily ipsets.IPFamil
 	ipm.AddDataplane(domainDataplane)
 }
 
+func (c *collector) SetNetlinkHandle(nl netlinkshim.Interface) {
+	if c.netlinkList != nil {
+		log.Debug("Real netlink already set, skipping")
+		return
+	}
+
+	log.Info("Adding new real netlink")
+	c.netlinkList = nl
+}
+
 func (c *collector) startStatsCollectionAndReporting() {
 	var (
 		pktInfoC        <-chan types.PacketInfo
@@ -399,7 +416,7 @@ func (c *collector) loopProcessingDataplaneInfoUpdates(dpInfoC <-chan *proto.ToD
 //
 // This method also updates the endpoint data from the cache, so beware - it is not as lightweight as a
 // simple map lookup.
-func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packetinfo bool) *Data {
+func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, pktInfo *types.PacketInfo, expired bool, packetinfo bool) *Data {
 	data, okData := c.epStats[t]
 	if expired {
 		// If the connection has expired then return the data as is. If there is no entry, that's fine too.
@@ -415,14 +432,23 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packe
 	dstEp := c.lookupEndpoint(t.Src, t.Dst, !srcEpIsNotLocal)
 	dstEpIsNotLocal := dstEp == nil || !dstEp.IsLocal()
 
+	// Get the node endpoint
+	var nodeEp calc.EndpointData
+	if apiv3.FlowLogsPolicyScopeType(c.config.PolicyScope) == apiv3.FlowLogsAllPolicies {
+		if pktInfo != nil {
+			nodeEp = c.lookupHostEndpoint(pktInfo)
+		}
+	}
+
 	if !okData {
-		// For new entries, check that at least one of the endpoints is local.
-		if srcEpIsNotLocal && dstEpIsNotLocal {
+		if srcEpIsNotLocal && dstEpIsNotLocal && nodeEp == nil {
+			// The source and destination endpoints are not local and the node endpoint is nil and no node endpoint
+			// was found in the lookups cache. This means that we don't have any data for this entry. We can return nil.
 			return nil
 		}
 
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(t, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
+		data = NewData(t, srcEp, dstEp, nodeEp, c.config.MaxOriginalSourceIPsIncluded)
 		c.updateEpStatsCache(t, data)
 	} else if data.Reported {
 		if !data.UnreportedPacketInfo && !packetinfo {
@@ -437,7 +463,7 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packe
 			// The endpoint information has now changed. Handle the endpoint changes.
 			c.handleDataEndpointOrRulesChanged(data)
 
-			// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
+			// If the source and destination endpoint is not local then we need to delete the entry.
 			if srcEpIsNotLocal && dstEpIsNotLocal {
 				c.deleteDataFromEpStats(data)
 				return nil
@@ -446,7 +472,7 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packe
 
 		// Update the source and dest data. We do this even if the endpoints haven't changed because the labels on the
 		// endpoints may have changed and so our matches might be different.
-		data.SrcEp, data.DstEp = srcEp, dstEp
+		data.SrcEp, data.DstEp, data.NodeEp = srcEp, dstEp, nodeEp
 	} else {
 		// Data has not been reported. Don't downgrade found endpoints (in case the endpoint is deleted prior to being
 		// reported).
@@ -455,6 +481,9 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packe
 		}
 		if dstEp != nil {
 			data.DstEp = dstEp
+		}
+		if nodeEp != nil {
+			data.NodeEp = nodeEp
 		}
 	}
 
@@ -482,12 +511,46 @@ func endpointChanged(ep1, ep2 calc.EndpointData) bool {
 	return ep1.Key() != ep2.Key()
 }
 
+// getNodeIP returns the node IP address for the this Felix host.
+func (c *collector) getNodeIP() [16]byte {
+	var ipv6FormattedNodeIP [16]byte
+
+	// Retrieve the node IP from the lookups cache
+	nodeIPString, ok := c.luc.GetNodeIP(c.felixHostName)
+	if !ok {
+		log.WithField("hostname", c.felixHostName).Warn("Failed to get node IP address")
+		return ipv6FormattedNodeIP
+	}
+
+	// Parse the IP address from CIDR notation
+	ipAddr, _, err := libnet.ParseCIDROrIP(nodeIPString)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"hostname": c.felixHostName,
+			"ip":       nodeIPString,
+		}).WithError(err).Error("failed to parse node IP address")
+		return ipv6FormattedNodeIP
+	}
+
+	// Convert to 16-byte representation and copy to our return array
+	ipv6Format := ipAddr.To16()
+	if ipv6Format == nil {
+		log.WithFields(log.Fields{
+			"hostname": c.felixHostName,
+			"ip":       nodeIPString,
+		}).Error("failed to convert node IP to IPv6 format")
+		return ipv6FormattedNodeIP
+	}
+
+	copy(ipv6FormattedNodeIP[:], ipv6Format)
+	return ipv6FormattedNodeIP
+}
+
 func (c *collector) lookupEndpoint(clientIPBytes, ip [16]byte, canCheckEgressDomains bool) calc.EndpointData {
 	// Get the endpoint data for this entry.
 	if ep, ok := c.luc.GetEndpoint(ip); ok {
 		return ep
 	}
-
 	// No matching endpoint. If NetworkSets are enabled for flows then check if the IP matches a NetworkSet and
 	// return that.
 	if c.config.EnableNetworkSets {
@@ -511,6 +574,20 @@ func (c *collector) lookupEndpoint(clientIPBytes, ip [16]byte, canCheckEgressDom
 				return ep
 			}
 		}
+	}
+	return nil
+}
+
+// lookupHostEndpoint returns the node endpoint data for this host.
+func (c *collector) lookupHostEndpoint(pktInfo *types.PacketInfo) calc.EndpointData {
+	if pktInfo == nil {
+		return nil
+	}
+
+	interfaceName := c.getInterfaceName(pktInfo)
+	// Get the endpoint data for this entry.
+	if ep, ok := c.luc.GetEndpointFromInterfaceKey(interfaceName, c.getNodeIP()); ok {
+		return ep
 	}
 	return nil
 }
@@ -556,11 +633,11 @@ func (c *collector) applyConntrackStatUpdate(
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
+func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int, isTransit bool) {
 	var ru RuleMatch
-	if ru = data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
+	if ru = data.AddRuleID(ruleID, matchIdx, numPkts, numBytes, isTransit); ru == RuleMatchIsDifferent {
 		c.handleDataEndpointOrRulesChanged(data)
-		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
+		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes, isTransit)
 	}
 	if ru == RuleMatchSet || ru == RuleMatchIsDifferent {
 		c.evaluatePendingRuleTraceForLocalEp(data)
@@ -803,10 +880,10 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 			// When they are correlated with regular metric updates and connection metrics, we don't need to
 			// send this.
 			sendOrigSourceIPsExpire := true
-			if data.EgressRuleTrace.FoundVerdict() {
+			if data.EgressRuleTrace.FoundVerdict() || data.EgressTransitRuleTrace.FoundVerdict() {
 				c.LogMetrics(data.MetricUpdateEgressConn(ut))
 			}
-			if data.IngressRuleTrace.FoundVerdict() {
+			if data.IngressRuleTrace.FoundVerdict() || data.IngressTransitRuleTrace.FoundVerdict() {
 				sendOrigSourceIPsExpire = false
 				c.LogMetrics(data.MetricUpdateIngressConn(ut))
 			}
@@ -823,6 +900,8 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 			data.ClearConnDirtyFlag()
 			data.EgressRuleTrace.ClearDirtyFlag()
 			data.IngressRuleTrace.ClearDirtyFlag()
+			data.EgressTransitRuleTrace.ClearDirtyFlag()
+			data.IngressTransitRuleTrace.ClearDirtyFlag()
 		}
 	} else {
 		// Report rule trace stats.
@@ -830,9 +909,17 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 			c.LogMetrics(data.MetricUpdateEgressNoConn(ut))
 			data.EgressRuleTrace.ClearDirtyFlag()
 		}
+		if (expired || data.EgressTransitRuleTrace.IsDirty()) && data.EgressTransitRuleTrace.FoundVerdict() {
+			c.LogMetrics(data.MetricUpdateEgressNoConn(ut))
+			data.EgressTransitRuleTrace.ClearDirtyFlag()
+		}
 		if (expired || data.IngressRuleTrace.IsDirty()) && data.IngressRuleTrace.FoundVerdict() {
-			c.LogMetrics(data.MetricUpdateIngressNoConn(ut))
+			c.LogMetrics(data.MetricUpdateIngressNoConn(ut, false))
 			data.IngressRuleTrace.ClearDirtyFlag()
+		}
+		if (expired || data.IngressTransitRuleTrace.IsDirty()) && data.IngressTransitRuleTrace.FoundVerdict() {
+			c.LogMetrics(data.MetricUpdateIngressNoConn(ut, true))
+			data.IngressTransitRuleTrace.ClearDirtyFlag()
 		}
 
 		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
@@ -860,7 +947,7 @@ func (c *collector) handleCtInfo(ctInfo types.ConntrackInfo) {
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
 
-	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired, false); data != nil {
+	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, nil, ctInfo.Expired, false); data != nil {
 
 		if !data.IsDNAT && ctInfo.IsDNAT {
 			originalTuple := ctInfo.PreDNATTuple
@@ -880,14 +967,14 @@ func (c *collector) handleCtInfo(ctInfo types.ConntrackInfo) {
 
 func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 	var (
-		localEp        calc.EndpointData
-		localMatchData *calc.MatchData
-		data           *Data
+		localEp                       calc.EndpointData
+		localMatchData, nodeMatchData *calc.MatchData
+		data                          *Data
 	)
 
 	t := pktInfo.Tuple
 
-	if data = c.getDataAndUpdateEndpoints(t, false, true); data == nil {
+	if data = c.getDataAndUpdateEndpoints(t, &pktInfo, false, true); data == nil {
 		// Data is nil, so the destination endpoint cannot be managed by local Calico.
 		return
 	}
@@ -902,18 +989,25 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 	// Determine the local endpoint for this update.
 	switch pktInfo.Direction {
 	case rules.RuleDirIngress:
-		// The local destination should be local.
-		if localEp = data.DstEp; localEp == nil || !localEp.IsLocal() {
-			return
+		if localEp = data.DstEp; localEp != nil && localEp.IsLocal() {
+			localMatchData = localEp.IngressMatchData()
 		}
-		localMatchData = localEp.IngressMatchData()
+		if data.NodeEp != nil {
+			nodeMatchData = data.NodeEp.IngressMatchData()
+		}
 	case rules.RuleDirEgress:
 		// The cache will return nil for egress if the source endpoint is not local.
-		if localEp = data.SrcEp; localEp == nil || !localEp.IsLocal() {
-			return
+		if localEp = data.SrcEp; localEp != nil && localEp.IsLocal() {
+			localMatchData = localEp.EgressMatchData()
 		}
-		localMatchData = localEp.EgressMatchData()
+		if data.NodeEp != nil {
+			nodeMatchData = data.NodeEp.EgressMatchData()
+		}
 	default:
+		return
+	}
+	// Return early if no match data found
+	if localMatchData == nil && nodeMatchData == nil {
 		return
 	}
 
@@ -923,20 +1017,36 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 			continue
 		}
 		if ruleID.IsProfile() {
-			// This is a profile verdict. Apply the rule unchanged, but at the profile match index (which is at the
-			// very end of the match slice).
-			c.applyNflogStatUpdate(data, ruleID, localMatchData.ProfileMatchIndex, rule.Hits, rule.Bytes)
+			// Only supported for local match rule traces.
+			if localMatchData != nil {
+				// This is a profile verdict. Apply the rule unchanged, but at the profile match index (which is at the
+				// very end of the match slice).
+				c.applyNflogStatUpdate(data, ruleID, localMatchData.ProfileMatchIndex, rule.Hits, rule.Bytes, false)
+			}
 			continue
 		}
 
 		if ruleID.IsEndOfTier() {
 			// This is an end-of-tier action.
 			// -  For deny convert the ruleID to the implicit drop rule
-			// -  For pass leave the rule unchanged. We never return this to the user, but instead use it to determine
-			//    whether we add staged policy end-of-tier denies.
 			// For both deny and pass, add the rule at the end of tier match index.
-			tier, ok := localMatchData.TierData[ruleID.Tier]
+			var (
+				tier               *calc.TierData
+				ok, foundNodeMatch bool
+			)
+			if localMatchData != nil {
+				tier, ok = localMatchData.TierData[ruleID.Tier]
+			}
+
+			if !ok && nodeMatchData != nil {
+				tier, ok = nodeMatchData.TierData[ruleID.Tier]
+				if ok {
+					// If we found the tier in node match data, then we need to set the foundNodeMatch flag.
+					foundNodeMatch = true
+				}
+			}
 			if !ok {
+				log.WithField("ruleID", ruleID).Trace("End of tier rule not found in local or node match data")
 				continue
 			}
 
@@ -944,7 +1054,7 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 			case rules.RuleActionDeny:
 				c.applyNflogStatUpdate(
 					data, tier.TierDefaultActionRuleID, tier.EndOfTierMatchIndex,
-					rule.Hits, rule.Bytes,
+					rule.Hits, rule.Bytes, foundNodeMatch,
 				)
 			case rules.RuleActionPass:
 				// If TierDefaultActionRuleID is nil, then endpoint is unmatched, and is hitting tier default Pass action.
@@ -954,32 +1064,51 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 				if tier.TierDefaultActionRuleID == nil {
 					c.applyNflogStatUpdate(
 						data, ruleID, tier.EndOfTierMatchIndex,
-						rule.Hits, rule.Bytes,
+						rule.Hits, rule.Bytes, foundNodeMatch,
 					)
 				} else {
 					c.applyNflogStatUpdate(
 						data, tier.TierDefaultActionRuleID, tier.EndOfTierMatchIndex,
-						rule.Hits, rule.Bytes,
+						rule.Hits, rule.Bytes, foundNodeMatch,
 					)
 				}
 			}
 			continue
 		}
 
-		// This is one of:
-		// -  An enforced rule match
-		// -  A staged policy match
-		// -  A staged policy miss
-		// -  An end-of-tier pass (from tiers only containing staged policies)
+		// This section handles different types of policy rule hits:
+		// -  An enforced rule match: When traffic matches a normal enforced policy rule
+		// -  A staged policy match: When traffic matches a staged policy
+		// -  A staged policy miss: When traffic would have been blocked by a staged policy
+		// -  An end-of-tier pass: When traffic passes through a tier containing only staged
+		//    policies
 		//
-		// For all these cases simply add the unchanged ruleID using the match index reserved for that policy.
-		// Extract the policy data from the ruleID.
-		policyIdx, ok := localMatchData.PolicyMatches[ruleID.PolicyID]
-		if !ok {
-			continue
+		// For all these cases, we need to:
+		// 1. Find the policy match index, which is the position in the match array reserved for
+		//    this policy
+		// 2. First check localMatchData, if available
+		// 3. If not found there, try nodeMatchData (for the node's preDNAT/ApplyOnForward policies)
+		// 4. Use the match index to properly record stats against the right policy
+		var (
+			policyIdx int
+			ok        bool
+		)
+
+		// First check local endpoint match data if available
+		if localMatchData != nil {
+			policyIdx, ok = localMatchData.PolicyMatches[ruleID.PolicyID]
+			if ok {
+				c.applyNflogStatUpdate(data, ruleID, policyIdx, rule.Hits, rule.Bytes, false)
+				continue // Found a match in local endpoint, no need to check host endpoints
+			}
 		}
 
-		c.applyNflogStatUpdate(data, ruleID, policyIdx, rule.Hits, rule.Bytes)
+		// If not found in local endpoint, check node endpoint match data
+		if !ok && nodeMatchData != nil {
+			if policyIdx, ok := nodeMatchData.PolicyMatches[ruleID.PolicyID]; ok {
+				c.applyNflogStatUpdate(data, ruleID, policyIdx, rule.Hits, rule.Bytes, true)
+			}
+		}
 	}
 
 	if data.Expired && c.reportMetrics(data, false) {
@@ -1004,7 +1133,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// from the dataplane before nflogs or conntrack).
-	data := c.getDataAndUpdateEndpoints(t, false, false)
+	data := c.getDataAndUpdateEndpoints(t, nil, false, false)
 
 	var httpDataCount int
 	var isL7Data bool
@@ -1200,6 +1329,34 @@ func (c *collector) dumpStats() {
 		c.dumpLog.Info(fmt.Sprintf("%v", v))
 	}
 	c.dumpLog.Infof("Stats Dump Completed: %v", time.Now().Format("2006-01-02 15:04:05.000"))
+}
+
+// getInterfaceName returns the interface name for the given packet info.
+func (c *collector) getInterfaceName(pktInfo *types.PacketInfo) string {
+	if c.netlinkList == nil {
+		log.Warn("NetlinkList is not set, cannot get interface name")
+		return ""
+	}
+	if pktInfo == nil {
+		log.Warn("PacketInfo is nil, cannot get interface name")
+		return ""
+	}
+
+	var interfaceIndex int
+	if pktInfo.Direction == rules.RuleDirEgress {
+		interfaceIndex = pktInfo.OutDeviceIndex
+	} else {
+		interfaceIndex = pktInfo.InDeviceIndex
+	}
+
+	link, err := c.netlinkList.LinkByIndex(interfaceIndex)
+	if err != nil {
+		log.WithError(err).WithField("index", interfaceIndex).Warn("Failed to get interface name by index")
+		return ""
+	}
+	// Return the interface name.
+	log.Debugf("Interface index %d, name: %s", interfaceIndex, link.Attrs().Name)
+	return link.Attrs().Name
 }
 
 // Logrus Formatter that strips the log entry of formatting such as time, log

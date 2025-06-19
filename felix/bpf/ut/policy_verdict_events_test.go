@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,11 +33,13 @@ func TestPolicyVerdictEvents(t *testing.T) {
 	RegisterTestingT(t)
 
 	tests := []struct {
-		name     string
-		accept   bool
-		policy   polprog.Rules
-		hits     int
-		rulesIDs [state.MaxRuleIDs]uint64
+		name           string
+		accept         bool
+		policy         polprog.Rules
+		hits           int
+		rulesIDs       [state.MaxRuleIDs]uint64
+		outDeviceIndex int
+		inDeviceIndex  int
 	}{
 		{
 			name:   "no rules, drop all",
@@ -45,8 +47,10 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			policy: polprog.Rules{
 				NoProfileMatchID: 0xdead0000beef0000,
 			},
-			hits:     1,
-			rulesIDs: [state.MaxRuleIDs]uint64{0xdead0000beef0000},
+			hits:           1,
+			rulesIDs:       [state.MaxRuleIDs]uint64{0xdead0000beef0000},
+			outDeviceIndex: 0,
+			inDeviceIndex:  0,
 		},
 		{
 			name:   "allow all",
@@ -61,8 +65,10 @@ func TestPolicyVerdictEvents(t *testing.T) {
 					}},
 				}},
 			},
-			hits:     1,
-			rulesIDs: [state.MaxRuleIDs]uint64{0x1234},
+			hits:           1,
+			rulesIDs:       [state.MaxRuleIDs]uint64{0x1234},
+			outDeviceIndex: 0,
+			inDeviceIndex:  0,
 		},
 		{
 			name:   "udp tier",
@@ -115,8 +121,10 @@ func TestPolicyVerdictEvents(t *testing.T) {
 					},
 				},
 			},
-			hits:     2,
-			rulesIDs: [state.MaxRuleIDs]uint64{17, 1717},
+			hits:           2,
+			rulesIDs:       [state.MaxRuleIDs]uint64{17, 1717},
+			outDeviceIndex: 0,
+			inDeviceIndex:  0,
 		},
 	}
 
@@ -183,6 +191,9 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			Expect(fl.RuleIDs).To(Equal(tc.rulesIDs))
 
 			Expect(fl.IPSize).To(Equal(uint16(ipv4.Length)))
+
+			Expect(fl.OutDeviceIndex).To(Equal(uint32(tc.outDeviceIndex)))
+			Expect(fl.InDeviceIndex).To(Equal(uint32(tc.inDeviceIndex)))
 		})
 	}
 }

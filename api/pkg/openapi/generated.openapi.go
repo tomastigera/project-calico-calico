@@ -6519,6 +6519,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"flowLogsPolicyScope": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsPolicyScope controls which policies are included in flow logs. AllPolicies - Processes both transit policies for the local node and endpoint policies derived from packet source/destination IPs. Provides comprehensive visibility into all policy evaluations but increases log volume. EndpointPolicies - Processes only policies for endpoints identified as the source or destination of the packet (whether workload or host endpoints). [Default: EndpointPolicies]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"flowLogsFileEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.",

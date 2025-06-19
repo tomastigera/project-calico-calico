@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -236,7 +236,7 @@ func (r *RouteRules) getNetlinkHandle() (HandleIface, error) {
 			r.numConsistentNetlinkFailures++
 			log.WithError(err).WithField("numFailures", r.numConsistentNetlinkFailures).Error(
 				"Failed to set netlink timeout")
-			nlHandle.Delete()
+			nlHandle.Close()
 			return nil, err
 		}
 		r.cachedNetlinkHandle = nlHandle
@@ -253,7 +253,7 @@ func (r *RouteRules) closeNetlinkHandle() {
 	if r.cachedNetlinkHandle == nil {
 		return
 	}
-	r.cachedNetlinkHandle.Delete()
+	r.cachedNetlinkHandle.Close()
 	r.cachedNetlinkHandle = nil
 }
 

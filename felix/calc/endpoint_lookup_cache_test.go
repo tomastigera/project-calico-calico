@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -12,12 +12,14 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/felix/calc"
 	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	libcaliconet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 const (
@@ -776,6 +778,177 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			node, ok := elc.GetNode(nodeIP)
 			Expect(ok).To(BeTrue())
 			Expect(node).To(Equal("node2"))
+		})
+	})
+})
+
+var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
+	var cache *calc.EndpointLookupsCache
+
+	ipToAddr := func(ipStr string) [16]byte {
+		var addr [16]byte
+		ip := net.ParseIP(ipStr)
+		Expect(ip).NotTo(BeNil(), "IP address should be valid")
+		copy(addr[:], ip.To16())
+		return addr
+	}
+
+	createWorkloadEndpoint := func(hostname, orchID, workloadID, endpointID, interfaceName, ipStr string) (*model.WorkloadEndpointKey, *model.WorkloadEndpoint) {
+		key := model.WorkloadEndpointKey{
+			Hostname:       hostname,
+			OrchestratorID: orchID,
+			WorkloadID:     workloadID,
+			EndpointID:     endpointID,
+		}
+
+		ip := net.ParseIP(ipStr)
+		cidr := net.IPNet{
+			IP:   ip,
+			Mask: net.CIDRMask(32, 32),
+		}
+		endpoint := &model.WorkloadEndpoint{
+			State:      "active",
+			Name:       endpointID,
+			ProfileIDs: []string{"profile1"},
+			IPv4Nets: []libcaliconet.IPNet{
+				{IPNet: cidr},
+			},
+		}
+
+		return &key, endpoint
+	}
+
+	createHostEndpoint := func(hostname, endpointID, interfaceName, ipStr string) (*model.HostEndpointKey, *model.HostEndpoint) {
+		key := model.HostEndpointKey{
+			Hostname:   hostname,
+			EndpointID: endpointID,
+		}
+
+		ip := net.ParseIP(ipStr)
+
+		endpoint := &model.HostEndpoint{
+			Name: interfaceName,
+			ExpectedIPv4Addrs: []libcaliconet.IP{
+				{IP: ip},
+			},
+		}
+
+		return &key, endpoint
+	}
+
+	BeforeEach(func() {
+		cache = calc.NewEndpointLookupsCache()
+	})
+
+	Context("with empty interface key", func() {
+		It("should delegate to GetEndpoint", func() {
+			// Setup - add a single endpoint
+			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
+			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+
+			// Test
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetEndpointFromInterfaceKey("", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepKey.String()))
+		})
+	})
+
+	Context("with exact interface match", func() {
+		It("should return endpoint with matching interface name", func() {
+			// Setup - add an endpoint with a specific interface name
+			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
+			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+
+			// Test
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetEndpointFromInterfaceKey("eth0", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepKey.String()))
+		})
+	})
+
+	Context("with multiple endpoints for same IP", func() {
+		It("should prioritize exact interface match", func() {
+			// Setup - add multiple endpoints with the same IP but different interface names
+			hepKey1, hep1 := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
+			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
+
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, EndpointEgressData{}, nil, nil)
+
+			// Test for exact match on eth1
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetEndpointFromInterfaceKey("eth1", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepKey2.String()), "Should return endpoint with matching interface name eth1")
+		})
+	})
+
+	Context("with no interface match but endpoint without interface", func() {
+		It("should return endpoint without interface name", func() {
+			// Setup - add endpoint with interface and one without
+			hepKey1, hep1 := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
+			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
+			hepNoInterface, hep3 := createHostEndpoint("test-host", "k8s", "", "192.168.1.1")
+
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepNoInterface, hep3, EndpointEgressData{}, nil, nil)
+
+			// Test with non-matching interface name
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetEndpointFromInterfaceKey("nonexistent", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepNoInterface.String()), "Should return endpoint without interface name")
+		})
+	})
+
+	Context("with no endpoints for IP", func() {
+		It("should return nil and false", func() {
+			// Setup - add endpoint with different IP
+			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
+			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+
+			// Test with IP that doesn't match any endpoint
+			addr := ipToAddr("192.168.1.2")
+			ep, found := cache.GetEndpointFromInterfaceKey("eth0", addr)
+
+			// Verification
+			Expect(found).To(BeFalse())
+			Expect(ep).To(BeNil())
+		})
+	})
+
+	Context("with both workload and host endpoints", func() {
+		It("should find the right endpoint based on interface", func() {
+			// Setup - add both workload and host endpoints with same IP
+			wepKey, wep := createWorkloadEndpoint("test-host", "k8s", "pod-1", "wep-eth0", "wep-eth0", "192.168.1.1")
+			hepKey, hep := createHostEndpoint("test-host", "host-ep", "host-eth0", "192.168.1.1")
+
+			cache.OnEndpointTierUpdate(*wepKey, wep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+
+			// Test looking for host endpoint
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetEndpointFromInterfaceKey("host-eth0", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepKey.String()), "Should return host endpoint with matching interface name")
 		})
 	})
 })

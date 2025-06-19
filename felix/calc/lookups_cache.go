@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -6,6 +6,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -35,9 +36,14 @@ func NewLookupsCache() *LookupsCache {
 	return lc
 }
 
-// GetEndpoint returns the ordered list of tiers for a particular endpoint.
+// GetEndpoint returns the endpoint data for a given IP address.
 func (lc *LookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
+}
+
+// GetEndpointFromKey returns the endpoint data for a given endpoint key.
+func (lc *LookupsCache) GetEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
+	return lc.epCache.GetEndpointFromInterfaceKey(key, addr)
 }
 
 // GetEndpointKeys returns all endpoint keys that the cache is tracking.
@@ -59,6 +65,11 @@ func (lc *LookupsCache) GetAllEndpointData() []EndpointData {
 // - The node wireguard tunnel address
 func (lc *LookupsCache) GetNode(addr [16]byte) (string, bool) {
 	return lc.epCache.GetNode(addr)
+}
+
+// GetNodeIP returns the node IP address for the supplied node name.
+func (lc *LookupsCache) GetNodeIP(name string) (string, bool) {
+	return lc.epCache.GetNodeIP(name)
 }
 
 // GetNetworkSet returns the networkset information for an address.
@@ -115,7 +126,11 @@ func (lc *LookupsCache) SetMockData(
 	nm map[[64]byte]*RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
+	nodes map[string]*v3.Node,
 ) {
+	for k, v := range nodes {
+		lc.epCache.nodes[k] = v.Spec
+	}
 	for ip, ed := range em {
 		if ed == nil {
 			delete(lc.epCache.ipToEndpoints, ip)

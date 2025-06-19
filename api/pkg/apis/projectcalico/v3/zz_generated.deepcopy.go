@@ -3213,6 +3213,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.FlowLogsPolicyScope != nil {
+		in, out := &in.FlowLogsPolicyScope, &out.FlowLogsPolicyScope
+		*out = new(string)
+		**out = **in
+	}
 	if in.FlowLogsFileEnabled != nil {
 		in, out := &in.FlowLogsFileEnabled, &out.FlowLogsFileEnabled
 		*out = new(bool)
