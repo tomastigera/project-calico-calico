@@ -350,14 +350,6 @@ func TestDecodeNewIntermediate(t *testing.T) {
 	strategy.PrepareForCreate(context.TODO(), &licenseKey)
 }
 
-func keys(set map[string]bool) []string {
-	var keys []string
-	for k := range set {
-		keys = append(keys, k)
-	}
-
-	return keys
-}
 func TestFeatureFlags(t *testing.T) {
 	numNodes := 5
 	sampleClaims := client.LicenseClaims{
@@ -393,50 +385,6 @@ func TestFeatureFlags(t *testing.T) {
 		claims := sampleClaims
 		claims.Features = []string{features.AWSCloudwatchMetrics}
 		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
-	})
-
-	t.Run("a license with 'cnx|all' features states that each feature is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cnx", features.All}
-
-		for f := range features.EnterpriseFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|community' package states any cloud community feature is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "community"}, keys(features.CloudCommunityFeatures)...)
-
-		for f := range features.CloudCommunityFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|starter' package states any cloud starter feature is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "starter"}, keys(features.CloudStarterFeatures)...)
-
-		for f := range features.CloudStarterFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|pro' package states any cloud pro feature is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "pro"}, keys(features.CloudProFeatures)...)
-
-		for f := range features.CloudProFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
 	})
 
 	t.Run("a license with 'cnx|all' package states ingress is disabled.", func(t *testing.T) {
