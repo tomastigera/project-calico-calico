@@ -459,6 +459,10 @@ bin/calico-bpf: $(SRC_FILES)
 	@echo Building calico-bpf...
 	$(call build_cgo_binary, "$(PACKAGE_NAME)/cmd/calico-bpf", $@)
 
+bin/calico-policy-repro: $(SRC_FILES)
+	@echo Building calico-policy-repro...
+	$(call build_cgo_binary, "$(PACKAGE_NAME)/cmd/calico-policy-repro", $@)
+
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building pktgen...
 	$(call build_binary, "$(PACKAGE_NAME)/fv/pktgen", $@)
