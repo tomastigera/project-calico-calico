@@ -118,14 +118,10 @@ func (f *WAFHTTPFilter) Start() error {
 			log.Fatalf("failed to listen: %v", err)
 		}
 
-		err = os.Chmod(f.options.SocketPath, 0o700)
-		if err != nil {
-			log.Fatalf("failed to set permissions: %v", err)
-		}
-
-		// envoy distroless uid (65532)
-		// Dockerfile uid
-		err = os.Chown(f.options.SocketPath, 10001, 0)
+		// We need to allow reading and writing to the socket by all users
+		// as the sidecar runs as root (for the file logger to work) and the
+		// envoy proxy runs as a non-root user.
+		err = os.Chmod(f.options.SocketPath, 0o666)
 		if err != nil {
 			log.Fatalf("failed to set permissions: %v", err)
 		}
