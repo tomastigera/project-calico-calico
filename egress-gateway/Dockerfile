@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ ARG CENTOS_MIRROR_BASE_URL=http://vault.centos.org/8.1.1911
 ARG LIBNFTNL_VER=1.1.1-4
 ARG LIBNFTNL_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/libnftnl-${LIBNFTNL_VER}.el8.src.rpm
 ARG IPTABLES_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/iptables-${IPTABLES_VER}.el8.src.rpm
+ARG TARGETARCH
 
 # Install build dependencies and security updates.
 RUN dnf install -y 'dnf-command(config-manager)' && \
@@ -37,12 +38,17 @@ RUN dnf install -y 'dnf-command(config-manager)' && \
 # iptables requires libnftnl-devel but libnftnl-devel is not available on ubi or CentOS repos.
 # (Note: it's not in RHEL8.1 either https://bugzilla.redhat.com/show_bug.cgi?id=1711361).
 # Rebuilding libnftnl will give us libnftnl-devel too.
-RUN rpm -i ${LIBNFTNL_SOURCERPM_URL} && \
+RUN case "${TARGETARCH}" in \
+    amd64) export MACHINEARCH=x86_64 ;; \
+    arm64) export MACHINEARCH=aarch64 ;; \
+    *) export MACHINEARCH=${TARGETARCH} ;; \
+    esac && \
+    rpm -i ${LIBNFTNL_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/libnftnl.spec && \
     rpmbuild -bb /root/rpmbuild/SPECS/libnftnl.spec && \
     # Now install libnftnl and libnftnl-devel
-    rpm -Uv /root/rpmbuild/RPMS/aarch64/libnftnl-${LIBNFTNL_VER}.el8.aarch64.rpm && \
-    rpm -Uv /root/rpmbuild/RPMS/aarch64/libnftnl-devel-${LIBNFTNL_VER}.el8.aarch64.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/${MACHINEARCH}/libnftnl-${LIBNFTNL_VER}.el8.${MACHINEARCH}.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/${MACHINEARCH}/libnftnl-devel-${LIBNFTNL_VER}.el8.${MACHINEARCH}.rpm && \
     # Install source RPM for iptables and install its build dependencies.
     rpm -i ${IPTABLES_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/iptables.spec
@@ -77,12 +83,13 @@ RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest AS ubi
 
 ARG IPTABLES_VER
+ARG TARGETARCH
 
 # Update base packages to pick up security updates.
 RUN microdnf upgrade
 
 # Copy in our rpms
-COPY --from=almalinux /root/rpmbuild/RPMS/aarch64/* /tmp/rpms/
+COPY --from=almalinux /root/rpmbuild/RPMS/ /tmp/rpms/
 
 RUN microdnf install \
     # Don't install copious docs.
@@ -116,15 +123,20 @@ RUN microdnf --enablerepo=baseos install \
 
 # Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
 # version '1.8.8-6.el8' conflicts with iptables-libs (pulled in by the iputils package) '1.8.5-11.el8_9'.
-RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.aarch64.rpm && \
-    rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.aarch64.rpm && \
+RUN case "${TARGETARCH}" in \
+    amd64) export MACHINEARCH=x86_64 ;; \
+    arm64) export MACHINEARCH=aarch64 ;; \
+    *) export MACHINEARCH=${TARGETARCH} ;; \
+    esac && \
+    rpm --force -i /tmp/rpms/${MACHINEARCH}/iptables-libs-${IPTABLES_VER}.el8.${MACHINEARCH}.rpm && \
+    rpm -i /tmp/rpms/${MACHINEARCH}/iptables-${IPTABLES_VER}.el8.${MACHINEARCH}.rpm && \
     # Set alternatives
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
 RUN microdnf clean all
 
-COPY bin/egressd-arm64 /egressd
+COPY bin/egressd-${TARGETARCH} /egressd
 
 # Add symlink to modprobe where iptables expects it to be.
 RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe

@@ -3,7 +3,6 @@ include ../metadata.mk
 PACKAGE_NAME?=github.com/projectcalico/calico/egress-gateway
 
 EGRESS_GATEWAY_IMAGE  ?=egress-gateway
-EGRESS_GATEWAY_TESTING_IMAGE ?=egress-gateway-testing
 BUILD_IMAGES          ?=$(EGRESS_GATEWAY_IMAGE)
 
 ###############################################################################
@@ -16,7 +15,6 @@ test: ut ## Run the tests for the current platform/architecture
 # Variables controlling the image
 ###############################################################################
 GATEWAY_CONTAINER_CREATED=.egress_gateway.created-$(ARCH)
-GATEWAY_TEST_CONTAINER_CREATED=.egress_gateway_testing.created-$(ARCH)
 # Files that go into the image
 GATEWAY_DAEMON_EXECUTABLE=./bin/egressd-$(ARCH)
 # Files to be built
@@ -43,7 +41,6 @@ clean:
 	rm -rf Makefile.common*
 	# Delete images that we built in this repo
 	-docker rmi $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH)
-	-docker rmi $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH)
 
 ###############################################################################
 # Protobufs, defer to felix's makefile.
@@ -77,7 +74,6 @@ endif
 ###############################################################################
 ## Create the image for the current ARCH
 image: $(EGRESS_GATEWAY_IMAGE)
-image-testing: $(EGRESS_GATEWAY_TESTING_IMAGE)
 
 ## Create the images for all supported ARCHes
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -85,14 +81,9 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(EGRESS_GATEWAY_IMAGE): $(GATEWAY_CONTAINER_CREATED)
-$(GATEWAY_CONTAINER_CREATED): Dockerfile.$(ARCH) $(GATEWAY_DAEMON_EXECUTABLE)
-	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
+$(GATEWAY_CONTAINER_CREATED): Dockerfile $(GATEWAY_DAEMON_EXECUTABLE)
+	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
-	touch $@
-
-$(EGRESS_GATEWAY_TESTING_IMAGE): $(GATEWAY_TEST_CONTAINER_CREATED)
-$(GATEWAY_TEST_CONTAINER_CREATED): test/Dockerfile.$(ARCH) $(GATEWAY_DAEMON_EXECUTABLE)
-	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH) -f test/Dockerfile.$(ARCH) .
 	touch $@
 
 ## Run the tests in a container. Useful for CI, Mac dev
