@@ -15,11 +15,6 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 )
 
-const (
-	linseedService     = "tigera-linseed.tigera-elasticsearch.svc"
-	linseedServiceFQDN = linseedService + ".cluster.local"
-)
-
 // Proxy allows you to proxy https connections with redirection based on the SNI in the client hello
 type Proxy interface {
 	ListenAndProxy(listener net.Listener) error
@@ -193,7 +188,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 		}
 	}
 
-	if serverName == linseedService || serverName == linseedServiceFQDN {
+	if isLinseedServerName(serverName) {
 		// This connection is destined to Linseed from over the mTLS tunnel with Guardian.
 		// Rather than forward the connection, we should handle it ourselves. Terminate TLS and proxy onwards.
 		c := NewLocalConnection(srcConn, bytesRead)
@@ -228,6 +223,20 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	conn.Forward(srcConn, dstConn)
 
 	return nil
+}
+
+func isLinseedServerName(serverName string) bool {
+	linseedHostMatches := []string{
+		"tigera-linseed",
+		"tigera-linseed.tigera-elasticsearch.svc",
+		"tigera-linseed.tigera-elasticsearch.svc.cluster.local",
+	}
+	for _, host := range linseedHostMatches {
+		if serverName == host {
+			return true
+		}
+	}
+	return false
 }
 
 func writeBytesToConn(bytes []byte, conn net.Conn) error {
