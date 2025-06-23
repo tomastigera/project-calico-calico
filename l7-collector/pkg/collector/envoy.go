@@ -5,6 +5,7 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -80,6 +81,14 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 	// Tail the file
 	// Currently this reads from the end of the tail file to prevent
 	// rereading the file.
+
+	// wait fo the log file to be created
+	for {
+		if _, err := os.Stat(ec.config.EnvoyLogPath); !errors.Is(err, os.ErrNotExist) {
+			break
+		}
+	}
+
 	t, err := tail.TailFile(ec.config.EnvoyLogPath, tail.Config{
 		Follow: true,
 		ReOpen: true,
@@ -160,6 +169,7 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 			ec.ingestLogs()
 			continue
 		case line := <-t.Lines:
+			log.Infof("Received line from envoy log: ", line.Text)
 			ec.processLine(line)
 		case <-ctx.Done():
 			log.Info("Collector shut down")
@@ -293,6 +303,7 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithField("log", logMsg).Debug("Log received from envoy via gRPC")
 	}
+	log.WithField("log", logMsg).Info("Log received from envoy via gRPC")
 	// Treat values
 	timeToLastUpstreamTxByte := logMsg.GetCommonProperties().GetTimeToLastUpstreamTxByte()
 	if timeToLastUpstreamTxByte == nil {

@@ -5,6 +5,7 @@ import (
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -38,6 +39,8 @@ func (s *LoggingServer) StreamAccessLogs(srv v3.AccessLogService_StreamAccessLog
 		if err != nil {
 			return err
 		}
+
+		logrus.Infof("Received access log payload: %+v", payload)
 
 		switch logEntry := payload.LogEntries.(type) {
 		case *v3.StreamAccessLogsMessage_HttpLogs:

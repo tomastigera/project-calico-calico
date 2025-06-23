@@ -29,19 +29,25 @@ func main() {
 		buildinfo.PrintVersion()
 		return
 	}
-
+	log.Infof("Starting l7-collector version %s", buildinfo.Version)
 	// Create/read config
 	// Load environment config.
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
 
+	log.Infof("Configuration: %+v", cfg)
+
 	// Instantiate the log collector
 	reportCh := make(chan collector.EnvoyInfo)
 	c := collector.NewEnvoyCollector(cfg, reportCh)
 
+	log.Info("creating l7-collector...")
+
 	// Instantiate the felix client
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)
+
+	log.Infof("setting up Felixclient at %s", cfg.DialTarget)
 
 	// Start gRPC log collector
 	gRPCServerStart(cfg, reportCh)
@@ -53,6 +59,7 @@ func main() {
 func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	log.Info("Starting gRCP server...")
 	ctx := context.Background()
+	// wg := sync.WaitGroup{}
 	gs := grpc.NewServer()
 	grpcCollector := collector.NewEnvoyCollector(cfg, reportCh)
 	logServer := collector.NewLoggingServer(grpcCollector.ReceiveLogs)
@@ -73,12 +80,15 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 			log.Fatal("unable to set write permission on socket: ", err)
 		}
 	}
+	// wg.Add(1)
 	go func() {
 		if err := gs.Serve(lis); err != nil {
 			log.Errorf("failed to serve: %v", err)
 		}
 		defer lis.Close()
+		// defer wg.Done()
 	}()
+	// wg.Wait()
 }
 
 func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
@@ -94,13 +104,14 @@ func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collect
 	}()
 
 	// Start the DataplaneStats reporting go routine.
-	wg.Add(1)
-	go func() {
-		client.SendStats(ctx, collector)
-		cancel()
-		wg.Done()
-	}()
+	// wg.Add(1)
+	// go func() {
+	// 	client.SendStats(ctx, collector)
+	// 	cancel()
+	// 	wg.Done()
+	// }()
 
 	// Wait for the go routine to complete before exiting
 	wg.Wait()
+	log.Info("All go routines completed, exiting l7-collector.")
 }

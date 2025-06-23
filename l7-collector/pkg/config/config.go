@@ -44,6 +44,7 @@ type Config struct {
 func MustLoadConfig() *Config {
 	c, err := LoadConfig()
 	if err != nil {
+		log.Info("Error loading configuration, exiting...")
 		log.Panicf("Error loading configuration: %v", err)
 	}
 	return c
@@ -99,4 +100,5 @@ func LoadConfig() (*Config, error) {
 func (c *Config) InitializeLogging() {
 	logutils.ConfigureFormatter("l7collector")
 	log.SetLevel(c.ParsedLogLevel)
+	log.Info("L7 Collector logging initialized with level: ", c.ParsedLogLevel)
 }
