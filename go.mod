@@ -173,7 +173,7 @@ require (
 	k8s.io/kube-aggregator v0.32.5
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/kubectl v0.32.5
-	k8s.io/kubernetes v1.32.5
+	k8s.io/kubernetes v1.32.6
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	modernc.org/memory v1.10.0
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -201,7 +201,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hnslib v0.0.8 // indirect
+	github.com/Microsoft/hnslib v0.1.1 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
