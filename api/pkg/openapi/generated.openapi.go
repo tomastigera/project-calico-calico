@@ -6805,7 +6805,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"bpfDNSPolicyMode": {
 						SchemaProps: spec.SchemaProps{
-							Description: "BPFDNSPolicyMode specifies how DNS policy programming will be handled. Inline - BPF parses DNS response inline with DNS response packet processing. This guarantees the DNS rules reflect any change immediately. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs. [Default: Inline]",
+							Description: "BPFDNSPolicyMode specifies how DNS policy programming will be handled. Inline - BPF parses DNS response inline with DNS response packet processing. This guarantees the DNS rules reflect any change immediately. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs. [Default: DelayDeniedPacket]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
