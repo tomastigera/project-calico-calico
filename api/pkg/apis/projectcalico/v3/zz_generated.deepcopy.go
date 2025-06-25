@@ -1058,6 +1058,11 @@ func (in *BGPPeerSpec) DeepCopyInto(out *BGPPeerSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.NextHopMode != nil {
+		in, out := &in.NextHopMode, &out.NextHopMode
+		*out = new(NextHopMode)
+		**out = **in
+	}
 	if in.Password != nil {
 		in, out := &in.Password, &out.Password
 		*out = new(BGPPassword)

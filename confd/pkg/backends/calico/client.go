@@ -651,12 +651,14 @@ func (c *client) updatePeersV1() {
 					}
 					reachableBy = v3res.Spec.ReachableBy
 				}
+				keepOriginalNextHop, nextHopMode := getNextHopMode(v3res)
 				peers = append(peers, &backends.BGPPeer{
 					PeerIP:          *ip,
 					ASNum:           v3res.Spec.ASNumber,
 					SourceAddr:      string(v3res.Spec.SourceAddress),
 					Port:            port,
-					KeepNextHop:     v3res.Spec.KeepOriginalNextHop,
+					KeepNextHop:     keepOriginalNextHop,
+					NextHopMode:     nextHopMode,
 					CalicoNode:      isCalicoNode,
 					TTLSecurity:     ttlSecurityHopCount,
 					ExternalNetwork: v3res.Spec.ExternalNetwork,
@@ -779,6 +781,19 @@ func (c *client) updatePeersV1() {
 		c.peeringCache[k] = newValue
 		c.keyUpdated(k)
 	}
+}
+
+func getNextHopMode(v3res *apiv3.BGPPeer) (bool, string) {
+	var nextHopMode string
+	var keepOriginalNextHop bool
+	if v3res.Spec.NextHopMode != nil {
+		// Ignore KeepOriginalNextHopMode if NextHopMode is not nil.
+		nextHopMode = string(*v3res.Spec.NextHopMode)
+	} else {
+		keepOriginalNextHop = v3res.Spec.KeepOriginalNextHop
+	}
+
+	return keepOriginalNextHop, nextHopMode
 }
 
 func parseIPPort(ipPort string) (string, uint16) {
@@ -927,6 +942,11 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 			}
 		}
 		peer.RRClusterID = rrClusterID
+
+		keepOriginalNextHop, nextHopMode := getNextHopMode(v3peer)
+		peer.KeepNextHop = keepOriginalNextHop
+		peer.NextHopMode = nextHopMode
+
 		peers = append(peers, peer)
 	}
 	return

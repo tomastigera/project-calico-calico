@@ -206,7 +206,7 @@ class TestBase(TestCase):
         logger.debug("Additional Service created. status='%s'" % str(api_response.status))
 
     def wait_until_exists(self, name, resource_type, ns="default"):
-        retry_until_success(kubectl, function_args=["get %s %s -n%s" %
+        retry_until_success(kubectl, function_args=["get %s %s -n %s" %
                                                     (resource_type, name, ns)])
 
     def delete(self, name, resource_type, ns="default", wait="true"):
