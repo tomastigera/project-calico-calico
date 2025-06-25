@@ -41,8 +41,8 @@ type Config struct {
 	ExcludeDryRuns bool `envconfig:"EXCLUDE_DRYRUNS" default:"true"`
 
 	// QueryServer Config
-	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://tigera-api.calico-system.svc:8080"`
-	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/calico-system/services/https:tigera-api:8080/proxy"`
+	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://calico-api.calico-system.svc:8080"`
+	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy"`
 	QueryServerCA       string `envconfig:"QUERYSERVER_CA" default:"/etc/pki/tls/certs/ca.crt"`
 	QueryServerToken    string `envconfig:"QUSERYSERVER_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 

@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: tigera-apiserver-certs
+  name: calico-apiserver-certs
   namespace: {{.Release.Namespace}}
 type: Opaque
 data:

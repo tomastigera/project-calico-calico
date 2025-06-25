@@ -5,8 +5,8 @@ type Config struct {
 	// this service will be hosted on this address
 	ListenAddr string `envconfig:"LISTEN_ADDR" default:":8080"`
 
-	TLSCert string `envconfig:"TLS_CERT" default:"/tigera-apiserver-certs/tls.crt"`
-	TLSKey  string `envconfig:"TLS_KEY" default:"/tigera-apiserver-certs/tls.key"`
+	TLSCert string `envconfig:"TLS_CERT" default:"/calico-apiserver-certs/tls.crt"`
+	TLSKey  string `envconfig:"TLS_KEY" default:"/calico-apiserver-certs/tls.key"`
 
 	// OIDC Authentication settings.
 	OIDCAuthEnabled        bool   `envconfig:"OIDC_AUTH_ENABLED" default:"false" split_words:"true"`

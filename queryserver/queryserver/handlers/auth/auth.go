@@ -23,14 +23,14 @@ const (
 var resourceGET = &authzv1.ResourceAttributes{
 	Verb:     "get",
 	Resource: "services/proxy",
-	Name:     "https:tigera-api:8080",
+	Name:     "https:calico-api:8080",
 }
 
 // The RBAC permissions that allow a user to perform an HTTP POST to Queryserver.
 var resourcePOST = &authzv1.ResourceAttributes{
 	Verb:     "create",
 	Resource: "services/proxy",
-	Name:     "https:tigera-api:8080",
+	Name:     "https:calico-api:8080",
 }
 
 type AuthHandler interface {
@@ -124,7 +124,7 @@ func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 		if !authorized {
 			// Respond with 403.
 			w.WriteHeader(http.StatusForbidden)
-			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
+			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)))
 			if err != nil {
 				log.Errorf("error when writing body to response: %v", err)
 			}

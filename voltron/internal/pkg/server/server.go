@@ -650,10 +650,10 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// Older managed clusters still run the API server in the "tigera-system" namespace.
 	// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
 	// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
-	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:tigera-api") {
+	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:calico-api") {
 		if isOlderCluster {
 			logrus.Debugf("Redirecting request path for older managed cluster: %s", clusterID)
-			re := regexp.MustCompile(`/namespaces/calico-system/services/https:tigera-api`)
+			re := regexp.MustCompile(`/namespaces/calico-system/services/https:calico-api`)
 			r.URL.Path = re.ReplaceAllString(r.URL.Path, `/namespaces/tigera-system/services/https:tigera-api`)
 		}
 	}

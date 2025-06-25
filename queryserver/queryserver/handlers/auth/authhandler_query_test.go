@@ -81,7 +81,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		addAccessReviewsReactor(fakeK8sCli, true, userInfo, verb)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:calico-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(true, nil)
 
@@ -205,7 +205,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		addAccessReviewsReactor(fakeK8sCli, isAuthorized, userInfo, verb)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:calico-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(false, nil)
 
@@ -221,7 +221,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		time.Sleep(interval)
 
 		By("Verifying the recorder error code is 403.")
-		Expect(rr.Body.String()).To(Equal("user &{default  [] map[]} is not authorized to perform POST https:tigera-api:8080"))
+		Expect(rr.Body.String()).To(Equal("user &{default  [] map[]} is not authorized to perform POST https:calico-api:8080"))
 		Expect(rr.Code).To(Equal(http.StatusForbidden))
 		Expect(req.URL.Path).To(Equal(name))
 	})
@@ -241,7 +241,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		mAuth.MockJWTAuth.On("Authenticate", req).Return(userInfo, 200, nil)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:calico-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(true, errors.New("internal server error."))
 
@@ -309,7 +309,7 @@ func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userIn
 		Expect(review.Spec.UID).To(Equal(userInfo.GetUID()))
 		Expect(review.Spec.Groups).To(Equal(userInfo.GetGroups()))
 		Expect(review.Spec.Extra).To(Equal(extra))
-		Expect(review.Spec.ResourceAttributes.Name).To(BeElementOf("https:tigera-api:8080",
+		Expect(review.Spec.ResourceAttributes.Name).To(BeElementOf("https:calico-api:8080",
 			"/endpoints", "/endpoints/", "/policies", "/policies/", "/nodes", "/nodes/",
 			"/summary", "/version", "/license"))
 		Expect(review.Spec.ResourceAttributes.Resource).To(Equal("services/proxy"))

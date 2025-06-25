@@ -41,8 +41,8 @@ type config struct {
 	PrometheusCABundlePath    string `default:"/certs/prometheus/tls.crt" split_words:"true"`
 	PrometheusPath            string `default:"/api/v1/namespaces/tigera-prometheus/services/calico-node-prometheus:9090/proxy/" split_words:"true"`
 	PrometheusEndpoint        string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
-	QueryserverPath           string `default:"/api/v1/namespaces/calico-system/services/https:tigera-api:8080/proxy/" split_words:"true"`
-	QueryserverEndpoint       string `default:"https://tigera-api.calico-system.svc:8080" split_words:"true"`
+	QueryserverPath           string `default:"/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/" split_words:"true"`
+	QueryserverEndpoint       string `default:"https://calico-api.calico-system.svc:8080" split_words:"true"`
 	QueryserverCABundlePath   string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	KeepAliveEnable   bool `default:"true" split_words:"true"`

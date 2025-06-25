@@ -302,9 +302,9 @@ func runFakeCluster(secret v1.Secret, cfg config) error {
 			LogLevel:         proxyLogLevel,
 		},
 		{
-			Path:             "/api/v1/namespaces/calico-system/services/https:tigera-api:8080/proxy/",
-			Dest:             mustParseURL("https://tigera-api.calico-system.svc:8080"),
-			PathRegexp:       regexp.MustCompile(fmt.Sprintf("^%v/?", "/api/v1/namespaces/calico-system/services/https:tigera-api:8080/proxy/")),
+			Path:             "/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/",
+			Dest:             mustParseURL("https://calico-api.calico-system.svc:8080"),
+			PathRegexp:       regexp.MustCompile(fmt.Sprintf("^%v/?", "/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/")),
 			PathReplace:      []byte("/"),
 			CAPem:            clusterCfg.realTigeraCABundlePath,
 			AllowInsecureTLS: true,
