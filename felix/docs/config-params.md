@@ -3717,10 +3717,10 @@ This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode inst
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
 | Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
-| Default value (above encoding) | `Inline` |
+| Default value (above encoding) | `DelayDeniedPacket` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
 | `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
-| Default value (YAML) | `Inline` |
+| Default value (YAML) | `DelayDeniedPacket` |
 | Notes | Required. | 
 
 ### `DNSPolicyNfqueueID` (config file) / `dnsPolicyNfqueueID` (YAML)
