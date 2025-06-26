@@ -51,7 +51,7 @@ var excludedComponents = []string{
 }
 
 type PinnedVersions interface {
-	GenerateFile() (version.Data, error)
+	GenerateFile() (version.Versions, error)
 }
 
 type OperatorConfig struct {
@@ -130,7 +130,7 @@ type CalicoPinnedVersions struct {
 }
 
 // GenerateFile generates the pinned version file.
-func (p *CalicoPinnedVersions) GenerateFile() (version.Data, error) {
+func (p *CalicoPinnedVersions) GenerateFile() (version.Versions, error) {
 	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
 	productBranch, err := utils.GitBranch(p.RootDir)
@@ -152,7 +152,7 @@ func (p *CalicoPinnedVersions) GenerateFile() (version.Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	versionData := version.NewVersionData(version.New(productVer), operatorVer)
+	versionData := version.NewHashreleaseVersions(version.New(productVer), operatorVer)
 	tmpl, err := template.New("pinnedversion").Parse(calicoTemplate)
 	if err != nil {
 		return nil, err
@@ -292,13 +292,13 @@ func RetrieveImageComponents(outputDir string) (map[string]registry.Component, e
 	return components, nil
 }
 
-func RetrieveVersions(outputDir string) (version.Data, error) {
+func RetrieveVersions(outputDir string) (version.Versions, error) {
 	pinnedVersion, err := retrievePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
 	}
 
-	return version.NewVersionData(version.New(pinnedVersion.Title), pinnedVersion.TigeraOperator.Version), nil
+	return version.NewHashreleaseVersions(version.New(pinnedVersion.Title), pinnedVersion.TigeraOperator.Version), nil
 }
 
 // normalizeComponent normalizes the component image name.

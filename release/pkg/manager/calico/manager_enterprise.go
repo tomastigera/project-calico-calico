@@ -1123,7 +1123,7 @@ func (m *EnterpriseManager) PrepareRelease() error {
 }
 
 func (m *EnterpriseManager) modifyVersionsFile() error {
-	versionData := version.NewEnterpriseReleaseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion)
+	versionData := version.NewEnterpriseReleaseVersions(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion)
 	err := pinnedversion.UpdateVersionsFile(m.repoRoot, versionData)
 	if err != nil {
 		return fmt.Errorf("failed to update versions file: %s", err)
