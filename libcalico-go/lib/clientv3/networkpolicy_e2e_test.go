@@ -16,7 +16,6 @@ package clientv3_test
 
 import (
 	"context"
-	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo"
