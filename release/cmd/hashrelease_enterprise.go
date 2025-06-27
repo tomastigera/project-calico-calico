@@ -100,6 +100,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				}
 			}
 
+			productRegistriesFromFlag := c.StringSlice(registryFlag.Name)
+
 			// Define the hashrelease directory using the hash from the pinned file.
 			hashreleaseDir := filepath.Join(baseHashreleaseDir, data.Hash())
 			hashrel, err := pinnedversion.LoadEnterpriseHashrelease(cfg.RepoRootDir, cfg.TmpDir, baseHashreleaseDir, c.Bool(latestFlag.Name))
@@ -125,8 +127,12 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
 				operator.WithTempDirectory(cfg.TmpDir),
 				operator.WithOutputDirectory(hashreleaseDir),
-				operator.WithRegistry(c.String(operatorRegistryFlag.Name)),
-				operator.WithProductRegistry(productRegistries[0]),
+			}
+			if reg := c.String(operatorRegistryFlag.Name); reg != "" {
+				operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
+			}
+			if len(productRegistriesFromFlag) > 0 {
+				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
 			}
 			if !c.Bool(skipOperatorFlag.Name) {
 				o := operator.NewEnterpriseManager(operatorOpts...)
@@ -150,9 +156,10 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithArchitectures(c.StringSlice(archFlag.Name)),
-				calico.WithImageRegistries(productRegistries),
 			}
-
+			if len(productRegistries) > 0 {
+				calicoOpts = append(calicoOpts, calico.WithImageRegistries(productRegistries))
+			}
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
@@ -238,18 +245,21 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithTmpDir(cfg.TmpDir),
 				calico.WithOutputDir(filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), hashrel.Hash)),
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
-				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 				calico.WithPublishImages(false), // Enterprise does not publish images
 			}
-			componentRegistry := registry.TigeraDevCIGCRRegistry
 			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
-				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
-				componentRegistry = reg[0]
+				calicoOpts = append(calicoOpts,
+					calico.WithImageRegistries(reg),
+					calico.WithImageScanning(false, *imageScanningAPIConfig(c)), // Disable image scanning if using custom registries.
+				)
 			} else {
-				calicoOpts = append(calicoOpts, calico.WithImageRegistries([]string{componentRegistry}))
+				calicoOpts = append(calicoOpts,
+					calico.WithImageRegistries([]string{registry.TigeraDevCIGCRRegistry}),
+					calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
+				)
 			}
 
-			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir, componentRegistry)
+			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve images for the hashrelease: %v", err)
 			}

@@ -12,6 +12,7 @@ import (
 	"cloud.google.com/go/storage"
 
 	"github.com/projectcalico/calico/release/internal/command"
+	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
@@ -42,16 +43,16 @@ func TestWindowsArchive(t *testing.T) {
 		t.Fatalf("failed to create GCS client: %v", err)
 	}
 
-	bucket := client.Bucket(calico.WindowsGCSBucket)
+	bucket := client.Bucket(utils.WindowsGCSBucketName)
 	obj := bucket.Object(fmt.Sprintf("tigera-calico-windows-%s.zip", releaseVersion))
 	_, err = obj.Attrs(ctx)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			t.Fatalf("Windows archive for version %s does not exist in GCS bucket %s", releaseVersion, calico.WindowsGCSBucket)
+			t.Fatalf("Windows archive for version %s does not exist in GCS bucket %s", releaseVersion, utils.WindowsGCSBucketName)
 		}
 		t.Fatalf("failed to get attributes for Windows archive: %v", err)
 	}
-	t.Logf("Windows archive for version %s exists in GCS bucket %s", releaseVersion, calico.WindowsGCSBucket)
+	t.Logf("Windows archive for version %s exists in GCS bucket %s", releaseVersion, utils.WindowsGCSBucketName)
 }
 
 func TestManifests(t *testing.T) {

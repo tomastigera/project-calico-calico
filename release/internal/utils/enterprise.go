@@ -13,10 +13,15 @@ const (
 
 	EnterpriseProductName = "Calico Enterprise"
 
+	// CalicoPrivateRepo is the name of the private repo in Tigera.
+	CalicoPrivateRepo = "calico-private"
+
 	TigeraManager = "manager"
 
 	// EnterpriseProductCode is the code for calico enterprise.
 	EnterpriseProductCode = "cnx"
+
+	WindowsGCSBucketName = "tigera-windows"
 )
 
 func DetermineCalicoVersion(repoRoot string) (string, error) {

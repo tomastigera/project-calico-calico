@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -37,12 +38,12 @@ var (
 		"coreos-alertmanager",
 		"coreos-config-reloader",
 		"coreos-dex",
-		"upstream-fluentd",
 		"coreos-prometheus",
 		"coreos-prometheus-operator",
 		"eck-elasticsearch",
 		"eck-elasticsearch-operator",
 		"eck-kibana",
+		"upstream-fluentd",
 	}
 )
 
@@ -209,11 +210,21 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 		return op, "", err
 	}
 
-	for name := range pinnedVersion.Components {
+	for name, component := range pinnedVersion.Components {
 		// Remove components that are not part of the operator.
-		if utils.Contains(operatorExcludedComponents, name) {
+		if slices.Contains(operatorExcludedComponents, name) {
 			delete(pinnedVersion.Components, name)
+			continue
 		}
+		if component.Image == "" {
+			img := registry.EnterpriseImageMap[name]
+			if img != "" {
+				component.Image = img
+			} else {
+				component.Image = name
+			}
+		}
+		pinnedVersion.Components[name] = component
 	}
 
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
@@ -267,7 +278,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}, nil
 }
 
-func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]registry.Component, error) {
+func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Component, error) {
 	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
@@ -283,11 +294,11 @@ func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]regist
 			delete(components, name)
 			continue
 		}
-		if component.Image == "" {
+		img := registry.EnterpriseImageMap[name]
+		if img != "" {
+			component.Image = img
+		} else if component.Image == "" {
 			component.Image = name
-		}
-		if component.Registry == "" && reg != "" {
-			component.Registry = reg
 		}
 		components[name] = component
 	}

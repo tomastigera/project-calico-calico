@@ -62,7 +62,7 @@ func (p *EnterpriseReleaseVersions) GenerateFile() (version.Versions, error) {
 }
 
 func (p *EnterpriseReleaseVersions) ImageList() ([]string, error) {
-	components, err := RetrieveEnterpriseImageComponents(p.Dir, "")
+	components, err := RetrieveEnterpriseImageComponents(p.Dir)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (p *EnterpriseReleaseVersions) ImageList() ([]string, error) {
 		if strings.Contains(component.Image, "tigera/operator") {
 			continue
 		}
-		componentNames = append(componentNames, strings.TrimPrefix(component.Image, "tigera/"))
+		componentNames = append(componentNames, component.Image)
 	}
 	return componentNames, nil
 }

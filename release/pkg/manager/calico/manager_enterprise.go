@@ -25,9 +25,9 @@ import (
 )
 
 var (
-	DefaultEnterpriseRegistry = "quay.io/tigera"
+	defaultEnterpriseRegistry = registry.DefaultEnterpriseRegistry
 
-	WindowsGCSBucket = "tigera-windows"
+	windowsGCSBucketName = utils.WindowsGCSBucketName
 
 	docsURL = "https://docs.tigera.io"
 
@@ -162,7 +162,7 @@ var (
 
 func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
 	defaultCalicoOpts := []Option{
-		WithImageRegistries([]string{DefaultEnterpriseRegistry}),
+		WithImageRegistries([]string{defaultEnterpriseRegistry}),
 		WithBuildImages(false),
 		WithPublishGitTag(false),
 		WithPublishGithubRelease(false),
@@ -329,12 +329,12 @@ func (m *EnterpriseManager) PreReleaseValidate(ver string) error {
 
 func (m *EnterpriseManager) generateManifests() error {
 	// Manifests are expecting registry to be the Contaier registry platform.
-	reg := strings.TrimSuffix(m.imageRegistries[0], "/tigera")
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("PRODUCT_VERSION=%s", m.calicoVersion))
+	env = append(env, fmt.Sprintf("REGISTRY=%s", m.imageRegistries[0]))
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
-	env = append(env, fmt.Sprintf("REGISTRY_OPERATOR=%s", m.operatorRegistry))
-	env = append(env, fmt.Sprintf("REGISTRY=%s", reg))
+	env = append(env, fmt.Sprintf("OPERATOR_REGISTRY_OVERRIDE=%s", m.operatorRegistry))
+	env = append(env, fmt.Sprintf("OPERATOR_IMAGE_OVERRIDE=%s", m.operatorImage))
 	if m.isHashRelease {
 		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
 	}
@@ -977,7 +977,7 @@ func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
 	}
 	logrus.Info("Start publishing windows archive to GCS")
 
-	bucket := WindowsGCSBucket
+	bucket := windowsGCSBucketName
 	publishSuffix := m.calicoVersion
 	if m.isHashRelease {
 		bucket += "/dev"

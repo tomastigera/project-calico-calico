@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/projectcalico/calico/release/internal/registry"
-	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
 
@@ -17,7 +16,7 @@ func TestImagesPublished(t *testing.T) {
 	checkImages(t, images)
 
 	for _, image := range strings.Split(images, " ") {
-		fqImage := fmt.Sprintf("%s/%s:%s", calico.DefaultEnterpriseRegistry, image, releaseVersion)
+		fqImage := fmt.Sprintf("%s/%s:%s", registry.DefaultEnterpriseRegistry, image, releaseVersion)
 		t.Run(fqImage, func(t *testing.T) {
 			if ok, err := registry.CheckImage(fqImage); err != nil {
 				t.Fatalf("failed to check image %s: %v", fqImage, err)
