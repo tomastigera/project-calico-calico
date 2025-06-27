@@ -75,7 +75,7 @@ var duplicateNamespaceResponse = []rest.MockResult{
 							Namespace: "tigera-manager",
 						},
 						Destination: lapi.Endpoint{
-							Namespace: "tigera-system",
+							Namespace: "calico-system",
 						},
 					},
 				},
@@ -376,16 +376,16 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 10))
-			Expect(namespaces[0].Name).To(Equal("kube-system"))
-			Expect(namespaces[1].Name).To(Equal("tigera-compliance"))
-			Expect(namespaces[2].Name).To(Equal("tigera-eck-operator"))
-			Expect(namespaces[3].Name).To(Equal("tigera-elasticsearch"))
-			Expect(namespaces[4].Name).To(Equal("tigera-fluentd"))
-			Expect(namespaces[5].Name).To(Equal("tigera-intrusion-detection"))
-			Expect(namespaces[6].Name).To(Equal("tigera-kibana"))
-			Expect(namespaces[7].Name).To(Equal("tigera-manager"))
-			Expect(namespaces[8].Name).To(Equal("tigera-prometheus"))
-			Expect(namespaces[9].Name).To(Equal("tigera-system"))
+			Expect(namespaces[0].Name).To(Equal("calico-system"))
+			Expect(namespaces[1].Name).To(Equal("kube-system"))
+			Expect(namespaces[2].Name).To(Equal("tigera-compliance"))
+			Expect(namespaces[3].Name).To(Equal("tigera-eck-operator"))
+			Expect(namespaces[4].Name).To(Equal("tigera-elasticsearch"))
+			Expect(namespaces[5].Name).To(Equal("tigera-fluentd"))
+			Expect(namespaces[6].Name).To(Equal("tigera-intrusion-detection"))
+			Expect(namespaces[7].Name).To(Equal("tigera-kibana"))
+			Expect(namespaces[8].Name).To(Equal("tigera-manager"))
+			Expect(namespaces[9].Name).To(Equal("tigera-prometheus"))
 		})
 
 		It("should retrieve an array of namespace objects with no duplicates and only up to the limit", func() {
@@ -455,7 +455,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 
 				for _, namespace := range []string{
 					"", "tigera-fluentd", "tigera-elasticsearch", "tigera-prometheus", "tigera-manager",
-					"tigera-system", "tigera-eck-operator", "tigera-kibana", "tigera-intrusion-detection",
+					"calico-system", "tigera-eck-operator", "tigera-kibana", "tigera-intrusion-detection",
 				} {
 					mockFlowHelper.On("IncludeNamespace", namespace).Return(false, nil)
 				}

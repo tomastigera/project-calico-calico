@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -20,24 +20,64 @@ const (
 	ActionAllow Action = "allow"
 	ActionDeny  Action = "deny"
 
-	ReporterSrc ReporterType = "src"
-	ReporterDst ReporterType = "dst"
+	ReporterSrc    ReporterType = "src"
+	ReporterDst    ReporterType = "dst"
+	ReporterFwd    ReporterType = "fwd"
+	ReporterSrcFwd ReporterType = "src,fwd"
+	ReporterDstFwd ReporterType = "dst,fwd"
 )
 
-// GetActionAndReporterFromRuleID converts the action to a string value.
-func getActionAndReporterFromRuleID(r *calc.RuleID) (a Action, flr ReporterType) {
-	switch r.Action {
+func getActionAndReporterFromRuleID(r, hr *calc.RuleID) (a Action, flr ReporterType) {
+	var (
+		action    rules.RuleAction
+		direction rules.RuleDir
+		isForward bool
+	)
+
+	switch {
+	case r != nil && hr != nil:
+		if r.Action == rules.RuleActionDeny || hr.Action == rules.RuleActionDeny {
+			// If either transit or non-transit action is a deny, then the flow is denied.
+			action = rules.RuleActionDeny
+		} else {
+			// If the verdict is not a deny, then the final verdict is determined by the last
+			// non-transit rule that ultimately applied the verdict.
+			action = r.Action
+		}
+		direction = r.Direction
+		isForward = true
+	case r != nil:
+		action = r.Action
+		direction = r.Direction
+	case hr != nil:
+		action = hr.Action
+		isForward = true
+	}
+
+	switch action {
 	case rules.RuleActionDeny:
 		a = ActionDeny
 	case rules.RuleActionAllow:
 		a = ActionAllow
 	}
-	switch r.Direction {
+
+	switch direction {
 	case rules.RuleDirIngress:
-		flr = ReporterDst
+		if isForward {
+			flr = ReporterDstFwd
+		} else {
+			flr = ReporterDst
+		}
 	case rules.RuleDirEgress:
-		flr = ReporterSrc
+		if isForward {
+			flr = ReporterSrcFwd
+		} else {
+			flr = ReporterSrc
+		}
+	default:
+		flr = ReporterFwd
 	}
+
 	return
 }
 

@@ -458,6 +458,7 @@ type Config struct {
 	FlowLogsDestDomainsByClient           bool   `config:"bool;true"`
 	FlowLogsDynamicAggregationEnabled     bool   `config:"bool;false"`
 	FlowLogsPolicyEvaluationMode          string `config:"oneof(OnNewConnection,Continuous);Continuous"`
+	FlowLogsPolicyScope                   string `config:"oneof(AllPolicies,EndpointPolicies);EndpointPolicies"`
 	FlowLogsPositionFilePath              string `config:"string;/var/log/calico/flows.log.pos"`
 	FlowLogsAggregationThresholdBytes     int    `config:"int;8192"`
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`
@@ -484,7 +485,7 @@ type Config struct {
 	DNSLogsLatency             bool          `config:"bool;true"`
 
 	// Config for DNS policy.
-	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse,Inline);Inline;non-zero"`
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse,Inline);DelayDeniedPacket;non-zero"`
 	NFTablesDNSPolicyMode            string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
 	BPFDNSPolicyMode                 string        `config:"oneof(NoDelay,Inline);Inline;non-zero"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`

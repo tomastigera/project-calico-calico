@@ -83,12 +83,14 @@ type Config struct {
 	PrometheusCABundlePath       string `default:"/certs/prometheus/tls.crt" split_words:"true"`
 	PrometheusPath               string `default:"/api/v1/namespaces/tigera-prometheus/services/calico-node-prometheus:9090/proxy/" split_words:"true"`
 	PrometheusEndpoint           string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
-	QueryserverPath              string `default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/" split_words:"true"`
-	QueryserverEndpoint          string `default:"https://tigera-api.tigera-system.svc:8080" split_words:"true"`
-	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	QueryserverPath              string `default:"/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/" split_words:"true"`
+	QueryserverEndpoint          string `default:"https://calico-api.calico-system.svc:8080" split_words:"true"`
+	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
+	FluentdHTTPPath              string `default:"https://fluentd-http-input.tigera-fluentd.svc.cluster.local:9880" split_words:"true"`
+	FluentdCABundlePath          string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	LinseedEndpoint     string `default:"https://tigera-linseed.tigera-elasticsearch.svc.cluster.local" split_words:"true"`
-	LinseedCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	LinseedCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	EnableCalicoCloudRbacApi       bool   `split_words:"true"`
 	CalicoCloudRbacApiCABundlePath string `split_words:"true"`
@@ -141,6 +143,9 @@ type Config struct {
 	// LMAAuthorizationCacheTTL used to configure authz caching when creating the `lma.auth.NewJWTAuth()` instance.
 	LMAAuthorizationCacheTTL time.Duration `default:"20s" split_words:"true"`
 
+	// TargetAuthorizerCacheTTL used to configure authz caching when creating the `lma.auth.NewJWTAuth()` instance.
+	TargetAuthorizerCacheTTL time.Duration `default:"20s" split_words:"true"`
+
 	// enable logging of all http requests to the clusterMuxer
 	HTTPAccessLoggingEnabled bool `default:"false" split_words:"true"`
 
@@ -173,7 +178,7 @@ type Config struct {
 
 	// GoldmaneEndpoint is the endpoint for the Goldmane service in the local cluster.
 	GoldmaneEndpoint     string `default:"https://goldmane.calico-system.svc.cluster.local" split_words:"true"`
-	GoldmaneCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	GoldmaneCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	// Whether or not the managed cluster supports impersonation. If not, Voltron will strip impersonation headers
 	// from requests before forwarding them to the managed cluster.

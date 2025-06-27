@@ -28,4 +28,5 @@ type BGPPeer struct {
 	ReachableBy       string               `json:"reachable_by"`
 	PassiveMode       bool                 `json:"passive_mode"`
 	LocalBGPPeer      bool                 `json:"local_bgp_peer"`
+	NextHopMode       string               `json:"next_hop_mode"`
 }

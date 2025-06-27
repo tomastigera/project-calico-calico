@@ -449,12 +449,11 @@ var _ = Describe("Service graph data tests", func() {
 							"namespace/tigera-elasticsearch",
 							"namespace/tigera-intrusion-detection",
 							"namespace/tigera-prometheus",
-							"namespace/tigera-system",
+							"namespace/calico-system",
 						},
 					}, {
 						Name: "infrastructure-kubernetes",
 						Nodes: []v1.GraphNodeID{
-							"namespace/calico-system",
 							"namespace/kube-system",
 							"namespace/crc-local-storage-system",
 							"svcgp;svc/default/kubernetes",

@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/client-go/transport"
 
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
 
@@ -43,6 +46,9 @@ type Target struct {
 	ClientKeyPath  string `json:"clientKeyPath"`
 
 	Unauthenticated bool `json:"unauthenticated,omitempty"`
+
+	Authorizer                  auth.RBACAuthorizer
+	AuthorizationAttributesFunc func(request *http.Request) (*authorizationv1.ResourceAttributes, *authorizationv1.NonResourceAttributes, error)
 }
 
 func (targets *Targets) UnauthenticatedPaths() []string {
@@ -147,6 +153,17 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 	}
 
 	return ret, nil
+}
+
+func AuthorizationDetailsByPath(tgts Targets) map[string]*proxy.AuthorizationDetails {
+	authMap := map[string]*proxy.AuthorizationDetails{}
+	for _, tgt := range tgts {
+		authMap[tgt.Path] = &proxy.AuthorizationDetails{
+			Authorizer:     tgt.Authorizer,
+			AttributesFunc: tgt.AuthorizationAttributesFunc,
+		}
+	}
+	return authMap
 }
 
 func TLSTerminatedRoutesFromFile(path string) ([]Target, error) {

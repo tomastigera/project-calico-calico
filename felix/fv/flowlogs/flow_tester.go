@@ -54,12 +54,20 @@ type FlowTesterOptions struct {
 	ExpectAllPolicies      bool
 	ExpectEnforcedPolicies bool
 	ExpectPendingPolicies  bool
+	ExpectTransitPolicies  bool
 
 	// Whether to include labels or policies in the match criteria
 	MatchLabels           bool
 	MatchAllPolicies      bool
 	MatchEnforcedPolicies bool
 	MatchPendingPolicies  bool
+	MatchTransitPolicies  bool
+
+	// Whether to check policies in the flow logs.
+	ExcludeAllPolicies      bool
+	ExcludeEnforcedPolicies bool
+	ExcludePendingPolicies  bool
+	ExcludeTransitPolicies  bool
 
 	// Set of include filters used to only include certain flows. Set of filters is ORed.
 	Includes []IncludeFilter
@@ -72,10 +80,11 @@ type FlowTesterOptions struct {
 
 type flowMeta struct {
 	flowlog.FlowMeta
-	policies string
-	enforced string
-	pending  string
-	labels   string
+	policies        string
+	enforced        string
+	pending         string
+	transitPolicies string
+	labels          string
 }
 
 type IncludeFilter func(flowlog.FlowLog) bool
@@ -134,23 +143,33 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 				return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 			}
 		}
-		if t.options.ExpectAllPolicies {
-			if len(fl.FlowAllPolicySet) == 0 {
-				return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
+
+		if !t.options.ExcludeAllPolicies {
+			if t.options.ExpectAllPolicies {
+				if len(fl.FlowAllPolicySet) == 0 {
+					return fmt.Errorf("missing all_policies in %v", fl.FlowMeta)
+				}
+			} else if len(fl.FlowAllPolicySet) != 0 {
+				return fmt.Errorf("unexpected all_policies %v in %v", fl.FlowAllPolicySet, fl.FlowMeta)
 			}
-		} else if len(fl.FlowAllPolicySet) != 0 {
-			return fmt.Errorf("unexpected Policies %v in %v", fl.FlowAllPolicySet, fl.FlowMeta)
 		}
-		if t.options.ExpectEnforcedPolicies {
-			if len(fl.FlowEnforcedPolicySet) == 0 {
-				return fmt.Errorf("missing enforced policies in %v", fl.FlowMeta)
+		if !t.options.ExcludeEnforcedPolicies {
+			if t.options.ExpectEnforcedPolicies {
+				if len(fl.FlowEnforcedPolicySet) == 0 {
+					return fmt.Errorf("missing enforced_policies in %v", fl.FlowMeta)
+				}
+			} else if len(fl.FlowEnforcedPolicySet) != 0 {
+				return fmt.Errorf("unexpected enforced_policies %v in %v", fl.FlowEnforcedPolicySet, fl.FlowMeta)
 			}
-		} else if len(fl.FlowEnforcedPolicySet) != 0 {
-			return fmt.Errorf("unexpected enforced policies %v in %v", fl.FlowEnforcedPolicySet, fl.FlowMeta)
 		}
-		if t.options.ExpectPendingPolicies {
+		if !t.options.ExcludePendingPolicies && t.options.ExpectPendingPolicies {
 			if len(fl.FlowPendingPolicySet) == 0 {
-				return fmt.Errorf("missing Pending Policies in %v", fl.FlowMeta)
+				return fmt.Errorf("missing pending__policies in %v", fl.FlowMeta)
+			}
+		}
+		if !t.options.ExcludeTransitPolicies && t.options.ExpectTransitPolicies {
+			if len(fl.FlowTransitPolicySet) == 0 {
+				return fmt.Errorf("missing transit_policies in %v", fl.FlowMeta)
 			}
 		}
 
@@ -297,6 +316,14 @@ func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 		}
 		sort.Strings(pending)
 		fm.pending += strings.Join(pending, ";")
+	}
+	if t.options.MatchTransitPolicies {
+		var host []string
+		for p := range fl.FlowTransitPolicySet {
+			host = append(host, p)
+		}
+		sort.Strings(host)
+		fm.transitPolicies += strings.Join(host, ";")
 	}
 	return fm
 }

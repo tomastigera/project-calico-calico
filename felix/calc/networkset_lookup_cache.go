@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -66,6 +66,11 @@ func (n networkSetData) Labels() uniquelabels.Map {
 }
 
 func (n networkSetData) GenerateName() string {
+	return ""
+}
+
+func (n networkSetData) InterfaceName() string {
+	// NetworkSet does not have an interface name.
 	return ""
 }
 

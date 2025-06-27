@@ -4018,14 +4018,14 @@
       },
       "Dest": {
         "Type": "rep",
-        "Namespace": "tigera-system",
+        "Namespace": "calico-system",
         "Name": "",
         "NameAggr": "tigera-apiserver-b47498c85-*",
         "PortNum": 5443,
         "Protocol": "tcp"
       },
       "ServicePort": {
-        "namespace": "tigera-system",
+        "namespace": "calico-system",
         "name": "tigera-api",
         "protocol": "tcp",
         "port_name": "apiserver",
@@ -4079,7 +4079,7 @@
       },
       "Dest": {
         "Type": "rep",
-        "Namespace": "tigera-system",
+        "Namespace": "calico-system",
         "Name": "",
         "NameAggr": "tigera-apiserver-b47498c85-*",
         "PortNum": 0,

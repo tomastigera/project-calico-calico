@@ -769,6 +769,7 @@ var (
 		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
+		TransitRuleIDs: []*calc.RuleID{ingressRule1Allow},
 		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 1,
@@ -803,6 +804,7 @@ var (
 		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
+		TransitRuleIDs: []*calc.RuleID{ingressRule1Allow},
 		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 1,
@@ -837,6 +839,7 @@ var (
 		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
+		TransitRuleIDs: []*calc.RuleID{ingressRule1Allow},
 		IsConnection:   false,
 		ProcessName:    "test-process",
 		ProcessID:      1234,

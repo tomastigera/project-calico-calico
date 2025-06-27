@@ -354,7 +354,7 @@
           "type": "wep",
           "name": "",
           "aggregated_name": "tigera-apiserver-ff8df8d5f-*",
-          "namespace": "tigera-system",
+          "namespace": "calico-system",
           "port": 0
         }
       },
@@ -368,7 +368,7 @@
         {
           "tier": "__PROFILE__",
           "namespace": "",
-          "name": "__PROFILE__.kns.tigera-system",
+          "name": "__PROFILE__.kns.calico-system",
           "action": "allow",
           "is_staged": false,
           "is_kubernetes": false,

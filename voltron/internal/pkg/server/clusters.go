@@ -362,6 +362,9 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 				Certificate:       mcResource.Spec.Certificate,
+				// TODO: Update Voltron to fetch the managed cluster version info and store it directly
+				// in the cluster memory, instead of using the ManagedCluster resource.
+				Version: mcResource.Status.Version,
 			}
 
 			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -417,6 +420,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 			ID:                id,
 			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 			Certificate:       managedCluster.Spec.Certificate,
+			Version:           managedCluster.Status.Version,
 		}
 
 		known[id] = struct{}{}

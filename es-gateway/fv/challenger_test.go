@@ -27,7 +27,7 @@ func TestFV_Challenger(t *testing.T) {
 		//  "cluster_name" : "docker-cluster",
 		//  "cluster_uuid" : "5lIuJ_FXSBakaIOJJBl4Zw",
 		//  "version" : {
-		//    "number" : "8.17.4",
+		//    "number" : "8.18.1",
 		//    "build_flavor" : "default",
 		//    "build_type" : "docker",
 		//    "build_hash" : "8682172c2130b9a411b1bd5ff37c9792367de6b0",
@@ -63,7 +63,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Kibana connects to Elastic via Kibana Proxy", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.17.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.1",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
@@ -79,7 +79,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Kibana Spaces can be created", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.17.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.1",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
@@ -97,7 +97,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Dashboards and Index Patterns can be created", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.17.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.1",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}

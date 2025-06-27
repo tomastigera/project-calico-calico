@@ -1,0 +1,52 @@
+{
+  "@timestamp": "2023-07-05T13:55:03.941044614Z",
+  "destination": {
+    "hostname": "",
+    "ip": "192.168.121.16",
+    "port_num": 80,
+    "name": "",
+    "namespace": ""
+  },
+  "level": "",
+  "method": "GET",
+  "msg": "[blocked] 3 WAF rule(s) got hit",
+  "path": "/?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+  "protocol": "HTTP/1.1",
+  "request_id": "838a5742-b176-4aab-956c-92b7e535969b",
+  "gateway_name": "gateway-1",
+  "gateway_namespace": "default",
+  "rules": [
+    {
+      "id": "932115",
+      "message": "Remote Command Execution: Windows Command Injection",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-932-APPLICATION-ATTACK-RCE.conf",
+      "line": "275",
+      "disruptive": false
+    },
+    {
+      "id": "942100",
+      "message": "SQL Injection Attack Detected via libinjection",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+      "line": "46",
+      "disruptive": false
+    },
+    {
+      "id": "949110",
+      "message": "Inbound Anomaly Score Exceeded (Total Score: 10)",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-949-BLOCKING-EVALUATION.conf",
+      "line": "81",
+      "disruptive": true
+    }
+  ],
+  "source": {
+    "hostname": "",
+    "ip": "192.168.111.80",
+    "port_num": 43684,
+    "name": "",
+    "namespace": ""
+  },
+  "host": "lorcan-bz-wodc-kadm-node-1"
+}

@@ -13,9 +13,10 @@
 # limitations under the License.
 
 ARG THIRD_PARTY_REGISTRY
+ARG THIRD_PARTY_RELEASE_BRANCH
 ARG WINDOWS_LTSC_VERSION
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0-${WINDOWS_LTSC_VERSION}
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0-${THIRD_PARTY_RELEASE_BRANCH}-${WINDOWS_LTSC_VERSION}
 
 USER ContainerAdministrator
 
@@ -64,7 +65,7 @@ ENV RUNTIME_LOG_FILE=${ROOT_DIR}/var/log/calico/runtime-security/report.log
 # TLS Settings
 ENV TLS_KEY_PATH=${ROOT_DIR}/tls/tls.key
 ENV TLS_CRT_PATH=${ROOT_DIR}/tls/tls.crt
-ENV CA_CRT_PATH=${ROOT_DIR}/etc/pki/tigera/tigera-ca-bundle.crt
+ENV CA_CRT_PATH=${ROOT_DIR}/etc/pki/tigera/ca.crt
 
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200

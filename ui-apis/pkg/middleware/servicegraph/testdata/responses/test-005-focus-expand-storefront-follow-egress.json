@@ -289,6 +289,92 @@
       }
     },
     {
+      "id": "namespace/calico-system",
+      "type": "namespace",
+      "name": "calico-system",
+      "service_ports": [
+        {
+          "namespace": "calico-system",
+          "name": "tigera-api",
+          "protocol": "tcp",
+          "port_name": "apiserver",
+          "port": 443
+        }
+      ],
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 20,
+              "packet_out": 23,
+              "bytes_in": 3762,
+              "bytes_out": 2342
+            },
+            "connections": {
+              "total_per_sample_interval": 2,
+              "started": 2,
+              "completed": 1
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 1951,
+              "max_min_rtt": 218,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1885,
+              "mean_min_mss": 182,
+              "mean_mss": 1388,
+              "count": 1
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ],
+            "dest": [
+              {
+                "name": "apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "selectors": {
+        "l3_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
+        "l7_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR src_namespace = \"calico-system\"",
+        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR client_namespace = \"calico-system\"",
+        "alerts": "dest_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
+        "packet_capture": "all()"
+      }
+    },
+    {
       "id": "namespace/kube-system",
       "type": "namespace",
       "name": "kube-system",
@@ -653,92 +739,6 @@
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
         "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
         "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\"",
-        "packet_capture": "all()"
-      }
-    },
-    {
-      "id": "namespace/tigera-system",
-      "type": "namespace",
-      "name": "tigera-system",
-      "service_ports": [
-        {
-          "namespace": "tigera-system",
-          "name": "tigera-api",
-          "protocol": "tcp",
-          "port_name": "apiserver",
-          "port": 443
-        }
-      ],
-      "stats_ingress": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 20,
-              "packet_out": 23,
-              "bytes_in": 3762,
-              "bytes_out": 2342
-            },
-            "connections": {
-              "total_per_sample_interval": 2,
-              "started": 2,
-              "completed": 1
-            },
-            "tcp": {
-              "sum_total_retransmissions": 0,
-              "sum_lost_packets": 0,
-              "sum_unrecovered_to": 0,
-              "min_send_congestion_window": 10,
-              "min_mss": 1388,
-              "max_smooth_rtt": 1951,
-              "max_min_rtt": 218,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1885,
-              "mean_min_mss": 182,
-              "mean_mss": 1388,
-              "count": 1
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "name": "kube-apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ],
-            "dest": [
-              {
-                "name": "apiserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              },
-              {
-                "name": "cnx-queryserver",
-                "source": "",
-                "destination": "",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ]
-          }
-        }
-      ],
-      "expandable": true,
-      "selectors": {
-        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-system\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
-        "alerts": "dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
         "packet_capture": "all()"
       }
     },
@@ -2739,47 +2739,7 @@
     {
       "id": {
         "source_node_id": "hosts/*",
-        "dest_node_id": "namespace/kube-system"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 17,
-              "packet_out": 17,
-              "bytes_in": 1946,
-              "bytes_out": 3493
-            },
-            "connections": {
-              "total_per_sample_interval": 19,
-              "started": 17,
-              "completed": 14
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
-        "alerts": "dest_namespace = \"kube-system\""
-      },
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "udp",
-            "port_ranges": [
-              {
-                "min_port": 53,
-                "max_port": 53
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "hosts/*",
-        "dest_node_id": "namespace/tigera-system"
+        "dest_node_id": "namespace/calico-system"
       },
       "stats": [
         {
@@ -2846,12 +2806,12 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\"",
-        "alerts": "dest_namespace = \"tigera-system\""
+        "l3_flows": "(dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"calico-system\""
       },
       "service_ports": [
         {
-          "namespace": "tigera-system",
+          "namespace": "calico-system",
           "name": "tigera-api",
           "protocol": "tcp",
           "port_name": "apiserver",
@@ -2870,6 +2830,46 @@
               {
                 "min_port": 8080,
                 "max_port": 8080
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "hosts/*",
+        "dest_node_id": "namespace/kube-system"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 17,
+              "packet_out": 17,
+              "bytes_in": 1946,
+              "bytes_out": 3493
+            },
+            "connections": {
+              "total_per_sample_interval": 19,
+              "started": 17,
+              "completed": 14
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"kube-system\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "udp",
+            "port_ranges": [
+              {
+                "min_port": 53,
+                "max_port": 53
               }
             ]
           }
@@ -5702,6 +5702,6 @@
     "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\" OR source_type = \"hep\"",
     "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
     "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
-    "alerts": "(source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"cartservice-5468974d8-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\") OR (source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\") OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-system\""
+    "alerts": "(source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"cartservice-5468974d8-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\") OR (source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\") OR source_namespace = \"calico-system\" OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\""
   }
 }

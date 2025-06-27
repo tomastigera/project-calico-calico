@@ -48,6 +48,7 @@ func restSetupAndTeardown(t *testing.T) func() {
 		URL:            fmt.Sprintf("https://localhost:%d/", args.Port),
 		ClientCertPath: "cert/localhost.crt",
 		ClientKeyPath:  "cert/localhost.key",
+		ServerName:     "localhost",
 	}
 	rc, err = rest.NewClient(tenant, cfg, rest.WithTokenPath(TokenPath))
 	require.NoError(t, err)
@@ -67,6 +68,7 @@ func TestFV_RESTClient(t *testing.T) {
 		badClient, err := rest.NewClient(tenant, rest.Config{
 			CACertPath: "cert/RootCA.crt",
 			URL:        fmt.Sprintf("https://localhost:%d/", DefaultLinseedArgs().Port),
+			ServerName: "localhost",
 		})
 		require.NoError(t, err)
 

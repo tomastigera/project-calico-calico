@@ -111,11 +111,11 @@ func (l logrusKlog) WithValues(keysAndValues ...any) logr.LogSink {
 }
 
 func configureLogging() {
-	// set logrus log-level for tigera-apiserver logging
+	// set logrus log-level for calico-apiserver logging
 	logrus.SetLevel(logrusLevel())
 
 	// create a logrus logger to be used by klog
-	logrusLogger := logrus.New().WithField("klog-logger", "tigera-apiserver")
+	logrusLogger := logrus.New().WithField("klog-logger", "calico-apiserver")
 	logrusLogger.Logger.SetLevel(logrusLevel())
 
 	logrusLoggerWrapper := logrusKlog{logger: logrusLogger}
@@ -123,7 +123,7 @@ func configureLogging() {
 	klogLogger := logr.New(logrusLoggerWrapper)
 	klog.SetLogger(klogLogger)
 
-	// set klog verbosity for libraries used in tigera-apiserver
+	// set klog verbosity for libraries used in calico-apiserver
 	msg, err := logs.GlogSetter(logLevelToVerbosityLevel())
 	if err != nil {
 		logrus.Errorf("Failed to set glog setter: %v", err)

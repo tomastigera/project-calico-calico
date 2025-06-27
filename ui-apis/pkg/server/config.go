@@ -33,17 +33,17 @@ type Config struct {
 	DefaultKeyFile  string `envconfig:"-"`
 
 	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
-	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
-	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/ca.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/ca.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	ExcludeDryRuns bool `envconfig:"EXCLUDE_DRYRUNS" default:"true"`
 
 	// QueryServer Config
-	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://tigera-api.tigera-system.svc:8080"`
-	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy"`
-	QueryServerCA       string `envconfig:"QUERYSERVER_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://calico-api.calico-system.svc:8080"`
+	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy"`
+	QueryServerCA       string `envconfig:"QUERYSERVER_CA" default:"/etc/pki/tls/certs/ca.crt"`
 	QueryServerToken    string `envconfig:"QUSERYSERVER_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	// TenantID is the unique identifier for the tenant this instance is serving. If left blank, this is a

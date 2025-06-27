@@ -29,7 +29,7 @@ spec:
             - name: LINSEED_ENDPOINT
               value: https://tigera-linseed.tigera-elasticsearch.svc
             - name: LINSEED_CA_PATH
-              value: /etc/pki/tls/certs/tigera-ca-bundle.crt
+              value: /etc/pki/tls/certs/ca.crt
             - name: TLS_KEY_PATH
               value: /tigera-fluentd-prometheus-tls/tls.key
             - name: TLS_CRT_PATH
@@ -83,9 +83,9 @@ spec:
         - configMap:
             defaultMode: 420
             items:
-              - key: tigera-ca-bundle.crt
-                path: tigera-ca-bundle.crt
-              - key: tigera-ca-bundle.crt
+              - key: ca.crt
+                path: ca.crt
+              - key: ca.crt
                 path: ca.pem
               - key: ca-bundle.crt
                 path: ca-bundle.crt

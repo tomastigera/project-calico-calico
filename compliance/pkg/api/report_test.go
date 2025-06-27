@@ -75,6 +75,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			URL:            "https://localhost:8444/",
 			ClientCertPath: linseedDir + "/cert/localhost.crt",
 			ClientKeyPath:  linseedDir + "/cert/localhost.key",
+			ServerName:     "localhost",
 		}
 		linseed, err := client.NewClient("tenant-a", cfg, rest.WithTokenPath(filepath.Join(linseedDir, "client-token")))
 		Expect(err).NotTo(HaveOccurred())

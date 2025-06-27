@@ -5,12 +5,12 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/elasticsearch
 ELASTICSEARCH_IMAGE   ?=elasticsearch
 BUILD_IMAGES          ?=$(ELASTICSEARCH_IMAGE)
 
-ELASTIC_VERSION=8.17.4
+ELASTIC_VERSION=8.18.1
 TINI_VERSION=0.19.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = v$(ELASTIC_VERSION)
+BRANCH_NAME = v$(ELASTIC_VERSION)-$(THIRD_PARTY_RELEASE_BRANCH)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################

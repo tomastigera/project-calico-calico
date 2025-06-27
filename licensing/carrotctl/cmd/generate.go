@@ -111,12 +111,6 @@ var GenerateLicenseCmd = &cobra.Command{
 		}
 
 		switch licensePackage {
-		case features.CloudCommunity:
-			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudCommunityFeatures)...)
-		case features.CloudStarter:
-			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudStarterFeatures)...)
-		case features.CloudPro:
-			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudProFeatures)...)
 		case features.Enterprise:
 			claims.Features = strings.Split(licensePackage, "|")
 		}

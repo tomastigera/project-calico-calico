@@ -53,7 +53,7 @@ require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-ini/ini v1.67.0
 	github.com/go-jose/go-jose/v4 v4.1.0
 	github.com/go-kit/log v0.2.1
@@ -248,7 +248,7 @@ require (
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudflare/circl v1.3.9 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/containerd/api v1.8.0 // indirect

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -107,6 +107,7 @@ type policiesJSONOutput struct {
 	AllPolicies      []string `json:"all_policies"`
 	EnforcedPolicies []string `json:"enforced_policies"`
 	PendingPolicies  []string `json:"pending_policies"`
+	TransitPolicies  []string `json:"transit_policies"`
 }
 
 func ToOutput(l *FlowLog) JSONOutput {
@@ -222,6 +223,11 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 		out.Policies.PendingPolicies = out.Policies.PendingPolicies[:0]
 		for pol := range l.FlowPendingPolicySet {
 			out.Policies.PendingPolicies = append(out.Policies.PendingPolicies, pol)
+		}
+
+		out.Policies.TransitPolicies = out.Policies.TransitPolicies[:0]
+		for pol := range l.FlowTransitPolicySet {
+			out.Policies.TransitPolicies = append(out.Policies.TransitPolicies, pol)
 		}
 	}
 
@@ -403,6 +409,7 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 		fl.FlowAllPolicySet = nil
 		fl.FlowEnforcedPolicySet = nil
 		fl.FlowPendingPolicySet = nil
+		fl.FlowTransitPolicySet = nil
 	} else {
 		fl.FlowAllPolicySet = make(FlowPolicySet)
 		for _, pol := range o.Policies.AllPolicies {
@@ -415,6 +422,10 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 		fl.FlowPendingPolicySet = make(FlowPolicySet)
 		for _, pol := range o.Policies.PendingPolicies {
 			fl.FlowPendingPolicySet[pol] = emptyValue
+		}
+		fl.FlowTransitPolicySet = make(FlowPolicySet)
+		for _, pol := range o.Policies.TransitPolicies {
+			fl.FlowTransitPolicySet[pol] = emptyValue
 		}
 	}
 

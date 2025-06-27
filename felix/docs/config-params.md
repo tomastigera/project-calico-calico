@@ -3437,6 +3437,24 @@ pending_policies field, offering a near-real-time view of policy changes across 
 | `FelixConfiguration` schema | String. |
 | Default value (YAML) | `Continuous` |
 
+### `FlowLogsPolicyScope` (config file) / `flowLogsPolicyScope` (YAML)
+
+Controls which policies are included in flow logs.
+AllPolicies - Processes both transit policies for the local node and
+endpoint policies derived from packet source/destination IPs. Provides comprehensive
+visibility into all policy evaluations but increases log volume.
+EndpointPolicies - Processes only policies for endpoints identified as the source
+or destination of the packet (whether workload or host endpoints).
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_FlowLogsPolicyScope` |
+| Encoding (env var/config file) | One of: <code>AllPolicies</code>, <code>EndpointPolicies</code> (case insensitive) |
+| Default value (above encoding) | `EndpointPolicies` |
+| `FelixConfiguration` field | `flowLogsPolicyScope` (YAML) `FlowLogsPolicyScope` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | `EndpointPolicies` |
+
 ### `FlowLogsPositionFilePath` (config file) / `flowLogsPositionFilePath` (YAML)
 
 Used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos.
@@ -3699,10 +3717,10 @@ This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode inst
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
 | Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
-| Default value (above encoding) | `Inline` |
+| Default value (above encoding) | `DelayDeniedPacket` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
 | `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
-| Default value (YAML) | `Inline` |
+| Default value (YAML) | `DelayDeniedPacket` |
 | Notes | Required. | 
 
 ### `DNSPolicyNfqueueID` (config file) / `dnsPolicyNfqueueID` (YAML)

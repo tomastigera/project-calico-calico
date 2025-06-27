@@ -134,7 +134,7 @@ func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userIn
 		Expect(review.Spec.UID).To(Equal(userInfo.GetUID()))
 		Expect(review.Spec.Groups).To(Equal(userInfo.GetGroups()))
 		Expect(review.Spec.Extra).To(Equal(extra))
-		Expect(review.Spec.ResourceAttributes.Name).To(BeElementOf("https:tigera-api:8080", "calico-node-prometheus:9090"))
+		Expect(review.Spec.ResourceAttributes.Name).To(BeElementOf("https:calico-api:8080", "calico-node-prometheus:9090"))
 		Expect(review.Spec.ResourceAttributes.Resource).To(Equal("services/proxy"))
 		Expect(review.Spec.ResourceAttributes.Verb).To(Equal("get"))
 		return true, &authzv1.SubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Allowed: authorized}}, nil

@@ -32,6 +32,7 @@ func NewLinseedClient(args *RunLinseedArgs, tokenPath string) (client.Client, er
 		URL:            fmt.Sprintf("https://localhost:%d/", args.Port),
 		ClientCertPath: "cert/localhost.crt",
 		ClientKeyPath:  "cert/localhost.key",
+		ServerName:     "localhost",
 	}
 
 	// The token is created as part of FV setup in the Makefile, and mounted into the container that

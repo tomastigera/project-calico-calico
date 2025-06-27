@@ -65,7 +65,7 @@ image: $(FLUENTD_IMAGE)
 
 $(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
 $(FLUENTD_IMAGE_CREATED): Dockerfile eks/bin/eks-log-forwarder-startup-$(ARCH)
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD_THIRD_PARTY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

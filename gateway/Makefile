@@ -9,6 +9,7 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/gateway
 WAF_HTTP_FILTER_IMAGE	?=waf-http-filter
 BUILD_IMAGES?=$(WAF_HTTP_FILTER_IMAGE)
 BUILD_TAGS   ?= coraza.rule.multiphase_evaluation
+EXTRA_GOTEST_ARGS ?= 
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -73,7 +74,7 @@ clean:
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... -cover -count 1 -tags=$(BUILD_TAGS) -v'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... -cover -count 1 -tags=$(BUILD_TAGS) $(EXTRA_GOTEST_ARGS)'
 
 st:
 	@echo "No STs"
@@ -101,7 +102,7 @@ fv-fast:
 	$(DOCKER_RUN) \
 	    -v $(REPO_ROOT)/gateway/fv/testdata:/shared \
 		$(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) go test ./fv -count 1'
+		sh -c '$(GIT_CONFIG_SSH) go test ./fv -count 1  -tags=$(BUILD_TAGS) $(EXTRA_GOTEST_ARGS)'
 
 
 ###############################################################################

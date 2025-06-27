@@ -605,7 +605,7 @@ func (m *EnterpriseManager) assembleRPMs() error {
 	for _, version := range RHELVersions {
 		rhelDir := filepath.Join(outDir, fmt.Sprintf("rhel%s", version))
 		pkgListPath := filepath.Join(m.tmpDir, fmt.Sprintf("%s-rhel%s-pkglist.txt", m.calicoVersion, version))
-		rpmURL := rpmURLBase + fmt.Sprintf("rhel%s/", version)
+		rpmURL := filepath.Join(rpmURLBase, fmt.Sprintf("rhel%s/", version))
 		if err := createRPMPackageList(rhelDir, pkgListPath); err != nil {
 			logrus.WithError(err).Errorf("Failed to create RPM package list for RHEL %s", version)
 			return fmt.Errorf("failed to create RPM package list for RHEL %s: %s", version, err)

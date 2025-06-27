@@ -80,6 +80,7 @@ type EndpointData interface {
 	Labels() uniquelabels.Map
 	IngressMatchData() *MatchData
 	EgressMatchData() *MatchData
+	InterfaceName() string
 }
 
 // endpointData is our internal interface shared by our local/remote cache
@@ -295,19 +296,22 @@ func CalculateRemoteEndpoint(key model.EndpointKey, ep model.Endpoint) *RemoteEn
 }
 
 func CalculateCommonEndpointData(key model.EndpointKey, ep model.Endpoint) CommonEndpointData {
-	generateName, ips := extractEndpointInfo(ep)
+	generateName, interfaceName, ips := extractEndpointInfo(ep)
 	commonData := CommonEndpointData{
-		key:          key,
-		labels:       ep.GetLabels(),
-		generateName: generateName,
-		ips:          ips,
+		key:           key,
+		labels:        ep.GetLabels(),
+		generateName:  generateName,
+		ips:           ips,
+		interfaceName: interfaceName,
 	}
 	return commonData
 }
 
-func extractEndpointInfo(ep model.Endpoint) (string, [][16]byte) {
-	var generateName string
-	var ips [][16]byte
+func extractEndpointInfo(ep model.Endpoint) (string, string, [][16]byte) {
+	var (
+		generateName, interfaceName string
+		ips                         [][16]byte
+	)
 	switch ep := ep.(type) {
 	case *model.WorkloadEndpoint:
 		generateName = ep.GenerateName
@@ -315,8 +319,9 @@ func extractEndpointInfo(ep model.Endpoint) (string, [][16]byte) {
 	case *model.HostEndpoint:
 		generateName = ""
 		ips = extractIPsFromHostEndpoint(ep)
+		interfaceName = ep.Name
 	}
-	return generateName, ips
+	return generateName, interfaceName, ips
 }
 
 // OnUpdate is the callback method registered with the RemoteEndpointDispatcher for
@@ -617,6 +622,53 @@ func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) 
 	return nil, ok
 }
 
+// GetHostEndpointFromInterfaceKey returns the endpoint data of a host endpoint for a given
+// interface name and IP address.
+//
+// Lookup priority:
+//  1. If key is empty: returns GetEndpoint(addr) result
+//  2. Exact interface name match
+//  3. Wildcard interface ("*") or empty interface name
+//  4. No match found
+//
+// Returns the endpoint data and a boolean indicating success.
+func (ec *EndpointLookupsCache) GetHostEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
+	ec.epMutex.RLock()
+	defer ec.epMutex.RUnlock()
+
+	if key == "" {
+		log.Debugf("No interface key provided, returning endpoint for address %s", net.IP(addr[:]).String())
+		// If no key is provided, return the endpoint for the given address.
+		return ec.GetEndpoint(addr)
+	}
+
+	var epWithoutInterface endpointData
+	if eps, ok := ec.ipToEndpoints[addr]; ok {
+		for _, ep := range eps {
+			if !ep.IsHostEndpoint() {
+				continue // Skip non-host endpoints.
+			}
+			if epWithoutInterface == nil && (ep.InterfaceName() == "*" || ep.InterfaceName() == "") {
+				// Store the first endpoint found for which the interface name is a wildcard or
+				// empty, and return it if no other endpoint matches the key.
+				epWithoutInterface = ep
+			}
+			if ep.InterfaceName() == key {
+				log.Tracef("Found endpoint with interface name %s for address %s: %s", key, net.IP(addr[:]).String(), endpointName(ep.Key()))
+				return ep, true
+			}
+		}
+	}
+
+	if epWithoutInterface != nil {
+		log.Debugf("Returning endpoint without interface name for address %s: %s", net.IP(addr[:]).String(), endpointName(epWithoutInterface.Key()))
+		return epWithoutInterface, true
+	}
+
+	log.Debugf("No endpoint found for address %s with interface key %s", net.IP(addr[:]).String(), key)
+	return nil, false
+}
+
 // GetEndpointKeys retrieves all keys from the EndpointLookupCache
 func (ec *EndpointLookupsCache) GetEndpointKeys() []model.Key {
 	ec.epMutex.RLock()
@@ -661,6 +713,36 @@ func (ec *EndpointLookupsCache) GetNode(ip [16]byte) (string, bool) {
 	}
 	log.Debugf("IP %v does not correspond to a known node IP", ip)
 	return "", false
+}
+
+// GetNodeIP returns the first IP address of a node given its name. Returns the IP address as a
+// string and a boolean indicating success.
+func (ec *EndpointLookupsCache) GetNodeIP(name string) (string, bool) {
+	ec.epMutex.RLock()
+	defer ec.epMutex.RUnlock()
+
+	// Look up the node by name
+	node, exists := ec.nodes[name]
+	if !exists {
+		log.WithField("node", name).Debug("Node does not correspond to a known node")
+		return "", false
+	}
+
+	// Check if the node has any addresses
+	if len(node.Addresses) == 0 {
+		log.WithField("node", name).Debug("Node has no IP addresses configured")
+		return "", false
+	}
+
+	nodeIP := node.Addresses[0].Address
+	if log.GetLevel() == log.TraceLevel {
+		log.WithFields(log.Fields{
+			"node": name,
+			"ip":   nodeIP,
+		}).Trace("Found IP address for node")
+	}
+
+	return nodeIP, true
 }
 
 // endpointName is a convenience function to return a printable name for an endpoint.
@@ -851,6 +933,8 @@ type CommonEndpointData struct {
 	// used for deleting an EndpointData, to delegate the actual
 	// deletion endpointDataDeletionDelay later
 	markedToBeDeleted bool
+
+	interfaceName string // only used for HostEndpointData
 }
 
 func (e *CommonEndpointData) Key() model.Key {
@@ -917,6 +1001,10 @@ func (ed *LocalEndpointData) EgressMatchData() *MatchData {
 	return ed.Egress
 }
 
+func (ed *LocalEndpointData) InterfaceName() string {
+	return ed.interfaceName
+}
+
 type RemoteEndpointData struct {
 	CommonEndpointData
 }
@@ -931,4 +1019,9 @@ func (ed *RemoteEndpointData) IngressMatchData() *MatchData {
 
 func (ed *RemoteEndpointData) EgressMatchData() *MatchData {
 	return nil
+}
+
+func (ed *RemoteEndpointData) InterfaceName() string {
+	// Remote endpoints do not have an interface name.
+	return ""
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Tigera, Inc. All rights reserved.
 
 package metric
 
@@ -108,6 +108,7 @@ type Update struct {
 	// Rules identification
 	RuleIDs        []*calc.RuleID
 	PendingRuleIDs []*calc.RuleID
+	TransitRuleIDs []*calc.RuleID
 
 	// Whether the rules IDs contains a deny rule.
 	HasDenyRule bool
@@ -119,8 +120,10 @@ type Update struct {
 	UnknownRuleID *calc.RuleID
 
 	// Inbound/Outbound packet/byte counts.
-	InMetric  Value
-	OutMetric Value
+	InMetric         Value
+	OutMetric        Value
+	InTransitMetric  Value
+	OutTransitMetric Value
 
 	// Optional process info
 	ProcessName string
@@ -183,6 +186,15 @@ func (mu Update) String() string {
 func (mu Update) GetLastRuleID() *calc.RuleID {
 	if len(mu.RuleIDs) > 0 {
 		return mu.RuleIDs[len(mu.RuleIDs)-1]
+	} else if mu.UnknownRuleID != nil {
+		return mu.UnknownRuleID
+	}
+	return nil
+}
+
+func (mu Update) GetLastTransitRuleID() *calc.RuleID {
+	if len(mu.TransitRuleIDs) > 0 {
+		return mu.TransitRuleIDs[len(mu.TransitRuleIDs)-1]
 	} else if mu.UnknownRuleID != nil {
 		return mu.UnknownRuleID
 	}

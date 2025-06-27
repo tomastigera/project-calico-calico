@@ -25,8 +25,8 @@ var alertExceptionsClient clientv3.AlertExceptionInterface
 type LinseedCfg struct {
 	TenantId   string `envconfig:"LINSEED_TENANT_ID"`
 	URL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
-	CA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
-	ClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	CA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/ca.crt"`
+	ClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/ca.crt"`
 	ClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	Token      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 }

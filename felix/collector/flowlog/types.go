@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -104,14 +104,15 @@ func newFlowMeta(mu metric.Update, includeService bool) (FlowMeta, error) {
 	}
 
 	lastRuleID := mu.GetLastRuleID()
-	if lastRuleID == nil {
+	lastTransitRuleID := mu.GetLastTransitRuleID()
+	if lastRuleID == nil && lastTransitRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
 		return f, fmt.Errorf("invalid metric update")
 	}
 
-	action, direction := getActionAndReporterFromRuleID(lastRuleID)
+	action, reporter := getActionAndReporterFromRuleID(lastRuleID, lastTransitRuleID)
 	f.Action = action
-	f.Reporter = direction
+	f.Reporter = reporter
 	return f, nil
 }
 
@@ -173,6 +174,7 @@ type FlowSpec struct {
 	FlowAllPolicySets
 	FlowEnforcedPolicySets
 	FlowPendingPolicySet
+	FlowTransitPolicySet
 	FlowDestDomains
 
 	// Reset aggregated data on the next metric update to ensure we clear out obsolete labels, policies and Domains for
@@ -188,6 +190,7 @@ func NewFlowSpec(mu *metric.Update, maxOriginalIPsSize, maxDomains int, includeP
 		FlowAllPolicySets:      NewFlowAllPolicySets(*mu),
 		FlowEnforcedPolicySets: NewFlowEnforcedPolicySets(*mu),
 		FlowPendingPolicySet:   NewFlowPendingPolicySet(*mu),
+		FlowTransitPolicySet:   NewFlowTransitPolicySet(*mu),
 		FlowStatsByProcess:     NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs, natOutgoingPortLimit),
 		flowExtrasRef:          NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 		FlowDestDomains:        NewFlowDestDomains(*mu, maxDomains),
@@ -226,6 +229,7 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 			fl.FlowAllPolicySet = nil
 			fl.FlowEnforcedPolicySet = nil
 			fl.FlowPendingPolicySet = nil
+			fl.FlowTransitPolicySet = nil
 			flogs = append(flogs, fl)
 		} else {
 			if len(f.FlowAllPolicySets) > 1 {
@@ -250,6 +254,9 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 				// policy will replace the previous one. The same pending policy will be depicted
 				// across all flow logs.
 				cpfl.FlowPendingPolicySet = FlowPolicySet(f.FlowPendingPolicySet)
+				// The latest transit policy will replace the previous one. The same transit policy will
+				// be depicted across all flow logs.
+				cpfl.FlowTransitPolicySet = FlowPolicySet(f.FlowTransitPolicySet)
 				flogs = append(flogs, &cpfl)
 			}
 		}
@@ -264,6 +271,7 @@ func (f *FlowSpec) AggregateMetricUpdate(mu *metric.Update) {
 		f.FlowAllPolicySets = nil
 		f.FlowEnforcedPolicySets = nil
 		f.FlowPendingPolicySet = nil
+		f.FlowTransitPolicySet = nil
 		f.FlowLabels.SrcLabels = uniquelabels.Nil
 		f.FlowLabels.DstLabels = uniquelabels.Nil
 		f.FlowDestDomains.reset()
@@ -277,6 +285,7 @@ func (f *FlowSpec) AggregateMetricUpdate(mu *metric.Update) {
 	f.aggregateFlowStatsByProcess(mu)
 
 	f.replaceFlowPendingPolicySet(*mu)
+	f.replaceFlowTransitPolicySet(*mu)
 }
 
 // MergeWith merges two flow specs. This means copying the flowRefsActive that contains a reference
@@ -429,6 +438,18 @@ func NewFlowPendingPolicySet(mu metric.Update) FlowPendingPolicySet {
 
 func (fpl *FlowPendingPolicySet) replaceFlowPendingPolicySet(mu metric.Update) {
 	*fpl = NewFlowPendingPolicySet(mu)
+}
+
+// FlowTransitPolicySet tracks transit policy enforcement for network flows, specifically PreDNAT
+// and ApplyOnForward policies enforced during packet transit through the node.
+type FlowTransitPolicySet FlowPolicySet
+
+func NewFlowTransitPolicySet(mu metric.Update) FlowTransitPolicySet {
+	return FlowTransitPolicySet(newPolicySet(mu.TransitRuleIDs, true))
+}
+
+func (fpl *FlowTransitPolicySet) replaceFlowTransitPolicySet(mu metric.Update) {
+	*fpl = NewFlowTransitPolicySet(mu)
 }
 
 type FlowDestDomains struct {
@@ -1146,7 +1167,7 @@ type FlowLog struct {
 	FlowExtras
 	FlowProcessReportedStats
 
-	FlowAllPolicySet, FlowEnforcedPolicySet, FlowPendingPolicySet FlowPolicySet
+	FlowAllPolicySet, FlowEnforcedPolicySet, FlowPendingPolicySet, FlowTransitPolicySet FlowPolicySet
 }
 
 func (f *FlowLog) Deserialize(fl string) error {

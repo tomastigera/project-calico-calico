@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
+	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/proto"
 )
 
@@ -29,6 +30,7 @@ type Collector interface {
 	SetProcessInfoCache(types.ProcessInfoCache)
 	SetDomainLookup(types.EgressDomainCache)
 	AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpsets.IPSetsManager)
+	SetNetlinkHandle(netlinkshim.Interface)
 	WAFReportingHandler() func(*proto.WAFEvent)
 	LogWAFEvents([]*proto.WAFEvent)
 	SetWAFEventsReporter(types.Reporter)

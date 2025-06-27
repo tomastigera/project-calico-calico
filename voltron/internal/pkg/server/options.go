@@ -151,6 +151,13 @@ func WithDefaultProxy(p *proxy.Proxy) Option {
 	}
 }
 
+func WithAuthAttributesMap(authMap map[string]*proxy.AuthorizationDetails) Option {
+	return func(s *Server) error {
+		s.authDetailsMap = authMap
+		return nil
+	}
+}
+
 // WithTunnelTargetWhitelist sets a whitelist of regex representing potential target paths
 // that should go through tunnel proxying in the server. This happens within the server
 // clusterMux handler.

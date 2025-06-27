@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package types
 
@@ -21,11 +21,13 @@ type RuleHit struct {
 
 // PacketInfo is information about a packet we received from the dataplane
 type PacketInfo struct {
-	Tuple        tuple.Tuple
-	PreDNATTuple tuple.Tuple
-	IsDNAT       bool
-	Direction    rules.RuleDir
-	RuleHits     []RuleHit
+	Tuple          tuple.Tuple
+	PreDNATTuple   tuple.Tuple
+	IsDNAT         bool
+	Direction      rules.RuleDir
+	RuleHits       []RuleHit
+	InDeviceIndex  int
+	OutDeviceIndex int
 }
 
 func (pkt PacketInfo) String() string {

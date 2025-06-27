@@ -18,12 +18,11 @@ COREDNS_VERSION=1.5.2
 ETCD_VERSION=v3.5.6
 GHR_VERSION=v0.17.0
 GITHUB_CLI_VERSION=2.65.0
+GOTESTSUM_VERSION=v1.12.2
 HELM_VERSION=v3.16.4
 KINDEST_NODE_VERSION=v1.31.4
 KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
 KIND_VERSION=v0.25.0
-GITHUB_CLI_VERSION=2.26.0
-GOTESTSUM_VERSION=v1.12.2
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
@@ -83,18 +82,6 @@ WINDOWS_VERSIONS ?= 1809 ltsc2022
 CNI_VERSION=master
 FLANNEL_VERSION=main
 
-# THIRD_PARTY_REGISTRY configures the third-party registry that serves intermediate base image
-# for some Calico Enterprise components. They are never released directly to public.
-ifeq ($(SEMAPHORE_GIT_REF_TYPE), branch)
-    # on master and release-calient branches
-    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/cnx/tigera/third-party
-else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
-    # on pull requests
-    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/third-party-ci
-else
-    THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
-endif
-
 # The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
 BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
@@ -105,3 +92,6 @@ OPERATOR_BRANCH=master
 
 # The libbpf version to use
 LIBBPF_VERSION=v1.4.6
+
+# quay.io expiry time for hashrelease/dev images
+QUAY_EXPIRE_DAYS=90

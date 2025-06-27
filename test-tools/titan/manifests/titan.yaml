@@ -143,7 +143,7 @@ spec:
           configMap:
             defaultMode: 420
             items:
-              - key: tigera-ca-bundle.crt
+              - key: ca.crt
                 path: tigera-ca-bundle-linseed.crt
               - key: ca-bundle.crt
                 path: ca-bundle-linseed.crt

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,33 +24,6 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
-
-type Interface interface {
-	SetSocketTimeout(to time.Duration) error
-	SetStrictCheck(b bool) error
-	LinkList() ([]netlink.Link, error)
-	LinkByName(name string) (netlink.Link, error)
-	LinkAdd(link netlink.Link) error
-	LinkDel(link netlink.Link) error
-	LinkSetMTU(link netlink.Link, mtu int) error
-	LinkSetUp(link netlink.Link) error
-	RouteListFiltered(family int, filter *netlink.Route, filterMask uint64) ([]netlink.Route, error)
-	RouteListFilteredIter(family int, filter *netlink.Route, filterMask uint64, f func(netlink.Route) (cont bool)) error
-	RouteAdd(route *netlink.Route) error
-	RouteReplace(route *netlink.Route) error
-	RouteDel(route *netlink.Route) error
-	AddrList(link netlink.Link, family int) ([]netlink.Addr, error)
-	AddrAdd(link netlink.Link, addr *netlink.Addr) error
-	AddrDel(link netlink.Link, addr *netlink.Addr) error
-	RuleList(family int) ([]netlink.Rule, error)
-	RuleAdd(rule *netlink.Rule) error
-	RuleDel(rule *netlink.Rule) error
-	Delete()
-	NeighAdd(neigh *netlink.Neigh) error
-	NeighList(linkIndex, family int) ([]netlink.Neigh, error)
-	NeighSet(a *netlink.Neigh) error
-	NeighDel(a *netlink.Neigh) error
-}
 
 type RealNetlink struct {
 	nlHandle *netlink.Handle
@@ -86,6 +59,10 @@ func (r *RealNetlink) LinkList() ([]netlink.Link, error) {
 		}
 		return links, err
 	}
+}
+
+func (r *RealNetlink) LinkByIndex(index int) (netlink.Link, error) {
+	return r.nlHandle.LinkByIndex(index)
 }
 
 func (r *RealNetlink) LinkByName(name string) (netlink.Link, error) {
@@ -183,9 +160,8 @@ func (r *RealNetlink) RuleDel(rule *netlink.Rule) error {
 	return r.nlHandle.RuleDel(rule)
 }
 
-func (r *RealNetlink) Delete() {
-	//nolint:staticcheck
-	r.nlHandle.Delete()
+func (r *RealNetlink) Close() {
+	r.nlHandle.Close()
 }
 
 func (r *RealNetlink) NeighAdd(neigh *netlink.Neigh) error {

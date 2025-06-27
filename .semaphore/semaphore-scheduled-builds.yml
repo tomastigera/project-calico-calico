@@ -1054,7 +1054,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: compliance
     run:
-      when: "true or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/compliance/','/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
