@@ -129,11 +129,19 @@ var _ = Describe("IPAM controller UTs", func() {
 				pod := obj.(*v1.Pod)
 				pods <- pod
 			},
+			DeleteFunc: func(obj interface{}) {
+				pod := obj.(*v1.Pod)
+				pods <- pod
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		nodes = make(chan *v1.Node, 1)
 		_, err = nodeInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
+				node := obj.(*v1.Node)
+				nodes <- node
+			},
+			DeleteFunc: func(obj interface{}) {
 				node := obj.(*v1.Node)
 				nodes <- node
 			},
@@ -839,11 +847,11 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Start the controller.
 		c.Start(stopChan)
-		var node *v1.Node
-		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		idx := 0
 		handle := "test-handle"
@@ -1069,6 +1077,7 @@ var _ = Describe("IPAM controller UTs", func() {
 		n.Spec.OrchRefs = []libapiv3.OrchRef{{NodeName: "kname", Orchestrator: apiv3.OrchestratorKubernetes}}
 		_, err := cli.Nodes().Create(context.TODO(), &n, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
 		kn := v1.Node{}
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
@@ -1425,6 +1434,7 @@ var _ = Describe("IPAM controller UTs", func() {
 		n.Spec.OrchRefs = []libapiv3.OrchRef{{NodeName: "kname", Orchestrator: apiv3.OrchestratorKubernetes}}
 		_, err := cli.Nodes().Create(context.TODO(), &n, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
 		kn := v1.Node{}
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
@@ -1537,6 +1547,7 @@ var _ = Describe("IPAM controller UTs", func() {
 		n.Spec.OrchRefs = []libapiv3.OrchRef{{NodeName: "kname", Orchestrator: apiv3.OrchestratorKubernetes}}
 		_, err := cli.Nodes().Create(context.TODO(), &n, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
 		kn := v1.Node{}
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
@@ -1761,7 +1772,6 @@ var _ = Describe("IPAM controller UTs", func() {
 				kn.Name = name
 				_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
-
 				var node *v1.Node
 				Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 			}
@@ -1789,6 +1799,7 @@ var _ = Describe("IPAM controller UTs", func() {
 			// Delete node1.
 			Expect(cs.CoreV1().Nodes().Delete(context.TODO(), "node1", metav1.DeleteOptions{})).NotTo(HaveOccurred())
 			c.OnKubernetesNodeDeleted(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1"}})
+			Eventually(nodes).WithTimeout(time.Second).Should(Receive())
 
 			// The allocations won't be marked as leaked yet, since the controller is confused about the node's status (deleted,
 			// but still has pods).
@@ -1863,7 +1874,6 @@ var _ = Describe("IPAM controller UTs", func() {
 				kn.Name = n.Name
 				_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
-
 				var node *v1.Node
 				Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 			}
@@ -1971,7 +1981,7 @@ var _ = Describe("IPAM controller UTs", func() {
 				defer done()
 				a := c.allocationState.allocationsByNode[pod2.Spec.NodeName][fmt.Sprintf("%s/%s", pod2.Name, pod2.Status.PodIP)]
 				return a.leakedAt == nil
-			}, 3*time.Second, 100*time.Millisecond).Should(BeTrue(), "IP was unexpected marked as leaked")
+			}, assertionTimeout, 100*time.Millisecond).Should(BeTrue(), "IP was unexpected marked as leaked")
 
 			By("Triggering a full IPAM scan")
 			// Now do a brute force full scan to ensure that the controller eventually catches up.

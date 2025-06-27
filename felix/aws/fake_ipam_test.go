@@ -115,16 +115,16 @@ func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*i
 	return v4Allocs, nil, nil
 }
 
-func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]cnet.IP, error) {
+func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]cnet.IP, []ipam.ReleaseOptions, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if err := m.Errors.NextErrorByCaller(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 	releaseCount := 0
 	var out []cnet.IP
@@ -149,7 +149,7 @@ func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) (
 		panic("asked to release non-allocated IP")
 	}
 
-	return out, nil
+	return out, ips, nil
 }
 
 func (m *fakeIPAM) IPsByHandle(ctx context.Context, handleID string) ([]cnet.IP, error) {
