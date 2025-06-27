@@ -24,7 +24,7 @@ type CalicoReleaseVersions struct {
 	versionFilePath string
 }
 
-func (p *CalicoReleaseVersions) GenerateFile() (version.Data, error) {
+func (p *CalicoReleaseVersions) GenerateFile() (version.Versions, error) {
 	ver := version.New(p.ProductVersion)
 
 	tmplData := &calicoTemplateData{

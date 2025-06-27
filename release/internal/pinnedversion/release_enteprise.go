@@ -17,7 +17,7 @@ type EnterpriseReleaseVersions struct {
 	RootDir      string
 }
 
-func (p *EnterpriseReleaseVersions) GenerateFile() (version.Data, error) {
+func (p *EnterpriseReleaseVersions) GenerateFile() (version.Versions, error) {
 	ver := version.New(p.ProductVersion)
 
 	calicoVer, err := utils.DetermineCalicoVersion(p.RootDir)
