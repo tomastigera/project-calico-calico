@@ -378,6 +378,7 @@ rules:
       - projectcalico.org
     resources:
       - ipamconfigurations
+      - clusterinformations
     verbs:
       - get
       - list
