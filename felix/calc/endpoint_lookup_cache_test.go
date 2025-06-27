@@ -848,7 +848,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
-			ep, found := cache.GetEndpointFromInterfaceKey("", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("", addr)
 
 			// Verification
 			Expect(found).To(BeTrue())
@@ -865,7 +865,24 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
-			ep, found := cache.GetEndpointFromInterfaceKey("eth0", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("eth0", addr)
+
+			// Verification
+			Expect(found).To(BeTrue())
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.Key().String()).To(Equal(hepKey.String()))
+		})
+	})
+
+	Context("with wildcard interface match", func() {
+		It("should return endpoint with matching IP regardless of interface name", func() {
+			// Setup - add an endpoint with a specific interface name
+			hepKey, hep := createHostEndpoint("test-host", "k8s", "*", "192.168.1.1")
+			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+
+			// Test with wildcard interface name
+			addr := ipToAddr("192.168.1.1")
+			ep, found := cache.GetHostEndpointFromInterfaceKey("eth0", addr)
 
 			// Verification
 			Expect(found).To(BeTrue())
@@ -885,7 +902,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test for exact match on eth1
 			addr := ipToAddr("192.168.1.1")
-			ep, found := cache.GetEndpointFromInterfaceKey("eth1", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("eth1", addr)
 
 			// Verification
 			Expect(found).To(BeTrue())
@@ -907,7 +924,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test with non-matching interface name
 			addr := ipToAddr("192.168.1.1")
-			ep, found := cache.GetEndpointFromInterfaceKey("nonexistent", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("nonexistent", addr)
 
 			// Verification
 			Expect(found).To(BeTrue())
@@ -924,7 +941,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test with IP that doesn't match any endpoint
 			addr := ipToAddr("192.168.1.2")
-			ep, found := cache.GetEndpointFromInterfaceKey("eth0", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("eth0", addr)
 
 			// Verification
 			Expect(found).To(BeFalse())
@@ -943,7 +960,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 
 			// Test looking for host endpoint
 			addr := ipToAddr("192.168.1.1")
-			ep, found := cache.GetEndpointFromInterfaceKey("host-eth0", addr)
+			ep, found := cache.GetHostEndpointFromInterfaceKey("host-eth0", addr)
 
 			// Verification
 			Expect(found).To(BeTrue())

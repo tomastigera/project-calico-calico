@@ -41,9 +41,9 @@ func (lc *LookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
 }
 
-// GetEndpointFromKey returns the endpoint data for a given endpoint key.
-func (lc *LookupsCache) GetEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
-	return lc.epCache.GetEndpointFromInterfaceKey(key, addr)
+// GetHostEndpointFromInterfaceKey returns the endpoint data for a given endpoint key.
+func (lc *LookupsCache) GetHostEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
+	return lc.epCache.GetHostEndpointFromInterfaceKey(key, addr)
 }
 
 // GetEndpointKeys returns all endpoint keys that the cache is tracking.

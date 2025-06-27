@@ -586,7 +586,7 @@ func (c *collector) lookupHostEndpoint(pktInfo *types.PacketInfo) calc.EndpointD
 
 	interfaceName := c.getInterfaceName(pktInfo)
 	// Get the endpoint data for this entry.
-	if ep, ok := c.luc.GetEndpointFromInterfaceKey(interfaceName, c.getNodeIP()); ok {
+	if ep, ok := c.luc.GetHostEndpointFromInterfaceKey(interfaceName, c.getNodeIP()); ok {
 		return ep
 	}
 	return nil

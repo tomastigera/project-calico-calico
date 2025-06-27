@@ -622,12 +622,17 @@ func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) 
 	return nil, ok
 }
 
-// GetEndpointFromInterfaceKey returns the endpoint data for a given interfaceName key and IP address.
-// Returns the endpoint data if found, or nil if not found, along with a boolean indicating success.
-// If the key is empty, it returns the result of GetEndpoint for the given address. If multiple
-// endpoints match the address, it returns the first one found with a matching interface name, or
-// the first endpoint without an interface name if no matching interface name is found.
-func (ec *EndpointLookupsCache) GetEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
+// GetHostEndpointFromInterfaceKey returns the endpoint data of a host endpoint for a given
+// interface name and IP address.
+//
+// Lookup priority:
+//  1. If key is empty: returns GetEndpoint(addr) result
+//  2. Exact interface name match
+//  3. Wildcard interface ("*") or empty interface name
+//  4. No match found
+//
+// Returns the endpoint data and a boolean indicating success.
+func (ec *EndpointLookupsCache) GetHostEndpointFromInterfaceKey(key string, addr [16]byte) (EndpointData, bool) {
 	ec.epMutex.RLock()
 	defer ec.epMutex.RUnlock()
 
@@ -640,9 +645,12 @@ func (ec *EndpointLookupsCache) GetEndpointFromInterfaceKey(key string, addr [16
 	var epWithoutInterface endpointData
 	if eps, ok := ec.ipToEndpoints[addr]; ok {
 		for _, ep := range eps {
-			if epWithoutInterface == nil && ep.InterfaceName() == "" {
-				// If we haven't found an endpoint without an interface name yet,
-				// store the first one we find.
+			if !ep.IsHostEndpoint() {
+				continue // Skip non-host endpoints.
+			}
+			if epWithoutInterface == nil && (ep.InterfaceName() == "*" || ep.InterfaceName() == "") {
+				// Store the first endpoint found for which the interface name is a wildcard or
+				// empty, and return it if no other endpoint matches the key.
 				epWithoutInterface = ep
 			}
 			if ep.InterfaceName() == key {
