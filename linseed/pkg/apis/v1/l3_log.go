@@ -33,6 +33,12 @@ type FlowLogParams struct {
 	// For example, return flowlogs which are allowed by the default tier.
 	// If multiple PendingPolicyMatches are provided, they are combined with a logical OR.
 	PendingPolicyMatches []PolicyMatch `json:"pending_policy_matches" validate:"dive"`
+
+	// TransitPolicyMatches selects flowlogs based on whether an action is taken on the flowlog
+	// by the provided tier, in the transit trace.
+	// For example, return flowlogs which are allowed by the default tier.
+	// If multiple TransitPolicyMatches are provided, they are combined with a logical OR.
+	TransitPolicyMatches []PolicyMatch `json:"transit_policy_matches" validate:"dive"`
 }
 
 type IPMatch struct {
@@ -146,6 +152,7 @@ type FlowLogPolicy struct {
 	AllPolicies      []string `json:"all_policies"`
 	EnforcedPolicies []string `json:"enforced_policies"`
 	PendingPolicies  []string `json:"pending_policies"`
+	TransitPolicies  []string `json:"transit_policies"`
 }
 
 type FlowLogLabels struct {

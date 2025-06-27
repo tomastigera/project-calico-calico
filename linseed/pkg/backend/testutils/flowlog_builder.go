@@ -235,6 +235,7 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 		addPolicies(b.activeLog.Policies.AllPolicies, &f.Policies)
 		addPolicies(b.activeLog.Policies.EnforcedPolicies, &f.EnforcedPolicies)
 		addPolicies(b.activeLog.Policies.PendingPolicies, &f.PendingPolicies)
+		addPolicies(b.activeLog.Policies.TransitPolicies, &f.TransitPolicies)
 	}
 
 	// Add in TCP stats.
@@ -367,6 +368,7 @@ func (b *FlowLogBuilder) WithPolicy(p string) *FlowLogBuilder {
 			AllPolicies:      []string{},
 			EnforcedPolicies: []string{},
 			PendingPolicies:  []string{},
+			TransitPolicies:  []string{},
 		}
 	}
 	b.activeLog.Policies.AllPolicies = append(b.activeLog.Policies.AllPolicies, p)
@@ -378,7 +380,9 @@ func (b *FlowLogBuilder) WithEnforcedPolicy(p string) *FlowLogBuilder {
 		b.activeLog.Policies = &v1.FlowLogPolicy{
 			AllPolicies:      []string{},
 			EnforcedPolicies: []string{},
-			PendingPolicies:  []string{}}
+			PendingPolicies:  []string{},
+			TransitPolicies:  []string{},
+		}
 	}
 	b.activeLog.Policies.EnforcedPolicies = append(b.activeLog.Policies.EnforcedPolicies, p)
 	return b
@@ -390,9 +394,23 @@ func (b *FlowLogBuilder) WithPendingPolicy(p string) *FlowLogBuilder {
 			AllPolicies:      []string{},
 			EnforcedPolicies: []string{},
 			PendingPolicies:  []string{},
+			TransitPolicies:  []string{},
 		}
 	}
 	b.activeLog.Policies.PendingPolicies = append(b.activeLog.Policies.PendingPolicies, p)
+	return b
+}
+
+func (b *FlowLogBuilder) WithTransitPolicy(p string) *FlowLogBuilder {
+	if b.activeLog.Policies == nil {
+		b.activeLog.Policies = &v1.FlowLogPolicy{
+			AllPolicies:      []string{},
+			EnforcedPolicies: []string{},
+			PendingPolicies:  []string{},
+			TransitPolicies:  []string{},
+		}
+	}
+	b.activeLog.Policies.TransitPolicies = append(b.activeLog.Policies.TransitPolicies, p)
 	return b
 }
 

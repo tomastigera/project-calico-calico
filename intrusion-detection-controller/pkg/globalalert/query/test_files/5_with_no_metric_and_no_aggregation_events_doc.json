@@ -1,2 +1,202 @@
-{"description":"test alert: sample-test","dest_name":"-","dest_name_aggr":"tigera-secure-es-7f5dee596fef130f-*","dest_namespace":"tigera-elasticsearch","dest_port":9200,"host":"suraiya-bz-wz7r-kadm-ms","origin":"sample-test","record":{"@timestamp":1615228205000,"action":"allow","bytes_in":3529,"bytes_out":1730,"dest_domains": null,"dest_ip":null,"dest_labels":{"labels":["controller-revision-hash=tigera-secure-es-7f5dee596fef130f-57bd6f665","elasticsearch.k8s.elastic.co/statefulset-name=tigera-secure-es-7f5dee596fef130f","common.k8s.elastic.co/type=elasticsearch","elasticsearch.k8s.elastic.co/cluster-name=tigera-secure","statefulset.kubernetes.io/pod-name=tigera-secure-es-7f5dee596fef130f-0","elasticsearch.k8s.elastic.co/config-hash=155086826","elasticsearch.k8s.elastic.co/node-data=true","elasticsearch.k8s.elastic.co/node-ingest=true","elasticsearch.k8s.elastic.co/http-scheme=https","elasticsearch.k8s.elastic.co/node-master=true","elasticsearch.k8s.elastic.co/version=7.6.2","elasticsearch.k8s.elastic.co/node-ml=true"]},"dest_name":"-","dest_name_aggr":"tigera-secure-es-7f5dee596fef130f-*","dest_namespace":"tigera-elasticsearch","dest_port":9200,"dest_service_name":"tigera-secure-es-http","dest_service_namespace":"tigera-elasticsearch","dest_service_port":"https","dest_type":"wep","end_time":1615228205,"host":"suraiya-bz-wz7r-kadm-ms","http_requests_allowed_in":0,"http_requests_denied_in":0,"nat_outgoing_ports":null,"num_flows":1,"num_flows_completed":0,"num_flows_started":1,"num_original_source_ips":0,"num_process_ids":0,"num_process_names":0,"original_source_ips":null,"packets_in":19,"packets_out":20,"policies":{"all_policies":["0|__PROFILE__|__PROFILE__.kns.calico-system|allow"],"enforced_policies":["0|__PROFILE__|__PROFILE__.kns.calico-system|allow"],"pending_policies":["0|__PROFILE__|__PROFILE__.kns.calico-system|allow"]},"process_id":"-","process_name":"-","proto":"tcp","reporter":"src","source_ip":null,"source_labels":{"labels":["k8s-app=calico-kube-controllers","pod-template-hash=5655748c58"]},"source_name":"-","source_name_aggr":"calico-kube-controllers-5655748c58-*","source_namespace":"calico-system","source_port":null,"source_type":"wep","start_time":1615227904,"process_args":null,"dest_service_port_num":null,"num_process_args":0,"tcp_lost_packets":0,"tcp_max_min_rtt":0,"tcp_max_smooth_rtt":0,"tcp_mean_mss":0,"tcp_mean_min_rtt":0,"tcp_mean_send_congestion_window":0,"tcp_mean_smooth_rtt":0,"tcp_min_mss":0,"tcp_min_send_congestion_window":0,"tcp_total_retransmissions":0,"tcp_unrecovered_to":0},"severity":100,"source_name":"-","source_name_aggr":"calico-kube-controllers-5655748c58-*","source_namespace":"calico-system","time":1615857005,"type":"global_alert"}
-{"description":"test alert: sample-test","dest_name":"-","dest_name_aggr":"coredns-f9fd979d6-*","dest_namespace":"kube-system","dest_port":53,"host":"suraiya-bz-wz7r-kadm-node-0","origin":"sample-test","record":{"@timestamp":1615422691000,"action":"allow","bytes_in":4904,"bytes_out":8784,"dest_domains": null,"dest_ip":null,"dest_labels":{"labels":["pod-template-hash=f9fd979d6","k8s-app=kube-dns"]},"dest_name":"-","dest_name_aggr":"coredns-f9fd979d6-*","dest_namespace":"kube-system","dest_port":53,"dest_service_name":"-","dest_service_namespace":"-","dest_service_port":"-","dest_type":"wep","end_time":1615422691,"host":"suraiya-bz-wz7r-kadm-node-0","http_requests_allowed_in":0,"http_requests_denied_in":0,"num_flows":46,"num_flows_completed":43,"num_flows_started":43,"num_original_source_ips":0,"num_process_ids":0,"num_process_names":0,"original_source_ips":null,"packets_in":43,"packets_out":43,"policies":{"all_policies":["0|__PROFILE__|__PROFILE__.kns.kube-system|allow"],"enforced_policies":["0|__PROFILE__|__PROFILE__.kns.kube-system|allow"],"pending_policies":["0|__PROFILE__|__PROFILE__.kns.kube-system|allow"]},"process_id":"-","process_name":"-","proto":"udp","reporter":"dst","source_ip":null,"source_labels":{"labels":["k8s-app=compliance-server","pod-template-hash=798bcd9596"]},"source_name":"-","source_name_aggr":"compliance-server-798bcd9596-*","source_namespace":"tigera-compliance","source_port":null,"source_type":"wep","start_time":1615422373,"nat_outgoing_ports":null,"process_args":null,"dest_service_port_num":null,"num_process_args":0,"tcp_lost_packets":0,"tcp_max_min_rtt":0,"tcp_max_smooth_rtt":0,"tcp_mean_min_rtt":0,"tcp_mean_send_congestion_window":0,"tcp_mean_smooth_rtt":0,"tcp_min_mss":0,"tcp_min_send_congestion_window":0,"tcp_total_retransmissions":0,"tcp_unrecovered_to":0,"tcp_mean_mss":0},"severity":100,"source_name":"-","source_name_aggr":"compliance-server-798bcd9596-*","source_namespace":"tigera-compliance","time":1615857005,"type":"global_alert"}
+{
+    "description": "test alert: sample-test",
+    "dest_name": "-",
+    "dest_name_aggr": "tigera-secure-es-7f5dee596fef130f-*",
+    "dest_namespace": "tigera-elasticsearch",
+    "dest_port": 9200,
+    "host": "suraiya-bz-wz7r-kadm-ms",
+    "origin": "sample-test",
+    "record": {
+        "@timestamp": 1615228205000,
+        "action": "allow",
+        "bytes_in": 3529,
+        "bytes_out": 1730,
+        "dest_domains": null,
+        "dest_ip": null,
+        "dest_labels": {
+            "labels": [
+                "controller-revision-hash=tigera-secure-es-7f5dee596fef130f-57bd6f665",
+                "elasticsearch.k8s.elastic.co/statefulset-name=tigera-secure-es-7f5dee596fef130f",
+                "common.k8s.elastic.co/type=elasticsearch",
+                "elasticsearch.k8s.elastic.co/cluster-name=tigera-secure",
+                "statefulset.kubernetes.io/pod-name=tigera-secure-es-7f5dee596fef130f-0",
+                "elasticsearch.k8s.elastic.co/config-hash=155086826",
+                "elasticsearch.k8s.elastic.co/node-data=true",
+                "elasticsearch.k8s.elastic.co/node-ingest=true",
+                "elasticsearch.k8s.elastic.co/http-scheme=https",
+                "elasticsearch.k8s.elastic.co/node-master=true",
+                "elasticsearch.k8s.elastic.co/version=7.6.2",
+                "elasticsearch.k8s.elastic.co/node-ml=true"
+            ]
+        },
+        "dest_name": "-",
+        "dest_name_aggr": "tigera-secure-es-7f5dee596fef130f-*",
+        "dest_namespace": "tigera-elasticsearch",
+        "dest_port": 9200,
+        "dest_service_name": "tigera-secure-es-http",
+        "dest_service_namespace": "tigera-elasticsearch",
+        "dest_service_port": "https",
+        "dest_type": "wep",
+        "end_time": 1615228205,
+        "host": "suraiya-bz-wz7r-kadm-ms",
+        "http_requests_allowed_in": 0,
+        "http_requests_denied_in": 0,
+        "nat_outgoing_ports": null,
+        "num_flows": 1,
+        "num_flows_completed": 0,
+        "num_flows_started": 1,
+        "num_original_source_ips": 0,
+        "num_process_ids": 0,
+        "num_process_names": 0,
+        "original_source_ips": null,
+        "packets_in": 19,
+        "packets_out": 20,
+        "policies": {
+            "all_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+            ],
+            "enforced_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+            ],
+            "pending_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+            ],
+            "transit_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+            ]
+        },
+        "process_id": "-",
+        "process_name": "-",
+        "proto": "tcp",
+        "reporter": "src",
+        "source_ip": null,
+        "source_labels": {
+            "labels": [
+                "k8s-app=calico-kube-controllers",
+                "pod-template-hash=5655748c58"
+            ]
+        },
+        "source_name": "-",
+        "source_name_aggr": "calico-kube-controllers-5655748c58-*",
+        "source_namespace": "calico-system",
+        "source_port": null,
+        "source_type": "wep",
+        "start_time": 1615227904,
+        "process_args": null,
+        "dest_service_port_num": null,
+        "num_process_args": 0,
+        "tcp_lost_packets": 0,
+        "tcp_max_min_rtt": 0,
+        "tcp_max_smooth_rtt": 0,
+        "tcp_mean_mss": 0,
+        "tcp_mean_min_rtt": 0,
+        "tcp_mean_send_congestion_window": 0,
+        "tcp_mean_smooth_rtt": 0,
+        "tcp_min_mss": 0,
+        "tcp_min_send_congestion_window": 0,
+        "tcp_total_retransmissions": 0,
+        "tcp_unrecovered_to": 0
+    },
+    "severity": 100,
+    "source_name": "-",
+    "source_name_aggr": "calico-kube-controllers-5655748c58-*",
+    "source_namespace": "calico-system",
+    "time": 1615857005,
+    "type": "global_alert"
+}
+{
+    "description": "test alert: sample-test",
+    "dest_name": "-",
+    "dest_name_aggr": "coredns-f9fd979d6-*",
+    "dest_namespace": "kube-system",
+    "dest_port": 53,
+    "host": "suraiya-bz-wz7r-kadm-node-0",
+    "origin": "sample-test",
+    "record": {
+        "@timestamp": 1615422691000,
+        "action": "allow",
+        "bytes_in": 4904,
+        "bytes_out": 8784,
+        "dest_domains": null,
+        "dest_ip": null,
+        "dest_labels": {
+            "labels": [
+                "pod-template-hash=f9fd979d6",
+                "k8s-app=kube-dns"
+            ]
+        },
+        "dest_name": "-",
+        "dest_name_aggr": "coredns-f9fd979d6-*",
+        "dest_namespace": "kube-system",
+        "dest_port": 53,
+        "dest_service_name": "-",
+        "dest_service_namespace": "-",
+        "dest_service_port": "-",
+        "dest_type": "wep",
+        "end_time": 1615422691,
+        "host": "suraiya-bz-wz7r-kadm-node-0",
+        "http_requests_allowed_in": 0,
+        "http_requests_denied_in": 0,
+        "num_flows": 46,
+        "num_flows_completed": 43,
+        "num_flows_started": 43,
+        "num_original_source_ips": 0,
+        "num_process_ids": 0,
+        "num_process_names": 0,
+        "original_source_ips": null,
+        "packets_in": 43,
+        "packets_out": 43,
+        "policies": {
+            "all_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+            ],
+            "enforced_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+            ],
+            "pending_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+            ],
+            "transit_policies": [
+                "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+            ]
+        },
+        "process_id": "-",
+        "process_name": "-",
+        "proto": "udp",
+        "reporter": "dst",
+        "source_ip": null,
+        "source_labels": {
+            "labels": [
+                "k8s-app=compliance-server",
+                "pod-template-hash=798bcd9596"
+            ]
+        },
+        "source_name": "-",
+        "source_name_aggr": "compliance-server-798bcd9596-*",
+        "source_namespace": "tigera-compliance",
+        "source_port": null,
+        "source_type": "wep",
+        "start_time": 1615422373,
+        "nat_outgoing_ports": null,
+        "process_args": null,
+        "dest_service_port_num": null,
+        "num_process_args": 0,
+        "tcp_lost_packets": 0,
+        "tcp_max_min_rtt": 0,
+        "tcp_max_smooth_rtt": 0,
+        "tcp_mean_min_rtt": 0,
+        "tcp_mean_send_congestion_window": 0,
+        "tcp_mean_smooth_rtt": 0,
+        "tcp_min_mss": 0,
+        "tcp_min_send_congestion_window": 0,
+        "tcp_total_retransmissions": 0,
+        "tcp_unrecovered_to": 0,
+        "tcp_mean_mss": 0
+    },
+    "severity": 100,
+    "source_name": "-",
+    "source_name_aggr": "compliance-server-798bcd9596-*",
+    "source_namespace": "tigera-compliance",
+    "time": 1615857005,
+    "type": "global_alert"
+}

@@ -452,6 +452,16 @@ type CompositeAggregationBucket struct {
 	//                }
 	//              ]
 	//            }
+	//            "by_tiered_transit_policy": {
+	//              "doc_count_error_upper_bound": 0,
+	//              "sum_other_doc_count": 0,
+	//              "buckets": [
+	//                {
+	//                  "key": "0|default|calico-monito...",
+	//                  "doc_count": 34
+	//                }
+	//              ]
+	//            }
 	//          },
 	AggregatedTerms map[string]*AggregatedTerm
 
@@ -579,6 +589,16 @@ type AggregatedTerm struct {
 	//              ]
 	//            }
 	//            "by_tiered_pending_policy": {         <- We "swallow" this key because we only allow a single term
+	//              "doc_count_error_upper_bound": 0,   <- We don't track this
+	//              "sum_other_doc_count": 0,           <- We don't track this
+	//              "buckets": [
+	//                {
+	//                  "key": "0|default|calico-monito...",  <- This is the map key
+	//                  "doc_count": 34                       <- This is the map value
+	//                }
+	//              ]
+	//            }
+	//            "by_tiered_transit_policy": {         <- We "swallow" this key because we only allow a single term
 	//              "doc_count_error_upper_bound": 0,   <- We don't track this
 	//              "sum_other_doc_count": 0,           <- We don't track this
 	//              "buckets": [

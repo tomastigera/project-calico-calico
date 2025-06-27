@@ -44,6 +44,9 @@
         ],
         "pending_policies": [
           "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "transit_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
         ]
       },
       "bytes_in": 730,
@@ -121,6 +124,9 @@
           "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
         ],
         "pending_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "transit_policies": [
           "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
         ]
       },
@@ -201,6 +207,10 @@
           "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
         ],
         "pending_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
+          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+        ],
+        "transit_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
           "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
         ]

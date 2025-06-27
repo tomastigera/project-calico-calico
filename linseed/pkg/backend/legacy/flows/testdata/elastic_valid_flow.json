@@ -81,6 +81,11 @@
               "doc_count_error_upper_bound": 0,
               "sum_other_doc_count": 0,
               "buckets": []
+            },
+            "by_tiered_transit_policy": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": []
             }
           },
           "source_labels": {

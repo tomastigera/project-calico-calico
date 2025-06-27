@@ -57,6 +57,7 @@ const (
 	allPoliciesSubField      = "all_policies"
 	enforcedPoliciesSubField = "enforced_policies"
 	pendingPoliciesSubField  = "pending_policies"
+	transitPoliciesSubField  = "transit_policies"
 )
 
 // flowBackend implements the Backend interface for flows stored
@@ -193,6 +194,12 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 			Path:  policiesPath,
 			Term:  "by_tiered_pending_policy",
 			Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField),
+		},
+		{
+			Name:  transitPoliciesSubField,
+			Path:  policiesPath,
+			Term:  "by_tiered_transit_policy",
+			Field: fmt.Sprintf("%s.%s", policiesField, transitPoliciesSubField),
 		},
 	}
 
@@ -352,6 +359,7 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.Policies = getPoliciesFromAggregation(log, policiesField, bucket.AggregatedTerms)
 	flow.EnforcedPolicies = getPoliciesFromAggregation(log, enforcedPoliciesSubField, bucket.AggregatedTerms)
 	flow.PendingPolicies = getPoliciesFromAggregation(log, pendingPoliciesSubField, bucket.AggregatedTerms)
+	flow.TransitPolicies = getPoliciesFromAggregation(log, transitPoliciesSubField, bucket.AggregatedTerms)
 
 	// Add in the destination domains.
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
@@ -487,6 +495,17 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 	if len(opts.PendingPolicyMatches) > 0 {
 		// Filter-in any flow logs that match any of the given policies.pending_policies matches.
 		q, err := BuildPendingPolicyMatchQuery(opts.PendingPolicyMatches)
+		if err != nil {
+			return nil, err
+		}
+		if q != nil {
+			query.Filter(q)
+		}
+	}
+
+	if len(opts.TransitPolicyMatches) > 0 {
+		// Filter-in any flow logs that match any of the given policies.transit_policies matches.
+		q, err := BuildTransitPolicyMatchQuery(opts.TransitPolicyMatches)
 		if err != nil {
 			return nil, err
 		}
