@@ -74,13 +74,13 @@
         - cd $HOME
         - tar -czf calico-private.tar.gz calico-private
         - cd calico-private/node
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export ZONE=us-east4-c
         - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
         - echo VM_PREFIX=${VM_PREFIX}
         - export REPO_NAME=$(basename $(pwd))
-        - export VM_DISK_SIZE=80GB
+        - export VM_DISK_SIZE=120GB
         - mkdir artifacts
         - ../.semaphore/vms/create-test-vms ${ZONE} ${VM_PREFIX}
     jobs:

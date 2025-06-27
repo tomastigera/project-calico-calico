@@ -90,8 +90,14 @@ echo "Install calicoctl as a pod"
 ${kubectl} apply -f $TEST_DIR/infra/calicoctl.yaml
 echo
 
+echo "Install storage class"
+# We need to pre-create the local storage directory.
+docker exec -t kind-worker mkdir /tigera-elasticsearch
+${kubectl} apply -f $TEST_DIR/infra/storage_class.yaml
+echo
+
 echo "Wait for Calico to be ready..."
-wait_pod_ready -n calico-system --all
+wait_pod_ready -n calico-system -l k8s-app
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
 
@@ -114,6 +120,11 @@ ${kubectl} get secret cnx-pull-secret -n tigera-operator ||
 # FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
 # Once such tests are added, this will have to move into the test itself.
 ${kubectl} exec -i -n kube-system calicoctl -- calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
+
+# Wait for the full Calico Enterprise system to be running.
+wait_pod_ready -n tigera-fluentd -l k8s-app
+wait_pod_ready -n tigera-elasticsearch -l k8s-app
+wait_pod_ready -n tigera-manager -l k8s-app
 
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
 ${kubectl} create ns metallb-system || true

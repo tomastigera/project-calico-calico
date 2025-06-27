@@ -60,7 +60,8 @@ EOF' && \
   gcloud --quiet compute scp --zone=${zone} "$HOME/calico-private.tar.gz" "ubuntu@${vm_name}:/home/ubuntu" && \
   gcloud --quiet compute ssh --zone=${zone} "ubuntu@${vm_name}" -- tar -xzf /home/ubuntu/calico-private.tar.gz && \
   gcloud --quiet compute ssh --zone=${zone} "ubuntu@${vm_name}" -- rm /home/ubuntu/calico-private.tar.gz && \
-  gcloud --quiet compute scp --zone=${zone} --recurse --compress "$HOME/secrets" "ubuntu@${vm_name}:/home/ubuntu/secrets"
+  gcloud --quiet compute scp --zone=${zone} --recurse --compress "$HOME/secrets" "ubuntu@${vm_name}:/home/ubuntu/secrets" && \
+  ${ssh_cmd} -- 'docker login -u _json_key -p "$(cat /home/ubuntu/secrets/docker_auth.json)" https://gcr.io'
 }
 
 function delete-vm() {

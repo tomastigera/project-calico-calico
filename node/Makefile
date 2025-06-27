@@ -342,7 +342,7 @@ $(FELIX_GPL_SOURCE): .felix-gpl-source.created
 K8ST_IMAGE_TARS=calico-node.tar calico-typha.tar calico-apiserver.tar calico-cni.tar pod2daemon.tar csi.tar node-driver-registrar.tar calicoctl.tar kube-controllers.tar operator.tar
 
 # Add in enterprise-only images.
-ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar
+ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar egress-gateway.tar prometheus-operator.tar config-reloader.tar prometheus.tar prometheus-service.tar alertmanager.tar fluentd.tar policy-rec.tar eck.tar manager.tar voltron.tar ui-apis.tar kibana.tar elastic.tar es-gw.tar linseed.tar idc.tar webhooks-processor.tar dashboards-installer.tar es-metrics.tar manager.tar
 K8ST_IMAGE_TARS += $(ENTERPRISE_IMAGE_TARS)
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
@@ -400,6 +400,9 @@ chart: ../bin/tigera-operator-$(GIT_VERSION).tgz
 # Tag to use for images built for e2e testing. This must match the image tag used in
 # tests/k8st/infra/calico_versions.yml
 TEST_BUILD_TAG=test-build
+
+# Default the branch used when pulling images, but allow it to be overridden.
+RELEASE_BRANCH ?= master
 
 operator.tar: $(K8ST_IMAGE_TARS) tests/k8st/infra/calico_versions.yml tests/k8st/infra/enterprise_versions.yml
 	cd tests/k8st/infra/ && BRANCH=$(OPERATOR_BRANCH) ./build-operator.sh
@@ -459,6 +462,112 @@ egress-gateway.tar: ../go.mod $(shell find ../egress-gateway -name '*.go') ../eg
 	make -C ../egress-gateway image
 	docker tag tigera/egress-gateway:latest-$(ARCH) tigera/egress-gateway:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/egress-gateway:$(TEST_BUILD_TAG)
+
+prometheus-operator.tar:
+	make -C ../third_party/prometheus-operator image
+	docker tag tigera/prometheus-operator:latest-$(ARCH) tigera/prometheus-operator:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/prometheus-operator:$(TEST_BUILD_TAG)
+
+config-reloader.tar:
+	make -C ../third_party/prometheus-operator image
+	docker tag tigera/prometheus-config-reloader:latest-$(ARCH) tigera/prometheus-config-reloader:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/prometheus-config-reloader:$(TEST_BUILD_TAG)
+
+prometheus.tar:
+	# TODO: Build this. We cannot at the moment because it relies on the host OS npm / go toolchain.
+	# make -C ../third_party/prometheus image
+	# docker tag tigera/prometheus:latest-$(ARCH) tigera/prometheus:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(RELEASE_BRANCH) tigera/prometheus:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/prometheus:$(TEST_BUILD_TAG)
+
+prometheus-service.tar:
+	make -C ../prometheus-service/ image
+	docker tag  tigera/prometheus-service:latest-amd64 tigera/prometheus-service:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/prometheus-service:$(TEST_BUILD_TAG)
+
+fluentd.tar:
+	make -C ../fluentd image
+	docker tag tigera/fluentd:latest-$(ARCH) tigera/fluentd:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/fluentd:$(TEST_BUILD_TAG)
+
+policy-rec.tar:
+	make -C ../policy-recommendation/ image
+	docker tag tigera/policy-recommendation:latest-$(ARCH) tigera/policy-recommendation:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/policy-recommendation:$(TEST_BUILD_TAG)
+
+eck.tar:
+	make -C ../third_party/eck-operator/ image
+	docker tag tigera/eck-operator:latest-$(ARCH) tigera/eck-operator:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/eck-operator:$(TEST_BUILD_TAG)
+
+alertmanager.tar:
+	# TODO: Build this.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(RELEASE_BRANCH) tigera/alertmanager:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/alertmanager:$(TEST_BUILD_TAG)
+
+elastic.tar:
+	# TODO: Build this.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(RELEASE_BRANCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
+	# make -C ../third_party/elasticsearch/ image
+	# docker tag tigera/elasticsearch:latest-$(ARCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/elasticsearch:$(TEST_BUILD_TAG)
+
+kibana.tar:
+	# TODO: Can we run without kibana? Requires operator change.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/kibana:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/kibana:$(RELEASE_BRANCH) tigera/kibana:$(TEST_BUILD_TAG)
+	# make -C ../third_party/kibana/ image
+	# docker tag tigera/kibana:latest-$(ARCH) tigera/kibana:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/kibana:$(TEST_BUILD_TAG)
+
+manager.tar:
+	# TODO
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:$(RELEASE_BRANCH) tigera/cnx-manager:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/cnx-manager:$(TEST_BUILD_TAG)
+
+ui-apis.tar:
+	make -C ../ui-apis image
+	docker tag tigera/ui-apis:latest-$(ARCH) tigera/ui-apis:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/ui-apis:$(TEST_BUILD_TAG)
+
+es-gw.tar:
+	make -C ../es-gateway image
+	docker tag tigera/es-gateway:latest-$(ARCH) tigera/es-gateway:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/es-gateway:$(TEST_BUILD_TAG)
+
+voltron.tar:
+	make -C ../voltron image
+	docker tag tigera/voltron:latest-$(ARCH) tigera/voltron:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/voltron:$(TEST_BUILD_TAG)
+
+linseed.tar:
+	make -C ../linseed image
+	docker tag tigera/linseed:latest-$(ARCH) tigera/linseed:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/linseed:$(TEST_BUILD_TAG)
+
+idc.tar:
+	make -C ../intrusion-detection-controller image
+	docker tag tigera/intrusion-detection-controller:latest-$(ARCH) tigera/intrusion-detection-controller:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/intrusion-detection-controller:$(TEST_BUILD_TAG)
+
+webhooks-processor.tar:
+	make -C ../webhooks-processor image
+	docker tag tigera/webhooks-processor:latest-$(ARCH) tigera/webhooks-processor:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/webhooks-processor:$(TEST_BUILD_TAG)
+
+dashboards-installer.tar:
+	make -C ../intrusion-detection-controller intrusion-detection-job-installer
+	docker tag tigera/intrusion-detection-job-installer:latest-$(ARCH) tigera/intrusion-detection-job-installer:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/intrusion-detection-job-installer:$(TEST_BUILD_TAG)
+
+es-metrics.tar:
+	make -C ../elasticsearch-metrics image
+	docker tag tigera/elasticsearch-metrics:latest-$(ARCH) tigera/elasticsearch-metrics:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/elasticsearch-metrics:$(TEST_BUILD_TAG)
 
 load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 	# Load the latest tar files onto the currently running kind cluster.
