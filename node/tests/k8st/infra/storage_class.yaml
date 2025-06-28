@@ -1,0 +1,33 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: tigera-elasticsearch
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+
+---
+
+# Manually specify a persistent volume bound to kind-worker for ES to use.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tigera-elasticsearch
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: tigera-elasticsearch
+  local:
+    path: /tigera-elasticsearch
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - kind-worker

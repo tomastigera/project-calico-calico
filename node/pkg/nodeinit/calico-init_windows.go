@@ -14,6 +14,6 @@
 
 package nodeinit
 
-func Run(_ bool) {
+func Run(_, _ bool) {
 	// Unused on Windows.
 }

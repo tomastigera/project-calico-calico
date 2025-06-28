@@ -300,7 +300,7 @@ func (d *FeatureDetector) netlinkSupportsStrict() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to open netlink handle to check supported features: %w", err)
 	}
-	defer h.Delete()
+	defer h.Close()
 	err = h.SetStrictCheck(true)
 	if err == nil {
 		log.Debug("Kernel support strict netlink mode")

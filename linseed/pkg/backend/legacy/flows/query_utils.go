@@ -25,6 +25,10 @@ func BuildPendingPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.Bool
 	return buildPolicyMatchQuery(policyMatches, pendingPolicyQuery)
 }
 
+func BuildTransitPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
+	return buildPolicyMatchQuery(policyMatches, transitPolicyQuery)
+}
+
 func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, policyQuery func(v1.PolicyMatch) (elastic.Query, error)) (*elastic.BoolQuery, error) {
 	if len(policyMatches) == 0 {
 		return nil, nil
@@ -74,6 +78,16 @@ func pendingPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.pending_policies", matchString)
+	return elastic.NewNestedQuery("policies", wildcard), nil
+}
+
+func transitPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
+	matchString, err := CompileStringMatch(m)
+	if err != nil {
+		return nil, err
+	}
+
+	wildcard := elastic.NewWildcardQuery("policies.transit_policies", matchString)
 	return elastic.NewNestedQuery("policies", wildcard), nil
 }
 

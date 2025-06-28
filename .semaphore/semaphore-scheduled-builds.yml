@@ -471,6 +471,14 @@ blocks:
       secrets:
         # Since we create a local kind cluster, we need the test license.
         - name: test-customer-license
+      prologue:
+        commands:
+          # Log in to GCR - deploying the kind cluster currently requires pulling
+          # private elastic / kibana images from unique-caldron-775.
+          - docker login -u _json_key -p "$(cat ~/secrets/docker_auth.json)" https://gcr.io
+          # We need to log in to GCP in order to build intrusion detection.
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+          - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
       agent:
         machine:
           type: f1-standard-4
@@ -930,13 +938,13 @@ blocks:
           - cd $HOME
           - tar -czf calico-private.tar.gz calico-private
           - cd calico-private/node
-          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=us-east4-c
           - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
           - echo VM_PREFIX=${VM_PREFIX}
           - export REPO_NAME=$(basename $(pwd))
-          - export VM_DISK_SIZE=80GB
+          - export VM_DISK_SIZE=120GB
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${ZONE} ${VM_PREFIX}
       jobs:
@@ -1069,7 +1077,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: compliance
     run:
-      when: "true or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/compliance/','/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2104,6 +2112,7 @@ blocks:
         - name: ci
           commands:
             - ../.semaphore/run-and-monitor release-ci.log make ci
+            - test-results publish --name "release-tool-ut-tests" ./report/*.xml || true
         - name: build binary
           commands:
             - ../.semaphore/run-and-monitor release-build.log make build

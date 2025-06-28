@@ -32,6 +32,28 @@ var (
 
 	numNodes1 = 555
 	numNodes2 = 420
+
+	// BaseFeatures package contains all available features in a standard license
+	BaseFeatures = map[string]bool{
+		features.ManagementPortal:       true,
+		features.PolicyRecommendation:   true,
+		features.PolicyPreview:          true,
+		features.PolicyManagement:       true,
+		features.FileOutputFlowLogs:     true,
+		features.PrometheusMetrics:      true,
+		features.MultiClusterManagement: true,
+		features.ComplianceReports:      true,
+		features.ThreatDefense:          true,
+		features.EgressAccessControl:    true,
+		features.Tiers:                  true,
+		features.FederatedServices:      true,
+		features.ExportLogs:             true,
+		features.AlertManagement:        true,
+		features.TopologicalGraph:       true,
+		features.KibanaDashboard:        true,
+		features.FileOutputL7Logs:       true,
+		features.PacketCapture:          true,
+	}
 )
 
 func init() {
@@ -328,14 +350,6 @@ func TestDecodeNewIntermediate(t *testing.T) {
 	strategy.PrepareForCreate(context.TODO(), &licenseKey)
 }
 
-func keys(set map[string]bool) []string {
-	var keys []string
-	for k := range set {
-		keys = append(keys, k)
-	}
-
-	return keys
-}
 func TestFeatureFlags(t *testing.T) {
 	numNodes := 5
 	sampleClaims := client.LicenseClaims{
@@ -373,48 +387,49 @@ func TestFeatureFlags(t *testing.T) {
 		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
 	})
 
-	t.Run("a license with 'cnx|all' features states that each feature is enabled.", func(t *testing.T) {
+	t.Run("a license with 'cnx|all' package states ingress is disabled.", func(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = []string{"cnx", features.All}
+		claims.Features = []string{"cnx", "all"}
 
-		for f := range features.EnterpriseFeatures {
+		for f := range BaseFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
 		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeFalse())
 	})
 
-	t.Run("a license with 'cloud|community' package states any cloud community feature is enabled.", func(t *testing.T) {
+	t.Run("a license with 'cnx|all|ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "community"}, keys(features.CloudCommunityFeatures)...)
+		claims.Features = []string{"cnx", "all", features.IngressGateway}
 
-		for f := range features.CloudCommunityFeatures {
+		for f := range BaseFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
 		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
 	})
 
-	t.Run("a license with 'cloud|starter' package states any cloud starter feature is enabled.", func(t *testing.T) {
+	t.Run("a license with 'ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "starter"}, keys(features.CloudStarterFeatures)...)
+		claims.Features = []string{features.IngressGateway}
 
-		for f := range features.CloudStarterFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		for f := range BaseFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeFalse())
 		}
+		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
 	})
 
-	t.Run("a license with 'cloud|pro' package states any cloud pro feature is enabled.", func(t *testing.T) {
+	t.Run("validate a new base feature", func(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = append([]string{"cloud", "pro"}, keys(features.CloudProFeatures)...)
+		claims.Features = []string{"cnx", "all"}
 
-		for f := range features.CloudProFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
+		Expect(claims.ValidateFeature("new-base-feature")).To(BeTrue())
 	})
 }
 

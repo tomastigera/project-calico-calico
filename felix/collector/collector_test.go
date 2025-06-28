@@ -39,6 +39,7 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -61,11 +62,16 @@ var (
 	remoteIp1       = utils.IpStrTo16Byte(remoteIp1Str)
 	remoteIp2Str    = "20.0.0.2"
 	remoteIp2       = utils.IpStrTo16Byte(remoteIp2Str)
-	localIp1DNAT    = utils.IpStrTo16Byte("192.168.0.1")
-	localIp2DNAT    = utils.IpStrTo16Byte("192.168.0.2")
-	publicIP1Str    = "1.0.0.1"
-	publicIP2Str    = "2.0.0.2"
-	netSetIp1Str    = "8.8.8.8"
+	remoteIp3Str    = "20.0.0.3"
+	remoteIp3       = utils.IpStrTo16Byte(remoteIp3Str)
+
+	localIp1DNAT = utils.IpStrTo16Byte("192.168.0.1")
+	localIp2DNAT = utils.IpStrTo16Byte("192.168.0.2")
+	publicIP1Str = "1.0.0.1"
+	publicIP2Str = "2.0.0.2"
+	netSetIp1Str = "8.8.8.8"
+	nodeIp1Str   = "192.168.55.55"
+	nodeIp1      = utils.IpStrTo16Byte(nodeIp1Str)
 )
 
 var (
@@ -79,6 +85,19 @@ var (
 )
 
 var (
+	node1 = &v3.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node1",
+		},
+		Spec: v3.NodeSpec{
+			Addresses: []v3.NodeAddress{
+				{
+					Address: "192.168.55.55",
+				},
+			},
+		},
+	}
+
 	localWlEPKey1 = model.WorkloadEndpointKey{
 		Hostname:       "localhost",
 		OrchestratorID: "orchestrator",
@@ -102,6 +121,11 @@ var (
 		OrchestratorID: "orchestrator",
 		WorkloadID:     "remoteworkloadid2",
 		EndpointID:     "remoteepid2",
+	}
+	remoteWlEpKey3 = model.WorkloadEndpointKey{
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "remoteworkloadid3",
+		EndpointID:     "remoteepid3",
 	}
 
 	localWlEp1 = &model.WorkloadEndpoint{
@@ -140,6 +164,16 @@ var (
 			"id": "remote-ep-2",
 		}),
 	}
+	remoteWlEp3 = &model.WorkloadEndpoint{
+		State:    "active",
+		Name:     "cali5",
+		Mac:      utils.MustParseMac("02:04:03:04:05:06"),
+		IPv4Nets: []net.IPNet{utils.MustParseNet("20.0.0.3/32")},
+		Labels: uniquelabels.Make(map[string]string{
+			"id": "remote-ep-3",
+		}),
+	}
+
 	localEd1 = &calc.LocalEndpointData{
 		CommonEndpointData: calc.CalculateCommonEndpointData(localWlEPKey1, localWlEp1),
 		Ingress: &calc.MatchData{
@@ -208,7 +242,9 @@ var (
 	remoteEd2 = &calc.RemoteEndpointData{
 		CommonEndpointData: calc.CalculateCommonEndpointData(remoteWlEpKey2, remoteWlEp2),
 	}
-
+	remoteEd3 = &calc.RemoteEndpointData{
+		CommonEndpointData: calc.CalculateCommonEndpointData(remoteWlEpKey3, remoteWlEp3),
+	}
 	netSetKey1 = model.NetworkSetKey{
 		Name: "dns-servers",
 	}
@@ -267,14 +303,41 @@ var (
 			Pid:  1234,
 		},
 	}
+
+	hepEPKey1 = model.HostEndpointKey{
+		Hostname: "host1",
+	}
+	hepEP1 = &model.HostEndpoint{
+		Name: "eth0",
+	}
+	nodeEd1 = &calc.LocalEndpointData{
+		CommonEndpointData: calc.CalculateCommonEndpointData(hepEPKey1, hepEP1),
+		Ingress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				{Name: "hep-policy1", Tier: "hep-tier"}: 0,
+				{Name: "hep-policy2", Tier: "hep-tier"}: 1,
+			},
+		},
+		Egress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				{Name: "hep-policy1", Tier: "hep-tier"}: 0,
+				{Name: "hep-policy2", Tier: "hep-tier"}: 1,
+			},
+		},
+	}
 )
 
 // Nflog prefix test parameters
 var (
-	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	defTierDenyEgressNFLOGPrefix     = [64]byte{'D', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
+	defTierAllowIngressNFLOGPrefix = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	defTierAllowEgressNFLOGPrefix  = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	defTierDenyIngressNFLOGPrefix  = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
+	defTierDenyEgressNFLOGPrefix   = [64]byte{'D', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
+	hepTierAllowIngressNFLOGPrefix = [64]byte{'A', 'P', 'I', '3', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	hepTierAllowEgressNFLOGPrefix  = [64]byte{'A', 'P', 'E', '0', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	hepTierDenyIngressNFLOGPrefix  = [64]byte{'D', 'P', 'I', '2', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	hepTierDenyEgressNFLOGPrefix   = [64]byte{'D', 'P', 'E', '1', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+
 	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
 			Tier:      "default",
@@ -338,6 +401,50 @@ var (
 		},
 		Index:     0,
 		IndexStr:  "0",
+		Action:    rules.RuleActionDeny,
+		Direction: rules.RuleDirEgress,
+	}
+	tierHepPolicy1AllowIngressRuleID = &calc.RuleID{
+		PolicyID: calc.PolicyID{
+			Tier:      "hep-tier",
+			Name:      "hep-policy1",
+			Namespace: "",
+		},
+		Index:     3,
+		IndexStr:  "3",
+		Action:    rules.RuleActionAllow,
+		Direction: rules.RuleDirIngress,
+	}
+	tierHepPolicy1DenyIngressRuleID = &calc.RuleID{
+		PolicyID: calc.PolicyID{
+			Tier:      "hep-tier",
+			Name:      "hep-policy1",
+			Namespace: "",
+		},
+		Index:     2,
+		IndexStr:  "2",
+		Action:    rules.RuleActionDeny,
+		Direction: rules.RuleDirIngress,
+	}
+	tierHepPolicy1AllowEgressRuleID = &calc.RuleID{
+		PolicyID: calc.PolicyID{
+			Tier:      "hep-tier",
+			Name:      "hep-policy1",
+			Namespace: "",
+		},
+		Index:     0,
+		IndexStr:  "0",
+		Action:    rules.RuleActionAllow,
+		Direction: rules.RuleDirEgress,
+	}
+	tierHepPolicy1DenyEgressRuleID = &calc.RuleID{
+		PolicyID: calc.PolicyID{
+			Tier:      "hep-tier",
+			Name:      "hep-policy1",
+			Namespace: "",
+		},
+		Index:     1,
+		IndexStr:  "1",
 		Action:    rules.RuleActionDeny,
 		Direction: rules.RuleDirEgress,
 	}
@@ -412,6 +519,104 @@ var ingressPktDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggreg
 }
 var ingressPktDenyTuple = tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
+var remoteIngressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   remoteIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var remoteIngressPktDenyNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   remoteIp3,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var remoteEgressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   remoteIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var remoteEgressPktDenyNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   remoteIp3,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var remotePktAllowIngressTuple = tuple.New(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
+
+var remotePktIngressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	remoteIngressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierAllowIngressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: remoteIngressPktAllowNflogTuple,
+	},
+}
+
+var remotePktDenyIngressTuple = tuple.New(remoteIp1, remoteIp3, proto_tcp, srcPort, dstPort)
+
+var remotePktIngressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	remoteIngressPktDenyNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierDenyIngressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: remoteIngressPktDenyNflogTuple,
+	},
+}
+
+var remotePktAllowEgressTuple = tuple.New(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
+
+var remotePktEgressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	remoteEgressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierAllowEgressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: remoteEgressPktAllowNflogTuple,
+	},
+}
+
+var remotePktDenyEgressTuple = tuple.New(remoteIp1, remoteIp3, proto_tcp, srcPort, dstPort)
+
+var remotePktEgressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	remoteEgressPktDenyNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierDenyEgressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: remoteEgressPktDenyNflogTuple,
+	},
+}
+
+var localPktTuple = tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+
 var localPktIngressNflogTuple = nfnetlink.NflogPacketTuple{
 	Src:   localIp1,
 	Dst:   localIp2,
@@ -424,6 +629,58 @@ var localPktIngress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggre
 		Prefixes: []nfnetlink.NflogPrefix{
 			{
 				Prefix:  defTierDenyIngressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: localPktIngressNflogTuple,
+	},
+}
+var localPktHepIngressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierDenyIngressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: localPktIngressNflogTuple,
+	},
+}
+var localPktHepIngressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierAllowIngressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: localPktIngressNflogTuple,
+	},
+}
+var localPktHepEgressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierDenyEgressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: localPktIngressNflogTuple,
+	},
+}
+var localPktHepEgressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  hepTierAllowEgressNFLOGPrefix,
 				Len:     22,
 				Bytes:   100,
 				Packets: 1,
@@ -556,20 +813,25 @@ var _ = Describe("NFLOG Datasource", func() {
 			FlowLogsFlushInterval:        time.Duration(100) * time.Second,
 			MaxOriginalSourceIPsIncluded: 5,
 			DisplayDebugTraceLogs:        true,
+			FelixHostName:                "node1",
 		}
 		BeforeEach(func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				localIp1:  localEd1,
 				localIp2:  localEd2,
 				remoteIp1: remoteEd1,
+				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
+			nodeMap := map[string]*v3.Node{
+				"node1": node1,
+			}
 
 			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap)
 			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 			Expect(nflogReader.Start()).NotTo(HaveOccurred())
 			c = newCollector(lm, conf).(*collector)
@@ -593,6 +855,64 @@ var _ = Describe("NFLOG Datasource", func() {
 			It("should receive a single stat update with deny ruleid trace", func() {
 				t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 				nflogReader.IngressC <- localPktIngress
+				Eventually(c.epStats).Should(HaveKey(*t))
+			})
+		})
+	})
+	Describe("NFLOG Incoming Packets (Pre-DNAT)", func() {
+		// Inject info nflogChan
+		var c *collector
+		var lm *calc.LookupsCache
+		var nflogReader *NFLogReader
+		conf := &Config{
+			StatsDumpFilePath:            "/tmp/qwerty",
+			AgeTimeout:                   time.Duration(10) * time.Second,
+			InitialReportingDelay:        time.Duration(5) * time.Second,
+			ExportingInterval:            time.Duration(1) * time.Second,
+			FlowLogsFlushInterval:        time.Duration(100) * time.Second,
+			MaxOriginalSourceIPsIncluded: 5,
+			DisplayDebugTraceLogs:        true,
+			FelixHostName:                "node1",
+			PolicyScope:                  "AllPolicies",
+		}
+		BeforeEach(func() {
+			epMap := map[[16]byte]calc.EndpointData{
+				localIp1:  localEd1,
+				localIp2:  localEd2,
+				remoteIp1: remoteEd1,
+				nodeIp1:   nodeEd1,
+			}
+			nflogMap := map[[64]byte]*calc.RuleID{}
+			nodeMap := map[string]*v3.Node{
+				"node1": node1,
+			}
+
+			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
+				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
+			}
+
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap)
+			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
+			Expect(nflogReader.Start()).NotTo(HaveOccurred())
+			c = newCollector(lm, conf).(*collector)
+			c.SetPacketInfoReader(nflogReader)
+			c.SetConntrackInfoReader(dummyConntrackInfoReader{})
+			go func() {
+				Expect(c.Start()).NotTo(HaveOccurred())
+			}()
+		})
+		AfterEach(func() {
+			nflogReader.Stop()
+		})
+		Describe("Test remote to remote pre-DNAT)", func() {
+			It("should receive a single stat update with allow ruleid trace", func() {
+				t := tuple.New(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
+				nflogReader.IngressC <- remotePktIngressAllow
+				Eventually(c.epStats).Should(HaveKey(*t))
+			})
+			It("should receive a single stat update with deny ruleid trace", func() {
+				t := tuple.New(remoteIp1, remoteIp3, proto_tcp, srcPort, dstPort)
+				nflogReader.IngressC <- remotePktIngressDeny
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
@@ -947,31 +1267,37 @@ var _ = Describe("Conntrack Datasource", func() {
 		FlowLogsFlushInterval:        time.Duration(100) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
+		FelixHostName:                "node1",
 	}
 	BeforeEach(func() {
 		epMap := map[[16]byte]calc.EndpointData{
 			localIp1:  localEd1,
 			localIp2:  localEd2,
 			remoteIp1: remoteEd1,
+			nodeIp1:   nodeEd1,
 		}
 		epMapSwapLocal = map[[16]byte]calc.EndpointData{
 			localIp1:  localEd2,
 			localIp2:  localEd1,
 			remoteIp1: remoteEd1,
+			nodeIp1:   nodeEd1,
 		}
 		epMapDelete = map[[16]byte]calc.EndpointData{
 			localIp1:  nil,
 			localIp2:  nil,
 			remoteIp1: nil,
+			nodeIp1:   nodeEd1,
 		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
-
+		nodes := map[string]*v3.Node{
+			"node1": node1,
+		}
 		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes)
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, conf).(*collector)
 
@@ -1010,7 +1336,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
@@ -1024,7 +1350,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
@@ -1045,7 +1371,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
@@ -1066,7 +1392,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1084,7 +1410,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1103,7 +1429,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			data := c.epStats[*t]
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
@@ -1126,7 +1452,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1148,7 +1474,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1208,7 +1534,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
@@ -1222,7 +1548,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
@@ -1243,7 +1569,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
@@ -1264,7 +1590,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1282,7 +1608,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1301,7 +1627,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			data := c.epStats[*t]
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
-			lm.SetMockData(epMapDelete, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
@@ -1324,7 +1650,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1346,7 +1672,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1531,7 +1857,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test data race", func() {
 		It("getDataAndUpdateEndpoints does not cause a data race contention with deleteDataFromEpStats after deleteDataFromEpStats removes it from epstats", func() {
 			existingTuple := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			testData := c.getDataAndUpdateEndpoints(*existingTuple, false, true)
+			testData := c.getDataAndUpdateEndpoints(*existingTuple, nil, false, true)
 
 			newTuple := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 
@@ -1544,7 +1870,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// ok Get is a little after feedupdate because feedupdate has some preprocesssing
 			// before it accesses flowstore
 			time.AfterFunc(2*time.Second+10*time.Millisecond, func() {
-				resultantNewTupleData = c.getDataAndUpdateEndpoints(*newTuple, false, true)
+				resultantNewTupleData = c.getDataAndUpdateEndpoints(*newTuple, nil, false, true)
 			})
 
 			time.Sleep(3 * time.Second)
@@ -1587,7 +1913,7 @@ var _ = Describe("Conntrack Datasource", func() {
 					},
 				},
 				},
-			})
+			}, nil)
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
 			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
@@ -1622,7 +1948,7 @@ var _ = Describe("Conntrack Datasource", func() {
 					},
 				},
 				},
-			})
+			}, nil)
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
 			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
@@ -1823,6 +2149,8 @@ var _ = Describe("Reporting Metrics", func() {
 		InitialReportingDelay: reportingDelay,
 		ExportingInterval:     exportingInterval,
 		FlowLogsFlushInterval: flowLogsFlushInterval,
+		FelixHostName:         "node1",
+		PolicyScope:           "AllPolicies",
 
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
@@ -1832,15 +2160,30 @@ var _ = Describe("Reporting Metrics", func() {
 			localIp1:  localEd1,
 			localIp2:  localEd2,
 			remoteIp1: remoteEd1,
+			remoteIp3: remoteEd3,
+			nodeIp1:   nodeEd1,
 		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
+		nodes := map[string]*v3.Node{
+			"node1": node1,
+		}
+
+		for _, rid := range []*calc.RuleID{
+			tierHepPolicy1AllowIngressRuleID,
+			tierHepPolicy1AllowEgressRuleID,
+			tierHepPolicy1DenyIngressRuleID,
+			tierHepPolicy1DenyEgressRuleID,
+			defTierPolicy1AllowEgressRuleID,
+			defTierPolicy1AllowIngressRuleID,
+			defTierPolicy2DenyIngressRuleID,
+			defTierPolicy2DenyEgressRuleID,
+		} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes)
 		mockReporter = newMockReporter()
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		Expect(nflogReader.Start()).NotTo(HaveOccurred())
@@ -1871,6 +2214,96 @@ var _ = Describe("Reporting Metrics", func() {
 						dstEp:        localEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy2DenyIngressRuleID},
 						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Denied Packets for Remote Endpoints - Ingress", func() {
+			BeforeEach(func() {
+				nflogReader.IngressC <- remotePktIngressDeny
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:     metric.UpdateTypeReport,
+						tpl:            *remotePktDenyIngressTuple,
+						srcEp:          remoteEd1,
+						dstEp:          remoteEd3,
+						transitRuleIDs: []*calc.RuleID{tierHepPolicy1DenyIngressRuleID},
+						isConnection:   false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Denied Packets for Host Endpoint Policies - Ingress", func() {
+			BeforeEach(func() {
+				nflogReader.IngressC <- localPktHepIngressDeny
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:     metric.UpdateTypeReport,
+						tpl:            *localPktTuple,
+						srcEp:          localEd1,
+						dstEp:          localEd2,
+						transitRuleIDs: []*calc.RuleID{tierHepPolicy1DenyIngressRuleID},
+						isConnection:   false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Allowed Packets for Host Endpoint Policies - Ingress", func() {
+			BeforeEach(func() {
+				nflogReader.IngressC <- localPktHepIngressAllow
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:     metric.UpdateTypeReport,
+						tpl:            *localPktTuple,
+						srcEp:          localEd1,
+						dstEp:          localEd2,
+						transitRuleIDs: []*calc.RuleID{tierHepPolicy1AllowIngressRuleID},
+						isConnection:   false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Denied Packets for Host Endpoint Policies - Egress", func() {
+			BeforeEach(func() {
+				nflogReader.EgressC <- localPktHepEgressDeny
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:     metric.UpdateTypeReport,
+						tpl:            *localPktTuple,
+						srcEp:          localEd1,
+						dstEp:          localEd2,
+						transitRuleIDs: []*calc.RuleID{tierHepPolicy1DenyEgressRuleID},
+						isConnection:   false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Allowed Packets for Host Endpoint Policies - Egress", func() {
+			BeforeEach(func() {
+				nflogReader.EgressC <- localPktHepEgressAllow
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:     metric.UpdateTypeReport,
+						tpl:            *localPktTuple,
+						srcEp:          localEd1,
+						dstEp:          localEd2,
+						transitRuleIDs: []*calc.RuleID{tierHepPolicy1AllowEgressRuleID},
+						isConnection:   false,
 					}
 					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 				})
@@ -2223,7 +2656,7 @@ var _ = Describe("DNS logging", func() {
 			remoteIp1: remoteEd1,
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil, nil)
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
@@ -2254,9 +2687,10 @@ func newMockLookupsCache(
 	nm map[[64]byte]*calc.RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
+	nodes map[string]*v3.Node,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
-	l.SetMockData(em, nm, ns, svcs)
+	l.SetMockData(em, nm, ns, svcs, nodes)
 	return l
 }
 
@@ -2295,7 +2729,7 @@ var _ = Describe("L7 logging", func() {
 		nflogMap := map[[64]byte]*calc.RuleID{}
 		nsMap := map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}
 		svcMap := map[model.ResourceKey]*kapiv1.Service{svcKey1: &svc1}
-		lm := newMockLookupsCache(epMap, nflogMap, nsMap, svcMap)
+		lm := newMockLookupsCache(epMap, nflogMap, nsMap, svcMap, nil)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -2362,7 +2796,7 @@ var _ = Describe("L7 logging", func() {
 		}
 
 		t = tuple.Make(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
-		d = NewData(t, remoteEd1, remoteEd2, 0)
+		d = NewData(t, remoteEd1, remoteEd2, nil, 0)
 		d.DstSvc = proxy.ServicePortName{
 			Port: "test-port",
 			NamespacedName: types.NamespacedName{
@@ -2616,7 +3050,7 @@ var _ = Describe("WAFEvent logging", func() {
 			localIp1: lep1,
 			localIp2: lep2,
 		}
-		lm := newMockLookupsCache(epMap, nil, nil, nil)
+		lm := newMockLookupsCache(epMap, nil, nil, nil, nil)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -2728,7 +3162,8 @@ type testMetricUpdate struct {
 	dstEp calc.EndpointData
 
 	// Rules identification
-	ruleIDs []*calc.RuleID
+	ruleIDs        []*calc.RuleID
+	transitRuleIDs []*calc.RuleID
 
 	// Sometimes we may need to send updates without having all the rules
 	// in place. This field will help aggregators determine if they need
@@ -2766,16 +3201,17 @@ func (mr *mockReporter) Report(u any) error {
 		return fmt.Errorf("invalid metric update")
 	}
 	mr.reportChan <- testMetricUpdate{
-		updateType:    mu.UpdateType,
-		tpl:           mu.Tuple,
-		srcEp:         mu.SrcEp,
-		dstEp:         mu.DstEp,
-		ruleIDs:       mu.RuleIDs,
-		unknownRuleID: mu.UnknownRuleID,
-		origSourceIPs: mu.OrigSourceIPs,
-		isConnection:  mu.IsConnection,
-		processName:   mu.ProcessName,
-		processID:     mu.ProcessID,
+		updateType:     mu.UpdateType,
+		tpl:            mu.Tuple,
+		srcEp:          mu.SrcEp,
+		dstEp:          mu.DstEp,
+		ruleIDs:        mu.RuleIDs,
+		transitRuleIDs: mu.TransitRuleIDs,
+		unknownRuleID:  mu.UnknownRuleID,
+		origSourceIPs:  mu.OrigSourceIPs,
+		isConnection:   mu.IsConnection,
+		processName:    mu.ProcessName,
+		processID:      mu.ProcessID,
 	}
 	return nil
 }
@@ -2802,7 +3238,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
 	}
-	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
@@ -2836,7 +3272,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
 	}
-	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
@@ -2860,8 +3296,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			data := NewData(tuples[i], localEd1, remoteEd1, 100)
-			c.applyNflogStatUpdate(data, rids[i], 0, 1, 2)
+			data := NewData(tuples[i], localEd1, remoteEd1, nil, 100)
+			c.applyNflogStatUpdate(data, rids[i], 0, 1, 2, false)
 		}
 	}
 }

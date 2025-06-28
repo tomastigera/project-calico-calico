@@ -16,6 +16,8 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
+const LinseedServerName = "tigera-linseed"
+
 // RESTClient is a helper for building HTTP requests for the Linseed API.
 type RESTClient interface {
 	BaseURL() string
@@ -50,6 +52,9 @@ type Config struct {
 
 	// ClientKeyPath is the path to the client key used for mTLS.
 	ClientKeyPath string
+
+	// ServerName is the hostname used to validate the server’s certificate during the TLS handshake.
+	ServerName string
 }
 
 type ClientOption func(*restClient) error
@@ -87,6 +92,10 @@ func NewClient(tenantID string, cfg Config, opts ...ClientOption) (RESTClient, e
 
 func newHTTPClient(cfg Config) (*http.Client, error) {
 	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig.ServerName = LinseedServerName
+	if len(cfg.ServerName) > 0 {
+		tlsConfig.ServerName = cfg.ServerName
+	}
 	if cfg.CACertPath != "" {
 		caCertPool := x509.NewCertPool()
 		caCert, err := os.ReadFile(cfg.CACertPath)

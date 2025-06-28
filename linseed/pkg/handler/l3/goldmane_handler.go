@@ -147,6 +147,8 @@ func convertPolicies(p *proto.PolicyTrace) (*v1.FlowLogPolicy, error) {
 		}
 		pp = append(pp, ps)
 	}
+	// Transit policies are not included in the FlowLogPolicy, as they are not present in the
+	// Goldmane API
 	return &v1.FlowLogPolicy{
 		EnforcedPolicies: ep,
 		PendingPolicies:  pp,

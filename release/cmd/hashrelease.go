@@ -15,12 +15,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 
+	"github.com/projectcalico/calico/release/internal/ci"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/outputs"
@@ -65,6 +67,10 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					return err
 				}
 
+				if err := validateCIBuildRequirements(c, cfg.RepoRootDir); err != nil {
+					return err
+				}
+
 				// Clone the operator repository.
 				operatorDir := filepath.Join(cfg.TmpDir, operator.DefaultRepoName)
 				err := operator.Clone(c.String(operatorOrgFlag.Name), c.String(operatorRepoFlag.Name), c.String(operatorBranchFlag.Name), operatorDir)
@@ -105,6 +111,8 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					}
 				}
 
+				productRegistriesFromFlag := c.StringSlice(registryFlag.Name)
+
 				// Build the operator
 				operatorOpts := []operator.Option{
 					operator.WithOperatorDirectory(operatorDir),
@@ -116,6 +124,12 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					operator.WithVersion(data.OperatorVersion()),
 					operator.WithCalicoDirectory(cfg.RepoRootDir),
 					operator.WithTempDirectory(cfg.TmpDir),
+				}
+				if reg := c.String(operatorRegistryFlag.Name); reg != "" {
+					operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
+				}
+				if len(productRegistriesFromFlag) > 0 {
+					operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistriesFromFlag[0]))
 				}
 				if !c.Bool(skipOperatorFlag.Name) {
 					o := operator.NewManager(operatorOpts...)
@@ -142,10 +156,9 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 					calico.WithArchitectures(c.StringSlice(archFlag.Name)),
 				}
-				if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
-					opts = append(opts, calico.WithImageRegistries(reg))
+				if len(productRegistriesFromFlag) > 0 {
+					opts = append(opts, calico.WithImageRegistries(productRegistriesFromFlag))
 				}
-
 				r := calico.NewManager(opts...)
 				if err := r.Build(); err != nil {
 					return err
@@ -225,10 +238,14 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					calico.WithHashrelease(*hashrel, *serverCfg),
 					calico.WithPublishImages(c.Bool(publishHashreleaseImageFlag.Name)),
 					calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
-					calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 				}
 				if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
-					opts = append(opts, calico.WithImageRegistries(reg))
+					opts = append(opts,
+						calico.WithImageRegistries(reg),
+						calico.WithImageScanning(false, imagescanner.Config{}), // Disable image scanning if using custom registries.
+					)
+				} else {
+					opts = append(opts, calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)))
 				}
 				// Note: We only need to check that the correct images exist if we haven't built them ourselves.
 				// So, skip this check if we're configured to build and publish images from the local codebase.
@@ -307,6 +324,9 @@ func validateHashreleaseBuildFlags(c *cli.Context) error {
 			return fmt.Errorf("missing hashrelease server configuration, must set %s, %s, %s, %s, and %s",
 				sshHostFlag, sshUserFlag, sshKeyFlag, sshPortFlag, sshKnownHostsFlag)
 		}
+		if c.String(ciTokenFlag.Name) == "" {
+			return fmt.Errorf("%s API token must be set when running on CI, either set \"SEMAPHORE_API_TOKEN\" or use %s flag", semaphoreCI, ciTokenFlag.Name)
+		}
 	} else {
 		// If building images, log a warning if no registry is specified.
 		if c.Bool(buildHashreleaseImageFlag.Name) && len(c.StringSlice(registryFlag.Name)) == 0 {
@@ -381,4 +401,25 @@ func imageScanningAPIConfig(c *cli.Context) *imagescanner.Config {
 		Token:   c.String(imageScannerTokenFlag.Name),
 		Scanner: c.String(imageScannerSelectFlag.Name),
 	}
+}
+
+func validateCIBuildRequirements(c *cli.Context, repoRootDir string) error {
+	if !c.Bool(ciFlag.Name) {
+		return nil
+	}
+	if c.Bool(buildImagesFlag.Name) {
+		logrus.Info("Building images in hashrelease, skipping images promotions check...")
+		return nil
+	}
+	orgURL := c.String(ciBaseURLFlag.Name)
+	token := c.String(ciTokenFlag.Name)
+	pipelineID := c.String(ciPipelineIDFlag.Name)
+	promotionsDone, err := ci.EvaluateImagePromotions(repoRootDir, orgURL, pipelineID, token)
+	if err != nil {
+		return err
+	}
+	if !promotionsDone {
+		return errors.New("images promotions are not done, wait for all images promotions to pass before publishing the hashrelease")
+	}
+	return nil
 }

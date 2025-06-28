@@ -40,18 +40,21 @@ type WAFLogAggregationParams struct {
 }
 
 type WAFLog struct {
-	Timestamp   time.Time    `json:"@timestamp"`
-	Destination *WAFEndpoint `json:"destination"`
-	Level       string       `json:"level"`
-	Method      string       `json:"method"`
-	Msg         string       `json:"msg"`
-	Path        string       `json:"path"`
-	Protocol    string       `json:"protocol"`
-	RequestId   string       `json:"request_id,omitempty"`
-	RuleInfo    string       `json:"rule_info,omitempty"`
-	Rules       []WAFRuleHit `json:"rules,omitempty"`
-	Source      *WAFEndpoint `json:"source"`
-	Host        string       `json:"host"`
+	Timestamp        time.Time    `json:"@timestamp"`
+	Count            int          `json:"count,omitempty"`
+	Destination      *WAFEndpoint `json:"destination"`
+	Level            string       `json:"level"`
+	Method           string       `json:"method"`
+	Msg              string       `json:"msg"`
+	Path             string       `json:"path"`
+	Protocol         string       `json:"protocol"`
+	RequestId        string       `json:"request_id,omitempty"`
+	RuleInfo         string       `json:"rule_info,omitempty"`
+	Rules            []WAFRuleHit `json:"rules,omitempty"`
+	Source           *WAFEndpoint `json:"source"`
+	Host             string       `json:"host"`
+	GatewayName      string       `json:"gateway_name,omitempty"`
+	GatewayNamespace string       `json:"gateway_namespace,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
@@ -61,9 +64,9 @@ type WAFLog struct {
 }
 
 type WAFEndpoint struct {
-	Hostname     string `json:"hostname"`
+	Hostname     string `json:"hostname,omitempty"`
 	IP           string `json:"ip"`
-	PortNum      int32  `json:"port_num"`
+	PortNum      int32  `json:"port_num,omitempty"`
 	PodName      string `json:"name,omitempty"`
 	PodNameSpace string `json:"namespace,omitempty"`
 }

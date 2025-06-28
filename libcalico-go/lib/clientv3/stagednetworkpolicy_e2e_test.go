@@ -16,7 +16,6 @@ package clientv3_test
 
 import (
 	"context"
-	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -369,80 +368,6 @@ var _ = testutils.E2eDatastoreDescribe("StagedNetworkPolicy tests", testutils.Da
 			ingress, egress,
 		),
 	)
-
-	DescribeTable("StagedNetworkPolicy default tier name test",
-		func(policyName string, incorrectPrefixPolicyName string) {
-			namespace := "default"
-			By("Getting the policy before it was created")
-			_, err := c.StagedNetworkPolicies().Get(ctx, namespace, policyName, options.GetOptions{})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("resource does not exist: StagedNetworkPolicy(" + namespace + "/" + policyName + ") with error:"))
-
-			By("Updating the policy before it was created")
-			_, err = c.StagedNetworkPolicies().Update(ctx,
-				&apiv3.StagedNetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: policyName, Namespace: namespace, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
-				}, options.SetOptions{})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("resource does not exist: StagedNetworkPolicy(" + namespace + "/" + policyName + ") with error:"))
-
-			By("Creating the policy")
-			returnedPolicy, err := c.StagedNetworkPolicies().Create(ctx,
-				&apiv3.StagedNetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: policyName, Namespace: namespace},
-				}, options.SetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedPolicy.Name).To(Equal(policyName))
-
-			By("Creating the policy with incorrect prefix name")
-			_, err = c.StagedNetworkPolicies().Create(ctx,
-				&apiv3.StagedNetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: incorrectPrefixPolicyName, Namespace: namespace},
-				}, options.SetOptions{})
-			Expect(err).To(HaveOccurred())
-
-			By("Getting the policy")
-			returnedPolicy, err = c.StagedNetworkPolicies().Get(ctx, namespace, policyName, options.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedPolicy.Name).To(Equal(policyName))
-
-			By("Updating the policy")
-			returnedPolicy, err = c.StagedNetworkPolicies().Update(ctx, returnedPolicy, options.SetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedPolicy.Name).To(Equal(policyName))
-
-			By("Getting the policy with incorrect prefix")
-			_, err = c.StagedNetworkPolicies().Get(ctx, namespace, incorrectPrefixPolicyName, options.GetOptions{})
-			Expect(err).To(HaveOccurred())
-
-			By("Updating the policy with incorrect prefix")
-			_, err = c.StagedNetworkPolicies().Update(ctx, &apiv3.StagedNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: incorrectPrefixPolicyName, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
-				Spec:       spec1,
-			}, options.SetOptions{})
-			Expect(err).To(HaveOccurred())
-
-			By("Deleting policy")
-			returnedPolicy, err = c.StagedNetworkPolicies().Delete(ctx, namespace, policyName, options.DeleteOptions{})
-			Expect(returnedPolicy.Name).To(Equal(policyName))
-			Expect(err).ToNot(HaveOccurred())
-		},
-		Entry("StagedNetworkPolicy without default tier prefix", "netpol", "default.netpol"),
-		Entry("StagedNetworkPolicy with default tier prefix", "default.netpol", "netpol"),
-	)
-
-	Describe("StagedNetworkPolicy without name on the projectcalico.org annotation", func() {
-		It("Should return the name without default prefix", func() {
-			if config.Spec.DatastoreType == apiconfig.Kubernetes {
-				// We create the policies as a CRD to prevent the api server adding the correct annotation
-				err := exec.Command("kubectl", "create", "-f", "../../test/mock-policies.yaml").Run()
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = c.StagedGlobalNetworkPolicies().Get(ctx, "prefix-test-policy", options.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-			}
-		})
-	})
 
 	DescribeTable("StagedNetworkPolicy name validation tests",
 		func(policyName string, tier string, expectError bool) {

@@ -37,7 +37,7 @@ var _ = Describe("QuerysServerClient tests", func() {
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: server.URL,
 				QueryServerURL:       "",
-				QueryServerCA:        "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+				QueryServerCA:        "/etc/pki/tls/certs/ca.crt",
 				QueryServerToken:     "test_data/token",
 			}
 
@@ -56,7 +56,7 @@ var _ = Describe("QuerysServerClient tests", func() {
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: "",
 				QueryServerURL:       server.URL,
-				QueryServerCA:        "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+				QueryServerCA:        "/etc/pki/tls/certs/ca.crt",
 				QueryServerToken:     "test_data/token",
 			}
 
@@ -74,7 +74,7 @@ var _ = Describe("QuerysServerClient tests", func() {
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: "",
 				QueryServerURL:       server.URL,
-				QueryServerCA:        "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+				QueryServerCA:        "/etc/pki/tls/certs/ca.crt",
 				QueryServerToken:     "",
 			}
 
@@ -92,7 +92,7 @@ var _ = Describe("QuerysServerClient tests", func() {
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: "",
 				QueryServerURL:       server.URL,
-				QueryServerCA:        "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+				QueryServerCA:        "/etc/pki/tls/certs/ca.crt",
 				QueryServerToken:     "",
 			}
 

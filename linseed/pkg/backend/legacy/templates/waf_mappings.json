@@ -7,6 +7,9 @@
     "@timestamp": {
       "type": "date"
     },
+    "count": {
+      "type": "integer"
+    },
     "source": {
       "properties": {
         "ip": {
@@ -95,6 +98,12 @@
           "type": "boolean"
         }
       }
+    },
+    "gateway_name": {
+      "type": "keyword"
+    },
+    "gateway_namespace": {
+      "type": "keyword"
     },
     "host": {
       "type": "keyword"

@@ -157,6 +157,7 @@ type Flow struct {
 type PolicyTrace struct {
 	EnforcedPolicies string
 	PendingPolicies  string
+	TransitPolicies  string
 }
 
 type PolicyHit struct {

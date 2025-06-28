@@ -1,37 +1,36 @@
-From 72fd478cb875dc6b807c9f8fee54de2c9e62a8eb Mon Sep 17 00:00:00 2001
-From: Vara <vara@tigera.io>
-Date: Wed, 11 Dec 2024 11:17:38 -0800
-Subject: [PATCH] apply tigera customization to kibana
+From cb955aeb08b4532a460eb30c9aa5bdfb02dbfee5 Mon Sep 17 00:00:00 2001
+From: Pasan Weerasinghe <pasan@tigera.io>
+Date: Thu, 8 May 2025 12:46:47 -0700
+Subject: [PATCH] Apply Tigera customizations to Kibana
 
 ---
  config/kibana.yml                             |  19 +
- .../src/chrome_service.tsx                    |   4 +
+ .../browser-internal/src/chrome_service.tsx   |   1 +
  .../src/ui/header/header.test.tsx             |   1 +
- .../src/ui/header/header.tsx                  |   3 +
- .../src/ui/header/header_logo.tsx             |  38 +-
+ .../browser-internal/src/ui/header/header.tsx |   3 +
+ .../src/ui/header/header_logo.tsx             |  31 +-
  .../tigera_icons/calico_cloud_logo_square.svg | 551 ++++++++++++++
  .../calico_enterprise_logo_square.svg         | 648 +++++++++++++++++
- .../src/views/template.tsx                    |  15 +-
+ .../server-internal/src/views/template.tsx    |  15 +-
  .../tigera_icons/calico_cloud_logo_square.tsx | 493 +++++++++++++
  .../calico_enterprise_logo_square.tsx         | 674 ++++++++++++++++++
- .../tsconfig.json                             |   1 +
- .../src/core_system.ts                        |   1 +
+ .../rendering/server-internal/tsconfig.json   |   1 +
  .../public/components/search_bar.tsx          |  20 +-
  .../public/components/types.ts                |   1 +
  .../global_search_bar/public/plugin.tsx       |   2 +
  .../public/authentication/login/login_app.ts  |   1 +
  .../authentication/login/login_page.tsx       |  22 +-
  .../security/tigera_icons/calico_logo.svg     |  55 ++
- x-pack/plugins/security/tsconfig.json         |   1 +
- 19 files changed, 2514 insertions(+), 36 deletions(-)
- create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
- create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
- create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
- create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
- create mode 100644 x-pack/plugins/security/tigera_icons/calico_logo.svg
+ .../plugins/shared/security/tsconfig.json     |   3 +-
+ 18 files changed, 2503 insertions(+), 38 deletions(-)
+ create mode 100644 src/core/packages/chrome/browser-internal/tigera_icons/calico_cloud_logo_square.svg
+ create mode 100644 src/core/packages/chrome/browser-internal/tigera_icons/calico_enterprise_logo_square.svg
+ create mode 100644 src/core/packages/rendering/server-internal/tigera_icons/calico_cloud_logo_square.tsx
+ create mode 100644 src/core/packages/rendering/server-internal/tigera_icons/calico_enterprise_logo_square.tsx
+ create mode 100644 x-pack/platform/plugins/shared/security/tigera_icons/calico_logo.svg
 
 diff --git a/config/kibana.yml b/config/kibana.yml
-index c816337f8..1b6f431bd 100644
+index b0ffc8e0e..8435fd2b2 100644
 --- a/config/kibana.yml
 +++ b/config/kibana.yml
 @@ -181,3 +181,22 @@
@@ -57,35 +56,11 @@ index c816337f8..1b6f431bd 100644
 +google_tag_manager.enabled: true
 +google_tag_manager.container: "GTM-TCNXTCJ"
 +
-diff --git a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
-index 434639b07..287348b1b 100644
---- a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
-+++ b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
-@@ -54,6 +54,7 @@ import { Header, LoadingIndicator, ProjectHeader } from './ui';
- import { registerAnalyticsContextProvider } from './register_analytics_context_provider';
- import type { InternalChromeStart } from './types';
- import { HeaderTopBanner } from './ui/header/header_top_banner';
-+import type { IUiSettingsClient } from '@kbn/core-ui-settings-browser';
- 
- const IS_LOCKED_KEY = 'core.chrome.isLocked';
- const IS_SIDENAV_COLLAPSED_KEY = 'core.chrome.isSideNavCollapsed';
-@@ -76,6 +77,7 @@ export interface StartDeps {
-   injectedMetadata: InternalInjectedMetadataStart;
-   notifications: NotificationsStart;
-   customBranding: CustomBrandingStart;
-+  uiSettings: IUiSettingsClient;
- }
- 
- /** @internal */
-@@ -237,6 +239,7 @@ export class ChromeService {
-     injectedMetadata,
-     notifications,
-     customBranding,
-+    uiSettings,
-   }: StartDeps): Promise<InternalChromeStart> {
-     this.initVisibility(application);
-     this.handleEuiFullScreenChanges();
-@@ -497,6 +500,7 @@ export class ChromeService {
+diff --git a/src/core/packages/chrome/browser-internal/src/chrome_service.tsx b/src/core/packages/chrome/browser-internal/src/chrome_service.tsx
+index e8eb19482..fcffb6ecf 100644
+--- a/src/core/packages/chrome/browser-internal/src/chrome_service.tsx
++++ b/src/core/packages/chrome/browser-internal/src/chrome_service.tsx
+@@ -520,6 +520,7 @@ export class ChromeService {
              onIsLockedUpdate={setIsNavDrawerLocked}
              isLocked$={getIsNavDrawerLocked$}
              customBranding$={customBranding$}
@@ -93,10 +68,10 @@ index 434639b07..287348b1b 100644
            />
          );
        };
-diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
+diff --git a/src/core/packages/chrome/browser-internal/src/ui/header/header.test.tsx b/src/core/packages/chrome/browser-internal/src/ui/header/header.test.tsx
 index f6253e283..0da19b199 100644
---- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
-+++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
+--- a/src/core/packages/chrome/browser-internal/src/ui/header/header.test.tsx
++++ b/src/core/packages/chrome/browser-internal/src/ui/header/header.test.tsx
 @@ -30,6 +30,7 @@ function mockProps() {
      breadcrumbsAppendExtension$: new BehaviorSubject(undefined),
      homeHref: '/',
@@ -105,10 +80,10 @@ index f6253e283..0da19b199 100644
      kibanaDocLink: '/docs',
      docLinks: docLinksServiceMock.createStartContract(),
      navLinks$: new BehaviorSubject([]),
-diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
+diff --git a/src/core/packages/chrome/browser-internal/src/ui/header/header.tsx b/src/core/packages/chrome/browser-internal/src/ui/header/header.tsx
 index 62f2963ae..c5776ce3d 100644
---- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
-+++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
+--- a/src/core/packages/chrome/browser-internal/src/ui/header/header.tsx
++++ b/src/core/packages/chrome/browser-internal/src/ui/header/header.tsx
 @@ -78,6 +78,7 @@ export interface HeaderProps {
    onIsLockedUpdate: OnIsLockedUpdate;
    customBranding$: Observable<CustomBranding>;
@@ -133,31 +108,30 @@ index 62f2963ae..c5776ce3d 100644
                    />,
                  ],
                },
-diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
-index b7ceb4b52..d12375e38 100644
---- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
-+++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
+diff --git a/src/core/packages/chrome/browser-internal/src/ui/header/header_logo.tsx b/src/core/packages/chrome/browser-internal/src/ui/header/header_logo.tsx
+index 882da0956..6505f0281 100644
+--- a/src/core/packages/chrome/browser-internal/src/ui/header/header_logo.tsx
++++ b/src/core/packages/chrome/browser-internal/src/ui/header/header_logo.tsx
 @@ -8,6 +8,7 @@
   */
  
- import './header_logo.scss';
+ import { css } from '@emotion/react';
 +import { EuiHeaderLogo } from '@elastic/eui';
  import { i18n } from '@kbn/i18n';
  import React from 'react';
  import useObservable from 'react-use/lib/useObservable';
-@@ -16,8 +17,9 @@ import Url from 'url';
- import { CustomBranding } from '@kbn/core-custom-branding-common';
+@@ -17,8 +18,8 @@ import { CustomBranding } from '@kbn/core-custom-branding-common';
  import type { HttpStart } from '@kbn/core-http-browser';
  import type { ChromeNavLink } from '@kbn/core-chrome-browser';
+ import { useEuiTheme } from '@elastic/eui';
 -import { ElasticMark } from './elastic_mark';
 -import { LoadingIndicator } from '../loading_indicator';
-+
 +import calicoEnterpriseLogoSquareIcon from '../../../tigera_icons/calico_enterprise_logo_square.svg';
 +import calicoCloudLogoSquareIcon from '../../../tigera_icons/calico_cloud_logo_square.svg';
  
  function findClosestAnchor(element: HTMLElement): HTMLAnchorElement | void {
    let current = element;
-@@ -80,34 +82,32 @@ interface Props {
+@@ -81,14 +82,14 @@ interface Props {
    navigateToApp: (appId: string) => void;
    loadingCount$?: ReturnType<HttpStart['getLoadingCount$']>;
    customBranding$: Observable<CustomBranding>;
@@ -165,26 +139,26 @@ index b7ceb4b52..d12375e38 100644
  }
  
 -export function HeaderLogo({ href, navigateToApp, loadingCount$, ...observables }: Props) {
-+export function HeaderLogo({
-+  href,
-+  navigateToApp,
-+  loadingCount$,
-+  licenseEdition,
-+  ...observables
-+}: Props) {
++export function HeaderLogo({ href, navigateToApp, loadingCount$, licenseEdition, ...observables }: Props) {
+   const { euiTheme } = useEuiTheme();
 +  const isEnterprise = licenseEdition === 'enterpriseEdition';
    const forceNavigation = useObservable(observables.forceNavigation$, false);
    const navLinks = useObservable(observables.navLinks$, []);
 -  const customBranding = useObservable(observables.customBranding$, {});
 -  const { customizedLogo, logo } = customBranding;
-+
+ 
+   const styles = {
+     logoCss: css({
+@@ -104,27 +105,17 @@ export function HeaderLogo({ href, navigateToApp, loadingCount$, ...observables
+   };
+ 
    return (
 -    <a
 +    <EuiHeaderLogo
 +      data-test-subj="logo"
 +      iconType={isEnterprise ? calicoEnterpriseLogoSquareIcon : calicoCloudLogoSquareIcon}
        onClick={(e) => onClick(e, forceNavigation, navLinks, navigateToApp)}
-       className="chrHeaderLogo"
+       css={styles.logoCss}
        href={href}
 -      data-test-subj="logo"
        aria-label={i18n.translate('core.ui.chrome.headerGlobalNav.goHomePageIconAriaLabel', {
@@ -195,23 +169,24 @@ index b7ceb4b52..d12375e38 100644
 -      {customizedLogo ? (
 -        <img
 -          src={customizedLogo}
--          className="chrHeaderLogo__mark"
+-          data-test-subj="logoMark"
+-          css={styles.logoMarkCss}
 -          style={{ maxWidth: '200px', maxHeight: '84px' }}
 -          alt="custom mark"
 -        />
 -      ) : (
--        <ElasticMark className="chrHeaderLogo__mark" aria-hidden={true} />
+-        <ElasticMark data-test-subj="logoMark" css={styles.logoMarkCss} aria-hidden={true} />
 -      )}
 -    </a>
 +      {`Calico ${isEnterprise ? 'Enterprise' : 'Cloud'} Elastic`}
 +    </EuiHeaderLogo>
    );
  }
-diff --git a/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
+diff --git a/src/core/packages/chrome/browser-internal/tigera_icons/calico_cloud_logo_square.svg b/src/core/packages/chrome/browser-internal/tigera_icons/calico_cloud_logo_square.svg
 new file mode 100644
 index 000000000..ef8e0113a
 --- /dev/null
-+++ b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
++++ b/src/core/packages/chrome/browser-internal/tigera_icons/calico_cloud_logo_square.svg
 @@ -0,0 +1,551 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -764,11 +739,11 @@ index 000000000..ef8e0113a
 +	c-0.3-3.5-2-4.8-4.5-6.9l-25.9,15L126.9,113.2z"
 +  />
 +</svg>
-diff --git a/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
+diff --git a/src/core/packages/chrome/browser-internal/tigera_icons/calico_enterprise_logo_square.svg b/src/core/packages/chrome/browser-internal/tigera_icons/calico_enterprise_logo_square.svg
 new file mode 100644
 index 000000000..0a31a68ef
 --- /dev/null
-+++ b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
++++ b/src/core/packages/chrome/browser-internal/tigera_icons/calico_enterprise_logo_square.svg
 @@ -0,0 +1,648 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -1418,10 +1393,10 @@ index 000000000..0a31a68ef
 +    />
 +  </g>
 +</svg>
-diff --git a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
-index fdbade121..c3c1af3ab 100644
---- a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
-+++ b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
+diff --git a/src/core/packages/rendering/server-internal/src/views/template.tsx b/src/core/packages/rendering/server-internal/src/views/template.tsx
+index c502e1a0d..9e8de0803 100644
+--- a/src/core/packages/rendering/server-internal/src/views/template.tsx
++++ b/src/core/packages/rendering/server-internal/src/views/template.tsx
 @@ -12,8 +12,9 @@ import { EUI_STYLES_GLOBAL, EUI_STYLES_UTILS } from '@kbn/core-base-common';
  import { i18n } from '@kbn/i18n';
  import { RenderingMetadata } from '../types';
@@ -1433,7 +1408,7 @@ index fdbade121..c3c1af3ab 100644
  
  interface Props {
    metadata: RenderingMetadata;
-@@ -32,14 +33,22 @@ export const Template: FunctionComponent<Props> = ({
+@@ -33,14 +34,22 @@ export const Template: FunctionComponent<Props> = ({
      customBranding,
    },
  }) => {
@@ -1457,7 +1432,7 @@ index fdbade121..c3c1af3ab 100644
    return (
      <html lang={locale}>
        <head>
-@@ -93,7 +102,7 @@ export const Template: FunctionComponent<Props> = ({
+@@ -97,7 +106,7 @@ export const Template: FunctionComponent<Props> = ({
                })}
              >
                {i18n.translate('core.ui.welcomeMessage', {
@@ -1466,11 +1441,11 @@ index fdbade121..c3c1af3ab 100644
                })}
              </div>
              <div className="kbnProgress" />
-diff --git a/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
+diff --git a/src/core/packages/rendering/server-internal/tigera_icons/calico_cloud_logo_square.tsx b/src/core/packages/rendering/server-internal/tigera_icons/calico_cloud_logo_square.tsx
 new file mode 100644
 index 000000000..fbd02037e
 --- /dev/null
-+++ b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
++++ b/src/core/packages/rendering/server-internal/tigera_icons/calico_cloud_logo_square.tsx
 @@ -0,0 +1,493 @@
 +/*
 + * Licensed to Elasticsearch B.V. under one or more contributor
@@ -1965,11 +1940,11 @@ index 000000000..fbd02037e
 +    </svg>
 +  );
 +}
-diff --git a/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
+diff --git a/src/core/packages/rendering/server-internal/tigera_icons/calico_enterprise_logo_square.tsx b/src/core/packages/rendering/server-internal/tigera_icons/calico_enterprise_logo_square.tsx
 new file mode 100644
 index 000000000..1af36ada8
 --- /dev/null
-+++ b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
++++ b/src/core/packages/rendering/server-internal/tigera_icons/calico_enterprise_logo_square.tsx
 @@ -0,0 +1,674 @@
 +/*
 + * Licensed to Elasticsearch B.V. under one or more contributor
@@ -2645,10 +2620,10 @@ index 000000000..1af36ada8
 +    </svg>
 +  );
 +}
-diff --git a/packages/core/rendering/core-rendering-server-internal/tsconfig.json b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
-index 28a22d3d5..4bfa83fdb 100644
---- a/packages/core/rendering/core-rendering-server-internal/tsconfig.json
-+++ b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
+diff --git a/src/core/packages/rendering/server-internal/tsconfig.json b/src/core/packages/rendering/server-internal/tsconfig.json
+index aca7d8f63..f67c8667e 100644
+--- a/src/core/packages/rendering/server-internal/tsconfig.json
++++ b/src/core/packages/rendering/server-internal/tsconfig.json
 @@ -11,6 +11,7 @@
    "include": [
      "**/*.ts",
@@ -2657,22 +2632,10 @@ index 28a22d3d5..4bfa83fdb 100644
    ],
    "kbn_references": [
      "@kbn/i18n",
-diff --git a/packages/core/root/core-root-browser-internal/src/core_system.ts b/packages/core/root/core-root-browser-internal/src/core_system.ts
-index 44e25b257..d83c3db45 100644
---- a/packages/core/root/core-root-browser-internal/src/core_system.ts
-+++ b/packages/core/root/core-root-browser-internal/src/core_system.ts
-@@ -348,6 +348,7 @@ export class CoreSystem {
-         injectedMetadata,
-         notifications,
-         customBranding,
-+        uiSettings,
-       });
-       const deprecations = this.deprecations.start({ http });
- 
-diff --git a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-index efc564089..4ad382cbf 100644
---- a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-+++ b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
+diff --git a/x-pack/platform/plugins/private/global_search_bar/public/components/search_bar.tsx b/x-pack/platform/plugins/private/global_search_bar/public/components/search_bar.tsx
+index 318b5cf2e..dfc24fe9e 100644
+--- a/x-pack/platform/plugins/private/global_search_bar/public/components/search_bar.tsx
++++ b/x-pack/platform/plugins/private/global_search_bar/public/components/search_bar.tsx
 @@ -19,6 +19,7 @@ import {
    euiSelectableTemplateSitewideRenderOptions,
    useEuiTheme,
@@ -2681,7 +2644,7 @@ index efc564089..4ad382cbf 100644
  import { EuiSelectableOnChangeEvent } from '@elastic/eui/src/components/selectable/selectable';
  import { css } from '@emotion/react';
  import { FormattedMessage } from '@kbn/i18n-react';
-@@ -77,7 +78,15 @@ const EmptyMessage = () => (
+@@ -73,7 +74,15 @@ const EmptyMessage = () => (
  );
  
  export const SearchBar: FC<SearchBarProps> = (opts) => {
@@ -2698,15 +2661,15 @@ index efc564089..4ad382cbf 100644
  
    const isMounted = useMountedState();
    const { euiTheme } = useEuiTheme();
-@@ -100,6 +109,7 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
+@@ -95,6 +104,7 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
    const UNKNOWN_TAG_ID = '__unknown__';
    const [isLoading, setIsLoading] = useState<boolean>(false);
    const [searchCharLimitExceeded, setSearchCharLimitExceeded] = useState(false);
 +  const isEnterprise = licenseEdition === 'enterpriseEdition';
  
+   // Initialize searchableTypes data
    useEffect(() => {
-     if (initialLoad) {
-@@ -384,8 +394,12 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
+@@ -376,8 +386,12 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
          'data-test-subj': 'nav-search-input',
          inputRef: setSearchRef,
          compressed: true,
@@ -2721,23 +2684,23 @@ index efc564089..4ad382cbf 100644
          onFocus: () => {
            reportEvent.searchFocus();
            setInitialLoad(true);
-diff --git a/x-pack/plugins/global_search_bar/public/components/types.ts b/x-pack/plugins/global_search_bar/public/components/types.ts
+diff --git a/x-pack/platform/plugins/private/global_search_bar/public/components/types.ts b/x-pack/platform/plugins/private/global_search_bar/public/components/types.ts
 index fbcf7c523..04ac334ea 100644
---- a/x-pack/plugins/global_search_bar/public/components/types.ts
-+++ b/x-pack/plugins/global_search_bar/public/components/types.ts
+--- a/x-pack/platform/plugins/private/global_search_bar/public/components/types.ts
++++ b/x-pack/platform/plugins/private/global_search_bar/public/components/types.ts
 @@ -20,4 +20,5 @@ export interface SearchBarProps {
    taggingApi?: SavedObjectTaggingPluginStart;
    basePathUrl: string;
    chromeStyle$: Observable<ChromeStyle>;
 +  licenseEdition: string;
  }
-diff --git a/x-pack/plugins/global_search_bar/public/plugin.tsx b/x-pack/plugins/global_search_bar/public/plugin.tsx
-index e8fbe2f7e..f1661e422 100644
---- a/x-pack/plugins/global_search_bar/public/plugin.tsx
-+++ b/x-pack/plugins/global_search_bar/public/plugin.tsx
+diff --git a/x-pack/platform/plugins/private/global_search_bar/public/plugin.tsx b/x-pack/platform/plugins/private/global_search_bar/public/plugin.tsx
+index 4ff393b90..1c96844f6 100644
+--- a/x-pack/platform/plugins/private/global_search_bar/public/plugin.tsx
++++ b/x-pack/platform/plugins/private/global_search_bar/public/plugin.tsx
 @@ -52,6 +52,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
      const { core, globalSearch, savedObjectsTagging, usageCollection } = deps;
-     const { application, http, theme, i18n } = core;
+     const { application, http } = core;
      const reportEvent = new EventReporter({ analytics: core.analytics, usageCollection });
 +    const licenseEdition = core.uiSettings.get('tigeratagmanager.licenseEdition');
  
@@ -2751,10 +2714,10 @@ index e8fbe2f7e..f1661e422 100644
              />
            </KibanaRenderContextProvider>,
            container
-diff --git a/x-pack/plugins/security/public/authentication/login/login_app.ts b/x-pack/plugins/security/public/authentication/login/login_app.ts
+diff --git a/x-pack/platform/plugins/shared/security/public/authentication/login/login_app.ts b/x-pack/platform/plugins/shared/security/public/authentication/login/login_app.ts
 index 495bd8d10..7e6db5d46 100644
---- a/x-pack/plugins/security/public/authentication/login/login_app.ts
-+++ b/x-pack/plugins/security/public/authentication/login/login_app.ts
+--- a/x-pack/platform/plugins/shared/security/public/authentication/login/login_app.ts
++++ b/x-pack/platform/plugins/shared/security/public/authentication/login/login_app.ts
 @@ -46,6 +46,7 @@ export const loginApp = Object.freeze({
              fatalErrors: coreStart.fatalErrors,
              loginAssistanceMessage: config.loginAssistanceMessage,
@@ -2763,10 +2726,10 @@ index 495bd8d10..7e6db5d46 100644
            }
          );
        },
-diff --git a/x-pack/plugins/security/public/authentication/login/login_page.tsx b/x-pack/plugins/security/public/authentication/login/login_page.tsx
+diff --git a/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx b/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
 index 741f61016..b69e8e7d8 100644
---- a/x-pack/plugins/security/public/authentication/login/login_page.tsx
-+++ b/x-pack/plugins/security/public/authentication/login/login_page.tsx
+--- a/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
++++ b/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
 @@ -12,7 +12,6 @@ import {
    EuiFlexGroup,
    EuiFlexItem,
@@ -2828,11 +2791,11 @@ index 741f61016..b69e8e7d8 100644
                  />
                </h1>
              </EuiTitle>
-diff --git a/x-pack/plugins/security/tigera_icons/calico_logo.svg b/x-pack/plugins/security/tigera_icons/calico_logo.svg
+diff --git a/x-pack/platform/plugins/shared/security/tigera_icons/calico_logo.svg b/x-pack/platform/plugins/shared/security/tigera_icons/calico_logo.svg
 new file mode 100644
 index 000000000..9e0f3cbae
 --- /dev/null
-+++ b/x-pack/plugins/security/tigera_icons/calico_logo.svg
++++ b/x-pack/platform/plugins/shared/security/tigera_icons/calico_logo.svg
 @@ -0,0 +1,55 @@
 +<svg viewBox="0 0 125 125" fill="none" xmlns="http://www.w3.org/2000/svg">
 +<path d="M91.148 102.481C88.5518 106.625 76.8593 109.751 62.8203 109.751C48.7813 109.751 37.0788 106.625 34.4827 102.481C31.1177 103.779 29.1606 105.327 29.1606 106.985C29.1606 111.598 44.2281 115.333 62.8203 115.333C81.4125 115.333 96.47 111.598 96.47 106.985C96.47 105.327 94.5129 103.779 91.148 102.481Z" fill="#B0B2B8"/>
@@ -2889,14 +2852,16 @@ index 000000000..9e0f3cbae
 +<path d="M53.8835 44.13C53.8143 44.1442 53.743 44.1442 53.6738 44.13L42.2409 39.6361C42.1604 39.6149 42.0853 39.5769 42.0206 39.5246C41.9558 39.4722 41.9029 39.4068 41.8653 39.3325C41.8277 39.2583 41.8063 39.1769 41.8024 39.0937C41.7985 39.0106 41.8123 38.9275 41.8429 38.8501C41.8734 38.7727 41.92 38.7026 41.9796 38.6445C42.0392 38.5863 42.1104 38.5415 42.1886 38.5129C42.2668 38.4843 42.3501 38.4727 42.4331 38.4786C42.5161 38.4846 42.597 38.5081 42.6702 38.5476L54.1031 43.0415C54.2075 43.1041 54.2899 43.1975 54.339 43.3088C54.3882 43.4202 54.4016 43.544 54.3776 43.6633C54.3535 43.7826 54.293 43.8915 54.2046 43.9751C54.1161 44.0586 54.0039 44.1128 53.8835 44.13Z" fill="#141414"/>
 +<path fill-rule="evenodd" clip-rule="evenodd" d="M52.3805 61C51.7588 61.7962 51.175 62.6823 50.6346 63.6546C48.2865 68.0122 47.0388 72.877 47 77.8262C47 87.8061 52.9711 94.7921 61.5083 94.7921C70.0555 94.7921 76.0166 87.7962 76.0166 77.7863C75.97 72.852 74.7262 68.0027 72.392 63.6546C71.8496 62.6823 71.2642 61.7962 70.6413 61H68.529C72.3573 65.1436 74.399 72.2907 74.399 77.8062C74.399 88.4349 67.9187 93.1953 61.5083 93.1953C55.0979 93.1953 48.6176 88.4149 48.6176 77.7863C48.6176 72.2844 50.6636 65.1422 54.4914 61H52.3805Z" fill="#141414"/>
 +</svg>
-diff --git a/x-pack/plugins/security/tsconfig.json b/x-pack/plugins/security/tsconfig.json
-index 1005d225b..1c2af16f7 100644
---- a/x-pack/plugins/security/tsconfig.json
-+++ b/x-pack/plugins/security/tsconfig.json
-@@ -8,6 +8,7 @@
+diff --git a/x-pack/platform/plugins/shared/security/tsconfig.json b/x-pack/platform/plugins/shared/security/tsconfig.json
+index 9f854b5a9..fb80eb13f 100644
+--- a/x-pack/platform/plugins/shared/security/tsconfig.json
++++ b/x-pack/platform/plugins/shared/security/tsconfig.json
+@@ -8,7 +8,8 @@
      "public/**/*",
      "server/**/*",
      "__mocks__/**/*",
+-    "__fixtures__/**/*"
++    "__fixtures__/**/*",
 +    "tigera_icons/**/*"
    ],
    "kbn_references": [

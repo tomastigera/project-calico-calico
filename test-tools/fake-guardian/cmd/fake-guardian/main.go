@@ -62,7 +62,7 @@ type config struct {
 	ClusterID              int    `default:"0" split_words:"true"`
 	ProxyListenPort        int    `default:"0" split_words:"true"`
 	MetricsPort            int    `default:"2112" split_words:"true"`
-	RealTigeraCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+	RealTigeraCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 	RealSATokenPath        string `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" split_words:"true"`
 	RealAPIServerCAPath    string `default:"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" split_words:"true"`
 	RealAPIServerURL       string `default:"https://kubernetes.default" split_words:"true"`
@@ -302,9 +302,9 @@ func runFakeCluster(secret v1.Secret, cfg config) error {
 			LogLevel:         proxyLogLevel,
 		},
 		{
-			Path:             "/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/",
-			Dest:             mustParseURL("https://tigera-api.tigera-system.svc:8080"),
-			PathRegexp:       regexp.MustCompile(fmt.Sprintf("^%v/?", "/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/")),
+			Path:             "/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/",
+			Dest:             mustParseURL("https://calico-api.calico-system.svc:8080"),
+			PathRegexp:       regexp.MustCompile(fmt.Sprintf("^%v/?", "/api/v1/namespaces/calico-system/services/https:calico-api:8080/proxy/")),
 			PathReplace:      []byte("/"),
 			CAPem:            clusterCfg.realTigeraCABundlePath,
 			AllowInsecureTLS: true,

@@ -75,14 +75,36 @@ func toCheckRequest(checkReq *envoyauthz.CheckRequest) *CheckRequest {
 	}
 }
 
-// Process can take two types of events:
-// - corazatypes.MatchedRule
-// - *txHttpInfo
-// We use the first type to process matched rules and create cache entries
-// The second type is used to fill in missing info in the cache entries
-//
-// if the cached entries do not have the missing info yet and flush comes along
-// that's okay, we'll just fill in the missing info with the default values
+func (p *WafEventsPipeline) ProcessProtoEvent(entry *proto.WAFEvent, tx corazatypes.Transaction) {
+	txID := tx.ID()
+	p.mu.Lock()
+	matchedRules, ok := p.errorsByTx[txID]
+	if !ok {
+		p.mu.Unlock()
+		return
+	}
+	delete(p.errorsByTx, txID)
+	p.mu.Unlock()
+
+	log.WithField("rules", matchedRules).Debug("Processing matched rules")
+
+	for _, matchedRule := range matchedRules {
+		rule := matchedRule.Rule()
+		entry.Rules = append(entry.Rules, &proto.WAFRuleHit{
+			Rule: &proto.WAFRule{
+				Id:       strconv.Itoa(rule.ID()),
+				Message:  matchedRule.Message(),
+				Severity: rule.Severity().String(),
+				File:     rule.File(),
+				Line:     strconv.Itoa(rule.Line()),
+			},
+			Disruptive: matchedRule.Disruptive(),
+		})
+	}
+
+	p.flushCallback(entry)
+}
+
 func (p *WafEventsPipeline) Process(req *CheckRequest, tx corazatypes.Transaction) {
 	txID := tx.ID()
 

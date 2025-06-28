@@ -331,7 +331,9 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 						// is handled below.
 					} else {
 						pktAggr = &NflogPacketAggregate{
-							Tuple: nflogPacket.Tuple,
+							Tuple:          nflogPacket.Tuple,
+							InDeviceIndex:  nflogPacket.InDeviceIndex,
+							OutDeviceIndex: nflogPacket.OutDeviceIndex,
 						}
 						numAggregatesCreated.Inc()
 					}
@@ -451,6 +453,10 @@ func parseNflog(m []byte) (NflogPacket, error) {
 				// Not returning error, flow log may still be useful without CT.
 				rll.WithError(err).Warn("Failed to parse conntrack entry.")
 			}
+		case nfnl.NFULA_IFINDEX_INDEV:
+			nflogPacket.InDeviceIndex = int(native.Uint32(attr.Value[0:4]))
+		case nfnl.NFULA_IFINDEX_OUTDEV:
+			nflogPacket.OutDeviceIndex = int(native.Uint32(attr.Value[0:4]))
 		default:
 			// Skip attributes we don't need.
 		}

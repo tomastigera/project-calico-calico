@@ -1,6 +1,10 @@
-//go:build coraza.rule.multiphase_evaluation
-
 package transaction_test
+
+// WARNING this file requires the build tag 'coraza.rule.multiphase_evaluation' to be set.
+// This is because the test uses the Coraza ruleset which requires multiphase evaluation to be enabled.
+//
+// If you are running into failures on this test, make sure to run it with the correct build tag. (see Makefile for details)
+// If someone removed the build tag from Makefile or any steps that involve this test, this test will fail to compile.
 
 import (
 	"strings"

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ func NewHandleManager(featureDetector environment.FeatureDetectorIface, opts ...
 // Handle returns the cached netlink handle, initialising it if needed.
 func (r *HandleManager) Handle() (netlinkshim.Interface, error) {
 	if r.reopenHandleNextTime && r.cachedHandle != nil {
-		r.cachedHandle.Delete()
+		r.cachedHandle.Close()
 		r.cachedHandle = nil
 	}
 	r.reopenHandleNextTime = false
@@ -117,7 +117,7 @@ func (r *HandleManager) newHandle() (netlinkshim.Interface, error) {
 		r.numRepeatFailures++
 		logrus.WithError(err).WithField("numFailures", r.numRepeatFailures).Error(
 			"Failed to set netlink timeout")
-		nlHandle.Delete()
+		nlHandle.Close()
 		return nil, err
 	}
 	if r.strictEnabled && r.featureDetector.GetFeatures().KernelSideRouteFiltering {
@@ -127,7 +127,7 @@ func (r *HandleManager) newHandle() (netlinkshim.Interface, error) {
 			r.numRepeatFailures++
 			logrus.WithError(err).WithField("numFailures", r.numRepeatFailures).Error(
 				"Failed to set netlink strict mode")
-			nlHandle.Delete()
+			nlHandle.Close()
 			return nil, err
 		}
 	}

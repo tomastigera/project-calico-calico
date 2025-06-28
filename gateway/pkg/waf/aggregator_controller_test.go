@@ -13,7 +13,7 @@ import (
 func TestAggregatorController(t *testing.T) {
 	t.Run("basic lifecycle", func(t *testing.T) {
 		type logSink struct {
-			received []*AggregatedWAFLog
+			received []*v1.WAFLog
 		}
 		sink := &logSink{}
 
@@ -21,7 +21,7 @@ func TestAggregatorController(t *testing.T) {
 		controller, err := NewAggregatorController(
 			aggregationPeriod,
 			[]string{"path", "method"},
-			func(logs []*AggregatedWAFLog) {
+			func(logs []*v1.WAFLog) {
 				sink.received = append(sink.received, logs...)
 			},
 		)
@@ -52,7 +52,7 @@ func TestAggregatorController(t *testing.T) {
 
 	t.Run("flush on stop", func(t *testing.T) {
 		type logSink struct {
-			received []*AggregatedWAFLog
+			received []*v1.WAFLog
 		}
 		sink := &logSink{}
 
@@ -60,7 +60,7 @@ func TestAggregatorController(t *testing.T) {
 		controller, err := NewAggregatorController(
 			aggregationPeriod,
 			[]string{"path", "method"},
-			func(logs []*AggregatedWAFLog) {
+			func(logs []*v1.WAFLog) {
 				sink.received = append(sink.received, logs...)
 			},
 		)

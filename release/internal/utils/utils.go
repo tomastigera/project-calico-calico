@@ -38,9 +38,6 @@ const (
 
 	// TigeraOrg is the name of the Tigera organization.
 	TigeraOrg = "tigera"
-
-	// CalicoPrivateRepo is the name of the private repo in Tigera.
-	CalicoPrivateRepo = "calico-private"
 )
 
 // Contains returns true if the a string is in a string slice.

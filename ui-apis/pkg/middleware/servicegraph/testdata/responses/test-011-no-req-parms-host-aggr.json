@@ -1301,12 +1301,12 @@
       }
     },
     {
-      "id": "namespace/tigera-system",
+      "id": "namespace/calico-system",
       "type": "namespace",
-      "name": "tigera-system",
+      "name": "calico-system",
       "service_ports": [
         {
-          "namespace": "tigera-system",
+          "namespace": "calico-system",
           "name": "tigera-api",
           "protocol": "tcp",
           "port_name": "apiserver",
@@ -1379,10 +1379,10 @@
       ],
       "expandable": true,
       "selectors": {
-        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-system\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
-        "alerts": "dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
+        "l3_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
+        "l7_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR src_namespace = \"calico-system\"",
+        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR client_namespace = \"calico-system\"",
+        "alerts": "dest_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
         "packet_capture": "all()"
       }
     },
@@ -1738,7 +1738,7 @@
     {
       "id": {
         "source_node_id": "hosts/*",
-        "dest_node_id": "namespace/tigera-system"
+        "dest_node_id": "namespace/calico-system"
       },
       "stats": [
         {
@@ -1805,12 +1805,12 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
-        "alerts": "dest_namespace = \"tigera-system\""
+        "l3_flows": "(dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"calico-system\""
       },
       "service_ports": [
         {
-          "namespace": "tigera-system",
+          "namespace": "calico-system",
           "name": "tigera-api",
           "protocol": "tcp",
           "port_name": "apiserver",

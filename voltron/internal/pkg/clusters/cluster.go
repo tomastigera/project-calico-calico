@@ -16,4 +16,6 @@ type ManagedCluster struct {
 	ActiveFingerprint string `json:"activeFingerprint,omitempty"`
 	// Certificate stores managed cluster certificate.
 	Certificate []byte `json:"certificate,omitempty"`
+	// Version stores managed cluster's cnxVersion information.
+	Version string `json:"version,omitempty"`
 }

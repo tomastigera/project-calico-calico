@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-func NewEnterpriseVersionData(calico Version, chartVersion, operator, manager string) Data {
-	return &EnterpriseVersionData{
-		CalicoVersionData: CalicoVersionData{
+func NewEnterpriseHashreleaseVersions(calico Version, chartVersion, operator, manager string) Versions {
+	return &EnterpriseVersions{
+		HashreleaseVersions: HashreleaseVersions{
 			calico:   calico,
 			operator: operator,
 		},
@@ -16,9 +16,9 @@ func NewEnterpriseVersionData(calico Version, chartVersion, operator, manager st
 	}
 }
 
-func NewEnterpriseReleaseVersionData(calico Version, chartVersion, operator string) *EnterpriseVersionData {
-	return &EnterpriseVersionData{
-		CalicoVersionData: CalicoVersionData{
+func NewEnterpriseReleaseVersions(calico Version, chartVersion, operator string) *EnterpriseVersions {
+	return &EnterpriseVersions{
+		HashreleaseVersions: HashreleaseVersions{
 			calico:   calico,
 			operator: operator,
 		},
@@ -28,36 +28,36 @@ func NewEnterpriseReleaseVersionData(calico Version, chartVersion, operator stri
 	}
 }
 
-type EnterpriseVersionData struct {
-	CalicoVersionData
+type EnterpriseVersions struct {
+	HashreleaseVersions
 	chartVersion string
 	manager      string
 	release      bool
 }
 
-func (v *EnterpriseVersionData) ChartVersion() string {
+func (v *EnterpriseVersions) ChartVersion() string {
 	return v.chartVersion
 }
 
-func (v *EnterpriseVersionData) HelmChartVersion() string {
+func (v *EnterpriseVersions) HelmChartVersion() string {
 	if v.chartVersion == "" {
 		return v.calico.FormattedString()
 	}
 	return fmt.Sprintf("%s-%s", v.calico.FormattedString(), v.chartVersion)
 }
 
-func (v *EnterpriseVersionData) OperatorVersion() string {
+func (v *EnterpriseVersions) OperatorVersion() string {
 	if v.release {
 		return v.operator
 	}
 	return fmt.Sprintf("%s-%s", v.operator, v.calico.FormattedString())
 }
 
-func (v *EnterpriseVersionData) Hash() string {
+func (v *EnterpriseVersions) Hash() string {
 	return fmt.Sprintf("%s-%s-%s", v.calico.FormattedString(), v.operator, v.manager)
 }
 
-func (v *EnterpriseVersionData) ManagerVersion() string {
+func (v *EnterpriseVersions) ManagerVersion() string {
 	return v.manager
 }
 

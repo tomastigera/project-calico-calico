@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -26,6 +26,9 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 		pendingPolicies := FlowPolicySet{
 			"0|tier.policy|allow|0": emptyValue,
+		}
+		transitPolicies := FlowPolicySet{
+			"0|forward-tier.foward-policy|pass|0": emptyValue,
 		}
 		flowLog := FlowLog{
 			StartTime: time.Now(),
@@ -72,6 +75,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			FlowAllPolicySet:      policies,
 			FlowEnforcedPolicySet: policies,
 			FlowPendingPolicySet:  pendingPolicies,
+			FlowTransitPolicySet:  transitPolicies,
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{net.ParseIP("10.0.1.1")},
 				NumOriginalSourceIPs: 1,

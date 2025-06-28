@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
 
 package mocknetlink
 
@@ -108,7 +108,9 @@ type FailFlags uint64
 const (
 	FailNextLinkList FailFlags = 1 << iota
 	FailNextLinkListWrappedEINTR
+	FailNextLinkByIndex
 	FailNextLinkByName
+	FailNextLinkByIndexNotFound
 	FailNextLinkByNameNotFound
 	FailNextRouteList
 	FailNextRouteListEINTR
@@ -433,7 +435,7 @@ func (d *MockNetlinkDataplane) NewMockNetlink() (netlinkshim.Interface, error) {
 
 // ----- Netlink API -----
 
-func (d *MockNetlinkDataplane) Delete() {
+func (d *MockNetlinkDataplane) Close() {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	defer GinkgoRecover()
@@ -484,6 +486,27 @@ func (d *MockNetlinkDataplane) LinkList() ([]netlink.Link, error) {
 		links = append(links, link.copy())
 	}
 	return links, nil
+}
+
+func (d *MockNetlinkDataplane) LinkByIndex(index int) (netlink.Link, error) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	defer GinkgoRecover()
+
+	Expect(d.NetlinkOpen).To(BeTrue())
+	if d.shouldFail(FailNextLinkByIndexNotFound) {
+		return nil, LinkNotFoundError
+	}
+	if d.shouldFail(FailNextLinkByIndex) {
+		return nil, SimulatedError
+	}
+	log.Debugf("Looking for interface with index: %d", index)
+	for _, link := range d.NameToLink {
+		if link.Attrs().Index == index {
+			return link.copy(), nil
+		}
+	}
+	return nil, LinkNotFoundError
 }
 
 func (d *MockNetlinkDataplane) LinkByName(name string) (netlink.Link, error) {

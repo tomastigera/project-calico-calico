@@ -56,8 +56,7 @@ $(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile bin/l7-collector-$(ARCH)
 
 $(ENVOY_IMAGE): $(ENVOY_IMAGE_CREATED)
 $(ENVOY_IMAGE_CREATED): register envoy/Dockerfile
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
-		-t $(ENVOY_IMAGE):latest-$(ARCH) -f envoy/Dockerfile envoy
+	$(DOCKER_BUILD) -t $(ENVOY_IMAGE):latest-$(ARCH) -f envoy/Dockerfile envoy
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_IMAGE)
 	touch $@
 

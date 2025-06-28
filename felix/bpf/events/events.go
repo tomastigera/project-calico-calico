@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -188,8 +188,66 @@ func (e ErrLostEvents) Num() int {
 	return int(e)
 }
 
-// ParsePolicyVerdict converts a bpf event data and converts to go structure
+// ParsePolicyVerdict converts raw binary data from BPF to a PolicyVerdict Go structure.
+//
+// Binary Layout:
+// +===============================================================================================+
+// | OFFSET | SIZE | DESCRIPTION                            | GO FIELD    | STATE STRUCT FIELD     |
+// +========+======+========================================+============+=========================+
+// |   IPv4  ADDRESSES                                                                             |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   0    |  4   | Source IP Address                      | SrcAddr    | SrcAddr                 |
+// |   32   |  4   | Destination IP Address                 | DstAddr    | DstAddr                 |
+// |   48   |  4   | Post-NAT Destination IP Address        | PostNATDst | PostNATDstAddr          |
+// |   64   |  4   | NAT Tunnel Source IP Address           | NATTunSrc  | TunIP                   |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   IPv6  ADDRESSES                                                                             |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   0    |  16  | Source IP Address                      | SrcAddr    | SrcAddr-SrcAddr3        |
+// |   32   |  16  | Destination IP Address                 | DstAddr    | DstAddr-DstAddr3        |
+// |   48   |  16  | Post-NAT Destination IP Address        | PostNATDst | PostNATDstAddr-3        |
+// |   64   |  16  | NAT Tunnel Source IP Address           | NATTunSrc  | TunIP-TunIP3            |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   POLICY AND CONNECTION INFORMATION                                                           |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   84   |  4   | Policy Result Code                     | PolicyRC   | PolicyRC                |
+// |   88   |  2   | Source Port                            | SrcPort    | SrcPort                 |
+// |   92   |  2   | Destination Port                       | DstPort    | DstPort                 |
+// |   94   |  2   | Post-NAT Destination Port              | PostNATDst | PostNATDstPort          |
+// |   96   |  1   | IP Protocol                            | IPProto    | IPProto                 |
+// |   97   |  1   | Padding (unused)                       | -          | _ (unnamed padding)     |
+// |   98   |  2   | IP Size (big-endian)                   | IPSize     | IPSize                  |
+// |  100   |  4   | Number of Rules Hit                    | RulesHit   | RulesHit                |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   RULE IDs AND CONNECTION TRACKING                                                            |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |  104   |  8*n | Rule IDs (n = RulesHit, max=MaxRuleIDs)| RuleIDs    | RuleIDs[i]              |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |   AFTER RULE IDs (ct = 104 + (MaxRuleIDs * 8))                                                |
+// +--------+------+----------------------------------------+------------+-------------------------+
+// |  ct+0  |  8   | Flags                                  | -          | Flags (uint64)          |
+// |  ct+8  |  4   | Conntrack RC Flags                     | -          | ConntrackRCFlags        |
+// |  ct+12 |  4   | Conntrack NAT IP                       | -          | ConntrackNATIP          |
+// |  ct+16 |  4   | Conntrack NAT Source IP                | -          | ConntrackNATsIP         |
+// |  ct+20 |  4   | Conntrack NAT Ports                    | -          | ConntrackNATPorts       |
+// |  ct+24 |  4   | Conntrack Tunnel IP                    | -          | ConntrackTunIP          |
+// |  ct+28 |  4   | Conntrack If Index Fwd                 | OutDevIdx  | ConntrackIfIndexFwd     |
+// |  ct+32 |  4   | Conntrack If Index Created             | InDevIdx   | ConntrackIfIndexCtd     |
+// |  ct+36 |  4   | Padding                                | -          | _ (unnamed padding)     |
+// |  ct+40 |  8   | Timestamp                              | -          | TimeStamp               |
+// |  ct+48 |  8   | NAT Data                               | -          | NATData                 |
+// |  ct+56 |  8   | Program Start Time                     | -          | ProgStartTime           |
+// |  ct+64 |  16  | Source Address Masquerade (IPv4/IPv6)  | -          | SrcAddrMasq-SrcAddrMasq3|
+// +===============================================================================================+//
+// Notes:
+// - IP addresses are stored differently for IPv4 vs IPv6
+// - Rule IDs are variable length based on RulesHit (up to MaxRuleIDs)
+// - Device indices come from the ConntrackIfIndex fields in the underlying structure
 func ParsePolicyVerdict(data []byte, isIPv6 bool) PolicyVerdict {
+	// The offsets start after the max rule IDs.
+	offSt := 104
+	ctOffset := offSt + (state.MaxRuleIDs * 8)
+
 	fl := PolicyVerdict{
 		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[84:88])),
 		SrcPort:        binary.LittleEndian.Uint16(data[88:90]),
@@ -198,6 +256,8 @@ func ParsePolicyVerdict(data []byte, isIPv6 bool) PolicyVerdict {
 		IPProto:        uint8(data[96]),
 		IPSize:         binary.BigEndian.Uint16(data[98:100]),
 		RulesHit:       binary.LittleEndian.Uint32(data[100:104]),
+		OutDeviceIndex: binary.LittleEndian.Uint32(data[ctOffset+28 : ctOffset+32]),
+		InDeviceIndex:  binary.LittleEndian.Uint32(data[ctOffset+32 : ctOffset+36]),
 	}
 
 	if fl.RulesHit > state.MaxRuleIDs {
@@ -216,7 +276,7 @@ func ParsePolicyVerdict(data []byte, isIPv6 bool) PolicyVerdict {
 		fl.NATTunSrcAddr = net.IP(data[64:68])
 	}
 
-	off := 104
+	off := offSt
 	for i := 0; i < int(fl.RulesHit); i++ {
 		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+8])
 		off += 8
@@ -241,6 +301,8 @@ type PolicyVerdict struct {
 	IPSize         uint16
 	RulesHit       uint32
 	RuleIDs        [state.MaxRuleIDs]uint64
+	InDeviceIndex  uint32
+	OutDeviceIndex uint32
 }
 
 // Type return TypePolicyVerdict

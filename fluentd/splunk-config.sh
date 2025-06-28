@@ -29,7 +29,12 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
     sed -i 's|source .*||g' "${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf"
   fi
   if [ "${SPLUNK_FLOW_LOG}" == "true" ]; then
-    cp "${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-splunk-flow.conf"
+      if [ "${FORWARD_CLUSTER_LOGS_TO_SPLUNK}" == "true" ]; then
+          cp "${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-splunk-flow.conf"
+      fi
+      if [ "${FORWARD_NON_CLUSTER_LOGS_TO_SPLUNK}" == "true" ]; then
+          cp "${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-splunk-flow.conf"
+      fi
   fi
 
   # Optional Splunk dns log output

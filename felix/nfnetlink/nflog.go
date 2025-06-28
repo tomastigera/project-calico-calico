@@ -54,15 +54,17 @@ func (np *NflogPrefix) Equals(cmp *NflogPrefix) bool {
 }
 
 type NflogPacket struct {
-	Header        NflogPacketHeader
-	Mark          int
-	Timestamp     NflogPacketTimestamp
-	Prefix        NflogPrefix
-	Gid           int
-	Tuple         NflogPacketTuple
-	Bytes         int
-	IsDNAT        bool
-	OriginalTuple CtTuple
+	Header         NflogPacketHeader
+	Mark           int
+	Timestamp      NflogPacketTimestamp
+	Prefix         NflogPrefix
+	Gid            int
+	Tuple          NflogPacketTuple
+	Bytes          int
+	IsDNAT         bool
+	OriginalTuple  CtTuple
+	InDeviceIndex  int
+	OutDeviceIndex int
 }
 
 type NflogPacketAggregate struct {
@@ -72,4 +74,9 @@ type NflogPacketAggregate struct {
 	// If DNAT then original tuple is also included. This is a CtTuple since it is derived from a CT hook in nflog.
 	IsDNAT        bool
 	OriginalTuple CtTuple
+
+	// InDeviceIndex and OutDeviceIndex are the indices of the input and output devices in the
+	// operating system.
+	InDeviceIndex  int
+	OutDeviceIndex int
 }

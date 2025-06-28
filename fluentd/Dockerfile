@@ -14,8 +14,9 @@
 
 ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
+ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0 AS fluentd
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0-${THIRD_PARTY_RELEASE_BRANCH} AS fluentd
 
 FROM scratch AS source
 
@@ -134,7 +135,7 @@ ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 ENV WAF_LOG_FILE=/var/log/calico/waf/waf.log
 
 # TLS Settings
-ENV CA_CRT_PATH=/etc/pki/tigera/tigera-ca-bundle.crt
+ENV CA_CRT_PATH=/etc/pki/tigera/ca.crt
 ENV TLS_CRT_PATH=/tls/tls.crt
 ENV TLS_KEY_PATH=/tls/tls.key
 

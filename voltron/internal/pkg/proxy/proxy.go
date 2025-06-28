@@ -16,8 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
+	authorizationv1 "k8s.io/api/authorization/v1"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 // Target describes which path is proxied to what destination URL
@@ -169,4 +171,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) GetTargetPath(r *http.Request) string {
 	_, pat := p.mux.Handler(r)
 	return pat
+}
+
+type AuthorizationDetails struct {
+	Authorizer     auth.RBACAuthorizer
+	AttributesFunc func(request *http.Request) (*authorizationv1.ResourceAttributes, *authorizationv1.NonResourceAttributes, error)
+}
+
+func (a *AuthorizationDetails) FullySet() bool {
+	return a != nil && a.Authorizer != nil && a.AttributesFunc != nil
 }

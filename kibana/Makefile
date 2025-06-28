@@ -38,7 +38,7 @@ image: $(KIBANA_IMAGE)
 $(KIBANA_IMAGE): $(KIBANA_IMAGE_MARKER)
 
 $(KIBANA_IMAGE_MARKER): register docker-image/Dockerfile docker-image/create_kibana_config.sh
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION)\
+	$(DOCKER_BUILD_THIRD_PARTY) --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION)\
 		-t $(KIBANA_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

@@ -121,6 +121,19 @@ DEV_REGISTRY ?= $(firstword $(DEV_REGISTRIES))
 # remove from the list to push to manifest any registries that do not support multi-arch
 MANIFEST_REGISTRIES         ?= $(DEV_REGISTRIES)
 
+# THIRD_PARTY_REGISTRY configures the third-party registry that serves intermediate base image
+# for some Calico Enterprise components. They are never released directly to public.
+THIRD_PARTY_RELEASE_BRANCH ?= $(if $(SEMAPHORE_GIT_BRANCH),$(SEMAPHORE_GIT_BRANCH),master)
+ifeq ($(SEMAPHORE_GIT_REF_TYPE), branch)
+    # on master and release-calient branches
+    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/cnx/tigera/third-party
+else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
+    # on pull requests
+    THIRD_PARTY_REGISTRY=gcr.io/unique-caldron-775/third-party-ci
+else
+    THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
+endif
+
 PUSH_MANIFEST_IMAGES := $(foreach registry,$(MANIFEST_REGISTRIES),$(foreach image,$(BUILD_IMAGES),$(call filter-registry,$(registry))$(image)))
 
 # location of docker credentials to push manifests
@@ -323,6 +336,10 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
+
+DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
+	--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
+	--build-arg THIRD_PARTY_RELEASE_BRANCH=$(THIRD_PARTY_RELEASE_BRANCH)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -562,18 +579,31 @@ CRANE_CMD         = docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root
                     $(double_quote)crane
 endif
 
+ifdef LOCAL_PYTHON
+PYTHON3_CMD       = python3
+else
+PYTHON3_CMD       = docker run --rm -e QUAY_API_TOKEN -v $(REPO_ROOT):$(REPO_ROOT) -w $(REPO_ROOT) python:3.13 python3.13
+endif
+
 GIT_CMD           = git
 DOCKER_CMD        = docker
 
+
+# RELEASE_PY3 is for Python invocations used for releasing,
+# where we want to be able to DRY_RUN them.
 ifdef CONFIRM
 CRANE         = $(CRANE_CMD)
 GIT           = $(GIT_CMD)
 DOCKER        = $(DOCKER_CMD)
+RELEASE_PY3   = $(PYTHON3_CMD)
 else
-CRANE         = echo [DRY RUN] $(CRANE_CMD)
-GIT           = echo [DRY RUN] $(GIT_CMD)
-DOCKER        = echo [DRY RUN] $(DOCKER_CMD)
+CRANE         = @echo [DRY RUN] $(CRANE_CMD)
+GIT           = @echo [DRY RUN] $(GIT_CMD)
+DOCKER        = @echo [DRY RUN] $(DOCKER_CMD)
+RELEASE_PY3   = @echo [DRY RUN] $(PYTHON3_CMD)
 endif
+
+QUAY_SET_EXPIRY_SCRIPT = $(REPO_ROOT)/hack/set_quay_expiry.py
 
 commit-and-push-pr:
 	$(GIT) add $(GIT_COMMIT_FILES)
@@ -981,8 +1011,22 @@ push-images-to-registry-%:
 
 # push-image-to-registry-% pushes the build / arch images specified by $* and VALIDARCHES to the registry
 # specified by REGISTRY.
+#
+# We also build a list of all of the iamges we're going to be pushing and then, once we're done, we set the expiry
+# on those images, either adding an expiry for normal pushes or removing it for releases, if we're pushing to quay.io
+# that is.
 push-image-to-registry-%:
-	$(MAKE) -j6 $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
+	$(eval BUILD_IMAGE=$(call unescapefs,$*))
+	$(eval EXPIRY_IMAGES_LIST=$(REGISTRY)/$(BUILD_IMAGE):$(IMAGETAG) $(addprefix $(REGISTRY)/$(BUILD_IMAGE):$(IMAGETAG)-,$(VALIDARCHES)))
+
+	$(MAKE) -j6 $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(BUILD_IMAGE)
+
+ifeq ($(findstring quay.io,$(REGISTRY)),quay.io)
+	$(if $(RELEASE), \
+		-$(RELEASE_PY3) $(QUAY_SET_EXPIRY_SCRIPT) remove $(EXPIRY_IMAGES_LIST), \
+		-$(RELEASE_PY3) $(QUAY_SET_EXPIRY_SCRIPT) add --expiry-days=$(QUAY_EXPIRE_DAYS) $(EXPIRY_IMAGES_LIST) \
+	)
+endif
 
 # push-image-arch-to-registry-% pushes the build / arch image specified by $* and BUILD_IMAGE to the registry
 # specified by REGISTRY.
@@ -1676,6 +1720,7 @@ windows-sub-image-%: var-require-all-GIT_VERSION-WINDOWS_IMAGE-WINDOWS_DIST-WIND
 		-t $(WINDOWS_IMAGE):latest \
 		--build-arg GIT_VERSION=$(GIT_VERSION) \
 		--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
+		--build-arg THIRD_PARTY_RELEASE_BRANCH=$(THIRD_PARTY_RELEASE_BRANCH) \
 		--build-arg WINDOWS_LTSC_VERSION=$(WINDOWS_LTSC_VERSION_$*) \
 		--build-arg WINDOWS_VERSION=$* \
 		-f Dockerfile-windows .
@@ -1706,6 +1751,7 @@ release-windows-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-IMAG
 			$(DOCKER_MANIFEST) annotate --os windows --arch amd64 --os-version $${version} $${manifest_image} $${image}; \
 		done; \
 		$(DOCKER_MANIFEST) push --purge $${manifest_image}; \
+		$(RELEASE_PY3) $(QUAY_SET_EXPIRY_SCRIPT) add --expiry-days=$(QUAY_EXPIRE_DAYS) $${manifest_image} $${all_images} || true; \
 	done;
 
 release-windows: var-require-one-of-CONFIRM-DRYRUN var-require-all-DEV_REGISTRIES-WINDOWS_IMAGE var-require-one-of-VERSION-BRANCH_NAME

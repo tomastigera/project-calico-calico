@@ -31,7 +31,7 @@ index f6cebfcaa..54864de37 100644
  // but can be brought in on a per-package basis
  export const PER_PACKAGE_ALLOWED_LICENSES = {
 -  'openpgp@5.10.1': ['LGPL-3.0+'],
-+  'openpgp@5.11.': ['LGPL-3.0+'],
++  'openpgp@5.11.3': ['LGPL-3.0+'],
  };
  // Globally overrides a license for a given package@version
  export const LICENSE_OVERRIDES = {

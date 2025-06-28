@@ -543,7 +543,7 @@ func removeWireguardDevice(
 				<-expBackoffMgr.Backoff().C()
 				continue
 			}
-			defer handle.Delete()
+			defer handle.Close()
 		}
 		if err = removeDevice(logCtx, wgDeviceName, handle); err != nil {
 			<-expBackoffMgr.Backoff().C()

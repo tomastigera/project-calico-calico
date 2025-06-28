@@ -57,11 +57,13 @@ func New(
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			EnableDestDomainsByClient:    configParams.FlowLogsDestDomainsByClient,
 			PolicyEvaluationMode:         configParams.FlowLogsPolicyEvaluationMode,
+			PolicyScope:                  configParams.FlowLogsPolicyScope,
 			FlowLogsFlushInterval:        configParams.FlowLogsFlushInterval,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 			IsBPFDataplane:               configParams.BPFEnabled,
 			DisplayDebugTraceLogs:        configParams.FlowLogsCollectorDebugTrace,
 			BPFConntrackTimeouts:         bpfconntrack.GetTimeouts(configParams.BPFConntrackTimeouts),
+			FelixHostName:                configParams.FelixHostname,
 		},
 	)
 

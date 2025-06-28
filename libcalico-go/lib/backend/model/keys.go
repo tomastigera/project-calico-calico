@@ -24,6 +24,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -771,9 +772,18 @@ func RemoveRemoteClusterPrefix(nodeName string) string {
 
 // determinePolicyName updates Policy name based on either the projectcalico.org/metadata annotation that was added in 3.30,
 // or defaults the name to be returned without the default prefix if no annotation was found. This was the default behaviour in =<3.28
-//
-// XXX not applicable to EE and should be a noop.
 func determinePolicyName(name, tier string, annotations map[string]string) (string, map[string]string, error) {
-	delete(annotations, metadataAnnotation)
+	if annotations != nil && annotations[metadataAnnotation] != "" {
+		meta := &metav1.ObjectMeta{}
+		err := json.Unmarshal([]byte(annotations[metadataAnnotation]), meta)
+		if err != nil {
+			return "", nil, err
+		}
+		delete(annotations, metadataAnnotation)
+		return meta.Name, annotations, nil
+	}
+
+	// For enterprise, if there was no annotation we default to the name as it was on the CRD. This is a divergence
+	// from the open source version, which defaults to the name without the prefix for backwards compatibility.
 	return name, annotations, nil
 }

@@ -51,11 +51,6 @@ func ValidEnterpriseTestLicense() *api.LicenseKey {
 	return lic
 }
 
-func ValidCloudProTestLicense() *api.LicenseKey {
-	_, lic := loadTestLicense("license-cloud-pro.yaml")
-	return lic
-}
-
 func GracePeriodTestLicense() *api.LicenseKey {
 	_, lic := loadTestLicense("license-grace.yaml")
 	return lic

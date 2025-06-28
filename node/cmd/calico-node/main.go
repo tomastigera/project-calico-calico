@@ -58,6 +58,7 @@ var (
 	allocateTunnelAddrsRunOnce = flagSet.Bool("allocate-tunnel-addrs-run-once", false, "Run allocate-tunnel-addrs in oneshot mode")
 	monitorToken               = flagSet.Bool("monitor-token", false, "Watch for Kubernetes token changes, update CNI config")
 	nonClusterHost             = flagSet.Bool("noncluster-host", false, "Run in non-cluster host mode")
+	skipCgroup                 = flagSet.Bool("skip-cgroup", false, "Used in combination with the init flag. Skips mounting cgroup.")
 )
 
 // Felix flags
@@ -161,7 +162,7 @@ func main() {
 		} else {
 			logutils.ConfigureFormatter("init")
 		}
-		nodeinit.Run(*bestEffort)
+		nodeinit.Run(*bestEffort, *skipCgroup)
 	} else if *runStartup {
 		logutils.ConfigureFormatter("startup")
 		startup.Run()

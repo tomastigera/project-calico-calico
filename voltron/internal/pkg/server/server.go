@@ -20,6 +20,7 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/coreos/go-semver/semver"
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -84,6 +85,8 @@ type Server struct {
 	// When impersonating a user we use the tigera-manager sa bearer token from this config.
 	config        *rest.Config
 	authenticator auth.JWTAuth
+
+	authDetailsMap map[string]*proxy.AuthorizationDetails
 
 	// defaultProxy handles requests received by voltron which are destined to the management cluster itself.
 	// this primarily serves requests made by the user's browser.
@@ -512,11 +515,37 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Perform authentication.
 	usr, status, err := s.authenticator.Authenticate(r)
 	if err != nil {
 		logrus.Errorf("Could not authenticate user from request: %s", err)
 		http.Error(w, err.Error(), status)
 		return
+	}
+
+	// Perform authorization if an authorizer has been registered for the path.
+	authorizationDetails := s.getAuthorizationDetails(r)
+	if authorizationDetails.FullySet() {
+		resAttrs, nonResAttrs, err := authorizationDetails.AttributesFunc(r)
+		if err != nil {
+			logrus.Errorf("Failed to resolve authorization attributes from request: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		authorized, err := authorizationDetails.Authorizer.Authorize(usr, resAttrs, nonResAttrs)
+		if err != nil {
+			logrus.Errorf("Failed to authorize user from request: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !authorized {
+			msg := "User was not authorized to perform request at this path"
+			logrus.Error(msg)
+			http.Error(w, msg, http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// If shouldUseTunnel=true, we do impersonation and the request will be sent to guardian.
@@ -539,22 +568,39 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if shouldUseTunnel && !s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
-		// If the request is going to a managed cluster, but the managed cluster does not support impersonation,
-		// remove impersonation headers. This isn't strictly necessary - the managed cluster will ignore the headers
-		// if they are present - but it's cleaner to remove them.
-		logrus.Debug("Removing impersonation headers")
-		r.Header.Del(authnv1.ImpersonateUserHeader)
-		r.Header.Del(authnv1.ImpersonateGroupHeader)
+	// Note, we expect the value passed in the request header field to be the resource
+	// name for a ManagedCluster resource (which will be human-friendly and unique)
+	clusterID := r.Header.Get(utils.ClusterHeaderField)
+	c := s.clusters.get(clusterID)
+	isOlderCluster := false
+
+	// For the management cluster, the cluster object is nil, so skip version check.
+	if c != nil {
+		// TODO: Clean up this logic in v3.25 or v3.26, since only two minor versions are supported.
+		isOlderCluster = isOlderManagedCluster(c)
+	}
+
+	if shouldUseTunnel {
+		userName := usr.GetName()
+
+		// Strip impersonation headers if the request is destined for a managed cluster and either:
+		// - The cluster is a newer version (v3.22+) that uses consolidated Guardian RBAC,
+		//   and the request originates from a management cluster backend component
+		// - The cluster does not support impersonation at all (e.g., free tier)
+		if !isOlderCluster &&
+			(strings.HasPrefix(userName, "system:serviceaccount:tigera-") ||
+				strings.HasPrefix(userName, "system:serviceaccount:calico-") ||
+				strings.HasPrefix(userName, "system:serviceaccount:cc-tenant-")) ||
+			!s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
+			logrus.Debugf("Removing impersonation headers from request (%s)", userName)
+			r.Header.Del(authnv1.ImpersonateUserHeader)
+			r.Header.Del(authnv1.ImpersonateGroupHeader)
+		}
 	}
 
 	// Always remove the auth headers before proxying the request. Management cluster requests will
 	// use impersonation, and tunneled requests will either use impersonation or Guardian's AuthN.
 	removeAuthHeaders(r)
-
-	// Note, we expect the value passed in the request header field to be the resource
-	// name for a ManagedCluster resource (which will be human-friendly and unique)
-	clusterID := r.Header.Get(utils.ClusterHeaderField)
 
 	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
 	// requests with this value in the ClusterHeaderField.
@@ -573,8 +619,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
-
-	c := s.clusters.get(clusterID)
 
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
@@ -603,6 +647,17 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Older managed clusters still run the API server in the "tigera-system" namespace.
+	// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
+	// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
+	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:calico-api") {
+		if isOlderCluster {
+			logrus.Debugf("Redirecting request path for older managed cluster: %s", clusterID)
+			re := regexp.MustCompile(`/namespaces/calico-system/services/https:calico-api`)
+			r.URL.Path = re.ReplaceAllString(r.URL.Path, `/namespaces/tigera-system/services/https:tigera-api`)
+		}
+	}
+
 	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
 	// XXX What if we set http2.Transport.AllowHTTP = true ?
 	r.URL.Scheme = "http"
@@ -615,6 +670,30 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	r.URL.Host = "voltron-tunnel"
 	r.Header.Del(utils.ClusterHeaderField)
 	c.ServeHTTP(w, r)
+}
+
+func isOlderManagedCluster(cluster *cluster) bool {
+	if len(cluster.Version) == 0 {
+		logrus.Debugf("ManagedCluster %s has no version info; treating as older cluster", cluster.ID)
+		return true
+	}
+	// ignore the prerelease version for semver compare
+	version := strings.Split(cluster.Version, "-")
+	if len(version) == 0 {
+		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		// Treat it as a new cluster for now; this behavior may change in the future.
+		return false
+	}
+
+	clusterVersion, err := semver.NewVersion(strings.TrimPrefix(version[0], "v"))
+	if err != nil {
+		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		// Treat it as a new cluster for now; this behavior may change in the future.
+		return false
+	}
+
+	featureVersion, _ := semver.NewVersion("3.22.0")
+	return clusterVersion.LessThan(*featureVersion)
 }
 
 // Determine whether or not the given request should use the tunnel proxying
@@ -682,6 +761,14 @@ func (s *Server) FlushAccessLogs() {
 	if s.accessLogger != nil {
 		s.accessLogger.Flush()
 	}
+}
+
+func (s *Server) getAuthorizationDetails(r *http.Request) *proxy.AuthorizationDetails {
+	if s.authDetailsMap == nil || s.defaultProxy == nil {
+		return nil
+	}
+
+	return s.authDetailsMap[s.defaultProxy.GetTargetPath(r)]
 }
 
 func authorizationHeaderBearerToken(r *http.Request) string {

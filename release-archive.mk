@@ -33,7 +33,7 @@ OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-op
 RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
-IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml 00-namespace-calico-apiserver.yaml 00-namespace-calico-system.yaml
+IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml 00-namespace-calico-system.yaml
 
 
 # The default registry we're pushing to

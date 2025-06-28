@@ -33,21 +33,32 @@ goldmane:
 whisker:
   enabled: false
 
+# CRDs are installed by `make kind-cluster-create` in lib.Makefile ($(KUBECTL) create -f $(REPO_ROOT)/libcalico-go/config/crd;)
+manageCRDs: false
+
 # Disable enterprise components not needed for tests.
 tigera-prometheus-operator:
-  enabled: false
+  enabled: true
+  prometheusOperator:
+    image: tigera/prometheus-operator
+    tag: test-build
+    registry: docker.io
+  prometheusConfigReloader:
+    image: tigera/prometheus-config-reloader
+    tag: test-build
+    registry: docker.io
 intrusionDetection:
-  enabled: false
+  enabled: true
 logCollector:
-  enabled: false
+  enabled: true
 logStorage:
-  enabled: false
+  enabled: true
 manager:
-  enabled: false
+  enabled: true
 monitor:
-  enabled: false
+  enabled: true
 policyRecommendation:
-  enabled: false
+  enabled: true
 
 # Configuration for the tigera operator
 tigeraOperator:

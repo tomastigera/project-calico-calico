@@ -38,8 +38,8 @@ type Config struct {
 
 	// Linseed configuration.
 	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
-	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
-	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/ca.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/ca.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 

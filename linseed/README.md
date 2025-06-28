@@ -44,7 +44,7 @@ curl -vvv "https://tigera-linseed.tigera-elasticsearch.svc/api/v1/flows/logs/bul
 -H "Authorization: Bearer $(cat /var/run/secrets/tigera.io/linseed/token)" \
 --cert /tigera-fluentd-prometheus-tls/tls.crt \
 --key /tigera-fluentd-prometheus-tls/tls.key \
---cacert /etc/pki/tls/certs/tigera-ca-bundle.crt
+--cacert /etc/pki/tls/certs/ca.crt
 ```
 
 Simulate a request to read data from the ui-apis backend from a standalone/management cluster
@@ -55,7 +55,7 @@ curl -vvv "https://tigera-linseed.tigera-elasticsearch.svc/api/v1/flows/logs/" \
 -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
 --cert /internal-manager-tls/tls.crt \
 --key /internal-manager-tls/tls.key \
---cacert /etc/pki/tls/certs/tigera-ca-bundle.crt
+--cacert /etc/pki/tls/certs/ca.crt
 ```
 
 ## Building and testing
@@ -280,7 +280,7 @@ A component running inside a management/standalona cluster will have the followi
 
 ```
 │       LINSEED_URL:                  https://tigera-linseed.tigera-elasticsearch.svc                                                                                                                     │
-│       LINSEED_CA:                   /etc/pki/tls/certs/tigera-ca-bundle.crt                                                                                                                             │
+│       LINSEED_CA:                   /etc/pki/tls/certs/ca.crt                                                                                                                             │
 │       LINSEED_CLIENT_CERT:          /<REPLACE_COMPONENT_NAME>-tls/tls.crt                                                                                                                                    │
 │       LINSEED_CLIENT_KEY:           /<REPLACE_COMPONENT_NAME>-tls/tls.key                                                                                                                                    │
 │       LINSEED_TOKEN:                /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -290,7 +290,7 @@ A component running inside a managed cluster will have the following environment
 
 ```
 │       LINSEED_URL:                  https://tigera-linseed.tigera-elasticsearch.svc                                                                                                                     │
-│       LINSEED_CA:                   /etc/pki/tls/certs/tigera-ca-bundle.crt                                                                                                                             │
+│       LINSEED_CA:                   /etc/pki/tls/certs/ca.crt                                                                                                                             │
 │       LINSEED_CLIENT_CERT:          /<REPLACE_COMPONENT_NAME>-tls/tls.crt                                                                                                                                    │
 │       LINSEED_CLIENT_KEY:           /<REPLACE_COMPONENT_NAME>-tls/tls.key                                                                                                                                    │
 │       LINSEED_TOKEN:                /var/run/secrets/tigera.io/linseed/token
@@ -317,7 +317,7 @@ A component running inside a managed cluster will have the following environment
 | MANAGEMENT_OPERATOR_NS                    |                `tigera-operator`                 |                                                      The namespace in which tigera-operator is running inside the management cluster |
 | TOKEN_CONTROLLER_ENABLED                  |                     `false`                      |                                     Enabling Token controller. Will provision tokens for components running inside a managed cluster |
 | LINSEED_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://tigera-manager.tigera-manager.svc:9443` |                                  Tigera Manager Endpoint used to override K8S API Endpoint to make requests inside a managed cluster |
-| LINSEED_MULTI_CLUSTER_FORWARDING_CA       |    `/etc/pki/tls/certs/tigera-ca-bundle.crt`     |                                                        Path to the CA that trust the certificate provided by tigera manager endpoint |
+| LINSEED_MULTI_CLUSTER_FORWARDING_CA       |    `/etc/pki/tls/certs/ca.crt`     |                                                        Path to the CA that trust the certificate provided by tigera manager endpoint |
 | LINSEED_HEALTH_PORT                       |                      `8080`                      |                                                                                   Health port used for readiness and liveness probes |
 | ELASTIC_HOST                              | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                                                    Elastic Host; For local development use localhost |
 | ELASTIC_PORT                              |                      `9200`                      |                                                                                         Elastic Port; For local development use 9200 |

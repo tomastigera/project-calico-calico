@@ -153,6 +153,9 @@
         },
         "pending_policies": {
           "type": "keyword"
+        },
+        "transit_policies": {
+          "type": "keyword"
         }
       }
     },

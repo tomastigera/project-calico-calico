@@ -23,7 +23,7 @@ fi
 defaultCalicoVersion=$($YQ '.[0].title' ../calico/_data/versions.yml)
 CALICO_VERSION=${PRODUCT_VERSION:-$defaultCalicoVersion}
 
-defaultRegistry=gcr.io/unique-caldron-775/cnx
+defaultRegistry=gcr.io/unique-caldron-775/cnx/tigera
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
 # Versions retrieved from charts.
@@ -31,12 +31,15 @@ defaultOperatorVersion=$($YQ .tigeraOperator.version <../charts/tigera-operator/
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
 defaultOperatorRegistry=$($YQ .tigeraOperator.registry <../charts/tigera-operator/values.yaml)
-OPERATOR_REGISTRY=${REGISTRY_OPERATOR:-$defaultOperatorRegistry}
+OPERATOR_REGISTRY=${OPERATOR_REGISTRY_OVERRIDE:-$defaultOperatorRegistry}
+
+defaultOperatorImage=$($YQ .tigeraOperator.image <../charts/tigera-operator/values.yaml)
+OPERATOR_IMAGE=${OPERATOR_IMAGE_OVERRIDE:-$defaultOperatorImage}
 
 # Images used in manifests that are not rendered by Helm.
-NON_HELM_MANIFEST_IMAGES="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
-tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
-tigera/calico-windows tigera/calicoctl"
+NON_HELM_MANIFEST_IMAGES="compliance-reporter firewall-integration ingress-collector \
+  license-agent prometheus-operator prometheus-config-reloader anomaly_detection_jobs \
+  calico-windows calicoctl"
 
 # Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
 # Defaults to nil, which results in CALICO_VERSION being set as the version for all non-helm manifest images.
@@ -163,10 +166,11 @@ ${HELM} template \
   --set manager.enabled=false \
   --set monitor.enabled=false \
   --set policyRecommendation.enabled=false \
+  --set tigeraOperator.image=$OPERATOR_IMAGE \
   --set tigeraOperator.version=$OPERATOR_VERSION \
   --set tigeraOperator.registry=$OPERATOR_REGISTRY \
   --set imagePullSecrets.tigera-pull-secret=SECRET \
-  --set calicoctl.image=$REGISTRY/tigera/calicoctl \
+  --set calicoctl.image=$REGISTRY/calicoctl \
   --set calicoctl.tag=$CALICO_VERSION
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
@@ -192,13 +196,10 @@ sed -i -e '$ d' tigera-operator-ocp-upgrade.yaml
 if [[ $CALICO_VERSION != master ]]; then
   echo "Replacing image tags for static enterprise manifests"
   for img in $NON_HELM_MANIFEST_IMAGES; do
-    echo $img
-    if [[ $VERSIONS_FILE ]]; then
-      ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
-    else
-      ver=$CALICO_VERSION
-    fi
-    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
+    curr_img=${defaultRegistry}/${img}
+    new_img=${REGISTRY}/${img}
+    echo "$curr_img:$defaultCalicoVersion --> $new_img:$CALICO_VERSION"
+    find . -type f -exec sed -i "s|${curr_img}:[A-Za-z0-9_.-]*|${new_img}:$CALICO_VERSION|g" {} \;
   done
 fi
 

@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/calico/node/pkg/lifecycle/startup"
 )
 
-func Run(bestEffort bool) {
+func Run(bestEffort, skipCgroup bool) {
 	// Check $CALICO_STARTUP_LOGLEVEL to capture early log statements
 	startup.ConfigureLogging()
 
@@ -41,6 +41,10 @@ func Run(bestEffort bool) {
 		if !bestEffort {
 			os.Exit(2) // Using 2 just to distinguish from the usage error case.
 		}
+	}
+
+	if skipCgroup {
+		return
 	}
 
 	err = ensureCgroupV2Filesystem()

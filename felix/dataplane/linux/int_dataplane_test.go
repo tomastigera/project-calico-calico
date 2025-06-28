@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/wireguard"
@@ -69,6 +70,8 @@ func (_ *mockCollector) SetDomainLookup(types.EgressDomainCache) {}
 
 func (_ *mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
 }
+
+func (_ *mockCollector) SetNetlinkHandle(netlinkshim.Interface) {}
 
 func (_ *mockCollector) WAFReportingHandler() func(*proto.WAFEvent) { return nil }
 

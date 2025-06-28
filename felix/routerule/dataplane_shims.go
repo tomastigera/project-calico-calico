@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,5 +25,5 @@ type HandleIface interface {
 	RuleList(family int) ([]netlink.Rule, error)
 	RuleAdd(rule *netlink.Rule) error
 	RuleDel(rule *netlink.Rule) error
-	Delete()
+	Close()
 }

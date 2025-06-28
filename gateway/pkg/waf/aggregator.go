@@ -8,16 +8,10 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-// TODO: Get rid of this and make Count a member of WAFLog
-type AggregatedWAFLog struct {
-	v1.WAFLog
-	Count int
-}
-
 // Aggregator aggregates WAF logs based on configurable must-keep fields.
 // Fields not in must-keep are aggregated away using sentinel values ("-" for strings, 0 for ints).
 type Aggregator struct {
-	store          []*AggregatedWAFLog
+	store          []*v1.WAFLog
 	mustKeepFields []string
 }
 
@@ -39,42 +33,38 @@ func NewAggregator(mustKeepFields []string) (*Aggregator, error) {
 		}
 	}
 	return &Aggregator{
-		store:          []*AggregatedWAFLog{},
+		store:          []*v1.WAFLog{},
 		mustKeepFields: mustKeepFields,
 	}, nil
 }
 
 // EndAggregationPeriod returns the current aggregated logs and resets the store.
-func (a *Aggregator) EndAggregationPeriod() []*AggregatedWAFLog {
+func (a *Aggregator) EndAggregationPeriod() []*v1.WAFLog {
 	aggregatedLogs := a.store
-	a.store = []*AggregatedWAFLog{}
+	a.store = []*v1.WAFLog{}
 	return aggregatedLogs
 }
 
 // AddLog adds a WAF log to the aggregator, aggregating with existing logs if possible.
 func (a *Aggregator) AddLog(log *v1.WAFLog) {
+	// Make sure log count is set to 1
+	log.Count = 1
+
 	if len(a.mustKeepFields) == 0 {
-		a.store = append(a.store, &AggregatedWAFLog{
-			WAFLog: *log,
-			Count:  1,
-		})
+		a.store = append(a.store, log)
 		return
 	}
 	for _, agg := range a.store {
 		if a.match(agg, log) {
-			agg.Count++
 			a.aggregateFields(agg, log)
 			return
 		}
 	}
-	a.store = append(a.store, &AggregatedWAFLog{
-		WAFLog: *log,
-		Count:  1,
-	})
+	a.store = append(a.store, log)
 }
 
 // match returns true if the log matches the aggregated log on all must-keep fields.
-func (a *Aggregator) match(agg *AggregatedWAFLog, log *v1.WAFLog) bool {
+func (a *Aggregator) match(agg *v1.WAFLog, log *v1.WAFLog) bool {
 	for _, field := range a.mustKeepFields {
 		switch strings.ToLower(field) {
 		case "path":
@@ -100,7 +90,10 @@ func (a *Aggregator) match(agg *AggregatedWAFLog, log *v1.WAFLog) bool {
 // For Rules, merge unique rules by Id if not aggregating by rules.
 // For any non-must-keep string field, if values differ, set to "-".
 // For pointer-to-struct fields (e.g., Source/Destination), recursively aggregate their fields.
-func (a *Aggregator) aggregateFields(agg *AggregatedWAFLog, log *v1.WAFLog) {
+func (a *Aggregator) aggregateFields(agg *v1.WAFLog, log *v1.WAFLog) {
+	// Increment count when aggregating
+	agg.Count++
+
 	// Special case for rules
 	if !a.hasMustKeep("rules") {
 		existing := make(map[string]struct{})
@@ -115,12 +108,16 @@ func (a *Aggregator) aggregateFields(agg *AggregatedWAFLog, log *v1.WAFLog) {
 		}
 	}
 
-	aggVal := reflect.ValueOf(&agg.WAFLog).Elem()
+	aggVal := reflect.ValueOf(agg).Elem()
 	logVal := reflect.ValueOf(log).Elem()
 	typ := aggVal.Type()
 
 	var aggregateField func(aggField, logField reflect.Value, field reflect.StructField, fieldName string)
 	aggregateField = func(aggField, logField reflect.Value, field reflect.StructField, fieldName string) {
+		// Special case for Count: skip aggregation, always sum in aggregateFields
+		if fieldName == "count" {
+			return
+		}
 		// Skip must-keep fields and Rules (already handled)
 		if a.hasMustKeep(fieldName) || fieldName == "rules" {
 			return

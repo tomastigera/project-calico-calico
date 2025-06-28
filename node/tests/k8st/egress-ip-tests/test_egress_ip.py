@@ -806,7 +806,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      namespaceSelector: projectcalico.org/name == 'tigera-system'
+      namespaceSelector: projectcalico.org/name == 'calico-system'
       selector: k8s-app == 'tigera-apiserver'
 EOF
 """)

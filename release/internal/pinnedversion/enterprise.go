@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -37,12 +38,12 @@ var (
 		"coreos-alertmanager",
 		"coreos-config-reloader",
 		"coreos-dex",
-		"upstream-fluentd",
 		"coreos-prometheus",
 		"coreos-prometheus-operator",
 		"eck-elasticsearch",
 		"eck-elasticsearch-operator",
 		"eck-kibana",
+		"upstream-fluentd",
 	}
 )
 
@@ -93,7 +94,7 @@ type EnteprisePinnedVersions struct {
 	ChartVersion string
 }
 
-func (p *EnteprisePinnedVersions) GenerateFile() (version.Data, error) {
+func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
 	productBranch, err := utils.GitBranch(p.RootDir)
@@ -130,7 +131,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Data, error) {
 	parts := strings.Split(calicoVer, ".")
 	calicoMajorMinor := fmt.Sprintf("%s.%s", parts[0], parts[1])
 
-	versionData := version.NewEnterpriseVersionData(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
+	versionData := version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
 	tmpl, err := template.New("pinnedversion").Parse(enterpriseTemplate)
 	if err != nil {
 		return nil, err
@@ -189,7 +190,7 @@ func retrieveEnterpisePinnedVersion(outputDir string) (EnterprisePinnedVersion, 
 	return pinnedVersionFile[0], nil
 }
 
-func RetrieveEnterpriseVersions(outputDir string) (version.Data, error) {
+func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
@@ -197,7 +198,7 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Data, error) {
 
 	managerVer := pinnedVersion.Components[managerComponent].Version
 
-	return version.NewEnterpriseVersionData(version.New(pinnedVersion.Title), pinnedVersion.HelmRelease, pinnedVersion.TigeraOperator.Version, managerVer), nil
+	return version.NewEnterpriseHashreleaseVersions(version.New(pinnedVersion.Title), pinnedVersion.HelmRelease, pinnedVersion.TigeraOperator.Version, managerVer), nil
 }
 
 // GenerateEnterpriseOperatorComponents generates the pinned_components.yaml for operator.
@@ -209,11 +210,21 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 		return op, "", err
 	}
 
-	for name := range pinnedVersion.Components {
+	for name, component := range pinnedVersion.Components {
 		// Remove components that are not part of the operator.
-		if utils.Contains(operatorExcludedComponents, name) {
+		if slices.Contains(operatorExcludedComponents, name) {
 			delete(pinnedVersion.Components, name)
+			continue
 		}
+		if component.Image == "" {
+			img := registry.EnterpriseImageMap[name]
+			if img != "" {
+				component.Image = img
+			} else {
+				component.Image = name
+			}
+		}
+		pinnedVersion.Components[name] = component
 	}
 
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
@@ -267,7 +278,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}, nil
 }
 
-func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]registry.Component, error) {
+func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Component, error) {
 	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
@@ -283,11 +294,11 @@ func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]regist
 			delete(components, name)
 			continue
 		}
-		if component.Image == "" {
+		img := registry.EnterpriseImageMap[name]
+		if img != "" {
+			component.Image = img
+		} else if component.Image == "" {
 			component.Image = name
-		}
-		if component.Registry == "" && reg != "" {
-			component.Registry = reg
 		}
 		components[name] = component
 	}
@@ -333,7 +344,7 @@ func versionsFilePath(repoRootDir string) string {
 	return filepath.Join(repoRootDir, "calico", "_data", "versions.yml")
 }
 
-func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersionData) error {
+func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersions) error {
 	versions, err := LoadVersionsFile(repoRootDir)
 	if err != nil {
 		return fmt.Errorf("failed to load versions file: %w", err)

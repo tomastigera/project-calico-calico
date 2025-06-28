@@ -18,7 +18,7 @@ var (
 		{
 			Verb:     "get",
 			Resource: "services/proxy",
-			Name:     "https:tigera-api:8080",
+			Name:     "https:calico-api:8080",
 		},
 		{
 			Verb:     "get",
@@ -31,7 +31,7 @@ var (
 		{
 			Verb:     "create",
 			Resource: "services/proxy",
-			Name:     "https:tigera-api:8080",
+			Name:     "https:calico-api:8080",
 		},
 		{
 			Verb:     "create",
@@ -96,7 +96,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 
 		if !authorized {
 			w.WriteHeader(http.StatusForbidden)
-			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
+			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)))
 			if err != nil {
 				log.Errorf("Error when writing body to response: %v", err)
 			}
