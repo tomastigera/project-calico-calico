@@ -51,7 +51,10 @@ class DiagsCollector(object):
             for node in nodes:
                 _log.info("")
                 run("docker exec " + node + " ip r")
+                run("docker exec " + node + " ip -6 r")
                 run("docker exec " + node + " ip l")
+            kubectl("logs -n calico-system -l k8s-app=calico-node")
+            self.print_confd_templates(nodes)
             for pod_name in calico_node_pod_names():
                 kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
                         allow_fail=True)
@@ -70,6 +73,23 @@ class DiagsCollector(object):
 def log_calico_node(node_ip):
     pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
     kubectl("logs %s -n calico-system " % pod_name.strip())
+
+def print_confd_templates(self, nodes):
+        for node in nodes:
+            calicoPod = kubectl("-n calico-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % node)
+            if calicoPod is None:
+                continue
+            calicoPod = calicoPod.strip()
+
+            # v4 files.
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % calicoPod)
+
+            # And for v6.
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod)
 
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
@@ -133,7 +153,7 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
     return birdy_ip
 
 def retry_until_success(fun,
-                        retries=60,
+                        retries=90,
                         wait_time=1,
                         ex_class=None,
                         log_exception=True,
