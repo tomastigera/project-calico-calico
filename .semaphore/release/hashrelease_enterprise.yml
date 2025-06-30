@@ -20,6 +20,8 @@ global_job_config:
     - name: iss-image-scanning
     # Secrets for Slack notifications
     - name: releasebot-slack
+    # Secret for Semaphore API access
+    - name: semaphore-api
   prologue:
     commands:
       - chmod 0600 ~/.keys/*
