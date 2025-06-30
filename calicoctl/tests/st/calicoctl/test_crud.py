@@ -931,7 +931,7 @@ class TestCalicoctlCommands(TestBase):
         # On get, we expect name to be prefixed with the "default" tier name as
         # well as have the tier field and value present in the spec.
         # First we check with the name without tier in the name.
-        name = 'default.' + data['metadata']['name']
+        name = data['metadata']['name']
         kind = data['kind']
         if is_namespaced:
             rc = calicoctl("get %s %s --namespace default -o yaml" % (kind, name))
@@ -939,7 +939,7 @@ class TestCalicoctlCommands(TestBase):
             rc = calicoctl("get %s %s -o yaml" % (kind, name))
 
         # We expect the name to be updated to include the tier, and the spec/labels as well.
-        data1['metadata']['name'] = 'default.' + data1['metadata']['name']
+        data1['metadata']['name'] = data1['metadata']['name']
         data1['spec']['tier'] = 'default'
         data1 = add_tier_label(data1)
         rc.assert_data(data1)
