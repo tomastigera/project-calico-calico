@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -71,13 +70,6 @@ type CalicoComponent struct {
 type EnterprisePinnedVersion struct {
 	PinnedVersion `yaml:",inline"`
 	HelmRelease   string          `yaml:"helmRelease,omitempty"`
-	Calico        CalicoComponent `yaml:"calico"`
-}
-
-// EnterpriseVersions represents the versions file in calico/_data/versions.yml.
-type EnterpriseVersions struct {
-	PinnedVersion `yaml:",inline"`
-	HelmRelease   int             `yaml:"helmRelease"`
 	Calico        CalicoComponent `yaml:"calico"`
 }
 
@@ -328,66 +320,4 @@ func LoadEnterpriseHashreleaseFromRemote(hashreleaseName, outputDir, repoRootDir
 		return nil, fmt.Errorf("failed to write %s pinned_versions.yml: %w", hashreleaseName, err)
 	}
 	return LoadEnterpriseHashrelease(repoRootDir, outputDir, "", false)
-}
-
-func LoadVersionsFile(repoRootDir string) (*EnterprisePinnedVersion, error) {
-	var pinnedVersionFile []EnterprisePinnedVersion
-	if pinnedVersionData, err := os.ReadFile(versionsFilePath(repoRootDir)); err != nil {
-		return nil, err
-	} else if err := yaml.Unmarshal([]byte(pinnedVersionData), &pinnedVersionFile); err != nil {
-		return nil, err
-	}
-	return &pinnedVersionFile[0], nil
-}
-
-func versionsFilePath(repoRootDir string) string {
-	return filepath.Join(repoRootDir, "calico", "_data", "versions.yml")
-}
-
-func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersions) error {
-	versions, err := LoadVersionsFile(repoRootDir)
-	if err != nil {
-		return fmt.Errorf("failed to load versions file: %w", err)
-	}
-	calicoVer, err := utils.DetermineCalicoVersion(repoRootDir)
-	calicoVersion := version.New(calicoVer)
-	if err != nil {
-		return fmt.Errorf("failed to determine calico version: %s", err)
-	}
-	newVersions := &EnterpriseVersions{
-		PinnedVersion: PinnedVersion{
-			Title: update.ProductVersion(),
-			TigeraOperator: registry.Component{
-				Version:  update.OperatorVersion(),
-				Image:    versions.TigeraOperator.Image,
-				Registry: versions.TigeraOperator.Registry,
-			},
-			Components: versions.Components,
-		},
-		Calico: CalicoComponent{
-			MinorVersion: calicoVersion.Stream(),
-			ArchivePath:  versions.Calico.ArchivePath,
-		},
-	}
-	if update.ChartVersion() != "" {
-		newVersions.HelmRelease, _ = strconv.Atoi(update.ChartVersion())
-	}
-	for n, c := range newVersions.Components {
-		if c.Version == versions.Title {
-			c.Version = update.ProductVersion()
-			versions.Components[n] = c
-		} else if strings.HasPrefix(n, managerComponent) {
-			c.Version = update.ManagerVersion()
-			versions.Components[n] = c
-		}
-	}
-
-	data, err := yaml.Marshal([]*EnterpriseVersions{newVersions})
-	if err != nil {
-		return fmt.Errorf("failed to marshal versions file: %s", err)
-	}
-	if err := os.WriteFile(versionsFilePath(repoRootDir), data, 0o644); err != nil {
-		return fmt.Errorf("failed to write versions file: %s", err)
-	}
-	return nil
 }

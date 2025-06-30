@@ -100,6 +100,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		repoFlag,
 		repoRemoteFlag,
 		devTagSuffixFlag,
+		chartVersionFlag,
 		skipReleaseVersionCheckFlag,
 		skipValidationFlag,
 		confirmFlag,
@@ -110,21 +111,23 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		Usage: "Run steps to build an enterprise release",
 		Flags: flags,
 		Action: func(c *cli.Context) error {
-			// Load version from calico/_data/versions.yaml
-			versions, err := pinnedversion.LoadVersionsFile(cfg.RepoRootDir)
+			configureLogging("release-build.log")
+			// Load version from manifests.
+			ver, operatorVer, err := version.VersionsFromManifests(cfg.RepoRootDir)
 			if err != nil {
 				return err
 			}
+
 			// Validate the release version.
-			if err := validateReleaseVersion(c, versions.Title); err != nil {
+			if err := validateReleaseVersion(c, ver.FormattedString()); err != nil {
 				return err
 			}
 
 			// Build the release.
 			opts := []calico.Option{
-				calico.WithVersion(versions.Title),
-				calico.WithOperatorVersion(versions.TigeraOperator.Version),
-				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, versions.Title)),
+				calico.WithVersion(ver.FormattedString()),
+				calico.WithOperatorVersion(operatorVer.FormattedString()),
+				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, ver.FormattedString())),
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithGithubOrg(c.String(orgFlag.Name)),
 				calico.WithRepoName(c.String(repoFlag.Name)),
@@ -133,7 +136,8 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(versions.HelmRelease),
+				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
+				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 			return m.Build()
@@ -149,10 +153,13 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		releaseBranchPrefixFlag,
 		devTagSuffixFlag,
 		hashreleaseNameFlag,
+		chartVersionFlag,
 		publishImagesFlag,
 		publishGitFlag,
 		publishToS3Flag,
 		publishWindowsArchiveFlag,
+		skipValidationFlag,
+		skipReleaseVersionCheckFlag,
 	}
 	flags = append(flags, managerFlags...)
 	flags = append(flags, awsProfileFlag, skipReleaseVersionCheckFlag, skipValidationFlag, confirmFlag)
@@ -225,6 +232,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
+				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
@@ -314,7 +322,7 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 
 func validateReleaseVersion(c *cli.Context, ver string) error {
 	if c.Bool(skipReleaseVersionCheckFlag.Name) {
-		logrus.Warn("Skipping release version check, this is not recommended")
+		logrus.Warn("Skipping release version and helm chart version check, this is not recommended")
 		return nil
 	}
 	// Determine the versions to use for the release.

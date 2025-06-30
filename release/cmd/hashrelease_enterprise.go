@@ -25,8 +25,7 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 }
 
 func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
-	flags := append(productFlags, chartVersionFlag)
-	flags = append(flags, managerFlags...)
+	flags := append(productFlags, managerFlags...)
 	flags = append(flags, operatorBuildFlags...)
 	flags = append(flags,
 		archFlag,
@@ -79,7 +78,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 					Dir:    managerDir,
 					Branch: c.String(managerBranchFlag.Name),
 				},
-				ChartVersion: c.String(chartVersionFlag.Name),
 			}
 
 			data, err := pinned.GenerateFile()
@@ -162,7 +160,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, *hashreleaseServerConfig(c)),
 				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
 			}

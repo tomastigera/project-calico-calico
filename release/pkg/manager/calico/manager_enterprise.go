@@ -492,6 +492,9 @@ func (m *EnterpriseManager) buildArchives() error {
 	if m.isHashRelease {
 		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
 	}
+	if m.chartVersion != "" {
+		env = append(env, fmt.Sprintf("CHART_RELEASE=%s", m.chartVersion))
+	}
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "release-archive", env...); err != nil {
 		return err
 	}
@@ -1068,10 +1071,7 @@ func (m *EnterpriseManager) PrepareRelease() error {
 		return err
 	}
 
-	// Modify calico/_data/versions.yml, helm charts and generate manifests.
-	if err := m.modifyVersionsFile(); err != nil {
-		return err
-	}
+	// Generate manifests.
 	if err := m.generateManifests(); err != nil {
 		return fmt.Errorf("failed to generate manifests: %s", err)
 	}
@@ -1118,15 +1118,6 @@ func (m *EnterpriseManager) PrepareRelease() error {
 			return fmt.Errorf("failed to create PR: %s", err)
 		}
 		logrus.WithField("PR", pr).Info("Created PR, please review and merge after release is published")
-	}
-	return nil
-}
-
-func (m *EnterpriseManager) modifyVersionsFile() error {
-	versionData := version.NewEnterpriseReleaseVersions(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion)
-	err := pinnedversion.UpdateVersionsFile(m.repoRoot, versionData)
-	if err != nil {
-		return fmt.Errorf("failed to update versions file: %s", err)
 	}
 	return nil
 }

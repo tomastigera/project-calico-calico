@@ -48,20 +48,12 @@ var (
 	}
 )
 
-var (
-	chartVersionFlag = &cli.StringFlag{
-		Name:    "chart-version",
-		Usage:   "The version suffix for the helm charts",
-		EnvVars: []string{"HELM_RELEASE", "CHART_VERSION"},
-	}
-
-	helmRegistryFlag = &cli.StringFlag{
-		Name:    "helm-registry",
-		Usage:   "The registry to publish the helm charts (hashrelease ONLY)",
-		EnvVars: []string{"HELM_REGISTRY"},
-		Value:   registry.HelmDevRegistry,
-	}
-)
+var helmRegistryFlag = &cli.StringFlag{
+	Name:    "helm-registry",
+	Usage:   "The registry to publish the helm charts (hashrelease ONLY)",
+	EnvVars: []string{"HELM_REGISTRY"},
+	Value:   registry.HelmDevRegistry,
+}
 
 var (
 	publishWindowsArchiveFlag = &cli.BoolFlag{
@@ -118,6 +110,14 @@ var releaseVersionFlag = &cli.StringFlag{
 	Name:     "version",
 	Usage:    "The version of Enterprise to release",
 	EnvVars:  []string{"RELEASE_VERSION"},
+	Required: true,
+}
+
+// chartVersionFlag is only used for releases.
+var chartVersionFlag = &cli.StringFlag{
+	Name:     "chart-version",
+	Usage:    "The version suffix for the helm charts",
+	EnvVars:  []string{"HELM_RELEASE", "CHART_VERSION"},
 	Required: true,
 }
 

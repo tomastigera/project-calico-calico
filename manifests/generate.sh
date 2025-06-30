@@ -7,7 +7,7 @@
 # Helm binary to use. Default to the one installed by the Makefile.
 HELM=${HELM:-../bin/helm}
 
-# yq binary to use for parsing component versions not found in charts. Default to the one installed by the Makefile.
+# yq binary to use. Default to the one installed by the Makefile.
 YQ=${YQ:-../bin/yq}
 
 if [[ ! -f $HELM ]]; then
@@ -20,13 +20,12 @@ if [[ ! -f $YQ ]]; then
 fi
 
 # Get versions to install.
-defaultCalicoVersion=$($YQ '.[0].title' ../calico/_data/versions.yml)
+defaultCalicoVersion=$($YQ .calicoctl.tag <../charts/tigera-operator/values.yaml)
 CALICO_VERSION=${PRODUCT_VERSION:-$defaultCalicoVersion}
 
 defaultRegistry=gcr.io/unique-caldron-775/cnx/tigera
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
-# Versions retrieved from charts.
 defaultOperatorVersion=$($YQ .tigeraOperator.version <../charts/tigera-operator/values.yaml)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
@@ -184,8 +183,8 @@ sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
 VALUES_FILES=$(ls ocp | grep -v -e '^01-' -e 'cluster-network-operator.yaml' -e '02-configmap-calico-resources.yaml')
 rm -f tigera-operator-ocp-upgrade.yaml
 for FILE in $VALUES_FILES; do
-  cat "ocp/$FILE" >> tigera-operator-ocp-upgrade.yaml
-  echo -e "---" >> tigera-operator-ocp-upgrade.yaml  # Add divisor
+  cat "ocp/$FILE" >>tigera-operator-ocp-upgrade.yaml
+  echo -e "---" >>tigera-operator-ocp-upgrade.yaml # Add divisor
 done
 # Remove the last separator (last line)
 sed -i -e '$ d' tigera-operator-ocp-upgrade.yaml
