@@ -35,7 +35,11 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-		tlsConfig := calicotls.NewTLSConfig()
+		tlsConfig, tlsErr := calicotls.NewTLSConfig()
+		if tlsErr != nil {
+			err = fmt.Errorf("failed to create TLS Config: %w", tlsErr)
+			return
+		}
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 		tlsConfig.ClientCAs = caCertPool
 		srv := &http.Server{
