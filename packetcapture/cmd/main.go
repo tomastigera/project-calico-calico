@@ -73,10 +73,14 @@ func main() {
 	http.Handle("/download/", middleware.Parse(middleware.AuthenticationHandler(authn, authz.Authorize(files.Download))))
 	http.Handle("/files/", middleware.Parse(middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete))))
 
+	tlsConfig, err := tls.NewTLSConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Start server
 	server := &http.Server{
 		Addr:      addr,
-		TLSConfig: tls.NewTLSConfig(),
+		TLSConfig: tlsConfig,
 	}
 
 	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))

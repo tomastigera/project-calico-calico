@@ -91,7 +91,10 @@ func NewClient(tenantID string, cfg Config, opts ...ClientOption) (RESTClient, e
 }
 
 func newHTTPClient(cfg Config) (*http.Client, error) {
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig.ServerName = LinseedServerName
 	if len(cfg.ServerName) > 0 {
 		tlsConfig.ServerName = cfg.ServerName

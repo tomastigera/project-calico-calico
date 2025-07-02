@@ -378,7 +378,11 @@ func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, 
 	if httpProxyURL != nil {
 		// mTLS will be negotiated over a TCP connection to the proxy, which performs TCP passthrough to the target.
 		logrus.Infof("Dialing to %s via HTTP proxy at %s", target, httpProxyURL)
-		c, err = tlsDialViaHTTPProxy(dialer, target, httpProxyURL, tunnelTLSConfig, calicoTLS.NewTLSConfig())
+		tlsConfig, err := calicoTLS.NewTLSConfig()
+		if err != nil {
+			return nil, err
+		}
+		c, err = tlsDialViaHTTPProxy(dialer, target, httpProxyURL, tunnelTLSConfig, tlsConfig)
 		if err != nil {
 			return nil, fmt.Errorf("TLS dial via HTTP proxy failed: %w", err)
 		}

@@ -66,7 +66,10 @@ func mustGetHTTPClient(config config.ElasticClientConfig, source string) *http.C
 	}
 
 	// Configure TLS
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	// Configure CA certificates
 	caCertPool := mustGetCACertPool(config)

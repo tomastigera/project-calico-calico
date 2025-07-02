@@ -75,7 +75,10 @@ func New(opts ...Option) (*Server, error) {
 		srv.ctx, srv.cancel = context.WithCancel(context.Background())
 	}
 
-	cfg := calicotls.NewTLSConfig()
+	cfg, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	if srv.internalCert != nil {
 		cfg.Certificates = append(cfg.Certificates, *srv.internalCert)
 	}

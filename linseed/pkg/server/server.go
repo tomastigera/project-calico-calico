@@ -30,9 +30,13 @@ func NewServer(addr string, opts ...Option) *Server {
 
 	mux := chi.NewRouter()
 
+	tlsConfig, err := tls.NewTLSConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	srv := &http.Server{
 		Addr:        addr,
-		TLSConfig:   tls.NewTLSConfig(),
+		TLSConfig:   tlsConfig,
 		Handler:     mux,
 		IdleTimeout: defaultIdleTimeout,
 		ReadTimeout: defaultReadTimeout,

@@ -135,7 +135,10 @@ func (builder *clientBuilder) Build() (Client, error) {
 }
 
 func NewClient(url, username, password string, roots *x509.CertPool) (Client, error) {
-	tlsConfig := tls.NewTLSConfig()
+	tlsConfig, err := tls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig.RootCAs = roots
 	config := es7.Config{
 		Addresses: []string{

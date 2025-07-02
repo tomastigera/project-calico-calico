@@ -413,7 +413,10 @@ func Start(cfg *Config) error {
 	}
 
 	if !cfg.ElasticKibanaDisabled {
-		kibanaTLSConfig := calicotls.NewTLSConfig()
+		kibanaTLSConfig, err := calicotls.NewTLSConfig()
+		if err != nil {
+			return err
+		}
 		kibanaTLSConfig.InsecureSkipVerify = true
 		kibanaCli := kibana.NewClient(&http.Client{
 			Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},

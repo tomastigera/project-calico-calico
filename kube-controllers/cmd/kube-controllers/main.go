@@ -290,7 +290,10 @@ func main() {
 			requiredCN = v
 		}
 
-		tlsConfig := calicotls.NewTLSConfig()
+		tlsConfig, err := calicotls.NewTLSConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
 		tlsConfig.ClientAuth = cryptotls.RequireAndVerifyClientCert
 
 		if caFile, ok = os.LookupEnv(config.EnvCAFile); ok {

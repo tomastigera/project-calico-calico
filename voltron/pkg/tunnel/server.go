@@ -147,7 +147,10 @@ func (s *Server) Serve(lis net.Listener) error {
 // ServeTLS starts serving TLS connections using the provided listener and the
 // configured certs
 func (s *Server) ServeTLS(lis net.Listener) error {
-	config := calicotls.NewTLSConfig()
+	config, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return err
+	}
 	config.Certificates = s.serverCerts
 	config.ClientAuth = tls.RequireAndVerifyClientCert
 	config.ClientCAs = s.clientCertPool
