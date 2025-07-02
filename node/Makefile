@@ -348,10 +348,7 @@ K8ST_IMAGE_TARS=calico-node.tar \
 	node-driver-registrar.tar \
 	calicoctl.tar \
 	kube-controllers.tar \
-	operator.tar \
-	whisker.tar \
-	whisker-backend.tar \
-	goldmane.tar
+	operator.tar
 
 # Add in enterprise-only images.
 ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar egress-gateway.tar prometheus-operator.tar config-reloader.tar prometheus.tar prometheus-service.tar alertmanager.tar fluentd.tar policy-rec.tar eck.tar manager.tar voltron.tar ui-apis.tar kibana.tar elastic.tar es-gw.tar linseed.tar idc.tar webhooks-processor.tar dashboards-installer.tar es-metrics.tar manager.tar
