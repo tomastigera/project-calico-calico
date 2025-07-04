@@ -213,7 +213,7 @@ func (s *WAFHTTPFilter) handleDirectivesUpdate(directivesJson []string) {
 		if err != nil {
 			logrus.Errorf("Error decoding directives: %#v", err)
 		}
-		s.wafServerManager.OnUpdate(directives)
+		s.wafServerManager.OnUpdate(append(DefaultDirectives, directives...))
 	}
 }
 
