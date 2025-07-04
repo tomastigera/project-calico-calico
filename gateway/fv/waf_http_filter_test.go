@@ -192,9 +192,9 @@ func TestRequests(t *testing.T) {
 		require.Empty(t, wafEvents)
 	})
 
-	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "/subpath?artist=")
 		require.Len(t, wafEvents, 1)
 	})
 }
@@ -208,9 +208,9 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	client := &http.Client{}
 
 	require.Len(t, wafEvents, 0)
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "/subpath?artist=")
 		require.Len(t, wafEvents, 1)
 	})
 
@@ -225,9 +225,9 @@ func TestDisablingWAFHTTPFilter(t *testing.T) {
 	})
 
 	// First request with the new config still uses the old config because update happens in the background so that we don't hold up traffic.
-	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking) using old config", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "GET", "http://127.0.0.1:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only) using old config", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "/subpath?artist=")
 		require.Len(t, wafEvents, 2)
 	})
 
@@ -244,7 +244,7 @@ func TestWAFConfig(t *testing.T) {
 	setupTest(t, waf.ServerOptions{
 		TcpPort:  9002,
 		HttpPort: 8080,
-	}, []string{"testdata/lds.yaml", "testdata/lds-not-blocking.yaml"})
+	}, []string{"testdata/lds.yaml", "testdata/lds-blocking.yaml"})
 
 	transport := &http.Transport{
 		DialContext: dialContextFromLocalPort(8000),
@@ -253,33 +253,33 @@ func TestWAFConfig(t *testing.T) {
 		Transport: transport,
 	}
 
-	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "subpath?artist=")
 		require.Len(t, wafEvents, 1)
 	})
+	time.Sleep(2 * time.Second)
 
-	// Replace the waf-http-filter config with a non-blocking WAF.
-	cmd := exec.Command("mv", "testdata/lds-not-blocking.yaml", "testdata/lds.yaml")
+	// Replace the waf-http-filter config with a blocking WAF.
+	cmd := exec.Command("mv", "testdata/lds-blocking.yaml", "testdata/lds.yaml")
 	_, err := cmd.Output()
 	require.NoError(t, err)
 
 	waitForConfigChange(t, func(t require.TestingT, config string) {
-		require.Contains(t, config, "SecRuleEngine DetectionOnly")
+		require.Contains(t, config, "SecRuleEngine On")
 	})
 
-	testRequestEventually(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user1", nil, "Non-blocking WAF", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 200, resp.StatusCode)
-		require.Contains(t, body, "/subpath?artist=")
+	testRequestEventually(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
 	})
 
-	// Initial sanity test with blocking WAF
-	require.Equal(t, wafEvents[0].Action, "deny")
+	// Initial sanity test with non-blocking WAF
+	require.Equal(t, wafEvents[0].Action, "pass")
 	// First request with new config (but used old config because update happens in the background so that we don't hold up traffic)
-	require.Equal(t, wafEvents[1].Action, "deny")
+	require.Equal(t, wafEvents[1].Action, "pass")
 	// Eventually the new config is used
-	require.Equal(t, 4, len(wafEvents)) // 4 because first 2 are blocking, then 2 are from DetectionOnly mode which produces 2 events on its own
-	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "pass")
+	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "deny")
 }
 
 func TestFileLogger(t *testing.T) {
@@ -348,15 +348,15 @@ func TestFileLogger(t *testing.T) {
 		Transport: transport,
 	}
 
-	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "subpath?artist=")
 	})
 
 	// Second request to cover log aggreagation too
-	testRequest(t, client, "POST", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
-		require.Equal(t, 403, resp.StatusCode)
-		require.Contains(t, body, "deny (403)")
+	testRequest(t, client, "POST", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (detection-only)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "subpath?artist=")
 	})
 
 	// Check that the log file is eventually created and contains the WAF event.
@@ -366,7 +366,7 @@ func TestFileLogger(t *testing.T) {
 
 		lines := strings.Split(string(data), "\n")
 		require.Len(t, lines, 2)
-		require.Contains(t, lines[0], "WAF detected 2 violations [deny]")
+		require.Contains(t, lines[0], "WAF detected 2 violations [pass]")
 		require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
 		require.Contains(t, lines[0], `"count":2`)
 		require.Empty(t, lines[1])

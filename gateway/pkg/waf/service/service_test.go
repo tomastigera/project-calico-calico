@@ -37,29 +37,27 @@ func TestRequestHandlerDetectionOnly(t *testing.T) {
 	}
 	for _, tc := range []testdata.NamedTestCase{
 		{
-			Name:                  "default, which is on",
+			Name:                  "default, which is detection only",
 			ExtraDirectives:       []string{},
-			RequestBuilderOptions: rbo,
-			ExpectedResponse: &envoy_service_proc_v3.ProcessingResponse{
-				Response: utils.NewForbiddenResponse([]byte("WAF rule 949111 interrupting request: deny (403)")),
-			},
-			NumExpectedWAFEvents: 1,
-		},
-		{
-			Name:                  "detection only",
-			ExtraDirectives:       []string{"SecRuleEngine DetectionOnly"},
 			RequestBuilderOptions: rbo,
 			ExpectedResponse:      &envoy_service_proc_v3.ProcessingResponse{},
 			NumExpectedWAFEvents:  2,
 		},
 		{
-			Name:                  "restore on setting",
+			Name:                  "blocking mode",
 			ExtraDirectives:       []string{"SecRuleEngine On"},
 			RequestBuilderOptions: rbo,
 			ExpectedResponse: &envoy_service_proc_v3.ProcessingResponse{
 				Response: utils.NewForbiddenResponse([]byte("WAF rule 949111 interrupting request: deny (403)")),
 			},
 			NumExpectedWAFEvents: 1,
+		},
+		{
+			Name:                  "restore detection-only setting",
+			ExtraDirectives:       []string{"SecRuleEngine DetectionOnly"},
+			RequestBuilderOptions: rbo,
+			ExpectedResponse:      &envoy_service_proc_v3.ProcessingResponse{},
+			NumExpectedWAFEvents:  2,
 		},
 	} {
 		upd := append(waf.DefaultDirectives, tc.ExtraDirectives...)

@@ -32,7 +32,7 @@ resources:
               timeout: 10s
               initial_metadata:
               - key: directivesJson
-                value: "[\"SecRuleEngine DetectionOnly\"]"
+                value: "[\"SecRuleEngine On\"]"
             processing_mode:
               request_header_mode: SEND
               response_header_mode: SEND
