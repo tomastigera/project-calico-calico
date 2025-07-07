@@ -3,22 +3,25 @@ include metadata.mk
 AWS_PROFILE := helm
 
 TOPLEVEL_DIR:=$(shell git rev-parse --show-toplevel)
-CALICO_DIR=$(TOPLEVEL_DIR)/calico
-VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
+OPERATOR_CHART_VALUES_FILE := $(TOPLEVEL_DIR)/charts/tigera-operator/values.yaml
 
-# Determine whether there's a local yaml installed or use dockerized version.
-# Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
-YAML_CMD:=$(shell which yq.v2 || echo docker run --rm -i mikefarah/yq:2.4.2 yq)
+YQ:= bin/yq
 HTML_CMD:=$(shell which pandoc || echo docker run --rm --volume "`pwd`:/data" pandoc/core:2.9.2)
 
 ##############################################################################
 # Version information used for cutting a release.
-# Use := so that these V_ variables are computed only once per make run.
 
-RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title' | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master')
-CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
-CHART_RELEASE := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].helmRelease')
+CALICO_VER := $(shell $(YQ) '.calicoctl.tag' $(OPERATOR_CHART_VALUES_FILE))
+OPERATOR_VER := $(shell $(YQ) '.tigeraOperator.version' $(OPERATOR_CHART_VALUES_FILE))
 
+ifdef VERSIONS_FILE
+CALICO_VER := $(shell $(YQ) '.[0].title' $(VERSIONS_FILE))
+OPERATOR_VER := $(shell $(YQ) '.[0].tigera-operator.version' $(VERSIONS_FILE))
+CHART_RELEASE := $(shell $(YQ) '.[0].helmRelease' $(VERSIONS_FILE))
+endif
+
+# Get the release stream from the version string without the "v" prefix.
+CALICO_RELEASE_STREAM := $(shell echo $(CALICO_VER) | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master' | sed -e 's/^v//')
 ###############################################################################
 # Include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -29,7 +32,6 @@ include lib.Makefile
 ## START builds the release archives for the version
 ## Creates archive of all the manifests
 OUTPUT_DIR?=_release_archive
-OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-operator.version')
 RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
@@ -65,9 +67,9 @@ $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/p
 
 $(RELEASE_DIR)/README.md:
 	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
-	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
+	@echo "Documentation for this release can be found at https://docs.tigera.io/calico-enterprise/$(CALICO_RELEASE_STREAM)" >> $@
 	@echo "" >> $@
-	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/maintenance/manifest-archive" >> $@
+	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/calico-enterprise/$(CALICO_RELEASE_STREAM)/getting-started/manifest-archive" >> $@
 	@echo "and use the appropriate manifest from the archive where ever you are prompted to download a manifest" >> $@
 	@echo "" >> $@
 	@echo "Example:" >> $@
