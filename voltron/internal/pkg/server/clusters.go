@@ -69,6 +69,11 @@ type cluster struct {
 
 	// Pointer to general Voltron configuration.
 	voltronCfg *config.Config
+
+	// Version stores managed cluster's cnxVersion information.
+	version string
+
+	managedClusterQuerier ManagedClusterQuerier
 }
 
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
@@ -122,6 +127,8 @@ type clusters struct {
 	clientCertificatePool *x509.CertPool
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
+
+	managedClusterQuerier ManagedClusterQuerier
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
@@ -151,12 +158,13 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	}
 
 	c := &cluster{
-		ManagedCluster:   *mc,
-		tunnelManager:    tunnelmgr.NewManager(),
-		k8sCLI:           cs.k8sCLI,
-		client:           cs.client,
-		voltronCfg:       cs.voltronCfg,
-		statusUpdateFunc: cs.statusUpdateFunc,
+		ManagedCluster:        *mc,
+		tunnelManager:         tunnelmgr.NewManager(),
+		k8sCLI:                cs.k8sCLI,
+		client:                cs.client,
+		voltronCfg:            cs.voltronCfg,
+		statusUpdateFunc:      cs.statusUpdateFunc,
+		managedClusterQuerier: cs.managedClusterQuerier,
 	}
 
 	// Append the new certificate to the client certificate pool.
@@ -362,9 +370,6 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 				Certificate:       mcResource.Spec.Certificate,
-				// TODO: Update Voltron to fetch the managed cluster version info and store it directly
-				// in the cluster memory, instead of using the ManagedCluster resource.
-				Version: mcResource.Status.Version,
 			}
 
 			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -420,7 +425,6 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 			ID:                id,
 			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 			Certificate:       managedCluster.Spec.Certificate,
-			Version:           managedCluster.Status.Version,
 		}
 
 		known[id] = struct{}{}
@@ -609,6 +613,13 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			logrus.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
+
+	// Fetch managed cluster version before marking it as connected.
+	mcVersion, err := c.managedClusterQuerier.GetVersion(c.DialTLS2, c.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch managed cluster version: %w", err)
+	}
+	c.version = mcVersion
 
 	c.sendStatusUpdate(v3.ManagedClusterStatusValueTrue)
 

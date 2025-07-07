@@ -60,6 +60,15 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
+type mockQuerier struct {
+	version string
+	err     error
+}
+
+func (m *mockQuerier) GetVersion(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error), clusterID string) (string, error) {
+	return m.version, m.err
+}
+
 const (
 	k8sIssuer           = "kubernetes/serviceaccount"
 	managerSAAuthHeader = "Bearer tigera-manager-token"
@@ -76,6 +85,7 @@ var (
 	bobBearerToken  = testing.NewFakeJWT(k8sIssuer, "bob@example.io")
 
 	watchSync chan error
+	mockQ     = &mockQuerier{version: "v3.24.0-1.0"}
 )
 
 func init() {
@@ -158,6 +168,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			config,
 			*vfg,
 			mockAuthenticator,
+			mockQ,
 			server.WithExternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
@@ -1106,7 +1117,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(err).NotTo(HaveOccurred())
 
 			vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
-			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator,
+			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator, mockQ,
 				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
@@ -1546,7 +1557,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.With
 	options ...server.Option,
 ) (*server.Server, string, string, string, *sync.WaitGroup) {
 	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS, ManagedClusterSupportsImpersonation: true}
-	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, options...)
+	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, mockQ, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	lisHTTPS, err := net.Listen("tcp", "localhost:0")

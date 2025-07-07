@@ -25,9 +25,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"golang.org/x/net/http2"
 	"golang.org/x/oauth2"
 	authnv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/transport"
@@ -143,7 +147,7 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, managedClusterQuerier ManagedClusterQuerier, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
@@ -155,7 +159,8 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 			client:     client,
 			// Dummy function that will be overwritten if voltron is accepting
 			// managed cluster connections.
-			statusUpdateFunc: func(string, v3.ManagedClusterStatusValue) {},
+			statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},
+			managedClusterQuerier: managedClusterQuerier,
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
@@ -673,21 +678,21 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 }
 
 func isOlderManagedCluster(cluster *cluster) bool {
-	if len(cluster.Version) == 0 {
+	if len(cluster.version) == 0 {
 		logrus.Debugf("ManagedCluster %s has no version info; treating as older cluster", cluster.ID)
 		return true
 	}
 	// ignore the prerelease version for semver compare
-	version := strings.Split(cluster.Version, "-")
+	version := strings.Split(cluster.version, "-")
 	if len(version) == 0 {
-		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.version)
 		// Treat it as a new cluster for now; this behavior may change in the future.
 		return false
 	}
 
 	clusterVersion, err := semver.NewVersion(strings.TrimPrefix(version[0], "v"))
 	if err != nil {
-		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.version)
 		// Treat it as a new cluster for now; this behavior may change in the future.
 		return false
 	}
@@ -776,4 +781,54 @@ func authorizationHeaderBearerToken(r *http.Request) string {
 		return value[7:]
 	}
 	return ""
+}
+
+type ManagedClusterQuerier interface {
+	GetVersion(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error), clusterID string) (string, error)
+}
+
+type ManagedClusterVersionQuerier struct{}
+
+func (q *ManagedClusterVersionQuerier) GetVersion(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error), clusterID string) (string, error) {
+	clog := logrus.WithField("cluster", clusterID)
+	clog.Info("Fetching the managed cluster version information")
+
+	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig.InsecureSkipVerify = true
+
+	restConfig := &rest.Config{
+		Host: "https://kubernetes.default.svc:443",
+		Transport: &http2.Transport{
+			DialTLS:         dialFunc,
+			TLSClientConfig: tlsConfig,
+			AllowHTTP:       true,
+		},
+	}
+
+	calicoClient, err := tigeraapi.NewForConfig(restConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Calico client: %w", err)
+	}
+
+	ci, err := calicoClient.ProjectcalicoV3().
+		ClusterInformations().
+		Get(context.Background(), "default", metav1.GetOptions{})
+
+	if err != nil {
+		// Managed clusters older than v3.22 may lack RBAC to fetch ClusterInformation.
+		// In such cases, leave the version empty for now.
+		if k8serrors.IsForbidden(err) {
+			clog.Debug("Forbidden error while fetching ClusterInformation:", err)
+			return "", nil
+		}
+
+		// We don't want to block tunnel establishment due to this error — just log a warning and proceed.
+		// This information is only needed for UI rendering, and restarting the guardian should resolve the issue.
+		// The tunnel, however, is critical for Fluentd to push logs to Elasticsearch.
+		clog.Warn("Error while fetching ClusterInformation:", err)
+		return "", nil
+	}
+
+	clog.Debug("Successfully fetched ClusterInformation: ", ci.Spec.CNXVersion)
+	return ci.Spec.CNXVersion, nil
 }

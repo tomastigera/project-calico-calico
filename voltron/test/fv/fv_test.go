@@ -55,7 +55,17 @@ var (
 	testServerName = "test-server-name"
 	proxyUser      = "username"
 	proxyPassword  = "password"
+	mockQ          = &mockQuerier{version: "v3.24.0-1.0"}
 )
+
+type mockQuerier struct {
+	version string
+	err     error
+}
+
+func (m *mockQuerier) GetVersion(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error), clusterID string) (string, error) {
+	return m.version, m.err
+}
 
 func init() {
 	var err error
@@ -354,6 +364,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				&rest.Config{BearerToken: "manager-token"},
 				vcfg.Config{TenantNamespace: clusterNS},
 				authenticator,
+				mockQ,
 				server.WithTunnelSigningCreds(tunnelCert),
 				server.WithTunnelCert(tunnelTLS),
 				server.WithExternalCredFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
