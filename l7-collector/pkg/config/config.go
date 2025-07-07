@@ -15,6 +15,8 @@ type Config struct {
 
 	// Socket to dial
 	DialTarget string `envconfig:"FELIX_DIAL_TARGET"`
+	// Location of the envoy access log file in the shared filesystem.
+	EnvoyAccessLogPath string `envconfig:"ENVOY_ACCESS_LOG_PATH"`
 	// Location of the envoy log files to read from
 	EnvoyLogPath string `envconfig:"ENVOY_LOG_PATH"`
 	// How long the collector will wait in seconds to collect

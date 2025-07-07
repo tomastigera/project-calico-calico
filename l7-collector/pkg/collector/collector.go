@@ -25,6 +25,8 @@ type EnvoyCollector interface {
 	ReadLogs(context.Context)
 	Report() <-chan EnvoyInfo
 	ParseRawLogs(string) (EnvoyLog, error)
+	ReadAccessLogs(context.Context)
+	ParseAccessLogs(string) (EnvoyLog, error)
 	ReceiveLogs(*accesslogv3.HTTPAccessLogEntry)
 	Start(context.Context)
 }

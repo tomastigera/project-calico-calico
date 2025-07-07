@@ -12,6 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
@@ -64,6 +65,7 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	grpcCollector := collector.NewEnvoyCollector(cfg, reportCh)
 	logServer := collector.NewLoggingServer(grpcCollector.ReceiveLogs)
 	logServer.RegisterAccessLogServiceServer(gs)
+	reflection.Register(gs)
 	go grpcCollector.Start(ctx)
 
 	// Run gRPC server on separate goroutine so we catch any signals and clean up.
@@ -95,21 +97,28 @@ func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collect
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
-	// Start the log ingestion go routine.
 	wg.Add(1)
 	go func() {
-		collector.ReadLogs(ctx)
+		collector.ReadAccessLogs(ctx)
 		cancel()
 		wg.Done()
 	}()
 
-	// Start the DataplaneStats reporting go routine.
+	// Start the log ingestion go routine.
 	// wg.Add(1)
 	// go func() {
-	// 	client.SendStats(ctx, collector)
+	// 	collector.ReadLogs(ctx)
 	// 	cancel()
 	// 	wg.Done()
 	// }()
+
+	// Start the DataplaneStats reporting go routine.
+	wg.Add(1)
+	go func() {
+		client.SendStats(ctx, collector)
+		cancel()
+		wg.Done()
+	}()
 
 	// Wait for the go routine to complete before exiting
 	wg.Wait()
