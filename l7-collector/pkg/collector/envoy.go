@@ -160,6 +160,7 @@ type AccessLog struct {
 	UpstreamHost         string `json:"upstream_host"`
 	UpstreamLocalAddress string `json:"upstream_local_address"`
 	UpstreamServiceTime  string `json:"upstream_service_time"`
+	Route                string `json:"route_name"`
 }
 
 func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
@@ -208,6 +209,7 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 		DurationMax:         accLog.Duration,
 		Latency:             accLog.Duration,
 		UpstreamServiceTime: accLog.UpstreamServiceTime,
+		Route:               accLog.Route,
 	}
 	// write entry out to envoy log file
 	ec.batch.Insert(entry)
