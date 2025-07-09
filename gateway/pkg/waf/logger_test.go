@@ -12,6 +12,9 @@ import (
 )
 
 func TestConvertWAFEventToWAFLog(t *testing.T) {
+	t.Setenv(GatewayNameEnvVar, "test-gateway")
+	t.Setenv(GatewayNamespaceEnvVar, "test-gateway-namespace")
+
 	now := time.Now().UTC()
 
 	event := &proto.WAFEvent{
@@ -58,4 +61,6 @@ func TestConvertWAFEventToWAFLog(t *testing.T) {
 			Disruptive: false,
 		},
 	}, log.Rules)
+	require.Equal(t, "test-gateway", log.GatewayName)
+	require.Equal(t, "test-gateway-namespace", log.GatewayNamespace)
 }
