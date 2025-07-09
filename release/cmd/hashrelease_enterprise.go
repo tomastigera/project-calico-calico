@@ -98,8 +98,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				}
 			}
 
-			productRegistriesFromFlag := c.StringSlice(registryFlag.Name)
-
 			// Define the hashrelease directory using the hash from the pinned file.
 			hashreleaseDir := filepath.Join(baseHashreleaseDir, data.Hash())
 			hashrel, err := pinnedversion.LoadEnterpriseHashrelease(cfg.RepoRootDir, cfg.TmpDir, baseHashreleaseDir, c.Bool(latestFlag.Name))
@@ -129,7 +127,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			if reg := c.String(operatorRegistryFlag.Name); reg != "" {
 				operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
 			}
-			if len(productRegistriesFromFlag) > 0 {
+			if len(productRegistries) > 0 {
 				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
 			}
 			if !c.Bool(skipOperatorFlag.Name) {

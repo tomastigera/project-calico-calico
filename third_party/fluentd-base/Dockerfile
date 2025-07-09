@@ -3,10 +3,10 @@
 FROM registry.access.redhat.com/ubi9/ubi
 
 ARG FLUENTD_VERSION
+ARG ARCH
 
 RUN dnf upgrade -y && dnf install -y \
        gcc \
-       jq \
        ruby \
        ruby-devel
 
@@ -32,11 +32,14 @@ RUN gem install elasticsearch-api -v 7.17.11 && \
        gem install fluent-plugin-splunk-hec -v 1.3.3 && \
        gem install fluent-plugin-sumologic_output -v 1.10.0
 
+# Download jq 1.8, dnf would get 1.6, which has vulnerabilities.
+RUN curl -L https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-$ARCH -o /usr/bin/jq && chmod +x /usr/bin/jq
+
 # cleanup
 RUN gem sources --clear-all
 RUN rm -fr /tmp/* /usr/local/share/gems/cache/*.gem
 RUN rm -fr /usr/local/share/gems/gems/fluentd-${FLUENTD_VERSION}/test/
-RUN rm -fr /usr/share/gems/specifications/default/net-imap-0.1.1.gemspec /usr/local/share/gems/doc/net-imap-0.1.1
+RUN rm -fr RUN rm -fr cgi-0.2.2.gemspec
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports
