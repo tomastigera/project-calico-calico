@@ -78,3 +78,10 @@ func WithHashreleaseVersion(version string) Option {
 		return nil
 	}
 }
+
+func WithHashreleaseRegistry(registry string) Option {
+	return func(m *Manager) error {
+		m.hashreleaseRegistry = registry
+		return nil
+	}
+}

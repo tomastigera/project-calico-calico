@@ -8,7 +8,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
-	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
@@ -106,9 +105,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			productRegistries := c.StringSlice(registryFlag.Name)
-			if len(productRegistries) == 0 {
-				productRegistries = []string{registry.TigeraDevCIGCRRegistry}
-			}
 
 			// Build the operator
 			operatorOpts := []operator.Option{
@@ -212,6 +208,8 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				return fmt.Errorf("%s hashrelease (%s) has already been published", hashrel.Name, hashrel.Hash)
 			}
 
+			productRegistries := c.StringSlice(registryFlag.Name)
+
 			// Push the operator hashrelease first before validation.
 			// This is because validation checks all images exists and sends to Image Scan Service
 			o := operator.NewEnterpriseManager(
@@ -241,16 +239,11 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithOutputDir(filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), hashrel.Hash)),
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithPublishImages(false), // Enterprise does not publish images
+				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 			}
-			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
+			if len(productRegistries) > 0 {
 				calicoOpts = append(calicoOpts,
-					calico.WithImageRegistries(reg),
-					calico.WithImageScanning(false, *imageScanningAPIConfig(c)), // Disable image scanning if using custom registries.
-				)
-			} else {
-				calicoOpts = append(calicoOpts,
-					calico.WithImageRegistries([]string{registry.TigeraDevCIGCRRegistry}),
-					calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
+					calico.WithImageRegistries(productRegistries),
 				)
 			}
 
