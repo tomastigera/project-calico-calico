@@ -21,6 +21,7 @@ func TestRequestHandler(t *testing.T) {
 	for _, directive := range waf.DefaultDirectives {
 		cfg = cfg.WithDirectives(directive)
 	}
+	cfg = cfg.WithDirectives("SecRuleEngine On")
 
 	// test case for badword in request body
 	cfg = cfg.WithDirectives(

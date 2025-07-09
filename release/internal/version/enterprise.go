@@ -16,18 +16,6 @@ func NewEnterpriseHashreleaseVersions(calico Version, chartVersion, operator, ma
 	}
 }
 
-func NewEnterpriseReleaseVersions(calico Version, chartVersion, operator string) *EnterpriseVersions {
-	return &EnterpriseVersions{
-		HashreleaseVersions: HashreleaseVersions{
-			calico:   calico,
-			operator: operator,
-		},
-		chartVersion: chartVersion,
-		manager:      calico.FormattedString(),
-		release:      true,
-	}
-}
-
 type EnterpriseVersions struct {
 	HashreleaseVersions
 	chartVersion string

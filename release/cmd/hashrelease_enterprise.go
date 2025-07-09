@@ -25,8 +25,7 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 }
 
 func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
-	flags := append(productFlags, chartVersionFlag)
-	flags = append(flags, managerFlags...)
+	flags := append(productFlags, managerFlags...)
 	flags = append(flags, operatorBuildFlags...)
 	flags = append(flags,
 		archFlag,
@@ -79,7 +78,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 					Dir:    managerDir,
 					Branch: c.String(managerBranchFlag.Name),
 				},
-				ChartVersion: c.String(chartVersionFlag.Name),
 			}
 
 			data, err := pinned.GenerateFile()
@@ -99,8 +97,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 					logrus.Warnf("hashrelease %s has already been published", data.Hash())
 				}
 			}
-
-			productRegistriesFromFlag := c.StringSlice(registryFlag.Name)
 
 			// Define the hashrelease directory using the hash from the pinned file.
 			hashreleaseDir := filepath.Join(baseHashreleaseDir, data.Hash())
@@ -131,7 +127,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			if reg := c.String(operatorRegistryFlag.Name); reg != "" {
 				operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
 			}
-			if len(productRegistriesFromFlag) > 0 {
+			if len(productRegistries) > 0 {
 				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
 			}
 			if !c.Bool(skipOperatorFlag.Name) {
@@ -162,7 +158,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, *hashreleaseServerConfig(c)),
 				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
 			}

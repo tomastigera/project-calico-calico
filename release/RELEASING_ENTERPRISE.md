@@ -7,8 +7,6 @@
     - [Create branch](#create-branch)
     - [Code thaw](#code-thaw)
     - [Setup hashrelease](#setup-hashrelease)
-      - [Update process repo](#update-process-repo)
-      - [Create task in Semaphore](#create-task-in-semaphore)
   - [Performing a release](#performing-a-release)
 
 ## Creating a release branch
@@ -110,42 +108,17 @@ All Operator changes for Enterprise vX.Y should be committed to master branch an
 
 ### Setup hashrelease
 
-#### Update process repo
+  > [!CAUTION]
+  > Wait for `tigera/calico-private` and `tigera/manager` to have published images from the release branch before completing step 2.
 
-1. In `tigera/process`, create a new branch off the latest master
-
-    ```sh
-    git checkout -b release-calient-vX.Y # git checkout -b release-calient-vX.Y-1 for EP1
-    ```
-
-1. Rename the enterprise pipeline job and update the values (i.e. name, env_vars et. al)
-
-    ```sh
-    git mv .semaphore/create-hashrelease-calient-master.yml .semaphore/create-hashrelease.yml
-    ```
-
-1. Update the values in Makefile (including updating `go-build` version to the latest)
+1. Add a new task in [Semaphore project](https://tigera.semaphoreci.com/projects/calico-private/schedulers)
 
     > [!TIP]
-    > Searching for "master" should give an idea of variables that need to be updates
+    > Use any of the "hashrelease: <BRANCH>" task as a template.
+    >
+    > The other hashrelease tasks might also need their schedules updated.
 
-1. Commit changes and push
-
-    ```sh
-    git add .
-    git commit -m "Updates for release-calient-vX.Y" # git commit -m "Updates for release-calient-vX.Y-1" for EP1
-    git push <remote> release-calient-vX.Y # git push <remote> release-calient-vX.Y-1 for EP1
-    ```
-
-#### Create task in Semaphore
-
-1. Add a new task in [process Semaphore project](https://tigera.semaphoreci.com/projects/process/schedulers).
-
-    > [!TIP]
-    > [Enterprise v3.21 EP1](https://tigera.semaphoreci.com/projects/process/schedulers/fea71d3c-5dce-4f59-8219-c5ad85d1da93) is a good example,
-    > be sure to use different times.
-
-1. Hit "Run Now" and ensure the pipeline passes.
+2. Hit "Run Now" and ensure the pipeline passes.
 
 ## Performing a release
 

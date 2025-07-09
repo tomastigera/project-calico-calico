@@ -24,6 +24,7 @@ func TestNewTransactionWrapper(t *testing.T) {
 	for _, directive := range waf.DefaultDirectives {
 		cfg = cfg.WithDirectives(directive)
 	}
+	cfg = cfg.WithDirectives("SecRuleEngine On")
 
 	instance, err := coraza.NewWAF(cfg)
 	if err != nil {
