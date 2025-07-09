@@ -480,12 +480,12 @@ func (m *endpointManager) CompleteDeferredWork() error {
 					return err
 				}
 
-				m.activeWlACLPolicies[id] = rules
-
 				// Inform collector for any policy updates.
 				if len(m.eventListeners) != 0 {
 					m.PropagatePolicyUpdate(endpointId)
 				}
+
+				m.activeWlACLPolicies[id] = rules
 			} else {
 				logCxt := log.WithFields(log.Fields{"id": id, "endpointId": endpointId})
 				logCxt.Debug("No new rules applied to the endpoint")

@@ -1828,7 +1828,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 
 								if vxlan {
 									topologyOptions.VXLANMode = api.VXLANModeAlways
-									topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+									topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 								}
 
 								if !calicoIPAM {

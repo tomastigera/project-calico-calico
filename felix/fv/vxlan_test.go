@@ -106,7 +106,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							// Change CIDR for the second datastore to prevent overlap.
 							topologyOptions.IPPoolCIDR = "10.75.0.0/16"
 							topologyOptions.IPv6PoolCIDR = "dead:cafe::/64"
-							topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+							topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 						} else if overlap == OverlapTestType_Connect {
 							logrus.Info("OverlapTestType_Connect: local and remote clusters share IP pool CIDRs.")
 						} else if overlap == OverlapTestType_ConnectDisconnect {
