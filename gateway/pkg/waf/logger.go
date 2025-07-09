@@ -37,7 +37,7 @@ func initializeEnvVars() {
 		gatewayNamespace = namespace
 	}
 
-	logrus.Infof("Using gateway name: %s, namespace: %s", gatewayName, gatewayNamespace)
+	logrus.Infof("gateway name: %s, namespace: %s", gatewayName, gatewayNamespace)
 }
 
 func DebugLogger(wafEvent *proto.WAFEvent) {
