@@ -430,7 +430,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 	)
 
 	Describe("NetworkPolicy without name on the projectcalico.org annotation", func() {
-		It("Should return the name without default prefix", func() {
+		It("Should return the name with default prefix", func() {
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				config, _, err := k8s.CreateKubernetesClientset(&config.Spec)
 				Expect(err).NotTo(HaveOccurred())
@@ -453,7 +453,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				Expect(err).NotTo(HaveOccurred())
 
 				// We should be able to get it without the default. prefix
-				_, err = c.NetworkPolicies().Get(ctx, "default", "prefix-test-policy", options.GetOptions{})
+				_, err = c.NetworkPolicies().Get(ctx, "default", "default.prefix-test-policy", options.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 			}
 		})
