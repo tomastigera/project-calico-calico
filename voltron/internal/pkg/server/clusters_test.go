@@ -8,8 +8,10 @@ package server
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"slices"
 	"time"
 
@@ -31,6 +33,22 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 )
 
+type MockManagedClusterQuerierFactory struct{}
+
+func (f *MockManagedClusterQuerierFactory) New(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)) (ManagedClusterQuerier, error) {
+	return &MockManagedClusterDataQuerier{
+		dialFunc: dialFunc,
+	}, nil
+}
+
+type MockManagedClusterDataQuerier struct {
+	dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)
+}
+
+func (mc *MockManagedClusterDataQuerier) GetVersion() (string, error) {
+	return "v3.24", nil
+}
+
 func describe(name string, testFn func(string)) bool {
 	Describe(name+" cluster-scoped", func() { testFn("") })
 	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
@@ -46,6 +64,8 @@ func InterceptUpdate(ctx context.Context, client client.WithWatch, obj client.Ob
 	return client.Update(ctx, obj, opts...)
 }
 
+var dummyDialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)
+
 var _ = describe("Clusters", func(clusterNamespace string) {
 	logrus.SetLevel(logrus.DebugLevel)
 	const clusterID = "resource-name"
@@ -55,6 +75,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 	var ctx context.Context
 	var cancel context.CancelFunc
 	var statusUpdater *RequestRecordingStatusUpdater
+	//var mockFactory *MockManagedClusterQuerierFactory
 
 	voltronConfig := config.Config{
 		TenantNamespace: clusterNamespace,
@@ -77,6 +98,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				statusUpdateFunc: statusUpdater.SetStatus,
 			}
 
+			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
@@ -156,6 +178,8 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				statusUpdateFunc: su.SetStatus,
 			}
 
+			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
+
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
@@ -201,6 +225,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
 				statusUpdateFunc: su.SetStatus,
 			}
+			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
@@ -292,7 +317,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
 				statusUpdateFunc: su.SetStatus,
 			}
-
+			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
@@ -383,6 +408,8 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
 				statusUpdateFunc: su.SetStatus,
 			}
+			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
+
 		})
 		AfterEach(func() { cancel() })
 
@@ -427,7 +454,6 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
-
 			Eventually(func() v3.ManagedClusterStatusValue {
 				mc := &v3.ManagedCluster{}
 				_ = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterNameConnected, Namespace: clusterNamespace}, mc)
@@ -454,7 +480,7 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 		clientCertificatePool: x509.NewCertPool(),
 		statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},
 	}
-
+	clusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 	var (
 		err                  error
 		voltronTunnelCert    *x509.Certificate

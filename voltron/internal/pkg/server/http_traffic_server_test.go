@@ -109,7 +109,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			fakeClient,
 			config,
 			voltronConfig,
-			mockAuthenticator, mockQ,
+			mockAuthenticator, mockFactory,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
