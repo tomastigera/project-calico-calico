@@ -25,6 +25,7 @@ const (
 type Manager struct {
 	dir       string
 	calicoDir string
+	version   string
 
 	runner command.CommandRunner
 
@@ -34,9 +35,9 @@ type Manager struct {
 	branch           string
 	devTagIdentifier string
 
-	isHashrelease      bool
-	hashreleaseVersion string
-	version            string
+	isHashrelease       bool
+	hashreleaseVersion  string
+	hashreleaseRegistry string
 
 	validate bool
 
@@ -45,10 +46,11 @@ type Manager struct {
 
 func NewManager(opts ...Option) (*Manager, error) {
 	m := &Manager{
-		runner:        &command.RealCommandRunner{},
-		validate:      true,
-		publish:       true,
-		isHashrelease: false,
+		runner:              &command.RealCommandRunner{},
+		validate:            true,
+		publish:             true,
+		isHashrelease:       false,
+		hashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
 	}
 	for _, opt := range opts {
 		if err := opt(m); err != nil {
@@ -71,7 +73,7 @@ func (m *Manager) Publish() error {
 	env := append(os.Environ(),
 		"IMAGE_ONLY=true",
 		fmt.Sprintf("DEV_TAG=%s", m.hashreleaseVersion),
-		fmt.Sprintf("DEV_REGISTRIES=%s", registry.TigeraDevCIGCRRegistry),
+		fmt.Sprintf("DEV_REGISTRIES=%s", m.hashreleaseRegistry),
 		fmt.Sprintf("RELEASE_TAG=%s", m.version),
 	)
 	if m.publish {

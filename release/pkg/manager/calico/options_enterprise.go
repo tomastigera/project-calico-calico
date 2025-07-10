@@ -27,6 +27,13 @@ func WithEnterpriseHashrelease(hashrelease hashreleaseserver.EnterpriseHashrelea
 	}
 }
 
+func WithEnterpriseHashreleaseRegistry(registry string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.enterpriseHashreleaseRegistry = registry
+		return nil
+	}
+}
+
 func WithPublishWindowsArchive(publish bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.publishWindowsArchive = publish

@@ -155,6 +155,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		hashreleaseNameFlag,
 		chartVersionFlag,
 		publishImagesFlag,
+		hashReleaseRegistryFlag,
 		publishGitFlag,
 		publishToS3Flag,
 		publishWindowsArchiveFlag,
@@ -193,6 +194,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
+			hashrelRegistry := c.String(hashReleaseRegistryFlag.Name)
+
 			// Release the cnx-manager image(s).
 			managerOpts := []manager.Option{
 				manager.WithDirectory(managerDir),
@@ -206,6 +209,9 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				manager.WithPublish(!c.Bool(confirmFlag.Name)),
 				manager.WithVersion(ver.FormattedString()),
 				manager.WithHashreleaseVersion(hashrel.ManagerVersion),
+			}
+			if hashrelRegistry != "" {
+				managerOpts = append(managerOpts, manager.WithHashreleaseRegistry(hashrelRegistry))
 			}
 			manager, err := manager.NewManager(managerOpts...)
 			if err != nil {
@@ -239,6 +245,9 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
 				calico.WithPublishGitChanges(c.Bool(publishGitFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
+			}
+			if hashrelRegistry != "" {
+				entOpts = append(entOpts, calico.WithEnterpriseHashreleaseRegistry(hashrelRegistry))
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 

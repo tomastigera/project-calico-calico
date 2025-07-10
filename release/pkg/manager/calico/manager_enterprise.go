@@ -172,10 +172,11 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 	calicoManager.productCode = utils.EnterpriseProductCode
 
 	m := &EnterpriseManager{
-		CalicoManager:         *calicoManager,
-		publishWindowsArchive: true,
-		publishCharts:         true,
-		helmRegistry:          registry.HelmDevRegistry, // Defaults to dev registry as currently only used for hashreleases.
+		CalicoManager:                 *calicoManager,
+		publishWindowsArchive:         true,
+		publishCharts:                 true,
+		helmRegistry:                  registry.HelmDevRegistry, // Defaults to dev registry as currently only used for hashreleases.
+		enterpriseHashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
 	}
 
 	for _, o := range opts {
@@ -203,6 +204,9 @@ type EnterpriseManager struct {
 	chartVersion string
 
 	enterpriseHashrelease hashreleaseserver.EnterpriseHashrelease
+
+	// enterpriseHashreleaseRegistry is the registry to get hashrelease images that are used for release.
+	enterpriseHashreleaseRegistry string
 
 	// publishing options
 	dryRun                bool
@@ -867,7 +871,7 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 	env := append(os.Environ(),
 		"IMAGE_ONLY=true",
 		fmt.Sprintf("DEV_TAG=%s", m.enterpriseHashrelease.ProductVersion),
-		fmt.Sprintf("DEV_REGISTRIES=%s", registry.TigeraDevCIGCRRegistry),
+		fmt.Sprintf("DEV_REGISTRIES=%s", m.enterpriseHashreleaseRegistry),
 		fmt.Sprintf("RELEASE_TAG=%s", m.calicoVersion),
 	)
 	if m.dryRun {
