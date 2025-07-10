@@ -64,8 +64,6 @@ func InterceptUpdate(ctx context.Context, client client.WithWatch, obj client.Ob
 	return client.Update(ctx, obj, opts...)
 }
 
-var dummyDialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)
-
 var _ = describe("Clusters", func(clusterNamespace string) {
 	logrus.SetLevel(logrus.DebugLevel)
 	const clusterID = "resource-name"
