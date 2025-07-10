@@ -55,6 +55,13 @@ var helmRegistryFlag = &cli.StringFlag{
 	Value:   registry.HelmDevRegistry,
 }
 
+var hashReleaseRegistryFlag = &cli.StringFlag{
+	Name:    "hashrelease-registry",
+	Aliases: []string{"hr-registry"},
+	Usage:   "The registry to get hashrelease images from to use for release",
+	EnvVars: []string{"HASHRELEASE_REGISTRY"},
+}
+
 var (
 	publishWindowsArchiveFlag = &cli.BoolFlag{
 		Name:    "publish-windows-archive",
