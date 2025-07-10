@@ -45,7 +45,7 @@ blocks:
             - make ci-preflight-checks
   - name: Publish tigera/snort3 images
     run:
-      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -64,7 +64,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
     run:
-      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -82,7 +82,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
     run:
-      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/snort3 images
       - Publish tigera/snort3 images - native arm64 runner
@@ -99,7 +99,7 @@ blocks:
 
   - name: deep-packet-inspection
     run:
-      when: "true or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/snort3 multi-arch manifests
     task:
@@ -122,7 +122,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/elasticsearch images
     run:
-      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -141,7 +141,7 @@ blocks:
             - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/elasticsearch images - native arm64 runner
     run:
-      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -159,7 +159,7 @@ blocks:
             - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/elasticsearch multi-arch manifests
     run:
-      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/elasticsearch images
       - Publish tigera/elasticsearch images - native arm64 runner
@@ -176,7 +176,7 @@ blocks:
 
   - name: elasticsearch
     run:
-      when: "true or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/elasticsearch multi-arch manifests
     task:
@@ -199,7 +199,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/fluentd-base images
     run:
-      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -214,7 +214,7 @@ blocks:
             - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/fluentd-base images - native arm64 runner
     run:
-      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     task:
@@ -232,7 +232,7 @@ blocks:
             - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/fluentd-base multi-arch manifests
     run:
-      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/fluentd-base images
       - Publish tigera/fluentd-base images - native arm64 runner
@@ -249,7 +249,7 @@ blocks:
 
   - name: fluentd
     run:
-      when: "true or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/fluentd-base multi-arch manifests
     task:
@@ -273,7 +273,7 @@ blocks:
 
   - name: Publish tigera/fluentd-base Windows images
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Prerequisites
     execution_time_limit:
@@ -307,7 +307,7 @@ blocks:
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
   - name: Publish tigera/fluentd-base Windows multi-arch manifests
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore', default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/fluentd-base Windows images
     task:
@@ -323,7 +323,7 @@ blocks:
 
   - name: fluentd Windows
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], default_branch: 'release-calient-v3.21'})"
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:
