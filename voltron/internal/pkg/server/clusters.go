@@ -22,6 +22,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -69,6 +70,11 @@ type cluster struct {
 
 	// Pointer to general Voltron configuration.
 	voltronCfg *config.Config
+
+	// Version stores managed cluster's version information.
+	version string
+
+	managedClusterQuerier ManagedClusterQuerier
 }
 
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
@@ -122,6 +128,8 @@ type clusters struct {
 	clientCertificatePool *x509.CertPool
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
+
+	managedClusterQuerierFactory ManagedClusterQuerierFactory
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
@@ -157,6 +165,12 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		client:           cs.client,
 		voltronCfg:       cs.voltronCfg,
 		statusUpdateFunc: cs.statusUpdateFunc,
+	}
+
+	var err error
+	c.managedClusterQuerier, err = cs.managedClusterQuerierFactory.New(c.DialTLS2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create managed cluster querier for cluster %s: %w", c.ID, err)
 	}
 
 	// Append the new certificate to the client certificate pool.
@@ -362,9 +376,6 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 				Certificate:       mcResource.Spec.Certificate,
-				// TODO: Update Voltron to fetch the managed cluster version info and store it directly
-				// in the cluster memory, instead of using the ManagedCluster resource.
-				Version: mcResource.Status.Version,
 			}
 
 			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -420,7 +431,6 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 			ID:                id,
 			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 			Certificate:       managedCluster.Spec.Certificate,
-			Version:           managedCluster.Status.Version,
 		}
 
 		known[id] = struct{}{}
@@ -608,6 +618,25 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			}
 			logrus.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
+	}
+
+	logrus.Info("Fetching the managed cluster version information for ", c.ID)
+	// Fetch managed cluster version before marking it as connected.
+	mcVersion, err := c.managedClusterQuerier.GetVersion()
+	if err != nil {
+		// Managed clusters older than v3.22 may lack RBAC to fetch ClusterInformation.
+		// In such cases, leave the version empty for now.
+		if k8serrors.IsForbidden(err) {
+			logrus.Debugf("Forbidden error while fetching ClusterInformation for %s :%v", c.ID, err)
+		} else {
+			// We don't want to block tunnel establishment due to this error — just log a warning and proceed.
+			// This information is only needed for UI rendering, and restarting the guardian should resolve the issue.
+			// The tunnel, however, is critical for Fluentd to push logs to Elasticsearch.
+			logrus.Warn("Error while fetching ClusterInformation:", c.ID, err)
+		}
+	} else {
+		logrus.Debugf("Fetched cluster version information for %s : %s", c.ID, mcVersion)
+		c.version = mcVersion
 	}
 
 	c.sendStatusUpdate(v3.ManagedClusterStatusValueTrue)

@@ -60,6 +60,22 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
+type MockManagedClusterQuerierFactory struct{}
+
+func (f *MockManagedClusterQuerierFactory) New(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)) (server.ManagedClusterQuerier, error) {
+	return &MockManagedClusterDataQuerier{
+		dialFunc: dialFunc,
+	}, nil
+}
+
+type MockManagedClusterDataQuerier struct {
+	dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)
+}
+
+func (mc *MockManagedClusterDataQuerier) GetVersion() (string, error) {
+	return "v3.24", nil
+}
+
 const (
 	k8sIssuer           = "kubernetes/serviceaccount"
 	managerSAAuthHeader = "Bearer tigera-manager-token"
@@ -76,6 +92,8 @@ var (
 	bobBearerToken  = testing.NewFakeJWT(k8sIssuer, "bob@example.io")
 
 	watchSync chan error
+
+	mockFactory = &MockManagedClusterQuerierFactory{}
 )
 
 func init() {
@@ -158,6 +176,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			config,
 			*vfg,
 			mockAuthenticator,
+			mockFactory,
 			server.WithExternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
@@ -1106,7 +1125,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(err).NotTo(HaveOccurred())
 
 			vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
-			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator,
+			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator, mockFactory,
 				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
@@ -1546,7 +1565,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.With
 	options ...server.Option,
 ) (*server.Server, string, string, string, *sync.WaitGroup) {
 	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS, ManagedClusterSupportsImpersonation: true}
-	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, options...)
+	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, mockFactory, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	lisHTTPS, err := net.Listen("tcp", "localhost:0")

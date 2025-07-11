@@ -452,6 +452,7 @@ func main() {
 		k8sConfig,
 		*cfg,
 		authn,
+		&server.DefaultManagedClusterQuerierFactory{},
 		opts...,
 	)
 	if err != nil {
