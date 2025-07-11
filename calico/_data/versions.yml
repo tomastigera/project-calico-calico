@@ -66,12 +66,12 @@
       image: tigera/ui-apis
       version: master
     eck-kibana:
-      version: 8.18.1
+      version: 8.18.3
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 8.18.1
+      version: 8.18.3
     elasticsearch:
       image: tigera/elasticsearch
       version: master
