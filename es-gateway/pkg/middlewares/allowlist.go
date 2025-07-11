@@ -21,33 +21,33 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	case r.URL.Path == "/_bulk" && r.Method == http.MethodPost:
 		// This is a request Kibana makes to update its indices
 		// POST /_bulk?refresh=false&_source_includes=originId&require_alias=true
-		// {"update":{"_id":"task:endpoint:user-artifact-packager:1.0.0","_index":".kibana_task_manager_8.18.1"}}
+		// {"update":{"_id":"task:endpoint:user-artifact-packager:1.0.0","_index":".kibana_task_manager_x.y.z"}}
 		// We need to filter through the body of this request and determine if we access only .kibana indices
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-bulk.html
 		return isBulkRequestAllowed(w, r)
 	case strings.HasPrefix(r.URL.Path, "/.kibana"):
 		// These request access kibana indices for read/write/update data
-		// DELETE /.kibana_task_manager_8.18.1/_doc/
-		// GET /.kibana_8.18.1/_doc/
-		// GET /.kibana%2C.kibana_8.18.1?ignore_unavailable=true
-		// GET /.kibana_task_manager%2C.kibana_task_manager_8.18.1?ignore_unavailable=true
+		// DELETE /.kibana_task_manager_x.y.z/_doc/
+		// GET /.kibana_x.y.z/_doc/
+		// GET /.kibana%2C.kibana_x.y.z?ignore_unavailable=true
+		// GET /.kibana_task_manager%2C.kibana_task_manager_x.y.z?ignore_unavailable=true
 		// GET /.kibana-event-log-*/_alias
 		// GET /.kibana-event-log-*/_settings
 		// GET /.kibana_security_session_1/_doc
-		// GET /.kibana_task_manager_8.18.1/_doc/
-		// POST /.kibana_8.18.1_001/_pit?keep_alive=10m
-		// POST /.kibana_8.18.1_001/_update_by_query
-		// POST /.kibana_8.18.1/_search
-		// POST /.kibana_8.18.1/_update
-		// POST /.kibana_task_manager_8.18.1_001/_pit?keep_alive=10m
-		// POST /.kibana_task_manager_8.18.1_001/_update_by_query
+		// GET /.kibana_task_manager_x.y.z/_doc/
+		// POST /.kibana_x.y.z_001/_pit?keep_alive=10m
+		// POST /.kibana_x.y.z_001/_update_by_query
+		// POST /.kibana_x.y.z/_search
+		// POST /.kibana_x.y.z/_update
+		// POST /.kibana_task_manager_x.y.z_001/_pit?keep_alive=10m
+		// POST /.kibana_task_manager_x.y.z_001/_update_by_query
 		// POST /.kibana_task_manager/_search
 		// POST /.kibana_task_manager/_update_by_query
-		// PUT /.kibana_8.18.1_001/_mapping?timeout=60s
-		// PUT /.kibana_8.18.1/_create
-		// PUT /.kibana_8.18.1/_doc
-		// PUT /.kibana_task_manager_8.18.1_001/_mapping?
-		// PUT /.kibana_task_manager_8.18.1/_create
+		// PUT /.kibana_x.y.z_001/_mapping?timeout=60s
+		// PUT /.kibana_x.y.z/_create
+		// PUT /.kibana_x.y.z/_doc
+		// PUT /.kibana_task_manager_x.y.z_001/_mapping?
+		// PUT /.kibana_task_manager_x.y.z/_create
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/rest-apis.html
 		return true, nil
 	case r.URL.Path == "/_nodes" && r.Method == http.MethodGet &&
@@ -60,7 +60,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	case r.URL.Path == "/_pit" && r.Method == http.MethodDelete:
 		// This is a request to delete a point in time. We will allow it without checking the index
 		// PIT request are previously make for kibana indices, like the ones below
-		// POST /.kibana_task_manager_8.18.1_001/_pit?keep_alive=10m
+		// POST /.kibana_task_manager_x.y.z_001/_pit?keep_alive=10m
 		// DELETE /_pit
 		// {"id":"u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAANE4FnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA="}
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/point-in-time-api.html
@@ -107,7 +107,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	case r.URL.Path == "/_security/user/_has_privileges" && r.Method == http.MethodPost:
 		// This requests checks what privileges has application kibana-.kibana
 		// POST /_security/user/_has_privileges
-		// {"index":[],"application":[{"application":"kibana-.kibana","resources":["*"],"privileges":["version:8.18.1","login:","ui:8.18.1:enterpriseSearch/all"]}]
+		// {"index":[],"application":[{"application":"kibana-.kibana","resources":["*"],"privileges":["version:x.y.z","login:","ui:x.y.z:enterpriseSearch/all"]}]
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-has-privileges.html
 		return true, nil
 	case r.URL.Path == "/_xpack" && r.Method == http.MethodGet && hasQueryParam(r, "accept_enterprise", "true"):
@@ -117,7 +117,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_cluster/health/.kibana") && r.Method == http.MethodGet && hasQueryParam(r, "wait_for_status", "yellow"):
 		// This is a request Kibana makes to check the health of the cluster
-		// GET /_cluster/health/.kibana_task_manager_8.18.1_001?wait_for_status=yellow&timeout=60s
+		// GET /_cluster/health/.kibana_task_manager_x.y.z_001?wait_for_status=yellow&timeout=60s
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
 		return true, nil
 	case r.URL.Path == "/_aliases" && r.Method == http.MethodPost:
@@ -161,7 +161,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	case r.URL.Path == "/_mget" && r.Method == http.MethodPost:
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// POST /_mget
-		// {"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".kibana_8.18.1"}]}
+		// {"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".kibana_x.y.z"}]}
 		// We need to filter through the body of this request and determine if we
 		// access only .kibana* indices
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-multi-get.html
@@ -176,7 +176,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	// https://github.com/elastic/kibana/blob/8.13/x-pack/plugins/event_log/README.md
 	case strings.HasPrefix(r.URL.Path, "/_alias/.kibana-event-log") && r.Method == http.MethodHead:
 		// This request is needed by the event log plugin
-		// HEAD /_alias/.kibana-event-log-8.18.1
+		// HEAD /_alias/.kibana-event-log-x.y.z
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-alias.html
 		return true, nil
 	case r.URL.Path == "/_ilm/policy/kibana-event-log-policy" && r.Method == http.MethodGet:
@@ -186,12 +186,12 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_index_template/.kibana-event-log") && r.Method == http.MethodHead:
 		// This request is needed by the event log plugin
-		// HEAD /_index_template/.kibana-event-log-8.18.1-template
+		// HEAD /_index_template/.kibana-event-log-x.y.z-template
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
 		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_template/.kibana-event-log") && r.Method == http.MethodHead:
 		// This request is needed by the event log plugin
-		// HEAD /_template/.kibana-event-log-8.18.1-template
+		// HEAD /_template/.kibana-event-log-x.y.z-template
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
 		return true, nil
 	case r.URL.Path == "/_template/.kibana-event-log-*" && r.Method == http.MethodGet:
@@ -502,14 +502,14 @@ type Aliases struct {
 //	 "actions": [
 //	   {
 //	     "add": {
-//	       "index": ".kibana_task_manager_8.18.1_001",
+//	       "index": ".kibana_task_manager_x.y.z_001",
 //	       "alias": ".kibana_task_manager"
 //	     }
 //	   },
 //	   {
 //	     "add": {
-//	       "index": ".kibana_task_manager_8.18.1_001",
-//	       "alias": ".kibana_task_manager_8.18.1"
+//	       "index": ".kibana_task_manager_x.y.z_001",
+//	       "alias": ".kibana_task_manager_x.y.z"
 //	     }
 //	   }
 //	 ]

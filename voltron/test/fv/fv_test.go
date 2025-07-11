@@ -55,7 +55,24 @@ var (
 	testServerName = "test-server-name"
 	proxyUser      = "username"
 	proxyPassword  = "password"
+	mockFactory    = &MockManagedClusterQuerierFactory{}
 )
+
+type MockManagedClusterQuerierFactory struct{}
+
+func (f *MockManagedClusterQuerierFactory) New(dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)) (server.ManagedClusterQuerier, error) {
+	return &MockManagedClusterDataQuerier{
+		dialFunc: dialFunc,
+	}, nil
+}
+
+type MockManagedClusterDataQuerier struct {
+	dialFunc func(network, addr string, cfg *tls.Config) (net.Conn, error)
+}
+
+func (mc *MockManagedClusterDataQuerier) GetVersion() (string, error) {
+	return "v3.24", nil
+}
 
 func init() {
 	var err error
@@ -354,6 +371,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				&rest.Config{BearerToken: "manager-token"},
 				vcfg.Config{TenantNamespace: clusterNS},
 				authenticator,
+				mockFactory,
 				server.WithTunnelSigningCreds(tunnelCert),
 				server.WithTunnelCert(tunnelTLS),
 				server.WithExternalCredFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),

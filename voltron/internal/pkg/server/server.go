@@ -143,7 +143,7 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
@@ -155,7 +155,8 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 			client:     client,
 			// Dummy function that will be overwritten if voltron is accepting
 			// managed cluster connections.
-			statusUpdateFunc: func(string, v3.ManagedClusterStatusValue) {},
+			statusUpdateFunc:             func(string, v3.ManagedClusterStatusValue) {},
+			managedClusterQuerierFactory: mcQuerierFactory,
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
@@ -679,21 +680,21 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 }
 
 func isOlderManagedCluster(cluster *cluster) bool {
-	if len(cluster.Version) == 0 {
+	if len(cluster.version) == 0 {
 		logrus.Debugf("ManagedCluster %s has no version info; treating as older cluster", cluster.ID)
 		return true
 	}
 	// ignore the prerelease version for semver compare
-	version := strings.Split(cluster.Version, "-")
+	version := strings.Split(cluster.version, "-")
 	if len(version) == 0 {
-		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		logrus.Debugf("Managed cluster version length is zero for cluster ID: %s. Version info: %s", cluster.ID, cluster.version)
 		// Treat it as a new cluster for now; this behavior may change in the future.
 		return false
 	}
 
 	clusterVersion, err := semver.NewVersion(strings.TrimPrefix(version[0], "v"))
 	if err != nil {
-		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.Version)
+		logrus.Debugf("Failed to parse semantic version for cluster ID: %s. Version info: %s", cluster.ID, cluster.version)
 		// Treat it as a new cluster for now; this behavior may change in the future.
 		return false
 	}

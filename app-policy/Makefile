@@ -158,7 +158,8 @@ cd: image-all cd-common
 
 ###############################################################################
 MMDB_DIR=./bin/database
-MMDB_SRC_URL=https://download.db-ip.com/free/dbip-city-lite-2025-06.mmdb.gz
+MMDB_RELEASE=$(shell date '+%Y-%m')
+MMDB_SRC_URL=https://download.db-ip.com/free/dbip-city-lite-$(MMDB_RELEASE).mmdb.gz
 MMDB_FILES=$(MMDB_DIR)/dbip-city-lite.mmdb
 $(MMDB_FILES):
 	@echo "[INFO] Downloading MMDB from DB-IP.com (city) $@ ..."
