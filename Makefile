@@ -154,6 +154,7 @@ generate:
 	$(MAKE) get-operator-crds
 	$(MAKE) gen-manifests
 	$(MAKE) fix-changed
+	$(MAKE) get-operator-crds
 
 PROM_CRD_LOCATION=third_party/prometheus-operator/prometheus-operator/example/prometheus-operator-crd
 PROM_CRD_TARGET_LOCATION=charts/tigera-prometheus-operator/crds
