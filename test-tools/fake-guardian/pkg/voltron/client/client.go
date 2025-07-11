@@ -97,7 +97,10 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 			dialerFunc = func() (*tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
 
-				tlsConfig := calicotls.NewTLSConfig()
+				tlsConfig, err := calicotls.NewTLSConfig()
+				if err != nil {
+					return nil, err
+				}
 				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
 				tlsConfig.RootCAs = tunnelRootCAs
 				tlsConfig.ServerName = client.tunnelServerName
@@ -162,7 +165,10 @@ func (c *Client) ServeTunnelHTTP() error {
 	if c.tunnelCert != nil {
 		// we need to upgrade the tunnel to a TLS listener to support HTTP2
 		// on this side.
-		tlsConfig := calicotls.NewTLSConfig()
+		tlsConfig, err := calicotls.NewTLSConfig()
+		if err != nil {
+			return err
+		}
 		tlsConfig.Certificates = []tls.Certificate{*c.tunnelCert}
 		tlsConfig.NextProtos = []string{"h2"}
 		listener = tls.NewListener(listener, tlsConfig)

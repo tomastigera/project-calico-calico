@@ -89,11 +89,14 @@ func (s *Server) Start() error {
 
 	lic := handlers.License{Client: c}
 	sm.HandleFunc("/license", s.authhandler.AuthenticationHandler(lic.LicenseHandler, authhandler.MethodGET))
-
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return err
+	}
 	s.server = &http.Server{
 		Addr:      s.servercfg.ListenAddr,
 		Handler:   sm,
-		TLSConfig: calicotls.NewTLSConfig(),
+		TLSConfig: tlsConfig,
 	}
 	if s.servercfg.TLSCert != "" && s.servercfg.TLSKey != "" {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTPS server")

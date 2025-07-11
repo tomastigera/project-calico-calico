@@ -53,7 +53,10 @@ func main() {
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := ctls.NewTLSConfig()
+	tlsConfig, err := ctls.NewTLSConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	tlsConfig.RootCAs = caCertPool
 
 	// Determine whether mTLS is enabled for Kibana.

@@ -281,7 +281,10 @@ func (s *SyncerClient) connect(cxt context.Context, typhaAddr discovery.Typha) e
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
-		tlsConfig := calicotls.NewTLSConfig()
+		tlsConfig, err := calicotls.NewTLSConfig()
+		if err != nil {
+			return fmt.Errorf("failed to create TLS Config: %w", err)
+		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on

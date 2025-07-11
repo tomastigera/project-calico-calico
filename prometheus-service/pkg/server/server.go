@@ -75,11 +75,14 @@ func Start(config *Config) {
 	sm.Handle("/health", health.HealthCheck())
 
 	sm.Handle("/", proxyHandler)
-
+	tlsConfig, err := tls.NewTLSConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	server = &http.Server{
 		Addr:      config.ListenAddr,
 		Handler:   middleware.LogRequestHeaders(sm),
-		TLSConfig: tls.NewTLSConfig(),
+		TLSConfig: tlsConfig,
 	}
 
 	wg.Add(1)

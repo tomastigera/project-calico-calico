@@ -36,8 +36,10 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 	BeforeEach(func() {
 		httpProxy = goproxy.NewProxyHttpServer()
 		httpsProxy = goproxy.NewProxyHttpServer()
-		tunnelClientTLSConfig = calicoTLS.NewTLSConfig()
-		proxyClientTLSConfig = calicoTLS.NewTLSConfig()
+		tlsConfig, errTLS := calicoTLS.NewTLSConfig()
+		Expect(errTLS).NotTo(HaveOccurred())
+		tunnelClientTLSConfig = tlsConfig
+		proxyClientTLSConfig = tlsConfig
 
 		// Silence warnings from connections being closed. The proxy server lib only accepts the unstructured std logger.
 		silentLogger := log.New(io.Discard, "", log.LstdFlags)

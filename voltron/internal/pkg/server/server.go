@@ -182,7 +182,10 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, wrapInCORSHandler(srv.cors, srv.clusterMuxer)))
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
-	cfg := calicotls.NewTLSConfig()
+	cfg, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 	if len(srv.internalCert.Certificate) > 0 {
 		cfg.Certificates = append(cfg.Certificates, srv.internalCert)
@@ -198,7 +201,10 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 		if len(srv.internalCert.Certificate) == 0 {
 			return nil, fmt.Errorf("no internal certificates configured")
 		}
-		internalTlsCfg := calicotls.NewTLSConfig()
+		internalTlsCfg, err := calicotls.NewTLSConfig()
+		if err != nil {
+			return nil, err
+		}
 		internalTlsCfg.Certificates = append(internalTlsCfg.Certificates, srv.internalCert)
 
 		srv.internalHTTP = &http.Server{

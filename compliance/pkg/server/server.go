@@ -39,11 +39,15 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, f api.StoreFactory,
 	mux.Get(UrlList, authenticateRequest(authenticator, s.handleListReports))
 	mux.Get(UrlDownload, authenticateRequest(authenticator, s.handleDownloadReports))
 
+	tlsConfig, err := tls.NewTLSConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Create a new server using the MUX.
 	s.server = &http.Server{
 		Addr:      addr,
 		Handler:   mux,
-		TLSConfig: tls.NewTLSConfig(),
+		TLSConfig: tlsConfig,
 	}
 
 	return s

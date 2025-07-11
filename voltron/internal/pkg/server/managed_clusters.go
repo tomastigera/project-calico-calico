@@ -36,7 +36,10 @@ type ManagedClusterDataQuerier struct {
 
 // GetVersion fetches the Managed cluster's version information via the existing tunnel.
 func (mc *ManagedClusterDataQuerier) GetVersion() (string, error) {
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to create TLS Config: %w", err)
+	}
 	tlsConfig.InsecureSkipVerify = true
 
 	restConfig := &rest.Config{

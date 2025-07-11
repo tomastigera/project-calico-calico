@@ -54,7 +54,10 @@ func getTLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("failed to parse root certificate")
 	}
 
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig.RootCAs = caCertPool
 
 	return tlsConfig, nil

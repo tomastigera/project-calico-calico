@@ -183,7 +183,11 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 			if err != nil {
 				log.WithError(err).Fatal("Unable to create tls configuration for bgp metrics health check")
 			}
-			tlsConfig = calicotls.NewTLSConfig()
+			tlsConfig, err = calicotls.NewTLSConfig()
+			if err != nil {
+				fmt.Printf("%s\n", err)
+				os.Exit(1)
+			}
 			tlsConfig.Certificates = []tls.Certificate{pair}
 			tlsConfig.InsecureSkipVerify = true
 		}

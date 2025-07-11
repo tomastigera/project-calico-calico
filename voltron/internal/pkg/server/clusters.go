@@ -133,7 +133,10 @@ type clusters struct {
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
-	cfg := calicotls.NewTLSConfig()
+	cfg, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return err
+	}
 	if cs.voltronCfg.LinseedServerKey != "" && cs.voltronCfg.LinseedServerCert != "" {
 		certBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerCert)
 		if err != nil {
@@ -571,7 +574,10 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 
 	// Set up the outbound proxy, which handles traffic from the management cluster desinted
 	// to the managed cluster over the tunnel.
-	outboundTLSConfig := calicotls.NewTLSConfig()
+	outboundTLSConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return err
+	}
 	outboundTLSConfig.InsecureSkipVerify = true // todo: not sure where this comes from, but this should be dealt with.
 	c.outboundTLSProxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,

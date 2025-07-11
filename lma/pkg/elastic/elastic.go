@@ -107,7 +107,10 @@ func NewFromConfig(cfg *Config) (Client, error) {
 			}
 		}
 
-		tlsConfig := tls.NewTLSConfig()
+		tlsConfig, err := tls.NewTLSConfig()
+		if err != nil {
+			return nil, err
+		}
 		tlsConfig.RootCAs = ca
 		h.Transport = &http.Transport{TLSClientConfig: tlsConfig}
 	}

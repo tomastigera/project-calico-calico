@@ -53,7 +53,10 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 	if t.Transport != nil {
 		p.Transport = &loggerRoundTripper{defaultTransport: t.Transport}
 	} else if t.Dest.Scheme == "https" {
-		tlsCfg := calicotls.NewTLSConfig()
+		tlsCfg, err := calicotls.NewTLSConfig()
+		if err != nil {
+			return nil, err
+		}
 
 		if t.AllowInsecureTLS {
 			tlsCfg.InsecureSkipVerify = true

@@ -40,7 +40,10 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
 		TLSClientConfig: tlsConfig,
