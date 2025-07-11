@@ -10047,12 +10047,6 @@ func schema_pkg_apis_projectcalico_v3_ManagedClusterStatus(ref common.ReferenceC
 							},
 						},
 					},
-					"version": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 				},
 			},
 		},

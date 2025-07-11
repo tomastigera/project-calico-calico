@@ -69,7 +69,6 @@ type ControllersConfig struct {
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
 	ManagedClusterLicensing    *ManagedClusterControllerConfig
-	ClusterInfo                *ManagedClusterControllerConfig
 	Usage                      *UsageControllerConfig
 	LoadBalancer               *LoadBalancerControllerConfig
 }
@@ -478,15 +477,6 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedClusterLicensing.TenantNamespace = envCfg.TenantNamespace
 	}
 
-	if rc.ClusterInfo != nil {
-		rc.ClusterInfo.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
-		rc.ClusterInfo.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
-		rc.ClusterInfo.Kubeconfig = envCfg.Kubeconfig
-
-		// TenantNamespace will be available in Multitenant Mode.
-		rc.ClusterInfo.TenantNamespace = envCfg.TenantNamespace
-	}
-
 	if rc.AuthorizationConfiguration != nil {
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
 		rc.AuthorizationConfiguration.OIDCAuthUsernamePrefix = envCfg.OIDCAuthUsernamePrefix
@@ -784,8 +774,6 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 				// managed cluster not supported on KubeControllersConfiguration yet
 			case "managedclusterlicensing":
 				rc.ManagedClusterLicensing = &ManagedClusterControllerConfig{}
-			case "clusterinfo":
-				rc.ClusterInfo = &ManagedClusterControllerConfig{}
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet
