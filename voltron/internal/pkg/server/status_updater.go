@@ -295,12 +295,6 @@ func setConnectedStatus(client ctrlclient.WithWatch, namespace, managedClusterNa
 
 	var updatedConditions []v3.ManagedClusterStatusCondition
 
-	// Ensure version information is preserved while updating status conditions.
-	var clusterversion string
-	if mc.Status.Version != "" {
-		clusterversion = mc.Status.Version
-	}
-
 	connectedConditionFound := false
 	for _, c := range mc.Status.Conditions {
 		if c.Type == v3.ManagedClusterStatusTypeConnected {
@@ -318,7 +312,6 @@ func setConnectedStatus(client ctrlclient.WithWatch, namespace, managedClusterNa
 	}
 
 	mc.Status.Conditions = updatedConditions
-	mc.Status.Version = clusterversion
 
 	err = client.Update(ctx, mc)
 	if err != nil {

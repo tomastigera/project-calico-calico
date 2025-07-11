@@ -803,44 +803,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			}
 		}
 
-		if cfg.Controllers.ClusterInfo != nil {
-			opts := []managedcluster.ControllerOption{
-				managedcluster.WithManagedClusterControllerConfig(*cfg.Controllers.ClusterInfo),
-				managedcluster.WithControllerRuntimeClient(client),
-				managedcluster.WithCreateManagedK8sCLI(func(clustername string) (kubernetes.Interface, tigeraapi.Interface, error) {
-					kubeconfig := restclient.CopyConfig(kubeconfig)
-					kubeconfig.Host = cfg.Controllers.ClusterInfo.MultiClusterForwardingEndpoint
-					kubeconfig.CAFile = cfg.Controllers.ClusterInfo.MultiClusterForwardingCA
-					kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
-						return &addHeaderRoundTripper{
-							headers: map[string][]string{"x-cluster-id": {clustername}},
-							rt:      rt,
-						}
-					})
-					kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
-					if err != nil {
-						return kubeClientSet, nil, err
-					}
-
-					calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
-					if err != nil {
-						return kubeClientSet, calicoClientSet, err
-					}
-
-					return kubeClientSet, calicoClientSet, nil
-				}),
-			}
-			clusterInfoController, err := managedcluster.NewClusterInfoController(opts...)
-			if err != nil {
-				log.WithError(err).Fatal("failed to created clusterInfoController")
-			}
-
-			cc.controllerStates["ClusterInfo"] = &controllerState{
-				controller:     clusterInfoController,
-				licenseFeature: features.MultiClusterManagement,
-			}
-		}
-
 		cc.needLicenseMonitoring = true
 	}
 

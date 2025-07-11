@@ -5,6 +5,7 @@
 !filesystem
 !dist/bin
 !vendor/github.com/kelseyhightower/confd/etc/calico/confd
+!patches/svlogd_use_0644_permission_instead_of_0744.patch
 # - AlmaLinux repository file and our license
 !almalinux.repo
 # - Files used in the windows image
