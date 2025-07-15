@@ -168,6 +168,29 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 	}
 }
 
+// validateEnterpriseHashreleasePublishFlags checks that the flags are set correctly for the enterprise hashrelease publish command.
+func validateEnterpriseHashreleasePublishFlags(c *cli.Context) error {
+	// If publishing the hashrelease
+	if c.Bool(publishHashreleaseFlag.Name) {
+		//  check that hashrelease server configuration is set.
+		if !hashreleaseServerConfig(c).Valid() {
+			return fmt.Errorf("missing hashrelease server configuration, ensure %s, %s, %s, %s %s, %s and %s are set",
+				sshHostFlag, sshUserFlag, sshKeyFlag, sshPortFlag, sshKnownHostsFlag,
+				hashreleaseServerBucketFlag, hashreleaseServerCredentialsFlag)
+		}
+		// If building locally, do not allow setting the hashrelease as latest.
+		if c.Bool(latestFlag.Name) && !c.Bool(ciFlag.Name) {
+			return fmt.Errorf("cannot set hashrelease as latest when building locally, use --%s=false instead", latestFlag.Name)
+		}
+	}
+
+	// If skipValidationFlag is set, then skipImageScanFlag must also be set.
+	if c.Bool(skipValidationFlag.Name) && !c.Bool(skipImageScanFlag.Name) {
+		return fmt.Errorf("%s must be set if %s is set", skipImageScanFlag, skipValidationFlag)
+	}
+	return nil
+}
+
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
 		devTagSuffixFlag,
@@ -191,7 +214,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			configureLogging("hashrelease-publish.log")
 
 			// Validate flags.
-			if err := validateHashreleasePublishFlags(c); err != nil {
+			if err := validateEnterpriseHashreleasePublishFlags(c); err != nil {
 				return err
 			}
 
