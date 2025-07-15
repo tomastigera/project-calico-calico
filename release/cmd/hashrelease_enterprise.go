@@ -173,6 +173,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 		devTagSuffixFlag,
 		operatorDevTagSuffixFlag,
 		archFlag,
+		registryFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
 		helmRegistryFlag,
