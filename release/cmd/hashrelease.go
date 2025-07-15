@@ -372,6 +372,10 @@ func validateHashreleasePublishFlags(c *cli.Context) error {
 				hashreleaseServerBucketFlag, hashreleaseServerCredentialsFlag)
 		}
 		if c.Bool(latestFlag.Name) {
+			// If using a custom registry, do not allow setting the hashrelease as latest.
+			if len(c.StringSlice(registryFlag.Name)) > 0 {
+				return fmt.Errorf("cannot set hashrelease as latest when using a custom registry")
+			}
 			// If building locally, do not allow setting the hashrelease as latest.
 			if !c.Bool(ciFlag.Name) {
 				return fmt.Errorf("cannot set hashrelease as latest when building locally, use --%s=false instead", latestFlag.Name)
