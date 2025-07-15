@@ -135,6 +135,8 @@ echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 # Exclude specific ES outputs based on ENV variable flags. Note, if ES output is disabled here for a log type, depending on whether
 # another output destination is enabled, we may need to disable the output match directive for the log type completely (see later
 # on in this script).
+mkdir -p "${ROOT_DIR}/fluentd/etc/output_flows/"
+mkdir -p "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/"
 if [ -z "${DISABLE_ES_FLOW_LOG}" ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ]; then
   if [ -z "${LINSEED_ENABLED}" ] || [ "${LINSEED_ENABLED}" == "false" ]; then
     cp "${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-es.conf"
