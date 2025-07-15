@@ -145,6 +145,7 @@ generate:
 	$(MAKE) -C goldmane gen-files
 	$(MAKE) gen-prometheus-crds
 	$(MAKE) gen-eck-crds
+	$(MAKE) get-operator-crds
 	$(MAKE) gen-manifests
 	$(MAKE) fix-changed
 
