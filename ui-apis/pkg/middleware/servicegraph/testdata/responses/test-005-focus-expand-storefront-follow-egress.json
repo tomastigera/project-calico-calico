@@ -9,7 +9,7 @@
     {
       "id": "hosts/*",
       "type": "hosts",
-      "name": "*",
+      "name": "hosts",
       "aggregated_proto_ports": {
         "proto_ports": [
           {
