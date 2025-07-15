@@ -1993,6 +1993,14 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 							}
 						})
 
+						JustBeforeEach(func() {
+							if BPFMode() {
+								for cluster := range []int{localCluster, remoteCluster} {
+									ensureAllNodesBPFProgramsAttached(state[cluster].tc.Felixes)
+								}
+							}
+						})
+
 						AfterEach(func() {
 							for cluster := range []int{localCluster, remoteCluster} {
 								for felixIdx, felixWls := range state[cluster].wlsByHost {
