@@ -802,12 +802,12 @@ spec:
       ports:
       - 10250
     protocol: TCP
-  # kube-apiserver to tigera-apiserver egress
+  # kube-apiserver to calico-apiserver egress
   - action: Allow
     protocol: TCP
     destination:
       namespaceSelector: projectcalico.org/name == 'calico-system'
-      selector: k8s-app == 'tigera-apiserver'
+      selector: k8s-app == 'calico-apiserver'
 EOF
 """)
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-control-plane-heps"))
