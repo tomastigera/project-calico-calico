@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	cli "github.com/urfave/cli/v2"
+	cli "github.com/urfave/cli/v3"
 
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
@@ -51,13 +52,13 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			skipBranchCheckFlag,
 			githubTokenFlag,
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-prep.log")
 
 			ver := c.String(releaseVersionFlag.Name)
 
 			// Validate the release version.
-			if err := validateReleaseVersion(c, ver); err != nil {
+			if err := validateReleaseVersion(ctx, c, ver); err != nil {
 				return err
 			}
 
@@ -124,7 +125,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		Name:  "build",
 		Usage: "Run steps to build an enterprise release",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-build.log")
 			// Load version from manifests.
 			ver, operatorVer, err := version.VersionsFromManifests(cfg.RepoRootDir)
@@ -139,7 +140,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 			}
 
 			// Validate the release version.
-			if err := validateReleaseVersion(c, versions.Title); err != nil {
+			if err := validateReleaseVersion(ctx, c, versions.Title); err != nil {
 				return err
 			}
 			if !c.Bool(skipReleaseVersionCheckFlag.Name) && operatorVer.FormattedString() != versions.TigeraOperator.Version {
@@ -207,7 +208,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		Name:  "publish",
 		Usage: "Run steps to publish an enterprise release",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-publish.log")
 
 			// Load the versions.
@@ -223,7 +224,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 			}
 
 			// Validate the release version.
-			if err := validateReleaseVersion(c, versions.Title); err != nil {
+			if err := validateReleaseVersion(ctx, c, versions.Title); err != nil {
 				return err
 			}
 			if !c.Bool(skipReleaseVersionCheckFlag.Name) && operatorVer.FormattedString() != versions.TigeraOperator.Version {
@@ -335,7 +336,7 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 			skipOperatorValidationFlag,
 			skipImageValidationFlag,
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-validation.log")
 
 			// Load the versions.
@@ -395,7 +396,7 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 	}
 }
 
-func validateReleaseVersion(c *cli.Context, ver string) error {
+func validateReleaseVersion(_ context.Context, c *cli.Command, ver string) error {
 	if c.Bool(skipReleaseVersionCheckFlag.Name) {
 		logrus.Warn("Skipping release version and helm chart version check, this is not recommended")
 		return nil
