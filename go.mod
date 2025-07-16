@@ -132,7 +132,7 @@ require (
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
-	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
+	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
