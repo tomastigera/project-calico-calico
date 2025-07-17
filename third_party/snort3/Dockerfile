@@ -1,34 +1,36 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM almalinux:8 AS snort
+FROM almalinux:9 AS snort
 
 ARG DAQ_VERSION=3.0.19
 ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
+    epel-release
+
+RUN dnf install -y \
     autoconf \
     automake \
     bison \
     cmake \
-    epel-release \
     flex \
     gcc \
     gcc-c++ \
-    libtool \
-    pkg-config
-
-RUN dnf --enablerepo=powertools install -y \
     hwloc-devel \
     libdnet-devel \
-    libnetfilter_queue-devel \
-    libnfnetlink-devel \
-    libpcap-devel \
+    libtool \
     libuuid-devel \
     luajit-devel \
     openssl-devel \
-    pcre-devel \
+    pcre2-devel \
+    pkg-config \
     xz-devel \
     zlib-devel
+
+RUN dnf --enablerepo=crb install -y \
+    libnetfilter_queue-devel \
+    libnfnetlink-devel \
+    libpcap-devel
 
 RUN mkdir /build
 WORKDIR /build
