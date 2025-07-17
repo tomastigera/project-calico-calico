@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index ff70a2a..6e2a098 100644
+index ff70a2a..bcba6da 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -59,9 +59,9 @@ require (
@@ -15,6 +15,15 @@ index ff70a2a..6e2a098 100644
  	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f
  	google.golang.org/grpc v1.69.4
  	google.golang.org/protobuf v1.36.3
+@@ -114,7 +114,7 @@ require (
+ 	github.com/chai2010/gettext-go v1.0.2 // indirect
+ 	github.com/cilium/ebpf v0.16.0 // indirect
+ 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
+-	github.com/containerd/containerd v1.7.23 // indirect
++	github.com/containerd/containerd v1.7.27 // indirect
+ 	github.com/containerd/errdefs v0.3.0 // indirect
+ 	github.com/containerd/log v0.1.0 // indirect
+ 	github.com/containerd/platforms v0.2.1 // indirect
 @@ -275,15 +275,15 @@ require (
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0 // indirect
  	go.opentelemetry.io/otel/trace v1.34.0 // indirect
@@ -40,9 +49,24 @@ index ff70a2a..6e2a098 100644
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
  	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 diff --git a/go.sum b/go.sum
-index d23202d..b4d8e4a 100644
+index d23202d..712cd10 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -130,10 +130,10 @@ github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78/go.mod h1:W+zGtBO5Y1Ig
+ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
+ github.com/containerd/cgroups/v3 v3.0.3 h1:S5ByHZ/h9PMe5IOQoN7E+nMc2UcLEM/V48DGDJ9kip0=
+ github.com/containerd/cgroups/v3 v3.0.3/go.mod h1:8HBe7V3aWGLFPd/k03swSIsGjZhHI2WzJmticMgVuz0=
+-github.com/containerd/containerd v1.7.23 h1:H2CClyUkmpKAGlhQp95g2WXHfLYc7whAuvZGBNYOOwQ=
+-github.com/containerd/containerd v1.7.23/go.mod h1:7QUzfURqZWCZV7RLNEn1XjUCQLEf0bkaK4GjUaZehxw=
+-github.com/containerd/continuity v0.4.2 h1:v3y/4Yz5jwnvqPKJJ+7Wf93fyWoCB3F5EclWG023MDM=
+-github.com/containerd/continuity v0.4.2/go.mod h1:F6PTNCKepoxEaXLQp3wDAjygEnImnZ/7o4JzpodfroQ=
++github.com/containerd/containerd v1.7.27 h1:yFyEyojddO3MIGVER2xJLWoCIn+Up4GaHFquP7hsFII=
++github.com/containerd/containerd v1.7.27/go.mod h1:xZmPnl75Vc+BLGt4MIfu6bp+fy03gdHAn9bz+FreFR0=
++github.com/containerd/continuity v0.4.4 h1:/fNVfTJ7wIl/YPMHjf+5H32uFhl63JucB34PlCpMKII=
++github.com/containerd/continuity v0.4.4/go.mod h1:/lNJvtJKUQStBzpVQ1+rasXO1LAWtUQssk28EZvJ3nE=
+ github.com/containerd/errdefs v0.3.0 h1:FSZgGOeK4yuT/+DnF07/Olde/q4KBoMsaamhXxIMDp4=
+ github.com/containerd/errdefs v0.3.0/go.mod h1:+YBYIdtsnF4Iw6nWZhJcqGSg/dwvV7tyJ/kCkyJ2k+M=
+ github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
 @@ -966,21 +966,21 @@ golang.org/x/crypto v0.0.0-20190617133340-57b3e21c3d56/go.mod h1:yigFU9vqHzYiE8U
  golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
  golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=

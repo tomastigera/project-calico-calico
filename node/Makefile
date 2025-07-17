@@ -496,7 +496,7 @@ prometheus-service.tar:
 	docker save --output $@ tigera/prometheus-service:$(TEST_BUILD_TAG)
 
 fluentd.tar:
-	make -C ../fluentd image
+	make -C ../fluentd image THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY_CI)
 	docker tag tigera/fluentd:latest-$(ARCH) tigera/fluentd:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/fluentd:$(TEST_BUILD_TAG)
 

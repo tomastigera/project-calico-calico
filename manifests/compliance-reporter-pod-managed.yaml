@@ -44,6 +44,8 @@ spec:
           value: /tigera-compliance-reporter-tls/tls.key
         - name: LINSEED_TOKEN
           value: /var/run/secrets/tigera.io/linseed/token
+        - name: LINSEED_URL
+          value: https://guardian.calico-system.svc
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:

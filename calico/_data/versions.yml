@@ -136,7 +136,7 @@
       image: tigera/prometheus
       version: master
     coreos-prometheus:
-      version: v2.54.1
+      version: v3.4.1
     coreos-prometheus-operator:
       version: v0.76.0
     coreos-config-reloader:
