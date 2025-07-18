@@ -1,0 +1,41 @@
+From 6e163426b3770f6510e839d75bfc466cd37261ad Mon Sep 17 00:00:00 2001
+From: Tian Feng <tian@tigera.io>
+Date: Thu, 17 Jul 2025 14:13:52 -0700
+Subject: [PATCH] bump go deps packages
+
+---
+ go.mod | 2 +-
+ go.sum | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/go.mod b/go.mod
+index ea4052c..b079544 100644
+--- a/go.mod
++++ b/go.mod
+@@ -136,7 +136,7 @@ require (
+ 	github.com/go-openapi/swag v0.23.0 // indirect
+ 	github.com/go-openapi/validate v0.24.0 // indirect
+ 	github.com/go-resty/resty/v2 v2.16.5 // indirect
+-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
++	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+ 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/google/gnostic-models v0.6.8 // indirect
+diff --git a/go.sum b/go.sum
+index b9ed9a9..03c9986 100644
+--- a/go.sum
++++ b/go.sum
+@@ -146,8 +146,8 @@ github.com/go-resty/resty/v2 v2.16.5/go.mod h1:hkJtXbA2iKHzJheXYvQ8snQES5ZLGKMwQ
+ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
+ github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
+-github.com/go-viper/mapstructure/v2 v2.2.1 h1:ZAaOCxANMuZx5RCeg0mBdEZk7DZasvvZIxtHqx8aGss=
+-github.com/go-viper/mapstructure/v2 v2.2.1/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
++github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
++github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
+ github.com/go-zookeeper/zk v1.0.4 h1:DPzxraQx7OrPyXq2phlGlNSIyWEsAox0RJmjTseMV6I=
+ github.com/go-zookeeper/zk v1.0.4/go.mod h1:nOB03cncLtlp4t+UAkGSV+9beXP/akpekBwL+UX1Qcw=
+ github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
+-- 
+2.43.0
+
