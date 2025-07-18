@@ -147,6 +147,21 @@ func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
 	return ""
 }
 
+// GetAggrEndpointName returns the aggregated name for the given endpoint.
+// For host endpoints, such as cluster nodes and non-cluster hosts, this function returns a more
+// descriptive name (e.g. "clusternodes" or "hosts") instead of "*" for the service graph UI.
+// For all other endpoints, it returns the endpoint NameAggr which preserves existing behavior.
+func (idf *IDInfo) GetAggrEndpointName() string {
+	switch idf.Endpoint.Type {
+	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeClusterNodes:
+		return string(v1.GraphNodeTypeClusterNodes)
+	case v1.GraphNodeTypeHost, v1.GraphNodeTypeHosts:
+		return string(v1.GraphNodeTypeHosts)
+	default:
+		return idf.Endpoint.NameAggr
+	}
+}
+
 // GetAggrEndpointType returns the aggregated endpoint type. This may be different from the Type in the structure
 // if the endpoint is not aggregated. In particular if the endpoint is actually a pod (wep) then the aggregated type
 // would be a replica set.

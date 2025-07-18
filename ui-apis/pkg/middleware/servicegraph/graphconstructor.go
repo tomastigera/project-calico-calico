@@ -680,7 +680,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				ID:         aggrEndpointId,
 				ParentID:   parent.id(),
 				Namespace:  endpoint.Namespace,
-				Name:       endpoint.NameAggr,
+				Name:       idi.GetAggrEndpointName(),
 				Expandable: expandable,
 				Expanded:   expandable && viewData.Expanded,
 			},

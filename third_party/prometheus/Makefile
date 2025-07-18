@@ -25,6 +25,7 @@ $(PROMETHEUS_DOWNLOADED):
 	mkdir -p prometheus
 	curl -sfL https://github.com/prometheus/prometheus/archive/refs/tags/$(PROMETHEUS_VERSION).tar.gz | tar xz --strip-components 1 -C prometheus
 	patch -d prometheus -p1 < patches/0001-String-Go-binary-debug-symbols.patch
+	patch -d prometheus -p1 < patches/0002-bump-go-deps-packages.patch
 	touch $@
 
 .PHONY: build

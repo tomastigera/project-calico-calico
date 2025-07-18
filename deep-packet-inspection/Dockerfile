@@ -13,12 +13,11 @@ ARG TARGETARCH
 # Copy snort, tar, and library dependencies
 COPY --from=snort /usr/bin/snort /usr/bin/snort
 COPY --from=snort /usr/bin/tar /usr/bin/tar
-COPY --from=snort /usr/lib64/libdaq.so.3 /lib64/libdaq.so.3
+COPY --from=snort /lib64/libdaq.so.3 /lib64/libdaq.so.3
 
 COPY --from=snort /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=snort /lib64/libattr.so.1 /lib64/libattr.so.1
-COPY --from=snort /lib64/libcrypto.so.1.1 /lib64/libcrypto.so.1.1
-COPY --from=snort /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=snort /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
 COPY --from=snort /lib64/libdnet.so.1 /lib64/libdnet.so.1
 COPY --from=snort /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
 COPY --from=snort /lib64/libhwloc.so.15 /lib64/libhwloc.so.15
@@ -29,7 +28,6 @@ COPY --from=snort /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=snort /lib64/libnl-3.so.200 /lib64/libnl-3.so.200
 COPY --from=snort /lib64/libnl-route-3.so.200 /lib64/libnl-route-3.so.200
 COPY --from=snort /lib64/libpcap.so.1 /lib64/libpcap.so.1
-COPY --from=snort /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=snort /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=snort /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=snort /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
