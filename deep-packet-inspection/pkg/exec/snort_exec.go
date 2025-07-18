@@ -3,7 +3,6 @@
 package exec
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -123,16 +122,15 @@ func ValidateSnortConfiguration() error {
 	snortArgs := append([]string{"-c", SnortConfigFileLocation, "-T"}, detectRules()...)
 	snortCmd := exec.Command("snort", snortArgs...)
 
-	if err := snortCmd.Start(); err != nil {
+	out, err := snortCmd.CombinedOutput()
+
+	if err == nil {
 		return nil
 	}
 
-	if err := snortCmd.Wait(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 0 {
-			return nil
-		}
-		return errors.New("snort configuration is invalid")
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 0 {
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("snort configuration is invalid: %w\n%v", err, string(out))
 }
