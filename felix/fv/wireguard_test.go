@@ -1803,6 +1803,10 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 				for _, overlap := range []OverlapTestType{OverlapTestType_None, OverlapTestType_Connect, OverlapTestType_ConnectDisconnect} {
 					Describe(fmt.Sprintf("ipVersion: %d, calicoIPAM: %v, vxlan: %v, overlap: %v", ipVersion, calicoIPAM, vxlan, overlap), func() {
 						BeforeEach(func() {
+							if vxlan && !calicoIPAM {
+								Skip("VXLAN requires Calico IPAM")
+							}
+
 							// Run these tests only when the Host has Wireguard kernel module available.
 							if os.Getenv("FELIX_FV_WIREGUARD_AVAILABLE") != "true" {
 								Skip("Skipping Wireguard supported tests.")
@@ -1834,11 +1838,8 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 								if !calicoIPAM {
 									// Enable host encryption (else host-to-pod communication is not possible)
 									hostEncryptionEnabled := true
+									topologyOptions.WireguardHostEncryptionEnabled = true
 									topologyOptions.InitialFelixConfiguration.Spec.WireguardHostEncryptionEnabled = &hostEncryptionEnabled
-
-									// Disable the allocation of an interface IP by the topology tooling.
-									topologyOptions.WireguardEnabled = false
-									topologyOptions.WireguardEnabledV6 = false
 								}
 
 								state[cluster].tc, state[cluster].client = infrastructure.StartNNodeTopology(nodeCount, topologyOptions, state[cluster].infra)
