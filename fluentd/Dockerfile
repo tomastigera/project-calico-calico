@@ -28,7 +28,6 @@ COPY --from=fluentd /usr/bin/awk /usr/bin/awk
 COPY --from=fluentd /usr/bin/cat /usr/bin/cat
 COPY --from=fluentd /usr/bin/coreutils /usr/bin/coreutils
 COPY --from=fluentd /usr/bin/cp /usr/bin/cp
-COPY --from=fluentd /usr/bin/mkdir /usr/bin/mkdir
 COPY --from=fluentd /usr/bin/curl /usr/bin/curl
 COPY --from=fluentd /usr/bin/echo /usr/bin/echo
 COPY --from=fluentd /usr/bin/find /usr/bin/find
