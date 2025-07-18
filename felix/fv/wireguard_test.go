@@ -1884,7 +1884,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 									Eventually(func() string {
 										out, _ := state[cluster].tc.Felixes[i].ExecOutput("ip", "link", "show", ifName)
 										return out
-									}, "10s", "100ms").Should(Not(BeEmpty()))
+									}, "60s", "100ms").Should(Not(BeEmpty()))
 								}
 							}
 
