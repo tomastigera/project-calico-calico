@@ -106,7 +106,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							// Change CIDR for the second datastore to prevent overlap.
 							topologyOptions.IPPoolCIDR = "10.75.0.0/16"
 							topologyOptions.IPv6PoolCIDR = "dead:cafe::/64"
-							topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+							topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 						} else if overlap == OverlapTestType_Connect {
 							logrus.Info("OverlapTestType_Connect: local and remote clusters share IP pool CIDRs.")
 						} else if overlap == OverlapTestType_ConnectDisconnect {
@@ -1280,7 +1280,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 				topologyOptions = createVXLANBaseTopologyOptions(vxlanMode, enableIPv6, routeSource, brokenXSum)
 				topologyOptions.FelixLogSeverity = "Debug"
-				topologyOptions.VXLANStrategy = infrastructure.NewBorrowedIPVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR, 3)
+				topologyOptions.VXLANStrategy = infrastructure.NewBorrowedIPTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR, 3)
 
 				cc = &connectivity.Checker{}
 
@@ -1413,7 +1413,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				Expect(err).NotTo(HaveOccurred())
 
 				// Configure the VXLAN strategy to use this IP pool for tunnel addresses allocation.
-				topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(tunnelPool.Spec.CIDR, tunnelPoolV6.Spec.CIDR)
+				topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(tunnelPool.Spec.CIDR, tunnelPoolV6.Spec.CIDR)
 
 				cc = &connectivity.Checker{}
 
@@ -1503,7 +1503,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 func createVXLANBaseTopologyOptions(vxlanMode api.VXLANMode, enableIPv6 bool, routeSource string, brokenXSum bool) infrastructure.TopologyOptions {
 	topologyOptions := infrastructure.DefaultTopologyOptions()
 	topologyOptions.VXLANMode = vxlanMode
-	topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+	topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 	topologyOptions.IPIPMode = api.IPIPModeNever
 	topologyOptions.EnableIPv6 = enableIPv6
 	topologyOptions.ExtraEnvVars["FELIX_ROUTESOURCE"] = routeSource
@@ -1546,6 +1546,19 @@ func assignTunnelAddresses(infra infrastructure.DatastoreInfra, tc infrastructur
 				Hostname: f.Hostname,
 			})
 			Expect(err).NotTo(HaveOccurred(), "failed to assign VXLAN v6 tunnel address")
+		}
+		if f.ExpectedIPIPTunnelAddr != "" {
+			handle := fmt.Sprintf("ipip-tunnel-addr-%s", f.Hostname)
+			err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
+				IP:       net.MustParseIP(f.ExpectedIPIPTunnelAddr),
+				HandleID: &handle,
+				Attrs: map[string]string{
+					ipam.AttributeNode: f.Hostname,
+					ipam.AttributeType: ipam.AttributeTypeIPIP,
+				},
+				Hostname: f.Hostname,
+			})
+			Expect(err).NotTo(HaveOccurred(), "failed to assign IPIP tunnel address")
 		}
 	}
 }

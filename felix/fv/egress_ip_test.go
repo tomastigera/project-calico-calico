@@ -328,7 +328,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		topologyOptions.EnableIPv6 = false
 		if overlay == OV_VXLAN {
 			topologyOptions.VXLANMode = api.VXLANModeAlways
-			topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+			topologyOptions.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 		}
 		if overlay != OV_IPIP {
 			topologyOptions.IPIPMode = api.IPIPModeNever

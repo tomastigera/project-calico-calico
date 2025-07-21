@@ -392,7 +392,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				options.SimulateBIRDRoutes = true
 			case "vxlan":
 				options.VXLANMode = api.VXLANModeAlways
-				options.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(options.IPPoolCIDR, options.IPv6PoolCIDR)
+				options.VXLANStrategy = infrastructure.NewDefaultTunnelStrategy(options.IPPoolCIDR, options.IPv6PoolCIDR)
 			case "wireguard":
 				if testOpts.ipv6 {
 					// Allocate tunnel address for Wireguard.
@@ -5653,10 +5653,10 @@ func ensureBPFProgramsAttachedOffset(offset int, felix *infrastructure.Felix, if
 	if felix.ExpectedVXLANTunnelAddr != "" {
 		expectedIfaces = append(expectedIfaces, "vxlan.calico")
 	}
-	if felix.ExpectedWireguardTunnelAddr != "" {
+	if felix.ExpectedWireguardTunnelAddr != "" || (felix.TopologyOptions.WireguardEnabled && felix.TopologyOptions.WireguardHostEncryptionEnabled) {
 		expectedIfaces = append(expectedIfaces, "wireguard.cali")
 	}
-	if felix.ExpectedWireguardV6TunnelAddr != "" {
+	if felix.ExpectedWireguardV6TunnelAddr != "" || (felix.TopologyOptions.WireguardEnabledV6 && felix.TopologyOptions.WireguardHostEncryptionEnabled) {
 		expectedIfaces = append(expectedIfaces, "wg-v6.cali")
 	}
 
