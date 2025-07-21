@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ COPY --from=fluentd /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=fluentd /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=fluentd /lib64/libcap.so.2 /lib64/libcap.so.2
 COPY --from=fluentd /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
+COPY --from=fluentd /lib64/libcrypt.so.2 /lib64/libcrypt.so.2
 COPY --from=fluentd /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
 COPY --from=fluentd /lib64/libcurl.so.4 /lib64/libcurl.so.4
 COPY --from=fluentd /lib64/libgmp.so.10 /lib64/libgmp.so.10 
@@ -61,29 +62,18 @@ COPY --from=fluentd /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=fluentd /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=fluentd /lib64/libssl.so.3 /lib64/libssl.so.3
 COPY --from=fluentd /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=fluentd /lib64/libz.so.1 /lib64/libz.so.1
 
 # ruby and fluentd
 COPY --from=fluentd /usr/bin/gem /usr/bin/gem
 COPY --from=fluentd /usr/bin/ruby /usr/bin/ruby
-COPY --from=fluentd /usr/lib64/gems/ /usr/lib64/gems/
-COPY --from=fluentd /usr/local/lib64/gems/ /usr/local/lib64/gems/
-COPY --from=fluentd /usr/local/share/gems/ /usr/local/share/gems/
-COPY --from=fluentd /usr/share/gems/ /usr/share/gems/
-COPY --from=fluentd /usr/share/ruby/ /usr/share/ruby/
-COPY --from=fluentd /usr/share/rubygems/ /usr/share/rubygems/
 
-COPY --from=fluentd /lib64/libcrypt.so.2 /lib64/libcrypt.so.2
-COPY --from=fluentd /lib64/libffi.so.8 /lib64/libffi.so.8
-COPY --from=fluentd /lib64/libgdbm.so.6 /lib64/libgdbm.so.6
-COPY --from=fluentd /lib64/libgdbm_compat.so.4 /lib64/libgdbm_compat.so.4
-COPY --from=fluentd /lib64/libruby.so.3.0 /lib64/libruby.so.3.0
 COPY --from=fluentd /lib64/libyaml-0.so.2 /lib64/libyaml-0.so.2
-COPY --from=fluentd /lib64/libz.so.1 /lib64/libz.so.1
 COPY --from=fluentd /usr/lib64/ruby/ /usr/lib64/ruby/
 
 COPY --from=fluentd /fluentd/ /fluentd/
-COPY --from=fluentd /usr/local/bin/fluent-gem /usr/bin/fluent-gem
-COPY --from=fluentd /usr/local/bin/fluentd /usr/bin/fluentd
+COPY --from=fluentd /usr/bin/fluent-gem /usr/bin/fluent-gem
+COPY --from=fluentd /usr/bin/fluentd /usr/bin/fluentd
 
 COPY --from=fluentd /tmp/ /tmp/
 

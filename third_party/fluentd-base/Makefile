@@ -66,7 +66,7 @@ build-image-%:
 ifeq ($(OS),Windows_NT)
 	docker build --pull --build-arg FLUENTD_UPSTREAM_VERSION=v$(FLUENTD_VERSION)-$*-1.0 -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$* -f Dockerfile.windows .
 else
-	$(DOCKER_BUILD) --build-arg ARCH=$(ARCH) --build-arg FLUENTD_VERSION=$(FLUENTD_VERSION) -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD) --build-arg FLUENTD_VERSION=$(FLUENTD_VERSION) -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $(FLUENTD_BASE_IMAGE_CREATED)
 endif
