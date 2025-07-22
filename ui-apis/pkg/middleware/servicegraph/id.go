@@ -16,19 +16,20 @@ import (
 // ParseGraphNodeID is used to parse a graph node ID and return an IDInfo.
 // Create an IDInfo with appropriate data filled in, and use the various helper methods to construct an ID for a node.
 
+type Direction string
+
 const (
 	NoPort      int       = 0
 	NoDirection Direction = ""
 	NoProto               = ""
-)
 
-const graphNodeTypeDirection = "dir"
-
-type Direction string
-
-const (
 	DirectionIngress Direction = "ingress"
 	DirectionEgress  Direction = "egress"
+
+	graphNodeTypeDirection = "dir"
+
+	clusterNodesNameAggr = "cluster nodes"
+	hostsNameAggr        = "hosts"
 )
 
 // IDInfo is used to construct or parse service graph node string ids.
@@ -149,14 +150,14 @@ func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
 
 // GetAggrEndpointName returns the aggregated name for the given endpoint.
 // For host endpoints, such as cluster nodes and non-cluster hosts, this function returns a more
-// descriptive name (e.g. "clusternodes" or "hosts") instead of "*" for the service graph UI.
+// descriptive name (e.g. "cluster nodes" or "hosts") instead of "*" for the service graph UI.
 // For all other endpoints, it returns the endpoint NameAggr which preserves existing behavior.
 func (idf *IDInfo) GetAggrEndpointName() string {
 	switch idf.Endpoint.Type {
 	case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeClusterNodes:
-		return string(v1.GraphNodeTypeClusterNodes)
+		return clusterNodesNameAggr
 	case v1.GraphNodeTypeHost, v1.GraphNodeTypeHosts:
-		return string(v1.GraphNodeTypeHosts)
+		return hostsNameAggr
 	default:
 		return idf.Endpoint.NameAggr
 	}
