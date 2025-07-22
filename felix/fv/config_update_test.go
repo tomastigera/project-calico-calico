@@ -122,7 +122,7 @@ var _ = Context("Config update tests, after starting felix", func() {
 				ci.Spec.ClusterGUID = ""
 				ci.Spec.CalicoVersion = ""
 				ci.Spec.ClusterType = ""
-				ci.Spec.CNXVersion = ""
+				ci.Spec.CalicoEnterpriseVersion = ""
 				_, err = client.ClusterInformation().Update(ctx, ci, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})

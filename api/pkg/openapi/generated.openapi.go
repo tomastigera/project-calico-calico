@@ -3686,7 +3686,14 @@ func schema_pkg_apis_projectcalico_v3_ClusterInformationSpec(ref common.Referenc
 					},
 					"cnxVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CNXVersion is the version of Calico Enterprise that the cluster is running",
+							Description: "CNXVersion is the version of Calico Enterprise that the cluster is running Deprecated: Use CalicoEnterpriseVersion instead.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"calicoEnterpriseVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CalicoEnterpriseVersion is the version of Calico Enterprise that the cluster is running",
 							Type:        []string{"string"},
 							Format:      "",
 						},

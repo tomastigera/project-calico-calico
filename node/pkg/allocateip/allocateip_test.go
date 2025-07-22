@@ -1608,7 +1608,7 @@ func (c shimClient) EgressGatewayPolicy() client.EgressGatewayPolicyInterface {
 	return c.client.EgressGatewayPolicy()
 }
 
-func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion string, clusterType string) error {
+func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, calicoEnterpriseVersion string, clusterType string) error {
 	return nil
 }
 

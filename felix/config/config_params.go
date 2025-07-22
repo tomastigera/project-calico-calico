@@ -536,7 +536,7 @@ type Config struct {
 	NATOutgoingAddress    net.IP             `config:"ipv4;"`
 	NATOutgoingExclusions string             `config:"oneof(IPPoolsOnly,IPPoolsAndHostIPs);IPPoolsOnly"`
 
-	// TSEE no longer does any usage reporting, but we still support the config fields
+	// Calico Enterprise no longer does any usage reporting, but we still support the config fields
 	// so as not to break deployments that set them.  (In particular, not to break the
 	// case where a deployment sets UsageReportingEnabled to false.)
 	UsageReportingEnabled          bool          `config:"bool;true"`
@@ -545,7 +545,7 @@ type Config struct {
 	ClusterGUID                    string        `config:"string;baddecaf"`
 	ClusterType                    string        `config:"string;"`
 	CalicoVersion                  string        `config:"string;"`
-	CNXVersion                     string        `config:"string;"`
+	CalicoEnterpriseVersion        string        `config:"string;"`
 
 	ExternalNodesCIDRList []string `config:"cidr-list;;die-on-fail"`
 

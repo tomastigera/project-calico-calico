@@ -82,8 +82,4 @@ if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
 	rm -rf /etc/service/enabled/node-status-reporter/log
 fi
 
-echo "Calico Enterprise Version: $CNXVERSION"
-
-echo "Calico Enterprise Release Version: $CNXRELEASEVERSION"
-
 echo "Calico node started successfully"

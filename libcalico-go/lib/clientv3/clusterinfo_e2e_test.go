@@ -37,17 +37,17 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 	name := "default"
 	readyTrue := true
 	spec1 := apiv3.ClusterInformationSpec{
-		ClusterGUID:    "test-cluster-guid1",
-		ClusterType:    "test-cluster-type1",
-		CalicoVersion:  "test-version1",
-		CNXVersion:     "tigera-test-version1",
-		DatastoreReady: &readyTrue,
+		ClusterGUID:             "test-cluster-guid1",
+		ClusterType:             "test-cluster-type1",
+		CalicoVersion:           "test-version1",
+		CalicoEnterpriseVersion: "tigera-test-version1",
+		DatastoreReady:          &readyTrue,
 	}
 	spec2 := apiv3.ClusterInformationSpec{
-		ClusterGUID:   "test-cluster-guid2",
-		ClusterType:   "test-cluster-type2",
-		CalicoVersion: "test-version2",
-		CNXVersion:    "tigera-test-version2",
+		ClusterGUID:             "test-cluster-guid2",
+		ClusterType:             "test-cluster-type2",
+		CalicoVersion:           "test-version2",
+		CalicoEnterpriseVersion: "tigera-test-version2",
 	}
 
 	var c clientv3.Interface
@@ -84,11 +84,11 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name,
 				apiv3.ClusterInformationSpec{
-					ClusterGUID:    res.Spec.ClusterGUID,
-					ClusterType:    "test" + kddTypePart,
-					CalicoVersion:  "v0.0.0",
-					CNXVersion:     "v0.0.1",
-					DatastoreReady: &readyTrue,
+					ClusterGUID:             res.Spec.ClusterGUID,
+					ClusterType:             "test" + kddTypePart,
+					CalicoVersion:           "v0.0.0",
+					CalicoEnterpriseVersion: "v0.0.1",
+					DatastoreReady:          &readyTrue,
 				}))
 		})
 
@@ -106,11 +106,11 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name,
 				apiv3.ClusterInformationSpec{
-					ClusterGUID:    guid,
-					ClusterType:    "test" + kddTypePart,
-					CalicoVersion:  "v0.0.0",
-					CNXVersion:     "v0.0.1",
-					DatastoreReady: &readyTrue,
+					ClusterGUID:             guid,
+					ClusterType:             "test" + kddTypePart,
+					CalicoVersion:           "v0.0.0",
+					CalicoEnterpriseVersion: "v0.0.1",
+					DatastoreReady:          &readyTrue,
 				}))
 		})
 
@@ -125,11 +125,11 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			spec := apiv3.ClusterInformationSpec{
-				ClusterGUID:    guid,
-				ClusterType:    "test" + kddTypePart + ",test2",
-				CalicoVersion:  "v0.0.0",
-				CNXVersion:     "v0.0.1",
-				DatastoreReady: &readyTrue,
+				ClusterGUID:             guid,
+				ClusterType:             "test" + kddTypePart + ",test2",
+				CalicoVersion:           "v0.0.0",
+				CalicoEnterpriseVersion: "v0.0.1",
+				DatastoreReady:          &readyTrue,
 			}
 			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name, spec))
@@ -170,11 +170,11 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			spec := apiv3.ClusterInformationSpec{
-				ClusterGUID:    guid,
-				ClusterType:    "test" + kddTypePart,
-				CalicoVersion:  "v0.0.1",
-				CNXVersion:     "v0.0.2",
-				DatastoreReady: &readyTrue,
+				ClusterGUID:             guid,
+				ClusterType:             "test" + kddTypePart,
+				CalicoVersion:           "v0.0.1",
+				CalicoEnterpriseVersion: "v0.0.2",
+				DatastoreReady:          &readyTrue,
 			}
 			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name, spec))

@@ -74,8 +74,8 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Name: "node.mynode",
 	}
 	numFelixConfigs := numBaseFelixConfigs + numPrivateOnlyFelixConfigs
-	numClusterConfigs := 6
-	numNodeClusterConfigs := 5
+	numClusterConfigs := 7
+	numNodeClusterConfigs := 6
 	felixMappedNames := map[string]interface{}{
 		"RouteRefreshInterval":               nil,
 		"IptablesRefreshInterval":            nil,

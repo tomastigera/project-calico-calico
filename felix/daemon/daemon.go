@@ -1560,7 +1560,7 @@ var handledConfigChanges = set.From(
 	"HealthTimeoutOverrides",
 
 	// Enterprise extras...
-	"CNXVersion",
+	"CalicoEnterpriseVersion",
 	"DNSCacheEpoch",
 	"DNSExtraTTL",
 	"WindowsDNSExtraTTL",
