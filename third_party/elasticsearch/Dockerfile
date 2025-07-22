@@ -33,7 +33,7 @@ RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch repository
 
 # Change /usr/share/elasticsearch folder ownership to elasticsearch user and group.
 # Elastic gradle step installs bundle JDK into the /usr/share/elasticsearch/jdk folder.
-# The folder permisison is 0750 and when we deploy this UBI based container to Openshift,
+# The folder permission is 0750 and when we deploy this UBI based container to Openshift,
 # which has SELinux enabled by default, elasticsearch user get permissions errors on
 # accessing JDK files. This is not an issue on non-SELinux enabled hosts like Ubuntu.
 # Changing the folder ownership works on both hosts.
