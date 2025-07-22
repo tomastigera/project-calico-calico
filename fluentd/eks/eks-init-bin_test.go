@@ -2,7 +2,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -31,7 +30,7 @@ func fileExists(filePath string) bool {
 }
 
 func matchesToken(filePath string) string {
-	token, err := ioutil.ReadFile(filePath)
+	token, err := os.ReadFile(filePath)
 	if err == nil {
 		return string(token)
 	}
