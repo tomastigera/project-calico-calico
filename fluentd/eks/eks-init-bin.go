@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2025 Tigera Inc. All rights reserved.
 package main
 
 import (
@@ -6,6 +6,8 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
 
 func main() {
@@ -13,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		PrintVersion()
+		buildinfo.PrintVersion()
 		return
 	}
 
