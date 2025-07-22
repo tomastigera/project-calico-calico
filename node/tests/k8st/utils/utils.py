@@ -54,7 +54,7 @@ class DiagsCollector(object):
                 run("docker exec " + node + " ip -6 r")
                 run("docker exec " + node + " ip l")
             kubectl("logs -n calico-system -l k8s-app=calico-node")
-            self.print_confd_templates(nodes)
+            print_confd_templates(nodes)
             for pod_name in calico_node_pod_names():
                 kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
                         allow_fail=True)
