@@ -7,6 +7,58 @@
   ],
   "nodes": [
     {
+      "id": "clusternodes/*",
+      "type": "clusternodes",
+      "name": "cluster nodes",
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 1234,
+                "max_port": 5678
+              }
+            ]
+          }
+        ]
+      },
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 11,
+              "packet_out": 22,
+              "bytes_in": 33,
+              "bytes_out": 44
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "jwhuang-process-1",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "selectors": {
+        "l3_flows": "((dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\") OR ((source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\")"
+      }
+    },
+    {
       "id": "hosts/*",
       "type": "hosts",
       "name": "hosts",
@@ -136,13 +188,13 @@
         {
           "l3": {
             "allowed": {
-              "packet_in": 394,
-              "packet_out": 432,
-              "bytes_in": 65855,
-              "bytes_out": 33413
+              "packet_in": 405,
+              "packet_out": 454,
+              "bytes_in": 65888,
+              "bytes_out": 33457
             },
             "connections": {
-              "total_per_sample_interval": 51,
+              "total_per_sample_interval": 52,
               "started": 39,
               "completed": 34
             },
@@ -277,6 +329,15 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "jwhuang-process-1",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
               }
             ]
           }
@@ -284,7 +345,7 @@
       ],
       "expandable": true,
       "selectors": {
-        "l3_flows": "((dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\") OR ((source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\")"
+        "l3_flows": "((dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\") OR ((source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\")"
       }
     },
     {
@@ -1545,6 +1606,58 @@
     {
       "id": {
         "source_node_id": "hosts/*",
+        "dest_node_id": "clusternodes/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 11,
+              "packet_out": 22,
+              "bytes_in": 33,
+              "bytes_out": 44
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "jwhuang-process-1",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND (source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 1234,
+                "max_port": 5678
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "hosts/*",
         "dest_node_id": "hosts/*"
       },
       "stats": [
@@ -1598,7 +1711,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_type = \"hep\""
+        "l3_flows": "(dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND (source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_type = \"hep\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1688,7 +1801,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
+        "l3_flows": "(dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\") AND (source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
         "alerts": "dest_namespace = \"calico-system\""
       },
       "service_ports": [
@@ -1741,7 +1854,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND (source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
         "alerts": "dest_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
@@ -1818,7 +1931,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND (source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND source_type = \"hep\"",
         "alerts": "dest_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
@@ -1898,7 +2011,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
+        "l3_flows": "(source_name_aggr = \"jwhuang-cluster-node-0\" OR source_name_aggr = \"jwhuang-nonclusterhost-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-ms\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR source_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
         "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
@@ -2592,7 +2705,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\"",
+        "l3_flows": "(dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\"",
         "alerts": "source_namespace = \"tigera-prometheus\""
       },
       "endpoint_proto_ports": {
@@ -2683,7 +2796,7 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
+        "l3_flows": "(dest_name_aggr = \"jwhuang-cluster-node-0\" OR dest_name_aggr = \"jwhuang-nonclusterhost-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-ms\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" OR dest_name_aggr = \"rob-bz-lc19-kadm-node-2\") AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
         "alerts": "source_name_aggr = \"pub\" AND source_namespace = \"-\""
       },
       "endpoint_proto_ports": {
