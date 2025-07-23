@@ -29,10 +29,9 @@ init-source: $(KIBANA_DOWNLOADED)
 $(KIBANA_DOWNLOADED):
 	git clone --depth 1 --branch v$(KIBANA_VERSION) --single-branch https://github.com/elastic/kibana.git
 	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
-	patch -d kibana -p1 < patches/0002-Update-caniuse-lite-dependency.patch
+	patch -d kibana -p1 < patches/0002-Update-caniuse-lite-and-form-data.patch
 	patch -d kibana -p1 < patches/0003-Reduce-all-platforms-to-only-linux-variant.patch
 	patch -d kibana -p1 < patches/0004-support-ubi-arm64-builds.patch
-	patch -d kibana -p1 < patches/0005-Bump-form-data-version.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/googletagmanager kibana/plugins/
 	touch $@
