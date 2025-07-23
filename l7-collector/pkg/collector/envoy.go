@@ -209,7 +209,7 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 		DurationMax:         accLog.Duration,
 		Latency:             accLog.Duration,
 		UpstreamServiceTime: accLog.UpstreamServiceTime,
-		Route:               accLog.Route,
+		RouteName:           accLog.Route,
 	}
 	// write entry out to envoy log file
 	ec.batch.Insert(entry)

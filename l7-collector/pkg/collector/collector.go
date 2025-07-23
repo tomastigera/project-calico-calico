@@ -58,7 +58,7 @@ type EnvoyLog struct {
 	RequestId     string `json:"request_id"`
 	Type          string `json:"type"`
 	Domain        string `json:"domain"`
-	Route         string `json:"route_name"`
+	RouteName     string `json:"route_name"`
 
 	// these are the addresses we extract 5 tuple information from
 	DSRemoteAddress string `json:"downstream_remote_address"`

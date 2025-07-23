@@ -36,6 +36,7 @@ type Update struct {
 	UserAgent    string
 	Type         string
 	Count        int
+	RouteName    string
 }
 
 // L7Log represents the  the JSON representation of a L7Log we are pushing to fluentd/elastic.
