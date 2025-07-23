@@ -3,6 +3,7 @@ module github.com/projectcalico/calico
 go 1.24.4
 
 require (
+	cloud.google.com/go/storage v1.54.0
 	dario.cat/mergo v1.0.1
 	github.com/BurntSushi/toml v1.5.0
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -174,7 +175,7 @@ require (
 	k8s.io/kube-aggregator v0.32.7
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/kubectl v0.32.7
-	k8s.io/kubernetes v1.32.6
+	k8s.io/kubernetes v1.32.7
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	modernc.org/memory v1.10.0
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -193,7 +194,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.5.2 // indirect
 	cloud.google.com/go/monitoring v1.24.0 // indirect
-	cloud.google.com/go/storage v1.54.0
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0 // indirect

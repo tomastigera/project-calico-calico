@@ -227,7 +227,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		time.Sleep(5 * time.Second)
 	})
 
-	FIt("should correctly resolve and connectivity should be based on enforced policy.", func() {
+	It("should correctly resolve and connectivity should be based on enforced policy.", func() {
 		// Run a few tests for both interesting domains.  These should work immediately and consistently.
 		canWgetDomain("fake-microsoft.test")
 		cannotWgetDomain("www.fake-google.test")
@@ -507,7 +507,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 
 	// When FELIX_FLOWLOGSDESTDOMAINSBYCLIENT is true, domains that are queried by different endpoints
 	// and that resolve to the same IP should not be reported in the destination domains together.
-	FIt("should correctly resolve and domains should be listed by client", func() {
+	It("should correctly resolve and domains should be listed by client", func() {
 		// Run a few tests for both interesting domains. These should work immediately and consistently.
 		canWgetDomain(ep1_1, "gist.fake-github.test")
 		canWgetDomain(ep2_1, "fake-github.test")

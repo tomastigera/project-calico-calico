@@ -39,14 +39,14 @@ WORKDIR /build
 RUN curl -sfL https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.gz | tar xz -C /build && \
     cd /build/libdaq-${DAQ_VERSION}/ && \
     ./bootstrap && ./configure --prefix=/usr --libdir=/usr/lib64 && \
-    make -j4 && make install
+    make -j$(nproc) && make install
 
 # Build and Install Snort 3
 RUN curl -sfL https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.tar.gz | tar xz -C /build && \
     cd /build/snort3-${SNORT3_VERSION}/ && \
     ./configure_cmake.sh --prefix=/usr --build-type=Release --disable-gdb --disable-docs && \
     cd build && \
-    make -j4 && make install
+    make -j$(nproc) && make install
 
 # Create Snorts Log directory
 RUN mkdir /var/log/snort /var/log/snort-alerts

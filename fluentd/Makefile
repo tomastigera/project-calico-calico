@@ -27,10 +27,6 @@ include ../lib.Makefile
 # Build
 ###############################################################################
 EKS_SRC_FILES = $(shell find eks/ -name '*.go')
-EKS_VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
-	-X main.BUILD_DATE=$(DATE) \
-	-X main.GIT_TAG=$(GIT_DESCRIPTION) \
-	-X main.GIT_COMMIT=$(GIT_COMMIT)
 
 .PHONY: build
 build: eks/bin/eks-log-forwarder-startup-$(ARCH)
@@ -39,12 +35,12 @@ build: eks/bin/eks-log-forwarder-startup-$(ARCH)
 eks/bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable"
 	$(DOCKER_GO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o bin/$(@F) -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o bin/$(@F) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w"'
 
 eks/bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable for windows"
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o bin/$(@F) -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o bin/$(@F) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w"'
 
 clean:
 	rm -rf eks/bin dist Makefile.common*

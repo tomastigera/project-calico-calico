@@ -123,12 +123,13 @@ MANIFEST_REGISTRIES         ?= $(DEV_REGISTRIES)
 
 # The registry when running CI/CD pipelines.
 THIRD_PARTY_REGISTRY_CI=gcr.io/unique-caldron-775/third-party-ci
+THIRD_PARTY_REGISTRY_CD=gcr.io/unique-caldron-775/cnx/tigera/third-party
 # THIRD_PARTY_REGISTRY configures the third-party registry that serves intermediate base image
 # for some Calico Enterprise components. They are never released directly to public.
 THIRD_PARTY_RELEASE_BRANCH ?= $(if $(SEMAPHORE_GIT_BRANCH),$(SEMAPHORE_GIT_BRANCH),master)
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), branch)
     # on master and release-calient branches
-    THIRD_PARTY_REGISTRY?=gcr.io/unique-caldron-775/cnx/tigera/third-party
+    THIRD_PARTY_REGISTRY?=$(THIRD_PARTY_REGISTRY_CD)
 else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
     # on pull requests
     THIRD_PARTY_REGISTRY?=$(THIRD_PARTY_REGISTRY_CI)

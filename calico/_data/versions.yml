@@ -66,12 +66,12 @@
       image: tigera/ui-apis
       version: master
     eck-kibana:
-      version: 8.18.3
+      version: 8.18.4
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 8.18.3
+      version: 8.18.4
     elasticsearch:
       image: tigera/elasticsearch
       version: master
@@ -138,9 +138,9 @@
     coreos-prometheus:
       version: v3.4.1
     coreos-prometheus-operator:
-      version: v0.76.0
+      version: v0.84.0
     coreos-config-reloader:
-      version: v0.76.0
+      version: v0.84.0
     prometheus-operator:
       image: tigera/prometheus-operator
       version: master

@@ -58,28 +58,30 @@ type TopologyOptions struct {
 	TestManagesBPF    bool
 	TyphaLogSeverity  string
 	// In some cases, we rely on BIRD to program IPIP and noEncap routes. VXLAN routes are always programmed by Felix.
-	SimulateBIRDRoutes        bool
-	IPIPMode                  api.IPIPMode
-	VXLANMode                 api.VXLANMode
-	VXLANStrategy             VXLANStrategy
-	WireguardEnabled          bool
-	WireguardEnabledV6        bool
-	InitialFelixConfiguration *api.FelixConfiguration
-	WithPrometheusPortTLS     bool
-	NATOutgoingEnabled        bool
-	DelayFelixStart           bool
-	AutoHEPsEnabled           bool
-	TriggerDelayedFelixStart  bool
-	FelixStopGraceful         bool
-	ExternalIPs               bool
-	UseIPPools                bool
-	IPPoolCIDR                string
-	IPv6PoolCIDR              string
-	IPPoolUsages              []api.IPPoolAllowedUse
-	IPv6PoolUsages            []api.IPPoolAllowedUse
-	NeedNodeIP                bool
-	PerNodeOptions            []PerNodeOptions
-	FlowLogSource             int
+	SimulateBIRDRoutes             bool
+	IPIPMode                       api.IPIPMode
+	IPIPStrategy                   TunnelStrategy
+	VXLANMode                      api.VXLANMode
+	VXLANStrategy                  TunnelStrategy
+	WireguardEnabled               bool
+	WireguardEnabledV6             bool
+	InitialFelixConfiguration      *api.FelixConfiguration
+	WithPrometheusPortTLS          bool
+	NATOutgoingEnabled             bool
+	DelayFelixStart                bool
+	AutoHEPsEnabled                bool
+	TriggerDelayedFelixStart       bool
+	FelixStopGraceful              bool
+	ExternalIPs                    bool
+	UseIPPools                     bool
+	IPPoolCIDR                     string
+	IPv6PoolCIDR                   string
+	IPPoolUsages                   []api.IPPoolAllowedUse
+	IPv6PoolUsages                 []api.IPPoolAllowedUse
+	NeedNodeIP                     bool
+	PerNodeOptions                 []PerNodeOptions
+	FlowLogSource                  int
+	WireguardHostEncryptionEnabled bool
 }
 
 type PerNodeOptions struct {
@@ -124,6 +126,7 @@ func DefaultTopologyOptions() TopologyOptions {
 		WithFelixTyphaTLS:     false,
 		TyphaLogSeverity:      "info",
 		IPIPMode:              api.IPIPModeAlways,
+		IPIPStrategy:          NewDefaultTunnelStrategy(DefaultIPPoolCIDR, DefaultIPv6PoolCIDR),
 		SimulateBIRDRoutes:    true,
 		IPPoolCIDR:            DefaultIPPoolCIDR,
 		IPv6PoolCIDR:          DefaultIPv6PoolCIDR,
@@ -385,7 +388,8 @@ func StartNNodeTopology(
 
 		setUpBGPNodeIPAndIPIPTunnelIP := n > 1 || opts.NeedNodeIP
 		if opts.IPIPMode != api.IPIPModeNever {
-			infra.SetExpectedIPIPTunnelAddr(felix, IPv4CIDR, i, setUpBGPNodeIPAndIPIPTunnelIP)
+			ExpectWithOffset(1, opts.IPIPStrategy).ToNot(BeNil(), "IPIPMode is set but IPIPStrategy is nil")
+			infra.SetExpectedIPIPTunnelAddr(felix, opts.IPIPStrategy.TunnelAddress(i), setUpBGPNodeIPAndIPIPTunnelIP)
 			expectedIPs = append(expectedIPs, felix.ExpectedIPIPTunnelAddr)
 		}
 		if opts.VXLANMode != api.VXLANModeNever {
@@ -398,11 +402,11 @@ func StartNNodeTopology(
 				expectedIPs = append(expectedIPs, felix.ExpectedVXLANV6TunnelAddr)
 			}
 		}
-		if opts.WireguardEnabled {
+		if opts.WireguardEnabled && !opts.WireguardHostEncryptionEnabled {
 			infra.SetExpectedWireguardTunnelAddr(felix, IPv4CIDR, i, n > 1)
 			expectedIPs = append(expectedIPs, felix.ExpectedWireguardTunnelAddr)
 		}
-		if opts.WireguardEnabledV6 {
+		if opts.WireguardEnabledV6 && !opts.WireguardHostEncryptionEnabled {
 			infra.SetExpectedWireguardV6TunnelAddr(felix, IPv6CIDR, i, n > 1)
 			expectedIPs = append(expectedIPs, felix.ExpectedWireguardV6TunnelAddr)
 		}

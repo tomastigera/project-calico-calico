@@ -1,14 +1,26 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 FROM registry.access.redhat.com/ubi9/ubi
 
 ARG FLUENTD_VERSION
-ARG ARCH
+ARG JQ_VERSION=1.8.1
+ARG RUBY_VERSION=3.4.5
+ARG TARGETARCH
 
 RUN dnf upgrade -y && dnf install -y \
+       autoconf \
+       automake \
        gcc \
-       ruby \
-       ruby-devel
+       libyaml-devel \
+       make \
+       openssl-devel \
+       zlib-devel
+
+RUN mkdir -p /ruby-build && \
+       curl -sfL https://cache.ruby-lang.org/pub/ruby/3.4/ruby-${RUBY_VERSION}.tar.gz | tar xz --strip-components=1 -C /ruby-build && \
+       cd /ruby-build && ./configure --prefix=/usr --disable-install-doc && \
+       make -j$(nproc) && make install && \
+       rm -rf /ruby-build
 
 # From upstream fluentd Dockerfile and update them when upgrading fluentd
 # https://github.com/fluent/fluentd-docker-image/blob/master/v1.18/debian/Dockerfile
@@ -33,13 +45,10 @@ RUN gem install elasticsearch-api -v 7.17.11 && \
        gem install fluent-plugin-sumologic_output -v 1.10.0
 
 # Download jq 1.8, dnf would get 1.6, which has vulnerabilities.
-RUN curl -L https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-$ARCH -o /usr/bin/jq && chmod +x /usr/bin/jq
+RUN curl -L https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${TARGETARCH} -o /usr/bin/jq && chmod +x /usr/bin/jq
 
 # cleanup
 RUN gem sources --clear-all
-RUN rm -fr /tmp/* /usr/local/share/gems/cache/*.gem
-RUN rm -fr /usr/local/share/gems/gems/fluentd-${FLUENTD_VERSION}/test/
-RUN rm -fr /usr/share/gems/specifications/default/net-imap-0.1.1.gemspec
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports

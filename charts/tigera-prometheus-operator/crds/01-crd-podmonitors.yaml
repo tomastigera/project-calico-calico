@@ -3,8 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
-    operator.prometheus.io/version: 0.76.2
+    controller-gen.kubebuilder.io/version: v0.18.0
+    operator.prometheus.io/version: 0.84.0
   name: podmonitors.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -39,6 +39,16 @@ spec:
                 bodySizeLimit:
                   pattern: (^0|([0-9]*[.])?[0-9]+((K|M|G|T|E|P)i?)?B)$
                   type: string
+                convertClassicHistogramsToNHCB:
+                  type: boolean
+                fallbackScrapeProtocol:
+                  enum:
+                    - PrometheusProto
+                    - OpenMetricsText0.0.1
+                    - OpenMetricsText1.0.0
+                    - PrometheusText0.0.4
+                    - PrometheusText1.0.0
+                  type: string
                 jobLabel:
                   type: string
                 keepDroppedTargets:
@@ -62,6 +72,15 @@ spec:
                         type: string
                       type: array
                   type: object
+                nativeHistogramBucketLimit:
+                  format: int64
+                  type: integer
+                nativeHistogramMinBucketFactor:
+                  anyOf:
+                    - type: integer
+                    - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
                 podMetricsEndpoints:
                   items:
                     properties:
@@ -185,6 +204,8 @@ spec:
                               type: string
                           type: object
                         type: array
+                      noProxy:
+                        type: string
                       oauth2:
                         properties:
                           clientId:
@@ -256,7 +277,7 @@ spec:
                           proxyFromEnvironment:
                             type: boolean
                           proxyUrl:
-                            pattern: ^http(s)?://.+$
+                            pattern: ^(http|https|socks5)://.+$
                             type: string
                           scopes:
                             items:
@@ -372,7 +393,33 @@ spec:
                         type: string
                       port:
                         type: string
+                      portNumber:
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      proxyConnectHeader:
+                        additionalProperties:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                default: ""
+                                type: string
+                              optional:
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      proxyFromEnvironment:
+                        type: boolean
                       proxyUrl:
+                        pattern: ^(http|https|socks5)://.+$
                         type: string
                       relabelings:
                         items:
@@ -540,6 +587,8 @@ spec:
                 scrapeClass:
                   minLength: 1
                   type: string
+                scrapeClassicHistograms:
+                  type: boolean
                 scrapeProtocols:
                   items:
                     enum:
@@ -547,6 +596,7 @@ spec:
                       - OpenMetricsText0.0.1
                       - OpenMetricsText1.0.0
                       - PrometheusText0.0.4
+                      - PrometheusText1.0.0
                     type: string
                   type: array
                   x-kubernetes-list-type: set
@@ -576,6 +626,11 @@ spec:
                       type: object
                   type: object
                   x-kubernetes-map-type: atomic
+                selectorMechanism:
+                  enum:
+                    - RelabelConfig
+                    - RoleSelector
+                  type: string
                 targetLimit:
                   format: int64
                   type: integer

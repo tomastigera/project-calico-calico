@@ -3,8 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
-    operator.prometheus.io/version: 0.76.2
+    controller-gen.kubebuilder.io/version: v0.18.0
+    operator.prometheus.io/version: 0.84.0
   name: servicemonitors.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -39,6 +39,8 @@ spec:
                 bodySizeLimit:
                   pattern: (^0|([0-9]*[.])?[0-9]+((K|M|G|T|E|P)i?)?B)$
                   type: string
+                convertClassicHistogramsToNHCB:
+                  type: boolean
                 endpoints:
                   items:
                     properties:
@@ -164,6 +166,8 @@ spec:
                               type: string
                           type: object
                         type: array
+                      noProxy:
+                        type: string
                       oauth2:
                         properties:
                           clientId:
@@ -235,7 +239,7 @@ spec:
                           proxyFromEnvironment:
                             type: boolean
                           proxyUrl:
-                            pattern: ^http(s)?://.+$
+                            pattern: ^(http|https|socks5)://.+$
                             type: string
                           scopes:
                             items:
@@ -351,7 +355,28 @@ spec:
                         type: string
                       port:
                         type: string
+                      proxyConnectHeader:
+                        additionalProperties:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                default: ""
+                                type: string
+                              optional:
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      proxyFromEnvironment:
+                        type: boolean
                       proxyUrl:
+                        pattern: ^(http|https|socks5)://.+$
                         type: string
                       relabelings:
                         items:
@@ -515,6 +540,14 @@ spec:
                         type: boolean
                     type: object
                   type: array
+                fallbackScrapeProtocol:
+                  enum:
+                    - PrometheusProto
+                    - OpenMetricsText0.0.1
+                    - OpenMetricsText1.0.0
+                    - PrometheusText0.0.4
+                    - PrometheusText1.0.0
+                  type: string
                 jobLabel:
                   type: string
                 keepDroppedTargets:
@@ -538,6 +571,15 @@ spec:
                         type: string
                       type: array
                   type: object
+                nativeHistogramBucketLimit:
+                  format: int64
+                  type: integer
+                nativeHistogramMinBucketFactor:
+                  anyOf:
+                    - type: integer
+                    - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
                 podTargetLabels:
                   items:
                     type: string
@@ -548,6 +590,8 @@ spec:
                 scrapeClass:
                   minLength: 1
                   type: string
+                scrapeClassicHistograms:
+                  type: boolean
                 scrapeProtocols:
                   items:
                     enum:
@@ -555,6 +599,7 @@ spec:
                       - OpenMetricsText0.0.1
                       - OpenMetricsText1.0.0
                       - PrometheusText0.0.4
+                      - PrometheusText1.0.0
                     type: string
                   type: array
                   x-kubernetes-list-type: set
@@ -584,6 +629,11 @@ spec:
                       type: object
                   type: object
                   x-kubernetes-map-type: atomic
+                selectorMechanism:
+                  enum:
+                    - RelabelConfig
+                    - RoleSelector
+                  type: string
                 targetLabels:
                   items:
                     type: string
@@ -595,8 +645,68 @@ spec:
                 - endpoints
                 - selector
               type: object
+            status:
+              properties:
+                bindings:
+                  items:
+                    properties:
+                      conditions:
+                        items:
+                          properties:
+                            lastTransitionTime:
+                              format: date-time
+                              type: string
+                            message:
+                              type: string
+                            observedGeneration:
+                              format: int64
+                              type: integer
+                            reason:
+                              type: string
+                            status:
+                              minLength: 1
+                              type: string
+                            type:
+                              enum:
+                                - Accepted
+                              minLength: 1
+                              type: string
+                          required:
+                            - lastTransitionTime
+                            - status
+                            - type
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                          - type
+                        x-kubernetes-list-type: map
+                      group:
+                        enum:
+                          - monitoring.coreos.com
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        minLength: 1
+                        type: string
+                      resource:
+                        enum:
+                          - prometheuses
+                          - prometheusagents
+                        type: string
+                    required:
+                      - group
+                      - name
+                      - namespace
+                      - resource
+                    type: object
+                  type: array
+              type: object
           required:
             - spec
           type: object
       served: true
       storage: true
+      subresources:
+        status: {}

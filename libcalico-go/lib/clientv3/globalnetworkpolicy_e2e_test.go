@@ -23,10 +23,12 @@ import (
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -402,6 +404,69 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 		},
 		Entry("GlobalNetworkPolicy without default tier prefix", "netpol", "default.netpol"),
 		Entry("GlobalNetworkPolicy with default tier prefix", "default.netpol", "netpol"),
+	)
+
+	Describe("GlobalNetworkPolicy without name on the projectcalico.org annotation", func() {
+		It("Should return the name with default prefix", func() {
+			if config.Spec.DatastoreType == apiconfig.Kubernetes {
+				config, _, err := k8s.CreateKubernetesClientset(&config.Spec)
+				Expect(err).NotTo(HaveOccurred())
+				config.ContentType = "application/json"
+				cli, err := ctrlclient.New(config, ctrlclient.Options{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create v1 crd with empty metadata annotation name
+				annotations := map[string]string{}
+				annotations["projectcalico.org/metadata"] = "{}"
+				policy := &apiv3.GlobalNetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+						Name:        "default.prefix-test-policy"},
+					Spec: apiv3.GlobalNetworkPolicySpec{},
+				}
+				err = cli.Create(context.Background(), policy)
+				Expect(err).NotTo(HaveOccurred())
+
+				// We should be able to get it without the default. prefix
+				_, err = c.GlobalNetworkPolicies().Get(ctx, "default.prefix-test-policy", options.GetOptions{})
+				Expect(err).ToNot(HaveOccurred())
+			}
+		})
+	})
+
+	DescribeTable("GlobalNetworkPolicy name validation tests",
+		func(policyName string, tier string, expectError bool) {
+			if tier != "default" {
+				// Create the tier if required before running other tiered policy tests.
+				tierSpec := apiv3.TierSpec{Order: &tierOrder}
+				By("Creating the tier")
+				_, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: tier},
+					Spec:       tierSpec,
+				}, options.SetOptions{})
+				Expect(resErr).NotTo(HaveOccurred())
+			}
+
+			_, err := c.GlobalNetworkPolicies().Create(ctx,
+				&apiv3.GlobalNetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: policyName},
+					Spec: apiv3.GlobalNetworkPolicySpec{
+						Tier: tier,
+					},
+				}, options.SetOptions{})
+
+			if expectError {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).ToNot(HaveOccurred())
+			}
+		},
+		Entry("GlobalNetworkPolicy in default tier without prefix", "netpol", "default", false),
+		Entry("GlobalNetworkPolicy in default tier with prefix", "default.netpol", "default", false),
+		Entry("GlobalNetworkPolicy in custom tier with correct prefix", "tier1.netpol", "tier1", false),
+		Entry("GlobalNetworkPolicy in custom tier without prefix", "netpol", "tier1", true),
+		Entry("GlobalNetworkPolicy in custom tier with incorrect prefix", "tier1.netpol", "tier2", true),
 	)
 
 	Describe("GlobalNetworkPolicy watch functionality", func() {

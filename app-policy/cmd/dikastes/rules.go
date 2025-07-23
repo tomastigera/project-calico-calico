@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"sigs.k8s.io/knftables"
 )
 
 const (
@@ -89,6 +91,55 @@ func generateRules(
 				"-j", inputRedirectChain,
 				"-m", "comment", "--comment", "Redirect remaining inbound traffic to envoy",
 			},
+		},
+	}
+
+	return inboundStaticRules
+}
+
+func generateRulesNftables(
+	envoyInboundPort, envoyMetricsPort, envoyLivenessPort, envoyReadinessPort, envoyStartupProbePort, envoyHealthCheckPort string,
+) (inboundStaticRules []knftables.Rule) {
+	inboundStaticRules = []knftables.Rule{
+		{
+			Chain:   inputRedirectChain,
+			Comment: knftables.PtrTo("Redirect inbound traffic to envoy"),
+			Rule:    fmt.Sprintf("ip protocol tcp counter redirect to :%s", envoyInboundPort),
+		},
+		{
+			Chain:   "PREROUTING",
+			Comment: knftables.PtrTo(fmt.Sprintf("Jump to %s chain for ALL inbound traffic", inputProxyInbound)),
+			Rule:    "ip protocol tcp counter jump " + inputProxyInbound,
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Allow access to envoy metrics port"),
+			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyMetricsPort),
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Allow access to envoy liveness probe port"),
+			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyLivenessPort),
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Allow access to envoy readiness probe port"),
+			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyReadinessPort),
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Allow access to envoy startup probe port"),
+			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyStartupProbePort),
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Allow access to envoy health check port"),
+			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyHealthCheckPort),
+		},
+		{
+			Chain:   inputProxyInbound,
+			Comment: knftables.PtrTo("Redirect remaining inbound traffic to envoy"),
+			Rule:    "ip protocol tcp counter jump " + inputRedirectChain,
 		},
 	}
 
