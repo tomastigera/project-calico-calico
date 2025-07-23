@@ -445,7 +445,6 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithField("log", logMsg).Debug("Log received from envoy via gRPC")
 	}
-	log.WithField("log", logMsg).Info("Log received from envoy via gRPC")
 	// Treat values
 	timeToLastUpstreamTxByte := logMsg.GetCommonProperties().GetTimeToLastUpstreamTxByte()
 	if timeToLastUpstreamTxByte == nil {
