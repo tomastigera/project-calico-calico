@@ -211,9 +211,9 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 		if component.Image == "" {
 			img := registry.EnterpriseImageMap[name]
 			if img != "" {
-				component.Image = img
-			} else {
-				component.Image = name
+				component.Image = fmt.Sprintf("%s/%s", registry.TigeraNamespace, img)
+			} else if component.Version == pinnedVersion.Title || strings.HasPrefix(name, managerComponent) {
+				component.Image = fmt.Sprintf("%s/%s", registry.TigeraNamespace, name)
 			}
 		}
 		pinnedVersion.Components[name] = component

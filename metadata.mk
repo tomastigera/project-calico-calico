@@ -85,6 +85,8 @@ FLANNEL_VERSION=main
 # The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
 BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
+# The default branch for semaphore
+DEFAULT_BRANCH_OVERRIDE ?= master
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.
