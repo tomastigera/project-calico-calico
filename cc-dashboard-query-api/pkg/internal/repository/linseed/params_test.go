@@ -39,6 +39,10 @@ func TestParams(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
 
+	policyAllPoliciesField, found := collectionsMap[collections.CollectionNameFlows].Field("policies.all_policies")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeText, policyAllPoliciesField.Type())
+
 	enumField, found := collectionsMap[collections.CollectionNameFlows].Field("action")
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
@@ -440,6 +444,23 @@ func TestParams(t *testing.T) {
 				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
+
+			t.Run("nested fields", func(t *testing.T) {
+				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewWildcard(policyAllPoliciesField, "*_PROFILE_*", true),
+				}, time.Time{})
+
+				require.Equal(t, &queryParams{
+					selector: `"policies.all_policies" NOTIN {"*_PROFILE_*"}`,
+
+					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
+					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
+				}, subject)
+			})
 		})
 
 		t.Run("dateRange", func(t *testing.T) {

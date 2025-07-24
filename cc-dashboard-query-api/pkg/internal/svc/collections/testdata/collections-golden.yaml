@@ -54,6 +54,14 @@
     - CNAME
     - SOA
     - SRV
+  - name: servers.ip
+    type: ip
+  - name: servers.name
+    type: text
+  - name: servers.name_aggr
+    type: text
+  - name: servers.namespace
+    type: text
   groupBys:
   - field: client_name_aggr
     nested:
@@ -93,6 +101,8 @@
     type: text
   - name: dest_ip
     type: ip
+  - name: dest_labels.labels
+    type: text
   - name: dest_name
     type: text
   - name: dest_name_aggr
@@ -162,6 +172,8 @@
     values:
     - staged
     - enforced
+  - name: policies.all_policies
+    type: text
   - name: process_args
     type: text
   - name: process_id
@@ -184,6 +196,8 @@
     - dst
   - name: source_ip
     type: ip
+  - name: source_labels.labels
+    type: text
   - name: source_name
     type: text
   - name: source_name_aggr

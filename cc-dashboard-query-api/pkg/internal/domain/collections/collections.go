@@ -11,8 +11,9 @@ const (
 	CollectionNameDNS   = CollectionName("dns")
 	CollectionNameFlows = CollectionName("flows")
 
-	FieldTypeIP        = FieldType("ip")
-	FieldTypeText      = FieldType("text")
+	FieldTypeIP   = FieldType("ip")
+	FieldTypeText = FieldType("text")
+	// FieldTypeTextExact restricts text fields to the EQUALS and IN filter operators
 	FieldTypeTextExact = FieldType("text-exact")
 	FieldTypeDate      = FieldType("date")
 	FieldTypeEnum      = FieldType("enum")
