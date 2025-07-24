@@ -34,83 +34,6 @@ import (
 	"github.com/projectcalico/calico/felix/vxlanfdb"
 )
 
-type mockVXLANDataplane struct {
-	links     []netlink.Link
-	ipVersion uint8
-}
-
-func (m *mockVXLANDataplane) LinkByName(name string) (netlink.Link, error) {
-	la := netlink.NewLinkAttrs()
-	la.Index = 6
-	la.Name = "vxlan"
-	link := &netlink.Vxlan{
-		LinkAttrs:    la,
-		VxlanId:      1,
-		Port:         20,
-		VtepDevIndex: 2,
-		SrcAddr:      ip.FromString("172.0.0.2").AsNetIP(),
-	}
-
-	la = netlink.NewLinkAttrs()
-	la.Name = "vxlan-v6"
-	if m.ipVersion == 6 {
-		link = &netlink.Vxlan{
-			LinkAttrs:    la,
-			VxlanId:      1,
-			Port:         20,
-			VtepDevIndex: 2,
-			SrcAddr:      ip.FromString("fc00:10:96::2").AsNetIP(),
-		}
-	}
-
-	return link, nil
-}
-
-func (m *mockVXLANDataplane) LinkSetMTU(link netlink.Link, mtu int) error {
-	return nil
-}
-
-func (m *mockVXLANDataplane) LinkSetUp(link netlink.Link) error {
-	return nil
-}
-
-func (m *mockVXLANDataplane) AddrList(link netlink.Link, family int) ([]netlink.Addr, error) {
-	l := []netlink.Addr{{
-		IPNet: &net.IPNet{
-			IP: net.IPv4(172, 0, 0, 2),
-		},
-	}}
-
-	if m.ipVersion == 6 {
-		l = []netlink.Addr{{
-			IPNet: &net.IPNet{
-				IP: net.ParseIP("fc00:10:96::2"),
-			},
-		}}
-	}
-	return l, nil
-}
-
-func (m *mockVXLANDataplane) AddrAdd(link netlink.Link, addr *netlink.Addr) error {
-	return nil
-}
-
-func (m *mockVXLANDataplane) AddrDel(link netlink.Link, addr *netlink.Addr) error {
-	return nil
-}
-
-func (m *mockVXLANDataplane) LinkList() ([]netlink.Link, error) {
-	return m.links, nil
-}
-
-func (m *mockVXLANDataplane) LinkAdd(netlink.Link) error {
-	return nil
-}
-
-func (m *mockVXLANDataplane) LinkDel(netlink.Link) error {
-	return nil
-}
-
 type mockVXLANFDB struct {
 	setVTEPsCalls int
 	currentVTEPs  []vxlanfdb.VTEP
@@ -163,9 +86,10 @@ var _ = Describe("VXLANManager", func() {
 			4444,
 			dpConfig,
 			opRecorder,
-			&mockVXLANDataplane{
-				links:     []netlink.Link{&mockLink{attrs: la}},
-				ipVersion: 4,
+			&mockTunnelDataplane{
+				links:          []netlink.Link{&mockLink{attrs: la}},
+				tunnelLinkName: dataplanedefs.VXLANIfaceNameV4,
+				ipVersion:      4,
 			},
 			mockProcSys.write,
 		)
@@ -188,9 +112,10 @@ var _ = Describe("VXLANManager", func() {
 			6666,
 			dpConfigV6,
 			opRecorder,
-			&mockVXLANDataplane{
-				links:     []netlink.Link{&mockLink{attrs: la}},
-				ipVersion: 6,
+			&mockTunnelDataplane{
+				links:          []netlink.Link{&mockLink{attrs: la}},
+				tunnelLinkName: dataplanedefs.VXLANIfaceNameV6,
+				ipVersion:      6,
 			},
 			mockProcSys.write,
 		)
@@ -529,7 +454,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect no routes.
-		Expect(rt.currentRoutes["vxlan.calico"]).To(HaveLen(0))
+		Expect(rt.currentRoutes[dataplanedefs.VXLANIfaceNameV4]).To(HaveLen(0))
 	})
 
 	It("IPv6: should program directly connected routes for remote VTEPs with borrowed IP addresses", func() {
@@ -563,7 +488,669 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect no routes.
-		Expect(rt.currentRoutes["vxlan.calico"]).To(HaveLen(0))
+		Expect(rt.currentRoutes[dataplanedefs.VXLANIfaceNameV6]).To(HaveLen(0))
+	})
+
+	It("programs remote VTEP L2 route if no conflict present with local cluster VTEP", func() {
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node2",
+			Mac:            "00:0a:95:9d:68:16",
+			Ipv4Addr:       "10.0.80.0",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.80.0/32",
+			DstNodeName: "remote-cluster/node2",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		mac, err := net.ParseMAC("00:0a:95:9d:68:16")
+		Expect(err).NotTo(HaveOccurred())
+		// Expect the nodes VTEP to be programmed with the remote cluster VTEP route.
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.80.0"),
+			HostIP:    ip.FromString("172.0.12.1"),
+		}))
+	})
+
+	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP IP of this node", func() {
+		// VTEP IPs are equal.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node2",
+			Mac:            "00:0a:95:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		// Omit the remote cluster route update, as the Calc Graph will resolve the IP conflict and send the winning L3 route accordingly.
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the nodes VTEP to not be programmed with the remote cluster VTEP route.
+		Expect(fdb.currentVTEPs).To(HaveLen(0))
+	})
+
+	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP IP on another node", func() {
+		// We should see an L2 route for the local VTEP on another node, even if the L3 route was not sent.
+		// This is because we always program local cluster VTEPs.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}))
+
+		// Add the remote node with conflicting IP, along with the route updates.
+		// The remote cluster node does not have a route update, as the Calc Graph picks the local VTEP to win the IP conflict.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node2",
+			Mac:            "00:0a:95:9d:68:16",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "node3",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the nodes VTEP to still only be programmed with the local route.
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}))
+	})
+
+	It("does not program remote VTEP L2 routes if they conflict with a different remote cluster VTEP IP", func() {
+		// Two remote VTEPs have the same IP. The Calc Graph with resolve the IP conflict, sending just one L3 route.
+		// Expect that the L2 routes respect the winner of the conflict.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-a/node2",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-b/node3",
+			Mac:            "00:0a:95:9d:68:16",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.12.1",
+		})
+
+		// Assume remote-cluster-a is the winner, so only send a route update for remote-cluster-a.
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster-a/node2",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+
+		Expect(err).NotTo(HaveOccurred())
+		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		// Expect the nodes VTEP to be programmed with the remote cluster A VTEP route.
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}))
+	})
+
+	It("programs VTEP L2 routes correctly during transitions between IP conflict states", func() {
+		// Define data for the test - the local and remote node VTEPs have conflicting IPs.
+		thisNodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		}
+		localNodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		}
+		remoteNodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node2",
+			Mac:            "00:0a:95:9d:68:16",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.12.1",
+		}
+		thisNodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		localNodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "node3",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		remoteNodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster/node2",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		localMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		localL2Route := vxlanfdb.VTEP{
+			TunnelMAC: localMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}
+		remoteMAC, err := net.ParseMAC("00:0a:95:9d:68:16")
+		Expect(err).NotTo(HaveOccurred())
+		remoteL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.12.1"),
+		}
+
+		// Establish local VTEPs for this node, and another local node.
+		vxlanMgr.OnUpdate(thisNodeVTEP)
+		vxlanMgr.OnUpdate(thisNodeVTEPRoute)
+		vxlanMgr.OnUpdate(localNodeVTEP)
+		vxlanMgr.OnUpdate(localNodeVTEPRoute)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect that the local node VTEP has an L2 route.
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
+
+		// Add the remote node with conflicting IP.
+		// We don't add a route update as the Calc Graph should pick the local VTEP as the winner of the IP conflict.
+		vxlanMgr.OnUpdate(remoteNodeVTEP)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the nodes VTEP to still only be programmed with the local route.
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
+
+		// Now remove the local VTEP. The routes should shift to the remote VTEP.
+		// We also add the route update for the remote VTEP, as it is no longer conflicted in the calc graph.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointRemove{Node: localNodeVTEP.Node})
+		vxlanMgr.OnUpdate(&proto.RouteRemove{Dst: localNodeVTEPRoute.Dst})
+		vxlanMgr.OnUpdate(remoteNodeVTEPRoute)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect that the routes shifted to the remote VTEP.
+		Expect(fdb.currentVTEPs).To(ConsistOf(remoteL2Route))
+
+		// Now restore the local VTEP.
+		vxlanMgr.OnUpdate(localNodeVTEP)
+		vxlanMgr.OnUpdate(&proto.RouteRemove{Dst: remoteNodeVTEPRoute.Dst})
+		vxlanMgr.OnUpdate(localNodeVTEPRoute)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the routes have shifted back to the local VTEP.
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
+	})
+
+	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP MAC of this node", func() {
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.80.0",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.80.0/32",
+			DstNodeName: "remote-cluster/node1",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the nodes VTEP to not be programmed with the remote cluster VTEP route.
+		Expect(fdb.currentVTEPs).To(HaveLen(0))
+	})
+
+	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP MAC of another node", func() {
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "node3",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster/node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.3",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.3/32",
+			DstNodeName: "remote-cluster/node3",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		// Expect the nodes VTEP to only be programmed with the local route.
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{
+			{
+				TunnelMAC: mac,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
+			},
+		}))
+	})
+
+	It("does not program remote VTEP L2 routes if they conflict with a different remote cluster VTEP MAC", func() {
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-a/node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster-a/node3",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-b/node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.3",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.3/32",
+			DstNodeName: "remote-cluster-b/node3",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect remote A VTEP to be programmed, due to sort on node name to resolve MAC conflict.
+		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}}))
+	})
+
+	It("programs remote VTEP L2 routes correctly during transitions between MAC conflict states", func() {
+		// Define the test data. Remote node A and remote node B VTEPs have the same MAC address.
+		thisNodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		}
+		thisNodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		remoteANodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-a/node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		}
+		remoteANodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster-a/node3",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		remoteBNodeVTEP := &proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-b/node3",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.3",
+			ParentDeviceIp: "172.0.12.1",
+		}
+		remoteBNodeVTEPRoute := &proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.3/32",
+			DstNodeName: "remote-cluster-b/node3",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		}
+		remoteAMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		remoteAL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteAMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}
+		remoteBMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		remoteBL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteBMAC,
+			TunnelIP:  ip.FromString("10.0.0.3"),
+			HostIP:    ip.FromString("172.0.12.1"),
+		}
+
+		// Program the remote B VTEP along with this nodes VTEP.
+		vxlanMgr.OnUpdate(remoteBNodeVTEP)
+		vxlanMgr.OnUpdate(remoteBNodeVTEPRoute)
+		vxlanMgr.OnUpdate(thisNodeVTEP)
+		vxlanMgr.OnUpdate(thisNodeVTEPRoute)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect remote B to be programmed as the L2 route.
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteBL2Route}))
+
+		// Program the remote A VTEP.
+		vxlanMgr.OnUpdate(remoteANodeVTEP)
+		vxlanMgr.OnUpdate(remoteANodeVTEPRoute)
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect remote A to be programmed as the L2 route, since it wins the MAC conflict resolution by node name order.
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteAL2Route}))
+
+		// Remove the remote B VTEP.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointRemove{Node: remoteBNodeVTEP.Node})
+		vxlanMgr.OnUpdate(&proto.RouteRemove{Dst: remoteBNodeVTEPRoute.Dst})
+		err = vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect remote A to still be programmed as the L2 route.
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteAL2Route}))
+	})
+
+	It("utilizes L3 routes to resolve L2 conflicts when two VTEPs have the same IP and MAC", func() {
+		// The remote cluster VTEPs have the same IP and MAC.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-a/node2",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-b/node2",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.12.1",
+		})
+
+		// We expect only one remote cluster tunnel route to be present, as the Calc Graph should assign a winner.
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster-a/node2",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expect the remote A L2 route to be programmed, rather than neither, since the remote B VTEP is conflicted in the Calc Graph.
+		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{
+			{
+				TunnelMAC: mac,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
+			},
+		}))
+	})
+
+	It("utilizes L3 routes to resolve L2 conflicts when two VTEPs have the same MAC and one is conflicted at L3", func() {
+		// Remote cluster A VTEP has the same MAC as C. Remote cluster B VTEP has the same IP as C.
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "node1",
+			Mac:            "00:0a:74:9d:68:16",
+			Ipv4Addr:       "10.0.0.0",
+			ParentDeviceIp: "172.0.0.2",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-a/node2",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.1",
+			ParentDeviceIp: "172.0.0.3",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-b/node3",
+			Mac:            "00:bc:22:32:ea:33",
+			Ipv4Addr:       "10.0.0.2",
+			ParentDeviceIp: "172.0.12.1",
+		})
+		vxlanMgr.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
+			Node:           "remote-cluster-c/node2",
+			Mac:            "00:ab:22:32:af:e2",
+			Ipv4Addr:       "10.0.0.2",
+			ParentDeviceIp: "172.0.22.2",
+		})
+
+		// We expect that the Calc Graph will assign B as the winner of the IP conflict.
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_LOCAL_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.0/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.0.0.2",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.1/32",
+			DstNodeName: "remote-cluster-a/node2",
+			DstNodeIp:   "172.0.0.3",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+		vxlanMgr.OnUpdate(&proto.RouteUpdate{
+			Types:       proto.RouteType_REMOTE_TUNNEL,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "10.0.0.2/32",
+			DstNodeName: "remote-cluster-b/node3",
+			DstNodeIp:   "172.0.12.1",
+			TunnelType:  &proto.TunnelType{Vxlan: true},
+		})
+
+		err := vxlanMgr.CompleteDeferredWork()
+		Expect(err).NotTo(HaveOccurred())
+
+		// As a result, we expect the A and B VTEP to be programmed. Since we ignore the C VTEP due to the L3 conflict, A is
+		// not conflicted with it's MAC address.
+		aMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
+		Expect(err).NotTo(HaveOccurred())
+		bMAC, err := net.ParseMAC("00:bc:22:32:ea:33")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fdb.currentVTEPs).To(ConsistOf([]vxlanfdb.VTEP{
+			{
+				TunnelMAC: aMAC,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
+			},
+			{
+				TunnelMAC: bMAC,
+				TunnelIP:  ip.FromString("10.0.0.2"),
+				HostIP:    ip.FromString("172.0.12.1"),
+			},
+		}))
 	})
 
 	It("programs remote VTEP L2 route if no conflict present with local cluster VTEP", func() {
