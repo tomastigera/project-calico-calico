@@ -1,18 +1,26 @@
-From a6576fb8c008b5b35bf0157a700d1c2ac8ba60e6 Mon Sep 17 00:00:00 2001
+From dbd42c5163088bdf0019f321798f2ca99a25c8e1 Mon Sep 17 00:00:00 2001
 From: Tian Feng <tian@tigera.io>
-Date: Wed, 23 Jul 2025 10:28:23 -0700
+Date: Thu, 24 Jul 2025 10:19:45 -0700
 Subject: [PATCH] Bump form-data and caniuse-lite
 
 ---
- package.json |  7 +++---
- yarn.lock    | 64 ++++++++++++++++++++++++++++++++++++++++++++++++----
- 2 files changed, 64 insertions(+), 7 deletions(-)
+ package.json |  8 +++---
+ yarn.lock    | 72 +++++++++++++++++++++++++++++++++++++++-------------
+ 2 files changed, 60 insertions(+), 20 deletions(-)
 
 diff --git a/package.json b/package.json
-index 230172892..ed44142fe 100644
+index 230172892..57320d02c 100644
 --- a/package.json
 +++ b/package.json
-@@ -585,11 +585,11 @@
+@@ -101,6 +101,7 @@
+     "@types/react": "~18.2.0",
+     "@types/react-dom": "~18.2.0",
+     "@xstate5/react/**/xstate": "^5.19.2",
++    "form-data": "4.0.4",
+     "globby/fast-glob": "^3.3.2"
+   },
+   "dependencies": {
+@@ -585,11 +586,11 @@
      "@kbn/index-management-plugin": "link:x-pack/platform/plugins/shared/index_management",
      "@kbn/index-management-shared-types": "link:x-pack/platform/packages/shared/index-management/index_management_shared_types",
      "@kbn/index-patterns-test-plugin": "link:test/plugin_functional/plugins/index_patterns",
@@ -25,7 +33,7 @@ index 230172892..ed44142fe 100644
      "@kbn/infra-forge": "link:x-pack/platform/packages/private/kbn-infra-forge",
      "@kbn/infra-plugin": "link:x-pack/solutions/observability/plugins/infra",
      "@kbn/ingest-pipelines-plugin": "link:x-pack/platform/plugins/shared/ingest_pipelines",
-@@ -1094,6 +1094,7 @@
+@@ -1094,6 +1095,7 @@
      "byte-size": "^9.0.1",
      "cacheable-lookup": "6",
      "camelcase-keys": "7.0.2",
@@ -33,7 +41,7 @@ index 230172892..ed44142fe 100644
      "canvg": "^3.0.9",
      "chalk": "^4.1.0",
      "cheerio": "^1.0.0-rc.12",
-@@ -1768,7 +1769,7 @@
+@@ -1768,7 +1770,7 @@
      "fetch-mock": "^7.3.9",
      "file-loader": "^4.2.0",
      "find-cypress-specs": "^1.41.4",
@@ -42,7 +50,7 @@ index 230172892..ed44142fe 100644
      "geckodriver": "^5.0.0",
      "gulp-brotli": "^3.0.0",
      "gulp-postcss": "^9.0.1",
-@@ -1881,4 +1882,4 @@
+@@ -1881,4 +1883,4 @@
      "zod-to-json-schema": "^3.23.0"
    },
    "packageManager": "yarn@1.22.21"
@@ -50,7 +58,7 @@ index 230172892..ed44142fe 100644
 \ No newline at end of file
 +}
 diff --git a/yarn.lock b/yarn.lock
-index 3ea16d8fd..a1f997896 100644
+index 3ea16d8fd..8a2cdefb8 100644
 --- a/yarn.lock
 +++ b/yarn.lock
 @@ -15291,6 +15291,11 @@ caniuse-lite@^1.0.0, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001335, can
@@ -82,25 +90,36 @@ index 3ea16d8fd..a1f997896 100644
  es-shim-unscopables@^1.0.0:
    version "1.0.0"
    resolved "https://registry.yarnpkg.com/es-shim-unscopables/-/es-shim-unscopables-1.0.0.tgz#702e632193201e3edf8713635d083d378e510241"
-@@ -19774,6 +19789,17 @@ form-data@^4.0.0, form-data@~4.0.0:
-     combined-stream "^1.0.8"
-     mime-types "^2.1.12"
+@@ -19756,22 +19771,15 @@ form-data-encoder@1.7.2:
+   resolved "https://registry.yarnpkg.com/form-data-encoder/-/form-data-encoder-1.7.2.tgz#1f1ae3dccf58ed4690b86d87e4f57c654fbab040"
+   integrity sha512-qfqtYan3rxrnCk1VYaA4H+Ms9xdpPqvLZa6xmMgFvhO32x7/3J/ExcTd6qpxM0vH2GdMI+poehyBZvqfMTto8A==
  
-+form-data@^4.0.4:
+-form-data@^3.0.0:
+-  version "3.0.1"
+-  resolved "https://registry.yarnpkg.com/form-data/-/form-data-3.0.1.tgz#ebd53791b78356a99af9a300d4282c4d5eb9755f"
+-  integrity sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg==
+-  dependencies:
+-    asynckit "^0.4.0"
+-    combined-stream "^1.0.8"
+-    mime-types "^2.1.12"
+-
+-form-data@^4.0.0, form-data@~4.0.0:
+-  version "4.0.0"
+-  resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.0.tgz#93919daeaf361ee529584b9b31664dc12c9fa452"
+-  integrity sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==
++form-data@4.0.4, form-data@^3.0.0, form-data@^4.0.0, form-data@^4.0.4, form-data@~4.0.0:
 +  version "4.0.4"
 +  resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.4.tgz#784cdcce0669a9d68e94d11ac4eea98088edd2c4"
 +  integrity sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==
-+  dependencies:
-+    asynckit "^0.4.0"
-+    combined-stream "^1.0.8"
+   dependencies:
+     asynckit "^0.4.0"
+     combined-stream "^1.0.8"
 +    es-set-tostringtag "^2.1.0"
 +    hasown "^2.0.2"
-+    mime-types "^2.1.12"
-+
+     mime-types "^2.1.12"
+ 
  formdata-node@^4.3.2:
-   version "4.4.1"
-   resolved "https://registry.yarnpkg.com/formdata-node/-/formdata-node-4.4.1.tgz#23f6a5cb9cb55315912cbec4ff7b0f59bbd191e2"
-@@ -30941,7 +30967,7 @@ string-replace-loader@^3.1.0:
+@@ -30941,7 +30949,7 @@ string-replace-loader@^3.1.0:
      loader-utils "^2.0.0"
      schema-utils "^3.0.0"
  
@@ -109,7 +128,7 @@ index 3ea16d8fd..a1f997896 100644
    version "4.2.3"
    resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
    integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
-@@ -30959,6 +30985,15 @@ string-width@^1.0.1:
+@@ -30959,6 +30967,15 @@ string-width@^1.0.1:
      is-fullwidth-code-point "^1.0.0"
      strip-ansi "^3.0.0"
  
@@ -125,7 +144,7 @@ index 3ea16d8fd..a1f997896 100644
  string-width@^5.0.1, string-width@^5.1.2:
    version "5.1.2"
    resolved "https://registry.yarnpkg.com/string-width/-/string-width-5.1.2.tgz#14f8daec6d81e7221d2a357e668cab73bdbca794"
-@@ -31069,7 +31104,7 @@ stringify-object@^3.2.1:
+@@ -31069,7 +31086,7 @@ stringify-object@^3.2.1:
      is-obj "^1.0.1"
      is-regexp "^1.0.0"
  
@@ -134,7 +153,7 @@ index 3ea16d8fd..a1f997896 100644
    version "6.0.1"
    resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
    integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
-@@ -31083,6 +31118,13 @@ strip-ansi@^3.0.0, strip-ansi@^3.0.1:
+@@ -31083,6 +31100,13 @@ strip-ansi@^3.0.0, strip-ansi@^3.0.1:
    dependencies:
      ansi-regex "^2.0.0"
  
@@ -148,7 +167,7 @@ index 3ea16d8fd..a1f997896 100644
  strip-ansi@^7.0.1, strip-ansi@^7.1.0:
    version "7.1.0"
    resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-7.1.0.tgz#d5b6568ca689d8561370b0707685d22434faff45"
-@@ -34067,7 +34109,7 @@ workerpool@^6.5.1:
+@@ -34067,7 +34091,7 @@ workerpool@^6.5.1:
    resolved "https://registry.yarnpkg.com/workerpool/-/workerpool-6.5.1.tgz#060f73b39d0caf97c6db64da004cd01b4c099544"
    integrity sha512-Fs4dNYcsdpYSAfVxhnl1L5zTksjvOJxtC5hzMNl+1t9B8hTJTdKDyZ5ju7ztgPy+ft9tBFXoOlDNiOT9WUXZlA==
  
@@ -157,7 +176,7 @@ index 3ea16d8fd..a1f997896 100644
    version "7.0.0"
    resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
    integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
-@@ -34093,6 +34135,15 @@ wrap-ansi@^6.2.0:
+@@ -34093,6 +34117,15 @@ wrap-ansi@^6.2.0:
      string-width "^4.1.0"
      strip-ansi "^6.0.0"
  
@@ -173,7 +192,7 @@ index 3ea16d8fd..a1f997896 100644
  wrap-ansi@^8.1.0:
    version "8.1.0"
    resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-8.1.0.tgz#56dc22368ee570face1b49819975d9b9a5ead214"
-@@ -34205,7 +34256,7 @@ xpath@^0.0.33:
+@@ -34205,7 +34238,7 @@ xpath@^0.0.33:
    resolved "https://registry.yarnpkg.com/xpath/-/xpath-0.0.33.tgz#5136b6094227c5df92002e7c3a13516a5074eb07"
    integrity sha512-NNXnzrkDrAzalLhIUc01jO2mOzXGXh1JwPgkihcLLzw98c0WgYDmmjSh1Kl3wzaxSVWMuA+fe0WTWOBDWCBmNA==
  
@@ -182,7 +201,7 @@ index 3ea16d8fd..a1f997896 100644
    version "5.19.2"
    resolved "https://registry.yarnpkg.com/xstate/-/xstate-5.19.2.tgz#db3f1ee614bbb6a49ad3f0c96ddbf98562d456ba"
    integrity sha512-B8fL2aP0ogn5aviAXFzI5oZseAMqN00fg/TeDa3ZtatyDcViYLIfuQl4y8qmHCiKZgGEzmnTyNtNQL9oeJE2gw==
-@@ -34215,6 +34266,11 @@ xstate@^4.38.3:
+@@ -34215,6 +34248,11 @@ xstate@^4.38.3:
    resolved "https://registry.yarnpkg.com/xstate/-/xstate-4.38.3.tgz#4e15e7ad3aa0ca1eea2010548a5379966d8f1075"
    integrity sha512-SH7nAaaPQx57dx6qvfcIgqKRXIh4L0A1iYEqim4s1u7c9VoCgzZc+63FY90AKU4ZzOC2cfJzTnpO4zK7fCUzzw==
  
