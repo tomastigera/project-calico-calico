@@ -54,7 +54,7 @@ class DiagsCollector(object):
                 run("docker exec " + node + " ip -6 r")
                 run("docker exec " + node + " ip l")
             kubectl("logs -n calico-system -l k8s-app=calico-node")
-            print_confd_templates(nodes)
+            self.print_confd_templates(nodes)
             for pod_name in calico_node_pod_names():
                 kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
                         allow_fail=True)
@@ -70,11 +70,7 @@ class DiagsCollector(object):
             _log.info("========= TEST COMPLETED WITHOUT EXCEPTION ========")
             _log.info("===================================================")
 
-def log_calico_node(node_ip):
-    pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
-    kubectl("logs %s -n calico-system " % pod_name.strip())
-
-def print_confd_templates(self, nodes):
+    def print_confd_templates(self, nodes):
         for node in nodes:
             calicoPod = kubectl("-n calico-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % node)
             if calicoPod is None:
@@ -90,6 +86,10 @@ def print_confd_templates(self, nodes):
             kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod)
             kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod)
             kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod)
+
+def log_calico_node(node_ip):
+    pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
+    kubectl("logs %s -n calico-system " % pod_name.strip())
 
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
