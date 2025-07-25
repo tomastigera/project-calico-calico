@@ -64,6 +64,20 @@ type EnvoyLog struct {
 	// used to calculate latency
 	UpstreamServiceTime string `json:"upstream_service_time"`
 
+	// gateway specific fields
+	// This represents the main address of the upstream host to which Envoy is proxying the request. Envoy var: %UPSTREAM_HOST%
+	UpstreamHost string `json:"upstream_host"`
+	// This represents the address of the gateway that is proxying the request. Envoy var: %UPSTREAM_LOCAL_ADDRESS%
+	UpstreamLocalAddress string `json:"upstream_local_address"`
+	// This represents the address of the downstream direct remote address host that is proxying the request. Envoy var: %DOWNSTREAM_DIRECT_REMOTE_ADDRESS%
+	// This is if your Gateway is deployed with a direct connection to the client, without any proxy in between. (Edge, Mobile, etc.)
+	DSDirectRemoteAddress string `json:"downstream_direct_remote_address"`
+	// This represents the address of the downstream local address host that is proxying the request.
+	// This is if your Gateway is deployed with trusted proxies in between the client and the gateway.
+	// Requires the proper XFF (xff_num_trusted_hops) configuration to be set in the gateway.
+	// Envoy var: %REQ(X-FORWARDED-FOR)%
+	XForwardedFor string `json:"x_forwarded_for"`
+
 	Protocol    string `json:"protocol"`
 	SrcIp       string
 	DstIp       string
