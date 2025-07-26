@@ -857,7 +857,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if config.BPFEnabled && bpfutils.BTFEnabled {
 			vxlanMTU = 0
 		}
-		go dp.vxlanManager.KeepVXLANDeviceInSync(
+		go dp.vxlanManager.keepVXLANDeviceInSync(
 			context.Background(),
 			vxlanMTU,
 			dataplaneFeatures.ChecksumOffloadBroken,
@@ -1518,7 +1518,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.loopSummarizer,
 		)
 		dp.ipipParentIfaceC = make(chan string, 1)
-		go dp.ipipManager.KeepIPIPDeviceInSync(
+		go dp.ipipManager.keepIPIPDeviceInSync(
 			context.Background(),
 			config.IPIPMTU,
 			dataplaneFeatures.ChecksumOffloadBroken,
@@ -1673,7 +1673,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			if config.BPFEnabled && bpfutils.BTFEnabled {
 				vxlanMTU = 0
 			}
-			go dp.vxlanManagerV6.KeepVXLANDeviceInSync(
+			go dp.vxlanManagerV6.keepVXLANDeviceInSync(
 				context.Background(),
 				vxlanMTU,
 				dataplaneFeatures.ChecksumOffloadBroken,
