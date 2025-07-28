@@ -21,6 +21,7 @@ import random
 import string
 import subprocess
 import time
+import traceback
 
 from kubernetes import client, config
 
@@ -35,13 +36,14 @@ class DiagsCollector(object):
     def __enter__(self):
         pass
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         if exc_type is not None:
             # Print out diagnostics for the test. These will go to screen
             # on test failure.
             _log.info("===================================================")
-            _log.info("============= COLLECTING DIAGS FOR TEST ===========")
+            _log.info("==== TEST IS FAILING, COLLECTING DIAGS FOR TEST ===")
             _log.info("===================================================")
+            _log.info("Exception information: %s, %s, %s", exc_type, exc_value, traceback.format_tb(tb))
             kubectl("version")
             kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
             for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
@@ -78,14 +80,14 @@ class DiagsCollector(object):
             calicoPod = calicoPod.strip()
 
             # v4 files.
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % calicoPod, allow_fail=True)
 
             # And for v6.
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod, allow_fail=True)
 
 def log_calico_node(node_ip):
     pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
@@ -354,7 +356,7 @@ def update_ds_env(ds, ns, env_vars):
         while True:
             time.sleep(10)
             node_ds = api.read_namespaced_daemon_set_status("calico-node", "calico-system")
-            _log.info("%d/%d nodes updated",
+            _log.info("%s/%s nodes updated",
                       node_ds.status.updated_number_scheduled,
                       node_ds.status.desired_number_scheduled)
             if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
