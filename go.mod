@@ -483,8 +483,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
 
-require github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
-
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
