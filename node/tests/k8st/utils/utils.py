@@ -369,9 +369,30 @@ def update_ds_env(ds, ns, env_vars):
             else:
                 last_number = node_ds.status.updated_number_scheduled
                 iterations_with_no_change = 0
+        wait_for_calico_node_pods_ready()
 
-        # Wait until all calico-node pods are ready.
-        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n calico-system --timeout=300s")
+def wait_for_calico_node_pods_ready():
+    """
+    Wait until all calico-node pods are ready.
+    """
+    _log.info("Waiting for calico-node pods to be ready")
+    # kubectl seems to cache the list of pods that it's waiting for throughout
+    # one wait call.  Split up the wait into multiple short waits in case the
+    # set of pods is changing.
+    iterations = 30
+    for i in range(iterations):
+        try:
+            kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n calico-system --timeout=10s")
+            return
+        except subprocess.CalledProcessError:
+            if i == iterations-1:
+                _log.exception("calico-node pods not ready after 30 attempts, giving up")
+                _log.info("Current calico-node pods:")
+                kubectl("get pods -n calico-system -l k8s-app=calico-node -o wide")
+                kubectl("describe pods -n calico-system -l k8s-app=calico-node")
+                raise
+            _log.info("calico-node pods not ready yet, retrying (%d/30)", i + 1)
+    _log.info("All calico-node pods are ready")
 
 def copy_cnx_pull_secret(ns):
     out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")
