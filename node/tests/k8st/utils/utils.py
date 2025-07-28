@@ -21,6 +21,7 @@ import random
 import string
 import subprocess
 import time
+import traceback
 
 from kubernetes import client, config
 
@@ -35,13 +36,14 @@ class DiagsCollector(object):
     def __enter__(self):
         pass
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         if exc_type is not None:
             # Print out diagnostics for the test. These will go to screen
             # on test failure.
             _log.info("===================================================")
-            _log.info("============= COLLECTING DIAGS FOR TEST ===========")
+            _log.info("==== TEST IS FAILING, COLLECTING DIAGS FOR TEST ===")
             _log.info("===================================================")
+            _log.info("Exception information: %s, %s, %s", exc_type, exc_value, traceback.format_tb(tb))
             kubectl("version")
             kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
             for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
@@ -54,7 +56,7 @@ class DiagsCollector(object):
                 run("docker exec " + node + " ip -6 r")
                 run("docker exec " + node + " ip l")
             kubectl("logs -n calico-system -l k8s-app=calico-node")
-            print_confd_templates(nodes)
+            self.print_confd_templates(nodes)
             for pod_name in calico_node_pod_names():
                 kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
                         allow_fail=True)
@@ -70,11 +72,7 @@ class DiagsCollector(object):
             _log.info("========= TEST COMPLETED WITHOUT EXCEPTION ========")
             _log.info("===================================================")
 
-def log_calico_node(node_ip):
-    pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
-    kubectl("logs %s -n calico-system " % pod_name.strip())
-
-def print_confd_templates(self, nodes):
+    def print_confd_templates(self, nodes):
         for node in nodes:
             calicoPod = kubectl("-n calico-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % node)
             if calicoPod is None:
@@ -82,14 +80,18 @@ def print_confd_templates(self, nodes):
             calicoPod = calicoPod.strip()
 
             # v4 files.
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % calicoPod, allow_fail=True)
 
             # And for v6.
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod)
-            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_aggr.cfg" % calicoPod, allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird6_ipam.cfg" % calicoPod, allow_fail=True)
+
+def log_calico_node(node_ip):
+    pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
+    kubectl("logs %s -n calico-system " % pod_name.strip())
 
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
@@ -354,7 +356,7 @@ def update_ds_env(ds, ns, env_vars):
         while True:
             time.sleep(10)
             node_ds = api.read_namespaced_daemon_set_status("calico-node", "calico-system")
-            _log.info("%d/%d nodes updated",
+            _log.info("%s/%s nodes updated",
                       node_ds.status.updated_number_scheduled,
                       node_ds.status.desired_number_scheduled)
             if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
@@ -367,9 +369,30 @@ def update_ds_env(ds, ns, env_vars):
             else:
                 last_number = node_ds.status.updated_number_scheduled
                 iterations_with_no_change = 0
+        wait_for_calico_node_pods_ready()
 
-        # Wait until all calico-node pods are ready.
-        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n calico-system --timeout=300s")
+def wait_for_calico_node_pods_ready():
+    """
+    Wait until all calico-node pods are ready.
+    """
+    _log.info("Waiting for calico-node pods to be ready")
+    # kubectl seems to cache the list of pods that it's waiting for throughout
+    # one wait call.  Split up the wait into multiple short waits in case the
+    # set of pods is changing.
+    iterations = 30
+    for i in range(iterations):
+        try:
+            kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n calico-system --timeout=10s")
+            return
+        except subprocess.CalledProcessError:
+            if i == iterations-1:
+                _log.exception("calico-node pods not ready after 30 attempts, giving up")
+                _log.info("Current calico-node pods:")
+                kubectl("get pods -n calico-system -l k8s-app=calico-node -o wide")
+                kubectl("describe pods -n calico-system -l k8s-app=calico-node")
+                raise
+            _log.info("calico-node pods not ready yet, retrying (%d/30)", i + 1)
+    _log.info("All calico-node pods are ready")
 
 def copy_cnx_pull_secret(ns):
     out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")

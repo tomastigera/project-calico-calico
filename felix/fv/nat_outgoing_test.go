@@ -107,7 +107,7 @@ var _ = infrastructure.DatastoreDescribe("NATOutgoing rule rendering test", []ap
 	})
 })
 
-var _ = infrastructure.DatastoreDescribeWithRemote("NATOutgoing remote cluster rendering test", []apiconfig.DatastoreType{}, func(factories infrastructure.LocalRemoteInfraFactories) {
+var _ = infrastructure.DatastoreDescribeRemoteOnly("NATOutgoing remote cluster rendering test", func(factories infrastructure.LocalRemoteInfraFactories) {
 	var infra [2]infrastructure.DatastoreInfra
 	var tc [2]infrastructure.TopologyContainers
 	var natPool [2]*api.IPPool
