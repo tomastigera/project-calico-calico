@@ -123,7 +123,7 @@ var _ = Describe("EgressIPManager", func() {
 		Expect(nodeIP).To(Equal(net.ParseIP("172.0.0.2")))
 		err = manager.configureVXLANDevice(nodeIP, 50)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(manager.vxlanDeviceLinkIndex).To(Equal(6))
+		Expect(manager.vxlanDeviceLinkIndex).To(Equal(mockedTunnelIndex))
 	})
 
 	expectIPSetMembers := func(id string, members []gateway) {
