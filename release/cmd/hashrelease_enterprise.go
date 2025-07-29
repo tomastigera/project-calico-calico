@@ -197,6 +197,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 		operatorDevTagSuffixFlag,
 		archFlag,
 		registryFlag,
+		windowsArchiveBucketFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
 		helmRegistryFlag,
@@ -270,13 +271,11 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 					calico.WithImageRegistries(productRegistries),
 				)
 			}
-
 			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve images for the hashrelease: %v", err)
 			}
 			calicoOpts = append(calicoOpts, calico.WithComponents(components))
-
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(hashrel.ChartVersion),
@@ -285,7 +284,9 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
 				calico.WithHelmRegistry(c.String(helmRegistryFlag.Name)),
 			}
-
+			if b := c.String(windowsArchiveBucketFlag.Name); b != "" {
+				enterpriseOpts = append(enterpriseOpts, calico.WithWindowsArchiveBucket(b))
+			}
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
 			if err := m.PublishRelease(); err != nil {
 				return err

@@ -34,6 +34,13 @@ func WithEnterpriseHashreleaseRegistry(registry string) EnterpriseOption {
 	}
 }
 
+func WithWindowsArchiveBucket(bucket string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.windowsArchiveBucket = bucket
+		return nil
+	}
+}
+
 func WithPublishWindowsArchive(publish bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.publishWindowsArchive = publish
@@ -52,13 +59,6 @@ func WithPublishToS3(publish bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.publishCharts = publish
 		r.publishToS3 = publish
-		return nil
-	}
-}
-
-func WithPublishGitChanges(publish bool) EnterpriseOption {
-	return func(r *EnterpriseManager) error {
-		r.publishGitChanges = publish
 		return nil
 	}
 }
@@ -84,9 +84,23 @@ func WithAWSProfile(profile string) EnterpriseOption {
 	}
 }
 
+func WithS3Bucket(bucket string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.s3Bucket = bucket
+		return nil
+	}
+}
+
 func WithDryRun(dryRun bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.dryRun = dryRun
+		return nil
+	}
+}
+
+func WithBaseArtifactsURL(url string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.baseArtifactsURL = url
 		return nil
 	}
 }

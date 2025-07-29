@@ -11,13 +11,21 @@ import (
 	"github.com/projectcalico/calico/release/internal/version"
 )
 
-func (b *BranchManager) CreateNextDevelopmentTag() error {
-	// Get Next release version
+func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
+	// Tag the current commit with the release version
+	if releaseVersion == "" {
+		logrus.Error("Release version is not specified")
+		return fmt.Errorf("release version must be specified")
+	}
+	if _, err := b.git("tag", releaseVersion); err != nil {
+		return err
+	}
 	gitVersion, err := command.GitVersion(b.repoRoot, true)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to get git version")
 	}
 	ver := version.New(gitVersion)
+	// Get Next release version
 	nextVersion, err := ver.NextReleaseVersion()
 	if err != nil {
 		logrus.WithError(err).Error("Failed to determine next release version")
@@ -43,9 +51,6 @@ func (b *BranchManager) CreateNextDevelopmentTag() error {
 		// update the dev tag identifier
 		devTagIdentifier = fmt.Sprintf("%s-%d", strings.Join(parts[:len(parts)-1], "-"), numInt)
 		logrus.WithField("newDevTagIdentifier", devTagIdentifier).Info("New development tag identifier created")
-	}
-	if _, err := b.git("tag", devTagIdentifier); err != nil {
-		return err
 	}
 	nextVersionTag = fmt.Sprintf("%s-%s", nextVersion.FormattedString(), devTagIdentifier)
 

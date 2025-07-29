@@ -347,8 +347,8 @@ release/metadata: release/bin/release var-require-all-METADATA_DIR
 	@release/bin/release release metadata
 
 # Create updates for pre-release
-release-prep: release/bin/release bin/gh var-require-all-HASHRELEASE-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
-	@REGISTRIES=$(REGISTRY) release/bin/release release prep
+release-prep: release/bin/release bin/gh var-require-all-HASHRELEASE-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION var-require-one-of-CONFIRM-DRYRUN
+	release/bin/release release prep
 
 # Install ghr for publishing to github.
 bin/ghr:
@@ -356,6 +356,7 @@ bin/ghr:
 
 # Install GitHub CLI
 bin/gh:
+	mkdir -p bin
 	curl -sSL -o bin/gh.tgz https://github.com/cli/cli/releases/download/v$(GITHUB_CLI_VERSION)/gh_$(GITHUB_CLI_VERSION)_linux_amd64.tar.gz
 	tar -zxvf bin/gh.tgz -C bin/ gh_$(GITHUB_CLI_VERSION)_linux_amd64/bin/gh --strip-components=2
 	chmod +x $@
@@ -366,7 +367,7 @@ release: release/bin/release
 	@release/bin/release release build
 
 # Publish an already built release.
-release-publish: release/bin/release bin/gh
+release-publish: release/bin/release bin/gh var-require-all-AWS_PROFILE var-require-one-of-CONFIRM-DRYRUN
 	@release/bin/release release publish
 
 release-public: bin/gh release/bin/release

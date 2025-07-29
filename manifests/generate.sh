@@ -23,7 +23,8 @@ fi
 defaultCalicoVersion=$($YQ .calicoctl.tag <../charts/tigera-operator/values.yaml)
 CALICO_VERSION=${PRODUCT_VERSION:-$defaultCalicoVersion}
 
-defaultRegistry=gcr.io/unique-caldron-775/cnx/tigera
+calicoctlImage=$($YQ .calicoctl.image <../charts/tigera-operator/values.yaml)
+defaultRegistry=${calicoctlImage%/calicoctl}
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
 defaultOperatorVersion=$($YQ .tigeraOperator.version <../charts/tigera-operator/values.yaml)
@@ -74,6 +75,7 @@ ${HELM} -n tigera-operator template \
   --set manager.enabled=false \
   --set monitor.enabled=false \
   --set policyRecommendation.enabled=false \
+  --set tigeraOperator.image=$OPERATOR_IMAGE \
   --set tigeraOperator.version=$OPERATOR_VERSION \
   --set tigeraOperator.registry=$OPERATOR_REGISTRY \
   --set calicoctl.tag=$CALICO_VERSION \
@@ -97,6 +99,7 @@ for FILE in $VALUES_FILES; do
   ${HELM} -n ${ns:-"tigera-operator"} template \
     ../charts/tigera-operator \
     --set policyRecommendation.enabled=false \
+    --set tigeraOperator.image=$OPERATOR_IMAGE \
     --set tigeraOperator.version=$OPERATOR_VERSION \
     --set tigeraOperator.registry=$OPERATOR_REGISTRY \
     --set calicoctl.tag=$CALICO_VERSION \
@@ -137,6 +140,7 @@ done) >>prometheus-operator-crds.yaml
 ${HELM} -n tigera-operator template \
   --set policyRecommendation.enabled=false \
   --set imagePullSecrets.tigera-pull-secret="\{}" \
+  --set tigeraOperator.image=$OPERATOR_IMAGE \
   --set tigeraOperator.version=$OPERATOR_VERSION \
   --set tigeraOperator.registry=$OPERATOR_REGISTRY \
   --set calicoctl.tag=$CALICO_VERSION \

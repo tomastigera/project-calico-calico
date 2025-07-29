@@ -53,3 +53,5 @@ blocks:
           value: gcr.io/unique-caldron-775/cnx
         - name: REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
+        - name: WINDOWS_GCS_BUCKET
+          value: tigera-windows/dev

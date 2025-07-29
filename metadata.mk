@@ -66,7 +66,10 @@ DEV_TAG_SUFFIX ?= calient-0.dev
 
 # RELEASE_REGISTRIES configures the container images registries which are published to
 # as part of an official release.
-RELEASE_REGISTRIES = quay.io/tigera
+RELEASE_REGISTRIES ?= quay.io/tigera
+
+# Archive bucket
+ARTIFACTS_BUCKET ?= tigera-public/ee
 
 # The directory for windows image tarballs
 WINDOWS_DIST = dist/windows

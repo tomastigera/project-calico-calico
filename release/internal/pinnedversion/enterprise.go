@@ -73,6 +73,29 @@ type EnterprisePinnedVersion struct {
 	Calico        CalicoComponent `yaml:"calico"`
 }
 
+// GetComponentImageNames returns a list of Enterprise images that are part of the pinned version.
+// It excludes Tigera operator and components that do not produce images or are not built by Tigera.
+func (p *EnterprisePinnedVersion) GetComponentImageNames() []string {
+	componentNames := make([]string, 0)
+	for name, component := range p.Components {
+		img := registry.EnterpriseImageMap[name]
+		if img == "" {
+			img = component.Image
+		}
+		if img == "" {
+			img = name
+		}
+		switch {
+		case utils.Contains(noEntepriseImageComponents, name),
+			strings.Contains(img, p.TigeraOperator.Image):
+			continue
+		default:
+			componentNames = append(componentNames, img)
+		}
+	}
+	return componentNames
+}
+
 type enterpriseTemplateData struct {
 	calicoTemplateData
 	HelmReleaseVersion string
@@ -170,8 +193,8 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	return versionData, nil
 }
 
-// retrieveEnterpisePinnedVersion retrieves the pinned version from the pinned version file.
-func retrieveEnterpisePinnedVersion(outputDir string) (EnterprisePinnedVersion, error) {
+// retrieveEnterprisePinnedVersion retrieves the pinned version from the pinned version file.
+func retrieveEnterprisePinnedVersion(outputDir string) (EnterprisePinnedVersion, error) {
 	pinnedVersionPath := PinnedVersionFilePath(outputDir)
 	var pinnedVersionFile []EnterprisePinnedVersion
 	if pinnedVersionData, err := os.ReadFile(pinnedVersionPath); err != nil {
@@ -183,7 +206,7 @@ func retrieveEnterpisePinnedVersion(outputDir string) (EnterprisePinnedVersion, 
 }
 
 func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
-	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
+	pinnedVersion, err := retrieveEnterprisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +220,7 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 // It also copies the generated file to the output directory if provided.
 func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.OperatorComponent, string, error) {
 	op := registry.OperatorComponent{}
-	pinnedVersion, err := retrieveEnterpisePinnedVersion(srcDir)
+	pinnedVersion, err := retrieveEnterprisePinnedVersion(srcDir)
 	if err != nil {
 		return op, "", err
 	}
@@ -244,7 +267,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 		logrus.WithError(err).Error("Failed to get current branch")
 		return nil, err
 	}
-	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
+	pinnedVersion, err := retrieveEnterprisePinnedVersion(outputDir)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to get pinned version")
 	}
@@ -271,7 +294,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 }
 
 func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Component, error) {
-	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
+	pinnedVersion, err := retrieveEnterprisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
 	}

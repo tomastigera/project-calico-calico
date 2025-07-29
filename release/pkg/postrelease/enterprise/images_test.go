@@ -12,11 +12,16 @@ import (
 func TestImagesPublished(t *testing.T) {
 	t.Parallel()
 
+	if skipImages {
+		t.Skip("Skipping image validation as per flag")
+		return
+	}
+
 	checkVersion(t, releaseVersion)
 	checkImages(t, images)
 
 	for _, image := range strings.Split(images, " ") {
-		fqImage := fmt.Sprintf("%s/%s:%s", registry.DefaultEnterpriseRegistry, image, releaseVersion)
+		fqImage := fmt.Sprintf("%s/%s:%s", releaseRegistry, image, releaseVersion)
 		t.Run(fqImage, func(t *testing.T) {
 			if ok, err := registry.CheckImage(fqImage); err != nil {
 				t.Fatalf("failed to check image %s: %v", fqImage, err)
@@ -42,6 +47,11 @@ func TestImagesPublished(t *testing.T) {
 
 	t.Run("Tigera Operator", func(t *testing.T) {
 		t.Parallel()
+
+		if skipOperator {
+			t.Skip("Skipping Tigera Operator validation as per flag")
+			return
+		}
 
 		checkVersion(t, operatorVersion)
 
