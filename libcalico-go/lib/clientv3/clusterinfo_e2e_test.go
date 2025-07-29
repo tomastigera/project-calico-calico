@@ -87,6 +87,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					ClusterGUID:             res.Spec.ClusterGUID,
 					ClusterType:             "test" + kddTypePart,
 					CalicoVersion:           "v0.0.0",
+					CNXVersion:              "v0.0.1",
 					CalicoEnterpriseVersion: "v0.0.1",
 					DatastoreReady:          &readyTrue,
 				}))
@@ -109,6 +110,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					ClusterGUID:             guid,
 					ClusterType:             "test" + kddTypePart,
 					CalicoVersion:           "v0.0.0",
+					CNXVersion:              "v0.0.1",
 					CalicoEnterpriseVersion: "v0.0.1",
 					DatastoreReady:          &readyTrue,
 				}))
@@ -128,6 +130,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				ClusterGUID:             guid,
 				ClusterType:             "test" + kddTypePart + ",test2",
 				CalicoVersion:           "v0.0.0",
+				CNXVersion:              "v0.0.1",
 				CalicoEnterpriseVersion: "v0.0.1",
 				DatastoreReady:          &readyTrue,
 			}
@@ -173,6 +176,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				ClusterGUID:             guid,
 				ClusterType:             "test" + kddTypePart,
 				CalicoVersion:           "v0.0.1",
+				CNXVersion:              "v0.0.2",
 				CalicoEnterpriseVersion: "v0.0.2",
 				DatastoreReady:          &readyTrue,
 			}

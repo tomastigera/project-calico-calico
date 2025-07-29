@@ -451,7 +451,8 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cal
 
 		if calicoEnterpriseVersion != "" {
 			// Only update the version if it's different from what we have.
-			if clusterInfo.Spec.CalicoEnterpriseVersion != calicoEnterpriseVersion {
+			if clusterInfo.Spec.CalicoEnterpriseVersion != calicoEnterpriseVersion || clusterInfo.Spec.CNXVersion != calicoEnterpriseVersion {
+				clusterInfo.Spec.CNXVersion = calicoEnterpriseVersion
 				clusterInfo.Spec.CalicoEnterpriseVersion = calicoEnterpriseVersion
 				updateNeeded = true
 			} else {
