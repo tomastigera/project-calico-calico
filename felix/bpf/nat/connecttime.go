@@ -68,14 +68,13 @@ func RemoveConnectTimeLoadBalancer(cgroupv2 string) error {
 	}
 
 	pinDir := path.Join(bpfMount, bpfdefs.CtlbPinDir)
-	defer bpf.CleanUpCalicoPins(pinDir)
+	defer bpf.CleanUpCalicoPins(pinDir, false)
 	ctlbProgsMap := newProgramsMap()
 	defer os.Remove(ctlbProgsMap.Path())
 
 	if err := detachCtlbPrograms(pinDir, cgroupv2); err != nil {
 		return err
 	}
-	bpf.CleanUpCalicoPins(pinDir)
 	return nil
 }
 
