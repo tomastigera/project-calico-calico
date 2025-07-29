@@ -344,6 +344,11 @@ def update_ds_env(ds, ns, env_vars):
                         container.env.append(v1_ev)
         api.replace_namespaced_daemon_set(ds, ns, node_ds)
 
+        # Delete the calico-node pods so that they will be restarted more
+        # quickly with the new configuration.  This won't do a rolling restart,
+        # but it cuts minutes off each test.
+        kubectl("delete pod -l k8s-app=calico-node -n calico-system")
+
         # Wait until the DaemonSet reports that all nodes have been updated.
         # In the past we've seen that the calico-node on kind-control-plane can
         # hang, in a not Ready state, for about 15 minutes.  Here we want to
