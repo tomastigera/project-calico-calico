@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 )
 
 type CriterionRelativeTimeRange struct {

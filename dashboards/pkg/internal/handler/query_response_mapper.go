@@ -8,7 +8,7 @@ import (
 
 	"github.com/swaggest/openapi-go/openapi3"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
+	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"

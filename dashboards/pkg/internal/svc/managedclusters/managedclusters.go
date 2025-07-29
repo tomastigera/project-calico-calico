@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )

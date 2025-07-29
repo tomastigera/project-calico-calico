@@ -13,7 +13,7 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
 )
 

@@ -8,9 +8,9 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 )
 
 type fakeGroup struct {

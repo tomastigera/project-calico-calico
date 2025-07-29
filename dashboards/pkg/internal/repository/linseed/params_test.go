@@ -8,8 +8,8 @@ import (
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/filters"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 

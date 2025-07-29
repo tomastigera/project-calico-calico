@@ -13,8 +13,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"

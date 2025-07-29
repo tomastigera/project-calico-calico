@@ -3,7 +3,7 @@ package fake
 import (
 	"reflect"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 

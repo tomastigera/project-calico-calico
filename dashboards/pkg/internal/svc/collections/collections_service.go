@@ -1,9 +1,9 @@
 package collections
 
 import (
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/client"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/collections"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/client"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"

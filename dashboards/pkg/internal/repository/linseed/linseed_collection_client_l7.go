@@ -9,7 +9,7 @@ import (
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )

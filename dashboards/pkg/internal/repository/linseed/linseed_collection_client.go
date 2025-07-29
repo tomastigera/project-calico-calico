@@ -7,7 +7,7 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/query/result"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 )
 
 // linseedCollectionClient interface to a collection-specific client

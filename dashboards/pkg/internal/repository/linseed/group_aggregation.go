@@ -11,7 +11,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
 	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
 )
 

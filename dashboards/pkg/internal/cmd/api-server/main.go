@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/server"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/server"
 	"github.com/tigera/tds-apiserver/lib/logging"
 )
 

@@ -18,8 +18,8 @@ import (
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmatesting "github.com/projectcalico/calico/lma/pkg/auth/testing"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/config"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/security/fake"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 	"github.com/tigera/tds-apiserver/lib/logging"
 )
 

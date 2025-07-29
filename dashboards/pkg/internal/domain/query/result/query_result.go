@@ -1,8 +1,8 @@
 package result
 
 import (
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/aggregations"
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
 )
 
 type QueryResult struct {

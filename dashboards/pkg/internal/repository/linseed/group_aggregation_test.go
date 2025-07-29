@@ -7,7 +7,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tigera/calico-cloud/cc-dashboard-query-api/pkg/internal/domain/groups"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
 )
 
 func TestGroupAggregation(t *testing.T) {
