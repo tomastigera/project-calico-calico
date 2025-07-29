@@ -41,6 +41,29 @@ const (
 	TypeDNSEventL3 Type = 6
 	// TypePolicyVerdictV6 is emitted when a v6 policy program reaches a verdict
 	TypePolicyVerdictV6 Type = 7
+
+	// Address offsets (same for both IPv4 and IPv6)
+	offsetSrcAddr        = 0
+	offsetDstAddr        = 32
+	offsetPostNATDstAddr = 48
+	offsetNATTunSrcAddr  = 64
+
+	// Connection info offsets
+	offsetPolicyRC       = 84
+	offsetSrcPort        = 88
+	offsetDstPort        = 92
+	offsetPostNATDstPort = 94
+	offsetIPProto        = 96
+	offsetIPSize         = 98
+	offsetRulesHit       = 100
+	offsetRuleIDs        = 104
+
+	ruleIDSize           = 8
+	conntrackBlockOffset = offsetRuleIDs + (state.MaxRuleIDs * ruleIDSize)
+
+	// Conntrack device index offsets
+	offsetOutDeviceIndex = conntrackBlockOffset + 28
+	offsetInDeviceIndex  = conntrackBlockOffset + 32
 )
 
 func (t Type) String() string {
@@ -244,42 +267,38 @@ func (e ErrLostEvents) Num() int {
 // - Rule IDs are variable length based on RulesHit (up to MaxRuleIDs)
 // - Device indices come from the ConntrackIfIndex fields in the underlying structure
 func ParsePolicyVerdict(data []byte, isIPv6 bool) PolicyVerdict {
-	// The offsets start after the max rule IDs.
-	offSt := 104
-	ctOffset := offSt + (state.MaxRuleIDs * 8)
-
 	fl := PolicyVerdict{
-		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[84:88])),
-		SrcPort:        binary.LittleEndian.Uint16(data[88:90]),
-		DstPort:        binary.LittleEndian.Uint16(data[92:94]),
-		PostNATDstPort: binary.LittleEndian.Uint16(data[94:96]),
-		IPProto:        uint8(data[96]),
-		IPSize:         binary.BigEndian.Uint16(data[98:100]),
-		RulesHit:       binary.LittleEndian.Uint32(data[100:104]),
-		OutDeviceIndex: binary.LittleEndian.Uint32(data[ctOffset+28 : ctOffset+32]),
-		InDeviceIndex:  binary.LittleEndian.Uint32(data[ctOffset+32 : ctOffset+36]),
-	}
-
-	if fl.RulesHit > state.MaxRuleIDs {
-		fl.RulesHit = state.MaxRuleIDs
+		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[offsetPolicyRC : offsetPolicyRC+4])),
+		SrcPort:        binary.LittleEndian.Uint16(data[offsetSrcPort : offsetSrcPort+2]),
+		DstPort:        binary.LittleEndian.Uint16(data[offsetDstPort : offsetDstPort+2]),
+		PostNATDstPort: binary.LittleEndian.Uint16(data[offsetPostNATDstPort : offsetPostNATDstPort+2]),
+		IPProto:        uint8(data[offsetIPProto]),
+		IPSize:         binary.BigEndian.Uint16(data[offsetIPSize : offsetIPSize+2]),
+		RulesHit:       binary.LittleEndian.Uint32(data[offsetRulesHit : offsetRulesHit+4]),
 	}
 
 	if isIPv6 {
-		fl.SrcAddr = net.IP(data[0:16])
-		fl.DstAddr = net.IP(data[32:48])
-		fl.PostNATDstAddr = net.IP(data[48:64])
-		fl.NATTunSrcAddr = net.IP(data[64:80])
+		fl.SrcAddr = net.IP(data[offsetSrcAddr : offsetSrcAddr+16])
+		fl.DstAddr = net.IP(data[offsetDstAddr : offsetDstAddr+16])
+		fl.PostNATDstAddr = net.IP(data[offsetPostNATDstAddr : offsetPostNATDstAddr+16])
+		fl.NATTunSrcAddr = net.IP(data[offsetNATTunSrcAddr : offsetNATTunSrcAddr+16])
 	} else {
-		fl.SrcAddr = net.IP(data[0:4])
-		fl.DstAddr = net.IP(data[32:36])
-		fl.PostNATDstAddr = net.IP(data[48:52])
-		fl.NATTunSrcAddr = net.IP(data[64:68])
+		fl.SrcAddr = net.IP(data[offsetSrcAddr : offsetSrcAddr+4])
+		fl.DstAddr = net.IP(data[offsetDstAddr : offsetDstAddr+4])
+		fl.PostNATDstAddr = net.IP(data[offsetPostNATDstAddr : offsetPostNATDstAddr+4])
+		fl.NATTunSrcAddr = net.IP(data[offsetNATTunSrcAddr : offsetNATTunSrcAddr+4])
 	}
 
-	off := offSt
+	off := offsetRuleIDs
 	for i := 0; i < int(fl.RulesHit); i++ {
-		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+8])
-		off += 8
+		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+ruleIDSize])
+		off += ruleIDSize
+	}
+
+	// Fill in OutDeviceIndex and InDeviceIndex if the data length is sufficient
+	if len(data) >= offsetInDeviceIndex+4 {
+		fl.OutDeviceIndex = binary.LittleEndian.Uint32(data[offsetOutDeviceIndex : offsetOutDeviceIndex+4])
+		fl.InDeviceIndex = binary.LittleEndian.Uint32(data[offsetInDeviceIndex : offsetInDeviceIndex+4])
 	}
 
 	return fl
