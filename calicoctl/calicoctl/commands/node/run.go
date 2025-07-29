@@ -149,7 +149,7 @@ Options:
                            Allow client and cluster versions mismatch.
 
 Description:
-  This command is used to start a tigera/node container instance which provides
+  This command is used to start a calico/node container instance which provides
   Calico networking and network policy on your compute host.
 `
 	// Replace all instances of BINARY_NAME with the name of the binary.
@@ -325,14 +325,14 @@ Description:
 	cmd = append(cmd, img)
 
 	if dryrun {
-		fmt.Println("Use the following command to start the tigera/node container:")
+		fmt.Println("Use the following command to start the calico/node container:")
 		fmt.Printf("\n%s\n\n", strings.Join(cmd, " "))
 
 		if !initSystem {
-			fmt.Println("If you are running tigera/node in an init system, use the --init-system flag")
+			fmt.Println("If you are running calico/node in an init system, use the --init-system flag")
 			fmt.Println("to display the appropriate start and stop commands.")
 		} else {
-			fmt.Println("Use the following command to stop the tigera/node container:")
+			fmt.Println("Use the following command to stop the calico/node container:")
 			fmt.Printf("\ndocker stop calico-node\n\n")
 		}
 		return nil
@@ -355,9 +355,9 @@ Description:
 		setNFConntrackMax()
 	}
 
-	// Make sure the node is not already running before we attempt
+	// Make sure the calico-node is not already running before we attempt
 	// to start the node.
-	fmt.Println("Removing old node container (if running).")
+	fmt.Println("Removing old calico-node container (if running).")
 	err = exec.Command("docker", "rm", "-f", "calico-node").Run()
 	if err != nil {
 		log.WithError(err).Debug("Unable to remove calico-node container (ok if container was not running)")
@@ -386,14 +386,14 @@ Description:
 	// Get the stdout pipe
 	outPipe, err := logCmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Error executing command:  unable to check tigera/node logs: %v", err)
+		return fmt.Errorf("Error executing command:  unable to check calico/node logs: %v", err)
 	}
 	outScanner := bufio.NewScanner(outPipe)
 
 	// Start following the logs.
 	err = logCmd.Start()
 	if err != nil {
-		return fmt.Errorf("Error executing command:  unable to check tigera/node logs: %v", err)
+		return fmt.Errorf("Error executing command:  unable to check calico/node logs: %v", err)
 	}
 
 	// Protect against calico processes taking too long to start, or docker
@@ -429,9 +429,9 @@ Description:
 
 	// If we didn't successfully start then notify the user.
 	if outScanner.Err() != nil {
-		return fmt.Errorf("Error executing command: error reading tigera/node logs, check logs for details")
+		return fmt.Errorf("Error executing command: error reading calico/node logs, check logs for details")
 	} else if !started {
-		return fmt.Errorf("Error executing command: tigera/node has terminated, check logs for details")
+		return fmt.Errorf("Error executing command: calico/node has terminated, check logs for details")
 	}
 
 	return nil
