@@ -24,6 +24,12 @@ var (
 	httpIPv6Log string
 	//go:embed testdata/upstream_service_time.json
 	upstreamServiceTimeLog string
+	//go:embed testdata/gateway_edge.json
+	gatewayEdgeLog string
+	//go:embed testdata/gateway_proxied.json
+	gatewayProxiedLog string
+	//go:embed testdata/gateway_proxied_no_xff.json
+	gatewayProxiedNoXFFLog string
 )
 
 var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
@@ -81,6 +87,41 @@ var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
 			Expect(log.Duration).To(Equal(int32(2)))
 			Expect(log.UpstreamServiceTime).To(Equal("1"))
 			Expect(log.Latency).To(Equal(int32(1)))
+		})
+	})
+	Context("With a gateway-edge reporter log", func() {
+		It("should use upstream_host and downstream_direct_remote_address for tuple extraction", func() {
+			log, err := c.ParseRawLogs(gatewayEdgeLog)
+			Expect(err).NotTo(HaveOccurred())
+			// Should use upstream_host (192.168.35.210:80) for destination
+			// and downstream_direct_remote_address (192.168.138.208:34368) for source
+			Expect(log.SrcIp).To(Equal("192.168.138.208"))
+			Expect(log.DstIp).To(Equal("192.168.35.210"))
+			Expect(log.SrcPort).To(Equal(int32(34368)))
+			Expect(log.DstPort).To(Equal(int32(80)))
+		})
+	})
+	Context("With a gateway-proxied reporter log with X-Forwarded-For", func() {
+		It("should use upstream_host and first XFF IP for tuple extraction", func() {
+			log, err := c.ParseRawLogs(gatewayProxiedLog)
+			Expect(err).NotTo(HaveOccurred())
+			// Should use upstream_host (192.168.35.210:80) for destination
+			// and first XFF IP (10.1.1.1) for source, with source port from downstream_direct_remote_address
+			Expect(log.SrcIp).To(Equal("10.1.1.1"))
+			Expect(log.DstIp).To(Equal("192.168.35.210"))
+			Expect(log.SrcPort).To(Equal(int32(34368)))
+			Expect(log.DstPort).To(Equal(int32(80)))
+		})
+	})
+	Context("With a gateway-proxied reporter log without X-Forwarded-For", func() {
+		It("should fallback to gateway-edge behavior", func() {
+			log, err := c.ParseRawLogs(gatewayProxiedNoXFFLog)
+			Expect(err).NotTo(HaveOccurred())
+			// Should fallback to using downstream_direct_remote_address for source
+			Expect(log.SrcIp).To(Equal("192.168.138.208"))
+			Expect(log.DstIp).To(Equal("192.168.35.210"))
+			Expect(log.SrcPort).To(Equal(int32(34368)))
+			Expect(log.DstPort).To(Equal(int32(80)))
 		})
 	})
 })
