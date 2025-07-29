@@ -154,7 +154,11 @@ func Start(
 }
 
 func getTLSConfig(caCertFilename string) (*tls.Config, error) {
-	tlsConfig := calicotls.NewTLSConfig()
+	tlsConfig, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	if caCertFilename != "" {
 		caCert, err := os.ReadFile(caCertFilename)
 		if err != nil {
