@@ -1,0 +1,373 @@
+- defaultTimeFieldName: start_time
+  fields:
+  - name: end_time
+    type: date
+  - name: start_time
+    type: date
+  - name: client_ip
+    type: ip
+  - name: client_name
+    type: text
+  - name: client_name_aggr
+    type: text
+  - name: client_namespace
+    type: text
+  - filterDisabled: true
+    name: cluster
+    type: text
+  - name: count
+    type: number
+  - name: host
+    type: text
+  - name: latency_count
+    type: number
+  - aggregationFunctionTypes:
+    - avg
+    - max
+    - p50
+    - p90
+    - p95
+    name: latency_max
+    type: number
+  - aggregationFunctionTypes:
+    - avg
+    - min
+    name: latency_mean
+    type: number
+  - name: qclass
+    type: text
+  - name: qname
+    type: text
+  - name: qtype
+    type: text
+  - name: rcode
+    type: text
+  - name: rrsets.name
+    type: text-exact
+  - name: rrsets.rdata
+    type: text-exact
+  - name: rrsets.type
+    type: enum
+    values:
+    - A
+    - AAAA
+    - CNAME
+    - SOA
+    - SRV
+  - name: servers.ip
+    type: ip
+  - name: servers.name
+    type: text
+  - name: servers.name_aggr
+    type: text
+  - name: servers.namespace
+    type: text
+  groupBys:
+  - field: client_name_aggr
+    nested:
+    - field: qtype
+    - field: rcode
+  - field: cluster
+  - field: end_time
+  - field: qname
+  - field: qtype
+  - field: rcode
+  - field: start_time
+  name: dns
+- defaultTimeFieldName: start_time
+  fields:
+  - name: end_time
+    type: date
+  - name: start_time
+    type: date
+  - name: action
+    type: enum
+    values:
+    - allow
+    - deny
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_in
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_out
+    type: number
+  - filterDisabled: true
+    name: cluster
+    type: text
+  - filterDisabled: true
+    name: dest_domains
+    type: text
+  - name: dest_ip
+    type: ip
+  - name: dest_labels.labels
+    type: text
+  - name: dest_name
+    type: text
+  - name: dest_name_aggr
+    type: text
+  - name: dest_namespace
+    type: text
+  - name: dest_port
+    type: number
+  - name: dest_port_num
+    type: number
+  - name: dest_service_name
+    type: text
+  - name: dest_service_namespace
+    type: text
+  - name: dest_service_port
+    type: text
+  - name: dest_service_port_name
+    type: text
+  - name: dest_service_port_num
+    type: number
+  - name: dest_type
+    type: enum
+    values:
+    - wep
+    - hep
+    - ns
+    - net
+  - name: host
+    type: text
+  - name: http_requests_allowed_in
+    type: number
+  - name: http_requests_denied_in
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows_completed
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: num_flows_started
+    type: number
+  - name: num_original_source_ips
+    type: number
+  - name: num_process_args
+    type: number
+  - name: num_process_ids
+    type: number
+  - name: num_process_names
+    type: number
+  - name: original_source_ips
+    type: ip
+  - aggregationFunctionTypes:
+    - sum
+    name: packets_in
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: packets_out
+    type: number
+  - defaultValue: enforced
+    name: policy.type
+    type: enum
+    values:
+    - staged
+    - enforced
+  - name: policies.all_policies
+    type: text
+  - name: process_args
+    type: text
+  - name: process_id
+    type: text
+  - name: process_name
+    type: text
+  - name: proto
+    type: enum
+    values:
+    - icmp
+    - tcp
+    - udp
+    - ipip
+    - esp
+    - icmp6
+  - name: reporter
+    type: enum
+    values:
+    - src
+    - dst
+  - name: source_ip
+    type: ip
+  - name: source_labels.labels
+    type: text
+  - name: source_name
+    type: text
+  - name: source_name_aggr
+    type: text
+  - name: source_namespace
+    type: text
+  - name: source_port
+    type: number
+  - name: source_port_num
+    type: number
+  - name: source_type
+    type: enum
+    values:
+    - wep
+    - hep
+    - ns
+    - net
+  - aggregationFunctionTypes:
+    - sum
+    name: tcp_lost_packets
+    type: number
+  - aggregationFunctionTypes:
+    - max
+    - p50
+    - p90
+    - p95
+    - p100
+    name: tcp_max_min_rtt
+    type: number
+  - aggregationFunctionTypes:
+    - max
+    - p50
+    - p90
+    - p95
+    - p100
+    name: tcp_max_smooth_rtt
+    type: number
+  - name: tcp_mean_min_rtt
+    type: number
+  - name: tcp_mean_mss
+    type: number
+  - name: tcp_mean_send_congestion_window
+    type: number
+  - name: tcp_mean_smooth_rtt
+    type: number
+  - name: tcp_min_mss
+    type: number
+  - name: tcp_min_send_congestion_window
+    type: number
+  - aggregationFunctionTypes:
+    - max
+    - sum
+    name: tcp_total_retransmissions
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: tcp_unrecovered_to
+    type: number
+  groupBys:
+  - field: end_time
+    nested:
+    - field: action
+  - field: start_time
+    nested:
+    - field: host
+    - field: dest_namespace
+    - field: source_namespace
+  - field: cluster
+    nested:
+    - field: source_namespace
+  - field: source_namespace
+    nested:
+    - field: source_name_aggr
+      nested:
+      - field: dest_domains
+        nested:
+        - field: dest_port
+      - field: dest_namespace
+        nested:
+        - field: dest_name_aggr
+          nested:
+          - field: dest_port
+      - field: source_name
+        nested:
+        - field: dest_namespace
+          nested:
+          - field: dest_name_aggr
+            nested:
+            - field: dest_name
+  - field: dest_ip
+    nested:
+    - field: dest_domains
+      nested:
+      - field: dest_port
+  - field: source_name
+    nested:
+    - field: dest_name
+  - field: process_id
+    nested:
+    - field: process_name
+      nested:
+      - field: process_args
+  - field: dest_namespace
+  - field: dest_domains
+  - field: dest_port
+  - field: source_ip
+  - field: source_name_aggr
+  - field: host
+  name: flows
+- defaultTimeFieldName: start_time
+  fields:
+  - name: end_time
+    type: date
+  - name: start_time
+    type: date
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_in
+    type: number
+  - aggregationFunctionTypes:
+    - sum
+    name: bytes_out
+    type: number
+  - filterDisabled: true
+    name: cluster
+    type: text
+  - name: dest_name
+    type: text
+  - name: dest_name_aggr
+    type: text
+  - name: dest_namespace
+    type: text
+  - name: dest_port_num
+    type: number
+  - name: dest_service_name
+    type: text
+  - name: dest_service_namespace
+    type: text
+  - name: dest_service_port
+    type: number
+  - name: dest_service_port_name
+    type: text
+  - aggregationFunctionTypes:
+    - avg
+    name: duration_max
+    type: number
+  - aggregationFunctionTypes:
+    - avg
+    name: duration_mean
+    type: number
+  - name: host
+    type: text
+  - name: method
+    type: text
+  - name: response_code
+    type: text
+  - name: url
+    type: text
+  - name: user_agent
+    type: text
+  groupBys:
+  - field: dest_service_name
+    nested:
+    - field: method
+    - field: response_code
+  - field: start_time
+    nested:
+    - field: dest_service_name
+  - field: cluster
+  - field: response_code
+  - field: method
+  - field: url
+  name: l7

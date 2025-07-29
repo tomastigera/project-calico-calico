@@ -1,0 +1,71 @@
+package collections
+
+var collectionL7 = Collection{
+	name:                 CollectionNameL7,
+	defaultTimeFieldName: "start_time",
+	fields: []CollectionField{
+		collectionFieldGeneric{fieldName: "end_time", fieldType: FieldTypeDate},
+		collectionFieldGeneric{fieldName: "start_time", fieldType: FieldTypeDate},
+
+		collectionFieldGeneric{
+			fieldName: "bytes_in",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "bytes_out",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeSum,
+			},
+		},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "cluster", filterDisabled: true},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_name"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_name_aggr"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_namespace"},
+		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_port_num"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_name"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_namespace"},
+		collectionFieldGeneric{fieldType: FieldTypeNumber, fieldName: "dest_service_port"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_service_port_name"},
+		collectionFieldGeneric{
+			fieldName: "duration_max",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeAvg,
+			},
+		},
+		collectionFieldGeneric{
+			fieldName: "duration_mean",
+			fieldType: FieldTypeNumber,
+			aggregationFunctionTypes: []AggregationFunctionType{
+				AggregationFunctionTypeAvg,
+			}},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "method"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "response_code"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "url"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "user_agent"},
+	},
+	groupBys: []GroupBy{
+		groupBy{
+			field: "dest_service_name",
+			nested: []GroupBy{
+				groupBy{field: "method"},
+				groupBy{field: "response_code"},
+			},
+		},
+		groupBy{
+			field: "start_time",
+			nested: []GroupBy{
+				groupBy{field: "dest_service_name"},
+			},
+		},
+		groupBy{field: "cluster"},
+		groupBy{field: "response_code"},
+		groupBy{field: "method"},
+		groupBy{field: "url"},
+	},
+}
