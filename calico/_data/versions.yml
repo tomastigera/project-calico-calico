@@ -172,9 +172,6 @@
     envoy:
       image: tigera/envoy
       version: master
-    envoy-init:
-      image: tigera/envoy-init
-      version: master
     webhooks-processor:
       image: tigera/webhooks-processor
       version: master

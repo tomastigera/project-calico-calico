@@ -84,7 +84,6 @@ var (
 		"eck-operator",
 		"alertmanager",
 		"envoy",
-		"envoy-init",
 		"pod2daemon-flexvol",
 		"csi",
 		"node-driver-registrar",
