@@ -44,6 +44,10 @@
   "num_flows_completed": 1,
   "packets_in": 9,
   "packets_out": 11,
+  "transit_bytes_in": 0,
+  "transit_bytes_out": 0,
+  "transit_packets_in": 0,
+  "transit_packets_out": 0,
   "http_requests_allowed_in": 0,
   "http_requests_denied_in": 0,
   "host": "tigera-fluentd-node-qxdr7"

@@ -97,8 +97,10 @@ type FlowLog struct {
 	Policies *FlowLogPolicy `json:"policies"`
 
 	// Traffic stats.
-	BytesIn  int64 `json:"bytes_in"`
-	BytesOut int64 `json:"bytes_out"`
+	BytesIn         int64 `json:"bytes_in"`
+	BytesOut        int64 `json:"bytes_out"`
+	TransitBytesIn  int64 `json:"transit_bytes_in"`
+	TransitBytesOut int64 `json:"transit_bytes_out"`
 
 	// Stats from the original logs used to generate this flow log.
 	// Felix aggregates multiple flow logs into a single FlowLog.
@@ -107,8 +109,10 @@ type FlowLog struct {
 	NumFlowsCompleted int64 `json:"num_flows_completed"`
 
 	// Traffic stats.
-	PacketsIn  int64 `json:"packets_in"`
-	PacketsOut int64 `json:"packets_out"`
+	PacketsIn         int64 `json:"packets_in"`
+	PacketsOut        int64 `json:"packets_out"`
+	TransitPacketsIn  int64 `json:"transit_packets_in"`
+	TransitPacketsOut int64 `json:"transit_packets_out"`
 
 	// HTTP fields.
 	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
