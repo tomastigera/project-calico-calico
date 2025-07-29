@@ -1,0 +1,102 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: cc-dashboard-query-api-ci-
+spec:
+  entrypoint: main
+  templateDefaults:
+    script:
+      image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.84
+      imagePullPolicy: Always
+      command: ["bash", "-e"]
+      workingDir: "/src"
+      securityContext:
+        runAsUser: 1000
+        privileged: true
+      envFrom:
+        - secretRef:
+            name: marvin-github-ssh-private-key
+        - secretRef:
+            name: banzai-secrets
+      env:
+        - name: DOCKER_HOST
+          value: tcp://127.0.0.1:2375
+        - name: GOPROXY
+          value: http://proxy.athens.svc
+      volumeMounts:
+        - name: src
+          mountPath: /src
+        - name: home
+          mountPath: /root
+        - name: tmp
+          mountPath: /tmp
+        - name: go
+          mountPath: /go
+    sidecars:
+      - name: dind
+        image: docker:20.10.17-dind
+        command:
+        - dockerd-entrypoint.sh
+        - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
+        - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
+        env:
+          - name: DOCKER_TLS_CERTDIR
+            value: ""
+        securityContext:
+          privileged: true
+        mirrorVolumeMounts: true
+    volumes:
+      - name: src
+        emptyDir: {}
+      - name: home
+        emptyDir: {}
+      - name: go
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: test-and-build-images
+            template: test-and-build-images
+          - name: push-dev-images
+            depends: "test-and-build-images"
+            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
+            template: push-dev-images
+          - name: push-prod-images
+            depends: "test-and-build-images"
+            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
+            template: build-and-push-prod-images
+
+    - name: test-and-build-images
+      script:
+        source: |
+          source checkout
+          cd cc-dashboard-query-api
+          until docker ps; do sleep 5; done
+          make test
+          make docker-build
+
+    - name: push-dev-images
+      script:
+        env:
+          - name: GCP_PROJECT
+            value: tigera-cc-dev
+        source: |
+          source checkout
+          cd cc-dashboard-query-api
+          source .argoci/scripts/cd_prologue.sh
+          make docker-push
+          ENV=dev PR_OPTS=" -l autoupdate,automerge,dev,cc-dashboard-query-api" make helm-pr
+
+    - name: build-and-push-prod-images
+      script:
+        source: |
+          source checkout
+          cd cc-dashboard-query-api
+          source .argoci/scripts/cd_prologue.sh
+          make docker-push
+          ENV=stag make helm-pr
+          ENV=prod make helm-pr
