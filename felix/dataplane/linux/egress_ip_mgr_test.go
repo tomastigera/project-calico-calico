@@ -77,7 +77,7 @@ var _ = Describe("EgressIPManager", func() {
 		ipsets := newMockSets()
 		bpfIPsets := newMockSets()
 		la := netlink.NewLinkAttrs()
-		la.Name = "egress.calico"
+		la.Name = "eth0"
 		manager = newEgressIPManagerWithShims(
 			fdb,
 			rrFactory,
@@ -86,8 +86,9 @@ var _ = Describe("EgressIPManager", func() {
 			tableIndexStack,
 			"egress.calico",
 			dpConfig,
-			&mockVXLANDataplane{
-				links: []netlink.Link{&mockLink{attrs: la}},
+			&mockTunnelDataplane{
+				links:          []netlink.Link{&mockLink{attrs: la}},
+				tunnelLinkName: "egress.calico",
 			},
 			logutils.NewSummarizer("test loop"),
 			func(ifName string) error { return nil },
@@ -114,7 +115,7 @@ var _ = Describe("EgressIPManager", func() {
 
 		manager.OnUpdate(&proto.HostMetadataUpdate{
 			Hostname: "host0",
-			Ipv4Addr: "172.0.0.2", // mockVXLANDataplane use interface address 172.0.0.2
+			Ipv4Addr: "172.0.0.2", // mockTunnelDataplane use interface address 172.0.0.2
 		})
 		manager.lock.Lock()
 		nodeIP := manager.nodeIP
