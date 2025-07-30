@@ -298,7 +298,7 @@ def assert_number_endpoints(host, expected):
 @debug_failures
 def apply_cnx_license(host):
     """
-    Apply a Tigera CNX license key
+    Apply a Calico Enterprise license key
 
     :param host: DockerHost object to run calicoctl on
     :return: None

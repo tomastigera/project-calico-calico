@@ -35,7 +35,7 @@ for i in xrange(10000):
 
 
 #
-# CNX Licenses
+# Calico Enterprise Licenses
 #
 
 valid_cnx_license_expires_september_02_2021 = {

@@ -17,7 +17,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
-// CNX Metrics
+// Calico Enterprise Metrics
 var (
 	LABEL_TIER        = "tier"
 	LABEL_NAMESPACE   = "namespace"
@@ -31,21 +31,21 @@ var (
 	counterRulePackets = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_packets",
-			Help: "Total number of packets handled by CNX policy rules.",
+			Help: "Total number of packets handled by Calico Enterprise policy rules.",
 		},
 		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	counterRuleBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_bytes",
-			Help: "Total number of bytes handled by CNX policy rules.",
+			Help: "Total number of bytes handled by Calico Enterprise policy rules.",
 		},
 		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	counterRuleConns = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_connections",
-			Help: "Total number of connections handled by CNX policy rules.",
+			Help: "Total number of connections handled by Calico Enterprise policy rules.",
 		},
 		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)

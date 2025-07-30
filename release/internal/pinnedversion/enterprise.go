@@ -22,7 +22,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/version"
 )
 
-const managerComponent = "cnx-manager"
+const managerComponent = "manager"
 
 var (
 	operatorExcludedComponents = []string{
@@ -33,7 +33,7 @@ var (
 	}
 	noEntepriseImageComponents = []string{
 		"calico-private",
-		"cnx-manager-proxy",
+		"manager-proxy",
 		"coreos-alertmanager",
 		"coreos-config-reloader",
 		"coreos-dex",

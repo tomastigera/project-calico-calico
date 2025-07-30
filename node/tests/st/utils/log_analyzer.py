@@ -96,7 +96,7 @@ class LogAnalyzer(object):
     def __init__(self, host, filename, log_format, timestamp_format,
                  continuation_level=None):
         """
-        :param host: the host running cnx-node
+        :param host: the host running calico-node
         :param filename: The log filename on the server
         :param log_format: The format of the logs
         :param timestamp_format: The date/time format in the logs.

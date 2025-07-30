@@ -9,7 +9,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api"
         },
         "value": [
@@ -23,7 +23,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unlabeled"
         },
@@ -38,7 +38,7 @@
           "endpoint": "queryserver",
           "instance": "192.168.106.154:8080",
           "job": "tigera-api",
-          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "pod": "calico-apiserver-7bcfdbf658-46622",
           "service": "tigera-api",
           "type": "unprotected"
         },

@@ -239,8 +239,8 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		var err error
 
 		BeforeEach(func() {
-			externalServerName = "cnx-manager.calico-monitoring.svc"
-			internalServerName = "cnx-manager.calico-monitoring.svc"
+			externalServerName = "tigera-manager.calico-monitoring.svc"
+			internalServerName = "tigera-manager.calico-monitoring.svc"
 
 			externalCACert, err = os.ReadFile("testdata/cert-pkcs8-format.pem")
 			Expect(err).NotTo(HaveOccurred())

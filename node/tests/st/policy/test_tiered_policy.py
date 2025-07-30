@@ -139,12 +139,12 @@ class TieredPolicyWorkloads(TestBase):
                                     post_docker_commands=POST_DOCKER_COMMANDS,
                                     start_calico=False))
 
-        # Add a CNX license key
+        # Add a Calico Enterprise license key
         apply_cnx_license(cls.hosts[0])
 
         for host in cls.hosts:
             host.start_calico_node()
-        # Allow time for cnx-node to load
+        # Allow time for calico-node to load
         time.sleep(10)
 
         cls.networks = []

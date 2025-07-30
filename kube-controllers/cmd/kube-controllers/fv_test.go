@@ -105,7 +105,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 		Expect(*info.Spec.DatastoreReady).To(BeTrue())
 	})
 
-	Context("when licenses are applied for CNX controllers", func() {
+	Context("when licenses are applied for Calico Enterprise controllers", func() {
 		consistentlyTimeout := "2s"
 		consistentlyPoll := "500ms"
 

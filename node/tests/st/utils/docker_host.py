@@ -40,7 +40,7 @@ CHECKOUT_DIR = os.getenv("HOST_CHECKOUT_DIR", "")
 if CHECKOUT_DIR == "":
     CHECKOUT_DIR = os.getcwd()
 
-NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "cnx-node:latest")
+NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "tigera/node:latest")
 
 FELIX_LOGLEVEL = os.getenv("ST_FELIX_LOGLEVEL", "")
 
@@ -63,7 +63,7 @@ class DockerHost(object):
 
     :param calico_node_autodetect_ip: When set to True, the test framework
     will not perform IP detection, and will run `calicoctl node` without
-    explicitly passing in a value for --ip. This means cnx-node will be
+    explicitly passing in a value for --ip. This means calico-node will be
     forced to do its IP detection.
     :param override_hostname: When set to True, the test framework will
     choose an alternate hostname for the host which it will pass to all
@@ -187,7 +187,7 @@ class DockerHost(object):
             self.start_calico_node(env_options=' -e FELIX_HEALTHENABLED=true ')
 
     def assert_is_ready(self, bird=True, felix=True):
-        cmd = "docker exec cnx-node /bin/calico-node"
+        cmd = "docker exec calico-node /bin/calico-node"
         if bird:
             cmd += " -bird-ready"
         if felix:
@@ -196,7 +196,7 @@ class DockerHost(object):
         self.execute(cmd)
 
     def assert_is_live(self, felix=True, bird=True, bird6=True):
-        cmd = "docker exec cnx-node /bin/calico-node"
+        cmd = "docker exec calico-node /bin/calico-node"
         if felix:
             cmd += " -felix-live"
         if bird:
@@ -344,9 +344,9 @@ class DockerHost(object):
             output = self.calicoctl(cmd)
 
             # Look for the line in the output that includes "docker run",
-            # "--net=host" and "--name=cnx-node".
+            # "--net=host" and "--name=calico-node".
             for line in output.split('\n'):
-                if re.match(r'docker run .*--net=host .*--name=cnx-node', line):
+                if re.match(r'docker run .*--net=host .*--name=calico-node', line):
                     # This is the line we want to modify.
                     break
             else:
@@ -545,7 +545,7 @@ class DockerHost(object):
             # For non Docker-in-Docker, we can only remove the containers we
             # created - so remove the workloads and delete the calico node.
             self.remove_workloads()
-            log_and_run("docker rm -f cnx-node || true")
+            log_and_run("docker rm -f calico-node || true")
 
         self._cleaned = True
 
@@ -712,14 +712,14 @@ class DockerHost(object):
         self.execute("ip6tables-save -c", raise_exception_on_failure=False)
         self.execute("ipset save", raise_exception_on_failure=False)
         self.execute("ps waux", raise_exception_on_failure=False)
-        self.execute("docker logs cnx-node", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node ls -l /var/log/calico/confd", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node cat /var/log/calico/confd/*", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node ls -l /var/log/calico/bird", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node cat /var/log/calico/bird/*", raise_exception_on_failure=False)
-        self.execute("docker exec cnx-node cat /etc/calico/confd/config/bird.cfg", raise_exception_on_failure=False)
+        self.execute("docker logs calico-node", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node ls -l /var/log/calico/confd", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node cat /var/log/calico/confd/*", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node ls -l /var/log/calico/bird", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node cat /var/log/calico/bird/*", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node cat /etc/calico/confd/config/bird.cfg", raise_exception_on_failure=False)
 
         self.execute("docker ps -a", raise_exception_on_failure=False)
         for wl in self.workloads:
@@ -727,7 +727,7 @@ class DockerHost(object):
         log_and_run("docker logs %s" % self.name, raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_ip(self, protocol, dst_ip):
-        self.execute("docker exec cnx-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
+        self.execute("docker exec calico-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
                      raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_workloads(self, protocol):
