@@ -30,26 +30,6 @@ const (
 	EnvoyGatewayProxiedReporter = "gateway-proxied"
 )
 
-type AccessLogEntry struct {
-	Reporter                string `json:"reporter"`
-	StartTime               string `json:"start_time"`
-	Duration                string `json:"duration"`
-	ResponseCode            string `json:"response_code"`
-	BytesSent               string `json:"bytes_sent"`
-	BytesReceived           string `json:"bytes_received"`
-	UserAgent               string `json:"user_agent"`
-	RequestPath             string `json:"request_path"`
-	RequestMethod           string `json:"request_method"`
-	RequestID               string `json:"request_id"`
-	Type                    string `json:"type"`
-	DownstreamRemoteAddress string `json:"downstream_remote_address"`
-	DownstreamLocalAddress  string `json:"downstream_local_address"`
-	Domain                  string `json:"domain"`
-	UpstreamHost            string `json:"upstream_host"`
-	UpstreamLocalAddress    string `json:"upstream_local_address"`
-	UpstreamServiceTime     string `json:"upstream_service_time"`
-}
-
 type connectionCounter struct {
 	connectionCounts map[TupleKey]int
 	mu               sync.Locker
@@ -133,7 +113,9 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
 			ec.ingestLogs()
 		case line := <-t.Lines:
 			log.Infof("Received line from envoy log: %v", line.Text)
-			ec.ParseAccessLogs(line.Text)
+			if _, err := ec.ParseAccessLogs(line.Text); err != nil {
+				log.Errorf("Error parsing access log: %v", err)
+			}
 		case <-ctx.Done():
 			log.Info("Collector shut down")
 			return
@@ -224,7 +206,7 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 	// Currently this reads from the end of the tail file to prevent
 	// rereading the file.
 
-	// wait fo the log file to be created
+	// wait for the log file to be created
 	for {
 		if _, err := os.Stat(ec.config.EnvoyLogPath); !errors.Is(err, os.ErrNotExist) {
 			break
