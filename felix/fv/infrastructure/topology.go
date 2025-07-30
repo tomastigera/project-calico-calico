@@ -271,7 +271,7 @@ func StartNNodeTopology(
 	client = infra.GetCalicoClient()
 	mustInitDatastore(client)
 
-	// Add a CNX license.
+	// Add a Calico Enterprise license.
 	ApplyValidLicense(client)
 
 	// If asked to, pre-create a felix configuration.  We do this before enabling IPIP because IPIP set-up can

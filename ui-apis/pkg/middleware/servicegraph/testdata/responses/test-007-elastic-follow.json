@@ -7,6 +7,58 @@
   ],
   "nodes": [
     {
+      "id": "clusternodes/*",
+      "type": "clusternodes",
+      "name": "cluster nodes",
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 1234,
+                "max_port": 5678
+              }
+            ]
+          }
+        ]
+      },
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 11,
+              "packet_out": 22,
+              "bytes_in": 33,
+              "bytes_out": 44
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "jwhuang-process-1",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\" OR source_type = \"hep\""
+      }
+    },
+    {
       "id": "hosts/*",
       "type": "hosts",
       "name": "hosts",
@@ -136,13 +188,13 @@
         {
           "l3": {
             "allowed": {
-              "packet_in": 394,
-              "packet_out": 432,
-              "bytes_in": 65855,
-              "bytes_out": 33413
+              "packet_in": 405,
+              "packet_out": 454,
+              "bytes_in": 65888,
+              "bytes_out": 33457
             },
             "connections": {
-              "total_per_sample_interval": 51,
+              "total_per_sample_interval": 52,
               "started": 39,
               "completed": 34
             },
@@ -270,7 +322,16 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "cnx-queryserver",
+                "name": "queryserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "jwhuang-process-1",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,
@@ -353,7 +414,7 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "cnx-queryserver",
+                "name": "queryserver",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,
@@ -1337,6 +1398,58 @@
     {
       "id": {
         "source_node_id": "hosts/*",
+        "dest_node_id": "clusternodes/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 11,
+              "packet_out": 22,
+              "bytes_in": 33,
+              "bytes_out": 44
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "jwhuang-process-1",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 1234,
+                "max_port": 5678
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "hosts/*",
         "dest_node_id": "hosts/*"
       },
       "stats": [
@@ -1467,7 +1580,7 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "cnx-queryserver",
+                "name": "queryserver",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,

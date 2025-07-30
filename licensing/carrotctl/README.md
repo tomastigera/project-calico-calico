@@ -29,7 +29,7 @@ For v2.1 we basically have 2 major features:
 Spec for `carrotctl generate` is:
 
 ```
-Generate CNX license file and store the fields in the database
+Generate Calico Enterprise license file and store the fields in the database
 
 Usage:
   carrotctl generate [flags]

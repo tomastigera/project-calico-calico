@@ -3,29 +3,29 @@ title: test-build
 components:
   libcalico-go:
     version: test-build
-  cnx-manager:
-    image: tigera/cnx-manager
+  manager:
+    image: tigera/manager
     version: test-build
   voltron:
     image: tigera/voltron
     version: test-build
-  cnx-apiserver:
-    image: tigera/cnx-apiserver
+  apiserver:
+    image: tigera/apiserver
     version: test-build
-  cnx-queryserver:
-    image: tigera/cnx-queryserver
+  queryserver:
+    image: tigera/queryserver
     version: test-build
-  cnx-kube-controllers:
+  kube-controllers:
     image: tigera/kube-controllers
     version: test-build
   typha:
     image: tigera/typha
     version: test-build
-  cnx-node:
-    image: library/cnx-node
+  node:
+    image: library/node
     version: test-build
-  cnx-node-windows:
-    image: tigera/cnx-node-windows
+  node-windows:
+    image: tigera/node-windows
     version: test-build
   fluentd:
     image: tigera/fluentd

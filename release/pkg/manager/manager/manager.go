@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultImage        = "cnx-manager"
+	DefaultImage        = "manager"
 	DefaultOrg          = utils.TigeraOrg
 	DefaultRepoName     = "manager"
 	DefaultBranchName   = utils.DefaultBranch

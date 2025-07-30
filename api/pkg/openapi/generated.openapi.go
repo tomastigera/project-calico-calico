@@ -3686,7 +3686,14 @@ func schema_pkg_apis_projectcalico_v3_ClusterInformationSpec(ref common.Referenc
 					},
 					"cnxVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CNXVersion is the version of CNX that the cluster is running",
+							Description: "CNXVersion is the version of Calico Enterprise that the cluster is running Deprecated: Use CalicoEnterpriseVersion instead.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"calicoEnterpriseVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CalicoEnterpriseVersion is the version of Calico Enterprise that the cluster is running",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -9703,7 +9710,7 @@ func schema_pkg_apis_projectcalico_v3_LicenseKey(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "LicenseKey contains the Tigera CNX license key for the cluster.",
+				Description: "LicenseKey contains the Calico Enterprise license key for the cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {

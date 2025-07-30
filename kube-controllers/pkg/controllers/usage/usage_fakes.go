@@ -257,7 +257,7 @@ func (f fakeCalicoClient) SecurityEventWebhook() clientv3.SecurityEventWebhookIn
 	panic("implement me")
 }
 
-func (f fakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
+func (f fakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion, calicoEnterpriseVersion, clusterType string) error {
 	panic("implement me")
 }
 

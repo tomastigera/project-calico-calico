@@ -235,11 +235,11 @@ func (q *CompositeAggregationQuery) getMaxBuckets() int {
 //	         "key": {
 //	           "flow_impacted": true,
 //	           "action": "allow",
-//	           "dest_name": "cnx-apiserver-65954bfd46-*",
+//	           "dest_name": "calico-apiserver-65954bfd46-*",
 //	           "dest_namespace": "kube-system",
 //	           "dest_type": "wep",
 //	           "reporter": "src",
-//	           "source_name": "cnx-apiclient-65954bfd46-*",
+//	           "source_name": "calico-apiclient-65954bfd46-*",
 //	           "source_namespace": "compliance",
 //	           "source_type": "wep"
 //	         },
@@ -252,7 +252,7 @@ func (q *CompositeAggregationQuery) getMaxBuckets() int {
 //	               },
 //	               {
 //	                 "doc_count": 3,
-//	                 "key": "k8s-app=cnx-apiserver"
+//	                 "key": "k8s-app=calico-apiserver"
 //	               },
 //	               {
 //	                 "doc_count": 3,

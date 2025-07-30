@@ -140,7 +140,7 @@ func Run(configFile string, gitVersion, buildDate, gitRevision string, nonCluste
 
 	buildInfoLogCxt := log.WithFields(log.Fields{
 		"version":    buildinfo.Version,
-		"release":    "CNX",
+		"release":    "Calico Enterprise",
 		"builddate":  buildinfo.BuildDate,
 		"gitcommit":  buildinfo.GitRevision,
 		"GOMAXPROCS": runtime.GOMAXPROCS(0),
@@ -1560,7 +1560,7 @@ var handledConfigChanges = set.From(
 	"HealthTimeoutOverrides",
 
 	// Enterprise extras...
-	"CNXVersion",
+	"CalicoEnterpriseVersion",
 	"DNSCacheEpoch",
 	"DNSExtraTTL",
 	"WindowsDNSExtraTTL",

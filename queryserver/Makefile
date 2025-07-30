@@ -8,7 +8,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/queryserver
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-QUERYSERVER_IMAGE ?=cnx-queryserver
+QUERYSERVER_IMAGE ?=queryserver
 BUILD_IMAGES      ?=$(QUERYSERVER_IMAGE)
 
 ###############################################################################
@@ -34,10 +34,10 @@ SRC_FILES = $(shell find queryserver pkg -type f -name '*.go') \
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
-build: bin/cnx-queryserver-$(ARCH)
+build: bin/queryserver-$(ARCH)
 
-.PHONY: bin/cnx-queryserver-$(ARCH)
-bin/cnx-queryserver-$(ARCH): $(SRC_FILES)
+.PHONY: bin/queryserver-$(ARCH)
+bin/queryserver-$(ARCH): $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, queryserver/$*/*.go, $@)
 else
@@ -47,7 +47,7 @@ endif
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
-QUERYSERVER_CONTAINER_CREATED=.cnx-queryserver.created-$(ARCH)
+QUERYSERVER_CONTAINER_CREATED=.queryserver.created-$(ARCH)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -59,7 +59,7 @@ sub-image-%:
 image: $(QUERYSERVER_IMAGE)
 
 $(QUERYSERVER_IMAGE): $(QUERYSERVER_CONTAINER_CREATED)
-$(QUERYSERVER_CONTAINER_CREATED): Dockerfile bin/cnx-queryserver-$(ARCH)
+$(QUERYSERVER_CONTAINER_CREATED): Dockerfile bin/queryserver-$(ARCH)
 	$(DOCKER_BUILD) -t $(QUERYSERVER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

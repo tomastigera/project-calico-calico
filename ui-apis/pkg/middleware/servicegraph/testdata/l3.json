@@ -60,6 +60,64 @@
   {
     "Edge": {
       "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "jwhuang-nonclusterhost-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "clusternode",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "jwhuang-cluster-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 1234,
+              "max_port": 5678
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 11,
+        "packet_out": 22,
+        "bytes_in": 33,
+        "bytes_out":44 
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "dest": [
+        {
+          "name": "jwhuang-process-1",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
         "Type": "rep",
         "Namespace": "tigera-prometheus",
         "Name": "",
@@ -4020,7 +4078,7 @@
         "Type": "rep",
         "Namespace": "calico-system",
         "Name": "",
-        "NameAggr": "tigera-apiserver-b47498c85-*",
+        "NameAggr": "calico-apiserver-b47498c85-*",
         "PortNum": 5443,
         "Protocol": "tcp"
       },
@@ -4081,7 +4139,7 @@
         "Type": "rep",
         "Namespace": "calico-system",
         "Name": "",
-        "NameAggr": "tigera-apiserver-b47498c85-*",
+        "NameAggr": "calico-apiserver-b47498c85-*",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -4139,7 +4197,7 @@
       ],
       "dest": [
         {
-          "name": "cnx-queryserver",
+          "name": "queryserver",
           "min_num_names_per_flow": 1,
           "max_num_names_per_flow": 1,
           "min_num_ids_per_flow": 1,

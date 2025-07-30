@@ -64,7 +64,11 @@
         "@timestamp": 1615422691000,
         "bytes_out": 8784,
         "dest_ip": null,
-        "proto": "udp"
+        "proto": "udp",
+        "transit_bytes_in": 0,
+        "transit_bytes_out": 0,
+        "transit_packets_in": 0,
+        "transit_packets_out": 0
     }
   ]
 }

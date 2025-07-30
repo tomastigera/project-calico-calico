@@ -12,7 +12,6 @@ const (
 
 // EnterpriseImageMap maps the component name to its image for enterprise.
 var EnterpriseImageMap = map[string]string{
-	"cnx-kube-controllers":        "kube-controllers",
 	"csi-node-driver-registrar":   "node-driver-registrar",
 	"elastic-tsee-installer":      "intrusion-detection-job-installer",
 	"elasticsearch-operator":      "eck-operator",

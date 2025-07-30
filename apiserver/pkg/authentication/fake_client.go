@@ -14,7 +14,7 @@ import (
 )
 
 // A Fake Authenticator satisfies the Authenticator interface and can be used for unit tests. It will mock/fake
-// the tigera-apiserver and responds according to your predefined API server responses.
+// the calico-apiserver and responds according to your predefined API server responses.
 type FakeAuthenticator interface {
 	AddErrorAPIServerResponse(authorizationHeader string, apiResponse []byte, statusCode int)
 	AddValidApiResponse(authorizationHeader, user string, groups []string)
@@ -83,12 +83,12 @@ func NewFakeAuthenticator() FakeAuthenticator {
 }
 
 // Add a custom response for an authorization header. You can use this to test various headers that should not be
-// authenticated or test the behaviour of the authenticator when the tigera-apiserver shows unexpected behaviour.
+// authenticated or test the behaviour of the authenticator when the calico-apiserver shows unexpected behaviour.
 func (f *fakeAuthenticator) AddErrorAPIServerResponse(authorizationHeader string, apiResponse []byte, statusCode int) {
 	f.rt.users[authorizationHeader] = testResult{apiResponseJson: apiResponse, statusCode: statusCode}
 }
 
-// Add a user to the fake tigera-apiserver. When the authenticator makes a call, it will get back an authentication
+// Add a user to the fake calico-apiserver. When the authenticator makes a call, it will get back an authentication
 // review with the provided username and groups as json.
 func (f *fakeAuthenticator) AddValidApiResponse(authorizationHeader, username string, groups []string) {
 	authenticationReview := v3.NewAuthenticationReview()

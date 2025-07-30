@@ -330,7 +330,7 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 
 		if licStatus := claims.Validate(); licStatus != licClient.Valid {
 			// If the license is expired (but within grace period) then show this warning banner, but continue to work.
-			// in CNX v2.1, grace period is infinite.
+			// in Calico Enterprise v2.1, grace period is infinite.
 			fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")
 			fmt.Println("Contact Tigera support or email licensing@tigera.io")
 			fmt.Println()

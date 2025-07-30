@@ -22,7 +22,7 @@ The integration tests/functional verification tests can be run via the `fv`/`fv-
 make fv
 ```
 
-## Adding resources to cnx-apiserver
+## Adding resources to apiserver
 
 Add the new resource definitions to tigera/api and associated code in libcalico-go.  Ensure the code auto-generation is run (make gen-files) in both repositories.
 
@@ -242,30 +242,6 @@ func NewStorage(...) {
 Remember to copy the Status member if your resource has one.
 
 11. Lastly, add a clientset test for functional verification tests to `test/integration/clientset_test.go`. Take a look at the `TestLicenseKeyClient()` and `testLicenseKeyClient()` functions as an example.
-
-* In order to rebuild the container image:
-
-```bash
-make tigera/cnx-apiserver
-
-# In order to test:
-docker tag tigera/cnx-apiserver:latest quay.io/bcreane/cnx-apiserver:latest
-docker push quay.io/bcreane/cnx-apiserver:latest
-
-# then update the cnx-etcd.yaml manifest to change the cnx-apiserver image to
-# point to your image, e.g.
-
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: cnx-apiserver
-
-...
-
-image: quay.io/bcreane/cnx-apiserver:latest
-imagePullPolicy: Always
-
-```
 
 * Verify you can view, modify, and create your resource via  `kubectl`, for example:
 
