@@ -129,6 +129,9 @@ func (b *BranchManager) CutReleaseBranch() error {
 	if err := b.CutVersionedBranch(ver.Stream()); err != nil {
 		return err
 	}
+	if err := b.retagThirdPartyBaseImages(ver.Stream()); err != nil {
+		return err
+	}
 	if _, err := b.git("checkout", b.mainBranch); err != nil {
 		return err
 	}

@@ -100,3 +100,10 @@ sub-windows-manifest-%:
 		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${ver} $(call unescapefs,$*):$(LATEST_IMAGE_TAG)-windows $${image}; \
 	done; \
 	$(DOCKER) manifest push --purge $(call unescapefs,$*):$(LATEST_IMAGE_TAG)-windows;
+
+.PHONY: release-retag-image
+release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-master \
+		$(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-$(RELEASE_BRANCH)$(double_quote)
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-master-windows \
+		$(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-$(RELEASE_BRANCH)-windows$(double_quote)
