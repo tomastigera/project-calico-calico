@@ -32,6 +32,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/ip"
 	. "github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -363,24 +364,24 @@ var (
 				},
 				"hasAHTTP": {
 					Selector: "has(a)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasAAndBHTTP": {
 					// This gives more than one ScanStrategy to evaluate.
 					Selector: "has(a) && has(b)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasBHTTP": {
 					Selector: "has(b)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasBAndParentAHTTP": {
 					// This compares a parent and an endpoint ScanStrategy.
 					Selector: "has(b) && has(parentLabelA)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 			},
@@ -539,24 +540,24 @@ var (
 				},
 				"hasAHTTP": {
 					Selector: "has(a)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasAAndBHTTP": {
 					// This gives more than one ScanStrategy to evaluate.
 					Selector: "has(a) && has(b)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasBHTTP": {
 					Selector: "has(b)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 				"hasBAndParentAHTTP": {
 					// This compares a parent and an endpoint ScanStrategy.
 					Selector: "has(b) && has(parentLabelA)",
-					Protocol: ProtocolTCP,
+					Protocol: ipsetmember.ProtocolTCP,
 					Port:     "http",
 				},
 			},
@@ -992,7 +993,7 @@ func (s namedPortState) CheckRecordedState(t *testing.T, rec *testRecorder) {
 		setName := "s:" + setName
 		memberStrings := set.New[string]()
 		for m := range rec.ipsets[setName] {
-			memberStrings.Add(memberToProto(m))
+			memberStrings.Add(m.ToProtobufFormat())
 		}
 		ExpectWithOffset(1, memberStrings).To(Equal(set.FromArray(expected)),
 			fmt.Sprintf("%s: expected IP set %s to have entries: %v, not %v, all: %v", s.Name, setName, expected, memberStrings.Slice(), rec.ipsets))
@@ -1004,22 +1005,6 @@ func (s namedPortState) CheckRecordedState(t *testing.T, rec *testRecorder) {
 		ExpectWithOffset(1, members).To(HaveLen(0), "Unexpected IP set: "+setName)
 	}
 	log.Infof("TEST HARNESS: Recorded state looks good.")
-}
-
-// Copied from event sequencer.
-func memberToProto(member IPSetMember) string {
-	switch member.Protocol {
-	case ProtocolNone:
-		return member.CIDR.String()
-	case ProtocolTCP:
-		return fmt.Sprintf("%s,tcp:%d", member.CIDR.Addr(), member.PortNumber)
-	case ProtocolUDP:
-		return fmt.Sprintf("%s,udp:%d", member.CIDR.Addr(), member.PortNumber)
-	case ProtocolSCTP:
-		return fmt.Sprintf("%s,sctp:%d", member.CIDR.Addr(), member.PortNumber)
-	}
-	log.WithField("member", member).Panic("Unknown IP set member type")
-	return ""
 }
 
 // mockEndpoint represents an abstract endpoint or network set.
@@ -1043,7 +1028,7 @@ type mockParent struct {
 
 type ipSet struct {
 	Selector string
-	Protocol IPSetPortProtocol
+	Protocol ipsetmember.Protocol
 	Port     string
 }
 
@@ -1362,7 +1347,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			})
 			s, err := selector.Parse("villain == 'ghost'")
 			Expect(err).ToNot(HaveOccurred())
-			uut.UpdateIPSet("villains", s, ProtocolNone, "")
+			uut.UpdateIPSet("villains", s, ipsetmember.ProtocolNone, "")
 			set, ok := recorder.ipsets["villains"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(1))
@@ -1382,12 +1367,12 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			})
 			s, err := selector.Parse("villain == 'ghost'")
 			Expect(err).ToNot(HaveOccurred())
-			uut.UpdateIPSet("dvillains", s, ProtocolNone, "")
+			uut.UpdateIPSet("dvillains", s, ipsetmember.ProtocolNone, "")
 			set, ok := recorder.ipsets["dvillains"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(2))
-			Expect(set).To(HaveKey(IPSetMember{Domain: "microsoft.com"}))
-			Expect(set).To(HaveKey(IPSetMember{Domain: "mixed.org"}))
+			Expect(set).To(HaveKey(ipsetmember.MakeDomain("microsoft.com")))
+			Expect(set).To(HaveKey(ipsetmember.MakeDomain("mixed.org")))
 		})
 	})
 
@@ -1420,7 +1405,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			})
 			s, err := selector.Parse("villain == 'ghost' && superhero == 'scooby'")
 			Expect(err).ToNot(HaveOccurred())
-			uut.UpdateIPSet("scoobydoobydoo", s, ProtocolNone, "")
+			uut.UpdateIPSet("scoobydoobydoo", s, ipsetmember.ProtocolNone, "")
 			set, ok := recorder.ipsets["scoobydoobydoo"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(1))
@@ -1460,17 +1445,19 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			})
 			s, err := selector.Parse("villain == 'ghost'")
 			Expect(err).ToNot(HaveOccurred())
-			uut.UpdateIPSet("e:villains", s, ProtocolNone, "")
+			uut.UpdateIPSet("e:villains", s, ipsetmember.ProtocolNone, "")
 			set, ok := recorder.ipsets["e:villains"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(1))
 			cidr, err := ip.CIDRFromString("192.168.4.10/32")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(set).To(HaveKey(IPSetMember{
-				CIDR:            cidr,
-				IsEgressGateway: true,
-				Hostname:        "test-host",
-			}))
+			Expect(set).To(HaveKey(ipsetmember.MakeEgressGateway(
+				cidr.Addr().(ip.V4Addr),
+				time.Time{},
+				0,
+				"test-host",
+				0,
+			)))
 		})
 	})
 
@@ -1494,7 +1481,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// The new ipset should have 2 IPs.
-			uut.UpdateIPSet("heptest", s, ProtocolNone, "")
+			uut.UpdateIPSet("heptest", s, ipsetmember.ProtocolNone, "")
 			set, ok := recorder.ipsets["heptest"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(2))
@@ -1516,23 +1503,23 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 })
 
 func newRecorder() *testRecorder {
-	return &testRecorder{ipsets: make(map[string]map[IPSetMember]bool)}
+	return &testRecorder{ipsets: make(map[string]map[ipsetmember.IPSetMember]bool)}
 }
 
 type testRecorder struct {
-	ipsets map[string]map[IPSetMember]bool
+	ipsets map[string]map[ipsetmember.IPSetMember]bool
 }
 
-func (t *testRecorder) OnMemberAdded(ipSetID string, member IPSetMember) {
+func (t *testRecorder) OnMemberAdded(ipSetID string, member ipsetmember.IPSetMember) {
 	s := t.ipsets[ipSetID]
 	if s == nil {
-		s = make(map[IPSetMember]bool)
+		s = make(map[ipsetmember.IPSetMember]bool)
 		t.ipsets[ipSetID] = s
 	}
 	s[member] = true
 }
 
-func (t *testRecorder) OnMemberRemoved(ipSetID string, member IPSetMember) {
+func (t *testRecorder) OnMemberRemoved(ipSetID string, member ipsetmember.IPSetMember) {
 	s := t.ipsets[ipSetID]
 	delete(s, member)
 	if len(s) == 0 {

@@ -1853,12 +1853,8 @@ func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 
 	addr := ip.MustParseCIDROrIP(a[0]).Addr()
 	if len(a) == 5 {
-		if err := maintenanceStarted.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
-			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance started timestamp from member str, defaulting to zero value.")
-		}
-		if err := maintenanceFinished.UnmarshalText([]byte(strings.ToUpper(a[2]))); err != nil {
-			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance finished timestamp from member str, defaulting to zero value.")
-		}
+		maintenanceStarted = parseProtoTimestamp(a[1])
+		maintenanceFinished = parseProtoTimestamp(a[2])
 		if healthPort64, err := strconv.ParseUint(a[3], 10, 16); err != nil {
 			log.WithField("memberStr", memberStr).Warn("unable to parse port from member str, defaulting to zero value.")
 		} else {
@@ -1874,6 +1870,19 @@ func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 		healthPort:          healthPort,
 		hostname:            hostname,
 	}, nil
+}
+
+func parseProtoTimestamp(in string) time.Time {
+	if in == "" {
+		return time.Time{}
+	}
+	var t time.Time
+	err := t.UnmarshalText(([]byte)(in))
+	if err != nil {
+		log.WithField("timestamp", in).Warn("Failed to parse proto timestamp, defaulting to zero value.")
+		t = time.Time{}
+	}
+	return t
 }
 
 func parseNameAndNamespace(wlId string) (string, string, error) {
