@@ -707,7 +707,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withFlowLogs(flowLogsEnabled),
 						withDenyAction(denyAction),
 						withDenyActionString(denyActionString),
-						withQoSControls(2000, 4000),
+						withQoSPacketRate(2000, 4000),
 					).build()
 
 					fromWlRules := newRuleBuilder(
@@ -717,7 +717,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withEgress(),
 						withDropIPIP(),
 						withDropVXLAN(VXLANPort),
-						withQoSControls(1000, 2000),
+						withQoSPacketRate(1000, 2000),
 					).build()
 
 					expected := []*generictables.Chain{
@@ -756,7 +756,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withFlowLogs(flowLogsEnabled),
 						withDenyAction(denyAction),
 						withDenyActionString(denyActionString),
-						withQoSConnection(20),
+						withQoSMaxConnections(20),
 					).build()
 
 					fromWlRules := newRuleBuilder(
@@ -766,7 +766,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withEgress(),
 						withDropIPIP(),
 						withDropVXLAN(VXLANPort),
-						withQoSConnection(10),
+						withQoSMaxConnections(10),
 					).build()
 
 					expected := trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
@@ -1562,15 +1562,15 @@ func withTierPassAction() ruleBuilderOpt {
 	}
 }
 
-func withQoSControls(rate, burst int64) ruleBuilderOpt {
+func withQoSPacketRate(rate, burst int64) ruleBuilderOpt {
 	return func(r *ruleBuilder) {
 		r.qosControlsEnabled = true
-		r.qosRate = rate
-		r.qosburst = burst
+		r.qosPacketRate = rate
+		r.qosPacketBurst = burst
 	}
 }
 
-func withQoSConnection(maxConn int64) ruleBuilderOpt {
+func withQoSMaxConnections(maxConn int64) ruleBuilderOpt {
 	return func(r *ruleBuilder) {
 		r.qosMaxConn = maxConn
 	}
@@ -1659,8 +1659,8 @@ type ruleBuilder struct {
 	tierPassAction bool
 
 	qosControlsEnabled bool
-	qosRate            int64
-	qosburst           int64
+	qosPacketRate      int64
+	qosPacketBurst     int64
 	qosMaxConn         int64
 
 	flowLogsEnabled       bool
@@ -1698,7 +1698,7 @@ func (b *ruleBuilder) build() []generictables.Rule {
 
 	// Initially, add QoS control rules.
 	if b.qosControlsEnabled {
-		rules = append(rules, b.qosControlRules(b.qosRate, b.qosburst)...)
+		rules = append(rules, b.qosControlRules(b.qosPacketRate, b.qosPacketBurst)...)
 	}
 
 	// Add connection tracking rules, unless building rules for host endpoints with untracked policies.
