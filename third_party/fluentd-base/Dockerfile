@@ -42,13 +42,10 @@ RUN gem install elasticsearch-api -v 8.19.0 && \
        gem install fluent-plugin-remote_syslog -v 1.1.0 && \
        gem install fluent-plugin-s3 -v 1.8.3 && \
        gem install fluent-plugin-splunk-hec -v 1.3.3 && \
-       gem install fluent-plugin-sumologic_output -v 1.10.0
+       gem sources --clear-all
 
 # Download jq 1.8, dnf would get 1.6, which has vulnerabilities.
 RUN curl -L https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${TARGETARCH} -o /usr/bin/jq && chmod +x /usr/bin/jq
-
-# cleanup
-RUN gem sources --clear-all
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports

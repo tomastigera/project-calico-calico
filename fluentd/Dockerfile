@@ -83,8 +83,6 @@ COPY liveness.sh /bin/liveness.sh
 COPY readiness.sh /bin/readiness.sh
 COPY splunk-config.sh /bin/splunk-config.sh
 COPY splunk-environment.sh /bin/splunk-environment.sh
-COPY sumo-config.sh /bin//sumo-config.sh
-COPY sumo-environment.sh /bin/sumo-environment.sh
 COPY syslog-config.sh /bin/syslog-config.sh
 COPY syslog-environment.sh /bin/syslog-environment.sh
 

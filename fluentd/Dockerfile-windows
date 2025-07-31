@@ -111,8 +111,6 @@ COPY syslog-environment.sh /bin/syslog-environment.sh
 COPY syslog-config.sh /bin/syslog-config.sh
 COPY splunk-environment.sh /bin/splunk-environment.sh
 COPY splunk-config.sh /bin/splunk-config.sh
-COPY sumo-environment.sh /bin/sumo-environment.sh
-COPY sumo-config.sh /bin/sumo-config.sh
 COPY ee_entrypoint.sh /bin/ee_entrypoint.sh
 COPY eks/bin/eks-log-forwarder-startup.exe /bin/eks-log-forwarder-startup.exe
 
