@@ -97,7 +97,9 @@ ${kubectl} apply -f $TEST_DIR/infra/storage_class.yaml
 echo
 
 echo "Wait for Calico to be ready..."
-wait_pod_ready -n calico-system -l k8s-app
+for app in calico-node calico-kube-controllers calico-apiserver calico-typha; do
+  wait_pod_ready -n calico-system -l k8s-app="$app"
+done
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
 
