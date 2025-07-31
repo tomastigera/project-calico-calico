@@ -45,12 +45,16 @@ type BranchManager struct {
 
 	// publish indicates if we should push the branch changes to the remote repository
 	publish bool
+
+	// retag third-party base images when cutting a release branch
+	retagThirdParty bool
 }
 
 func NewManager(opts ...Option) *BranchManager {
 	b := &BranchManager{
-		validate: true,
-		publish:  false,
+		validate:        true,
+		publish:         false,
+		retagThirdParty: false,
 	}
 
 	// Apply the options
@@ -129,8 +133,10 @@ func (b *BranchManager) CutReleaseBranch() error {
 	if err := b.CutVersionedBranch(ver.Stream()); err != nil {
 		return err
 	}
-	if err := b.retagThirdPartyBaseImages(ver.Stream()); err != nil {
-		return err
+	if b.retagThirdParty {
+		if err := b.retagThirdPartyBaseImages(ver.Stream()); err != nil {
+			return err
+		}
 	}
 	if _, err := b.git("checkout", b.mainBranch); err != nil {
 		return err
