@@ -530,6 +530,8 @@ func StartDataplaneDriver(
 
 			KubernetesProvider: configParams.KubernetesProvider(),
 
+			RequireMTUFile: configParams.RequireMTUFile,
+
 			DNSCacheFile:              configParams.GetDNSCacheFile(),
 			DNSCacheSaveInterval:      configParams.DNSCacheSaveInterval,
 			DNSCacheEpoch:             configParams.DNSCacheEpoch,
