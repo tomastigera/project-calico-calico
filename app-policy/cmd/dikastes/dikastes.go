@@ -13,9 +13,8 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/flags"
 	"github.com/projectcalico/calico/app-policy/server"
+	"github.com/projectcalico/calico/pkg/buildinfo"
 )
-
-var VERSION string = "dev"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -27,7 +26,7 @@ func main() {
 		return
 	}
 
-	log.Infof("Dikastes (%s) launching", VERSION)
+	log.Infof("Dikastes (%s) launching", buildinfo.Version)
 	switch config.Command {
 	case "init-sidecar":
 		// At least one of them should be enabled
