@@ -210,7 +210,7 @@ type Config struct {
 	DeviceRouteSourceAddressIPv6   net.IP
 	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
-	ProgramRoutes                  bool
+	ProgramClusterRoutes           bool
 	IPForwarding                   string
 	TableRefreshInterval           time.Duration
 	IPSecPolicyRefreshInterval     time.Duration
