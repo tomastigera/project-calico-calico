@@ -16,7 +16,7 @@ ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0-${THIRD_PARTY_RELEASE_BRANCH} AS fluentd
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.19.0-${THIRD_PARTY_RELEASE_BRANCH} AS fluentd
 
 FROM scratch AS source
 
@@ -83,8 +83,6 @@ COPY liveness.sh /bin/liveness.sh
 COPY readiness.sh /bin/readiness.sh
 COPY splunk-config.sh /bin/splunk-config.sh
 COPY splunk-environment.sh /bin/splunk-environment.sh
-COPY sumo-config.sh /bin//sumo-config.sh
-COPY sumo-environment.sh /bin/sumo-environment.sh
 COPY syslog-config.sh /bin/syslog-config.sh
 COPY syslog-environment.sh /bin/syslog-environment.sh
 
