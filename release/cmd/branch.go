@@ -61,7 +61,8 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 					branch.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 					branch.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 					branch.WithValidate(!c.Bool(skipValidationFlag.Name)),
-					branch.WithPublish(c.Bool(publishBranchFlag.Name)))
+					branch.WithPublish(c.Bool(publishBranchFlag.Name)),
+					branch.WithRetagThirdPartyBaseImages(true))
 				return m.CutReleaseBranch()
 			},
 		},
