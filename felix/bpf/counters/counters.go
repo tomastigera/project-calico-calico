@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 23
+	MaxCounterNumber    int = 25
 	counterMapKeySize   int = 8
 	counterMapValueSize int = 8
 )
