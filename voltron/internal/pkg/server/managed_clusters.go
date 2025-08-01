@@ -64,5 +64,9 @@ func (mc *ManagedClusterDataQuerier) GetVersion() (string, error) {
 		return "", err
 	}
 
-	return ci.Spec.CNXVersion, nil
+	calicoEnterpriseVersion := ci.Spec.CalicoEnterpriseVersion
+	if calicoEnterpriseVersion == "" {
+		calicoEnterpriseVersion = ci.Spec.CNXVersion
+	}
+	return calicoEnterpriseVersion, nil
 }

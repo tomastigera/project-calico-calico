@@ -29,7 +29,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 )
 
 var id = 0
@@ -348,7 +348,7 @@ func (b *MockBPFLib) LookupCIDRMap(ifName string, family IPFamily, ip net.IP, ma
 
 func (b *MockBPFLib) LookupFailsafeMap(proto uint8, port uint16) (bool, error) {
 	pp := ProtoPort{
-		Proto: labelindex.IPSetPortProtocol(proto),
+		Proto: ipsetmember.Protocol(proto),
 		Port:  port,
 	}
 
@@ -416,7 +416,7 @@ func (b *MockBPFLib) RemoveItemFailsafeMap(proto uint8, port uint16) error {
 	}
 
 	pp := ProtoPort{
-		Proto: labelindex.IPSetPortProtocol(proto),
+		Proto: ipsetmember.Protocol(proto),
 		Port:  port,
 	}
 
@@ -466,7 +466,7 @@ func (b *MockBPFLib) UpdateFailsafeMap(proto uint8, port uint16) error {
 	}
 
 	pp := ProtoPort{
-		Proto: labelindex.IPSetPortProtocol(proto),
+		Proto: ipsetmember.Protocol(proto),
 		Port:  port,
 	}
 

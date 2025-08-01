@@ -73,6 +73,10 @@ type JSONOutput struct {
 	NumFlowsCompleted     int64 `json:"num_flows_completed"`
 	PacketsIn             int64 `json:"packets_in"`
 	PacketsOut            int64 `json:"packets_out"`
+	TransitBytesIn        int64 `json:"transit_bytes_in"`
+	TransitBytesOut       int64 `json:"transit_bytes_out"`
+	TransitPacketsIn      int64 `json:"transit_packets_in"`
+	TransitPacketsOut     int64 `json:"transit_packets_out"`
 	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
 	HTTPRequestsDeniedIn  int64 `json:"http_requests_denied_in"`
 
@@ -247,6 +251,10 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.BytesOut = int64(l.BytesOut)
 	out.PacketsIn = int64(l.PacketsIn)
 	out.PacketsOut = int64(l.PacketsOut)
+	out.TransitBytesIn = int64(l.TransitBytesIn)
+	out.TransitBytesOut = int64(l.TransitBytesOut)
+	out.TransitPacketsIn = int64(l.TransitPacketsIn)
+	out.TransitPacketsOut = int64(l.TransitPacketsOut)
 	out.NumFlows = int64(l.NumFlows)
 	out.NumFlowsCompleted = int64(l.NumFlowsCompleted)
 	out.NumFlowsStarted = int64(l.NumFlowsStarted)
@@ -384,6 +392,10 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.BytesOut = int(o.BytesOut)
 	fl.PacketsIn = int(o.PacketsIn)
 	fl.PacketsOut = int(o.PacketsOut)
+	fl.TransitBytesIn = int(o.TransitBytesIn)
+	fl.TransitBytesOut = int(o.TransitBytesOut)
+	fl.TransitPacketsIn = int(o.TransitPacketsIn)
+	fl.TransitPacketsOut = int(o.TransitPacketsOut)
 	fl.NumFlows = int(o.NumFlows)
 	fl.NumFlowsStarted = int(o.NumFlowsStarted)
 	fl.NumFlowsCompleted = int(o.NumFlowsCompleted)

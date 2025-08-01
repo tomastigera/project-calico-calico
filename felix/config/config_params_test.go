@@ -53,7 +53,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"ClusterType",
 		"CalicoVersion",
 		"Variant",
-		"CNXVersion",
+		"CalicoEnterpriseVersion",
 
 		// Moved to Node.
 		"IpInIpTunnelAddr",

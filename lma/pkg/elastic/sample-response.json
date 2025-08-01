@@ -12,7 +12,7 @@
                 },
                 {
                   "doc_count": 3,
-                  "key": "k8s-app=cnx-apiserver"
+                  "key": "k8s-app=calico-apiserver"
                 },
                 {
                   "doc_count": 3,
@@ -28,11 +28,11 @@
           "key": {
             "flow_impacted": true,
             "action": "allow",
-            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_name": "calico-apiserver-65954bfd46-*",
             "dest_namespace": "kube-system",
             "dest_type": "wep",
             "reporter": "src",
-            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_name": "apiclient-65954bfd46-*",
             "source_namespace": "compliance",
             "source_type": "wep"
           },
@@ -41,7 +41,7 @@
               "buckets": [
                 {
                   "doc_count": 3,
-                  "key": "0|allow-cnx|kube-system/allow-cnx.cnx-apiserver-access|allow|0"
+                  "key": "0|allow-tigera|kube-system/allow-tigera.apiserver-access|allow|0"
                 }
               ],
               "doc_count_error_upper_bound": 0,
@@ -92,7 +92,7 @@
                 },
                 {
                   "doc_count": 3,
-                  "key": "k8s-app=cnx-apiserver"
+                  "key": "k8s-app=calico-apiserver"
                 },
                 {
                   "doc_count": 3,
@@ -108,11 +108,11 @@
           "key": {
             "flow_impacted": true,
             "action": "allow",
-            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_name": "calico-apiserver-65954bfd46-*",
             "dest_namespace": "kube-system",
             "dest_type": "wep",
             "reporter": "dst",
-            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_name": "calico-apiclient-65954bfd46-*",
             "source_namespace": "compliance",
             "source_type": "wep",
             "source_action": "unknown"
@@ -173,7 +173,7 @@
                 },
                 {
                   "doc_count": 3,
-                  "key": "k8s-app=cnx-apiserver"
+                  "key": "k8s-app=calico-apiserver"
                 },
                 {
                   "doc_count": 3,
@@ -189,11 +189,11 @@
           "key": {
             "flow_impacted": true,
             "action": "deny",
-            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_name": "calico-apiserver-65954bfd46-*",
             "dest_namespace": "kube-system",
             "dest_type": "wep",
             "reporter": "dst",
-            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_name": "calico-apiclient-65954bfd46-*",
             "source_namespace": "compliance",
             "source_type": "wep",
             "source_action": "allow"
@@ -262,7 +262,7 @@
                 },
                 {
                   "doc_count": 3,
-                  "key": "k8s-app=cnx-apiserver"
+                  "key": "k8s-app=calico-apiserver"
                 },
                 {
                   "doc_count": 3,
@@ -278,11 +278,11 @@
           "key": {
             "flow_impacted": true,
             "action": "allow",
-            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_name": "calico-apiserver-65954bfd46-*",
             "dest_namespace": "kube-system",
             "dest_type": "wep",
             "reporter": "src",
-            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_name": "calico-apiclient-65954bfd46-*",
             "source_namespace": "compliance",
             "source_type": "wep"
           },
@@ -291,7 +291,7 @@
               "buckets": [
                 {
                   "doc_count": 3,
-                  "key": "0|allow-cnx|kube-system/allow-cnx.cnx-apiserver-access|allow|0"
+                  "key": "0|allow-tigera|kube-system/allow-tigera.apiserver-access|allow|0"
                 }
               ],
               "doc_count_error_upper_bound": 0,
@@ -331,7 +331,7 @@
           "sum_packets_out": {
             "value": 60
           }
-        },
+        }
       ]
     }
   }

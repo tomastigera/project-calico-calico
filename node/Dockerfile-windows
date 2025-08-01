@@ -14,7 +14,7 @@
 
 # FIXME: Use WINDOWS_HPC_VERSION and image instead of nanoserver and WINDOWS_VERSIONS when containerd v1.6 is EOL'd
 # ARG WINDOWS_HPC_VERSION
-ARG WINDOWS_VERSION
+ARG WINDOWS_VERSION=ltsc2022
 
 #FROM mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:${WINDOWS_HPC_VERSION}
 FROM mcr.microsoft.com/windows/nanoserver:${WINDOWS_VERSION}
@@ -40,7 +40,7 @@ COPY windows-packaging/CalicoWindows/libs/hns/hns.psm1 /CalicoWindows/libs/hns/h
 COPY windows-packaging/nssm.exe /nssm.exe
 COPY windows-packaging/CalicoWindows/uninstall-calico-hpc.ps1 /uninstall-calico.ps1
 
-ENV PATH=$PATH;/CalicoWindows
+ENV PATH="$PATH;C:\CalicoWindows;C:\Windows\System32;C:\Windows;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Program Files\PowerShell"
 WORKDIR /CalicoWindows
 # The nanoserver image does not have powershell but this works because
 # this container will be running on the host.

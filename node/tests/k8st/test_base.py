@@ -55,6 +55,7 @@ class TestBase(TestCase):
             try:
                 cleanup()
             except Exception as e:
+                logger.exception("Error during cleanup")
                 errors.append(e)
         super(TestBase, self).tearDown()
         if errors:
@@ -297,7 +298,7 @@ metadata:
   namespace: %s
 spec:
   imagePullSecrets:
-  - name: cnx-pull-secret
+  - name: tigera-pull-secret
   initContainers:
   - name: egress-gateway-init
     image: docker.io/tigera/egress-gateway:test-build

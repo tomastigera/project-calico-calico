@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,6 +61,10 @@ func BenchmarkSnapshotThenDeleteLocal200Local10kTotal10000NetsetPols(b *testing.
 	benchInitialSnap(b, 10000, 200, 200, 0, 10000)
 }
 
+var (
+	cg *CalcGraph
+)
+
 func benchInitialSnap(
 	b *testing.B,
 	numEndpoints int,
@@ -80,7 +84,6 @@ func benchInitialSnap(
 	profUpdates := makeNamespaceUpdates(numNamespaces)
 	netSetUpdates := makeNetSetAndPolUpdates(netSetsAndPols)
 
-	var cg *CalcGraph
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
@@ -130,9 +133,6 @@ func benchInitialSnap(
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	b.ReportMetric(float64(m.HeapAlloc)/(1024*1024), "HeapAllocMB")
-
-	// Make sure the CalcGraph doesn't get GCed before we collect stats.
-	runtime.KeepAlive(cg)
 }
 
 // These trivial functions are broken out so that, when CPU profiling, each

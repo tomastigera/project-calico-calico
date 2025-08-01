@@ -111,7 +111,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	if ap.Type == tcdefs.EpTypeWorkload {
 		l, err := netlink.LinkByName(ap.Iface)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
@@ -153,8 +153,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 		return fmt.Errorf("error loading tcp stats program %w", err)
 	}
 	defer obj.Close()
-	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
-	return err
+	return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
 }
 
 func (ap *AttachPoint) DetachProgram() error {
@@ -389,10 +388,6 @@ func RemoveQdisc(ifaceName string) error {
 	}
 
 	return libbpf.RemoveQDisc(ifaceName)
-}
-
-func (ap *AttachPoint) HookName() hook.Hook {
-	return ap.Hook
 }
 
 func (ap *AttachPoint) HookName() hook.Hook {

@@ -11,6 +11,7 @@ type Config struct {
 	TLSCert, TLSKey       string
 	EnvoyImg, DikastesImg string
 	ListenAddr            string
+	Dataplane             string // "iptables" or "nftables"
 }
 
 func FromEnv() (*Config, error) {
@@ -19,6 +20,7 @@ func FromEnv() (*Config, error) {
 	envoyImg := os.Getenv("L7ADMCTRL_ENVOYIMAGE")
 	dikastesImg := os.Getenv("L7ADMCTRL_DIKASTESIMAGE")
 	listenAddr := os.Getenv("L7ADMCTRL_LISTENADDR")
+	dataplane := os.Getenv("DATAPLANE")
 
 	if listenAddr == "" {
 		listenAddr = ":6443"
@@ -36,5 +38,6 @@ func FromEnv() (*Config, error) {
 		EnvoyImg:    envoyImg,
 		DikastesImg: dikastesImg,
 		ListenAddr:  listenAddr,
+		Dataplane:   dataplane,
 	}, nil
 }

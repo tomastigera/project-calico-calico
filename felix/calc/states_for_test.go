@@ -135,12 +135,12 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	routelocalWlTenDotTwo,
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
-).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
+).withIPSet(selectorIdDNSExternal, allowedEgressDomainsLower).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
 
 // Same as withDNSPolicy, but with no duplication in the network set domain names.
 var withDNSPolicyNoDupe = withDNSPolicy.withKVUpdates(
 	KVPair{Key: netSetDNSKey, Value: &netSetDNSNoDupe},
-).withIPSet(selectorIdDNSExternal, allowedEgressDomainsNoDupe)
+).withIPSet(selectorIdDNSExternal, allowedEgressDomainsNoDupeLower)
 
 // withDNSPolicy2 verifies that when two GlobalNetworkSets, each with its own allowedEgressDomains, are selected by an appropriate
 // GlobalNetworkPolicy, the resulting IPSet will contain the domain names from both Sets.
@@ -173,7 +173,7 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	routelocalWlTenDotTwo,
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
-).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
+).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomainsLower, allowedEgressDomains2Lower...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
 
 // withDNSPolicy3 verifies that a GlobalNetworkSet with allowedEgressDomains and a Policy that matches the domains directly but
 // without a selector will contain an IPSet with the correct domains.
@@ -205,7 +205,7 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	routelocalWlTenDotTwo,
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
-).withIPSet(selectorIdDNSExternal3, allowedEgressDomains).withName("with DNS Policy 3")
+).withIPSet(selectorIdDNSExternal3, allowedEgressDomainsLower).withName("with DNS Policy 3")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(

@@ -9,7 +9,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -252,7 +252,7 @@ func (w *L7WorkloadIPSetCalculator) flush() {
 	w.sentAddrs.Iter(func(addr ip.Addr) error {
 		if !updatedAddrs.Contains(addr) {
 			log.Debugf("Local WEP IP no longer active for ALP policy: %v", addr)
-			w.callbacks.OnIPSetMemberRemoved(tproxydefs.ApplicationLayerPolicyIPSet, labelindex.IPSetMember{CIDR: addr.AsCIDR()})
+			w.callbacks.OnIPSetMemberRemoved(tproxydefs.ApplicationLayerPolicyIPSet, ipsetmember.MakeCIDROrIPOnly(addr.AsCIDR()))
 			return set.RemoveItem
 		}
 		return nil
@@ -263,7 +263,7 @@ func (w *L7WorkloadIPSetCalculator) flush() {
 	updatedAddrs.Iter(func(addr ip.Addr) error {
 		if !w.sentAddrs.Contains(addr) {
 			log.Debugf("Local WEP IP now active for ALP policy: %v", addr)
-			w.callbacks.OnIPSetMemberAdded(tproxydefs.ApplicationLayerPolicyIPSet, labelindex.IPSetMember{CIDR: addr.AsCIDR()})
+			w.callbacks.OnIPSetMemberAdded(tproxydefs.ApplicationLayerPolicyIPSet, ipsetmember.MakeCIDROrIPOnly(addr.AsCIDR()))
 			w.sentAddrs.Add(addr)
 		}
 		return nil

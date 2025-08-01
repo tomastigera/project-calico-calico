@@ -95,7 +95,11 @@
         "tcp_min_mss": 0,
         "tcp_min_send_congestion_window": 0,
         "tcp_total_retransmissions": 0,
-        "tcp_unrecovered_to": 0
+        "tcp_unrecovered_to": 0,
+        "transit_bytes_in": 0,
+        "transit_bytes_out": 0,
+        "transit_packets_in": 0,
+        "transit_packets_out": 0
     },
     "severity": 100,
     "source_name": "-",
@@ -191,7 +195,11 @@
         "tcp_min_send_congestion_window": 0,
         "tcp_total_retransmissions": 0,
         "tcp_unrecovered_to": 0,
-        "tcp_mean_mss": 0
+        "tcp_mean_mss": 0,
+        "transit_bytes_in": 0,
+        "transit_bytes_out": 0,
+        "transit_packets_in": 0,
+        "transit_packets_out": 0
     },
     "severity": 100,
     "source_name": "-",

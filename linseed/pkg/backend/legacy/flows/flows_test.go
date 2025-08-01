@@ -130,7 +130,7 @@ func TestListFlows(t *testing.T) {
 			WithRandomFlowStats().WithRandomPacketStats().
 			WithReporter("src").WithAction("allowed").
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-			WithPolicies("0|allow-tigera|calico-system/allow-tigera.cnx-apiserver-access|allow|1").
+			WithPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
 			WithProcessName("/usr/bin/curl")
 		expected1 := populateFlowData(t, ctx, bld.Copy(), client, cluster1Info)
 		expected2 := populateFlowData(t, ctx, bld.Copy(), client, cluster2Info)

@@ -1,5 +1,6 @@
 # Tigera Licensing
-CNX licensing & crypto library and `carrotctl` license management tool 
+
+Calico Enterprise licensing and crypto library and `carrotctl` license management tool.
 
 Resources
 

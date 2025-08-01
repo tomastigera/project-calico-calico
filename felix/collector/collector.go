@@ -906,11 +906,11 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 	} else {
 		// Report rule trace stats.
 		if (expired || data.EgressRuleTrace.IsDirty()) && data.EgressRuleTrace.FoundVerdict() {
-			c.LogMetrics(data.MetricUpdateEgressNoConn(ut))
+			c.LogMetrics(data.MetricUpdateEgressNoConn(ut, false))
 			data.EgressRuleTrace.ClearDirtyFlag()
 		}
 		if (expired || data.EgressTransitRuleTrace.IsDirty()) && data.EgressTransitRuleTrace.FoundVerdict() {
-			c.LogMetrics(data.MetricUpdateEgressNoConn(ut))
+			c.LogMetrics(data.MetricUpdateEgressNoConn(ut, true))
 			data.EgressTransitRuleTrace.ClearDirtyFlag()
 		}
 		if (expired || data.IngressRuleTrace.IsDirty()) && data.IngressRuleTrace.FoundVerdict() {

@@ -17,14 +17,14 @@ The token can be retrieved using [token.sh](/install-scripts/token.sh). You can 
 This step is required to enable multi cluster mode on a standalone TSEE cluster. A standalone already has Voltron installed. All you need to do is to enable the multi cluster mode that allows an user to create managed clusters.
 
 *This step is optional
-Voltron needs an accessible IP to accept tunnels. The script will pick the internal ip of the master node. If you wish to change this, add the following environment variable VOLTRON_PUBLIC_IP to cnx-manager-proxy container.*
+Voltron needs an accessible IP to accept tunnels. The script will pick the internal ip of the master node. If you wish to change this, add the following environment variable VOLTRON_PUBLIC_IP to manager-proxy container.*
 
 Next run the following script to enable a multi cluster mode.
 Please follow the [setup-voltron-mgmt-cluster.bash](/install-scripts/setup-voltron-mgmt-cluster.bash).
 
 ## Managed Clusters
 
-Create a managed cluster via CNX manager UI and apply the manifest for guardian.
+Create a managed cluster via manager UI and apply the manifest for guardian.
 This step is required to enable multi cluster client mode on a standalone TSEE cluster.
 
 Please follow the [setup-guardian-app-cluster.bash](/install-scripts/setup-guardian-app-cluster.bash).

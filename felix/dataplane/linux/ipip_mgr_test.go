@@ -406,6 +406,10 @@ var _ = Describe("IPIPManager", func() {
 	})
 })
 
+const (
+	mockedTunnelIndex = 6
+)
+
 var (
 	notFound    = errors.New("not found")
 	mockFailure = errors.New("mock failure")
@@ -536,6 +540,7 @@ func (d *mockTunnelDataplane) LinkAdd(l netlink.Link) error {
 	Expect(l.Attrs().Name).To(Equal(d.tunnelLinkName))
 	if d.tunnelLink == nil {
 		logrus.Info("Creating tunnel link")
+		l.Attrs().Index = mockedTunnelIndex
 		d.tunnelLinkAttrs = l.Attrs()
 		d.tunnelLink = l
 	}

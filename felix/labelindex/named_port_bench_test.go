@@ -24,6 +24,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	. "github.com/projectcalico/calico/felix/labelindex"
+	. "github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

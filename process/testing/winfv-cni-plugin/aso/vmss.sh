@@ -89,11 +89,11 @@ EOF
 
   echo
   echo "Generating helper files"
-  echo ${MASTER_CONNECT_COMMAND} > ./ssh-node-linux.sh
+  echo '${MASTER_CONNECT_COMMAND} "$@"' > ./ssh-node-linux.sh
   chmod +x ./ssh-node-linux.sh
 
   cat << EOF > ssh-node-windows.sh
-#usage: . /ssh-node-windows.sh "Restart-Computer -force"
+#usage: ./ssh-node-windows.sh "Restart-Computer -force"
 ${WINDOWS_CONNECT_COMMAND} \$1
 EOF
   chmod +x ./ssh-node-windows.sh
@@ -119,7 +119,7 @@ chmod +x ./scp-from-windows.sh
 }
 
 function retry-ssh() {
-  local SSH_CMD=$1
+  local SSH_CMD="$@"
   local RETRY_INTERVAL=30         # Seconds between retries
   local MAX_DURATION=300
 
@@ -153,8 +153,8 @@ function retry-ssh() {
 function confirm-nodes-ssh() {
   echo;echo "confirm nodes can be accessed by ssh..."
   show_connections
-  retry-ssh "${MASTER_CONNECT_COMMAND} echo"
-  retry-ssh "${WINDOWS_CONNECT_COMMAND} -Command 'echo'"
+  retry-ssh ./ssh-node-linux.sh echo
+  retry-ssh ./ssh-node-windows.sh "-Help"
 
   # Azure may assign another public IP to the VM.
   # So even the first batch of SSHes works, the ip could be updated later.
@@ -162,8 +162,8 @@ function confirm-nodes-ssh() {
   echo "sleep 30 seconds..."
   sleep 30
   show_connections
-  retry-ssh "${MASTER_CONNECT_COMMAND} echo"
-  retry-ssh "${WINDOWS_CONNECT_COMMAND} -Command 'echo'"
+  retry-ssh ./ssh-node-linux.sh echo
+  retry-ssh ./ssh-node-windows.sh "-Help"
   echo "VMs can be accessed by ssh.";echo
 }
 
