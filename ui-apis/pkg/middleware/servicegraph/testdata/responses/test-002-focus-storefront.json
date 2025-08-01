@@ -270,7 +270,7 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "cnx-queryserver",
+                "name": "queryserver",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,

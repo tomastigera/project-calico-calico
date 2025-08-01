@@ -8,7 +8,7 @@ EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
-API_SERVER_IMAGE      ?=cnx-apiserver
+API_SERVER_IMAGE      ?=apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
 
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw

@@ -199,7 +199,8 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
-		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 {
+		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 &&
+			fl.FlowReportedStats.TransitPacketsIn+fl.FlowReportedStats.TransitPacketsOut == 0 {
 			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}

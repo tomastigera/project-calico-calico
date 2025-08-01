@@ -111,9 +111,12 @@ Description:
 			if v == "" {
 				v = "unknown"
 			}
-			cv := ci.Spec.CNXVersion
+			cv := ci.Spec.CalicoEnterpriseVersion
 			if cv == "" {
-				cv = "unknown"
+				cv = ci.Spec.CNXVersion
+				if cv == "" {
+					cv = "unknown"
+				}
 			}
 			t := ci.Spec.ClusterType
 			if t == "" {

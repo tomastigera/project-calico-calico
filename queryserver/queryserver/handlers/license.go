@@ -72,7 +72,7 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the license is valid.
 	if licStatus := claims.Validate(); licStatus != licClient.Valid {
 		// If the license is expired (but within grace period) then show this warning banner, but continue to work.
-		// in CNX v2.1, grace period is infinite.
+		// in Calico Enterprise v2.1, grace period is infinite.
 		licResp.Warning = "[WARNING] Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io"
 		writeResponse(w, licResp)
 		return

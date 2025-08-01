@@ -61,11 +61,13 @@ func CheckVersionMismatch(configArg, allowMismatchArg interface{}) error {
 		return fmt.Errorf("Unable to get Cluster Information to verify version mismatch: %w\nUse --allow-version-mismatch to override.\n", err)
 	}
 
-	clusterv := ci.Spec.CNXVersion
+	clusterv := ci.Spec.CalicoEnterpriseVersion
 	if clusterv == "" {
-		// CNXVersion field not specified in the cluster, so skip check.
-		log.Infof("Skip version mismatch checking due to CNXVersion not being set")
-
+		clusterv = ci.Spec.CNXVersion
+		if clusterv == "" {
+			// Calico Enterprise version field not specified in the cluster, so skip check.
+			log.Infof("Skip version mismatch checking due to Calico Enterprise version not being set")
+		}
 		return nil
 	}
 

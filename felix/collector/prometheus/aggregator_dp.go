@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
@@ -38,7 +39,7 @@ type DeniedPacketsAggregateKey struct {
 }
 
 func getDeniedPacketsAggregateKey(mu metric.Update) (DeniedPacketsAggregateKey, error) {
-	lastRuleID := mu.GetLastRuleID()
+	lastRuleID := lastRuleID(mu)
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
 		return DeniedPacketsAggregateKey{}, fmt.Errorf("invalid metric update")
@@ -82,7 +83,7 @@ func (dp *DeniedPacketsAggregator) RegisterMetrics(registry *prometheus.Registry
 }
 
 func (dp *DeniedPacketsAggregator) OnUpdate(mu metric.Update) {
-	lastRuleID := mu.GetLastRuleID()
+	lastRuleID := lastRuleID(mu)
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
 		return
@@ -134,21 +135,29 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu metric.Update) {
 		}
 		value.refs.Add(mu.Tuple)
 	}
+	inMetric := mu.InMetric
+	outMetric := mu.OutMetric
 	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		inMetric = mu.InTransitMetric
+		outMetric = mu.OutTransitMetric
+		lastRuleID = mu.GetLastTransitRuleID()
+	}
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
 		return
 	}
 	switch lastRuleID.Direction {
 	case rules.RuleDirIngress:
-		value.packets.Add(float64(mu.InMetric.DeltaPackets))
-		value.bytes.Add(float64(mu.InMetric.DeltaBytes))
+		value.packets.Add(float64(inMetric.DeltaPackets))
+		value.bytes.Add(float64(inMetric.DeltaBytes))
 	case rules.RuleDirEgress:
-		value.packets.Add(float64(mu.OutMetric.DeltaPackets))
-		value.bytes.Add(float64(mu.OutMetric.DeltaBytes))
+		value.packets.Add(float64(outMetric.DeltaPackets))
+		value.bytes.Add(float64(outMetric.DeltaBytes))
 	default:
 		return
 	}
+
 	dp.aggStats[key] = value
 }
 
@@ -161,7 +170,7 @@ func (dp *DeniedPacketsAggregator) expireMetric(mu metric.Update) {
 	if !ok || !value.refs.Contains(mu.Tuple) {
 		return
 	}
-	lastRuleID := mu.GetLastRuleID()
+	lastRuleID := lastRuleID(mu)
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
 		return
@@ -205,4 +214,12 @@ func (dp *DeniedPacketsAggregator) deleteMetric(key DeniedPacketsAggregateKey) {
 		gaugeDeniedBytes.Delete(value.labels)
 		delete(dp.aggStats, key)
 	}
+}
+
+func lastRuleID(mu metric.Update) *calc.RuleID {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		lastRuleID = mu.GetLastTransitRuleID()
+	}
+	return lastRuleID
 }

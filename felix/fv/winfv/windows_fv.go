@@ -45,7 +45,7 @@ func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
 	}
 
 	var backend CalicoBackEnd
-	networkType := testutils.Powershell(`Get-HnsNetwork | Where name -EQ Calico | Select Type`)
+	networkType, _ := testutils.Powershell(`Get-HnsNetwork | Where name -EQ Calico | Select Type`)
 	log.Infof("Windows network type %s", networkType)
 	if strings.Contains(strings.ToLower(networkType), "l2bridge") {
 		backend = CalicoBackendBGP

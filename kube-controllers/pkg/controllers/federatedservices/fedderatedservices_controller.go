@@ -497,7 +497,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 				// not be updating the endpoints for this service.
 				if entry.federationConfigErr != nil && id.cluster == "" {
 					log.WithError(entry.federationConfigErr).Warningf("Unable to parse federation config; "+
-						"the Service '%v' will not be included in CNX federation", entry.service.Name)
+						"the Service '%v' will not be included in Calico Enterprise federation", entry.service.Name)
 				}
 			}
 

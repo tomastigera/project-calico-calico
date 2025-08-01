@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,7 +22,12 @@ import (
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
-const DestinationEnvoyReporter = "destination"
+const (
+	DestinationEnvoyReporter    = "destination"
+	EnvoyGatewayReporter        = "gateway"
+	EnvoyGatewayEdgeReporter    = "gateway-edge"
+	EnvoyGatewayProxiedReporter = "gateway-proxied"
+)
 
 type connectionCounter struct {
 	connectionCounts map[TupleKey]int
@@ -219,26 +225,44 @@ func (ec *envoyCollector) ParseRawLogs(text string) (EnvoyLog, error) {
 }
 
 func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
-
-	if envoyLog.Reporter != DestinationEnvoyReporter {
-		// client side logs are not processed at the time
-		// on the client side downstream_local_address refers to destination, upstream_local_address to source
+	switch envoyLog.Reporter {
+	case EnvoyGatewayProxiedReporter:
+		firstXFFHost := ""
+		xFFHosts := strings.Split(envoyLog.XForwardedFor, ",")
+		if len(xFFHosts) > 0 {
+			firstXFFHost = strings.TrimSpace(xFFHosts[0])
+			if firstXFFHost != "" {
+				// For XFF, we need to get the port from downstream_direct_remote_address
+				_, sp, err := net.SplitHostPort(envoyLog.DSDirectRemoteAddress)
+				if err != nil {
+					return EnvoyLog{}, fmt.Errorf("error parsing port from downstream_direct_remote_address: %w", err)
+				}
+				srcWithPort := net.JoinHostPort(firstXFFHost, sp)
+				return parseFiveTupleInformationFromFields(envoyLog, envoyLog.UpstreamHost, srcWithPort)
+			}
+		}
+		fallthrough // if no XFF is present, we fall through to the next case which is the Gateway Edge Reporter
+	case EnvoyGatewayReporter, EnvoyGatewayEdgeReporter:
+		return parseFiveTupleInformationFromFields(envoyLog, envoyLog.UpstreamHost, envoyLog.DSDirectRemoteAddress)
+	case DestinationEnvoyReporter:
+		return parseFiveTupleInformationFromFields(envoyLog, envoyLog.DSLocalAddress, envoyLog.DSRemoteAddress)
+	default:
+		// If the reporter is not "gateway" or "destination", we do not process
+		// the log at this time.
 		log.Warnf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
 		return EnvoyLog{}, fmt.Errorf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
 	}
+}
 
-	// this case is envoyLog.Reporter == "destination" or the server side logs
-	// on the server side downstream_local_address refers to destination, downstream_remote_address refers to source
-	// Refer doc https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage.html
-	dh, dp, derr := net.SplitHostPort(envoyLog.DSLocalAddress)
-	sh, sp, serr := net.SplitHostPort(envoyLog.DSRemoteAddress)
-
-	if serr != nil {
-		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from downstream_remote_address %w", derr)
+func parseFiveTupleInformationFromFields(envoyLog EnvoyLog, dest, src string) (EnvoyLog, error) {
+	dh, dp, derr := net.SplitHostPort(dest)
+	if derr != nil {
+		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from destination information: %w", derr)
 	}
 
-	if derr != nil {
-		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from downstream_local_address %w", serr)
+	sh, sp, serr := net.SplitHostPort(src)
+	if serr != nil {
+		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from source information: %w", serr)
 	}
 
 	envoyLog.SrcIp = sh
@@ -249,7 +273,6 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 	envoyLog.DstPort = int32(dport)
 
 	return envoyLog, nil
-
 }
 
 func (ec *envoyCollector) Start(ctx context.Context) {
@@ -286,28 +309,32 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	}
 
 	entry := EnvoyLog{
-		Reporter:            DestinationEnvoyReporter,
-		StartTime:           startTime.String(),
-		Duration:            int32(duration.Nanos / 1000000),
-		ResponseCode:        int32(responseCode.Value),
-		BytesSent:           int32(logMsg.Request.RequestBodyBytes + logMsg.Request.RequestHeadersBytes),
-		BytesReceived:       int32(logMsg.Response.ResponseBodyBytes + logMsg.Response.ResponseHeadersBytes),
-		UserAgent:           logMsg.Request.RequestHeaders["user-agent"],
-		RequestPath:         logMsg.Request.GetPath(),
-		RequestMethod:       logMsg.Request.GetRequestMethod().String(),
-		RequestId:           logMsg.Request.RequestId,
-		Type:                "http",
-		DSRemoteAddress:     logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
-		DSLocalAddress:      logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
-		UpstreamServiceTime: strconv.Itoa(int(timeToLastUpstreamTxByte.Nanos / 1000000)),
-		Protocol:            "tcp", //log.ProtocolVersion.String(),
-		SrcIp:               logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
-		DstIp:               logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
-		SrcPort:             int32(logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetPortValue()),
-		DstPort:             int32(logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetPortValue()),
-		Count:               1,
-		DurationMax:         int32(duration.Nanos / 1000000),
-		Latency:             int32(duration.Nanos / 1000000),
+		Reporter:              DestinationEnvoyReporter,
+		StartTime:             startTime.String(),
+		Duration:              int32(duration.Nanos / 1000000),
+		ResponseCode:          int32(responseCode.Value),
+		BytesSent:             int32(logMsg.Request.RequestBodyBytes + logMsg.Request.RequestHeadersBytes),
+		BytesReceived:         int32(logMsg.Response.ResponseBodyBytes + logMsg.Response.ResponseHeadersBytes),
+		UserAgent:             logMsg.Request.RequestHeaders["user-agent"],
+		RequestPath:           logMsg.Request.GetPath(),
+		RequestMethod:         logMsg.Request.GetRequestMethod().String(),
+		RequestId:             logMsg.Request.RequestId,
+		Type:                  "http",
+		DSRemoteAddress:       logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
+		DSLocalAddress:        logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
+		UpstreamHost:          logMsg.GetCommonProperties().GetUpstreamLocalAddress().GetSocketAddress().GetAddress(),
+		UpstreamLocalAddress:  logMsg.GetCommonProperties().GetUpstreamLocalAddress().GetSocketAddress().GetAddress(),
+		DSDirectRemoteAddress: logMsg.GetCommonProperties().GetDownstreamDirectRemoteAddress().GetSocketAddress().GetAddress(),
+		XForwardedFor:         logMsg.Request.RequestHeaders["x-forwarded-for"],
+		UpstreamServiceTime:   strconv.Itoa(int(timeToLastUpstreamTxByte.Nanos / 1000000)),
+		Protocol:              "tcp", //log.ProtocolVersion.String(),
+		SrcIp:                 logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
+		DstIp:                 logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
+		SrcPort:               int32(logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetPortValue()),
+		DstPort:               int32(logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetPortValue()),
+		Count:                 1,
+		DurationMax:           int32(duration.Nanos / 1000000),
+		Latency:               int32(duration.Nanos / 1000000),
 	}
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)

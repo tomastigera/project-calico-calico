@@ -20,7 +20,6 @@ var (
 	secretDeniedPrefix = []string{
 		"alertmanager-calico-",
 		"calico-",
-		"cnx-",
 		"default-token-",
 		"elastic-",
 		"intrusion-detection-controller-token-",

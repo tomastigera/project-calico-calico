@@ -7,8 +7,7 @@ PACKAGE_NAME          ?= github.com/projectcalico/calico/l7-collector
 
 L7_COLLECTOR_IMAGE    ?=l7-collector
 ENVOY_IMAGE           ?=envoy
-ENVOY_INIT_IMAGE      ?=envoy-init
-BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE) $(ENVOY_INIT_IMAGE)
+BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -38,7 +37,6 @@ endif
 ###############################################################################
 L7_COLLECTOR_CONTAINER_CREATED=.l7-collector.created-$(ARCH)
 ENVOY_IMAGE_CREATED=.envoy.created-$(ARCH)
-ENVOY_INIT_CONTAINER_CREATED=.envoy-init.created-$(ARCH)
 
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -46,7 +44,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE) $(ENVOY_INIT_IMAGE)
+image: $(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE)
 
 $(L7_COLLECTOR_IMAGE): $(L7_COLLECTOR_CONTAINER_CREATED)
 $(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile bin/l7-collector-$(ARCH)
@@ -60,21 +58,12 @@ $(ENVOY_IMAGE_CREATED): register envoy/Dockerfile
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_IMAGE)
 	touch $@
 
-$(ENVOY_INIT_IMAGE): $(ENVOY_INIT_CONTAINER_CREATED)
-$(ENVOY_INIT_CONTAINER_CREATED): register envoy-init/Dockerfile envoy-init/init_iptables.sh
-	$(DOCKER_BUILD) -t $(ENVOY_INIT_IMAGE):latest-$(ARCH) -f envoy-init/Dockerfile envoy-init
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_INIT_IMAGE)
-	touch $@
-
 .PHONY: clean
 clean:
 	rm -rf bin
 	rm -f $(L7_COLLECTOR_CONTAINER_CREATED)
-	rm -f $(ENVOY_INIT_CONTAINER_CREATED)
-
 	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(ENVOY_IMAGE) -a -q)
-	-docker image rm -f $$(docker images $(ENVOY_INIT_IMAGE) -a -q)
 
 ###############################################################################
 # UTs

@@ -9,7 +9,7 @@ if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
     cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_flows/out-syslog.conf"
   fi
   if [ "${FORWARD_NON_CLUSTER_LOGS_TO_SYSLOG}" == "true" ]; then
-    cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-syslog.conf"
+    cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog-nch.conf" "${ROOT_DIR}/fluentd/etc/output_non_cluster_flows/out-syslog.conf"
   fi
 fi
 if [ "${SYSLOG_DNS_LOG}" == "true" ]; then

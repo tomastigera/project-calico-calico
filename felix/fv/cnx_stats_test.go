@@ -27,10 +27,10 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
-// Pause time before felix will generate CNX metrics
+// Pause time before felix will generate Calico Enterprise metrics
 var pollingInterval = time.Duration(10) * time.Second
 
-var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datastore, 4 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
 		infra          infrastructure.DatastoreInfra
@@ -77,7 +77,7 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 			cprb, _ := metrics.GetCNXMetrics(felix.IP, "cnx_policy_rule_bytes")
 			cdp, _ := metrics.GetCNXMetrics(felix.IP, "calico_denied_packets")
 			cdb, _ := metrics.GetCNXMetrics(felix.IP, "calico_denied_bytes")
-			log.Info("Collected CNX Metrics\n\n" +
+			log.Info("Collected Calico Enterprise Metrics\n\n" +
 				"cnx_policy_rule_connections\n" +
 				"===========================\n" +
 				strings.Join(cprc, "\n") + "\n\n" +
@@ -898,7 +898,7 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
-var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
 		infra    infrastructure.DatastoreInfra
@@ -936,7 +936,7 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 			cprb, _ := metrics.GetCNXMetrics(felix.IP, "cnx_policy_rule_bytes")
 			cdp, _ := metrics.GetCNXMetrics(felix.IP, "calico_denied_packets")
 			cdb, _ := metrics.GetCNXMetrics(felix.IP, "calico_denied_bytes")
-			log.Info("Collected CNX Metrics\n\n" +
+			log.Info("Collected Calico Enterprise Metrics\n\n" +
 				"cnx_policy_rule_connections\n" +
 				"===========================\n" +
 				strings.Join(cprc, "\n") + "\n\n" +

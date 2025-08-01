@@ -15,16 +15,16 @@ registry, and then push the newly tagged images to your own registry.
 
     ``` highlight
     docker pull quay.io/tigera/operator:__OP_VERSION__
-    docker pull quay.io/tigera/cnx-manager:__CE_VERSION__
+    docker pull quay.io/tigera/manager:__CE_VERSION__
     docker pull quay.io/tigera/voltron:__CE_VERSION__
     docker pull quay.io/tigera/guardian:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-apiserver:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-queryserver:__CE_VERSION__
+    docker pull quay.io/tigera/apiserver:__CE_VERSION__
+    docker pull quay.io/tigera/queryserver:__CE_VERSION__
     docker pull quay.io/tigera/kube-controllers:__CE_VERSION__
     docker pull quay.io/tigera/calicoq:__CE_VERSION__
     docker pull quay.io/tigera/typha:__CE_VERSION__
     docker pull quay.io/tigera/calicoctl:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-node:__CE_VERSION__
+    docker pull quay.io/tigera/node:__CE_VERSION__
     docker pull quay.io/tigera/dikastes:__CE_VERSION__
     docker pull quay.io/tigera/dex:__CE_VERSION__
     docker pull quay.io/tigera/fluentd:__CE_VERSION__
@@ -62,7 +62,6 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/eck-operator:__CE_VERSION__
     docker pull quay.io/tigera/alertmanager:__CE_VERSION__
     docker pull quay.io/tigera/envoy:__CE_VERSION__
-    docker pull quay.io/tigera/envoy-init:__CE_VERSION__
     docker pull quay.io/tigera/pod2daemon-flexvol:__CE_VERSION__
     docker pull quay.io/tigera/csi:__CE_VERSION__
     docker pull quay.io/tigera/node-driver-registrar:__CE_VERSION__
@@ -82,16 +81,16 @@ registry, and then push the newly tagged images to your own registry.
 
     ``` highlight
     docker pull quay.io/tigera/operator:__OP_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/operator:__OP_VERSION__
-    docker pull quay.io/tigera/cnx-manager:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-manager:__CE_VERSION__
+    docker pull quay.io/tigera/manager:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/manager:__CE_VERSION__
     docker pull quay.io/tigera/voltron:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/voltron:__CE_VERSION__
     docker pull quay.io/tigera/guardian:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/guardian:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-apiserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-apiserver:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-queryserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-queryserver:__CE_VERSION__
+    docker pull quay.io/tigera/apiserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/apiserver:__CE_VERSION__
+    docker pull quay.io/tigera/queryserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/queryserver:__CE_VERSION__
     docker pull quay.io/tigera/kube-controllers:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/kube-controllers:__CE_VERSION__
     docker pull quay.io/tigera/calicoq:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/calicoq:__CE_VERSION__
     docker pull quay.io/tigera/typha:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/typha:__CE_VERSION__
     docker pull quay.io/tigera/calicoctl:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/calicoctl:__CE_VERSION__
-    docker pull quay.io/tigera/cnx-node:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-node:__CE_VERSION__
+    docker pull quay.io/tigera/node:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/node:__CE_VERSION__
     docker pull quay.io/tigera/dikastes:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
     docker pull quay.io/tigera/dex:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
     docker pull quay.io/tigera/fluentd:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
@@ -129,7 +128,6 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/eck-operator:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/eck-operator:__CE_VERSION__
     docker pull quay.io/tigera/alertmanager:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/alertmanager:__CE_VERSION__
     docker pull quay.io/tigera/envoy:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/envoy:__CE_VERSION__
-    docker pull quay.io/tigera/envoy-init:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/envoy-init:__CE_VERSION__
     docker pull quay.io/tigera/pod2daemon-flexvol:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/pod2daemon-flexvol:__CE_VERSION__
     docker pull quay.io/tigera/csi:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/csi:__CE_VERSION__
     docker pull quay.io/tigera/node-driver-registrar:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/node-driver-registrar:__CE_VERSION__
@@ -148,16 +146,16 @@ registry, and then push the newly tagged images to your own registry.
 
     ``` highlight
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/operator:__OP_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-manager:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/manager:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/voltron:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/guardian:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-apiserver:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-queryserver:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/apiserver:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/queryserver:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/kube-controllers:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/calicoq:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/typha:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/calicoctl:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-node:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/node:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
@@ -195,7 +193,6 @@ registry, and then push the newly tagged images to your own registry.
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/eck-operator:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/alertmanager:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/envoy:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/envoy-init:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/pod2daemon-flexvol:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/csi:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/node-driver-registrar:__CE_VERSION__

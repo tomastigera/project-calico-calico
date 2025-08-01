@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -38,7 +38,7 @@ type L7ServiceIPSetsCalculator struct {
 	sai          *ServiceAddrIndexer
 	esai         *EndpointSliceAddrIndexer
 
-	activeWorkloadIPSetMembers map[labelindex.IPSetMember]struct{}
+	activeWorkloadIPSetMembers map[ipsetmember.IPSetMember]struct{}
 	activeEndpoints            set.Set[ipPortProtoKey]
 	activeNodePorts            set.Set[portProtoKey]
 
@@ -52,7 +52,7 @@ func NewL7ServiceIPSetsCalculator(callbacks ipSetUpdateCallbacks, conf *config.C
 		callbacks:    callbacks,
 		sai:          NewServiceAddrIndexer(),
 
-		activeWorkloadIPSetMembers: make(map[labelindex.IPSetMember]struct{}),
+		activeWorkloadIPSetMembers: make(map[ipsetmember.IPSetMember]struct{}),
 		esai:                       NewEndpointSliceAddrIndexer(),
 		activeEndpoints:            set.New[ipPortProtoKey](),
 		activeNodePorts:            set.New[portProtoKey](),
@@ -178,8 +178,8 @@ func (c *L7ServiceIPSetsCalculator) flush() {
 }
 
 func isTCP(ipPortProto ipPortProtoKey) bool {
-	protocol := labelindex.IPSetPortProtocol(ipPortProto.proto)
-	if protocol != labelindex.ProtocolTCP {
+	protocol := ipsetmember.Protocol(ipPortProto.proto)
+	if protocol != ipsetmember.ProtocolTCP {
 		log.Warningf("IP/Port/Protocol (%v/%d/%d) Protocol not valid for l7 logging",
 			ipPortProto.ip, protocol, ipPortProto.port)
 		return false
@@ -292,9 +292,9 @@ func (c *L7ServiceIPSetsCalculator) resolveNodePorts() ([]portProtoKey, []portPr
 		if c.activeNodePorts.Contains(portProto) {
 			continue
 		}
-		protocol := labelindex.IPSetPortProtocol(portProto.proto)
+		protocol := ipsetmember.Protocol(portProto.proto)
 		// skip non tcp for now
-		if protocol != labelindex.ProtocolTCP {
+		if protocol != ipsetmember.ProtocolTCP {
 			log.Warningf("Port/Protocol (%d/%d) Protocol not valid for tproxy", portProto.port, protocol)
 			continue
 		}
@@ -312,22 +312,20 @@ func (c *L7ServiceIPSetsCalculator) flushNodePorts(added []portProtoKey,
 	removed []portProtoKey) {
 
 	for _, portProto := range removed {
-		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
-			member := getIpSetPortMemberFromPortProto(portProto)
-			member.Family = 4
+		if ipsetmember.Protocol(portProto.proto) == ipsetmember.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto, 4)
 			c.callbacks.OnIPSetMemberRemoved(tproxydefs.NodePortsIPSet, member)
-			member.Family = 6
+			member = getIpSetPortMemberFromPortProto(portProto, 6)
 			c.callbacks.OnIPSetMemberRemoved(tproxydefs.NodePortsIPSet, member)
 			c.activeNodePorts.Discard(portProto)
 		}
 	}
 
 	for _, portProto := range added {
-		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
-			member := getIpSetPortMemberFromPortProto(portProto)
-			member.Family = 4
+		if ipsetmember.Protocol(portProto.proto) == ipsetmember.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto, 4)
 			c.callbacks.OnIPSetMemberAdded(tproxydefs.NodePortsIPSet, member)
-			member.Family = 6
+			member = getIpSetPortMemberFromPortProto(portProto, 6)
 			c.callbacks.OnIPSetMemberAdded(tproxydefs.NodePortsIPSet, member)
 			c.activeNodePorts.Add(portProto)
 		}
@@ -335,23 +333,18 @@ func (c *L7ServiceIPSetsCalculator) flushNodePorts(added []portProtoKey,
 
 }
 
-func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) labelindex.IPSetMember {
+func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) ipsetmember.IPSetMember {
 	netIP := net.IP(ipPortProto.ip[:])
-	member := labelindex.IPSetMember{
-		PortNumber: uint16(ipPortProto.port),
-		Protocol:   labelindex.IPSetPortProtocol(ipPortProto.proto),
-		CIDR:       ip.FromNetIP(netIP).AsCIDR(),
-	}
-
+	member := ipsetmember.MakeIPPortProto(
+		ip.FromNetIP(netIP),
+		uint16(ipPortProto.port),
+		ipsetmember.Protocol(ipPortProto.proto),
+	)
 	return member
 }
 
-func getIpSetPortMemberFromPortProto(portProto portProtoKey) labelindex.IPSetMember {
-	member := labelindex.IPSetMember{
-		PortNumber: uint16(portProto.port),
-	}
-
-	return member
+func getIpSetPortMemberFromPortProto(portProto portProtoKey, family int) ipsetmember.IPSetMember {
+	return ipsetmember.MakePortOnly(uint16(portProto.port), family)
 }
 
 func hasAnnotation(annotations map[string]string, annotation string) bool {

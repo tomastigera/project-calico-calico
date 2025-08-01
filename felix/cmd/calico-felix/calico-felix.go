@@ -37,7 +37,7 @@ Options:
 func main() {
 	// Parse command-line args.
 	version := "Version:            " + buildinfo.Version + "\n" +
-		"Release:            CNX\n" +
+		"Release:            Calico Enterprise\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
 		"Build date:         " + buildinfo.BuildDate + "\n"
 	arguments, err := docopt.ParseArgs(usage, nil, version)
