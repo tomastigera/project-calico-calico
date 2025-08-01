@@ -35,9 +35,6 @@ whisker:
   # Whisker is not supported in enterprise.
   enabled: false
 
-# CRDs are installed by `make kind-cluster-create` in lib.Makefile ($(KUBECTL) create -f $(REPO_ROOT)/libcalico-go/config/crd;)
-manageCRDs: false
-
 # Disable enterprise components not needed for tests.
 tigera-prometheus-operator:
   enabled: true

@@ -2163,7 +2163,8 @@
           "Description": "Specifies whether mtu file is required to start the felix.\nOptional as to keep the same as previous behavior.",
           "DescriptionHTML": "<p>Specifies whether mtu file is required to start the felix.\nOptional as to keep the same as previous behavior.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
