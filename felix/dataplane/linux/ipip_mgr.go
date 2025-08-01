@@ -58,8 +58,7 @@ type ipipManager struct {
 	ipSetMetadata ipsets.IPSetMetadata
 
 	// Indicates if configuration has changed since the last apply.
-	routesDirty bool
-	ipSetDirty  bool
+	ipSetDirty bool
 
 	// Configured list of external node ip cidr's to be added to the ipset.
 	externalNodeCIDRs []string
