@@ -32,6 +32,7 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_compliance_reports" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" && \
+        powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_non_cluster_flows" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_ids_events" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_kube_audit" && \
         powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7" && \
