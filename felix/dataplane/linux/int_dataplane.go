@@ -1348,7 +1348,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Infof("Connect time load balancer enabled: %s", config.BPFConnTimeLB)
 		} else {
 			// Deactivate the connect-time load balancer.
-			err = nat.RemoveConnectTimeLoadBalancer(config.BPFCgroupV2)
+			err = nat.RemoveConnectTimeLoadBalancer(true, config.BPFCgroupV2)
 			if err != nil {
 				log.WithError(err).Warn("Failed to detach connect-time load balancer. Ignoring.")
 			}
@@ -3691,7 +3691,7 @@ func createDNSBpfMaps(ipFamily proto.IPVersion) (maps.Map, maps.Map, maps.Map) {
 
 func cleanupBPFState(config Config) {
 	// Clean up any leftover BPF state.
-	err := bpfnat.RemoveConnectTimeLoadBalancer("")
+	err := bpfnat.RemoveConnectTimeLoadBalancer(true, "")
 	if err != nil {
 		log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 	}
