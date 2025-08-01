@@ -15,9 +15,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -36,14 +35,8 @@ func TestEgressHealthMainline(t *testing.T) {
 		Type: proto.IPSetUpdate_EGRESS_IP,
 		Id:   "set-1",
 		Members: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[0].IP.AsCIDR(),
-				PortNumber: uint16(h[0].Port),
-			}),
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[1].IP.AsCIDR(),
-				PortNumber: uint16(h[1].Port),
-			}),
+			MakeIPPortEgressMember(h[0].IP, h[0].Port).ToProtobufFormat(),
+			MakeIPPortEgressMember(h[1].IP, h[1].Port).ToProtobufFormat(),
 		},
 	})
 
@@ -136,16 +129,10 @@ func TestEgressHealthMainline(t *testing.T) {
 	tracker.OnIPSetDeltaUpdate(&proto.IPSetDeltaUpdate{
 		Id: "set-1",
 		RemovedMembers: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       ip.MustParseCIDROrIP("127.0.0.2"),
-				PortNumber: uint16(h[1].Port),
-			}),
+			MakeIPPortEgressMember(ip.FromString("127.0.0.2"), h[1].Port).ToProtobufFormat(),
 		},
 		AddedMembers: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       ip.MustParseCIDROrIP("127.0.0.3"),
-				PortNumber: uint16(h[2].Port),
-			}),
+			MakeIPPortEgressMember(ip.FromString("127.0.0.3"), h[2].Port).ToProtobufFormat(),
 		},
 	})
 	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
@@ -210,10 +197,7 @@ func TestEgressHealthTimeout(t *testing.T) {
 		Type: proto.IPSetUpdate_EGRESS_IP,
 		Id:   "set-1",
 		Members: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[0].IP.AsCIDR(),
-				PortNumber: uint16(h[0].Port),
-			}),
+			MakeIPPortEgressMember(h[0].IP, h[0].Port).ToProtobufFormat(),
 		},
 	})
 
@@ -261,10 +245,7 @@ func TestEgressHealthFailCount(t *testing.T) {
 		Type: proto.IPSetUpdate_EGRESS_IP,
 		Id:   "set-1",
 		Members: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[0].IP.AsCIDR(),
-				PortNumber: uint16(h[0].Port),
-			}),
+			MakeIPPortEgressMember(h[0].IP, h[0].Port).ToProtobufFormat(),
 		},
 	})
 
@@ -302,10 +283,7 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 		Type: proto.IPSetUpdate_EGRESS_IP,
 		Id:   "set-1",
 		Members: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[0].IP.AsCIDR(),
-				PortNumber: uint16(h[0].Port),
-			}),
+			MakeIPPortEgressMember(h[0].IP, h[0].Port).ToProtobufFormat(),
 		},
 	})
 	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
@@ -338,10 +316,7 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 		Type: proto.IPSetUpdate_EGRESS_IP,
 		Id:   "set-1",
 		Members: []string{
-			calc.EgressIPSetMemberToProto(labelindex.IPSetMember{
-				CIDR:       h[0].IP.AsCIDR(),
-				PortNumber: uint16(h[0].Port),
-			}),
+			MakeIPPortEgressMember(h[0].IP, h[0].Port).ToProtobufFormat(),
 		},
 	})
 	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
@@ -478,4 +453,14 @@ func newMockHealthListener(localIP string) (handler *healthHandler, cancel func(
 		_ = listener.Close()
 	}
 	return
+}
+
+func MakeIPPortEgressMember(addr ip.Addr, healthPort int) ipsetmember.IPSetMember {
+	return ipsetmember.MakeEgressGateway(
+		addr.(ip.V4Addr),
+		time.Time{},
+		0,
+		"",
+		uint16(healthPort),
+	)
 }

@@ -64,3 +64,10 @@ func WithPublish(publish bool) Option {
 		return nil
 	}
 }
+
+func WithRetagThirdPartyBaseImages(retag bool) Option {
+	return func(b *BranchManager) error {
+		b.retagThirdParty = retag
+		return nil
+	}
+}

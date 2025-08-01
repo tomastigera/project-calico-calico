@@ -2328,15 +2328,20 @@ func egressActiveMemberStrWithPort(cidr string, port uint16, hostname string) st
 }
 
 func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint16, hostname string) string {
-	startBytes, err := start.MarshalText()
-	if err != nil {
-		panic(err)
+	var startStr, finishStr string
+	if !start.IsZero() {
+		startBytes, err := start.MarshalText()
+		if err != nil {
+			panic(err)
+		}
+		finishBytes, err := finish.MarshalText()
+		if err != nil {
+			panic(err)
+		}
+		startStr = string(startBytes)
+		finishStr = string(finishBytes)
 	}
-	finishBytes, err := finish.MarshalText()
-	if err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)), port, hostname)
+	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, startStr, finishStr, port, hostname)
 }
 
 func namespaceToProfile(ns *kapiv1.Namespace) *v3.Profile {

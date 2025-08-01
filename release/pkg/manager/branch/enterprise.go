@@ -2,6 +2,7 @@ package branch
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -75,6 +76,22 @@ func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
 			logrus.WithError(err).Fatal("Failed to push new dev tag")
 			return err
 		}
+	}
+	return nil
+}
+
+func (b *BranchManager) retagThirdPartyBaseImages(stream string) error {
+	releaseBranchName := fmt.Sprintf("%s-%s", b.releaseBranchPrefix, stream)
+	logrus.WithField("branch", releaseBranchName).Info("retagging third-party base images")
+
+	args := []string{"release-retag-third-party-base-images"}
+	envs := append(os.Environ(),
+		fmt.Sprintf("RELEASE_BRANCH=%s", releaseBranchName),
+		"CONFIRM=true",
+	)
+
+	if _, err := command.Make(args, envs); err != nil {
+		return err
 	}
 	return nil
 }

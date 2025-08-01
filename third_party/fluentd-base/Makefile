@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/fluentd-base
 FLUENTD_BASE_IMAGE ?= fluentd-base
 BUILD_IMAGES ?= $(FLUENTD_BASE_IMAGE)
 
-FLUENTD_VERSION ?= 1.18.0
+FLUENTD_VERSION ?= 1.19.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -100,3 +100,10 @@ sub-windows-manifest-%:
 		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${ver} $(call unescapefs,$*):$(LATEST_IMAGE_TAG)-windows $${image}; \
 	done; \
 	$(DOCKER) manifest push --purge $(call unescapefs,$*):$(LATEST_IMAGE_TAG)-windows;
+
+.PHONY: release-retag-image
+release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-master \
+		$(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-$(RELEASE_BRANCH)$(double_quote)
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-master-windows \
+		$(THIRD_PARTY_REGISTRY_CD)/$(FLUENTD_BASE_IMAGE):$(FLUENTD_VERSION)-$(RELEASE_BRANCH)-windows$(double_quote)

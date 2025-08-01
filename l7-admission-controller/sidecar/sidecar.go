@@ -109,15 +109,13 @@ badRequest:
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-var (
-	defaultVolumes = []map[string]interface{}{
-		{"name": "envoy-config", "emptyDir": map[string]interface{}{}},
-		{"name": "dikastes-sock", "hostPath": map[string]interface{}{"path": "/var/run/dikastes", "type": "Directory"}},
-		{"name": "l7-collector-sock", "hostPath": map[string]interface{}{"path": "/var/run/l7-collector", "type": "Directory"}},
-	}
-)
+var defaultVolumes = []map[string]interface{}{
+	{"name": "envoy-config", "emptyDir": map[string]interface{}{}},
+	{"name": "dikastes-sock", "hostPath": map[string]interface{}{"path": "/var/run/dikastes", "type": "Directory"}},
+	{"name": "l7-collector-sock", "hostPath": map[string]interface{}{"path": "/var/run/l7-collector", "type": "Directory"}},
+}
 
-func generateDikastesInitContainer(image string, args []string) []map[string]interface{} {
+func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
 			"name":    "tigera-dikastes-init",
@@ -132,6 +130,10 @@ func generateDikastesInitContainer(image string, args []string) []map[string]int
 				{
 					"name":  "ENVOY_INBOUND_PORT",
 					"value": "16001",
+				},
+				{
+					"name":  "DATAPLANE",
+					"value": dataplane,
 				},
 			},
 			"volumeMounts": []map[string]interface{}{
@@ -203,6 +205,7 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 type sidecarCfg struct {
 	dikastesImg    string
 	envoyImg       string
+	dataplane      string
 	logging        bool
 	policy         bool
 	waf            bool
@@ -291,7 +294,7 @@ func (cfg *sidecarCfg) patchBytes(additionalPatches ...patchOp) ([]byte, error) 
 		Op:   "add",
 		Path: "/spec/initContainers",
 		Value: append(
-			generateDikastesInitContainer(cfg.dikastesImg, cfg.dikastesInitArgs()),
+			generateDikastesInitContainer(cfg.dikastesImg, cfg.dikastesInitArgs(), cfg.dataplane),
 			envoyValues...,
 		),
 	})
@@ -329,6 +332,7 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 	cfg := sidecarCfg{
 		dikastesImg:    s.cfg.DikastesImg,
 		envoyImg:       s.cfg.EnvoyImg,
+		dataplane:      s.cfg.Dataplane,
 		logging:        (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled"),
 		policy:         (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled"),
 		waf:            (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled"),

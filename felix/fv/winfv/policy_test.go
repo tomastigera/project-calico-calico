@@ -73,18 +73,19 @@ func powershell(args ...string) (string, string, error) {
 func getPodIP(name, namespace string) string {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config get pod %s -n %s -o jsonpath='{.status.podIP}'`,
 		name, namespace)
-	return testutils.Powershell(cmd)
+	out, _ := testutils.Powershell(cmd)
+	return out
 }
 
 func kubectlExec(command string) {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config -n demo exec %v`, command)
-	_ = testutils.Powershell(cmd)
+	_, _ = testutils.Powershell(cmd)
 }
 
 func kubectlExecWithErrors(command string) {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config -n demo exec %v`, command)
-	err := testutils.PowershellWithError(cmd)
-	log.Infof("Error: %s", err)
+	out, err := testutils.PowershellWithError(cmd)
+	log.Infof("Output: %s, Error: %s", out, err)
 }
 
 func newClient() clientv3.Interface {
