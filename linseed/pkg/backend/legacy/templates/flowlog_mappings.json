@@ -269,6 +269,18 @@
     "tcp_unrecovered_to": {
       "type": "long"
     },
+    "transit_bytes_in": {
+      "type": "long"
+    },
+    "transit_bytes_out": {
+      "type": "long"
+    },
+    "transit_packets_in": {
+      "type": "long"
+    },
+    "transit_packets_out": {
+      "type": "long"
+    },
     "host": {
       "type": "keyword"
     },

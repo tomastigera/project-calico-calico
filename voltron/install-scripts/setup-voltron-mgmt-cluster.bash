@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Patch the following for CNX Manager containers: 
-# - For cnx-manager, enable ENABLE_MULTI_CLUSTER_MANAGEMENT
-# - For tigera-voltron, mount volume to use secret cnx-voltron-tunnel
+# Patch the following for Tigera Manager containers: 
+# - For tigera-manager, enable ENABLE_MULTI_CLUSTER_MANAGEMENT
+# - For tigera-voltron, mount volume to use secret tigera-voltron-tunnel
 # - For tigera-voltron, open 9449 port to accept tunnels
 
 # Create certs that will be used for Voltron
@@ -25,7 +25,7 @@ kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cnx-voltron-tunnel
+  name: tigera-voltron-tunnel
   namespace: tigera-manager
 type: Opaque
 data:
@@ -40,7 +40,7 @@ echo "Using Voltron Public Ip ${INTERNAL_IP}"
 kubectl set env deployment tigera-manager  -ntigera-manager -c tigera-voltron VOLTRON_PUBLIC_IP=${INTERNAL_IP}:30449
 
 kubectl patch deployment -n tigera-manager tigera-manager --patch \
-'{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"tigera-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"tigera-voltron","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}, {"name": "VOLTRON_ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"cnx-voltron-tunnel"}]}],"volumes":[{"name":"cnx-voltron-tunnel","secret":{"secretName":"cnx-voltron-tunnel"}}]}}}}'
+'{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"tigera-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"tigera-voltron","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}, {"name": "VOLTRON_ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"tigera-voltron-tunnel"}]}],"volumes":[{"name":"tigera-voltron-tunnel","secret":{"secretName":"tigera-voltron-tunnel"}}]}}}}'
 
 kubectl apply -f - <<EOF
 apiVersion: v1
@@ -59,10 +59,10 @@ spec:
     k8s-app: tigera-manager
 EOF
 
-# Monitor deployment for cnx-manager
+# Monitor deployment for tigera-manager
 kubectl rollout status -n tigera-manager deployment/tigera-manager
 if [ $? -ne 0 ]; then
-  echo >&2 "Patching cnx-manager deployment failed"
+  echo >&2 "Patching tigera-manager deployment failed"
   exit 1
 fi
 

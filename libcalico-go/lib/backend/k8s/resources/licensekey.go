@@ -34,7 +34,7 @@ func NewLicenseKeyClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourc
 		restClient:      r,
 		name:            LicenseKeyCRDName,
 		resource:        LicenseKeyResourceName,
-		description:     "Tigera CNX License Key",
+		description:     "Calico Enterprise License Key",
 		k8sResourceType: reflect.TypeOf(apiv3.LicenseKey{}),
 		k8sResourceTypeMeta: metav1.TypeMeta{
 			Kind:       apiv3.KindLicenseKey,

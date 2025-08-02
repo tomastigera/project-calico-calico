@@ -77,6 +77,17 @@ var (
 			DeltaBytes:   1,
 		},
 	}
+	denyPacketTuple1DenyT3Transit = metric.Update{
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		IsConnection:   true,
+		TransitRuleIDs: []*calc.RuleID{ingressRulePolicy3Deny},
+		HasDenyRule:    true,
+		InTransitMetric: metric.Value{
+			DeltaPackets: 1,
+			DeltaBytes:   1,
+		},
+	}
 )
 
 func getMetricNumber(m prometheus.Gauge) int {
@@ -419,6 +430,88 @@ var _ = Describe("Denied packets Prometheus PromAggregator", func() {
 			})
 			It("should have the deleted entry as candidate for deletion", func() {
 				Expect(da.retainedMetrics).Should(HaveKey(key2))
+			})
+		})
+	})
+	Describe("Test Report for Transit", func() {
+		Context("No existing aggregated stats", func() {
+			Describe("Transit rule", func() {
+				var (
+					key   DeniedPacketsAggregateKey
+					value DeniedPacketsAggregateValue
+					refs  tuple.Set
+					ok    bool
+				)
+				BeforeEach(func() {
+					key = DeniedPacketsAggregateKey{
+						srcIP:  localIp1,
+						policy: ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
+					}
+					refs = tuple.NewSet()
+					refs.Add(tuple1)
+					da.OnUpdate(denyPacketTuple1DenyT3Transit)
+				})
+				It("should have 1 aggregated stats entry", func() {
+					Expect(da.aggStats).Should(HaveLen(1))
+				})
+				It("should have correct packet and byte counts", func() {
+					Expect(func() int {
+						value, ok = da.aggStats[key]
+						if !ok {
+							return -1
+						}
+						return getMetricNumber(value.packets)
+					}()).Should(Equal(1))
+					Expect(func() int {
+						value, ok = da.aggStats[key]
+						if !ok {
+							return -1
+						}
+						return getMetricNumber(value.bytes)
+					}()).Should(Equal(1))
+				})
+				It("should have correct refs", func() {
+					Expect(func() tuple.Set {
+						value, ok = da.aggStats[key]
+						if !ok {
+							return nil
+						}
+						return value.refs
+					}()).To(Equal(refs))
+				})
+			})
+		})
+	})
+	Describe("Test Expire Transit", func() {
+		var key1 DeniedPacketsAggregateKey
+		var value1 DeniedPacketsAggregateValue
+		BeforeEach(func() {
+			key1 = DeniedPacketsAggregateKey{
+				srcIP:  localIp1,
+				policy: ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
+			}
+			label1 := prometheus.Labels{
+				"srcIP":        net.IP(localIp1[:16]).String(),
+				"policy":       ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
+				LABEL_INSTANCE: "testHost",
+			}
+			value1 = DeniedPacketsAggregateValue{
+				packets: gaugeDeniedPackets.With(label1),
+				bytes:   gaugeDeniedBytes.With(label1),
+				refs:    tuple.NewSet(),
+			}
+			value1.refs.Add(tuple1)
+			value1.packets.Set(1)
+			value1.bytes.Set(1)
+			da.aggStats[key1] = value1
+		})
+		Describe("Delete a transit entry", func() {
+			BeforeEach(func() {
+				denyPacketTuple1DenyT3Transit.UpdateType = metric.UpdateTypeExpire
+				da.OnUpdate(denyPacketTuple1DenyT3Transit)
+			})
+			It("should have the deleted entry as candidate for deletion", func() {
+				Expect(da.retainedMetrics).Should(HaveKey(key1))
 			})
 		})
 	})

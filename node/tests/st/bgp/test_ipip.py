@@ -253,7 +253,7 @@ class TestIPIP(TestBase):
                 # Shutdown the calico-node on host1, we should still have connectivity because
                 # the node was shut down without removing the routes.  Check tunnel usage based
                 # on the current IPIP mode (only a mode of Always will use the tunnel).
-                host1.execute("docker rm -f cnx-node")
+                host1.execute("docker rm -f calico-node")
                 self.assert_ipip_routing(host1, workload_host1, workload_host2,
                                          modes[-1] == "Always")
 

@@ -59,6 +59,10 @@ func (b *FlowLogBuilder) Build() (*v1.FlowLog, error) {
 		b.activeLog.PacketsOut = 2
 		b.activeLog.BytesIn = 32
 		b.activeLog.BytesOut = 128
+		b.activeLog.TransitPacketsIn = 0
+		b.activeLog.TransitPacketsOut = 0
+		b.activeLog.TransitBytesIn = 0
+		b.activeLog.TransitBytesOut = 0
 	}
 	if b.randomFlowStats {
 		b.activeLog.NumFlows = 1
@@ -146,6 +150,10 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 		f.TrafficStats.BytesOut += log.BytesOut
 		f.TrafficStats.PacketsIn += log.PacketsIn
 		f.TrafficStats.PacketsOut += log.PacketsOut
+		f.TrafficStats.TransitBytesIn += log.TransitBytesIn
+		f.TrafficStats.TransitBytesOut += log.TransitBytesOut
+		f.TrafficStats.TransitPacketsIn += log.TransitPacketsIn
+		f.TrafficStats.TransitPacketsOut += log.TransitPacketsOut
 		f.LogStats.Completed += log.NumFlowsCompleted
 		f.LogStats.Started += log.NumFlowsStarted
 		f.LogStats.LogCount += log.NumFlows

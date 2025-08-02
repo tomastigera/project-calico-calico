@@ -4,12 +4,12 @@ PACKAGE_NAME = github.com/projectcalico/calico/node
 
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
-NODE_IMAGE            ?=cnx-node
+NODE_IMAGE            ?=node
 # Name of the Enterprise windows image
 # The windows image names are:
 # - OS: calico/node-windows
-# - EE: tigera/cnx-node-windows
-WINDOWS_IMAGE         ?=cnx-node-windows
+# - EE: tigera/node-windows
+WINDOWS_IMAGE         ?=node-windows
 
 # If this is a windows release build the windows image.  ARCHES will contain the values
 # in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
@@ -428,8 +428,8 @@ calico-typha.tar: ../go.mod $(shell find ../typha -name '*.go') $(shell find ../
 
 calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../apiserver image
-	docker tag tigera/cnx-apiserver:latest-$(ARCH) tigera/cnx-apiserver:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/cnx-apiserver:$(TEST_BUILD_TAG)
+	docker tag tigera/apiserver:latest-$(ARCH) tigera/apiserver:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/apiserver:$(TEST_BUILD_TAG)
 
 calico-cni.tar: ../go.mod $(shell find ../cni-plugin -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../cni-plugin image
@@ -464,8 +464,8 @@ kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go') $
 # Enterprise-only tar files below here.
 calico-queryserver.tar:
 	make -C ../queryserver image
-	docker tag tigera/cnx-queryserver:latest-$(ARCH) tigera/cnx-queryserver:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/cnx-queryserver:$(TEST_BUILD_TAG)
+	docker tag tigera/queryserver:latest-$(ARCH) tigera/queryserver:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/queryserver:$(TEST_BUILD_TAG)
 
 egress-gateway.tar: ../go.mod $(shell find ../egress-gateway -name '*.go') ../egress-gateway/* $(shell find ../libcalico-go -name '*.go')
 	make -C ../egress-gateway image
@@ -534,9 +534,9 @@ kibana.tar:
 
 manager.tar:
 	# TODO
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:$(RELEASE_BRANCH) tigera/cnx-manager:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/cnx-manager:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/manager:$(RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/manager:$(RELEASE_BRANCH) tigera/manager:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/manager:$(TEST_BUILD_TAG)
 
 ui-apis.tar:
 	make -C ../ui-apis image

@@ -37132,6 +37132,11 @@ spec:
                   type: string
                 restartMode:
                   type: string
+                reversePeering:
+                  enum:
+                    - Auto
+                    - Manual
+                  type: string
                 sourceAddress:
                   type: string
                 ttlSecurity:
@@ -37383,6 +37388,8 @@ spec:
               type: object
             spec:
               properties:
+                calicoEnterpriseVersion:
+                  type: string
                 calicoVersion:
                   type: string
                 clusterGUID:

@@ -108,7 +108,7 @@ type Interface interface {
 	// Most Calico deployment scenarios will automatically implicitly invoke this
 	// method and so a general consumer of this API can assume that the datastore
 	// is already initialized.
-	EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error
+	EnsureInitialized(ctx context.Context, calicoVersion, calicoEnterpriseVersion, clusterType string) error
 
 	// Close attempts to close any connections to the datastore.  Using the
 	// client after calling this method may result in undefined behavior.

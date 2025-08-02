@@ -375,7 +375,7 @@ func (c *MockIPAMClient) EgressGatewayPolicy() client.EgressGatewayPolicyInterfa
 	return nil
 }
 
-func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
+func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, calicoEnterpriseVersion, clusterType string) error {
 	// DO NOTHING
 	return nil
 }

@@ -61,6 +61,7 @@ require (
 	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/runtime v0.28.0
+	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-sql-driver/mysql v1.9.2
 	github.com/gofrs/flock v0.12.1
 	github.com/gofrs/uuid v4.4.0+incompatible
@@ -88,11 +89,13 @@ require (
 	github.com/juju/clock v1.1.1
 	github.com/juju/errors v1.0.0
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kelseyhightower/memkv v0.1.1
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/lestrrat-go/jwx/v2 v2.1.3
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/mdlayher/netlink v1.7.2
@@ -118,6 +121,7 @@ require (
 	github.com/prometheus/common v0.63.0
 	github.com/prometheus/procfs v0.16.1
 	github.com/robfig/cron v1.2.0
+	github.com/rs/cors v1.11.1
 	github.com/safchain/ethtool v0.5.10
 	github.com/shirou/gopsutil/v4 v4.25.4
 	github.com/sirupsen/logrus v1.9.3
@@ -129,11 +133,14 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	github.com/swaggest/openapi-go v0.2.59
 	github.com/tchap/go-patricia/v2 v2.3.2
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
-	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
+	github.com/tigera/tds-apiserver v0.88.0
+	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
+	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
@@ -183,15 +190,6 @@ require (
 	sigs.k8s.io/knftables v0.0.18
 	sigs.k8s.io/network-policy-api v0.1.5
 	sigs.k8s.io/yaml v1.4.0
-)
-
-require (
-	github.com/go-playground/validator/v10 v10.26.0
-	github.com/julienschmidt/httprouter v1.3.0
-	github.com/rs/cors v1.11.1
-	github.com/swaggest/openapi-go v0.2.59
-	github.com/tigera/tds-apiserver v0.88.0
-	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
 )
 
 require (
@@ -272,6 +270,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.5.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
@@ -302,6 +301,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.2.4 // indirect
@@ -347,6 +347,11 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc v1.0.6 // indirect
+	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lestrrat-go/strftime v1.1.0 // indirect
 	github.com/libopenstorage/openstorage v1.0.0 // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
@@ -398,6 +403,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
+	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect

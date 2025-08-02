@@ -96,34 +96,37 @@ docker exec -t kind-worker mkdir /tigera-elasticsearch
 ${kubectl} apply -f $TEST_DIR/infra/storage_class.yaml
 echo
 
+echo "Wait for tigera status to be ready"
+if ! ( ${kubectl} wait --for=create --timeout=60s tigerastatus/calico &&
+       ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/calico ); then
+  echo "TigeraStatus for Calico is down, collecting diags..."
+  ${kubectl} get -o yaml tigerastatus/calico
+  echo "Logs for tigera-operator:"
+  ${kubectl} logs -n tigera-operator -l k8s-app=tigera-operator
+  echo "Status of pods:"
+  ${kubectl} get po -A -o wide
+  ${kubectl} describe po -n calico-system
+  exit 1
+fi
+if ! ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/apiserver; then
+  ${kubectl} get -o yaml tigerastatus/apiserver
+  exit 1
+fi
+
 echo "Wait for Calico to be ready..."
-wait_pod_ready -n calico-system -l k8s-app
+for app in calico-node calico-kube-controllers calico-apiserver calico-typha; do
+  wait_pod_ready -n calico-system -l k8s-app="$app"
+done
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
 
-# TODO: Re-enable this. These seem to be flaky in enterprise.
-#echo "Wait for tigera status to be ready"
-#if ! ${kubectl} wait --for=condition=Available tigerastatus/calico; then
-#  echo "TigeraStatus for Calico is down, collecting diags..."
-#  ${kubectl} get -o yaml tigerastatus/calico
-#  echo "Logs for tigera-operator:"
-#  ${kubectl} logs -n tigera-operator -l k8s-app=tigera-operator
-#  echo "Status of pods:"
-#  ${kubectl} get po -A -o wide
-#  ${kubectl} describe po -n calico-system
-#  exit 1
-#fi
-#if ! ${kubectl} wait --for=condition=Available tigerastatus/apiserver; then
-#  ${kubectl} get -o yaml tigerastatus/apiserver
-#  exit 1
-#fi
 echo "Calico is running."
 echo
 
 # The GCR_IO_PULL_SECRET is not needed to install Calico, as we use locally loaded images. However,
 # it is still needed for some tests. Notably the EGW tests rely on this.
-${kubectl} get secret cnx-pull-secret -n tigera-operator ||
-  ${kubectl} -n tigera-operator create secret generic cnx-pull-secret \
+${kubectl} get secret tigera-pull-secret -n tigera-operator ||
+  ${kubectl} -n tigera-operator create secret generic tigera-pull-secret \
    --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
    --type=kubernetes.io/dockerconfigjson
 

@@ -47,7 +47,7 @@ var clusterInfoFields = set.From(
 	"ClusterType",
 	"CalicoVersion",
 	"Variant",
-	"CNXVersion",
+	"CalicoEnterpriseVersion",
 )
 
 var nodeFields = set.From(

@@ -74,7 +74,11 @@
       "@timestamp": 1615228205000,
       "bytes_out": 1730,
       "dest_ip": null,
-      "proto": "tcp"
+      "proto": "tcp",
+      "transit_bytes_in": 0,
+      "transit_bytes_out": 0,
+      "transit_packets_in": 0,
+      "transit_packets_out": 0
     }
   ],
   "after_key": {

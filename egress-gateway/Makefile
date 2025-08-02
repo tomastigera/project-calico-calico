@@ -81,7 +81,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(EGRESS_GATEWAY_IMAGE): $(GATEWAY_CONTAINER_CREATED)
-$(GATEWAY_CONTAINER_CREATED): Dockerfile $(GATEWAY_DAEMON_EXECUTABLE)
+$(GATEWAY_CONTAINER_CREATED): Dockerfile $(GATEWAY_DAEMON_EXECUTABLE) init-gateway.sh
 	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

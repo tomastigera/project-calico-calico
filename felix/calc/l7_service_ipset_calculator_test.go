@@ -12,7 +12,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/labelindex/ipsetmember"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -32,11 +32,11 @@ func (m *ipSetMockCallbacks) OnIPSetRemoved(setID string) {
 	_ = m.Called(setID)
 }
 
-func (m *ipSetMockCallbacks) OnIPSetMemberAdded(setID string, ip labelindex.IPSetMember) {
+func (m *ipSetMockCallbacks) OnIPSetMemberAdded(setID string, ip ipsetmember.IPSetMember) {
 	_ = m.Called(setID, ip)
 }
 
-func (m *ipSetMockCallbacks) OnIPSetMemberRemoved(setID string, setMember labelindex.IPSetMember) {
+func (m *ipSetMockCallbacks) OnIPSetMemberRemoved(setID string, setMember ipsetmember.IPSetMember) {
 	_ = m.Called(setID, setMember)
 }
 
@@ -44,7 +44,7 @@ type output struct {
 	setId    string
 	ipAddr   string
 	port     int32
-	protocol labelindex.IPSetPortProtocol
+	protocol ipsetmember.Protocol
 
 	// ipv6Port is set only for IPv6 ports, which are signalled by the Family field on the IPSetMember.
 	ipv6Port bool
@@ -64,22 +64,20 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 			for _, addedMember := range addedMembers {
 				switch addedMember.setId {
 				case tproxydefs.ServiceIPsIPSet:
-					member := labelindex.IPSetMember{
-						PortNumber: uint16(addedMember.port),
-						Protocol:   addedMember.protocol,
-					}
+					var member ipsetmember.IPSetMember
 					if addedMember.ipAddr != "" {
-						member.CIDR = ip.FromString(addedMember.ipAddr).AsCIDR()
+						addr := ip.FromString(addedMember.ipAddr)
+						member = ipsetmember.MakeIPPortProto(addr, uint16(addedMember.port), addedMember.protocol)
+					} else {
+						panic("not implemented")
 					}
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 				case tproxydefs.NodePortsIPSet:
-					member := labelindex.IPSetMember{
-						PortNumber: uint16(addedMember.port),
-					}
+					var member ipsetmember.IPSetMember
 					if addedMember.ipv6Port {
-						member.Family = 6
+						member = ipsetmember.MakePortOnly(uint16(addedMember.port), 6)
 					} else {
-						member.Family = 4
+						member = ipsetmember.MakePortOnly(uint16(addedMember.port), 4)
 					}
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 				}
@@ -88,22 +86,20 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 			for _, removedMember := range removedMembers {
 				switch removedMember.setId {
 				case tproxydefs.ServiceIPsIPSet:
-					member := labelindex.IPSetMember{
-						PortNumber: uint16(removedMember.port),
-						Protocol:   removedMember.protocol,
-					}
+					var member ipsetmember.IPSetMember
 					if removedMember.ipAddr != "" {
-						member.CIDR = ip.FromString(removedMember.ipAddr).AsCIDR()
+						addr := ip.FromString(removedMember.ipAddr)
+						member = ipsetmember.MakeIPPortProto(addr, uint16(removedMember.port), removedMember.protocol)
+					} else {
+						panic("not implemented")
 					}
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 				case tproxydefs.NodePortsIPSet:
-					member := labelindex.IPSetMember{
-						PortNumber: uint16(removedMember.port),
-					}
+					var member ipsetmember.IPSetMember
 					if removedMember.ipv6Port {
-						member.Family = 6
+						member = ipsetmember.MakePortOnly(uint16(removedMember.port), 6)
 					} else {
-						member.Family = 4
+						member = ipsetmember.MakePortOnly(uint16(removedMember.port), 4)
 					}
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 				}
@@ -180,17 +176,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				// There are always 2 port updates, one for v4 and one for v6
 				setId: tproxydefs.NodePortsIPSet,
@@ -235,17 +231,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -346,17 +342,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -412,17 +408,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -435,17 +431,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -496,17 +492,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -519,17 +515,17 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
@@ -568,7 +564,7 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
+				protocol: ipsetmember.ProtocolTCP,
 			}, {
 				setId: tproxydefs.NodePortsIPSet,
 				port:  456,

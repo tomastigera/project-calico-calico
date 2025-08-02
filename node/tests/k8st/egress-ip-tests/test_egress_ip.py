@@ -802,12 +802,12 @@ spec:
       ports:
       - 10250
     protocol: TCP
-  # kube-apiserver to tigera-apiserver egress
+  # kube-apiserver to calico-apiserver egress
   - action: Allow
     protocol: TCP
     destination:
       namespaceSelector: projectcalico.org/name == 'calico-system'
-      selector: k8s-app == 'tigera-apiserver'
+      selector: k8s-app == 'calico-apiserver'
 EOF
 """)
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-control-plane-heps"))
@@ -1444,7 +1444,7 @@ EOF
         return client, server, gateway
 
     def copy_pull_secret(self, ns):
-        out = run("kubectl get secret cnx-pull-secret -n tigera-operator -o json")
+        out = run("kubectl get secret tigera-pull-secret -n tigera-operator -o json")
 
         # Remove revision and UID information so we can re-apply cleanly.
         # This used to be done with --export, but that option has been removed from kubectl.

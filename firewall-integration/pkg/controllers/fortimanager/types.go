@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-const TigeraComment = "Managed by Tigera Calico Enterprise"
+const TigeraComment = "Managed by Calico Enterprise"
 
 type FortinetClient interface {
 	CreateFirewallAddress(FirewallAddress) error

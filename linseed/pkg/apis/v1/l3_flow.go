@@ -275,6 +275,18 @@ type TrafficStats struct {
 
 	// BytesOut is the total number of outgoing packets aggregated into this entry
 	BytesOut int64 `json:"bytes_out"`
+
+	// TransitPacketsIn is the total number of incoming transit packets aggregated into this entry
+	TransitPacketsIn int64 `json:"transit_packets_in"`
+
+	// TransitPacketsOut is the total number of outgoing transit packets aggregated into this entry
+	TransitPacketsOut int64 `json:"transit_packets_out"`
+
+	// TransitBytesIn is the total number of incoming transit bytes aggregated into this entry
+	TransitBytesIn int64 `json:"transit_bytes_in"`
+
+	// TransitBytesOut is the total number of outgoing transit bytes aggregated into this entry
+	TransitBytesOut int64 `json:"transit_bytes_out"`
 }
 
 // HTTPStats represent HTTP metrics aggregated from flows into this entry

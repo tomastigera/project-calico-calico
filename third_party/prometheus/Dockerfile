@@ -5,7 +5,7 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} AS ubi
 
-RUN microdnf upgrade
+RUN microdnf upgrade -y
 
 RUN mkdir /prometheus && \
     ln -s /etc/prometheus /prometheus/prometheus

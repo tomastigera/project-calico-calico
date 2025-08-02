@@ -161,7 +161,7 @@ class TestFelixOnGateway(TestBase):
         # And an nginx server on the external network only.
         log_and_run("docker run --network=cali-st-ext -d --name=cali-st-ext-nginx nginx")
 
-        # Add a CNX license key
+        # Add a Calico Enterprise license key
         apply_cnx_license(cls.hosts[0])
 
         for host in cls.hosts:

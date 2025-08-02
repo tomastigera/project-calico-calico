@@ -31,6 +31,10 @@ const (
 	FlowAggSumBytesIn                  = "sum_bytes_in"
 	FlowAggSumPacketsOut               = "sum_packets_out"
 	FlowAggSumBytesOut                 = "sum_bytes_out"
+	FlowAggSumTransitPacketsIn         = "sum_transit_packets_in"
+	FlowAggSumTransitPacketsOut        = "sum_transit_packets_out"
+	FlowAggSumTransitBytesIn           = "sum_transit_bytes_in"
+	FlowAggSumTransitBytesOut          = "sum_transit_bytes_out"
 	FlowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
 	FlowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
 	FlowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
@@ -131,6 +135,10 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 		{Name: FlowAggSumBytesIn, Field: "bytes_in"},
 		{Name: FlowAggSumPacketsOut, Field: "packets_out"},
 		{Name: FlowAggSumBytesOut, Field: "bytes_out"},
+		{Name: FlowAggSumTransitBytesIn, Field: "transit_bytes_in"},
+		{Name: FlowAggSumTransitBytesOut, Field: "transit_bytes_out"},
+		{Name: FlowAggSumTransitPacketsIn, Field: "transit_packets_in"},
+		{Name: FlowAggSumTransitPacketsOut, Field: "transit_packets_out"},
 		{Name: FlowAggSumTCPRetranmissions, Field: "tcp_total_retransmissions"},
 		{Name: FlowAggSumTCPLostPackets, Field: "tcp_lost_packets"},
 		{Name: FlowAggSumTCPUnrecoveredTO, Field: "tcp_unrecovered_to"},
@@ -311,10 +319,14 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	}
 
 	flow.TrafficStats = &v1.TrafficStats{
-		PacketsIn:  int64(bucket.AggregatedSums[FlowAggSumPacketsIn]),
-		PacketsOut: int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
-		BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
-		BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
+		PacketsIn:         int64(bucket.AggregatedSums[FlowAggSumPacketsIn]),
+		PacketsOut:        int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
+		BytesIn:           int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
+		BytesOut:          int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
+		TransitPacketsIn:  int64(bucket.AggregatedSums[FlowAggSumTransitPacketsIn]),
+		TransitPacketsOut: int64(bucket.AggregatedSums[FlowAggSumTransitPacketsOut]),
+		TransitBytesIn:    int64(bucket.AggregatedSums[FlowAggSumTransitBytesIn]),
+		TransitBytesOut:   int64(bucket.AggregatedSums[FlowAggSumTransitBytesOut]),
 	}
 
 	if flow.Key.Protocol == "tcp" {

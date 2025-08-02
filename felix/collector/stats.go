@@ -811,6 +811,7 @@ func (d *Data) MetricUpdateIngressConn(ut metric.UpdateType) metric.Update {
 			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
+
 	return metricUpdate
 }
 
@@ -857,6 +858,7 @@ func (d *Data) MetricUpdateEgressConn(ut metric.UpdateType) metric.Update {
 			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
+
 	return metricUpdate
 
 }
@@ -880,13 +882,9 @@ func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType, isTransit bool) m
 		HasDenyRule:     d.IngressRuleTrace.HasDenyRule() || d.IngressTransitRuleTrace.HasDenyRule(),
 		PendingRuleIDs:  d.IngressPendingRuleIDs,
 		IsConnection:    d.IsConnection,
-		InTransitMetric: metric.Value{
-			DeltaPackets: d.IngressTransitRuleTrace.pktsCtr.Delta(),
-			DeltaBytes:   d.IngressTransitRuleTrace.bytesCtr.Delta(),
-		},
-		ProcessName: d.DestProcessData().Name,
-		ProcessID:   d.DestProcessData().Pid,
-		ProcessArgs: d.DestProcessData().Arguments,
+		ProcessName:     d.DestProcessData().Name,
+		ProcessID:       d.DestProcessData().Pid,
+		ProcessArgs:     d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -899,11 +897,9 @@ func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType, isTransit bool) m
 			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
-	// If the ingress transit rule has a deny rule, no ingress rule trace will be reported,
-	// so we report the transit rule trace counters. This will be the case for PreDNAT and
-	// ingress ApplyOnForward deny policies.
-	if isTransit && d.IngressTransitRuleTrace.HasDenyRule() {
-		metricUpdate.InMetric = metric.Value{
+
+	if isTransit {
+		metricUpdate.InTransitMetric = metric.Value{
 			DeltaPackets: d.IngressTransitRuleTrace.pktsCtr.Delta(),
 			DeltaBytes:   d.IngressTransitRuleTrace.bytesCtr.Delta(),
 		}
@@ -918,7 +914,7 @@ func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType, isTransit bool) m
 }
 
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
-func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType) metric.Update {
+func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType, isTransit bool) metric.Update {
 	metricDstServiceInfo := metric.ServiceInfo{
 		ServicePortName: d.DstSvc,
 		PortNum:         d.PreDNATPort,
@@ -937,17 +933,9 @@ func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType) metric.Update {
 		HasDenyRule:     d.EgressRuleTrace.HasDenyRule() || d.EgressTransitRuleTrace.HasDenyRule(),
 		PendingRuleIDs:  d.EgressPendingRuleIDs,
 		IsConnection:    d.IsConnection,
-		OutMetric: metric.Value{
-			DeltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
-			DeltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
-		},
-		OutTransitMetric: metric.Value{
-			DeltaPackets: d.EgressTransitRuleTrace.pktsCtr.Delta(),
-			DeltaBytes:   d.EgressTransitRuleTrace.bytesCtr.Delta(),
-		},
-		ProcessName: d.SourceProcessData().Name,
-		ProcessID:   d.SourceProcessData().Pid,
-		ProcessArgs: d.SourceProcessData().Arguments,
+		ProcessName:     d.SourceProcessData().Name,
+		ProcessID:       d.SourceProcessData().Pid,
+		ProcessArgs:     d.SourceProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -958,6 +946,18 @@ func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType) metric.Update {
 			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
 			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
 			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
+
+	if isTransit {
+		metricUpdate.OutTransitMetric = metric.Value{
+			DeltaPackets: d.EgressTransitRuleTrace.pktsCtr.Delta(),
+			DeltaBytes:   d.EgressTransitRuleTrace.bytesCtr.Delta(),
+		}
+	} else {
+		metricUpdate.OutMetric = metric.Value{
+			DeltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
+			DeltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
 		}
 	}
 

@@ -537,10 +537,14 @@ type flowReferences struct {
 
 // FlowReportedStats are the statistics we actually report out in flow logs.
 type FlowReportedStats struct {
-	PacketsIn             int `json:"packetsIn"`
-	PacketsOut            int `json:"packetsOut"`
 	BytesIn               int `json:"bytesIn"`
 	BytesOut              int `json:"bytesOut"`
+	PacketsIn             int `json:"packetsIn"`
+	PacketsOut            int `json:"packetsOut"`
+	TransitBytesIn        int `json:"transitBytesIn"`
+	TransitBytesOut       int `json:"transitBytesOut"`
+	TransitPacketsIn      int `json:"transitPacketsIn"`
+	TransitPacketsOut     int `json:"transitPacketsOut"`
 	HTTPRequestsAllowedIn int `json:"httpRequestsAllowedIn"`
 	HTTPRequestsDeniedIn  int `json:"httpRequestsDeniedIn"`
 	NumFlows              int `json:"numFlows"`
@@ -561,10 +565,14 @@ type FlowReportedTCPStats struct {
 }
 
 func (f *FlowReportedStats) Add(other FlowReportedStats) {
-	f.PacketsIn += other.PacketsIn
-	f.PacketsOut += other.PacketsOut
 	f.BytesIn += other.BytesIn
 	f.BytesOut += other.BytesOut
+	f.PacketsIn += other.PacketsIn
+	f.PacketsOut += other.PacketsOut
+	f.TransitBytesIn += other.TransitBytesIn
+	f.TransitBytesOut += other.TransitBytesOut
+	f.TransitPacketsIn += other.TransitPacketsIn
+	f.TransitPacketsOut += other.TransitPacketsOut
 	f.HTTPRequestsAllowedIn += other.HTTPRequestsAllowedIn
 	f.HTTPRequestsDeniedIn += other.HTTPRequestsDeniedIn
 	f.NumFlows += other.NumFlows
@@ -672,6 +680,10 @@ func NewFlowStats(mu metric.Update) FlowStats {
 			BytesIn:               mu.InMetric.DeltaBytes,
 			PacketsOut:            mu.OutMetric.DeltaPackets,
 			BytesOut:              mu.OutMetric.DeltaBytes,
+			TransitPacketsIn:      mu.InTransitMetric.DeltaPackets,
+			TransitBytesIn:        mu.InTransitMetric.DeltaBytes,
+			TransitPacketsOut:     mu.OutTransitMetric.DeltaPackets,
+			TransitBytesOut:       mu.OutTransitMetric.DeltaBytes,
 			HTTPRequestsAllowedIn: mu.InMetric.DeltaAllowedHTTPRequests,
 			HTTPRequestsDeniedIn:  mu.InMetric.DeltaDeniedHTTPRequests,
 		},

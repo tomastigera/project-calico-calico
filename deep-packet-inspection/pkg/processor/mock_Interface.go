@@ -68,7 +68,7 @@ func (_m *MockClientInterface) DeepPacketInspections() clientv3.DeepPacketInspec
 	return r0
 }
 
-func (_m *MockClientInterface) EnsureInitialized(ctx context.Context, calicoVersion string, cnxVersion string, clusterType string) error {
+func (_m *MockClientInterface) EnsureInitialized(ctx context.Context, calicoVersion string, calicoEnterpriseVersion string, clusterType string) error {
 	return nil
 }
 

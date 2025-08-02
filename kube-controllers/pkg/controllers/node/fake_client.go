@@ -275,7 +275,7 @@ func (f *FakeCalicoClient) BFDConfigurations() clientv3.BFDConfigurationInterfac
 // Most Calico deployment scenarios will automatically implicitly invoke this
 // method and so a general consumer of this API can assume that the datastore
 // is already initialized.
-func (f *FakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion string, cnxVersion string, clusterType string) error {
+func (f *FakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion string, calicoEnterpriseVersion string, clusterType string) error {
 	panic("not implemented")
 }
 
