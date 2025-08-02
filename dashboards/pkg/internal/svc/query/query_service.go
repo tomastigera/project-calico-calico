@@ -11,7 +11,6 @@ import (
 
 	validatorv10 "github.com/go-playground/validator/v10"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
@@ -22,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/tigera/tds-apiserver/lib/comparators"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
@@ -199,7 +199,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	if len(req.GroupBys) == 0 {
 		// Handle the special case of a count aggregation with no groups set, which results in no elastic aggregations
 		// being queried (since the count aggregation relies on document/hit count)
-		for aggKey, _ := range countAggregations {
+		for aggKey := range countAggregations {
 			queryResponse.Aggregations[aggKey] = client.QueryResponseValueAsString{
 				AsString: strconv.FormatInt(queryResult.Hits, 10),
 			}

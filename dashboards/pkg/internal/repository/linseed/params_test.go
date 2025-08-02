@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
@@ -452,6 +452,7 @@ func TestParams(t *testing.T) {
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewWildcard(policyAllPoliciesField, "*_PROFILE_*", true),
 				}, time.Time{})
+				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
 					selector: `"policies.all_policies" NOTIN {"*_PROFILE_*"}`,

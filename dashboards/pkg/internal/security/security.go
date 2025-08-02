@@ -19,7 +19,6 @@ type Context interface {
 
 type userAuthContext struct {
 	context.Context
-	clusterID     string
 	userInfo      user.Info
 	k8sClient     kubernetes.Interface
 	authorizer    Authorizer

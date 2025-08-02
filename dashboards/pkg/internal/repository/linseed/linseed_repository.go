@@ -11,13 +11,13 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
@@ -25,7 +25,6 @@ import (
 
 type LinseedRepository struct {
 	url     string
-	client  lsclient.Client
 	clients map[collections.CollectionName]linseedCollectionClient
 
 	logger logging.Logger
@@ -177,10 +176,10 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 
 func handleQueryResultError(err error) error {
 
-	if m := reInvalidSelectorValueErr.FindStringSubmatch(err.Error()); m != nil && len(m) == 2 {
+	if m := reInvalidSelectorValueErr.FindStringSubmatch(err.Error()); len(m) == 2 {
 		// Handle invalid selector value errors as a Bad Request
 		return httpreply.ToBadRequest(m[1])
-	} else if m := reUnexpectedSelectorTokenErr.FindStringSubmatch(err.Error()); m != nil && len(m) == 2 {
+	} else if m := reUnexpectedSelectorTokenErr.FindStringSubmatch(err.Error()); len(m) == 2 {
 		// Handle invalid selector value errors as a Bad Request
 		return httpreply.ToBadRequest(fmt.Sprintf("invalid criterion filter: %s", m[1]))
 	}

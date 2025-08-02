@@ -109,6 +109,9 @@ func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string) error {
 				}
 				return ""
 			})
+			if err != nil {
+				return err
+			}
 		}
 	} else if len(q.GroupValues) > 0 {
 		err := q.convertGroupValuesToCSV(csvWriter, fields, nil, 0, q.GroupValues)

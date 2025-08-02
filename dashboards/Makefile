@@ -1,20 +1,64 @@
+# Copyright 2025 Tigera Inc. All rights reserved.
+
 include ../metadata.mk
+
+PACKAGE_NAME ?= github.com/projectcalico/calico/dashboards
+
+###############################################################################
+# Env vars related to building
+###############################################################################
+SRC_FILES = $(shell find . -name '*.go')
+BINDIR = bin
+
+###############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
 include ../lib.Makefile
 
+###############################################################################
+# Binary build
+###############################################################################
+.PHONY: build
+build: $(BINDIR)/cc-dashboard-query-api-$(ARCH)
+
+$(BINDIR)/cc-dashboard-query-api-$(ARCH): $(SRC_FILES)
+	$(call build_binary, pkg/internal/cmd/api-server/main.go, $@)
+
+.PHONY: clean
+clean:
+	rm -fr $(BINDIR)/
+
+###############################################################################
+# Testing
+###############################################################################
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+
+###############################################################################
+# CI
+###############################################################################
+.PHONY: ci
+
+ci: clean static-checks build ut
+
+###############################################################################
+# Calico Cloud targets
+###############################################################################
 PROJECT_NAME ?= cc-dashboard-query-api
 
 GCP_PROJECT ?= tigera-tesla
 TAG_NAME ?= $(if $(git-release-tag-for-current-commit),$(git-release-tag-for-current-commit),$(shell git describe --always --tags --long))
 DOCKERFILE=Dockerfile
 
-BINDIR=bin
-
 docker-build: $(BINDIR)/$(PROJECT_NAME)
 	$(DOCKER_BUILD) \
 		--file ./$(DOCKERFILE) \
 		-t "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)" .
 
-$(BINDIR)/$(PROJECT_NAME): $(shell find . -name '*.go') ../go.mod
+$(BINDIR)/$(PROJECT_NAME): $(SRC_FILES)
 	$(CONTAINERIZED_BUILD) \
 	sh -c '$(GIT_CONFIG_SSH) \
 	CGO_ENABLED=0 go build -v -o $@ ./pkg/internal/cmd/api-server/main.go'
@@ -33,10 +77,6 @@ test: fmt-vet
 	$(CONTAINERIZED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 		go test ./... $(TESTARGS)'
-
-clean:
-	rm -f $(BINDIR)/$(PROJECT_NAME)
-	rmdir $(BINDIR) 2>/dev/null || true
 
 ## targets for auto opening prs on helm-charts repo with tag updates
 helm-pr:

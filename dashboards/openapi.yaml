@@ -326,11 +326,11 @@ components:
         maxDocs:
           format: int
           nullable: true
-          type: string
+          type: integer
         pageNum:
           format: int
           nullable: true
-          type: string
+          type: integer
       type: object
     QueryRequestFilter:
       properties:
@@ -376,7 +376,7 @@ components:
           type: string
         maxValues:
           format: int
-          type: string
+          type: integer
         orderBy:
           oneOf:
           - nullable: true
@@ -426,7 +426,7 @@ components:
           type: string
         value:
           format: int64
-          type: string
+          type: integer
       type: object
   securitySchemes:
     bearer_jwt:

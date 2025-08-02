@@ -6,8 +6,8 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/ui-apis
 MOCKERY_FILE_PATHS= \
 	pkg/kibana/Client \
 
-ES_PROXY_IMAGE        ?=ui-apis
-BUILD_IMAGES          ?=$(ES_PROXY_IMAGE)
+UI_APIS_IMAGE ?= ui-apis
+BUILD_IMAGES  ?= $(UI_APIS_IMAGE)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -34,7 +34,7 @@ endif
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "ui-apis" instead of "$(BINDIR)/ui-apis".
-build: $(BINDIR)/ui-apis-$(ARCH)
+build: $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/cc-dashboard-query-api-$(ARCH)
 
 $(BINDIR)/ui-apis-$(ARCH): $(SRC_FILES)
 ifeq ($(FIPS),true)
@@ -43,7 +43,11 @@ else
 	$(call build_binary, cmd/server/*.go, $@)
 endif
 
-ES_PROXY_CONTAINER_CREATED=.ui-apis.created-$(ARCH)
+$(BINDIR)/cc-dashboard-query-api-$(ARCH):
+	$(MAKE) -C ../dashboards $@
+	ln -f ../dashboards/$@ $@
+
+UI_APIS_CONTAINER_CREATED=.ui-apis.created-$(ARCH)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -52,19 +56,19 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(ES_PROXY_IMAGE)
+image: $(UI_APIS_IMAGE)
 
-$(ES_PROXY_IMAGE): $(ES_PROXY_CONTAINER_CREATED)
-$(ES_PROXY_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH)
-	$(DOCKER_BUILD) -t $(ES_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(UI_APIS_IMAGE): $(UI_APIS_CONTAINER_CREATED)
+$(UI_APIS_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/cc-dashboard-query-api-$(ARCH)
+	$(DOCKER_BUILD) -t $(UI_APIS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 .PHONY: clean
 clean:
 	rm -fr $(BINDIR)
-	rm -f $(ES_PROXY_CONTAINER_CREATED)
-	-docker image rm -f $$(docker images $(ES_PROXY_IMAGE) -a -q)
+	rm -f $(UI_APIS_CONTAINER_CREATED)
+	-docker image rm -f $$(docker images $(UI_APIS_IMAGE) -a -q)
 
 ##########################################################################
 # Testing
