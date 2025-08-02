@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
+
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 type collectionClientL7 struct {

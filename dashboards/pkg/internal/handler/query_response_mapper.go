@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/swaggest/openapi-go/openapi3"
-
-	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
+
+	"github.com/projectcalico/calico/dashboards/pkg/client"
 )
 
 type queryResponseWriterBodyMapper[T client.QueryResponse] struct {

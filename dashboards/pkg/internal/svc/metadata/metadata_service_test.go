@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/pkg/types"
 )
 
 func TestMetadataService(t *testing.T) {

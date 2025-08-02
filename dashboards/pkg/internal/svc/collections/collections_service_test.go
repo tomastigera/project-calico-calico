@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
+	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
@@ -16,9 +18,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 func TestCollectionsService(t *testing.T) {

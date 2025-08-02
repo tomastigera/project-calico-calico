@@ -9,17 +9,17 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
 
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
-	"github.com/tigera/tds-apiserver/lib/logging"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 func TestLinseedRepository(t *testing.T) {

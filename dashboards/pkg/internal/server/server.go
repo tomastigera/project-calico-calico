@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/pkg/otel"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -27,8 +28,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/query"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/pkg/otel"
 )
 
 // Start starts the HTTPS server.

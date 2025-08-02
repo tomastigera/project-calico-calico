@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
-
 	"github.com/tigera/tds-apiserver/lib/slices"
 )
 

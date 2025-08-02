@@ -10,6 +10,10 @@ import (
 	"time"
 
 	validatorv10 "github.com/go-playground/validator/v10"
+	"github.com/tigera/tds-apiserver/lib/comparators"
+	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
@@ -22,10 +26,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
-	"github.com/tigera/tds-apiserver/lib/comparators"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 type QueryService struct {

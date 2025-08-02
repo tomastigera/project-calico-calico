@@ -8,16 +8,15 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/swaggest/openapi-go/openapi3"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 type AuthService struct {

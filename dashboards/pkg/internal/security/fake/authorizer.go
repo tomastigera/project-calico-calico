@@ -3,8 +3,9 @@ package fake
 import (
 	"reflect"
 
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/tigera/tds-apiserver/lib/slices"
+
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 )
 
 type MatchingResource struct {

@@ -10,15 +10,12 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
-
+	"github.com/tigera/tds-apiserver/lib/httpreply"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
@@ -27,9 +24,11 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
-	"github.com/tigera/tds-apiserver/lib/httpreply"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/lib/slices"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead

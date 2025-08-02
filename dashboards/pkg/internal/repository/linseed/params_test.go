@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tigera/tds-apiserver/lib/slices"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 func TestParams(t *testing.T) {

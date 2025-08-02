@@ -10,7 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
-
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/server"
-	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 var (

@@ -11,16 +11,15 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
+	"github.com/tigera/tds-apiserver/lib/logging"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmatesting "github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
-	"github.com/tigera/tds-apiserver/lib/logging"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	lmatesting "github.com/projectcalico/calico/lma/pkg/auth/testing"
 )
 
 func TestAuthService(t *testing.T) {

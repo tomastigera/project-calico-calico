@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,10 +15,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 type NameLister interface {

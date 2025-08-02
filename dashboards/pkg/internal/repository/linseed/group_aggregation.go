@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/groups"
-	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
 )
 
 const (

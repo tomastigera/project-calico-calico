@@ -36,9 +36,9 @@ spec:
       - name: dind
         image: docker:20.10.17-dind
         command:
-        - dockerd-entrypoint.sh
-        - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
-        - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
+          - dockerd-entrypoint.sh
+          - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
+          - --insecure-registry=argoci-registry.argoci.svc.cluster.local:5000
         env:
           - name: DOCKER_TLS_CERTDIR
             value: ""
@@ -63,11 +63,11 @@ spec:
             template: test-and-build-images
           - name: push-dev-images
             depends: "test-and-build-images"
-            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
+            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
             template: push-dev-images
           - name: push-prod-images
             depends: "test-and-build-images"
-            when : "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
+            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
             template: build-and-push-prod-images
 
     - name: test-and-build-images

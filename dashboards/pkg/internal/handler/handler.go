@@ -6,6 +6,9 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
+	"github.com/tigera/tds-apiserver/pkg/types"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/handler/middleware/cors"
@@ -14,9 +17,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/query"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
-	"github.com/tigera/tds-apiserver/pkg/types"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

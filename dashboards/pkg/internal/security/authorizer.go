@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	lmacache "github.com/projectcalico/calico/lma/pkg/cache"
-	"github.com/tigera/tds-apiserver/lib/logging"
-	"github.com/tigera/tds-apiserver/lib/slices"
 )
 
 const APIGroupLMATigera = "lma.tigera.io"

@@ -6,14 +6,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
+	"github.com/tigera/tds-apiserver/lib/logging"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-
-	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 func TestAuthorizer(t *testing.T) {

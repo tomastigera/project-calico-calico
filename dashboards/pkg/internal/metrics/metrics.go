@@ -7,9 +7,9 @@ import (
 
 	"github.com/felixge/httpsnoop"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/tigera/tds-apiserver/lib/logging"
 
 	lsmetrics "github.com/projectcalico/calico/linseed/pkg/metrics"
-	"github.com/tigera/tds-apiserver/lib/logging"
 )
 
 func init() {

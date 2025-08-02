@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/tigera/tds-apiserver/lib/slices"
+
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
-	"github.com/tigera/tds-apiserver/lib/slices"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 type queryParams struct {

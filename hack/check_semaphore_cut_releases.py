@@ -15,6 +15,7 @@ SKIP_SUBDIRS = [
     "api",
     "confd",
     "crypto",
+    "dashboards",
     "e2e",
     "felix",
     "fluent-bit",
