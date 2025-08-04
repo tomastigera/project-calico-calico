@@ -198,7 +198,7 @@ var _ = Describe("Constructor test", func() {
 		})
 
 		It("should still be constructable", func() {
-			dp := intdataplane.NewIntDataplaneDriver(dpConfig)
+			dp := intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 			Expect(dp).ToNot(BeNil())
 		})
 	})
