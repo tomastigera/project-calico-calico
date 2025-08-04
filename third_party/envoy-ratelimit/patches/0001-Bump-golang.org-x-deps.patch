@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 18643a8..12f9fa5 100644
+index 18643a8..4db1ffe 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,8 @@
@@ -8,7 +8,7 @@ index 18643a8..12f9fa5 100644
 -go 1.22.8
 +go 1.23.0
 +
-+toolchain go1.24.3
++toolchain go1.24.5
  
  require (
  	github.com/DataDog/datadog-go/v5 v5.5.0
