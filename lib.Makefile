@@ -1329,6 +1329,24 @@ check-dirty:
 	@if [ "$$(git --no-pager diff --stat)" != "" ]; then \
 	echo "The following files are dirty"; git --no-pager diff; exit 1; fi
 
+# This setup is used to download and install the 'crane' binary into the local bin/ directory.
+# The binary will be placed at: ./bin/crane
+# Normalize architecture for go-containerregistry filenames
+CRANE_BUILDARCH := $(shell uname -m | sed 's/amd64/x86_64/;s/x86_64/x86_64/;s/aarch64/arm64/')
+ifeq ($(CRANE_BUILDARCH),)
+  $(error Unsupported or unknown architecture: $(shell uname -m))
+endif
+CRANE_FILENAME := go-containerregistry_Linux_$(CRANE_BUILDARCH).tar.gz
+CRANE_URL := https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/$(CRANE_FILENAME)
+
+# Install crane binary into bin/
+bin/crane:
+	mkdir -p bin
+	$(eval CRANE_TMP := $(shell mktemp -d))
+	curl -sSfL --retry 5 -o $(CRANE_TMP)/crane.tar.gz $(CRANE_URL)
+	tar -xzf $(CRANE_TMP)/crane.tar.gz -C $(CRANE_TMP) crane
+	mv $(CRANE_TMP)/crane bin/crane
+
 ###############################################################################
 # Common functions for launching a local Kubernetes control plane.
 ###############################################################################
