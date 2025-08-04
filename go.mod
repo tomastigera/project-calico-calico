@@ -138,6 +138,7 @@ require (
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
+	github.com/tigera/operator/api v0.0.0-20250729225329-a4e446dfb054
 	github.com/tigera/tds-apiserver v0.88.0
 	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
 	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
@@ -151,6 +152,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.21
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.38.0
+	golang.org/x/mod v0.24.0
 	golang.org/x/net v0.40.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.14.0
@@ -183,6 +185,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 	k8s.io/kubectl v0.32.7
 	k8s.io/kubernetes v1.32.7
+	k8s.io/pod-security-admission v0.32.7
 	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
 	modernc.org/memory v1.10.0
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -400,6 +403,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/pquerna/otp v1.4.0 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
@@ -474,7 +478,6 @@ require (
 	k8s.io/kube-scheduler v0.32.7 // indirect
 	k8s.io/kubelet v0.32.7 // indirect
 	k8s.io/mount-utils v0.32.7 // indirect
-	k8s.io/pod-security-admission v0.32.7 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect

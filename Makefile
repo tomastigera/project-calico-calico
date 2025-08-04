@@ -64,6 +64,7 @@ clean:
 
 ci-preflight-checks:
 	$(MAKE) check-go-mod
+	$(MAKE) verify-go-mods
 	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
@@ -316,7 +317,7 @@ image:
 # Run local e2e smoke test against the checked-out code
 # using a local kind cluster.
 ###############################################################################
-E2E_FOCUS ?= "sig-network.*Conformance"
+E2E_FOCUS ?= "sig-network.*Conformance|sig-calico.*Conformance"
 ADMINPOLICY_SUPPORTED_FEATURES ?= "AdminNetworkPolicy,BaselineAdminNetworkPolicy"
 ADMINPOLICY_UNSUPPORTED_FEATURES ?= ""
 e2e-test:

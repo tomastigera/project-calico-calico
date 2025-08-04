@@ -104,32 +104,14 @@ func (ap *AttachPoint) loadObject(file string) (*libbpf.Obj, error) {
 	return obj, nil
 }
 
-type AttachResult struct {
-	progId int
-	prio   int
-	handle int
-}
-
-func (ar AttachResult) ProgID() int {
-	return ar.progId
-}
-
-func (ar AttachResult) Prio() int {
-	return ar.prio
-}
-
-func (ar AttachResult) Handle() int {
-	return ar.handle
-}
-
 // AttachProgram attaches a BPF program from a file to the TC attach point
-func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
+func (ap *AttachPoint) AttachProgram() error {
 	logCxt := log.WithField("attachPoint", ap)
 
 	if ap.Type == tcdefs.EpTypeWorkload {
 		l, err := netlink.LinkByName(ap.Iface)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
@@ -139,30 +121,29 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 	// configuration further to the selected set of programs.
 
 	binaryToLoad := path.Join(bpfdefs.ObjectDir, "tc_preamble.o")
-	var res AttachResult
 
 	/* XXX we should remember the tag of the program and skip the rest if the tag is
 	* still the same */
-	progsAttached, err := ap.listAttachedPrograms(true)
+	progsAttached, err := ListAttachedPrograms(ap.Iface, ap.Hook.String(), true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	prio, handle := findFilterPriority(progsAttached)
 	obj, err := ap.loadObject(binaryToLoad)
 	if err != nil {
 		logCxt.Warn("Failed to load program")
-		return nil, fmt.Errorf("object %w", err)
+		return fmt.Errorf("object %w", err)
 	}
 	defer obj.Close()
 
-	res.progId, res.prio, res.handle, err = obj.AttachClassifier("cali_tc_preamble", ap.Iface, ap.Hook == hook.Ingress, prio, handle)
+	err = obj.AttachClassifier("cali_tc_preamble", ap.Iface, ap.Hook == hook.Ingress, prio, handle)
 	if err != nil {
 		logCxt.Warnf("Failed to attach to TC section cali_tc_preamble")
-		return nil, err
+		return err
 	}
 	logCxt.Info("Program attached to TC.")
-	return res, nil
+	return nil
 }
 
 func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
@@ -172,12 +153,11 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 		return fmt.Errorf("error loading tcp stats program %w", err)
 	}
 	defer obj.Close()
-	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
-	return err
+	return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
 }
 
 func (ap *AttachPoint) DetachProgram() error {
-	progsToClean, err := ap.listAttachedPrograms(true)
+	progsToClean, err := ListAttachedPrograms(ap.Iface, ap.Hook.String(), true)
 	if err != nil {
 		return err
 	}
@@ -190,7 +170,7 @@ func (ap *AttachPoint) detachPrograms(progsToClean []attachedProg) error {
 	for _, p := range progsToClean {
 		log.WithField("prog", p).Debug("Cleaning up old calico program")
 		attemptCleanup := func() error {
-			_, err := ExecTC("filter", "del", "dev", ap.Iface, ap.Hook.String(), "pref", p.pref, "handle", p.handle, "bpf")
+			_, err := ExecTC("filter", "del", "dev", ap.Iface, ap.Hook.String(), "pref", fmt.Sprintf("%d", p.Pref), "handle", fmt.Sprintf("0x%x", p.Handle), "bpf")
 			return err
 		}
 		err := attemptCleanup()
@@ -262,12 +242,12 @@ func isDumpInterrupted(err error) bool {
 }
 
 type attachedProg struct {
-	pref   string
-	handle string
+	Pref   int
+	Handle uint32
 }
 
-func (ap *AttachPoint) listAttachedPrograms(includeLegacy bool) ([]attachedProg, error) {
-	out, err := ExecTC("filter", "show", "dev", ap.Iface, ap.Hook.String())
+func ListAttachedPrograms(iface, hook string, includeLegacy bool) ([]attachedProg, error) {
+	out, err := ExecTC("filter", "show", "dev", iface, hook)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tc filters on interface: %w", err)
 	}
@@ -280,9 +260,17 @@ func (ap *AttachPoint) listAttachedPrograms(includeLegacy bool) ([]attachedProg,
 		}
 		// find the pref and the handle
 		if sm := prefHandleRe.FindStringSubmatch(line); len(sm) > 0 {
+			pref, err := strconv.Atoi(sm[1])
+			if err != nil {
+				continue
+			}
+			handle64, err := strconv.ParseUint(sm[2][2:], 16, 32)
+			if err != nil {
+				continue
+			}
 			p := attachedProg{
-				pref:   sm[1],
-				handle: sm[2],
+				Pref:   pref,
+				Handle: uint32(handle64),
 			}
 			log.WithField("prog", p).Debug("Found old calico program")
 			progsAttached = append(progsAttached, p)
@@ -322,21 +310,6 @@ func (ap *AttachPoint) ProgramID() (int, error) {
 		}
 	}
 	return -1, fmt.Errorf("couldn't find 'id <ID> in 'tc filter' command out=\n%v err=%w", string(out), ErrNoTC)
-}
-
-func (ap *AttachPoint) IsAttached() (bool, error) {
-	hasQ, err := HasQdisc(ap.Iface)
-	if err != nil {
-		return false, err
-	}
-	if !hasQ {
-		return false, nil
-	}
-	progs, err := ap.listAttachedPrograms(false)
-	if err != nil {
-		return false, err
-	}
-	return len(progs) > 0, nil
 }
 
 // EnsureQdisc makes sure that qdisc is attached to the given interface
@@ -390,15 +363,6 @@ func RemoveQdisc(ifaceName string) error {
 	if !hasQdisc {
 		return nil
 	}
-
-	// Remove the json files of the programs attached to the interface for both directions
-	if err = bpf.ForgetAttachedProg(ifaceName, hook.Ingress); err != nil {
-		return fmt.Errorf("failed to remove runtime json file of ingress direction: %w", err)
-	}
-	if err = bpf.ForgetAttachedProg(ifaceName, hook.Egress); err != nil {
-		return fmt.Errorf("failed to remove runtime json file of egress direction: %w", err)
-	}
-
 	return libbpf.RemoveQDisc(ifaceName)
 }
 
@@ -406,23 +370,13 @@ func (ap *AttachPoint) HookName() hook.Hook {
 	return ap.Hook
 }
 
-func findFilterPriority(progsToClean []attachedProg) (int, int) {
+func findFilterPriority(progsToClean []attachedProg) (int, uint32) {
 	prio := 0
-	handle := 0
+	handle := uint32(0)
 	for _, p := range progsToClean {
-		pref, err := strconv.Atoi(p.pref)
-		if err != nil {
-			continue
-		}
-
-		handle64, err := strconv.ParseInt(p.handle[2:], 16, 64)
-		if err != nil {
-			continue
-		}
-
-		if pref > prio {
-			prio = pref
-			handle = int(handle64)
+		if p.Pref > prio {
+			prio = p.Pref
+			handle = p.Handle
 		}
 	}
 	return prio, handle

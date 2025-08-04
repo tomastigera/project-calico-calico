@@ -27,6 +27,7 @@ const (
 
 	GlobalPinDir = DefaultBPFfsPath + "/tc/globals/"
 	ObjectDir    = "/usr/lib/calico/bpf"
+	CtlbPinDir   = "ctlb"
 
 	DnsObjDir = DefaultBPFfsPath + "/dns"
 

@@ -7,7 +7,7 @@
 
 #include "bpf.h"
 
-#define MAX_COUNTERS_SIZE 19
+#define MAX_COUNTERS_SIZE 23
 
 typedef __u64 counters_t[MAX_COUNTERS_SIZE];
 
