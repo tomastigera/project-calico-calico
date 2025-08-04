@@ -57,6 +57,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		// Start felix instances.
 		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)
 
+		if bpfEnabled {
+			ensureBPFProgramsAttached(tc.Felixes[0])
+			ensureBPFProgramsAttached(tc.Felixes[1])
+		}
+
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
