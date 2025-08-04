@@ -53,9 +53,6 @@ if [ "${MANAGED_K8S}" == "true" ]; then
   source "${ROOT_DIR}/bin/splunk-environment.sh"
   source "${ROOT_DIR}/bin/splunk-config.sh"
 
-  source "${ROOT_DIR}/bin/sumo-environment.sh"
-  source "${ROOT_DIR}/bin/sumo-config.sh"
-
   cat "${ROOT_DIR}/fluentd/etc/outputs/out-eks-audit-es.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
   echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 
@@ -220,9 +217,6 @@ source "${ROOT_DIR}/bin/syslog-config.sh"
 
 source "${ROOT_DIR}/bin/splunk-environment.sh"
 source "${ROOT_DIR}/bin/splunk-config.sh"
-
-source "${ROOT_DIR}/bin/sumo-environment.sh"
-source "${ROOT_DIR}/bin/sumo-config.sh"
 
 # Determine which output match directives to include.
 

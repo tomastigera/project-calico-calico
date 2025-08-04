@@ -137,6 +137,13 @@ else
     THIRD_PARTY_REGISTRY?=gcr.io/tigera-dev/third-party-ci
 endif
 
+THIRD_PARTY_BASE_IMAGES_TO_RETAG = elasticsearch fluentd-base kibana snort3
+release-retag-third-party-base-images: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
+	$(MAKE) $(addprefix release-retag-third-party-base-images-,$(THIRD_PARTY_BASE_IMAGES_TO_RETAG))
+
+release-retag-third-party-base-images-%: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
+	$(MAKE) -C third_party/$* release-retag-image
+
 PUSH_MANIFEST_IMAGES := $(foreach registry,$(MANIFEST_REGISTRIES),$(foreach image,$(BUILD_IMAGES),$(call filter-registry,$(registry))$(image)))
 
 # location of docker credentials to push manifests
@@ -752,11 +759,12 @@ fix-changed go-fmt-changed goimports-changed:
 fix-all go-fmt-all goimports-all:
 	$(DOCKER_RUN) $(CALICO_BUILD) $(REPO_REL_DIR)/hack/format-all-files.sh
 
-GOMODDER=$(REPO_DIR)/hack/cmd/gomodder/main.go
+GOMODDER=./hack/cmd/gomodder/main.go
 
 .PHONY: verify-go-mods
 verify-go-mods:
-	$(DOCKER_RUN) $(CALICO_BUILD) go run $(GOMODDER)
+	# FIXME needs to be fixed up for calico-private repo.
+	#$(DOCKER_RUN) $(CALICO_BUILD) go run $(GOMODDER)
 
 .PHONY: pre-commit
 pre-commit:
