@@ -405,6 +405,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	github.com/urfave/cli v1.22.16 // indirect
+	github.com/urfave/cli/v3 v3.3.8
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
 	github.com/vbatts/tar-split v0.11.6 // indirect
 	github.com/virtuald/go-ordered-json v0.0.0-20170621173500-b18e6e673d74 // indirect
