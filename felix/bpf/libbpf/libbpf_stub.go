@@ -173,10 +173,6 @@ func (o *Obj) Close() error {
 	panic("LIBBPF syscall stub")
 }
 
-func (l *Link) Close() error {
-	panic("LIBBPF syscall stub")
-}
-
 func (m *Map) IsMapInternal() bool {
 	panic("LIBBPF syscall stub")
 }
