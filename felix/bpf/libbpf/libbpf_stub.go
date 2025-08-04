@@ -182,18 +182,18 @@ func (m *Map) IsMapInternal() bool {
 }
 
 const (
-	GlobalsIPv6Enabled      uint32 = 1
+	GlobalsIPv6Enabled             uint32 = 1
 	GlobalsTCPStatsEnabled  uint32 = 2
 	GlobalsIsEgressGateway  uint32 = 4
 	GlobalsIsEgressClient   uint32 = 8
 	GlobalsRPFOptionEnabled uint32 = 16
 	GlobalsRPFOptionStrict  uint32 = 32
 	GlobalsEgressIPEnabled  uint32 = 12345
-	GlobalsNoDSRCidrs       uint32 = 12345
-	GlobalsLoUDPOnly        uint32 = 12345
+	GlobalsNoDSRCidrs              uint32 = 12345
+	GlobalsLoUDPOnly               uint32 = 12345
 	GlobalsDNSInline        uint32 = 12345
 	GlobalsRedirectPeer     uint32 = 12345
-	GlobalsFlowLogsEnabled  uint32 = 12345
+	GlobalsFlowLogsEnabled  uint32 = 12345GlobalsNATOutgoingExcludeHosts uint32 = 12345
 )
 
 func (m *Map) SetSize(size int) error {

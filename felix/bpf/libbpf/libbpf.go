@@ -520,17 +520,18 @@ func (o *Obj) AttachCGroupLegacy(cgroup, progName string) error {
 
 const (
 	// Set when IPv6 is enabled to configure bpf dataplane accordingly
-	GlobalsTCPStatsEnabled  uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
-	GlobalsIsEgressGateway  uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
-	GlobalsIsEgressClient   uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
-	GlobalsRPFOptionEnabled uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
-	GlobalsRPFOptionStrict  uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
-	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
-	GlobalsNoDSRCidrs       uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
-	GlobalsLoUDPOnly        uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
-	GlobalsDNSInline        uint32 = C.CALI_GLOBALS_DNS_INLINE
-	GlobalsRedirectPeer     uint32 = C.CALI_GLOBALS_REDIRECT_PEER
-	GlobalsFlowLogsEnabled  uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
+	GlobalsTCPStatsEnabled         uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
+	GlobalsIsEgressGateway         uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
+	GlobalsIsEgressClient          uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
+	GlobalsRPFOptionEnabled        uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
+	GlobalsRPFOptionStrict         uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
+	GlobalsEgressIPEnabled         uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
+	GlobalsNoDSRCidrs              uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
+	GlobalsLoUDPOnly               uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
+	GlobalsDNSInline               uint32 = C.CALI_GLOBALS_DNS_INLINE
+	GlobalsRedirectPeer            uint32 = C.CALI_GLOBALS_REDIRECT_PEER
+	GlobalsFlowLogsEnabled         uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
+	GlobalsNATOutgoingExcludeHosts uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
 )
 
 func (t *TcGlobalData) Set(m *Map) error {

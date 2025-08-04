@@ -387,6 +387,8 @@ type bpfEndpointManager struct {
 
 	overlayTunnelID uint32
 
+	natOutgoingExclusions string
+
 	// Flow logs related fields.
 	lookupsCache *calc.LookupsCache
 
@@ -525,6 +527,8 @@ func NewBPFEndpointManager(
 		bpfRedirectToPeer:      config.BPFRedirectToPeer,
 		polNameToMatchIDs:      map[string]set.Set[polprog.RuleMatchID]{},
 		dirtyRules:             set.New[polprog.RuleMatchID](),
+
+		natOutgoingExclusions: config.RulesConfig.NATOutgoingExclusions,
 
 		healthAggregator: healthAggregator,
 		features:         dataplanefeatures,
@@ -2944,6 +2948,10 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 	} else {
 		ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 		ap.EnableTCPStats = m.enableTcpStats
+	}
+
+	if m.natOutgoingExclusions == string(apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs) {
+		ap.NATOutgoingExcludeHosts = true
 	}
 
 	ap.ToHostDrop = (m.epToHostAction == "DROP")
