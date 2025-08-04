@@ -4,6 +4,7 @@ package flowlog
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -597,7 +598,10 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Verify a flow log for a metric update with a transit policy.
 			Expect(ca.FeedUpdate(&muNoConn1Rule1TransitAllowUpdate)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
-			Expect(len(messages)).Should(Equal(2))
+			Expect(messages).To(HaveLen(2))
+			slices.SortFunc(messages, func(a, b *FlowLog) int {
+				return a.StartTime.Compare(b.StartTime)
+			})
 			message = *(messages[1])
 
 			expectedNumFlows = 1
