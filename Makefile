@@ -64,6 +64,7 @@ clean:
 
 ci-preflight-checks:
 	$(MAKE) check-go-mod
+	$(MAKE) verify-go-mods
 	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.

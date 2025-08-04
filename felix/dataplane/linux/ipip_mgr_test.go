@@ -63,7 +63,7 @@ var _ = Describe("IPIPManager", func() {
 			links:          []netlink.Link{&mockLink{attrs: la}},
 			tunnelLinkName: dataplanedefs.IPIPIfaceName,
 		}
-		ipipMgr = newIPIPManagerWithSims(
+		ipipMgr = newIPIPManagerWithShims(
 			ipSets, rt, dataplanedefs.IPIPIfaceName,
 			4,
 			1400,
@@ -74,9 +74,9 @@ var _ = Describe("IPIPManager", func() {
 				RulesConfig: rules.Config{
 					IPIPTunnelAddress: net.ParseIP("192.168.0.1"),
 				},
-				ProgramRoutes:       true,
-				DeviceRouteProtocol: dataplanedefs.DefaultRouteProto,
-				EgressIPEnabled:     true,
+				ProgramClusterRoutes: true,
+				DeviceRouteProtocol:  dataplanedefs.DefaultRouteProto,
+				EgressIPEnabled:      true,
 			},
 			opRecorder,
 			dataplane,

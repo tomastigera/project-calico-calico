@@ -496,7 +496,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
-	_, contVethMac, err := d.DoNetworking(
+	hostVethName, contVethMac, err := d.DoNetworking(
 		ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW)
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
@@ -604,19 +604,21 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	logger.Info("Wrote updated endpoint to datastore")
 
 	// Add the interface created above to the CNI result.
-	result.Interfaces = append(result.Interfaces,
-		&cniv1.Interface{
-			Name:    endpoint.Spec.InterfaceName,
-			Mac:     endpoint.Spec.MAC,
-			Mtu:     conf.MTU,
-			Sandbox: args.Netns,
-		},
-		&cniv1.Interface{
-			Name:    args.IfName,
-			Sandbox: args.Netns,
-			Mac:     contVethMac,
-		},
-	)
+	hostInterface := &cniv1.Interface{
+		Name: hostVethName,
+	}
+	contInterface := &cniv1.Interface{
+		Name:    args.IfName,
+		Mac:     contVethMac,
+		Mtu:     conf.MTU,
+		Sandbox: args.Netns,
+	}
+
+	result.Interfaces = append(result.Interfaces, hostInterface, contInterface)
+
+	for _, ip := range result.IPs {
+		ip.Interface = cniv1.Int(1)
+	}
 
 	// Conditionally wait for host-local Felix to program the policy for this WEP.
 	// Error if negative, ignore if 0.

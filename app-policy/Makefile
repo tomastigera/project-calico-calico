@@ -12,8 +12,6 @@ SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 DIKASTES_IMAGE ?=dikastes
 BUILD_IMAGES ?= $(DIKASTES_IMAGE)
 
-LDFLAGS = -X main.VERSION=$(GIT_VERSION)
-
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
