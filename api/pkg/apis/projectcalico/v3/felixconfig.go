@@ -104,7 +104,7 @@ const (
 	NFTablesDNSPolicyModeDelayDNSResponse  NFTablesDNSPolicyMode = "DelayDNSResponse"
 )
 
-// +kubebuilder:validation:Enum=TC;TCX
+// +kubebuilder:validation:Enum=tc;tcx
 type BPFAttachOption string
 
 const (

@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
+	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
@@ -1025,6 +1026,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				nil,
 				nil,
 				false,
+				string(apiv3.BPFAttachOptionTCX),
 				hepListener,
 				common.NewCallbacks(),
 				nlHandle,
