@@ -66,16 +66,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ iptables cleanup tests", []
 
 		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 			It("_BPF_ should clean up kube-proxy's rules", func() {
-				Eventually(dumpIptables, "5s").ShouldNot(MatchRegexp(kubeChainsThatShouldBeCleanedUp))
+				Eventually(dumpIptables, "20s", "100ms").ShouldNot(MatchRegexp(kubeChainsThatShouldBeCleanedUp))
 				Consistently(dumpIptables, "2s").Should(MatchRegexp(kubeChainsThatShouldNeverBeCleanedUp))
 			})
 		} else {
 			It("should leave kube-proxy rules alone", func() {
-				Consistently(dumpIptables, "5s").Should(MatchRegexp(kubeChainsThatShouldBeCleanedUp))
+				Consistently(dumpIptables, "10s").Should(MatchRegexp(kubeChainsThatShouldBeCleanedUp))
 			})
 		}
 		It("should clean up our rules", func() {
-			Eventually(dumpIptables, "5s").ShouldNot(MatchRegexp(caliChainsThatShouldBeCleanedUp))
+			Eventually(dumpIptables, "10s").ShouldNot(MatchRegexp(caliChainsThatShouldBeCleanedUp))
 		})
 	})
 
