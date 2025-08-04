@@ -518,6 +518,7 @@ func StartDataplaneDriver(
 			FlowLogsFileDomainsLimit:           configParams.FlowLogsFileDomainsLimit,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 			BPFRedirectToPeer:                  configParams.BPFRedirectToPeer,
+			BPFAttachType:                      configParams.BPFAttachType,
 			BPFProfiling:                       configParams.BPFProfiling,
 			ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 

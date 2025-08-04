@@ -285,16 +285,17 @@ type Config struct {
 	BPFExcludeCIDRsFromNAT             []string
 	BPFExportBufferSizeMB              int
 	BPFRedirectToPeer                  string
-	BPFProfiling                       string
-	KubeProxyMinSyncPeriod             time.Duration
-	KubeProxyEndpointSlicesEnabled     bool
-	FlowLogsCollectProcessInfo         bool
-	FlowLogsCollectTcpStats            bool
-	FlowLogsCollectProcessPath         bool
-	FlowLogsFileIncludeService         bool
-	FlowLogsFileDomainsLimit           int
+	BPFAttachType                      string
 
-	SidecarAccelerationEnabled bool
+	BPFProfiling                   string
+	KubeProxyMinSyncPeriod         time.Duration
+	KubeProxyEndpointSlicesEnabled bool
+	FlowLogsCollectProcessInfo     bool
+	FlowLogsCollectTcpStats        bool
+	FlowLogsCollectProcessPath     bool
+	FlowLogsFileIncludeService     bool
+	FlowLogsFileDomainsLimit       int
+	SidecarAccelerationEnabled     bool
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool

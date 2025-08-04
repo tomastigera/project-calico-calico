@@ -28,11 +28,10 @@ const (
 	GlobalPinDir = DefaultBPFfsPath + "/tc/globals/"
 	ObjectDir    = "/usr/lib/calico/bpf"
 	CtlbPinDir   = "ctlb"
+	TcxPinDir    = DefaultBPFfsPath + "/tcx"
 
-	DnsObjDir = DefaultBPFfsPath + "/dns"
-
-	DnsParserProgram = "cali_ipt_parse_dns"
-
+	DnsObjDir            = DefaultBPFfsPath + "/dns"
+	DnsParserProgram     = "cali_ipt_parse_dns"
 	IPTMatchIPSetProgram = "cali_ipt_match_ipset"
 )
 
