@@ -57,6 +57,7 @@ type AttachPoint struct {
 	Iface       string
 	LogLevel    string
 	Profiling   string
+	IfIndex     int
 }
 
 func (ap *AttachPoint) LogVal() string {
@@ -78,8 +79,8 @@ func (ap *AttachPoint) PolicyJmp(ipFamily proto.IPVersion) int {
 	return ap.PolicyIdxV4
 }
 
-type AttachResult interface {
-	ProgID() int
+func (ap *AttachPoint) IfaceIndex() int {
+	return ap.IfIndex
 }
 
 // AlreadyAttachedProg checks that the program we are going to attach has the
