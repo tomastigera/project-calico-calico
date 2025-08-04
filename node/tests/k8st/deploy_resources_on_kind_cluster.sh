@@ -39,6 +39,7 @@ function wait_pod_ready() {
     ${kubectl} logs $args
     echo "Pod $args failed to become ready within 300s; diags above ^^"
   fi
+
   set -e
   return $rc
 }
@@ -159,6 +160,7 @@ echo
 ${kubectl} get po --all-namespaces -o wide
 ${kubectl} get svc
 
+# Run ipv4 ipv6 connection test
 function test_connection() {
   local svc="webserver-ipv$1"
   output=$(${kubectl} exec client -- wget $svc -T 10 -O -)
@@ -168,7 +170,6 @@ function test_connection() {
     exit 1
   fi
 }
-# Run ipv4 ipv6 connection test
 test_connection 4
 test_connection 6
 
