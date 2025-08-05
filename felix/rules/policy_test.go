@@ -2733,8 +2733,16 @@ var _ = Describe("Filtered rules (negated catch-all CIDR validation)", func() {
 		func(ipVer int, in *proto.Rule) {
 			rrConfigNormal.FlowLogsEnabled = false
 			renderer := NewRenderer(rrConfigNormal)
-			rules := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			rules := renderer.ProtoRuleToIptablesRules(
+				in,
+				uint8(ipVer),
+				RuleOwnerTypePolicy,
+				RuleDirIngress,
+				0,
+				"default.foo",
+				false,
+				false,
+			)
 			// Rules with catch-all negated CIDRs should be completely filtered out
 			Expect(len(rules)).To(Equal(0))
 		},
