@@ -21,9 +21,9 @@ include ../lib.Makefile
 # Binary build
 ###############################################################################
 .PHONY: build
-build: $(BINDIR)/cc-dashboard-query-api-$(ARCH)
+build: $(BINDIR)/dashboard-api-$(ARCH)
 
-$(BINDIR)/cc-dashboard-query-api-$(ARCH): $(SRC_FILES)
+$(BINDIR)/dashboard-api-$(ARCH): $(SRC_FILES)
 	$(call build_binary, pkg/internal/cmd/api-server/main.go, $@)
 
 .PHONY: clean

@@ -34,7 +34,7 @@ endif
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "ui-apis" instead of "$(BINDIR)/ui-apis".
-build: $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/cc-dashboard-query-api-$(ARCH)
+build: $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/dashboard-api-$(ARCH)
 
 $(BINDIR)/ui-apis-$(ARCH): $(SRC_FILES)
 ifeq ($(FIPS),true)
@@ -43,7 +43,7 @@ else
 	$(call build_binary, cmd/server/*.go, $@)
 endif
 
-$(BINDIR)/cc-dashboard-query-api-$(ARCH):
+$(BINDIR)/dashboard-api-$(ARCH):
 	$(MAKE) -C ../dashboards $@
 	ln -f ../dashboards/$@ $@
 
@@ -59,7 +59,7 @@ sub-image-%:
 image: $(UI_APIS_IMAGE)
 
 $(UI_APIS_IMAGE): $(UI_APIS_CONTAINER_CREATED)
-$(UI_APIS_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/cc-dashboard-query-api-$(ARCH)
+$(UI_APIS_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/dashboard-api-$(ARCH)
 	$(DOCKER_BUILD) -t $(UI_APIS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

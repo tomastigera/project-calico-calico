@@ -10,7 +10,7 @@ FROM scratch AS source
 
 ARG TARGETARCH
 
-COPY bin/cc-dashboard-query-api-${TARGETARCH} /usr/bin/cc-dashboard-query-api
+COPY bin/dashboard-api-${TARGETARCH} /usr/bin/dashboard-api
 COPY bin/ui-apis-${TARGETARCH} /usr/bin/ui-apis
 
 # /etc/ui-apis directory used for storing self-signed certificates
