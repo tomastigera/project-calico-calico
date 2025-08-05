@@ -2715,17 +2715,22 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 var _ = Describe("Filtered rules (negated catch-all CIDR validation)", func() {
 	rrConfigNormal := Config{
-		IPIPEnabled:       true,
-		IPIPTunnelAddress: nil,
-		IPSetConfigV4:     ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:     ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		MarkAccept:        0x80,
-		MarkPass:          0x100,
-		MarkScratch0:      0x200,
-		MarkScratch1:      0x400,
-		MarkDrop:          0x800,
-		MarkEndpoint:      0xff000,
-		LogPrefix:         "calico-packet",
+		IPIPEnabled:              true,
+		IPIPTunnelAddress:        nil,
+		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:       100,
+		DNSPacketsNfqueueID:      101,
+		MarkEgress:               0x40,
+		MarkAccept:               0x80,
+		MarkPass:                 0x100,
+		MarkScratch0:             0x200,
+		MarkScratch1:             0x400,
+		MarkDrop:                 0x800,
+		LogPrefix:                "calico-packet",
+		MarkDNSPolicy:            0x00001,
+		MarkSkipDNSPolicyNfqueue: 0x400000,
+		MarkEndpoint:             0xff000,
 	}
 
 	DescribeTable(
