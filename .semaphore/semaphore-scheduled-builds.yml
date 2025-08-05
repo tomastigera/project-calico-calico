@@ -1096,6 +1096,26 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: dashboards
+    run:
+      when: "true or change_in(['/*', '/dashboards/', '/crypto/', '/libcalico-go/', '/linseed/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cd dashboards
+      jobs:
+        - name: dashboards tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: Build binary
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/snort3 images
     run:
       when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
