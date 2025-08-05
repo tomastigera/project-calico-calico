@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: cc-dashboard-query-api-ci-
+  generateName: dashboards-ci-
 spec:
   entrypoint: main
   templateDefaults:
@@ -74,7 +74,7 @@ spec:
       script:
         source: |
           source checkout
-          cd cc-dashboard-query-api
+          cd dashboards
           until docker ps; do sleep 5; done
           make test
           make docker-build
@@ -86,7 +86,7 @@ spec:
             value: tigera-cc-dev
         source: |
           source checkout
-          cd cc-dashboard-query-api
+          cd dashboards
           source .argoci/scripts/cd_prologue.sh
           make docker-push
           ENV=dev PR_OPTS=" -l autoupdate,automerge,dev,cc-dashboard-query-api" make helm-pr
@@ -95,7 +95,7 @@ spec:
       script:
         source: |
           source checkout
-          cd cc-dashboard-query-api
+          cd dashboards
           source .argoci/scripts/cd_prologue.sh
           make docker-push
           ENV=stag make helm-pr

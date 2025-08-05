@@ -1,0 +1,10 @@
+version: v2
+workflows:
+  - name: dashboards-ci
+    workflowFile: dashboards/.argoci/ciworkflow.yaml
+    runWhen:
+      runOnTag: true
+      changes:
+        in:
+          - dashboards\/.*
+
