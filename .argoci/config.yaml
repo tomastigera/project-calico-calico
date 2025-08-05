@@ -7,4 +7,3 @@ workflows:
       changes:
         in:
           - dashboards\/.*
-
