@@ -1,7 +1,7 @@
 # !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.
 - title: v3.22.1
   release_name: 2025-07-24-v3-22-1-handiness
-  note: 2025-07-24-v3-22-1-handiness - generated from git hash 82c214ea1ee9 and cnx-manager
+  note: 2025-07-24-v3-22-1-handiness - generated from git hash 82c214ea1ee9 and manager
     git hash 0b813a7a6f3b
   full_hash: 82c214ea1ee9
   tigera-operator:
@@ -11,25 +11,13 @@
   components:
     alertmanager:
       version: v3.22.1
+    apiserver:
+      version: v3.22.1
     calico-private:
       version: v3.22.1
     calicoctl:
       version: v3.22.1
     calicoq:
-      version: v3.22.1
-    cnx-apiserver:
-      version: v3.22.1
-    cnx-kube-controllers:
-      version: v3.22.1
-    cnx-manager:
-      version: v3.22.1
-    cnx-manager-proxy:
-      version: v3.22.1
-    cnx-node:
-      version: v3.22.1
-    cnx-node-windows:
-      version: v3.22.1
-    cnx-queryserver:
       version: v3.22.1
     compliance-benchmarker:
       version: v3.22.1
@@ -107,6 +95,8 @@
       version: v3.22.1
     kibana:
       version: v3.22.1
+    kube-controllers:
+      version: v3.22.1
     l7-admission-controller:
       version: v3.22.1
     l7-collector:
@@ -114,6 +104,14 @@
     license-agent:
       version: v3.22.1
     linseed:
+      version: v3.22.1
+    manager:
+      version: v3.22.1
+    manager-proxy:
+      version: v3.22.1
+    node:
+      version: v3.22.1
+    node-windows:
       version: v3.22.1
     packetcapture:
       version: v3.22.1
@@ -124,6 +122,8 @@
     prometheus-config-reloader:
       version: v3.22.1
     prometheus-operator:
+      version: v3.22.1
+    queryserver:
       version: v3.22.1
     tigera-cni:
       version: v3.22.1
