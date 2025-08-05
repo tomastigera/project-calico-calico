@@ -115,9 +115,7 @@ if ! ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/apise
 fi
 
 echo "Wait for Calico to be ready..."
-for app in calico-node calico-kube-controllers calico-apiserver calico-typha whisker goldmane; do
-  wait_pod_ready -n calico-system -l k8s-app="$app"
-done
+wait_pod_ready -n calico-system -l k8s-app
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
 
