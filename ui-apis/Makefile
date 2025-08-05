@@ -68,6 +68,8 @@ $(UI_APIS_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH) $(BI
 clean:
 	rm -fr $(BINDIR)
 	rm -f $(UI_APIS_CONTAINER_CREATED)
+	# We build dashboard api as part of the ui-apis image build, so clean them as part of the clean.
+	$(MAKE) -C ../dashboards clean
 	-docker image rm -f $$(docker images $(UI_APIS_IMAGE) -a -q)
 
 ##########################################################################
