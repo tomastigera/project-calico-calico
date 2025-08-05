@@ -245,7 +245,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 					return fmt.Errorf("failed to clone manager repository: %v", err)
 				}
 
-				// Release the cnx-manager image(s).
+				// Release the tigera-manager image(s).
 				managerOpts := []manager.Option{
 					manager.WithDirectory(managerDir),
 					manager.WithCalicoDirectory(cfg.RepoRootDir),
@@ -270,12 +270,12 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				}
 				manager, err := manager.NewManager(managerOpts...)
 				if err != nil {
-					return fmt.Errorf("failed to create cnx-manager manager: %v", err)
+					return fmt.Errorf("failed to create tigera-manager manager: %v", err)
 				}
 				if err := manager.Publish(); err != nil {
-					return fmt.Errorf("failed to publish cnx-manager: %v", err)
+					return fmt.Errorf("failed to publish tigera-manager: %v", err)
 				}
-				logrus.Info("Published cnx-manager")
+				logrus.Info("Published tigera-manager")
 			}
 
 			// Publish the rest of the release.

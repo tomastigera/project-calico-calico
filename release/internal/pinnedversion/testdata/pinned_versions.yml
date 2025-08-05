@@ -15,25 +15,13 @@
   components:
     alertmanager:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
+    apiserver:
+      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     calico-private:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     calicoctl:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     calicoq:
-      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
-    cnx-apiserver:
-      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
-    cnx-kube-controllers:
-      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
-    cnx-manager:
-      version: v3.22.0-1.0-calient-0.dev-148-g0b813a7a6f3b
-    cnx-manager-proxy:
-      version: v3.22.0-1.0-calient-0.dev-148-g0b813a7a6f3b
-    cnx-node:
-      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
-    cnx-node-windows:
-      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
-    cnx-queryserver:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     compliance-benchmarker:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
@@ -109,6 +97,8 @@
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     kibana:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
+    kube-controllers:
+      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     l7-collector:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     l7-admission-controller:
@@ -116,6 +106,14 @@
     license-agent:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     linseed:
+      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
+    manager:
+      version: v3.22.0-1.0-calient-0.dev-148-g0b813a7a6f3b
+    manager-proxy:
+      version: v3.22.0-1.0-calient-0.dev-148-g0b813a7a6f3b
+    node:
+      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
+    node-windows:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     packetcapture:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
@@ -126,6 +124,8 @@
     prometheus-config-reloader:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     prometheus-operator:
+      version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
+    queryserver:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
     tigera-cni:
       version: v3.22.0-1.0-calient-0.dev-1461-g82c214ea1ee9
