@@ -135,7 +135,7 @@ require (
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 	github.com/tigera/operator/api v0.0.0-20250729225329-a4e446dfb054
 	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
-	github.com/urfave/cli/v2 v2.27.6
+	github.com/urfave/cli/v3 v3.3.8
 	github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -412,7 +412,6 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
-	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.elastic.co/apm/module/apmzap/v2 v2.6.2 // indirect
