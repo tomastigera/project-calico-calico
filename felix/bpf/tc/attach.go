@@ -84,7 +84,6 @@ type AttachPoint struct {
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
 	DNSInlineProcessing     bool
-	RedirectPeer            bool
 }
 
 var ErrDeviceNotFound = errors.New("device not found")
