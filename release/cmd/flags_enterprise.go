@@ -46,6 +46,13 @@ var (
 		EnvVars: []string{"MANAGER_DEV_TAG_SUFFIX"},
 		Value:   manager.DefaultDevTagSuffix,
 	}
+
+	skipManagerFlag = &cli.StringFlag{
+		Name:    "skip-manager",
+		Usage:   "Skip the manager step",
+		EnvVars: []string{"SKIP_MANAGER"},
+		Value:   "false",
+	}
 )
 
 var helmRegistryFlag = &cli.StringFlag{
@@ -143,6 +150,18 @@ var awsProfileFlag = &cli.StringFlag{
 	Required: true,
 }
 
+var s3BucketFlag = &cli.StringFlag{
+	Name:    "s3-bucket",
+	Usage:   "The S3 bucket to publish the release to publish release artifacts to. ",
+	EnvVars: []string{"S3_BUCKET"},
+}
+
+var windowsArchiveBucketFlag = &cli.StringFlag{
+	Name:    "windows-gcs-bucket",
+	Usage:   "The GCS bucket to publish the Windows archive to",
+	EnvVars: []string{"WINDOWS_GCS_BUCKET"},
+}
+
 var skipReleaseVersionCheckFlag = &cli.BoolFlag{
 	Name:    "skip-version-check",
 	Usage:   "Skip checking the release version matches the determined version",
@@ -154,4 +173,24 @@ var skipReleaseVersionCheckFlag = &cli.BoolFlag{
 		}
 		return nil
 	},
+}
+
+var baseArtifactsURLFlag = &cli.StringFlag{
+	Name:    "artifacts-base-url",
+	Usage:   "Base URL for accessing enterprise artifacts",
+	EnvVars: []string{"ARTIFACTS_BASE_URL"},
+}
+
+var skipImageValidationFlag = &cli.BoolFlag{
+	Name:    "skip-image-validation",
+	Usage:   "Skip validation of images",
+	EnvVars: []string{"SKIP_IMAGE_VALIDATION"},
+	Value:   false,
+}
+
+var skipOperatorValidationFlag = &cli.BoolFlag{
+	Name:    "skip-operator-validation",
+	Usage:   "Skip validation of the Tigera operator image",
+	EnvVars: []string{"SKIP_OPERATOR_VALIDATION"},
+	Value:   false,
 }

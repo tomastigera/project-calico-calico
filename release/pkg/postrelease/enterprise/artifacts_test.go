@@ -12,12 +12,9 @@ import (
 	"cloud.google.com/go/storage"
 
 	"github.com/projectcalico/calico/release/internal/command"
-	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
-
-const downloadBaseURL = "https://downloads.tigera.io/ee"
 
 func validateURL(t testing.TB, url, desc string) {
 	t.Helper()
@@ -43,16 +40,21 @@ func TestWindowsArchive(t *testing.T) {
 		t.Fatalf("failed to create GCS client: %v", err)
 	}
 
-	bucket := client.Bucket(utils.WindowsGCSBucketName)
-	obj := bucket.Object(fmt.Sprintf("tigera-calico-windows-%s.zip", releaseVersion))
+	parts := strings.Split(windowsBucket, "/")
+	bucket := client.Bucket(parts[0])
+	objName := fmt.Sprintf("tigera-calico-windows-%s.zip", releaseVersion)
+	if len(parts) > 1 {
+		objName = filepath.Join(parts[1], objName)
+	}
+	obj := bucket.Object(objName)
 	_, err = obj.Attrs(ctx)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			t.Fatalf("Windows archive for version %s does not exist in GCS bucket %s", releaseVersion, utils.WindowsGCSBucketName)
+			t.Fatalf("Windows archive for version %s does not exist in GCS bucket %s", releaseVersion, windowsBucket)
 		}
 		t.Fatalf("failed to get attributes for Windows archive: %v", err)
 	}
-	t.Logf("Windows archive for version %s exists in GCS bucket %s", releaseVersion, utils.WindowsGCSBucketName)
+	t.Logf("Windows archive for version %s exists in GCS bucket %s", releaseVersion, windowsBucket)
 }
 
 func TestManifests(t *testing.T) {
@@ -75,7 +77,7 @@ func TestManifests(t *testing.T) {
 		}
 		t.Run(relPath, func(t *testing.T) {
 			t.Parallel()
-			validateURL(t, fmt.Sprintf("%s/%s/manifests/%s", downloadBaseURL, releaseVersion, relPath), "manifest file "+relPath)
+			validateURL(t, fmt.Sprintf("%s/%s/manifests/%s", artifactsBaseURL, releaseVersion, relPath), "manifest file "+relPath)
 		})
 		return nil
 	})
@@ -85,7 +87,7 @@ func TestManifests(t *testing.T) {
 
 	t.Run("OCP bundle", func(t *testing.T) {
 		t.Parallel()
-		validateURL(t, fmt.Sprintf("%s/%s/manifests/ocp.tgz", downloadBaseURL, releaseVersion), "OCP bundle")
+		validateURL(t, fmt.Sprintf("%s/%s/manifests/ocp.tgz", artifactsBaseURL, releaseVersion), "OCP bundle")
 	})
 }
 
@@ -97,7 +99,7 @@ func TestHelmChart(t *testing.T) {
 		t.Fatal("No chart version provided")
 	}
 
-	validateURL(t, fmt.Sprintf("%s/charts/tigera-operator-%s-%s.tgz", downloadBaseURL, releaseVersion, chartVersion), "Helm chart")
+	validateURL(t, fmt.Sprintf("%s/charts/tigera-operator-%s-%s.tgz", artifactsBaseURL, releaseVersion, chartVersion), "Helm chart")
 }
 
 func TestReleaseArchive(t *testing.T) {
@@ -105,7 +107,7 @@ func TestReleaseArchive(t *testing.T) {
 
 	checkVersion(t, releaseVersion)
 
-	validateURL(t, fmt.Sprintf("%s/archives/release-%s-%s.tgz", downloadBaseURL, releaseVersion, operatorVersion), "release archive")
+	validateURL(t, fmt.Sprintf("%s/archives/release-%s-%s.tgz", artifactsBaseURL, releaseVersion, operatorVersion), "release archive")
 }
 
 func TestBinaries(t *testing.T) {
@@ -115,23 +117,34 @@ func TestBinaries(t *testing.T) {
 		t.Parallel()
 
 		t.Run("linux", func(t *testing.T) {
-			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl", downloadBaseURL, releaseVersion), "calicoctl binary for Linux")
+			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl", artifactsBaseURL, releaseVersion), "calicoctl binary for Linux")
 		})
 
 		t.Run("mac", func(t *testing.T) {
-			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl-darwin-amd64", downloadBaseURL, releaseVersion), "calicoctl binary for Mac OSX")
+			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl-darwin-amd64", artifactsBaseURL, releaseVersion), "calicoctl binary for Mac OSX")
 		})
 
 		t.Run("windows", func(t *testing.T) {
-			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl-windows-amd64.exe", downloadBaseURL, releaseVersion), "calicoctl binary for Windows")
+			validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoctl-windows-amd64.exe", artifactsBaseURL, releaseVersion), "calicoctl binary for Windows")
 		})
 	})
 
 	t.Run("calicoq", func(t *testing.T) {
 		t.Parallel()
 
-		validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoq", downloadBaseURL, releaseVersion), "calicoq binary")
+		validateURL(t, fmt.Sprintf("%s/binaries/%s/calicoq", artifactsBaseURL, releaseVersion), "calicoq binary")
 	})
+}
+
+func resolveRPMVersion(t testing.TB, rpmVersion string) string {
+	t.Helper()
+
+	// hack/generate-rpm-version.sh
+	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-rpm-version.sh"), []string{repoRootDir, rpmVersion})
+	if err != nil {
+		t.Fatalf("failed to determine full RPM version for %s: %v", rpmVersion, err)
+	}
+	return strings.TrimSpace(v)
 }
 
 func determineRPMVersion(t testing.TB, dir, key string) string {
@@ -156,14 +169,14 @@ func TestRPMS(t *testing.T) {
 	t.Run("RHEL yum/dnf repo file", func(t *testing.T) {
 		t.Parallel()
 		for _, rhel := range calico.RHELVersions {
-			validateURL(t, fmt.Sprintf("%s/rpms/%s/calico_rhel%s.repo", downloadBaseURL, stream, rhel), fmt.Sprintf("yum/dnf repo file for RHEL %s", rhel))
+			validateURL(t, fmt.Sprintf("%s/rpms/%s/calico_rhel%s.repo", artifactsBaseURL, stream, rhel), fmt.Sprintf("yum/dnf repo file for RHEL %s", rhel))
 		}
 	})
 
 	t.Run("selinux", func(t *testing.T) {
 		t.Parallel()
 		for _, rhel := range calico.RHELVersions {
-			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/noarch/calico-selinux-%s-1.el%s.noarch.rpm", downloadBaseURL, stream, rhel, selinuxVersion, rhel), fmt.Sprintf("SELinux RPM for RHEL %s", rhel))
+			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/noarch/calico-selinux-%s-1.el%s.noarch.rpm", artifactsBaseURL, stream, rhel, resolveRPMVersion(t, selinuxVersion), rhel), fmt.Sprintf("SELinux RPM for RHEL %s", rhel))
 		}
 	})
 
@@ -171,13 +184,13 @@ func TestRPMS(t *testing.T) {
 		t.Parallel()
 		// https://downloads.tigera.io/ee/rpms/v3.20/rhel8/RPMS/x86_64/calico-node-3.20.4-1.el8.x86_64.rpm
 		for _, rhel := range calico.RHELVersions {
-			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/x86_64/calico-node-%s-1.el%s.x86_64.rpm", downloadBaseURL, stream, rhel, strings.TrimPrefix(releaseVersion, "v"), rhel), fmt.Sprintf("calico-node RPM for RHEL %s", rhel))
+			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/x86_64/calico-node-%s-1.el%s.x86_64.rpm", artifactsBaseURL, stream, rhel, resolveRPMVersion(t, ""), rhel), fmt.Sprintf("calico-node RPM for RHEL %s", rhel))
 		}
 	})
 	t.Run("calico-fluent-bit", func(t *testing.T) {
 		t.Parallel()
 		for _, rhel := range calico.RHELVersions {
-			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/x86_64/calico-fluent-bit-%s-1.el%s.x86_64.rpm", downloadBaseURL, stream, rhel, fluentBitVersion, rhel), fmt.Sprintf("calico-fluent-bit RPM for RHEL %s", rhel))
+			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/x86_64/calico-fluent-bit-%s-1.el%s.x86_64.rpm", artifactsBaseURL, stream, rhel, resolveRPMVersion(t, fluentBitVersion), rhel), fmt.Sprintf("calico-fluent-bit RPM for RHEL %s", rhel))
 		}
 	})
 }

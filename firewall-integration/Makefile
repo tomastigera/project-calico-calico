@@ -2,7 +2,6 @@
 include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/firewall-integration
-CONFIRM         ?= true
 BRANCH_NAME     ?= $(PIN_BRANCH)
 
 #############################################

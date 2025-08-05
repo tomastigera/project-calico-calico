@@ -21,7 +21,10 @@ const (
 	// EnterpriseProductCode is the code for calico enterprise.
 	EnterpriseProductCode = "cnx"
 
-	WindowsGCSBucketName = "tigera-windows"
+	EnterpriseWindowsGCSBucketName = "tigera-windows"
+
+	// EnterpriseArtifactsBaseURL is the base URL for accessing enterprise artifacts.
+	EnterpriseArtifactsBaseURL = "https://downloads.tigera.io/ee"
 )
 
 func DetermineCalicoVersion(repoRoot string) (string, error) {

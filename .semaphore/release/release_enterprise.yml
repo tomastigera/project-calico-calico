@@ -1,0 +1,40 @@
+version: v1.0
+name: Publish official release
+agent:
+  machine:
+    type: f1-standard-4
+    os_image: ubuntu2204
+execution_time_limit:
+  hours: 8
+blocks:
+  - name: "Publish official release"
+    dependencies: []
+    skip:
+      # Only run on branches that begin with 'release-calient-v'
+      when: "branch !~ '^release-calient-v/'"
+    task:
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: marvin-aws-config
+        - name: marvin-aws-credentials
+        - name: marvin-release-cutting-credentials
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Checkout the code and unshallow it.
+          - checkout
+          - retry git fetch --quiet --unshallow
+          # Log in to container registries needed for release.
+          - docker login --username marvin@tigera.io -u _json_key -p "$(cat ~/secrets/marvin-gcr-credentials.json)" https://gcr.io
+          - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
+      jobs:
+        - name: "Release on Semaphore VM"
+          env_vars:
+            - name: AWS_PROFILE
+              value: helm
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make GIT_BRANCH=${SEMAPHORE_GIT_BRANCH} release; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make GIT_BRANCH=${SEMAPHORE_GIT_BRANCH} release-publish; fi
