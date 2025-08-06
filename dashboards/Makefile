@@ -59,7 +59,7 @@ docker-build: $(BINDIR)/$(PROJECT_NAME)
 		-t "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)" .
 
 $(BINDIR)/$(PROJECT_NAME): $(SRC_FILES)
-	$(CONTAINERIZED_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	sh -c '$(GIT_CONFIG_SSH) \
 	CGO_ENABLED=0 go build -v -o $@ ./pkg/internal/cmd/api-server/main.go'
 
@@ -68,13 +68,13 @@ docker-push: docker-build
 
 .PHONY: fmt-vet
 fmt-vet: ## Run go fmt and go vet against code.
-		$(CONTAINERIZED) $(CALICO_BUILD) \
+		$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 		go fmt ./... && go vet ./...'
 
-.PHONY: test
-test: fmt-vet
-	$(CONTAINERIZED) $(CALICO_BUILD) \
+.PHONY: ci-test
+ci-test: fmt-vet
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 		go test ./... $(TESTARGS)'
 
