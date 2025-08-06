@@ -76,7 +76,7 @@ spec:
           source checkout
           cd dashboards
           until docker ps; do sleep 5; done
-          make ci-test
+          make ci
           make docker-build
 
     - name: push-dev-images

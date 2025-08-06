@@ -53,30 +53,13 @@ GCP_PROJECT ?= tigera-tesla
 TAG_NAME ?= $(if $(git-release-tag-for-current-commit),$(git-release-tag-for-current-commit),$(shell git describe --always --tags --long))
 DOCKERFILE=Dockerfile
 
-docker-build: $(BINDIR)/$(PROJECT_NAME)
+docker-build: build
 	$(DOCKER_BUILD) \
 		--file ./$(DOCKERFILE) \
 		-t "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)" .
 
-$(BINDIR)/$(PROJECT_NAME): $(SRC_FILES)
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	sh -c '$(GIT_CONFIG_SSH) \
-	CGO_ENABLED=0 go build -v -o $@ ./pkg/internal/cmd/api-server/main.go'
-
 docker-push: docker-build
 	docker push "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)"
-
-.PHONY: fmt-vet
-fmt-vet: ## Run go fmt and go vet against code.
-		$(DOCKER_RUN) $(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-		go fmt ./... && go vet ./...'
-
-.PHONY: ci-test
-ci-test: fmt-vet
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-		go test ./... $(TESTARGS)'
 
 ## targets for auto opening prs on helm-charts repo with tag updates
 helm-pr:
