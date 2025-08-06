@@ -48,11 +48,11 @@ var (
 		Value:   manager.DefaultDevTagSuffix,
 	}
 
-	skipManagerFlag = &cli.StringFlag{
+	skipManagerFlag = &cli.BoolFlag{
 		Name:    "skip-manager",
 		Usage:   "Skip the manager step",
 		Sources: cli.EnvVars("SKIP_MANAGER"),
-		Value:   "false",
+		Value:   false,
 	}
 )
 
