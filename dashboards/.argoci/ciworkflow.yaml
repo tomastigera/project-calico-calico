@@ -67,7 +67,7 @@ spec:
             template: push-dev-images
           - name: push-prod-images
             depends: "test-and-build-images"
-            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
+            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^release-cloud-v'"
             template: build-and-push-prod-images
 
     - name: test-and-build-images
