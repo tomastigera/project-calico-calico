@@ -31,12 +31,19 @@ func NewEnterpriseManager(opts ...Option) *EnterpriseOperatorManager {
 	}
 }
 
-func (o *EnterpriseOperatorManager) Build() error {
-	if !o.isHashRelease {
-		return fmt.Errorf("operator manager builds only for hash releases")
+func (o *EnterpriseOperatorManager) PreBuildValidation() error {
+	if err := o.OperatorManager.PreBuildValidation(o.tmpDir); err != nil {
+		return err
 	}
+	if !strings.HasSuffix(o.productRegistry, fmt.Sprintf("/%s", registry.TigeraNamespace)) {
+		return fmt.Errorf("operator does not support product registry %s, it must end with /%s", o.productRegistry, registry.TigeraNamespace)
+	}
+	return nil
+}
+
+func (o *EnterpriseOperatorManager) Build() error {
 	if o.validate {
-		if err := o.PreBuildValidation(o.tmpDir); err != nil {
+		if err := o.PreBuildValidation(); err != nil {
 			return err
 		}
 	}
@@ -104,7 +111,7 @@ func (o *EnterpriseOperatorManager) modifyComponentsImagesFile() error {
 
 	if err := tmpl.Execute(dest, map[string]string{
 		"Registry":        o.registry,
-		"ProductRegistry": o.productRegistry,
+		"ProductRegistry": strings.TrimSuffix(o.productRegistry, fmt.Sprintf("/%s", registry.TigeraNamespace)),
 		"Year":            time.Now().Format("2006"),
 	}); err != nil {
 		logrus.WithError(err).Errorf("Failed to write to file %s", destFilePath)

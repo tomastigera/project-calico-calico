@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
@@ -38,7 +39,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 		Name:  "build",
 		Usage: "build a Enterprise hashrelease locally",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("hashrelease-build.log")
 
 			if err := validateHashreleaseBuildFlags(c); err != nil {
@@ -169,7 +170,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 }
 
 // validateEnterpriseHashreleasePublishFlags checks that the flags are set correctly for the enterprise hashrelease publish command.
-func validateEnterpriseHashreleasePublishFlags(c *cli.Context) error {
+func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command) error {
 	// If publishing the hashrelease
 	if c.Bool(publishHashreleaseFlag.Name) {
 		//  check that hashrelease server configuration is set.
@@ -197,6 +198,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 		operatorDevTagSuffixFlag,
 		archFlag,
 		registryFlag,
+		windowsArchiveBucketFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
 		helmRegistryFlag,
@@ -210,11 +212,11 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 		Name:  "publish",
 		Usage: "publish a pre-built Enterprise hashrelease",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("hashrelease-publish.log")
 
 			// Validate flags.
-			if err := validateEnterpriseHashreleasePublishFlags(c); err != nil {
+			if err := validateEnterpriseHashreleasePublishFlags(ctx, c); err != nil {
 				return err
 			}
 
@@ -270,13 +272,11 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 					calico.WithImageRegistries(productRegistries),
 				)
 			}
-
 			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve images for the hashrelease: %v", err)
 			}
 			calicoOpts = append(calicoOpts, calico.WithComponents(components))
-
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(hashrel.ChartVersion),
@@ -285,7 +285,9 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
 				calico.WithHelmRegistry(c.String(helmRegistryFlag.Name)),
 			}
-
+			if b := c.String(windowsArchiveBucketFlag.Name); b != "" {
+				enterpriseOpts = append(enterpriseOpts, calico.WithWindowsArchiveBucket(b))
+			}
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
 			if err := m.PublishRelease(); err != nil {
 				return err
@@ -308,10 +310,10 @@ func enterpriseMetadataCommand(cfg *Config) *cli.Command {
 			orgFlag,
 			repoFlag,
 			repoRemoteFlag,
-			&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to", EnvVars: []string{"METADATA_DIR"}, Value: "", Required: true},
-			&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file", EnvVars: []string{"VERSIONS_FILE"}, Value: "", Required: true},
+			&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to", Sources: cli.EnvVars("METADATA_DIR"), Value: "", Required: true},
+			&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file", Sources: cli.EnvVars("VERSIONS_FILE"), Value: "", Required: true},
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("hashrelease-metadata.log")
 			pinnedVersionFileDir := filepath.Dir(c.String("versions-file"))
 			versions, err := pinnedversion.RetrieveVersions(pinnedVersionFileDir)

@@ -3,8 +3,8 @@
 #################################################################################################
 
 # The version of calico/go-build and calico/base to use.
-GO_BUILD_VER=1.24.5-llvm18.1.8-k8s1.32.6
-CALICO_BASE_VER=ubi9-1749156995
+GO_BUILD_VER=1.24.6-llvm18.1.8-k8s1.32.7
+CALICO_BASE_VER=ubi9-1754512227
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
@@ -66,7 +66,10 @@ DEV_TAG_SUFFIX ?= calient-0.dev
 
 # RELEASE_REGISTRIES configures the container images registries which are published to
 # as part of an official release.
-RELEASE_REGISTRIES = quay.io/tigera
+RELEASE_REGISTRIES ?= quay.io/tigera
+
+# Archive bucket
+ARTIFACTS_BUCKET ?= tigera-public/ee
 
 # The directory for windows image tarballs
 WINDOWS_DIST = dist/windows
@@ -85,6 +88,8 @@ FLANNEL_VERSION=main
 # The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
 BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
+# The default branch for semaphore
+DEFAULT_BRANCH_OVERRIDE ?= master
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.

@@ -29,28 +29,33 @@ type Manager struct {
 
 	runner command.CommandRunner
 
-	remote           string
-	githubOrg        string
-	repoName         string
-	branch           string
-	devTagIdentifier string
+	remote              string
+	githubOrg           string
+	repoName            string
+	branch              string
+	devTagIdentifier    string
+	releaseBranchPrefix string
 
 	isHashrelease       bool
 	hashreleaseVersion  string
 	hashreleaseRegistry string
+	registry            string
 
 	validate bool
 
-	publish bool
+	publishImages bool
+	publishTag    bool
+	dryRun        bool
 }
 
 func NewManager(opts ...Option) (*Manager, error) {
 	m := &Manager{
 		runner:              &command.RealCommandRunner{},
 		validate:            true,
-		publish:             true,
+		publishImages:       true,
 		isHashrelease:       false,
 		hashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
+		registry:            registry.DefaultEnterpriseRegistry,
 	}
 	for _, opt := range opts {
 		if err := opt(m); err != nil {
@@ -63,23 +68,28 @@ func NewManager(opts ...Option) (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) Publish() error {
-	if m.validate {
-		if err := m.PrePublishValidation(); err != nil {
-			return err
-		}
+func (m *Manager) publishReleaseImages() error {
+	if !m.publishImages {
+		logrus.Info("Skipping publishing release images")
+		return nil
 	}
 
+	logrus.Info("Start publishing release images")
 	env := append(os.Environ(),
+		"RELEASE=true",
 		"IMAGE_ONLY=true",
 		fmt.Sprintf("DEV_TAG=%s", m.hashreleaseVersion),
 		fmt.Sprintf("DEV_REGISTRIES=%s", m.hashreleaseRegistry),
+		fmt.Sprintf("RELEASE_REGISTRIES=%s", m.registry),
 		fmt.Sprintf("RELEASE_TAG=%s", m.version),
 	)
-	if m.publish {
+	if m.dryRun {
 		env = append(env, "DRYRUN=true")
 	} else {
 		env = append(env, "CONFIRM=true")
+	}
+	if !m.publishTag {
+		env = append(env, "SKIP_DEV_IMAGE_RETAG=true")
 	}
 
 	// We allow for a certain number of retries when publishing each directory, since
@@ -118,22 +128,37 @@ func (m *Manager) Publish() error {
 		logrus.Info(out)
 		break
 	}
+	logrus.Info("Finished publishing release images")
+	return nil
+}
+
+func (m *Manager) Publish() error {
+	if m.validate {
+		if err := m.PrePublishValidation(); err != nil {
+			return err
+		}
+	}
+
+	if err := m.publishReleaseImages(); err != nil {
+		return fmt.Errorf("failed to publish images: %w", err)
+	}
 
 	branchManager := branch.NewManager(branch.WithRepoRoot(m.dir),
 		branch.WithRepoRemote(m.remote),
 		branch.WithMainBranch(m.branch),
 		branch.WithDevTagIdentifier(m.devTagIdentifier),
+		branch.WithReleaseBranchPrefix(m.releaseBranchPrefix),
 		branch.WithValidate(m.validate),
-		branch.WithPublish(m.publish))
+		branch.WithPublish(m.publishTag && !m.dryRun))
 
-	return branchManager.CreateNextDevelopmentTag()
+	return branchManager.CreateNextDevelopmentTag(m.version)
 }
 
 func (m *Manager) PrePublishValidation() error {
 	if m.isHashrelease {
 		return fmt.Errorf("manager is only supported for release")
 	}
-	if m.hashreleaseVersion != "" {
+	if m.hashreleaseVersion == "" {
 		return fmt.Errorf("hashrelease version is not specified")
 	}
 	if m.version == "" {
@@ -145,10 +170,6 @@ func (m *Manager) PrePublishValidation() error {
 		err := fmt.Errorf("git version %s does not contain dev tag suffix %s", gitVersion, m.devTagIdentifier)
 		logrus.Error(err)
 		return err
-	}
-
-	if !m.publish {
-		logrus.Warn("Skipping publish is set, will treat as dry-run")
 	}
 	return nil
 }
