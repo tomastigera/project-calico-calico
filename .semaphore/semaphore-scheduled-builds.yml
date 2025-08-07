@@ -254,7 +254,8 @@ promotions:
 blocks:
   - name: Check images availability
     run:
-      when: "true or change_in(['/charts/', '/manifests/'])"
+      # Script fails on enterprise due to missing values.yaml.
+      when: "false and (true or change_in(['/charts/', '/manifests/']))"
     dependencies: []
     task:
       jobs:
