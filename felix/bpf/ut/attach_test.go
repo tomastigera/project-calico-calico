@@ -142,9 +142,9 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err = bpfEpMgr.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
-		programsCount := 15
+		programsCount := 16
 		if ipv6Enabled {
-			programsCount = 29
+			programsCount = 31
 		}
 		Expect(programs.Count()).To(Equal(programsCount))
 		at := programs.Programs()
@@ -198,7 +198,9 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			bpfEpMgr.OnUpdate(&proto.HostMetadataV6Update{Hostname: "uthost", Ipv6Addr: "1::4"})
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(programs.Count()).To(Equal(58))
+			Expect(programs.Count()).To(Equal(60))
+
+			at := programs.Programs()
 
 			Expect(at).To(HaveKey(hook.AttachType{
 				Hook:       hook.Ingress,
@@ -336,10 +338,10 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err := bpfEpMgr.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
-		programCount := 15
+		programCount := 16
 		jumpMapLen := 2
 		if ipv6Enabled {
-			programCount = 58
+			programCount = 60
 			jumpMapLen = 8
 		}
 		Expect(programs.Count()).To(Equal(programCount))
@@ -357,9 +359,9 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err = bpfEpMgr.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
-		programsCount := 29
+		programsCount := 31
 		if ipv6Enabled {
-			programsCount = 58
+			programsCount = 60
 		}
 		Expect(programs.Count()).To(Equal(programsCount))
 
@@ -427,11 +429,11 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err := bpfEpMgr.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
-		programsCount := 29
+		programsCount := 31
 		jumpMapLen := 6
 
 		if ipv6Enabled {
-			programsCount = 58
+			programsCount = 60
 			jumpMapLen = 16
 		}
 		Expect(programs.Count()).To(Equal(programsCount))
@@ -548,7 +550,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		Expect(attached).To(HaveKey("hostep2"))
 		Expect(attached).NotTo(HaveKey("workloadep3"))
 
-		programs.ResetCount() // Because we recycle it, restarted Felix would get a fresh copy.
+		programs.ResetForTesting() // Because we recycle it, restarted Felix would get a fresh copy.
 
 		bpfEpMgr, err = newBPFTestEpMgr(
 			&linux.Config{
@@ -592,10 +594,10 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err = oldProgs.Open()
 		Expect(err).NotTo(HaveOccurred())
 		pm := jumpMapDump(oldProgs)
-		programsCount := 29
+		programsCount := 31
 		oldPoliciesCount := 4
 		if ipv6Enabled {
-			programsCount = 58
+			programsCount = 60
 			oldPoliciesCount = 12
 		}
 		Expect(pm).To(HaveLen(programsCount))
@@ -631,9 +633,9 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		err = bpfEpMgr.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(programs.Count()).To(Equal(29))
+		Expect(programs.Count()).To(Equal(31))
 		pm = jumpMapDump(commonMaps.ProgramsMap)
-		Expect(pm).To(HaveLen(29))
+		Expect(pm).To(HaveLen(31))
 
 		pm = jumpMapDump(commonMaps.JumpMap)
 		// We remember the state from above
@@ -674,7 +676,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 
 		deleteLink(workload3)
 
-		programs.ResetCount() // Because we recycle it, restarted Felix would get a fresh copy.
+		programs.ResetForTesting() // Because we recycle it, restarted Felix would get a fresh copy.
 
 		bpfEpMgr, err = newBPFTestEpMgr(
 			&linux.Config{

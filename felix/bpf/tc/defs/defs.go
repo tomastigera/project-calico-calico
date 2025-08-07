@@ -58,6 +58,7 @@ const (
 	ProgIndexHostCtConflict
 	ProgIndexIcmpInnerNat
 	ProgIndexNewFlow
+	ProgIndexIPFrag
 	ProgIndexDNSParser
 	ProgIndexMainDebug
 	ProgIndexPolicyDebug
@@ -67,6 +68,7 @@ const (
 	ProgIndexHostCtConflictDebug
 	ProgIndexIcmpInnerNatDebug
 	ProgIndexNewFlowDebug
+	ProgIndexIPFragDebug
 	ProgIndexDNSParserDebug
 	ProgIndexEndDebug
 	ProgIndexEnd
@@ -91,6 +93,7 @@ var ProgramNames = []string{
 	"calico_tc_host_ct_conflict",
 	"calico_tc_skb_icmp_inner_nat",
 	"calico_tc_skb_new_flow_entrypoint",
+	"calico_tc_skb_ipv4_frag",
 	"calico_tc_dns_parser",
 	/* ipv4 - debug */
 	"calico_tc_main",
@@ -101,6 +104,7 @@ var ProgramNames = []string{
 	"calico_tc_host_ct_conflict",
 	"calico_tc_skb_icmp_inner_nat",
 	"calico_tc_skb_new_flow_entrypoint",
+	"calico_tc_skb_ipv4_frag",
 	"calico_tc_dns_parser",
 	/* ipv6 */
 	"calico_tc_main",
@@ -111,6 +115,7 @@ var ProgramNames = []string{
 	"calico_tc_host_ct_conflict",
 	"calico_tc_skb_icmp_inner_nat",
 	"calico_tc_skb_new_flow_entrypoint",
+	"",
 	"calico_tc_dns_parser",
 	/* ipv6 - debug */
 	"calico_tc_main",
@@ -121,6 +126,7 @@ var ProgramNames = []string{
 	"calico_tc_host_ct_conflict",
 	"calico_tc_skb_icmp_inner_nat",
 	"calico_tc_skb_new_flow_entrypoint",
+	"",
 	"calico_tc_dns_parser",
 }
 
