@@ -1138,6 +1138,7 @@ func TestAttachTcx(t *testing.T) {
 	tcxProgs, err := tc.ListAttachedTcxPrograms("workloadep0", "ingress")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(tcxProgs)).To(Equal(1))
+
 	// Now attach Tc program.
 	ap := &tc.AttachPoint{
 		AttachPoint: bpf.AttachPoint{
@@ -1182,6 +1183,20 @@ func TestAttachTcx(t *testing.T) {
 	tcxProgs, err = tc.ListAttachedTcxPrograms("workloadep0", "ingress")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(tcxProgs)).To(Equal(1))
+
+	bpfEpMgr.OnUpdate(&proto.WorkloadEndpointRemove{
+		Id: &proto.WorkloadEndpointID{
+			OrchestratorId: "k8s",
+			WorkloadId:     "workloadep0",
+			EndpointId:     "workloadep0",
+		},
+	})
+	err = bpfEpMgr.CompleteDeferredWork()
+	Expect(err).NotTo(HaveOccurred())
+	_, err = os.Stat(bpfdefs.TcxPinDir + "/workloadep0_ingress")
+	Expect(err).To(HaveOccurred())
+	_, err = os.Stat(bpfdefs.TcxPinDir + "/workloadep0_egress")
+	Expect(err).To(HaveOccurred())
 }
 
 func TestLogFilters(t *testing.T) {

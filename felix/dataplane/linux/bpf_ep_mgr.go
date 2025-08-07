@@ -1287,6 +1287,11 @@ func (m *bpfEndpointManager) onWorkloadEndpointRemove(msg *proto.WorkloadEndpoin
 		iface.info.endpointID = nil
 		return false
 	})
+
+	if m.bpfAttachType == string(apiv3.BPFAttachOptionTCX) {
+		// Remove tcx pins
+		m.cleanupOldTcAttach(oldWEP.Name)
+	}
 	// Remove policy debug info if any
 	m.removeIfaceAllPolicyDebugInfo(oldWEP.Name)
 }
