@@ -85,7 +85,7 @@ var collectionFlows = Collection{
 				AggregationFunctionTypeSum,
 			},
 		},
-		CollectionFieldEnum{fieldName: FieldNamePolicyType, fieldValues: []string{FieldPolicyStaged, FieldPolicyEnforced}, defaultValue: FieldPolicyEnforced},
+		CollectionFieldEnum{fieldName: FieldNamePolicyType, fieldValues: []string{FieldPolicyStaged, FieldPolicyEnforced}, defaultValue: FieldPolicyEnforced, displayDisabled: true},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "policies.all_policies"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_args"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "process_id"},

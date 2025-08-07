@@ -5,6 +5,7 @@ type CollectionField interface {
 	Type() FieldType
 	Internal() bool
 	FilterDisabled() bool
+	DisplayDisabled() bool
 	DisplayType() FieldType
 	SupportsExists() bool
 	AggregationFunctionTypes() []AggregationFunctionType

@@ -167,6 +167,7 @@
     name: packets_out
     type: number
   - defaultValue: enforced
+    displayDisabled: true
     name: policy.type
     type: enum
     values:
