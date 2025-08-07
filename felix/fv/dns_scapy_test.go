@@ -828,9 +828,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Make sure the packet is not seen by Felix
 					time.Sleep(1 * time.Second)
 
+					// Inline mode should work while felix is down.
+					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
+
 					By("Starting Felix again")
 					triggerStartup()
-					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 					tc.Felixes[0].WaitForReady() // Might take 30s in BPF mode.
 					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 				})
@@ -995,7 +997,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
-		// Make sure we don't lose the los that we watch for.
+		// Make sure we don't lose the log that we watch for.
 		opts.ExtraEnvVars["FELIX_DEBUGDISABLELOGDROPPING"] = "true"
 		opts.IPIPMode = api.IPIPModeNever
 		tc, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
