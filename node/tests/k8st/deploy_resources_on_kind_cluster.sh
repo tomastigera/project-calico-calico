@@ -39,6 +39,7 @@ function wait_pod_ready() {
     ${kubectl} logs $args
     echo "Pod $args failed to become ready within 300s; diags above ^^"
   fi
+
   set -e
   return $rc
 }
@@ -114,9 +115,7 @@ if ! ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/apise
 fi
 
 echo "Wait for Calico to be ready..."
-for app in calico-node calico-kube-controllers calico-apiserver calico-typha; do
-  wait_pod_ready -n calico-system -l k8s-app="$app"
-done
+wait_pod_ready -n calico-system -l k8s-app
 wait_pod_ready -l k8s-app=kube-dns -n kube-system
 wait_pod_ready calicoctl -n kube-system
 
@@ -159,6 +158,7 @@ echo
 ${kubectl} get po --all-namespaces -o wide
 ${kubectl} get svc
 
+# Run ipv4 ipv6 connection test
 function test_connection() {
   local svc="webserver-ipv$1"
   output=$(${kubectl} exec client -- wget $svc -T 10 -O -)
@@ -168,7 +168,6 @@ function test_connection() {
     exit 1
   fi
 }
-# Run ipv4 ipv6 connection test
 test_connection 4
 test_connection 6
 

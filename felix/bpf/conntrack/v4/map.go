@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v3
+package v4
 
 import (
 	"encoding/binary"
@@ -21,9 +21,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 
-	v4 "github.com/projectcalico/calico/felix/bpf/conntrack/v4"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
@@ -78,9 +76,7 @@ func (k Key) String() string {
 }
 
 func (k Key) Upgrade() maps.Upgradable {
-	var key4 v4.Key
-	copy(key4[:], k[:])
-	return key4
+	panic("conntrack map key already at its latest version")
 }
 
 func NewKey(proto uint8, ipA net.IP, portA uint16, ipB net.IP, portB uint16) Key {
@@ -214,8 +210,8 @@ const (
 	FlagNATFwdDsr   uint16 = (1 << 1)
 	FlagNATNPFwd    uint16 = (1 << 2)
 	FlagSkipFIB     uint16 = (1 << 3)
-	FlagTrustDNS    uint16 = (1 << 4)
-	FlagEgressGW    uint16 = (1 << 5)
+	FlagReserved4   uint16 = (1 << 4)
+	FlagReserved5   uint16 = (1 << 5)
 	FlagExtLocal    uint16 = (1 << 6)
 	FlagViaNATIf    uint16 = (1 << 7)
 	FlagSrcDstBA    uint16 = (1 << 8)
@@ -528,19 +524,16 @@ func (e Value) IsForwardDSR() bool {
 }
 
 func (e Value) Upgrade() maps.Upgradable {
-	var value4 v4.Value
-	copy(value4[:], e[:])
-	return value4
+	panic("conntrack map value already at its latest version")
 }
 
 var MapParams = maps.MapParameters{
-	Type:         "hash",
+	Type:         "lru_hash",
 	KeySize:      KeySize,
 	ValueSize:    ValueSize,
 	MaxEntries:   MaxEntries,
 	Name:         "cali_v4_ct",
-	Flags:        unix.BPF_F_NO_PREALLOC,
-	Version:      3,
+	Version:      4,
 	UpdatedByBPF: true,
 }
 
