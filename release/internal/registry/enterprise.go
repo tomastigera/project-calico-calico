@@ -1,6 +1,8 @@
 package registry
 
 const (
+	TigeraNamespace = "tigera"
+
 	DefaultEnterpriseRegistry = "quay.io/tigera"
 
 	// DefaultEnterpriseHashreleaseRegistry is the default registry for hashrelease images.

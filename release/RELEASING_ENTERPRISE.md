@@ -122,4 +122,4 @@ All Operator changes for Enterprise vX.Y should be committed to master branch an
 
 ## Performing a release
 
-Follow the instructions from [Calico Enterprise Release Cut Process](https://docs.google.com/document/d/1Oyg4avouWlLXLQf4wpDNsHzdmLyBfGuF_sFTs4t30ho/edit?usp=sharing)
+Follow the instructions from [Calico Enterprise Release Cut Process](https://docs.google.com/document/d/1Oyg4avouWlLXLQf4wpDNsHzdmLyBfGuF_sFTs4t30ho/edit?tab=t.ioffkn5wp5i8)

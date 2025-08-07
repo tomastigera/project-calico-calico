@@ -365,10 +365,28 @@ func TestFileLogger(t *testing.T) {
 		require.NoError(t, err)
 
 		lines := strings.Split(string(data), "\n")
-		require.Len(t, lines, 2)
-		require.Contains(t, lines[0], "WAF detected 2 violations [pass]")
-		require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
-		require.Contains(t, lines[0], `"count":2`)
-		require.Empty(t, lines[1])
+		// In the vast majority of cases, the files will contain 2 lines: 1 aggregated WAF log and an empty line.
+		if len(lines) == 2 {
+			require.Contains(t, lines[0], "WAF detected 2 violations [pass]")
+			require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
+			require.Contains(t, lines[0], `"count":2`)
+			require.Empty(t, lines[1])
+			// Rarely (flakes on CI), we get 2 logs that are not aggregated, likely because the aggregation period
+			// ended between the 2 requests are being generated.
+		} else {
+			require.Len(t, lines, 3) // 2 non-aggregated WAF logs and 1 empty line
+			require.Contains(t, lines[0], "WAF detected 2 violations [pass]")
+			require.Contains(t, lines[0], "SQL Injection Attack Detected via libinjection")
+			require.Contains(t, lines[0], `"method":"GET"`)
+			require.Contains(t, lines[0], `"count":1`)
+
+			require.Contains(t, lines[1], "WAF detected 2 violations [pass]")
+			require.Contains(t, lines[1], "SQL Injection Attack Detected via libinjection")
+			require.Contains(t, lines[1], `"method":"POST"`)
+			require.Contains(t, lines[1], `"count":1`)
+
+			require.Empty(t, lines[2])
+		}
+
 	}, 30*time.Second, 1*time.Second)
 }

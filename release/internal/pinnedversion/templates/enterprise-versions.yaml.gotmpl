@@ -15,25 +15,13 @@
   components:
     alertmanager:
       version: {{.ProductVersion}}
+    apiserver:
+      version: {{.ProductVersion}}
     calico-private:
       version: {{.ProductVersion}}
     calicoctl:
       version: {{.ProductVersion}}
     calicoq:
-      version: {{.ProductVersion}}
-    apiserver:
-      version: {{.ProductVersion}}
-    kube-controllers:
-      version: {{.ProductVersion}}
-    manager:
-      version: {{.ManagerVersion}}
-    manager-proxy:
-      version: {{.ManagerVersion}}
-    node:
-      version: {{.ProductVersion}}
-    node-windows:
-      version: {{.ProductVersion}}
-    queryserver:
       version: {{.ProductVersion}}
     compliance-benchmarker:
       version: {{.ProductVersion}}
@@ -107,6 +95,8 @@
       version: {{.ProductVersion}}
     kibana:
       version: {{.ProductVersion}}
+    kube-controllers:
+      version: {{.ProductVersion}}
     l7-collector:
       version: {{.ProductVersion}}
     l7-admission-controller:
@@ -114,6 +104,14 @@
     license-agent:
       version: {{.ProductVersion}}
     linseed:
+      version: {{.ProductVersion}}
+    manager:
+      version: {{.ManagerVersion}}
+    manager-proxy:
+      version: {{.ManagerVersion}}
+    node:
+      version: {{.ProductVersion}}
+    node-windows:
       version: {{.ProductVersion}}
     packetcapture:
       version: {{.ProductVersion}}
@@ -124,6 +122,8 @@
     prometheus-config-reloader:
       version: {{.ProductVersion}}
     prometheus-operator:
+      version: {{.ProductVersion}}
+    queryserver:
       version: {{.ProductVersion}}
     tigera-cni:
       version: {{.ProductVersion}}

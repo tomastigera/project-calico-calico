@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,16 +10,14 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	cli "github.com/urfave/cli/v2"
+	cli "github.com/urfave/cli/v3"
 
-	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
-	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
 
 func enterpriseReleaseSubCommand(cfg *Config) []*cli.Command {
@@ -40,41 +39,56 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			repoRemoteFlag,
 			releaseBranchPrefixFlag,
 			devTagSuffixFlag,
-			hashreleaseNameFlag,
 			releaseVersionFlag,
 			operatorVersionFlag,
 			chartVersionFlag,
+			hashreleaseNameFlag,
 			registryFlag,
+			operatorRegistryFlag,
+			operatorImageFlag,
 			confirmFlag,
 			skipReleaseVersionCheckFlag,
 			skipValidationFlag,
+			skipBranchCheckFlag,
 			githubTokenFlag,
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-prep.log")
 
 			ver := c.String(releaseVersionFlag.Name)
 
 			// Validate the release version.
-			if err := validateReleaseVersion(c, ver); err != nil {
+			if err := validateReleaseVersion(ctx, c, ver); err != nil {
 				return err
 			}
 
-			// Download the pinned versions of the hashrel.
-			hashrel, err := pinnedversion.LoadEnterpriseHashreleaseFromRemote(c.String(hashreleaseNameFlag.Name), cfg.TmpDir, cfg.RepoRootDir)
-			if err != nil {
-				return err
+			// Create versions file.
+			cfg := &pinnedversion.EnterpriseReleaseVersions{
+				Hashrelease:     c.String(hashreleaseNameFlag.Name),
+				RepoRootDir:     cfg.RepoRootDir,
+				TmpDir:          cfg.TmpDir,
+				ProductVersion:  c.String(releaseVersionFlag.Name),
+				OperatorVersion: c.String(operatorVersionFlag.Name),
+				OperatorCfg: pinnedversion.OperatorConfig{
+					Image:    c.String(operatorImageFlag.Name),
+					Registry: c.String(operatorRegistryFlag.Name),
+				},
+				HelmReleaseVersion: c.String(chartVersionFlag.Name),
+			}
+			if err := cfg.AddToEnterprisePinnedVersionFile(); err != nil {
+				return fmt.Errorf("failed to create pinned version file: %w", err)
 			}
 
 			calicoOpts := []calico.Option{
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithVersion(ver),
-				calico.WithOperatorVersion(c.String(operatorVersionFlag.Name)),
+				calico.WithOperator(c.String(operatorRegistryFlag.Name), c.String(operatorImageFlag.Name), c.String(operatorVersionFlag.Name)),
 				calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 				calico.WithGithubOrg(c.String(orgFlag.Name)),
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
+				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				calico.WithTmpDir(cfg.TmpDir),
 			}
 			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
@@ -82,8 +96,6 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			}
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
-				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 			}
 
@@ -100,17 +112,21 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		repoFlag,
 		repoRemoteFlag,
 		devTagSuffixFlag,
-		chartVersionFlag,
+		releaseBranchPrefixFlag,
+		baseArtifactsURLFlag,
+		s3BucketFlag,
 		skipReleaseVersionCheckFlag,
+		skipBranchCheckFlag,
 		skipValidationFlag,
-		confirmFlag,
+		skipRPMsFlag,
+		awsProfileFlag,
 	}
 
 	return &cli.Command{
 		Name:  "build",
 		Usage: "Run steps to build an enterprise release",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-build.log")
 			// Load version from manifests.
 			ver, operatorVer, err := version.VersionsFromManifests(cfg.RepoRootDir)
@@ -118,26 +134,46 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
+			// Load the release pinned versions.
+			versions, err := pinnedversion.LoadEnterpriseVersionsFromDataFile(cfg.RepoRootDir, ver.FormattedString())
+			if err != nil {
+				return fmt.Errorf("failed to load release versions: %w", err)
+			}
+
 			// Validate the release version.
-			if err := validateReleaseVersion(c, ver.FormattedString()); err != nil {
+			if err := validateReleaseVersion(ctx, c, versions.Title); err != nil {
 				return err
+			}
+			if !c.Bool(skipReleaseVersionCheckFlag.Name) && operatorVer.FormattedString() != versions.TigeraOperator.Version {
+				return fmt.Errorf("operator version mismatch: expected %s, got %s", versions.TigeraOperator.Version, operatorVer.FormattedString())
 			}
 
 			// Build the release.
 			opts := []calico.Option{
-				calico.WithVersion(ver.FormattedString()),
-				calico.WithOperatorVersion(operatorVer.FormattedString()),
-				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, ver.FormattedString())),
+				calico.WithVersion(versions.Title),
+				calico.WithOperator(versions.TigeraOperator.Registry, versions.TigeraOperator.Image, versions.TigeraOperator.Version),
+				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, versions.Title)),
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithGithubOrg(c.String(orgFlag.Name)),
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
+				calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
+				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
+				calico.WithTmpDir(cfg.TmpDir),
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
-				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
+				calico.WithChartVersion(versions.HelmRelease),
+				calico.WithDryRun(false),
+				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
+				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
+			}
+			if v := c.String(baseArtifactsURLFlag.Name); v != "" {
+				entOpts = append(entOpts, calico.WithBaseArtifactsURL(v))
+			}
+			if v := c.String(s3BucketFlag.Name); v != "" {
+				entOpts = append(entOpts, calico.WithS3Bucket(v))
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 			return m.Build()
@@ -152,23 +188,29 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		repoRemoteFlag,
 		releaseBranchPrefixFlag,
 		devTagSuffixFlag,
-		hashreleaseNameFlag,
-		chartVersionFlag,
-		publishImagesFlag,
-		hashReleaseRegistryFlag,
 		publishGitFlag,
+		registryFlag,
+		hashReleaseRegistryFlag,
+		publishImagesFlag,
+		s3BucketFlag,
 		publishToS3Flag,
+		windowsArchiveBucketFlag,
 		publishWindowsArchiveFlag,
-		skipValidationFlag,
-		skipReleaseVersionCheckFlag,
 	}
 	flags = append(flags, managerFlags...)
-	flags = append(flags, awsProfileFlag, skipReleaseVersionCheckFlag, skipValidationFlag, confirmFlag)
+	flags = append(flags,
+		skipManagerFlag,
+		awsProfileFlag,
+		skipValidationFlag,
+		skipBranchCheckFlag,
+		skipReleaseVersionCheckFlag,
+		confirmFlag,
+	)
 	return &cli.Command{
 		Name:  "publish",
 		Usage: "Run steps to publish an enterprise release",
 		Flags: flags,
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			configureLogging("release-publish.log")
 
 			// Load the versions.
@@ -177,77 +219,104 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
-			// Validate the release version.
-			if err := validateReleaseVersion(c, ver.FormattedString()); err != nil {
-				return err
+			// Load the release pinned versions.
+			versions, err := pinnedversion.LoadEnterpriseVersionsFromDataFile(cfg.RepoRootDir, ver.FormattedString())
+			if err != nil {
+				return fmt.Errorf("failed to load release versions: %w", err)
 			}
 
-			// Clone the manager repository.
-			managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
-			if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
-				return fmt.Errorf("failed to clone manager repository: %v", err)
+			// Validate the release version.
+			if err := validateReleaseVersion(ctx, c, versions.Title); err != nil {
+				return err
+			}
+			if !c.Bool(skipReleaseVersionCheckFlag.Name) && operatorVer.FormattedString() != versions.TigeraOperator.Version {
+				return fmt.Errorf("operator version mismatch: expected %s, got %s", versions.TigeraOperator.Version, operatorVer.FormattedString())
 			}
 
 			// Download the pinned versions of the hashrelease.
-			hashrel, err := pinnedversion.LoadEnterpriseHashreleaseFromRemote(c.String(hashreleaseNameFlag.Name), cfg.TmpDir, cfg.RepoRootDir)
+			hashrel, err := pinnedversion.LoadEnterpriseHashreleaseFromRemote(versions.ReleaseName, cfg.TmpDir, cfg.RepoRootDir)
 			if err != nil {
 				return err
 			}
-
+			registries := c.StringSlice(registryFlag.Name)
 			hashrelRegistry := c.String(hashReleaseRegistryFlag.Name)
 
-			// Release the tigera-manager image(s).
-			managerOpts := []manager.Option{
-				manager.WithDirectory(managerDir),
-				manager.WithCalicoDirectory(cfg.RepoRootDir),
-				manager.WithRepoName(c.String(managerRepoFlag.Name)),
-				manager.WithRepoRemote(c.String(managerRemoteFlag.Name)),
-				manager.WithGithubOrg(c.String(managerOrgFlag.Name)),
-				manager.WithBranch(c.String(managerBranchFlag.Name)),
-				manager.WithDevTagIdentifier(c.String(managerDevTagSuffixFlag.Name)),
-				manager.WithValidate(!c.Bool(skipValidationFlag.Name)),
-				manager.WithPublish(!c.Bool(confirmFlag.Name)),
-				manager.WithVersion(ver.FormattedString()),
-				manager.WithHashreleaseVersion(hashrel.ManagerVersion),
+			if !c.Bool(skipManagerFlag.Name) {
+				// Clone the manager repository.
+				managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
+				if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
+					return fmt.Errorf("failed to clone manager repository: %v", err)
+				}
+
+				// Release the tigera-manager image(s).
+				managerOpts := []manager.Option{
+					manager.WithDirectory(managerDir),
+					manager.WithCalicoDirectory(cfg.RepoRootDir),
+					manager.WithRepoName(c.String(managerRepoFlag.Name)),
+					manager.WithRepoRemote(c.String(managerRemoteFlag.Name)),
+					manager.WithGithubOrg(c.String(managerOrgFlag.Name)),
+					manager.WithBranch(c.String(managerBranchFlag.Name)),
+					manager.WithDevTagIdentifier(c.String(managerDevTagSuffixFlag.Name)),
+					manager.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
+					manager.WithValidate(!c.Bool(skipValidationFlag.Name)),
+					manager.WithPublishImages(c.Bool(publishImagesFlag.Name)),
+					manager.WithPublishTag(c.Bool(publishGitFlag.Name)),
+					manager.WithVersion(versions.Title),
+					manager.WithHashreleaseVersion(hashrel.ManagerVersion),
+					manager.WithDryRun(!c.Bool(confirmFlag.Name)),
+				}
+				if hashrelRegistry != "" {
+					managerOpts = append(managerOpts, manager.WithHashreleaseRegistry(hashrelRegistry))
+				}
+				if len(registries) > 0 {
+					managerOpts = append(managerOpts, manager.WithRegistry(registries[0]))
+				}
+				manager, err := manager.NewManager(managerOpts...)
+				if err != nil {
+					return fmt.Errorf("failed to create tigera-manager manager: %v", err)
+				}
+				if err := manager.Publish(); err != nil {
+					return fmt.Errorf("failed to publish tigera-manager: %v", err)
+				}
+				logrus.Info("Published tigera-manager")
 			}
-			if hashrelRegistry != "" {
-				managerOpts = append(managerOpts, manager.WithHashreleaseRegistry(hashrelRegistry))
-			}
-			manager, err := manager.NewManager(managerOpts...)
-			if err != nil {
-				return fmt.Errorf("failed to create tigera-manager manager: %v", err)
-			}
-			if err := manager.Publish(); err != nil {
-				return fmt.Errorf("failed to publish tigera-manager: %v", err)
-			}
-			logrus.Info("Published tigera-manager")
 
 			// Publish the rest of the release.
-			if _, err := command.GitInDir(cfg.RepoRootDir, "checkout", fmt.Sprintf("%s-%s", c.String(releaseBranchPrefixFlag.Name), ver.Stream())); err != nil {
-				return fmt.Errorf("failed to checkout release branch: %w", err)
-			}
 			opts := []calico.Option{
-				calico.WithVersion(ver.FormattedString()),
-				calico.WithOperatorVersion(operatorVer.FormattedString()),
+				calico.WithVersion(versions.Title),
+				calico.WithOperatorVersion(versions.TigeraOperator.Version),
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithGithubOrg(c.String(orgFlag.Name)),
 				calico.WithRepoName(c.String(repoFlag.Name)),
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
+				calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				calico.WithPublishImages(c.Bool(publishImagesFlag.Name)),
+				calico.WithPublishGitTag(c.Bool(publishGitFlag.Name)),
+				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
+				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, versions.Title)),
+				calico.WithTmpDir(cfg.TmpDir),
+			}
+			if len(registries) > 0 {
+				opts = append(opts, calico.WithImageRegistries(registries))
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
-				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
+				calico.WithChartVersion(versions.HelmRelease),
 				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
-				calico.WithPublishGitChanges(c.Bool(publishGitFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 			}
 			if hashrelRegistry != "" {
 				entOpts = append(entOpts, calico.WithEnterpriseHashreleaseRegistry(hashrelRegistry))
+			}
+			if v := c.String(windowsArchiveBucketFlag.Name); v != "" {
+				entOpts = append(entOpts, calico.WithWindowsArchiveBucket(v))
+			}
+			if v := c.String(s3BucketFlag.Name); v != "" {
+				entOpts = append(entOpts, calico.WithS3Bucket(v))
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 
@@ -262,35 +331,24 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 		Usage: "Post-release validation",
 		Flags: []cli.Flag{
 			releaseBranchPrefixFlag,
-			chartVersionFlag,
+			registryFlag,
+			windowsArchiveBucketFlag,
+			baseArtifactsURLFlag,
 			githubTokenFlag,
+			skipOperatorValidationFlag,
+			skipImageValidationFlag,
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-validation.log")
 
-			ver, operatorVer, err := version.VersionsFromManifests(cfg.RepoRootDir)
+			// Load the versions.
+			ver, _, err := version.VersionsFromManifests(cfg.RepoRootDir)
 			if err != nil {
 				return err
 			}
-
-			pinnedCfg := pinnedversion.EnterpriseReleaseVersions{
-				CalicoReleaseVersions: pinnedversion.CalicoReleaseVersions{
-					Dir:                 cfg.TmpDir,
-					ProductVersion:      ver.FormattedString(),
-					ReleaseBranchPrefix: c.String(releaseBranchPrefixFlag.Name),
-					OperatorVersion:     operatorVer.FormattedString(),
-					OperatorCfg: pinnedversion.OperatorConfig{
-						Image:    operator.DefaultImage,
-						Registry: operator.DefaultRegistry,
-					},
-				},
-			}
-			if _, err := pinnedCfg.GenerateFile(); err != nil {
-				return fmt.Errorf("failed to generate pinned version file: %w", err)
-			}
-			images, err := pinnedCfg.ImageList()
+			versions, err := pinnedversion.LoadEnterpriseVersionsFromDataFile(cfg.RepoRootDir, ver.FormattedString())
 			if err != nil {
-				return fmt.Errorf("failed to get image list: %w", err)
+				return fmt.Errorf("failed to load release versions: %w", err)
 			}
 
 			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise")
@@ -298,13 +356,24 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 				"--format=testname",
 				"--", "-v", "./...",
 				fmt.Sprintf("-repo-root=%s", cfg.RepoRootDir),
-				fmt.Sprintf("-release-version=%s", ver.FormattedString()),
-				fmt.Sprintf("-operator-version=%s", operatorVer.FormattedString()),
-				fmt.Sprintf("-chart-version=%s", c.String(chartVersionFlag.Name)),
-				fmt.Sprintf("-images=%s", strings.Join(images, " ")),
+				fmt.Sprintf("-release-version=%s", versions.Title),
+				fmt.Sprintf("-operator-version=%s", versions.TigeraOperator.Version),
+				fmt.Sprintf("-skip-operator=%t", c.Bool(skipImageValidationFlag.Name)),
+				fmt.Sprintf("-chart-version=%s", versions.HelmRelease),
+				fmt.Sprintf("-images=%s", strings.Join(versions.GetComponentImageNames(), " ")),
+				fmt.Sprintf("-skip-images=%t", c.Bool(skipImageValidationFlag.Name)),
 			}
-			if c.String(githubTokenFlag.Name) != "" {
-				args = append(args, fmt.Sprintf("-github-token=%s", c.String(githubTokenFlag.Name)))
+			if v := c.String(githubTokenFlag.Name); v != "" {
+				args = append(args, fmt.Sprintf("-github-token=%s", v))
+			}
+			if v := c.String(windowsArchiveBucketFlag.Name); v != "" {
+				args = append(args, fmt.Sprintf("-windows-bucket=%s", v))
+			}
+			if v := c.StringSlice(registryFlag.Name); len(v) > 0 {
+				args = append(args, fmt.Sprintf("-registry=%s", v[0]))
+			}
+			if v := c.String(baseArtifactsURLFlag.Name); v != "" {
+				args = append(args, fmt.Sprintf("-artifacts-base-url=%s", v))
 			}
 
 			cmd := exec.Command(filepath.Join(cfg.RepoRootDir, "bin", "gotestsum"), args...)
@@ -329,7 +398,7 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 	}
 }
 
-func validateReleaseVersion(c *cli.Context, ver string) error {
+func validateReleaseVersion(_ context.Context, c *cli.Command, ver string) error {
 	if c.Bool(skipReleaseVersionCheckFlag.Name) {
 		logrus.Warn("Skipping release version and helm chart version check, this is not recommended")
 		return nil

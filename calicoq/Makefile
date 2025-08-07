@@ -117,10 +117,12 @@ scale-test: image
 # Release
 ###############################################################################
 
+release-build-binaries: var-require-all-VERSION build
+
 ## Builds and pushed binaries to the public s3 bucket.
-release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION build-all
+release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN release-build-binaries
 ifdef CONFIRM
-	aws --profile helm s3 cp bin/calicoq-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoq --acl public-read
+	aws --profile helm s3 cp bin/calicoq-amd64 s3://$(ARTIFACTS_BUCKET)/binaries/$(VERSION)/calicoq --acl public-read
 else
-	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoq-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoq --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoq-amd64 s3://$(ARTIFACTS_BUCKET)/binaries/$(VERSION)/calicoq --acl public-read
 endif
