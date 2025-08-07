@@ -21,8 +21,8 @@ spec:
       env:
         - name: DOCKER_HOST
           value: tcp://127.0.0.1:2375
-        - name: GOPROXY
-          value: http://proxy.athens.svc
+        - name: EXTRA_DOCKER_ARGS
+          value: "-e GOPROXY=http://proxy.athens.svc"
       volumeMounts:
         - name: src
           mountPath: /src
@@ -67,7 +67,7 @@ spec:
             template: push-dev-images
           - name: push-prod-images
             depends: "test-and-build-images"
-            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^v'"
+            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'TAG' && '{{workflow.parameters.CI_GIT_TAG}}' =~ '^cloud-v'"
             template: build-and-push-prod-images
 
     - name: test-and-build-images
@@ -76,7 +76,7 @@ spec:
           source checkout
           cd dashboards
           until docker ps; do sleep 5; done
-          make test
+          make ci
           make docker-build
 
     - name: push-dev-images
