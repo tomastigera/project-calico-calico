@@ -1290,7 +1290,9 @@ func (m *bpfEndpointManager) onWorkloadEndpointRemove(msg *proto.WorkloadEndpoin
 
 	if m.bpfAttachType == string(apiv3.BPFAttachOptionTCX) {
 		// Remove tcx pins
-		m.cleanupOldTcAttach(oldWEP.Name)
+		if err := m.cleanupOldTcAttach(oldWEP.Name); err != nil {
+			log.Errorf("failed to delete tcx program from %s : %w", oldWEP.Name, err)
+		}
 	}
 	// Remove policy debug info if any
 	m.removeIfaceAllPolicyDebugInfo(oldWEP.Name)
