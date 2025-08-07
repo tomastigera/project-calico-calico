@@ -194,6 +194,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require golang.org/x/mod v0.26.0
+
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	cel.dev/expr v0.20.0 // indirect
