@@ -446,7 +446,6 @@ func (f *Felix) Ready() (bool, error) {
 	var healthAddr string
 
 	// Some tests override the health host, guess the right address to use.
-	// for testing readiness.
 	switch f.TopologyOptions.ExtraEnvVars["FELIX_HEALTHHOST"] {
 	case "::":
 		healthAddr = f.GetIPv6()
@@ -458,7 +457,7 @@ func (f *Felix) Ready() (bool, error) {
 
 	resp, err := http.Get("http://" + healthAddr + ":9099/readiness")
 	if err != nil {
-		logrus.WithError(err).WithField("resp", resp).Debug("HTTP GET for readiness failed")
+		logrus.WithError(err).Debug("HTTP GET for readiness failed")
 		return false, err
 	}
 	ok := resp.StatusCode == http.StatusOK
