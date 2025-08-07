@@ -139,6 +139,10 @@ var (
 		"third_party/prometheus-operator",
 		"third_party/prometheus",
 	}
+	cloudImageReleaseDirs = []string{
+		"kube-controllers",
+		"kibana",
+	}
 	enterpriseWindowsReleaseDirs = []string{
 		"cni-plugin",
 		"fluentd",
@@ -944,7 +948,7 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 		return nil
 	}
 
-	// Publish release images (including windows images).
+	// Publish release images.
 	logrus.Info("Start publishing release images")
 	env := append(os.Environ(),
 		"RELEASE=true",
@@ -976,7 +980,7 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 					continue
 				}
 				logrus.Error(out)
-				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+				return fmt.Errorf("Failed to publish %s images: %s", dir, err)
 			}
 
 			// Success - move on to the next directory.
@@ -984,10 +988,13 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 			break
 		}
 	}
-	for _, dir := range enterpriseWindowsReleaseDirs {
+
+	// Publish images for cloud
+	cloudEnv := append(env, "CLOUD=true")
+	for _, dir := range cloudImageReleaseDirs {
 		attempt := 0
 		for {
-			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "cut-release-image", append(env, "WINDOWS_RELEASE=true")...)
+			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "cut-release-image", cloudEnv...)
 			if err != nil {
 				if attempt < maxRetries {
 					logrus.WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
@@ -995,7 +1002,29 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 					continue
 				}
 				logrus.Error(out)
-				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+				return fmt.Errorf("Failed to publish %s cloud images: %s", dir, err)
+			}
+
+			// Success - move on to the next directory.
+			logrus.WithField("directory", dir).Info(out)
+			break
+		}
+	}
+
+	// Publish images for Windows
+	windowsEnv := append(env, "WINDOWS_RELEASE=true")
+	for _, dir := range enterpriseWindowsReleaseDirs {
+		attempt := 0
+		for {
+			out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "cut-release-image", windowsEnv...)
+			if err != nil {
+				if attempt < maxRetries {
+					logrus.WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+					attempt++
+					continue
+				}
+				logrus.Error(out)
+				return fmt.Errorf("Failed to publish %s windows images: %s", dir, err)
 			}
 
 			// Success - move on to the next directory.
