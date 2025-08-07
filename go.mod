@@ -133,6 +133,7 @@ require (
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
+	github.com/tigera/operator/api v0.0.0-20250729225329-a4e446dfb054
 	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
@@ -177,7 +178,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/kubectl v0.32.7
 	k8s.io/kubernetes v1.32.7
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	modernc.org/memory v1.10.0
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/kind v0.27.0
@@ -459,12 +460,14 @@ require (
 	k8s.io/kube-scheduler v0.32.7 // indirect
 	k8s.io/kubelet v0.32.7 // indirect
 	k8s.io/mount-utils v0.32.7 // indirect
-	k8s.io/pod-security-admission v0.32.7 // indirect
+	k8s.io/pod-security-admission v0.32.7
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
-	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
 )
+
+require github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1 // indirect
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe

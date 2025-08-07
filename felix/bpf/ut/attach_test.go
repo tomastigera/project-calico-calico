@@ -201,6 +201,8 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(programs.Count()).To(Equal(60))
 
+			at := programs.Programs()
+
 			Expect(at).To(HaveKey(hook.AttachType{
 				Hook:       hook.Ingress,
 				Family:     4,
@@ -549,7 +551,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		Expect(attached).To(HaveKey("hostep2"))
 		Expect(attached).NotTo(HaveKey("workloadep3"))
 
-		programs.ResetCount() // Because we recycle it, restarted Felix would get a fresh copy.
+		programs.ResetForTesting() // Because we recycle it, restarted Felix would get a fresh copy.
 
 		bpfEpMgr, err = newBPFTestEpMgr(
 			&linux.Config{
@@ -675,7 +677,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 
 		deleteLink(workload3)
 
-		programs.ResetCount() // Because we recycle it, restarted Felix would get a fresh copy.
+		programs.ResetForTesting() // Because we recycle it, restarted Felix would get a fresh copy.
 
 		bpfEpMgr, err = newBPFTestEpMgr(
 			&linux.Config{
