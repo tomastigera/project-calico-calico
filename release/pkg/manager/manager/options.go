@@ -44,6 +44,13 @@ func WithBranch(branch string) Option {
 	}
 }
 
+func WithReleaseBranchPrefix(prefix string) Option {
+	return func(m *Manager) error {
+		m.releaseBranchPrefix = prefix
+		return nil
+	}
+}
+
 func WithDevTagIdentifier(tag string) Option {
 	return func(m *Manager) error {
 		m.devTagIdentifier = tag
@@ -58,9 +65,23 @@ func WithValidate(validate bool) Option {
 	}
 }
 
-func WithPublish(publish bool) Option {
+func WithPublishImages(publish bool) Option {
 	return func(m *Manager) error {
-		m.publish = publish
+		m.publishImages = publish
+		return nil
+	}
+}
+
+func WithPublishTag(publishTag bool) Option {
+	return func(m *Manager) error {
+		m.publishTag = publishTag
+		return nil
+	}
+}
+
+func WithDryRun(dryRun bool) Option {
+	return func(r *Manager) error {
+		r.dryRun = dryRun
 		return nil
 	}
 }
@@ -75,6 +96,13 @@ func WithVersion(version string) Option {
 func WithHashreleaseVersion(version string) Option {
 	return func(m *Manager) error {
 		m.hashreleaseVersion = version
+		return nil
+	}
+}
+
+func WithRegistry(registry string) Option {
+	return func(m *Manager) error {
+		m.registry = registry
 		return nil
 	}
 }

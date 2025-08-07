@@ -22,7 +22,7 @@ if [[ -z "$repo_root" ]]; then
 fi
 
 version=${2#v}
-title=$(bin/yq .calicoctl.tag <../charts/tigera-operator/values.yaml)
+title=$(bin/yq .calicoctl.tag <$repo_root/charts/tigera-operator/values.yaml)
 
 is_dev=false
 is_early_preview=false

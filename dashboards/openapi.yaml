@@ -1,0 +1,435 @@
+openapi: 3.0.0
+info:
+  description: Dashboard Query API for Calico Cloud
+  title: Dashboard Query API
+  version: ""
+paths:
+  /api/collections:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Collection'
+                type: array
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Collections
+  /api/metadata:
+    get:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardListResponse'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    post:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardCreateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+  /api/metadata/{dashboardID}:
+    delete:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    get:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+    put:
+      parameters:
+      - description: Organization Project ID
+        in: header
+        name: X-Project-Id
+        required: true
+        schema:
+          format: types.ProjectID
+          type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Metadata
+  /api/query:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+          description: successful operation
+      security:
+      - bearer_jwt: []
+      tags:
+      - Query
+components:
+  schemas:
+    Collection:
+      properties:
+        defaultTimeFieldName:
+          type: string
+        fields:
+          items:
+            $ref: '#/components/schemas/CollectionField'
+          type: array
+        groupBys:
+          items:
+            $ref: '#/components/schemas/CollectionGroupBy'
+          type: array
+        name:
+          type: string
+      type: object
+    CollectionField:
+      properties:
+        aggregationFunctionTypes:
+          items:
+            type: string
+          type: array
+        defaultValue:
+          type: string
+        filterDisabled:
+          type: boolean
+        name:
+          type: string
+        type:
+          type: string
+        values:
+          items:
+            type: string
+          type: array
+      type: object
+    CollectionGroupBy:
+      properties:
+        field:
+          type: string
+        nested:
+          items:
+            $ref: '#/components/schemas/CollectionGroupBy'
+          type: array
+      type: object
+    Dashboard:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        id:
+          type: string
+        isImmutable:
+          type: boolean
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
+          type: string
+      type: object
+    DashboardCard:
+      properties:
+        chart:
+          additionalProperties: {}
+          type: object
+        id:
+          type: string
+        query:
+          additionalProperties: {}
+          type: object
+        responseMapping:
+          additionalProperties: {}
+          type: object
+        title:
+          type: string
+      type: object
+    DashboardCreateRequest:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
+          type: string
+      type: object
+    DashboardListResponse:
+      properties:
+        dashboards:
+          items:
+            $ref: '#/components/schemas/DashboardSummary'
+          type: array
+      type: object
+    DashboardSummary:
+      properties:
+        id:
+          type: string
+        isImmutable:
+          type: boolean
+        title:
+          type: string
+      type: object
+    DashboardUpdateRequest:
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/DashboardCard'
+          type: array
+        defaultFilters:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        layout:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        title:
+          type: string
+      type: object
+    QueryRequest:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        clusterFilter:
+          items:
+            type: string
+          type: array
+        collectionName:
+          type: string
+        filters:
+          items:
+            $ref: '#/components/schemas/QueryRequestFilter'
+          type: array
+        groupBys:
+          items:
+            $ref: '#/components/schemas/QueryRequestGroup'
+          type: array
+        maxDocs:
+          format: int
+          nullable: true
+          type: integer
+        pageNum:
+          format: int
+          nullable: true
+          type: integer
+      type: object
+    QueryRequestFilter:
+      properties:
+        criterion:
+          $ref: '#/components/schemas/QueryRequestFilterCriterion'
+        negate:
+          type: boolean
+      type: object
+    QueryRequestFilterCriterion:
+      properties:
+        criteria:
+          items:
+            $ref: '#/components/schemas/QueryRequestFilterCriterion'
+          type: array
+        field:
+          type: string
+        from:
+          type: string
+        gte:
+          type: string
+        lte:
+          type: string
+        pattern:
+          type: string
+        to:
+          type: string
+        type:
+          type: string
+        value:
+          $ref: '#/components/schemas/QueryRequestFilterCriterionValue'
+        values:
+          items:
+            type: string
+          type: array
+      type: object
+    QueryRequestFilterCriterionValue:
+      type: object
+    QueryRequestGroup:
+      properties:
+        fieldName:
+          type: string
+        interval:
+          type: string
+        maxValues:
+          format: int
+          type: integer
+        orderBy:
+          oneOf:
+          - nullable: true
+          - $ref: '#/components/schemas/QueryRequestGroupOrder'
+      type: object
+    QueryRequestGroupOrder:
+      properties:
+        aggKey:
+          type: string
+        sortAsc:
+          type: boolean
+        type:
+          type: string
+      type: object
+    QueryResponse:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        documents:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+        groupValues:
+          items:
+            $ref: '#/components/schemas/QueryResponseGroupValue'
+          type: array
+        totals:
+          $ref: '#/components/schemas/QueryResponseTotals'
+      type: object
+    QueryResponseGroupValue:
+      properties:
+        aggregations:
+          additionalProperties: {}
+          type: object
+        key:
+          type: string
+        nestedValues:
+          items:
+            $ref: '#/components/schemas/QueryResponseGroupValue'
+          type: array
+      type: object
+    QueryResponseTotals:
+      properties:
+        type:
+          type: string
+        value:
+          format: int64
+          type: integer
+      type: object
+  securitySchemes:
+    bearer_jwt:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

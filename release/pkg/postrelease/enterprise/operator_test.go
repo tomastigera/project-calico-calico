@@ -25,6 +25,11 @@ func githubClient() *github.Client {
 func TestOperatorGitHubRelease(t *testing.T) {
 	t.Parallel()
 
+	if skipOperator {
+		t.Skip("Skipping Tigera Operator validation as per flag")
+		return
+	}
+
 	checkVersion(t, operatorVersion)
 
 	release, resp, err := githubClient().Repositories.GetReleaseByTag(context.Background(), operator.DefaultOrg, operator.DefaultRepoName, operatorVersion)
@@ -46,6 +51,11 @@ func TestOperatorGitHubRelease(t *testing.T) {
 
 func TestOperatorGitHubMilestone(t *testing.T) {
 	t.Parallel()
+
+	if skipOperator {
+		t.Skip("Skipping Tigera Operator validation as per flag")
+		return
+	}
 
 	checkVersion(t, operatorVersion)
 

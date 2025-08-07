@@ -2,6 +2,7 @@ package usage
 
 import (
 	"math"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -103,8 +104,7 @@ func (r *reportGenerator) recalculateCurrentCounts() {
 	// Determine the set of nodes that are running calico-node.
 	nodesRunningCalico := set.New[string]()
 	for _, pod := range r.usage.pods {
-		podName := getPodNameFromLabels(pod)
-		if pod.Namespace == "calico-system" && (podName == "calico-node" || podName == "calico-node-windows") {
+		if pod.Namespace == "calico-system" && strings.HasPrefix(pod.Name, "calico-node-") {
 			nodesRunningCalico.Add(pod.Spec.NodeName)
 		}
 	}
@@ -161,14 +161,6 @@ func (r *reportGenerator) recalculateMaxCountsForInterval() {
 
 	if r.usage.currentCounts.nodes > r.usage.maxCounts.nodes {
 		r.usage.maxCounts.nodes = r.usage.currentCounts.nodes
-	}
-}
-
-func getPodNameFromLabels(pod *v1.Pod) string {
-	if name, ok := pod.Labels["app.kubernetes.io/name"]; ok {
-		return name
-	} else {
-		return pod.Labels["k8s-app"]
 	}
 }
 
