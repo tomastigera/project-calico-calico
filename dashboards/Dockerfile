@@ -1,10 +1,11 @@
 FROM scratch
 
+ARG TARGETARCH
+
 LABEL maintainer="maintainers@tigera.io"
-WORKDIR /gorun/
 
 # Copy binary
-COPY bin/cc-dashboard-query-api /gorun/cc-dashboard-query-api
+COPY bin/dashboard-api-${TARGETARCH} /dashboard-api
 
 # Configure entrypoint.
-ENTRYPOINT ["/gorun/cc-dashboard-query-api"]
+ENTRYPOINT ["/dashboard-api"]
