@@ -52,6 +52,10 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		goto skip_fib;
 	}
 
+	if (CALI_F_FROM_WEP && (GLOBAL_FLAGS & CALI_GLOBALS_SKIP_EGRESS_REDIRECT)) {
+		goto skip_fib;
+	}
+
 	// If this is an egress gateway flow on the client node, and we're in the outbound
 	// direction, arrange to drop to the IP stack so that `ip rule` can take effect to
 	// route the packet.

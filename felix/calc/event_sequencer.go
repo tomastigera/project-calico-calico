@@ -509,9 +509,16 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		}
 	}
 
-	epType := proto.WorkloadType_REGULAR
-	if isVMWorkload(ep.Labels) {
-		epType = proto.WorkloadType_VM
+	var skipRedir *proto.WorkloadBpfSkipRedir
+	// BPF ingress redirect should be skipped for VM workloads and workloads that have ingress BW QoS configured
+	if isVMWorkload(ep.Labels) || (ep.QoSControls != nil && ep.QoSControls.IngressBandwidth > 0) {
+		skipRedir = &proto.WorkloadBpfSkipRedir{Ingress: true}
+	}
+	if ep.QoSControls != nil && ep.QoSControls.EgressBandwidth > 0 {
+		if skipRedir == nil {
+			skipRedir = &proto.WorkloadBpfSkipRedir{}
+		}
+		skipRedir.Egress = true
 	}
 
 	return &proto.WorkloadEndpoint{
@@ -531,7 +538,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		ApplicationLayer:           appLayerToProtoAppLayer(ep.ApplicationLayer),
 		QosControls:                qosControls,
 		LocalBgpPeer:               localBGPPeer,
-		Type:                       epType,
+		SkipRedir:                  skipRedir,
 
 		// Enterprise-only flags
 
