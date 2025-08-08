@@ -52,6 +52,7 @@ func newNoEncapManager(
 		dpConfig,
 		opRecorder,
 		nlHandle,
+		writeProcSys,
 	)
 }
 
@@ -61,6 +62,7 @@ func newNoEncapManagerWithSims(
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	nlHandle netlinkHandle,
+	procSysWriter procSysWriter,
 ) *noEncapManager {
 
 	if ipVersion != 4 {
@@ -86,6 +88,7 @@ func newNoEncapManagerWithSims(
 			dpConfig,
 			opRecorder,
 			nlHandle,
+			procSysWriter,
 		),
 	}
 

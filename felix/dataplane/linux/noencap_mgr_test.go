@@ -28,9 +28,10 @@ import (
 
 var _ = Describe("NoEncap Manager", func() {
 	var (
-		noencapMgr *noEncapManager
-		rt         *mockRouteTable
-		dataplane  *mockTunnelDataplane
+		noencapMgr  *noEncapManager
+		rt          *mockRouteTable
+		dataplane   *mockTunnelDataplane
+		mockProcSys *testProcSys
 	)
 
 	const (
@@ -45,6 +46,7 @@ var _ = Describe("NoEncap Manager", func() {
 		la := netlink.NewLinkAttrs()
 		la.Name = "eth0"
 		opRecorder := logutils.NewSummarizer("test")
+		mockProcSys = &testProcSys{state: map[string]string{}}
 
 		dataplane = &mockTunnelDataplane{
 			links:          []netlink.Link{&mockLink{attrs: la}},
@@ -60,6 +62,7 @@ var _ = Describe("NoEncap Manager", func() {
 			},
 			opRecorder,
 			dataplane,
+			mockProcSys.write,
 		)
 	})
 

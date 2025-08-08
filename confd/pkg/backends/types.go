@@ -9,6 +9,7 @@ import (
 type BGPPeer struct {
 	PeerIP            net.IP               `json:"ip"`
 	ASNum             numorstring.ASNumber `json:"as_num,string"`
+	LocalASNum        numorstring.ASNumber `json:"local_as_num,string"`
 	RRClusterID       string               `json:"rr_cluster_id"`
 	Extensions        map[string]string    `json:"extensions"`
 	Password          *string              `json:"password"`
