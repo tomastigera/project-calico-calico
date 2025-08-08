@@ -1138,6 +1138,7 @@ func TestAttachTcx(t *testing.T) {
 	tcxProgs, err := tc.ListAttachedTcxPrograms("workloadep0", "ingress")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(tcxProgs)).To(Equal(1))
+
 	// Now attach Tc program.
 	ap := &tc.AttachPoint{
 		AttachPoint: bpf.AttachPoint{
