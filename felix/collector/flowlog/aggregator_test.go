@@ -4,7 +4,6 @@ package flowlog
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"time"
 
@@ -599,10 +598,13 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(ca.FeedUpdate(&muNoConn1Rule1TransitAllowUpdate)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
 			Expect(messages).To(HaveLen(2))
-			slices.SortFunc(messages, func(a, b *FlowLog) int {
-				return a.StartTime.Compare(b.StartTime)
-			})
-			message = *(messages[1])
+			if messages[0].Reporter == ReporterDstFwd {
+				message = *(messages[0])
+			} else if messages[1].Reporter == ReporterDstFwd {
+				message = *(messages[1])
+			} else {
+				Fail("Expected one of the messages to be from ReporterDstFwd")
+			}
 
 			expectedNumFlows = 1
 			expectedNumFlowsStarted = 1
