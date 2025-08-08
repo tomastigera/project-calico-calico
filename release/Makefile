@@ -9,7 +9,7 @@ export GIT_REPO
 export GIT_REPO_SLUG
 export DEV_REGISTRIES
 export OPERATOR_BRANCH
-export MANAGER_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+export MANAGER_BRANCH
 
 .PHONY: build
 build: bin/release

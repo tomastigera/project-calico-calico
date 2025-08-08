@@ -107,6 +107,9 @@ rm -rvf %{buildroot}%{_includedir}
 %exclude /usr/lib64/libluajit.a
 
 %changelog
+* Thu Aug 7 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.7-1
+- Update version to 4.0.7
+
 * Wed Jun 4 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.3-1
 - Set the maximum connection timeout for linseed out plugin to 10 seconds
 - Set the overall request timeout for linseed out plugin to 30 seconds

@@ -95,6 +95,8 @@ DEFAULT_BRANCH_OVERRIDE ?= master
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.
 OPERATOR_BRANCH=master
+# The manager branch corresponding to this branch.
+MANAGER_BRANCH ?= master
 
 # The libbpf version to use
 LIBBPF_VERSION=v1.4.6

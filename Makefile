@@ -368,18 +368,15 @@ bin/gh:
 
 # Build a release.
 release: release/bin/release
-	@release/bin/release release build
+	@MANAGER_BRANCH=$(MANAGER_BRANCH) release/bin/release release build
 
 # Publish an already built release.
 release-publish: release/bin/release bin/gh var-require-all-AWS_PROFILE var-require-one-of-CONFIRM-DRYRUN
-	@release/bin/release release publish
-
-release-public: bin/gh release/bin/release
-	@release/bin/release release public
+	@MANAGER_BRANCH=$(MANAGER_BRANCH) release/bin/release release publish
 
 # Create a release branch.
 create-release-branch: release/bin/release
-	@release/bin/release branch cut -git-publish
+	@MANAGER_BRANCH=$(MANAGER_BRANCH) release/bin/release branch cut -git-publish
 
 # Test the release code
 release-test:
