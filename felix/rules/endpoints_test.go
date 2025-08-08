@@ -1717,10 +1717,7 @@ func (b *ruleBuilder) build() []generictables.Rule {
 	}
 
 	// Clean marks.
-	rules = append(rules, generictables.Rule{
-		Match:  Match(),
-		Action: ClearMarkAction{Mark: 0x98},
-	})
+	rules = append(rules, clearMarkRule(0x98, ""))
 
 	if b.dropVXLAN {
 		rules = append(rules, b.dropVXLANTunnel())
@@ -1819,11 +1816,7 @@ func (b *ruleBuilder) dropIPIPTunnel() generictables.Rule {
 
 func (b *ruleBuilder) qosControlRules(rate, burst int64) []generictables.Rule {
 	return []generictables.Rule{
-		{
-			Match:   Match(),
-			Action:  ClearMarkAction{Mark: 0x20},
-			Comment: []string{fmt.Sprintf("Clear %v packet rate limit mark", b.direction)},
-		},
+		clearMarkRule(0x20, fmt.Sprintf("Clear %v packet rate limit mark", b.direction)),
 		{
 			Match:   Match(),
 			Action:  LimitPacketRateAction{Rate: rate, Burst: burst, Mark: 0x20},
@@ -1834,11 +1827,7 @@ func (b *ruleBuilder) qosControlRules(rate, burst int64) []generictables.Rule {
 			Action:  DropAction{},
 			Comment: []string{fmt.Sprintf("Drop packets over %v packet rate limit", b.direction)},
 		},
-		{
-			Match:   Match(),
-			Action:  ClearMarkAction{Mark: 0x20},
-			Comment: []string{fmt.Sprintf("Clear %v packet rate limit mark", b.direction)},
-		},
+		clearMarkRule(0x20, fmt.Sprintf("Clear %v packet rate limit mark", b.direction)),
 	}
 }
 
@@ -1900,6 +1889,18 @@ func (b *ruleBuilder) nflogAction(dropAction, forProfile bool) generictables.Rul
 	}
 }
 
+func clearMarkRule(mark uint32, comment string) generictables.Rule {
+	var comments []string
+	if comment != "" {
+		comments = append(comments, comment)
+	}
+	return generictables.Rule{
+		Match:   Match(),
+		Action:  ClearMarkAction{Mark: mark},
+		Comment: comments,
+	}
+}
+
 func (b *ruleBuilder) matchPolicies() []generictables.Rule {
 	var rules []generictables.Rule
 
@@ -1910,13 +1911,7 @@ func (b *ruleBuilder) matchPolicies() []generictables.Rule {
 
 	// In these tests, all policies are in the default tier.
 	// Add start of tier rule, for the default tier.
-	rules = append(rules,
-		generictables.Rule{
-			Comment: []string{"Start of tier default"},
-			Match:   Match(),
-			Action:  ClearMarkAction{Mark: 0x10},
-		},
-	)
+	rules = append(rules, clearMarkRule(0x10, "Start of tier default"))
 
 	var endOfTierDrop bool
 	// Add rules for policy groups.
@@ -2032,7 +2027,7 @@ func (b *ruleBuilder) matchProfiles() []generictables.Rule {
 
 func (b *ruleBuilder) egwRules() []generictables.Rule {
 	// Initial conntrack rules.
-	rules := []generictables.Rule{conntrackAcceptRule(), clearMarkRule()}
+	rules := []generictables.Rule{conntrackAcceptRule(), clearMarkRule(0x98, "")}
 
 	for _, ipsetName := range []string{"cali40all-hosts-net", "cali40all-tunnel-net"} {
 		matchIPset := Match().ProtocolNum(ProtoUDP).SourceIPSet(ipsetName).DestPorts(uint16(b.egressIPVXLANPort))
