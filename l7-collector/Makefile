@@ -9,6 +9,10 @@ L7_COLLECTOR_IMAGE    ?=l7-collector
 ENVOY_IMAGE           ?=envoy
 BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE)
 
+# For updating this version please seeAdd commentMore actions
+# https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
+ENVOYBINARY_IMAGE ?= quay.io/tigera/envoybinary:d09f1c3f01d046ddcd1a1beb1249a178795d3c49
+
 ##############################################################################
 # Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
