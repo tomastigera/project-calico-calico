@@ -335,7 +335,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						nil,
 						NotAnEgressGateway,
 						0,
-						UndefinedIPVersion, // TODO (Mazdak): originally 4
+						UndefinedIPVersion,
 					)).To(Equal(expected))
 				})
 
