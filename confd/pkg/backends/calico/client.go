@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -656,10 +656,17 @@ func (c *client) updatePeersV1() {
 					}
 					reachableBy = v3res.Spec.ReachableBy
 				}
+
+				var localASN numorstring.ASNumber
+				if v3res.Spec.LocalASNumber != nil {
+					localASN = *v3res.Spec.LocalASNumber
+				}
+
 				keepOriginalNextHop, nextHopMode := getNextHopMode(v3res)
 				peers = append(peers, &backends.BGPPeer{
 					PeerIP:          *ip,
 					ASNum:           v3res.Spec.ASNumber,
+					LocalASNum:      localASN,
 					SourceAddr:      string(v3res.Spec.SourceAddress),
 					Port:            port,
 					KeepNextHop:     keepOriginalNextHop,
@@ -891,6 +898,9 @@ func (c *client) localBGPPeerDataAsBGPPeers(localBGPPeerData localBGPPeerData, v
 			log.Warningf("Couldn't parse %v %v for workload %v", version, ipStr, workloadName)
 			continue
 		}
+		if v3Peer.Spec.LocalASNumber != nil {
+			peer.LocalASNum = *v3Peer.Spec.LocalASNumber
+		}
 		peer.PeerIP = *ip
 		peer.Filters = v3Peer.Spec.Filters
 		peer.ASNum = v3Peer.Spec.ASNumber
@@ -957,6 +967,7 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 				log.WithError(err).Warningf("Problem parsing global AS number %v for node %v", asNum, nodeName)
 			}
 		}
+
 		peer.RRClusterID = rrClusterID
 
 		keepOriginalNextHop, nextHopMode := getNextHopMode(v3peer)

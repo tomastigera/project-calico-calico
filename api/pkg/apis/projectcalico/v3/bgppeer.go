@@ -71,6 +71,11 @@ type BGPPeerSpec struct {
 	// +optional
 	ASNumber numorstring.ASNumber `json:"asNumber,omitempty"`
 
+	// The optional Local AS Number to use when peering with this remote peer.
+	// If not specified, the AS Number defined in default BGPConfiguration will be used.
+	// +optional
+	LocalASNumber *numorstring.ASNumber `json:"localASNumber,omitempty"`
+
 	// Extensions is a mapping of keys to values that can be used in custom BGP templates
 	// +optional
 	Extensions map[string]string `json:"extensions,omitempty" validate:"omitempty"`

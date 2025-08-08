@@ -280,6 +280,9 @@ template bgp bgp_template {
 {{- $peer_external_network_exists := and $data.external_network (exists (printf "/resources/v3/projectcalico.org/externalnetworks/%s" $data.external_network)) }}
 {{- if or $peer_external_network_exists (eq "" $data.external_network) }}
 protocol bgp Global_{{$id}} from bgp_template {
+{{- if ne ($data.local_as_num) "0"}}
+  local as {{$data.local_as_num}};
+{{- end }}
   neighbor {{$data.ip}} {{if $data.port }}port {{ $data.port }} {{end}}as {{$data.as_num}};
 {{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
@@ -397,6 +400,9 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
   ttl security off;
   multihop;
 {{- end }}
+{{- if ne ($data.local_as_num) "0"}}
+  local as {{$data.local_as_num}};
+{{- end }}
   neighbor {{$data.ip}} {{if $data.port }}port {{ $data.port }} {{end}}as {{$data.as_num}};
 {{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
@@ -496,6 +502,9 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- else }}
   multihop;
 {{- end }}
+{{- if ne ($data.local_as_num) "0"}}
+  local as {{$data.local_as_num}};
+{{- end }}
 {{- end}}
   import filter {
     {{- range $filter := $data.filters }}
@@ -593,6 +602,9 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
 {{- else }}
   ttl security off;
   multihop;
+{{- end }}
+{{- if ne ($data.local_as_num) "0"}}
+  local as {{$data.local_as_num}};
 {{- end }}
   neighbor {{$data.ip}} {{if $data.port }}port {{ $data.port }} {{end}}as {{$data.as_num}};
 {{- if eq $data.source_addr "UseNodeIP"}}

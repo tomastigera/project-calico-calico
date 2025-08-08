@@ -2354,6 +2354,13 @@ func schema_pkg_apis_projectcalico_v3_BGPPeerSpec(ref common.ReferenceCallback) 
 							Format:      "int64",
 						},
 					},
+					"localASNumber": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The optional Local AS Number to use when peering with this remote peer. If not specified, the AS Number defined in default BGPConfiguration will be used.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 					"extensions": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
