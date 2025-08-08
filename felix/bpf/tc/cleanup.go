@@ -16,6 +16,7 @@ package tc
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -197,7 +198,8 @@ func cleanUpProgramsAndPins(excludeDNS bool, mapsToExclude ...string) {
 			}
 		}
 	}
-
+	// Remove all tcx pins
+	os.RemoveAll(bpfdefs.TcxPinDir)
 	bpf.CleanUpCalicoPins(bpfdefs.DefaultBPFfsPath, excludeDNS, mapsToExclude...)
 }
 

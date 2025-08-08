@@ -17,12 +17,13 @@ K8S_VERSION=v1.32.7
 COREDNS_VERSION=1.5.2
 ETCD_VERSION=v3.5.6
 GHR_VERSION=v0.17.0
-GITHUB_CLI_VERSION=2.65.0
-GOTESTSUM_VERSION=v1.12.2
 HELM_VERSION=v3.16.4
 KINDEST_NODE_VERSION=v1.31.4
 KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
 KIND_VERSION=v0.25.0
+GITHUB_CLI_VERSION=2.26.0
+GOTESTSUM_VERSION=v1.12.2
+CRANE_VERSION := v0.20.6
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico

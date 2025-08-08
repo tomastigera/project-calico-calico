@@ -43,6 +43,8 @@ type L7Log struct {
 	DestPortNum          int64  `json:"dest_port_num"`
 	DestServiceName      string `json:"dest_service_name"`
 	DestServiceNamespace string `json:"dest_service_namespace"`
+	// Name of the gateway route
+	RouteName string `json:"route_name"`
 
 	// DestServicePortName Name is the name of the port exposed by the Service which the connection is trying to reach.
 	// Described in the Service resource specs as specs.[]ports.name. It will have the empty L7 Log character field value of '-' when:

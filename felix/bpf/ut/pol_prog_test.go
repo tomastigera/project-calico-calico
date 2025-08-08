@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -2234,7 +2235,7 @@ func denyDest(name, dst string) []polprog.Policy {
 }
 
 // polProgramTestWrapper allows to keep polProgramTest intact as well as the tests that
-// use it. The wrapped object satisfies testCase interface that allows to use the same
+// use it. The wrapped object satisfies testPolicy interface that allows to use the same
 // algo for testing with different testcase options.
 type polProgramTestWrapper struct {
 	p polProgramTest
@@ -2283,6 +2284,22 @@ func (w polProgramTestWrapper) ForIPv6() bool {
 	return w.p.ForIPv6
 }
 
+func (w polProgramTestWrapper) Setup() error {
+	if w.p.SetupCB != nil {
+		return w.p.SetupCB()
+	}
+
+	return nil
+}
+
+func (w polProgramTestWrapper) TearDown() error {
+	if w.p.TearDownCB != nil {
+		return w.p.TearDownCB()
+	}
+
+	return nil
+}
+
 func wrap(p polProgramTest) polProgramTestWrapper {
 	return polProgramTestWrapper{p}
 }
@@ -2306,10 +2323,16 @@ func TestExpandedPolicyPrograms(t *testing.T) {
 					defer log.SetLevel(logLevel)
 					log.SetLevel(log.InfoLevel)
 
-					runTest(t, wrap(expandedP))
+					runTest(t, wrap(expandedP), expandedP.Options...)
 				})
 		}
 	}
+}
+
+func execSysctl(param, value string) error {
+	cmd := exec.Command("sysctl", "-w", fmt.Sprintf("%s=%s", param, value))
+	_, err := cmd.CombinedOutput()
+	return err
 }
 
 var testExpanders = []testExpander{
@@ -2319,6 +2342,18 @@ var testExpanders = []testExpander{
 			out := p
 			initExtraTierOnce.Do(initExtraTier)
 			out.Policy.Tiers = append([]polprog.Tier{extraTier}, out.Policy.Tiers...)
+			return out
+		},
+	},
+	{
+		Name: "WithLargePrefixedTierAndJITHarden",
+		Expand: func(p polProgramTest) polProgramTest {
+			out := p
+			initExtraTierOnce.Do(initExtraTier)
+			out.Policy.Tiers = append([]polprog.Tier{extraTier}, out.Policy.Tiers...)
+			out.SetupCB = func() error { return execSysctl("net.core.bpf_jit_harden", "2") }
+			out.TearDownCB = func() error { return execSysctl("net.core.bpf_jit_harden", "0") }
+			out.Options = []polprog.Option{polprog.WithTrampolineStride(14000)}
 			return out
 		},
 	},
@@ -2467,6 +2502,9 @@ func (t testFlowLog) DroppedPackets() []testCase {
 func (t testFlowLog) IPSets() map[string][]string {
 	return t.ipSets
 }
+
+func (_ testFlowLog) Setup() error    { return nil }
+func (_ testFlowLog) TearDown() error { return nil }
 
 func TestPolicyProgramsExceedMatchIdSpace(t *testing.T) {
 	test := testFlowLog{
@@ -2871,6 +2909,9 @@ type polProgramTest struct {
 	UnmatchedPackets []packet
 	IPSets           map[string][]string
 	ForIPv6          bool
+	SetupCB          func() error
+	TearDownCB       func() error
+	Options          []polprog.Option
 }
 
 type packet struct {
@@ -3029,6 +3070,8 @@ type testPolicy interface {
 	UnmatchedPackets() []testCase
 	XDP() bool
 	ForIPv6() bool
+	Setup() error
+	TearDown() error
 }
 
 type testCase interface {
@@ -3041,6 +3084,14 @@ var nextPolProgIdx atomic.Int64
 
 func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	RegisterTestingT(t)
+
+	err := tp.Setup()
+	Expect(err).NotTo(HaveOccurred())
+
+	defer func() {
+		err := tp.TearDown()
+		Expect(err).NotTo(HaveOccurred())
+	}()
 
 	// The prog builder refuses to allocate IDs as a precaution, give it an allocator that forces allocations.
 	realAlloc := idalloc.New()
@@ -3061,7 +3112,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	}
 	policyJumpMap = jump.Map()
 	_ = unix.Unlink(policyJumpMap.Path())
-	err := policyJumpMap.EnsureExists()
+	err = policyJumpMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
 	allowIdx := tcdefs.ProgIndexAllowed

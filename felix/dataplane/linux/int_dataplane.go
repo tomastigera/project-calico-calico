@@ -285,16 +285,17 @@ type Config struct {
 	BPFExcludeCIDRsFromNAT             []string
 	BPFExportBufferSizeMB              int
 	BPFRedirectToPeer                  string
-	BPFProfiling                       string
-	KubeProxyMinSyncPeriod             time.Duration
-	KubeProxyEndpointSlicesEnabled     bool
-	FlowLogsCollectProcessInfo         bool
-	FlowLogsCollectTcpStats            bool
-	FlowLogsCollectProcessPath         bool
-	FlowLogsFileIncludeService         bool
-	FlowLogsFileDomainsLimit           int
+	BPFAttachType                      string
 
-	SidecarAccelerationEnabled bool
+	BPFProfiling                   string
+	KubeProxyMinSyncPeriod         time.Duration
+	KubeProxyEndpointSlicesEnabled bool
+	FlowLogsCollectProcessInfo     bool
+	FlowLogsCollectTcpStats        bool
+	FlowLogsCollectProcessPath     bool
+	FlowLogsFileIncludeService     bool
+	FlowLogsFileDomainsLimit       int
+	SidecarAccelerationEnabled     bool
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool
@@ -1495,6 +1496,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		filterMaps,
 		rawMaps,
 		config.BPFEnabled,
+		config.BPFAttachType,
 		bpfEndpointManager,
 		callbacks,
 		config.FlowLogsCollectTcpStats,
@@ -1741,6 +1743,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			filterMapsV6,
 			rawMapsV6,
 			config.BPFEnabled,
+			config.BPFAttachType,
 			nil,
 			callbacks,
 			config.FlowLogsCollectTcpStats,
@@ -3592,7 +3595,10 @@ func startBPFDataplaneComponents(
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create conntrack liveness scanner.")
 	}
-	conntrackScanner := bpfconntrack.NewScanner(bpfmaps.CtMap, ctKey, ctVal, livenessScanner)
+	conntrackScanner := bpfconntrack.NewScanner(bpfmaps.CtMap, ctKey, ctVal,
+		config.ConfigChangedRestartCallback,
+		config.BPFMapSizeConntrackScaling,
+		livenessScanner)
 
 	// Before we start, scan for all finished / timed out connections to
 	// free up the conntrack table asap as it may take time to sync up the

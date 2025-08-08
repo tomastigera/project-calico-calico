@@ -5,6 +5,7 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -76,10 +77,146 @@ func stop(t *tail.Tail) {
 	}
 }
 
+func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
+	// Read logs from the file and add them to the batch
+	if ec.config.EnvoyAccessLogPath == "" {
+		log.Warn("Envoy access log path is not set, skipping log collection")
+		return
+	}
+
+	t, err := tail.TailFile(ec.config.EnvoyAccessLogPath, tail.Config{
+		Follow: true,
+		ReOpen: true,
+		Location: &tail.SeekInfo{
+			Whence: ec.config.TailWhence,
+		},
+	})
+
+	defer func() {
+		// Call stop from within a defered function so that
+		// t can be reassigned if the tail is restarted.
+		stop(t)
+	}()
+	if err != nil {
+		// TODO: Figure out proper error handling
+		log.Warnf("Failed to tail envoy logs: %v", err)
+		return
+	}
+	defer func() {
+		if err := t.Err(); err != nil {
+			log.Errorf("Tail stopped with error: %v", err)
+		}
+	}()
+
+	// Set up the ticker for reading the log files
+	ticker := time.NewTicker(time.Duration(ec.config.EnvoyLogIntervalSecs) * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			ec.ingestLogs()
+		case line := <-t.Lines:
+			log.Infof("Received line from envoy log: %v", line.Text)
+			if _, err := ec.ParseAccessLogs(line.Text); err != nil {
+				log.Errorf("Error parsing access log: %v", err)
+			}
+		case <-ctx.Done():
+			log.Info("Collector shut down")
+			return
+		}
+	}
+
+}
+
+type AccessLog struct {
+	Reporter             string `json:"reporter"`
+	StartTime            string `json:"start_time"`
+	Duration             int32  `json:"duration"`
+	ResponseCode         int32  `json:"response_code"`
+	BytesSent            int32  `json:"bytes_sent"`
+	BytesReceived        int32  `json:"bytes_received"`
+	UserAgent            string `json:"user_agent"`
+	RequestPath          string `json:"request_path"`
+	RequestMethod        string `json:"request_method"`
+	RequestId            string `json:"request_id"`
+	Type                 string `json:"type"`
+	DSRemoteAddress      string `json:"downstream_remote_address"`
+	DSLocalAddress       string `json:"downstream_local_address"`
+	Domain               string `json:"domain"`
+	UpstreamHost         string `json:"upstream_host"`
+	UpstreamLocalAddress string `json:"upstream_local_address"`
+	UpstreamServiceTime  string `json:"upstream_service_time"`
+	Route                string `json:"route_name"`
+}
+
+func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
+	log.Debug("parsing envoy access logs ")
+	log.Printf("line %v", line)
+	// Unmarshall the bytes into the EnvoyLog data
+	var accLog AccessLog
+	err := json.Unmarshal([]byte(line), &accLog)
+	if err != nil {
+		return EnvoyLog{}, fmt.Errorf("failed to Unmarshal access log line: %w", err)
+	}
+
+	src := strings.Split(accLog.DSRemoteAddress, ":")
+	srcPort, err := strconv.Atoi(src[1])
+	if err != nil {
+		return EnvoyLog{}, fmt.Errorf("failed to parse source port: %w", err)
+	}
+
+	dest := strings.Split(accLog.DSLocalAddress, ":")
+
+	destPort, err := strconv.Atoi(dest[1])
+	if err != nil {
+		return EnvoyLog{}, fmt.Errorf("failed to parse destination port: %w", err)
+	}
+
+	entry := EnvoyLog{
+		Reporter:            "destination",
+		Count:               1,
+		StartTime:           accLog.StartTime,
+		Duration:            accLog.Duration,
+		ResponseCode:        accLog.ResponseCode,
+		BytesSent:           accLog.BytesSent,
+		BytesReceived:       accLog.BytesReceived,
+		UserAgent:           accLog.UserAgent,
+		RequestPath:         accLog.RequestPath,
+		RequestMethod:       accLog.RequestMethod,
+		RequestId:           accLog.RequestId,
+		Type:                accLog.Type,
+		DSRemoteAddress:     accLog.DSRemoteAddress,
+		DSLocalAddress:      accLog.DSLocalAddress,
+		Domain:              accLog.Domain,
+		SrcIp:               src[0],
+		SrcPort:             int32(srcPort),
+		DstIp:               dest[0],
+		DstPort:             int32(destPort),
+		DurationMax:         accLog.Duration,
+		Latency:             accLog.Duration,
+		UpstreamServiceTime: accLog.UpstreamServiceTime,
+		RouteName:           accLog.Route,
+	}
+	// write entry out to envoy log file
+	ec.batch.Insert(entry)
+	key := TupleKeyFromEnvoyLog(entry)
+	ec.connectionCounts.incr(key)
+
+	return entry, nil
+}
+
 func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 	// Tail the file
 	// Currently this reads from the end of the tail file to prevent
 	// rereading the file.
+
+	// wait for the log file to be created
+	for {
+		if _, err := os.Stat(ec.config.EnvoyLogPath); !errors.Is(err, os.ErrNotExist) {
+			break
+		}
+	}
+
 	t, err := tail.TailFile(ec.config.EnvoyLogPath, tail.Config{
 		Follow: true,
 		ReOpen: true,
@@ -160,6 +297,7 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 			ec.ingestLogs()
 			continue
 		case line := <-t.Lines:
+			log.Infof("Received line from envoy log: %v", line.Text)
 			ec.processLine(line)
 		case <-ctx.Done():
 			log.Info("Collector shut down")

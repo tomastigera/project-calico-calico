@@ -1,0 +1,19 @@
+{
+  "request_path": "/ns1/subpath?query=demo",
+  "reporter": "destination",
+  "request_method": "GET",
+  "upstream_local_address": "192.168.8.75:50046",
+  "downstream_local_address": "192.168.8.75:10080",
+  "bytes_received": 0,
+  "request_id": "20ea03a7-eef3-4dbf-9385-499268505464",
+  "bytes_sent": 1271,
+  "type": "{{.}}",
+  "response_code": 200,
+  "start_time": "2025-06-30T09:16:23.467Z",
+  "domain": "10.101.148.160",
+  "upstream_service_time": null,
+  "user_agent": "curl/8.5.0",
+  "upstream_host": "192.168.8.74:80",
+  "downstream_remote_address": "192.168.63.139:52638",
+  "duration": 45
+}

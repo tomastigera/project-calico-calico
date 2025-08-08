@@ -25,6 +25,8 @@ type EnvoyCollector interface {
 	ReadLogs(context.Context)
 	Report() <-chan EnvoyInfo
 	ParseRawLogs(string) (EnvoyLog, error)
+	ReadAccessLogs(context.Context)
+	ParseAccessLogs(string) (EnvoyLog, error)
 	ReceiveLogs(*accesslogv3.HTTPAccessLogEntry)
 	Start(context.Context)
 }
@@ -56,6 +58,7 @@ type EnvoyLog struct {
 	RequestId     string `json:"request_id"`
 	Type          string `json:"type"`
 	Domain        string `json:"domain"`
+	RouteName     string `json:"route_name"`
 
 	// these are the addresses we extract 5 tuple information from
 	DSRemoteAddress string `json:"downstream_remote_address"`

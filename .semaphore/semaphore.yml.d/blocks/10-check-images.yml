@@ -1,0 +1,10 @@
+- name: Check images availability
+  run:
+    # Script fails on enterprise due to missing values.yaml.
+    when: "false and (${FORCE_RUN} or change_in(['/charts/', '/manifests/']))"
+  dependencies: []
+  task:
+    jobs:
+      - name: Check images availability
+        commands:
+          - make check-images-availability

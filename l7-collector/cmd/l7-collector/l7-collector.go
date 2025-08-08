@@ -22,6 +22,8 @@ import (
 
 func main() {
 	var ver bool
+	var grpcServer bool
+	flag.BoolVar(&grpcServer, "grpc", true, "Run gRPC server for log collection")
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.Parse()
 
@@ -29,25 +31,33 @@ func main() {
 		buildinfo.PrintVersion()
 		return
 	}
-
+	log.Infof("Starting l7-collector version %s", buildinfo.Version)
 	// Create/read config
 	// Load environment config.
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
 
+	log.Infof("Configuration: %+v", cfg)
+
 	// Instantiate the log collector
 	reportCh := make(chan collector.EnvoyInfo)
 	c := collector.NewEnvoyCollector(cfg, reportCh)
+
+	log.Info("creating l7-collector...")
 
 	// Instantiate the felix client
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)
 
-	// Start gRPC log collector
-	gRPCServerStart(cfg, reportCh)
+	log.Infof("setting up Felixclient at %s", cfg.DialTarget)
+
+	if grpcServer {
+		// Start gRPC log collector
+		gRPCServerStart(cfg, reportCh)
+	}
 
 	// Start the log collector
-	CollectAndSend(context.Background(), felixClient, c)
+	CollectAndSend(context.Background(), felixClient, c, grpcServer)
 }
 
 func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
@@ -81,14 +91,18 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	}()
 }
 
-func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, grpcServer bool) {
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
-	// Start the log ingestion go routine.
 	wg.Add(1)
 	go func() {
-		collector.ReadLogs(ctx)
+		log.Info("Starting log collection...")
+		if grpcServer {
+			collector.ReadLogs(ctx)
+		} else {
+			collector.ReadAccessLogs(ctx)
+		}
 		cancel()
 		wg.Done()
 	}()
@@ -103,4 +117,5 @@ func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collect
 
 	// Wait for the go routine to complete before exiting
 	wg.Wait()
+	log.Info("All go routines completed, exiting l7-collector.")
 }

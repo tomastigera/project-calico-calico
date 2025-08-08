@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -367,8 +368,10 @@ type bpfEndpointManager struct {
 	// Service routes
 	hostNetworkedNATMode hostNetworkedNATMode
 
-	bpfPolicyDebugEnabled bool
-	bpfRedirectToPeer     string
+	bpfPolicyDebugEnabled  bool
+	bpfRedirectToPeer      string
+	bpfAttachType          string
+	policyTrampolineStride atomic.Int32
 
 	routeTableV4     *routetable.ClassView
 	routeTableV6     *routetable.ClassView
@@ -386,6 +389,8 @@ type bpfEndpointManager struct {
 	bpfIfaceMTU int
 
 	overlayTunnelID uint32
+
+	natOutgoingExclusions string
 
 	// Flow logs related fields.
 	lookupsCache *calc.LookupsCache
@@ -526,10 +531,15 @@ func NewBPFEndpointManager(
 		polNameToMatchIDs:      map[string]set.Set[polprog.RuleMatchID]{},
 		dirtyRules:             set.New[polprog.RuleMatchID](),
 
+		natOutgoingExclusions: config.RulesConfig.NATOutgoingExclusions,
+
 		healthAggregator: healthAggregator,
 		features:         dataplanefeatures,
 		profiling:        config.BPFProfiling,
+		bpfAttachType:    config.BPFAttachType,
 	}
+
+	m.policyTrampolineStride.Store(int32(asm.TrampolineStrideDefault))
 
 	specialInterfaces := []string{"egress.calico"}
 	if config.RulesConfig.IPIPEnabled {
@@ -597,6 +607,12 @@ func NewBPFEndpointManager(
 		m.hostNetworkedNATMode = hostNetworkedNATEnabled
 	}
 
+	if m.bpfAttachType == string(apiv3.BPFAttachOptionTCX) {
+		if !tc.IsTcxSupported() {
+			log.Infof("tcx is not supported. Falling back to tc")
+			m.bpfAttachType = string(apiv3.BPFAttachOptionTC)
+		}
+	}
 	m.v4 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV4, bpfmaps.V4, iptablesFilterTableV4, ipSetIDAllocV4, m)
 
 	if m.ipv6Enabled {
@@ -1271,6 +1287,13 @@ func (m *bpfEndpointManager) onWorkloadEndpointRemove(msg *proto.WorkloadEndpoin
 		iface.info.endpointID = nil
 		return false
 	})
+
+	if m.bpfAttachType == string(apiv3.BPFAttachOptionTCX) {
+		// Remove tcx pins
+		if err := m.cleanupOldTcAttach(oldWEP.Name); err != nil {
+			log.WithError(err).Errorf("failed to delete tcx program from %s", oldWEP.Name)
+		}
+	}
 	// Remove policy debug info if any
 	m.removeIfaceAllPolicyDebugInfo(oldWEP.Name)
 }
@@ -2946,6 +2969,10 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 		ap.EnableTCPStats = m.enableTcpStats
 	}
 
+	if m.natOutgoingExclusions == string(apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs) {
+		ap.NATOutgoingExcludeHosts = true
+	}
+
 	ap.ToHostDrop = (m.epToHostAction == "DROP")
 	ap.FIB = m.fibLookupEnabled
 	ap.DSR = m.dsrEnabled
@@ -2957,6 +2984,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 	ap.Profiling = m.profiling
 	ap.OverlayTunnelID = m.overlayTunnelID
+	ap.AttachType = m.bpfAttachType
 	ap.EGWVxlanPort = m.egwVxlanPort
 	ap.EgressIPEnabled = m.egIPEnabled
 
@@ -3616,6 +3644,9 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 }
 
 func (m *bpfEndpointManager) ensureQdisc(iface string) (bool, error) {
+	if m.bpfAttachType == string(apiv3.BPFAttachOptionTCX) {
+		return true, nil
+	}
 	return tc.EnsureQdisc(iface)
 }
 
@@ -4001,16 +4032,42 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 		stride = jump.XDPMaxEntryPoints
 	}
 	opts = append(opts, polprog.WithPolicyMapIndexAndStride(polJumpMapIdx, stride))
-	progFDs, insns, err := m.loadPolicyProgramFn(
-		progName,
-		ipFamily,
-		rules,
-		staticProgsMap,
-		polProgsMap,
-		opts...,
+
+	tstrideOrig := int(m.policyTrampolineStride.Load())
+	tstride := tstrideOrig
+
+	var (
+		progFDs []fileDescriptor
+		insns   []asm.Insns
 	)
-	if err != nil {
-		return nil, err
+
+	for {
+		var err error
+
+		options := append(opts, polprog.WithTrampolineStride(tstride))
+		progFDs, insns, err = m.loadPolicyProgramFn(
+			progName,
+			ipFamily,
+			rules,
+			staticProgsMap,
+			polProgsMap,
+			options...,
+		)
+		if err != nil {
+			if errors.Is(err, unix.ERANGE) && tstride >= 1000 {
+				tstride -= tstride / 4
+				continue
+			} else {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
+
+	if tstride < tstrideOrig {
+		m.policyTrampolineStride.Store(int32(tstride))
+		log.Warnf("Reducing policy program trampoline stride to %d", tstride)
 	}
 
 	defer func() {

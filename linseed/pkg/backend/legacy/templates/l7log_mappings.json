@@ -1,113 +1,116 @@
 {
   "dynamic": false,
-    "properties": {
-      "generated_time": {
-        "type": "date"
-      },
-      "@timestamp": {
-        "type": "date"
-      },
-      "start_time": {
-        "type": "date",
-        "format": "epoch_second"
-      },
-      "end_time": {
-        "type": "date",
-        "format": "epoch_second"
-      },
-      "duration_mean": {
-        "type": "long"
-      },
-      "duration_max": {
-        "type": "long"
-      },
-      "latency": {
-        "type": "long"
-      },
-      "bytes_in": {
-        "type": "long"
-      },
-      "bytes_out": {
-        "type": "long"
-      },
-      "count": {
-        "type": "long"
-      },
-      "src_name_aggr": {
-        "type": "keyword"
-      },
-      "src_namespace": {
-        "type": "keyword"
-      },
-      "src_type": {
-        "type": "keyword"
-      },
-      "source_name_aggr": {
-        "type": "alias",
-        "path": "src_name_aggr"
-      },
-      "source_namespace": {
-        "type": "alias",
-        "path": "src_namespace"
-      },
-      "source_type": {
-        "type": "alias",
-        "path": "src_type"
-      },
-      "source_port_num": {
-        "type": "long",
-        "null_value": 0
-      },
-      "dest_service_name": {
-        "type": "keyword"
-      },
-      "dest_service_namespace": {
-        "type": "keyword"
-      },
-      "dest_service_port": {
-        "type": "long",
-        "null_value": 0
-      },
-      "dest_service_port_name": {
-        "type": "keyword"
-      },
-      "dest_service_port_num": {
-        "type": "alias",
-        "path": "dest_service_port"
-      },
-      "dest_name_aggr": {
-        "type": "keyword"
-      },
-      "dest_namespace": {
-        "type": "keyword"
-      },
-      "dest_type": {
-        "type": "keyword"
-      },
-      "dest_port_num": {
-        "type": "long",
-        "null_value": 0
-      },
-      "url": {
-        "type": "keyword"
-      },
-      "response_code": {
-        "type": "keyword"
-      },
-      "method": {
-        "type": "keyword"
-      },
-      "user_agent": {
-        "type": "keyword"
-      },
-      "type": {
-        "type": "keyword"
-      },
-      "host": {
-        "type": "keyword"
-      },
-      "cluster": {
-        "type": "keyword"
-      }
+  "properties": {
+    "generated_time": {
+      "type": "date"
+    },
+    "@timestamp": {
+      "type": "date"
+    },
+    "start_time": {
+      "type": "date",
+      "format": "epoch_second"
+    },
+    "end_time": {
+      "type": "date",
+      "format": "epoch_second"
+    },
+    "duration_mean": {
+      "type": "long"
+    },
+    "duration_max": {
+      "type": "long"
+    },
+    "latency": {
+      "type": "long"
+    },
+    "bytes_in": {
+      "type": "long"
+    },
+    "bytes_out": {
+      "type": "long"
+    },
+    "count": {
+      "type": "long"
+    },
+    "src_name_aggr": {
+      "type": "keyword"
+    },
+    "src_namespace": {
+      "type": "keyword"
+    },
+    "src_type": {
+      "type": "keyword"
+    },
+    "source_name_aggr": {
+      "type": "alias",
+      "path": "src_name_aggr"
+    },
+    "source_namespace": {
+      "type": "alias",
+      "path": "src_namespace"
+    },
+    "source_type": {
+      "type": "alias",
+      "path": "src_type"
+    },
+    "source_port_num": {
+      "type": "long",
+      "null_value": 0
+    },
+    "dest_service_name": {
+      "type": "keyword"
+    },
+    "dest_service_namespace": {
+      "type": "keyword"
+    },
+    "dest_service_port": {
+      "type": "long",
+      "null_value": 0
+    },
+    "dest_service_port_name": {
+      "type": "keyword"
+    },
+    "dest_service_port_num": {
+      "type": "alias",
+      "path": "dest_service_port"
+    },
+    "dest_name_aggr": {
+      "type": "keyword"
+    },
+    "dest_namespace": {
+      "type": "keyword"
+    },
+    "dest_type": {
+      "type": "keyword"
+    },
+    "dest_port_num": {
+      "type": "long",
+      "null_value": 0
+    },
+    "url": {
+      "type": "keyword"
+    },
+    "response_code": {
+      "type": "keyword"
+    },
+    "route_name": {
+      "type": "keyword"
+    },
+    "method": {
+      "type": "keyword"
+    },
+    "user_agent": {
+      "type": "keyword"
+    },
+    "type": {
+      "type": "keyword"
+    },
+    "host": {
+      "type": "keyword"
+    },
+    "cluster": {
+      "type": "keyword"
     }
+  }
 }
