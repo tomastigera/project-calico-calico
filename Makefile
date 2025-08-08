@@ -110,6 +110,9 @@ go-vet:
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
 
+check-images-availability: bin/crane bin/yq
+	cd ./hack && ./check-images-availability.sh
+
 check-release-cut-promotions:
 	@docker run --quiet --rm \
 		-v .:/source \

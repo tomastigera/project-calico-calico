@@ -104,6 +104,14 @@ const (
 	NFTablesDNSPolicyModeDelayDNSResponse  NFTablesDNSPolicyMode = "DelayDNSResponse"
 )
 
+// +kubebuilder:validation:Enum=tc;tcx
+type BPFAttachOption string
+
+const (
+	BPFAttachOptionTC  BPFAttachOption = "tc"
+	BPFAttachOptionTCX BPFAttachOption = "tcx"
+)
+
 // +kubebuilder:validation:Enum=Enabled;Disabled
 type FloatingIPType string
 
@@ -940,6 +948,13 @@ type FelixConfigurationSpec struct {
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
 	IPSecPolicyRefreshInterval *metav1.Duration `json:"ipsecPolicyRefreshInterval,omitempty" configv1timescale:"seconds"`
+
+	// BPFAttachType controls how are the BPF programs at the network interfaces attached.
+	// By default `tcx` is used where available to enable easier coexistence with 3rd party programs.
+	// `tc` can force the legacy method of attaching via a qdisc. `tcx` falls back to `tc` if `tcx` is not available.
+	// [Default: tcx]
+	//+kubebuilder:validation:Enum=tc;tcx
+	BPFAttachType *BPFAttachOption `json:"bpfAttachType,omitempty" validate:"omitempty,oneof=tc tcx"`
 
 	// FlowLogsFlushInterval configures the interval at which Felix exports flow logs.
 	// +kubebuilder:validation:Type=string

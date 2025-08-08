@@ -223,8 +223,9 @@ type Config struct {
 	BPFDisableGROForIfaces             *regexp.Regexp    `config:"regexp;"`
 	BPFExcludeCIDRsFromNAT             []string          `config:"cidr-list;;"`
 	BPFRedirectToPeer                  string            `config:"oneof(Disabled,Enabled,L2Only);Disabled;non-zero"`
-	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
+	BPFAttachType                      string            `config:"oneof(tcx,tc);tcx;non-zero"`
 	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
+	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
 
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful

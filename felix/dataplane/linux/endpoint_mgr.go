@@ -232,6 +232,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
+	bpfAttachType          string
 	bpfEndpointManager     hepListener
 	nlHandle               netlinkHandle
 	tcpStatsEnabled        bool
@@ -257,6 +258,7 @@ func newEndpointManager(
 	filterMaps nftables.MapsDataplane,
 	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
+	bpfAttachType string,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
 	tcpStatsEnabled bool,
@@ -284,6 +286,7 @@ func newEndpointManager(
 		filterMaps,
 		rawMaps,
 		bpfEnabled,
+		bpfAttachType,
 		bpfEndpointManager,
 		callbacks,
 		nlHandle,
@@ -312,6 +315,7 @@ func newEndpointManagerWithShims(
 	filterMaps nftables.MapsDataplane,
 	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
+	bpfAttachType string,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
 	nlHandle netlinkHandle,
@@ -336,6 +340,7 @@ func newEndpointManagerWithShims(
 		wlIfacesRegexp:         wlIfacesRegexp,
 		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
 		bpfEnabled:             bpfEnabled,
+		bpfAttachType:          bpfAttachType,
 		filterMaps:             filterMaps,
 		rawMaps:                rawMaps,
 		bpfEndpointManager:     bpfEndpointManager,
@@ -737,7 +742,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 	}
 
 	removeActiveWorkload := func(logCxt *log.Entry, oldWorkload *proto.WorkloadEndpoint, id types.WorkloadEndpointID) {
-		if !m.bpfEnabled {
+		if m.isQoSBandwidthSupported() {
 			// QoS state should be removed before the workload itself is removed
 			if oldWorkload != nil {
 				logCxt.Info("Deleting QoS bandwidth state if present")
@@ -909,6 +914,9 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 							}
 						}
 					}
+				}
+
+				if m.isQoSBandwidthSupported() {
 					logCxt.Info("Updating QoS bandwidth state if changed")
 					err := m.maybeUpdateQoSBandwidth(oldWorkload, workload)
 					if err != nil {

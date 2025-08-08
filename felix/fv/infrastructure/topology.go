@@ -412,6 +412,7 @@ func StartNNodeTopology(
 		}
 
 		var w chan struct{}
+		_, isKDD := infra.(*K8sDatastoreInfra)
 		if !opts.DelayFelixStart && felix.ExpectedIPIPTunnelAddr != "" {
 			// If felix has an IPIP tunnel address defined, Felix may restart after loading its config.
 			// Handle that here by monitoring the log and waiting for the correct tunnel IP to show up
@@ -419,6 +420,12 @@ func StartNNodeTopology(
 			log.Info("Waiting for felix to restart after setting tunnel IP.")
 			w = felix.WatchStdoutFor(regexp.MustCompile(
 				`Successfully loaded configuration.*"IpInIpTunnelAddr":"` + regexp.QuoteMeta(felix.ExpectedIPIPTunnelAddr) + `"`))
+		} else if !opts.DelayFelixStart && isKDD {
+			// Enterprise-only: Enterprise has the NodeIP config param which will
+			// always trigger a Felix restart when we create the k8s Node resource.
+			log.Info("Waiting for felix to restart after setting tunnel IP.")
+			w = felix.WatchStdoutFor(regexp.MustCompile(
+				`Successfully loaded configuration.*"NodeIP":"` + regexp.QuoteMeta(felix.IP) + `"`))
 		} else if opts.NeedNodeIP {
 			// opts.NeedNodeIP is implicitly handled by the previous branch.  We rely on the infra to
 			// set the (formerly BGP) node IP and tunnel IP together so if we hit this branch then the
@@ -457,7 +464,6 @@ func StartNNodeTopology(
 		if opts.TriggerDelayedFelixStart {
 			felix.TriggerDelayedStart()
 		}
-
 	}
 
 	// Set up routes between the hosts, note: we're not using BGP here but we set up similar
