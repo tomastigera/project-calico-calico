@@ -27,6 +27,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -67,7 +68,6 @@ import (
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/status"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"

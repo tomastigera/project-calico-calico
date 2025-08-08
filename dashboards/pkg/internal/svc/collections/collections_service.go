@@ -47,9 +47,10 @@ func mapCollection(from collections.Collection) client.Collection {
 
 func mapCollectionField(from collections.CollectionField) (client.CollectionField, bool) {
 	collectionField := client.CollectionField{
-		Name:           client.CollectionFieldName(from.Name()),
-		Type:           client.CollectionFieldType(from.DisplayType()),
-		FilterDisabled: from.FilterDisabled(),
+		Name:            client.CollectionFieldName(from.Name()),
+		Type:            client.CollectionFieldType(from.DisplayType()),
+		FilterDisabled:  from.FilterDisabled(),
+		DisplayDisabled: from.DisplayDisabled(),
 		AggregationFunctionTypes: slices.Map(
 			from.AggregationFunctionTypes(),
 			func(aggregationFunctionType collections.AggregationFunctionType) client.AggregationFunctionType {

@@ -44,6 +44,10 @@ func (c collectionFieldGeneric) FilterDisabled() bool {
 	return c.filterDisabled
 }
 
+func (c collectionFieldGeneric) DisplayDisabled() bool {
+	return false
+}
+
 func (c collectionFieldGeneric) AggregationFunctionTypes() []AggregationFunctionType {
 	return c.aggregationFunctionTypes
 }

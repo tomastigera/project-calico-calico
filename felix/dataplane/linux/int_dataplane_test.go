@@ -15,6 +15,7 @@
 package intdataplane_test
 
 import (
+	"errors"
 	"net"
 	"regexp"
 	"time"
@@ -88,6 +89,16 @@ var _ = Describe("Constructor test", func() {
 	kubernetesProvider := config.ProviderNone
 	routeSource := "CalicoIPAM"
 	var wireguardEncryptHostTraffic bool
+	var nftablesDataplane func(knftables.Family, string) (knftables.Interface, error)
+
+	BeforeEach(func() {
+		// For most tests here, mock out the creation of the nftables interface in a way
+		// that simulates "nft" being available.  We don't want these tests to depend on the
+		// actual kernel version or presence of nftables.
+		nftablesDataplane = func(knftables.Family, string) (knftables.Interface, error) {
+			return nil, nil
+		}
+	})
 
 	JustBeforeEach(func() {
 		configParams = config.New()
@@ -167,11 +178,7 @@ var _ = Describe("Constructor test", func() {
 				EncryptHostTraffic: wireguardEncryptHostTraffic,
 			},
 
-			// Mock out the creation of the nftables interface - it's unused in these tests,
-			// and we don't want to depend on the kernel version or the presence of nftables.
-			NewNftablesDataplane: func(knftables.Family, string) (knftables.Interface, error) {
-				return nil, nil
-			},
+			NewNftablesDataplane: nftablesDataplane,
 
 			AWSSecondaryIPSupport: v3.AWSSecondaryIPEnabled,
 		}
@@ -181,6 +188,19 @@ var _ = Describe("Constructor test", func() {
 		var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 		defer dp.Stop()
 		Expect(dp).ToNot(BeNil())
+	})
+
+	Context("when nft is not available", func() {
+		BeforeEach(func() {
+			nftablesDataplane = func(knftables.Family, string) (knftables.Interface, error) {
+				return nil, errors.New("could not find nftables binary: file not found")
+			}
+		})
+
+		It("should still be constructable", func() {
+			dp := intdataplane.NewIntDataplaneDriver(dpConfig, nil)
+			Expect(dp).ToNot(BeNil())
+		})
 	})
 
 	Context("with health aggregator", func() {

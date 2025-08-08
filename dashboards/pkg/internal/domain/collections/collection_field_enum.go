@@ -6,6 +6,7 @@ type CollectionFieldEnum struct {
 	defaultValue             string
 	internal                 bool
 	filterDisabled           bool
+	displayDisabled          bool
 	aggregationFunctionTypes []AggregationFunctionType
 }
 
@@ -23,6 +24,10 @@ func (c CollectionFieldEnum) Internal() bool {
 
 func (c CollectionFieldEnum) FilterDisabled() bool {
 	return c.filterDisabled
+}
+
+func (c CollectionFieldEnum) DisplayDisabled() bool {
+	return c.displayDisabled
 }
 
 func (c CollectionFieldEnum) DisplayType() FieldType {
