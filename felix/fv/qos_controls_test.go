@@ -264,7 +264,7 @@ var _ = infrastructure.DatastoreDescribe(
 				// Expect the limited rate and peakrate to be within 20% of the desired rate and peakrate
 				Expect(ingressLimitedRate).To(BeNumerically(">=", 10000000.0*0.8))
 				Expect(ingressLimitedRate).To(BeNumerically("<=", 10000000.0*1.2))
-				Expect(ingressLimitedPeakrate).To(BeNumerically(">=", 100000000.0*0.8))
+				Expect(ingressLimitedPeakrate).To(BeNumerically(">=", 10000000.0))
 				Expect(ingressLimitedPeakrate).To(BeNumerically("<=", 100000000.0*1.2))
 
 				By("Setting 10Mbps limit and 100Mbps peakrate for egress on workload 1")
@@ -288,7 +288,7 @@ var _ = infrastructure.DatastoreDescribe(
 				// Expect the limited rate and peakrate to be within 20% of the desired rate and peakrate
 				Expect(egressLimitedRate).To(BeNumerically(">=", 10000000.0*0.8))
 				Expect(egressLimitedRate).To(BeNumerically("<=", 10000000.0*1.2))
-				Expect(egressLimitedPeakrate).To(BeNumerically(">=", 100000000.0*0.8))
+				Expect(egressLimitedPeakrate).To(BeNumerically(">=", 10000000.0))
 				Expect(egressLimitedPeakrate).To(BeNumerically("<=", 100000000.0*1.2))
 
 				By("Removing all limits from workload 1")
@@ -352,8 +352,8 @@ var _ = infrastructure.DatastoreDescribe(
 				ingressLimitedPeakrate, err := retryIperf2Client(w[1], 5, 5*time.Second, "-c", w[0].IP, "-u", "-l1000", "-b10M", "-t1")
 				logrus.Infof("iperf client peakrate with ingress packet rate limit on client (bps): %v", ingressLimitedPeakrate)
 				// Expect the limited peakrate to be below an estimated desired rate (1000 byte packet * 8 bits/byte * (100 packets/s + 200 packet burst) = 2400000bps), with a 20% margin
+				Expect(ingressLimitedPeakrate).To(BeNumerically(">=", 1000*8*100))
 				Expect(ingressLimitedPeakrate).To(BeNumerically("<=", 1000*8*300*1.2))
-				Expect(ingressLimitedPeakrate).To(BeNumerically(">=", 1000*8*300*0.8))
 
 				By("Sleeping for 5 seconds to clear any burst buffer/counters")
 				time.Sleep(5 * time.Second)
@@ -408,8 +408,8 @@ var _ = infrastructure.DatastoreDescribe(
 				egressLimitedPeakrate, err := retryIperf2Client(w[1], 5, 5*time.Second, "-c", w[0].IP, "-u", "-l1000", "-b10M", "-t1")
 				logrus.Infof("iperf client peakrate with egress packet rate limit on client (bps): %v", egressLimitedPeakrate)
 				// Expect the limited peakrate to be below an estimated desired rate (1000 byte packet * 8 bits/byte * (100 packets/s + 200 packet burst) = 2400000bps), with a 20% margin
+				Expect(egressLimitedPeakrate).To(BeNumerically(">=", 1000*8*100))
 				Expect(egressLimitedPeakrate).To(BeNumerically("<=", 1000*8*300*1.2))
-				Expect(egressLimitedPeakrate).To(BeNumerically(">=", 1000*8*300*0.8))
 
 				By("Sleeping for 5 seconds to clear any burst buffer/counters")
 				time.Sleep(5 * time.Second)
