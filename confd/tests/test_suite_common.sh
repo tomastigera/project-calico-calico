@@ -4724,17 +4724,8 @@ test_bgp_local_bgp_peer() {
     # For KDD, run Typha and clean up the output directory.
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
         start_typha
-        rm -rf /etc/calico/confd/endpoint-status || true
         rm -f /etc/calico/confd/config/*
     fi
-
-    mkdir -p /etc/calico/confd/endpoint-status
-    cat <<EOF > /etc/calico/confd/endpoint-status/pod1
-{"ifaceName":"cali97e1defe654","ipv4Nets":["192.168.162.134/32"],"ipv6Nets":["fd00:10:244:0:586d:4461:e980:a284/128"],"bgpPeerName":"test-global-peer-with-filter"}
-EOF
-cat <<EOF > /etc/calico/confd/endpoint-status/pod2
-{"ifaceName":"cali97e1defe656","ipv4Nets":["192.168.162.136/32"],"ipv6Nets":["fd00:10:244:0:586d:4461:e980:a286/128"],"bgpPeerName":"test-node-peer-with-filter"}
-EOF
 
     # Run confd as a background process.
     echo "Running confd as background process"
@@ -4800,7 +4791,7 @@ metadata:
   name: test-global-peer-with-filter
 spec:
   localWorkloadSelector: app == 'calico-bird-0'
-  asNumber: 64516
+  asNumber: 64518
   filters:
     - import-only-filter
 ---
@@ -4816,7 +4807,16 @@ spec:
     - import-only-filter
 EOF
 
-    test_confd_templates explicit_peering/local_bgp_peer
+mkdir -p /etc/calico/confd/endpoint-status
+cat <<EOF > /etc/calico/confd/endpoint-status/pod1
+{"ifaceName":"cali97e1defe654","ipv4Nets":["192.168.162.134/32"],"ipv6Nets":["fd00:10:244:0:586d:4461:e980:a284/128"],"bgpPeerName":"test-global-peer-with-filter"}
+EOF
+cat <<EOF > /etc/calico/confd/endpoint-status/pod2
+{"ifaceName":"cali97e1defe656","ipv4Nets":["192.168.162.136/32"],"ipv6Nets":["fd00:10:244:0:586d:4461:e980:a286/128"],"bgpPeerName":"test-node-peer-with-filter"}
+EOF
+
+
+    test_confd_templates explicit_peering/local_bgp_peer/global
 
     # Kill confd.
     kill -9 $CONFD_PID
