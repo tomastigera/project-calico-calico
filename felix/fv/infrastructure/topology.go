@@ -419,6 +419,12 @@ func StartNNodeTopology(
 			log.Info("Waiting for felix to restart after setting tunnel IP.")
 			w = felix.WatchStdoutFor(regexp.MustCompile(
 				`Successfully loaded configuration.*"IpInIpTunnelAddr":"` + regexp.QuoteMeta(felix.ExpectedIPIPTunnelAddr) + `"`))
+		} else if !opts.DelayFelixStart {
+			// Enterprise-only: Enterprise has the NodeIP config param which will
+			// always trigger a Felix restart when we create the Node.
+			log.Info("Waiting for felix to restart after setting tunnel IP.")
+			w = felix.WatchStdoutFor(regexp.MustCompile(
+				`Successfully loaded configuration.*"NodeIP":"` + regexp.QuoteMeta(felix.IP) + `"`))
 		} else if opts.NeedNodeIP {
 			// opts.NeedNodeIP is implicitly handled by the previous branch.  We rely on the infra to
 			// set the (formerly BGP) node IP and tunnel IP together so if we hit this branch then the
