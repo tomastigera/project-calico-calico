@@ -348,7 +348,6 @@ type RuleRenderer interface {
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []generictables.Rule
 	PolicyGroupToIptablesChains(group *PolicyGroup) []*generictables.Chain
 
-	MakeNatOutgoingRule(protocol string, action generictables.Action, ipVersion uint8) generictables.Rule
 	NATOutgoingChain(active bool, ipVersion uint8) *generictables.Chain
 
 	DNATsToIptablesChains(dnats map[string]string) []*generictables.Chain
