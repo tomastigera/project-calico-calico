@@ -40,6 +40,7 @@ const (
 	RouteClassVXLANTunnel
 	RouteClassIPIPSameSubnet
 	RouteClassIPIPTunnel
+	RouteClassNoEncap
 	RouteClassIPAMBlockDrop
 	RouteClassEgress
 	RouteClassAWSDefault
@@ -52,7 +53,7 @@ const (
 func (c RouteClass) IsRemote() bool {
 	switch c {
 	case RouteClassVXLANTunnel, RouteClassVXLANSameSubnet, RouteClassWireguard,
-		RouteClassIPIPTunnel, RouteClassIPIPSameSubnet:
+		RouteClassIPIPTunnel, RouteClassIPIPSameSubnet, RouteClassNoEncap:
 		return true
 	default:
 		return false
