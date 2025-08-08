@@ -87,17 +87,28 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 		payload.GeneratorURL = generatorURL
 	}
 
+	record := "{}"
+	if event.Record != nil {
+		bytes, err := json.Marshal(event.Record)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to marshal event record")
+		} else {
+			record = string(bytes)
+		}
+	}
+
 	// set alert annotations:
 	payload.Annotations = map[string]string{
 		"Description":    event.Description,
 		"Origin":         event.Origin,
 		"Severity":       fmt.Sprintf("%d", event.Severity),
 		"Destination IP": *event.DestIP,
-		"Source IP":      *event.DestIP,
+		"Source IP":      *event.SourceIP,
 		"Attack Vector":  event.AttackVector,
 		"Mitre Tactic":   event.MitreTactic,
 		"Mitre IDs":      strings.Join(*event.MitreIDs, "\n"),
 		"Mitigations":    strings.Join(*event.Mitigations, "\n"),
+		"Record Data":    record,
 	}
 
 	// generate payload data:
