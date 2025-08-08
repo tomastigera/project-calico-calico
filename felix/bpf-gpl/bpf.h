@@ -347,6 +347,10 @@ extern const volatile struct cali_tc_preamble_globals __globals;
 #define EGW_VXLAN_PORT  CALI_CONFIGURABLE(egw_vxlan_port)
 #define EGW_HEALTH_PORT  CALI_CONFIGURABLE(egw_health_port)
 #define OVERLAY_TUNNEL_ID CALI_CONFIGURABLE(overlay_tunnel_id)
+#define INGRESS_PACKET_RATE CALI_CONFIGURABLE(ingress_packet_rate)
+#define INGRESS_PACKET_BURST CALI_CONFIGURABLE(ingress_packet_burst)
+#define EGRESS_PACKET_RATE CALI_CONFIGURABLE(egress_packet_rate)
+#define EGRESS_PACKET_BURST CALI_CONFIGURABLE(egress_packet_burst)
 
 #define EGRESS_GATEWAY		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_GATEWAY)
 #define EGRESS_CLIENT 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_CLIENT)

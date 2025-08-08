@@ -74,6 +74,10 @@ type AttachPoint struct {
 	FlowLogsEnabled         bool
 	OverlayTunnelID         uint32
 	AttachType              string
+	IngressPacketRate       uint16
+	IngressPacketBurst      uint16
+	EgressPacketRate        uint16
+	EgressPacketBurst       uint16
 
 	// EE only
 	VethNS                  uint16
@@ -444,19 +448,24 @@ func (ap *AttachPoint) Config() string {
 
 func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 	globalData := &libbpf.TcGlobalData{
-		ExtToSvcMark:  ap.ExtToServiceConnmark,
-		VxlanPort:     ap.VXLANPort,
-		Tmtu:          ap.TunnelMTU,
-		PSNatStart:    ap.PSNATStart,
-		PSNatLen:      ap.PSNATEnd,
-		WgPort:        ap.WgPort,
-		Wg6Port:       ap.Wg6Port,
-		NatIn:         ap.NATin,
-		NatOut:        ap.NATout,
+		ExtToSvcMark:       ap.ExtToServiceConnmark,
+		VxlanPort:          ap.VXLANPort,
+		Tmtu:               ap.TunnelMTU,
+		PSNatStart:         ap.PSNATStart,
+		PSNatLen:           ap.PSNATEnd,
+		WgPort:             ap.WgPort,
+		Wg6Port:            ap.Wg6Port,
+		NatIn:              ap.NATin,
+		NatOut:             ap.NATout,
+		LogFilterJmp:       uint32(ap.LogFilterIdx),
+		IngressPacketRate:  ap.IngressPacketRate,
+		IngressPacketBurst: ap.IngressPacketBurst,
+		EgressPacketRate:   ap.EgressPacketRate,
+		EgressPacketBurst:  ap.EgressPacketBurst,
+
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 		VethNS:        ap.VethNS,
-		LogFilterJmp:  uint32(ap.LogFilterIdx),
 	}
 
 	if ap.Profiling == "Enabled" {
