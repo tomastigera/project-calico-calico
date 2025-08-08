@@ -102,7 +102,11 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
 		log.Warnf("Failed to tail envoy logs: %v", err)
 		return
 	}
-	defer log.Errorf("Tail stopped with error: %v", t.Err())
+	defer func() {
+		if err := t.Err(); err != nil {
+			log.Errorf("Tail stopped with error: %v", err)
+		}
+	}()
 
 	// Set up the ticker for reading the log files
 	ticker := time.NewTicker(time.Duration(ec.config.EnvoyLogIntervalSecs) * time.Second)
@@ -152,7 +156,7 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 	var accLog AccessLog
 	err := json.Unmarshal([]byte(line), &accLog)
 	if err != nil {
-		return EnvoyLog{}, fmt.Errorf("failed to marshal access log line: %w", err)
+		return EnvoyLog{}, fmt.Errorf("failed to Unmarshal access log line: %w", err)
 	}
 
 	src := strings.Split(accLog.DSRemoteAddress, ":")
