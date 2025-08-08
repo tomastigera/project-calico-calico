@@ -1428,6 +1428,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		UserAgent:     hd.UserAgent,
 		Type:          hd.Type,
 		Domain:        hd.Domain,
+		RouteName:     hd.RouteName,
 	}
 
 	// If there is no endpoint data for the supplied tuple, skip logging this info.
