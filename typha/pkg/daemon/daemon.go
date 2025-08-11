@@ -408,6 +408,7 @@ func (t *TyphaDaemon) CreateServer() {
 			ShutdownMaxDropInterval:        t.ConfigParams.ShutdownConnectionDropIntervalMaxSecs,
 			MaxConns:                       t.ConfigParams.MaxConnectionsUpperLimit,
 			Port:                           t.ConfigParams.ServerPort,
+			Host:                           t.ConfigParams.ServerHost,
 			HealthAggregator:               t.healthAggregator,
 			KeyFile:                        t.ConfigParams.ServerKeyFile,
 			CertFile:                       t.ConfigParams.ServerCertFile,
