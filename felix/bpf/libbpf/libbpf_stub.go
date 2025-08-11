@@ -16,7 +16,6 @@
 
 package libbpf
 
-import "C"
 import (
 	"runtime"
 )
