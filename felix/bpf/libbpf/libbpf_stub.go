@@ -194,6 +194,7 @@ const (
 	GlobalsRedirectPeer
 	GlobalsFlowLogsEnabled
 	GlobalsNATOutgoingExcludeHosts
+	GlobalsSkipEgressRedirect
 
 	AttachTypeTcxIngress
 	AttachTypeTcxEgress
