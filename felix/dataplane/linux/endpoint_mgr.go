@@ -232,7 +232,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
-	bpfAttachType          string
+	bpfAttachType          apiv3.BPFAttachOption
 	bpfEndpointManager     hepListener
 	nlHandle               netlinkHandle
 	tcpStatsEnabled        bool
@@ -258,7 +258,7 @@ func newEndpointManager(
 	filterMaps nftables.MapsDataplane,
 	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
-	bpfAttachType string,
+	bpfAttachType apiv3.BPFAttachOption,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
 	tcpStatsEnabled bool,
@@ -315,7 +315,7 @@ func newEndpointManagerWithShims(
 	filterMaps nftables.MapsDataplane,
 	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
-	bpfAttachType string,
+	bpfAttachType apiv3.BPFAttachOption,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
 	nlHandle netlinkHandle,
