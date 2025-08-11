@@ -169,14 +169,15 @@ var _ = Describe("RouteGenerator", func() {
 			svcRouteMap:                make(map[string]map[string]bool),
 			routeAdvertisementRefCount: make(map[string]int),
 			client: &client{
-				cache:                    make(map[string]string),
-				syncedOnce:               true,
-				clusterCIDRs:             []string{"10.0.0.0/16"},
-				programmedRouteRefCount:  make(map[string]int),
-				ExternalIPRouteIndex:     NewRouteIndex(),
-				ClusterIPRouteIndex:      NewRouteIndex(),
-				LoadBalancerIPRouteIndex: NewRouteIndex(),
-				nodeLabelManager:         newNodeLabelManager(),
+				cache:                          make(map[string]string),
+				syncedOnce:                     true,
+				clusterCIDRs:                   []string{"10.0.0.0/16"},
+				programmedRouteRefCount:        make(map[string]int),
+				ExternalIPRouteIndex:           NewRouteIndex(),
+				ClusterIPRouteIndex:            NewRouteIndex(),
+				LoadBalancerIPRouteIndex:       NewRouteIndex(),
+				nodeLabelManager:               newNodeLabelManager(),
+				serviceLoadBalancerAggregation: apiv3.ServiceLoadBalancerAggregationEnabled,
 
 				externalIPs: []string{
 					ipNet1.String(),
@@ -963,6 +964,7 @@ var _ = Describe("Service Load Balancer Aggregation", func() {
 				ExternalIPRouteIndex:     NewRouteIndex(),
 				ClusterIPRouteIndex:      NewRouteIndex(),
 				LoadBalancerIPRouteIndex: NewRouteIndex(),
+				nodeLabelManager:         newNodeLabelManager(),
 			}
 			rg.client = mockClient
 			rg.nodeName = "test-node"

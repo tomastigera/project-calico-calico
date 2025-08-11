@@ -492,7 +492,9 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints
 
 	// For Cluster services, check aggregation setting to determine if we should proceed with endpoint-based logic.
 	// When aggregation is enabled, Cluster services are handled by global CIDR advertisement instead of individual routes.
-	if svc.Spec.Type != v1.ServiceTypeClusterIP && svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal && rg.client.ShouldAggregateLoadBalancerServices() {
+	if svc.Spec.Type != v1.ServiceTypeClusterIP &&
+		svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal &&
+		rg.client.ShouldAggregateLoadBalancerServices() {
 		logc.Debugf("Skipping service with non-local external traffic policy '%s'", svc.Spec.ExternalTrafficPolicy)
 		return false
 	}
