@@ -191,6 +191,8 @@ components:
           type: array
         defaultValue:
           type: string
+        displayDisabled:
+          type: boolean
         filterDisabled:
           type: boolean
         name:
