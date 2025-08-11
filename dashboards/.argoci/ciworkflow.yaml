@@ -63,7 +63,7 @@ spec:
             template: test-and-build-images
           - name: push-dev-images
             depends: "test-and-build-images"
-            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'main'"
+            when: "'{{workflow.parameters.CI_GIT_REF_TYPE}}' == 'MERGE' && '{{workflow.parameters.CI_GIT_PR_BRANCH}}' == 'master'"
             template: push-dev-images
           - name: push-prod-images
             depends: "test-and-build-images"

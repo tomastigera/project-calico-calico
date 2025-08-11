@@ -168,6 +168,7 @@ func TestProcess(t *testing.T) {
 			"Origin":         "unit-test",
 			"Severity":       "1",
 			"Source IP":      "n/a",
+			"Record Data":    "{}",
 		},
 	) {
 		t.Errorf("received invalid value for Annotations: %+v", eventPayload.Annotations)
