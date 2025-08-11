@@ -203,6 +203,8 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 
 			at := programs.Programs()
 
+			at := programs.Programs()
+
 			Expect(at).To(HaveKey(hook.AttachType{
 				Hook:       hook.Ingress,
 				Family:     4,
