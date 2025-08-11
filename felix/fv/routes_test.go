@@ -186,7 +186,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 		)
 
 		It("should resolve when winning endpoint is removed", func() {
-			// Winner is non-deterministic.
 			w[0][winner].RemoveFromInfra(infra)
 			Eventually(tc.Felixes[0].ExecOutputFn("ip", "r", "get", "10.65.0.2"), "10s").Should(
 				ContainSubstring(w[0][loser].InterfaceName),
@@ -194,7 +193,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 		})
 
 		It("should resolve when losing endpoint is removed", func() {
-			// Winner is non-deterministic.
 			w[0][loser].RemoveFromInfra(infra)
 			Consistently(tc.Felixes[0].ExecOutputFn("ip", "r", "get", "10.65.0.2"), "5s").Should(
 				ContainSubstring(w[0][winner].InterfaceName),
@@ -202,7 +200,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 		})
 
 		It("should resolve when winning interface goes down", func() {
-			// Winner is non-deterministic.
 			w[0][winner].SetInterfaceUp(false)
 			Eventually(tc.Felixes[0].ExecOutputFn("ip", "r", "get", "10.65.0.2"), "10s").Should(
 				ContainSubstring(w[0][loser].InterfaceName),
@@ -210,7 +207,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 		})
 
 		It("should resolve when losing interface goes down", func() {
-			// Winner is non-deterministic.
 			w[0][loser].SetInterfaceUp(false)
 			Consistently(tc.Felixes[0].ExecOutputFn("ip", "r", "get", "10.65.0.2"), "5s").Should(
 				ContainSubstring(w[0][winner].InterfaceName),

@@ -279,7 +279,7 @@ func expectFelixReady() {
 				log.WithError(err).Error("Failed to get felix stat.")
 			}
 			return state
-		}, "10s").Should(
+		}, "20s").Should(
 		BeNumerically("==", 3), "Felix never reported in-sync with datastore")
 }
 

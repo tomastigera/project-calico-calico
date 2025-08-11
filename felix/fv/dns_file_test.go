@@ -17,7 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
@@ -26,7 +25,6 @@ import (
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	var (
-		etcd   *containers.Container
 		felix  *infrastructure.Felix
 		w      *workload.Workload
 		client client.Interface
@@ -35,7 +33,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	)
 
 	BeforeEach(func() {
-		etcd = nil
 		felix = nil
 		w = nil
 		var err error
@@ -50,8 +47,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		if felix != nil {
 			felix.Stop()
 		}
-		if etcd != nil {
-			etcd.Stop()
+		if infra != nil {
 			infra.Stop()
 		}
 	})
@@ -67,7 +63,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		var tc infrastructure.TopologyContainers
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, _, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		felix = tc.Felixes[0]
 	}
 

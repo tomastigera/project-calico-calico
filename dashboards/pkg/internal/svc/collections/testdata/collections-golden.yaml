@@ -355,6 +355,8 @@
     type: text
   - name: response_code
     type: text
+  - name: route_name
+    type: text
   - name: url
     type: text
   - name: user_agent
@@ -367,6 +369,7 @@
   - field: start_time
     nested:
     - field: dest_service_name
+  - field: route_name
   - field: cluster
   - field: response_code
   - field: method
