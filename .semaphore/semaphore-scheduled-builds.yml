@@ -817,7 +817,7 @@ blocks:
         - name: google-service-account-for-gce
   - name: kube-controllers
     run:
-      when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/', '/hack/test/certs/', 'felix/bpf/libbpf/libbpf_stub.go', '/felix/fv/containers', '/felix/fv/infrastructure', '/felix/labelindex', '/felix/calc'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:

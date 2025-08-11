@@ -43,6 +43,16 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
+const (
+	// dnsTTLSeconds is the TTL used in tests that restart felix.  It needs to
+	// be long enough that felix can restart inside the TTL, but short enough
+	// that we don't wait too long for the DNS cache to expire.
+	dnsTTLSeconds = 20
+	dnsTTL        = dnsTTLSeconds * time.Second
+)
+
+var dnsTTLStr = strconv.Itoa(dnsTTLSeconds)
+
 var dnsDir string
 
 type mapping struct {
@@ -538,7 +548,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=" + dnsTTLStr + ",rdata='server-5.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='AAAA'),an=(DNSRR(rrname='server-5.xyz.com',type='AAAA',ttl=36000,rdata='" + pingTarget.IPv6 + "')))",
 					})
@@ -608,7 +618,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=" + dnsTTLStr + ",rdata='server-5.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
 					scapyTrusted.Stdin.Close()
@@ -623,6 +633,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			})
 
 			Context("with a chain of DNS info for xyz.com", func() {
+				var expectedTTLExpipryTime time.Time
 				BeforeEach(func() {
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
@@ -632,10 +643,12 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=" + dnsTTLStr + ",rdata='server-5.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
 					scapyTrusted.Stdin.Close()
+					dnsResponseTime := time.Now()
+					expectedTTLExpipryTime = dnsResponseTime.Add(dnsTTL)
 				})
 
 				It("workload can ping etcd, because there's no policy", func() {
@@ -684,9 +697,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 						})
 
-						Context("with 11s sleep so that DNS info expires", func() {
+						Context("with a sleep so that DNS info expires", func() {
 							BeforeEach(func() {
-								time.Sleep(11 * time.Second)
+								time.Sleep(dnsTTL * 120 / 100)
 							})
 
 							It("workload cannot ping etcd", func() {
@@ -696,11 +709,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 						Context("with a Felix restart", func() {
 							BeforeEach(func() {
-								tc.Felixes[0].Restart()
-								// Allow a bit of time for Felix to re-read the
-								// persistent file and update the dataplane, but not
-								// long enough (8s) for the DNS info to expire.
-								time.Sleep(3 * time.Second)
+								restartFelixFixedDelay(tc.Felixes[0], time.Until(expectedTTLExpipryTime)*80/100)
 							})
 
 							It("workload can still ping etcd", func() {
@@ -740,20 +749,16 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 						Context("with a Felix restart", func() {
 							BeforeEach(func() {
-								tc.Felixes[0].Restart()
-								// Allow a bit of time for Felix to re-read the
-								// persistent file and update the dataplane, but not
-								// long enough (8s) for the DNS info to expire.
-								time.Sleep(3 * time.Second)
+								restartFelixFixedDelay(tc.Felixes[0], time.Until(expectedTTLExpipryTime)*80/100)
 							})
 
 							It("workload can still ping etcd", func() {
 								Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 							})
 
-							Context("with 10s sleep so that DNS info expires", func() {
+							Context("with a sleep so that DNS info expires", func() {
 								BeforeEach(func() {
-									time.Sleep(10 * time.Second)
+									time.Sleep(dnsTTL * 120 / 100)
 								})
 
 								It("workload cannot ping etcd", func() {
@@ -765,7 +770,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				})
 			})
 
-			Context("with a chain of DNS info for xyz.com while felix is restaring", func() {
+			Context("with a chain of DNS info for xyz.com while felix is restarting", func() {
 				if m != string(api.BPFDNSPolicyModeInline) || !BPFMode() {
 					return
 				}
@@ -815,17 +820,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=60,rdata='server-5.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
-					scapyTrusted.Stdin.Close()
+					Expect(scapyTrusted.Stdin.Close()).NotTo(HaveOccurred())
 
-					// Make sure the packet isnot seen by Felix
+					// Make sure the packet is not seen by Felix
 					time.Sleep(1 * time.Second)
+
+					// Inline mode should work while felix is down.
+					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 
 					By("Starting Felix again")
 					triggerStartup()
-
+					tc.Felixes[0].WaitForReady() // Might take 30s in BPF mode.
 					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 				})
 			})
@@ -989,6 +997,8 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
+		// Make sure we don't lose the log that we watch for.
+		opts.ExtraEnvVars["FELIX_DEBUGDISABLELOGDROPPING"] = "true"
 		opts.IPIPMode = api.IPIPModeNever
 		tc, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
 		felix = tc.Felixes[0]
@@ -1005,12 +1015,14 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		}
 
 		// Configure Felix to trust itself, the other Felix, and w[1] as DNS servers.
+		waitChan := felix.WatchStdoutFor(regexp.MustCompile("Felix starting up"))
 		utils.UpdateFelixConfig(client, func(fc *api.FelixConfiguration) {
 			fc.Spec.DNSTrustedServers = &[]string{felix.IP, server.IP, w[1].IP}
 		})
 		log.Info("Wait for Felix to restart")
-		<-felix.WatchStdoutFor(regexp.MustCompile("Felix starting up"))
+		<-waitChan
 		log.Info("Felix has restarted")
+		felix.WaitForReady()
 
 		if BPFMode() {
 			ensureBPFProgramsAttached(felix)
@@ -1019,9 +1031,9 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 			Eventually(func() bool {
 				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
 				Expect(err).NotTo(HaveOccurred())
-				return (strings.Contains(out, w[1].IP+":53 (proto 17)") &&
+				return strings.Contains(out, w[1].IP+":53 (proto 17)") &&
 					strings.Contains(out, felix.IP+":53 (proto 17)") &&
-					strings.Contains(out, server.IP+":53 (proto 17)"))
+					strings.Contains(out, server.IP+":53 (proto 17)")
 			}, "5s", "0.5s").Should(BeTrue())
 
 			// Ensure workloads are set up.
@@ -1034,7 +1046,6 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 				}, "5s", "0.5s").Should(Equal(2))
 			}
 		}
-		time.Sleep(5 * time.Second)
 
 		// Ensure that workload policy programs are in place.
 		cc = &connectivity.Checker{}
@@ -1206,3 +1217,16 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		testDNSExchange(felix, server)
 	})
 })
+
+// restartFelixFixedDelay restarts Felix and, in parallel, waits for the
+// specified delay.  Fails if Felix does not restart before the delay ends.
+func restartFelixFixedDelay(f *infrastructure.Felix, delay time.Duration) {
+	startTime := time.Now()
+	delayDone := time.After(delay)
+	f.Restart()
+	ExpectWithOffset(1, delayDone).NotTo(Receive(),
+		fmt.Sprintf("This test requires felix to restart in less than %v "+
+			"so that DNS records are still live after the restart, but it took %v.",
+			delay, time.Since(startTime)))
+	<-delayDone
+}
