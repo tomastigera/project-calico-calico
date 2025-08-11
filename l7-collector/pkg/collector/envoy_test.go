@@ -30,6 +30,8 @@ var (
 	gatewayProxiedLog string
 	//go:embed testdata/gateway_proxied_no_xff.json
 	gatewayProxiedNoXFFLog string
+	//go:embed testdata/access_log.json
+	accessLog string
 )
 
 var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
@@ -46,7 +48,17 @@ var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
 			Expect(log.SrcPort).To(Equal(int32(34368)))
 			Expect(log.DstPort).To(Equal(int32(80)))
 		})
+
+		It("(New)should return the expected EnvoyLog", func() {
+			log, err := c.ParseAccessLogs(accessLog)
+			Expect(err).To(BeNil())
+			Expect(log.SrcIp).To(Equal("192.168.63.139"))
+			Expect(log.DstIp).To(Equal("192.168.8.75"))
+			Expect(log.SrcPort).To(Equal(int32(52638)))
+			Expect(log.DstPort).To(Equal(int32(10080)))
+		})
 	})
+
 	Context("With a log with TCP destination json format", func() {
 		It("should return the expected EnvoyLog", func() {
 			log, err := c.ParseRawLogs(tcpDestinationLog)
