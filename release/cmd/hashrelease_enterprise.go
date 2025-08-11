@@ -20,7 +20,6 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 		enterpriseBuildHashreleaseCommand(cfg),
 		enterprisePublishHashreleaseCommand(cfg),
 		enterpriseMetadataCommand(cfg),
-		hashreleaseGarbageCollectCommand(cfg),
 	}
 }
 
@@ -89,10 +88,11 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			if published, err := tasks.HashreleasePublished(hashreleaseServerConfig(c), data.Hash(), c.Bool(ciFlag.Name)); err != nil {
 				return fmt.Errorf("failed to check if hashrelease has been published: %v", err)
 			} else if published {
-				// On CI, we want it to fail if the hashrelease has already been published.
+				// On CI, if the hashrelease has already been published, we exit successfully (return nil).
 				// However, on local builds, we just log a warning and continue.
 				if c.Bool(ciFlag.Name) {
-					return fmt.Errorf("hashrelease %s has already been published", data.Hash())
+					logrus.Infof("hashrelease %s has already been published", data.Hash())
+					return nil
 				} else {
 					logrus.Warnf("hashrelease %s has already been published", data.Hash())
 				}
@@ -175,9 +175,8 @@ func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command
 	if c.Bool(publishHashreleaseFlag.Name) {
 		//  check that hashrelease server configuration is set.
 		if !hashreleaseServerConfig(c).Valid() {
-			return fmt.Errorf("missing hashrelease server configuration, ensure %s, %s, %s, %s %s, %s and %s are set",
-				sshHostFlag, sshUserFlag, sshKeyFlag, sshPortFlag, sshKnownHostsFlag,
-				hashreleaseServerBucketFlag, hashreleaseServerCredentialsFlag)
+			return fmt.Errorf("missing hashrelease publishing configuration, ensure --%s and --%s are set",
+				hashreleaseServerBucketFlag.Name, hashreleaseServerCredentialsFlag.Name)
 		}
 		// If building locally, do not allow setting the hashrelease as latest.
 		if c.Bool(latestFlag.Name) && !c.Bool(ciFlag.Name) {
@@ -231,7 +230,14 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			if published, err := tasks.HashreleasePublished(serverCfg, hashrel.Hash, c.Bool(ciFlag.Name)); err != nil {
 				return fmt.Errorf("failed to check if hashrelease has been published: %v", err)
 			} else if published {
-				return fmt.Errorf("%s hashrelease (%s) has already been published", hashrel.Name, hashrel.Hash)
+				// On CI, we exit successfully (return nil) if the hashrelease has already been published.
+				// This is not an error scenario; we just log a warning and continue locally.
+				if c.Bool(ciFlag.Name) {
+					logrus.Infof("hashrelease %s has already been published", hashrel.Hash)
+					return nil
+				} else {
+					logrus.Warnf("hashrelease %s has already been published", hashrel.Hash)
+				}
 			}
 
 			productRegistries := c.StringSlice(registryFlag.Name)

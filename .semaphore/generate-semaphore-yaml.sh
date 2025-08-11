@@ -1,8 +1,22 @@
 #!/bin/bash
 
+set -eu
+
 write_disclaimer() {
   echo "# !! WARNING, DO NOT EDIT !! This file is generated from semaphore.yml.d." >"$1"
   echo "# To update, modify the template and then run 'make gen-semaphore-yaml'." >>"$1"
+}
+
+detect_branch() {
+  branch=$(grep -P --only-matching "(?<=default_branch: ')[^']+(?=')" semaphore.yml | uniq)
+  branch_counts=$(echo "${branch}" | wc -l)
+  if [[ ${branch_counts} != 1 ]]; then
+    echo "Detected more than one branch in the current semaphore.yml, bailing out:"
+    echo "$branch"
+    exit 1
+  else
+    echo "$branch"
+  fi
 }
 
 # To ease up on CI runs, we want to compare against the last commit
@@ -12,7 +26,7 @@ write_disclaimer() {
 # If we've been provided a DEFAULT_BRANCH_OVERRIDE, we use that. This
 # is in case we need to regenerate the yaml while on a different
 # branch (e.g. in a PR)
-if [[ -n $DEFAULT_BRANCH_OVERRIDE ]]; then
+if [[ -v DEFAULT_BRANCH_OVERRIDE ]]; then
   current_branch=$DEFAULT_BRANCH_OVERRIDE
 else
   # We haven't been provided an override, so we need to detect the
@@ -22,7 +36,7 @@ else
   #
   # If we don't have that variable, then we try using the name of
   # the branch we're currently on, which is hopefully correct.
-  if [[ -n $SEMAPHORE_GIT_BRANCH ]]; then
+  if [[ -v SEMAPHORE_GIT_BRANCH ]]; then
     # We're in Sem CI and we should use the base branch
     current_branch=$SEMAPHORE_GIT_BRANCH
   else
@@ -41,11 +55,20 @@ else
   if [[ $current_branch == master ]]; then
     branch_stanza=""
   else
-    echo "ERROR: Unable to determine the current 'default_branch', which should be"
-    echo "       of the format \`release-calient-v*\`. You can provide a branch name"
-    echo "       by setting the DEFAULT_BRANCH_OVERRIDE variable to the base branch"
-    echo "       that this branch will be merged into."
-    exit 1
+    detected_head_branch=$(detect_branch)
+    if [[ ${detected_head_branch} ]]; then
+      branch_stanza=", default_branch: '${detected_head_branch}'"
+      echo "WARNING: Currently on a non-master, non-release branch. This branch appears to"
+      echo "         be a branch of ${detected_head_branch}, so we're using that as the"
+      echo "         default branch in semaphore.yml. If this is not correct, please set"
+      echo "         DEFAULT_BRANCH_OVERRIDE in the environment before running this script."
+    else
+      branch_stanza=""
+      echo "WARNING: Currently on a non-master, non-release branch. This branch appears to"
+      echo "         be a branch of master, so we're not specifying a default branch in"
+      echo "         semaphore.yml. If this is not correct, please set DEFAULT_BRANCH_OVERRIDE"
+      echo "         in the environment before running this script."
+    fi
   fi
 fi
 
