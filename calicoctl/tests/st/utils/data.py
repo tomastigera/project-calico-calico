@@ -1727,6 +1727,7 @@ bgpconfig_name1_rev1 = {
         'logSeverityScreen': 'Info',
         'nodeToNodeMeshEnabled': True,
         'asNumber': 6512,
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1740,6 +1741,7 @@ bgpconfig_name1_rev2 = {
         'logSeverityScreen': 'Info',
         'nodeToNodeMeshEnabled': False,
         'asNumber': 6511,
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1751,6 +1753,7 @@ bgpconfig_name2_rev1 = {
     },
     'spec': {
         'logSeverityScreen': 'Info',
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1762,6 +1765,7 @@ bgpconfig_name2_rev2 = {
     },
     'spec': {
         'logSeverityScreen': 'Debug',
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1774,6 +1778,7 @@ bgpconfig_name2_rev3 = {
     'spec': {
         'logSeverityScreen': 'Debug',
         'nodeToNodeMeshEnabled': True,
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1785,6 +1790,7 @@ bgpconfig_name3_rev1 = {
     },
     'spec': {
         'logSeverityScreen': 'Debug',
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
@@ -1796,6 +1802,7 @@ bgpconfig_name4_rev1 = {
     },
     'spec': {
         'logSeverityScreen': 'Debug',
+        'serviceLoadBalancerAggregation': 'Enabled',
     }
 }
 
