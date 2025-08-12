@@ -34,7 +34,7 @@ func SingleIndexWAFLogs() Helper {
 
 // NewWAFLogsConverter returns a Converter instance defined for waf logs.
 func NewWAFLogsConverter() converter {
-	return converter{wafAtomToElastic, wafSetOpTermToElastic}
+	return converter{atomToElastic: wafAtomToElastic, setOpTermToElastic: wafSetOpTermToElastic}
 }
 
 // wafAtomToElastic returns a waf log atom as an elastic JsonObject.

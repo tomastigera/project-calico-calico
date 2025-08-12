@@ -35,7 +35,7 @@ type flowLogsIndexHelper struct {
 
 // NewFlowLogsConverter returns a Converter instance defined for flow logs.
 func NewFlowLogsConverter() converter {
-	return converter{flowLogsAtomToElastic, flowLogsSetOpTermToElastic}
+	return converter{atomToElastic: flowLogsAtomToElastic, setOpTermToElastic: flowLogsSetOpTermToElastic, unaryPostfixOpTermToElastic: flowLogsUnaryPostfixOpTermToElastic}
 }
 
 // flowLogsAtomToElastic returns a flow log atom as an elastic JsonObject.
@@ -62,6 +62,23 @@ func flowLogsQueryObjectToElastic[E queryObject](o E, key string, basicConverter
 	default:
 		return basicConverter(o)
 	}
+}
+
+// flowLogsUnaryPostfixOpTermToElastic returns a flow log UnaryPostfixOpTerm as an elastic JsonObject.
+func flowLogsUnaryPostfixOpTermToElastic(v *query.UnaryPostfixOpTerm) JsonObject {
+	switch v.Key {
+	case "dest_domains":
+		return JsonObject{
+			"bool": JsonObject{
+				"must_not": JsonObject{
+					"exists": JsonObject{
+						"field": v.Key,
+					},
+				},
+			},
+		}
+	}
+	panic("invalid field for unary postfix op term")
 }
 
 // Helper.

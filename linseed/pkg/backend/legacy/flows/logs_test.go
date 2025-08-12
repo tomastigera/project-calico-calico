@@ -586,6 +586,28 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog1: true,
 			ExpectLog2: false,
 		},
+		{
+			Name: "should support dest_domains empty match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "dest_domains EMPTY",
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support dest_domains not empty match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "NOT dest_domains EMPTY",
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -660,7 +682,8 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithTCPMaxMinRTT(300).
 					WithTCPMaxSmoothRTT(301).
 					WithTCPMeanMinRTT(302).
-					WithTCPMeanSmoothRTT(303)
+					WithTCPMeanSmoothRTT(303).
+					WithDestDomains("tigera.domain")
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 

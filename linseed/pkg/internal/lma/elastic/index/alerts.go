@@ -31,7 +31,7 @@ func SingleIndexAlerts() Helper {
 
 // NewAlertsConverter returns a Converter instance defined for alerts.
 func NewAlertsConverter() converter {
-	return converter{basicAtomToElastic, basicSetOpTermToElastic}
+	return converter{atomToElastic: basicAtomToElastic, setOpTermToElastic: basicSetOpTermToElastic}
 }
 
 // Helper.

@@ -60,6 +60,7 @@ var _ = DescribeTable("Flows", func(atom Atom, ok bool) {
 	Entry("dest_labels root key", Atom{Key: "dest_labels", Value: "foo=bar"}, false),
 	Entry("dest_labels valid format", Atom{Key: "dest_labels.labels", Value: "foo=bar"}, true),
 	Entry("dest labels invalid format", Atom{Key: "dest_labels.labels", Value: "foo"}, false),
+	Entry("dest_domains", Atom{Key: "dest_domains", Value: ""}, true),
 	Entry("host=test", Atom{Key: "host", Value: "test"}, true),
 	Entry("reporter=src", Atom{Key: "reporter", Value: "src"}, true),
 	Entry("reporter=dst", Atom{Key: "reporter", Value: "dst"}, true),

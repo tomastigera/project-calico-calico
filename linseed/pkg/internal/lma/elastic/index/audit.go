@@ -33,7 +33,7 @@ func SingleIndexAuditLogs() Helper {
 }
 
 func NewAuditLogsConverter() converter {
-	return converter{basicAtomToElastic, basicSetOpTermToElastic}
+	return converter{atomToElastic: basicAtomToElastic, setOpTermToElastic: basicSetOpTermToElastic}
 }
 
 func (h auditLogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*elastic.BoolQuery, error) {

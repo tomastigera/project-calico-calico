@@ -49,6 +49,7 @@ var (
 		"dest_service_port_num":           IntRangeValidator(0, MaxTCPUDPPortNum),
 		"dest_service_port_name":          DomainValidator,
 		"dest_labels.labels":              RegexpValidator("^[^=]+=[^=]+$"),
+		"dest_domains":                    NullValidator,
 		"host":                            NullValidator,
 		"reporter":                        SetValidator("src", "dst"),
 		"num_flows":                       PositiveIntValidator,
