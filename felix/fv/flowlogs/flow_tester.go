@@ -95,6 +95,12 @@ func IncludeByDestPort(port int) IncludeFilter {
 	}
 }
 
+func IncludeByReporter(reporter flowlog.ReporterType) IncludeFilter {
+	return func(f flowlog.FlowLog) bool {
+		return f.FlowMeta.Reporter == reporter
+	}
+}
+
 // NewFlowTester creates a new FlowTesterDeprecated initialized for the supplied felix instances.
 func NewFlowTester(options FlowTesterOptions) *FlowTester {
 	return &FlowTester{
@@ -144,33 +150,29 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 			}
 		}
 
-		if !t.options.ExcludeAllPolicies {
-			if t.options.ExpectAllPolicies {
-				if len(fl.FlowAllPolicySet) == 0 {
-					return fmt.Errorf("missing all_policies in %v", fl.FlowMeta)
-				}
-			} else if len(fl.FlowAllPolicySet) != 0 {
-				return fmt.Errorf("unexpected all_policies %v in %v", fl.FlowAllPolicySet, fl.FlowMeta)
+		if fl.Reporter != flowlog.ReporterFwd {
+			if t.options.ExpectAllPolicies && !t.options.ExcludeAllPolicies && len(fl.FlowAllPolicySet) == 0 {
+				return fmt.Errorf("missing all_policies in %v", fl.FlowMeta)
+			}
+			if !t.options.ExpectAllPolicies && !t.options.ExcludeAllPolicies && len(fl.FlowAllPolicySet) != 0 {
+				return fmt.Errorf("unexpected all_policies in %v", fl.FlowMeta)
+			}
+			if t.options.ExpectEnforcedPolicies && !t.options.ExcludeEnforcedPolicies && len(fl.FlowEnforcedPolicySet) == 0 {
+				return fmt.Errorf("missing enforced_policies in %v", fl.FlowMeta)
+			}
+			if !t.options.ExpectEnforcedPolicies && !t.options.ExcludeEnforcedPolicies && len(fl.FlowEnforcedPolicySet) != 0 {
+				return fmt.Errorf("unexpected enforced_policies in %v", fl.FlowMeta)
+			}
+			if t.options.ExpectPendingPolicies && !t.options.ExcludePendingPolicies && len(fl.FlowPendingPolicySet) == 0 {
+				return fmt.Errorf("missing pending_policies in %v", fl.FlowMeta)
 			}
 		}
-		if !t.options.ExcludeEnforcedPolicies {
-			if t.options.ExpectEnforcedPolicies {
-				if len(fl.FlowEnforcedPolicySet) == 0 {
-					return fmt.Errorf("missing enforced_policies in %v", fl.FlowMeta)
-				}
-			} else if len(fl.FlowEnforcedPolicySet) != 0 {
-				return fmt.Errorf("unexpected enforced_policies %v in %v", fl.FlowEnforcedPolicySet, fl.FlowMeta)
-			}
-		}
-		if !t.options.ExcludePendingPolicies && t.options.ExpectPendingPolicies {
-			if len(fl.FlowPendingPolicySet) == 0 {
-				return fmt.Errorf("missing pending__policies in %v", fl.FlowMeta)
-			}
-		}
-		if !t.options.ExcludeTransitPolicies && t.options.ExpectTransitPolicies {
-			if len(fl.FlowTransitPolicySet) == 0 {
-				return fmt.Errorf("missing transit_policies in %v", fl.FlowMeta)
-			}
+
+		reporterIsFwd := fl.Reporter == flowlog.ReporterSrcFwd ||
+			fl.Reporter == flowlog.ReporterDstFwd ||
+			fl.Reporter == flowlog.ReporterFwd
+		if reporterIsFwd && t.options.ExpectTransitPolicies && !t.options.ExcludeTransitPolicies && len(fl.FlowTransitPolicySet) == 0 {
+			return fmt.Errorf("missing transit_policies in %v", fl.FlowMeta)
 		}
 
 		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port

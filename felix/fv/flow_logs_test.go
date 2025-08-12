@@ -1464,7 +1464,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 			ExpectTransitPolicies:  true,
 			MatchTransitPolicies:   true,
 			MatchLabels:            false,
-			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort), flowlogs.IncludeByReporter(flowlog.ReporterSrcFwd), flowlogs.IncludeByReporter(flowlog.ReporterDstFwd)},
 			CheckNumFlowsStarted:   true,
 		})
 
