@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/proto"
@@ -734,11 +736,11 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		// Write a pcap file in order to simulate a previous capture
 		err = os.MkdirAll(captureDir, 0755)
-		defer os.Remove(captureDir)
+		defer removeBestEffort(captureDir)
 		Expect(err).NotTo(HaveOccurred())
 		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(file.Name())
+		defer removeBestEffort(file.Name())
 
 		// Initialise a new capture
 		var pcap capture.PcapFile
@@ -903,11 +905,11 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		// Write a pcap file in order to simulate a previous capture
 		var err = os.MkdirAll(captureDir, 0755)
-		defer os.Remove(captureDir)
+		defer removeBestEffort(captureDir)
 		Expect(err).NotTo(HaveOccurred())
 		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(file.Name())
+		defer removeBestEffort(file.Name())
 		var dummyFile = outputFile{
 			Name:  fmt.Sprintf("%s_%s.[\\d]+.pcap", podName, deviceName),
 			Size:  0,
@@ -937,11 +939,11 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		// Write a pcap file in order to simulate a previous capture
 		var err = os.MkdirAll(captureDir, 0755)
-		defer os.Remove(captureDir)
+		defer removeBestEffort(captureDir)
 		Expect(err).NotTo(HaveOccurred())
 		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(file.Name())
+		defer removeBestEffort(file.Name())
 		var dummyFile = outputFile{
 			Name:  fmt.Sprintf("%s_%s.[\\d]+.pcap", podName, deviceName),
 			Size:  0,
@@ -969,6 +971,16 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	}, 10)
 })
 
+func removeBestEffort(path string) {
+	err := os.RemoveAll(path)
+	if os.IsNotExist(err) {
+		return
+	}
+	if err != nil {
+		logrus.WithError(err).WithField("path", path).Warn("Failed to remove directory")
+	}
+}
+
 type outputFile struct {
 	Name  string
 	Size  int
@@ -976,27 +988,27 @@ type outputFile struct {
 }
 
 func assertPcapFiles(baseDir string, expected []outputFile) {
-	Eventually(func() []os.FileInfo { return read(baseDir) }).Should(HaveLen(len(expected)), "wrong length in assertPcapFiles")
 	sort.Slice(expected, func(i, j int) bool {
 		return expected[i].Order < expected[j].Order
 	})
 
-	for i, f := range expected {
-		Eventually(func() int {
-			files := read(baseDir)
-			if len(files) > i {
-				return int(files[i].Size())
+	Eventually(func() error {
+		files := read(baseDir)
+		if len(files) != len(expected) {
+			return fmt.Errorf("expected %d files, got %d", len(expected), len(files))
+		}
+
+		for i, exp := range expected {
+			if int64(exp.Size) != files[i].Size() {
+				return fmt.Errorf("expected file %d size %d, got %d", i, exp.Size, files[i].Size())
 			}
-			return -1
-		}).Should(Equal(f.Size))
-		Eventually(func() string {
-			files := read(baseDir)
-			if len(files) > i {
-				return files[i].Name()
+			nameRE := regexp.MustCompile(exp.Name)
+			if !nameRE.MatchString(files[i].Name()) {
+				return fmt.Errorf("expected file %d name %s, got %s", i, exp.Name, files[i].Name())
 			}
-			return ""
-		}).Should(MatchRegexp(f.Name))
-	}
+		}
+		return nil
+	}).Should(Succeed())
 }
 
 func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []outputFile, expectedNs string,
@@ -1016,13 +1028,30 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 func read(baseDir string) []os.FileInfo {
 	pCaps, err := os.ReadDir(baseDir)
 	if err != nil {
-		return []os.FileInfo{}
+		return nil
 	}
 
 	var pcapInfo []os.FileInfo
 	for _, pc := range pCaps {
-		info, _ := pc.Info()
-		pcapInfo = append(pcapInfo, info)
+		// We used to ignore the error here, but info.Size() sometimes panicked
+		// in CI with a nil pointer dereference.  Adding defensive logic here to
+		// either fix that or diagnose it.
+		info, err := pc.Info()
+		if err != nil {
+			logrus.WithError(err).WithField("dirInfo", pc).Warn("Failed to get file info for pcap file, skipping.")
+			continue
+		}
+		func() {
+			defer func() {
+				pv := recover()
+				if pv != nil {
+					logrus.WithField("dirInfo", pc).WithField("error", pv).Warn("Failed to get file size for pcap file, skipping.")
+					return
+				}
+			}()
+			info.Size()
+			pcapInfo = append(pcapInfo, info)
+		}()
 	}
 	sort.Slice(pcapInfo, func(i, j int) bool {
 		return pCaps[i].Name() < pCaps[j].Name()
