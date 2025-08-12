@@ -53,3 +53,4 @@ htmlcov/
 /report/*.xml
 
 Makefile.common*
+*.test

@@ -1777,22 +1777,22 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			_ = ifStateMap.Update(
 				ifstate.NewKey(123).AsBytes(),
 				ifstate.NewValue(ifstate.FlgIPv4Ready, "eth123",
-					1, 1, 2, -1, -1, -1, 3, 4).AsBytes(),
+					1, 1, 2, -1, -1, -1, 3, 4, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(124).AsBytes(),
 				ifstate.NewValue(0, "eth124",
-					2, 5, 6, -1, -1, -1, 7, 8).AsBytes(),
+					2, 5, 6, -1, -1, -1, 7, 8, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(125).AsBytes(),
 				ifstate.NewValue(ifstate.FlgWEP|ifstate.FlgIPv4Ready, "eth125",
-					3, 9, 10, -1, -1, -1, 11, 12).AsBytes(),
+					3, 9, 10, -1, -1, -1, 11, 12, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(126).AsBytes(),
 				ifstate.NewValue(ifstate.FlgWEP, "eth123",
-					0, 13, 14, -1, -1, -1, 15, 0).AsBytes(),
+					0, 13, 14, -1, -1, -1, 15, 0, -1, -1, 0, 0).AsBytes(),
 			)
 
 			err := bpfEpMgr.CompleteDeferredWork()
@@ -1843,8 +1843,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			key123 := ifstate.NewKey(123).AsBytes()
 			value123 := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				-1, 0, 2, -1, -1, -1, 3, 4)
-			value124 := ifstate.NewValue(0, "eth124", 2, 5, 6, -1, -1, -1, 7, 1)
+				-1, 0, 2, -1, -1, -1, 3, 4, -1, -1, 0, 0)
+			value124 := ifstate.NewValue(0, "eth124", 2, 5, 6, -1, -1, -1, 7, 1, -1, -1, 0, 0)
 
 			_ = ifStateMap.Update(
 				key123,
@@ -1899,7 +1899,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			// Oops, we accidentally wrote all zeros to the dataplane...
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				0, 0, 0, -1, -1, -1, 0, 0)
+				0, 0, 0, -1, -1, -1, 0, 0, -1, -1, 0, 0)
 
 			_ = ifStateMap.Update(
 				key123,
@@ -1924,7 +1924,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			// XDP gets cleaned up because it's a WEP, ingress keeps its
 			// ID because it was the first; egress gets reallocated.
 			value123Fixed := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				-1, 0, 1, -1, -1, -1, -1, -1)
+				-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, 0, 0)
 			Expect(dumpIfstateMap(ifStateMap)).To(Equal(map[int]string{
 				123: value123Fixed.String(),
 			}))
@@ -1938,11 +1938,11 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			// Oops, we accidentally wrote all zeros to the dataplane...
 			key123 := ifstate.NewKey(123).AsBytes()
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				0, 0, 0, -1, -1, -1, 0, 0)
+				0, 0, 0, -1, -1, -1, 0, 0, -1, -1, 0, 0)
 
 			key124 := ifstate.NewKey(124).AsBytes()
 			value124Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali56789",
-				0, 0, 0, -1, -1, -1, 0, 0)
+				0, 0, 0, -1, -1, -1, 0, 0, -1, -1, 0, 0)
 
 			_ = ifStateMap.Update(
 				key123,
@@ -2009,13 +2009,13 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			// Oops, we accidentally wrote all zeros to the dataplane...
 			key123 := ifstate.NewKey(123).AsBytes()
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready, "eth0",
-				0, 0, 0, -1, -1, -1, 0, -1)
+				0, 0, 0, -1, -1, -1, 0, -1, -1, -1, 0, 0)
 			// ...twice.
 			key124 := ifstate.NewKey(124).AsBytes()
 			// Using eth0a because the data iface pattern is eth0 (other tests
 			// use eth1 for something else...).
 			value124Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready, "eth0a",
-				0, 0, 0, -1, -1, -1, -1, 0)
+				0, 0, 0, -1, -1, -1, -1, 0, -1, -1, 0, 0)
 			_ = ifStateMap.Update(key123, value123Zeros.AsBytes())
 			_ = ifStateMap.Update(key124, value124Zeros.AsBytes())
 
@@ -2075,7 +2075,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		It("should clean up with update", func() {
 			_ = ifStateMap.Update(
 				ifstate.NewKey(123).AsBytes(),
-				ifstate.NewValue(ifstate.FlgIPv4Ready, "eth123", -1, -1, -1, -1, -1, -1, -1, -1).AsBytes(),
+				ifstate.NewValue(ifstate.FlgIPv4Ready, "eth123", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0).AsBytes(),
 			)
 
 			genIfaceUpdate("cali12345", ifacemonitor.StateUp, 15)()
@@ -2241,22 +2241,22 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			_ = ifStateMap.Update(
 				ifstate.NewKey(123).AsBytes(),
 				ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready, "eth123",
-					5, 6, 7, 1, 1, 2, 3, 4).AsBytes(),
+					5, 6, 7, 1, 1, 2, 3, 4, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(124).AsBytes(),
 				ifstate.NewValue(0, "eth124",
-					8, 9, 10, 2, 5, 6, 7, 8).AsBytes(),
+					8, 9, 10, 2, 5, 6, 7, 8, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(125).AsBytes(),
 				ifstate.NewValue(ifstate.FlgWEP|ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready, "eth125",
-					13, 14, 15, 3, 9, 10, 11, 12).AsBytes(),
+					13, 14, 15, 3, 9, 10, 11, 12, -1, -1, 0, 0).AsBytes(),
 			)
 			_ = ifStateMap.Update(
 				ifstate.NewKey(126).AsBytes(),
 				ifstate.NewValue(ifstate.FlgWEP, "eth123",
-					16, 17, 18, 0, 13, 14, 15, 0).AsBytes(),
+					16, 17, 18, 0, 13, 14, 15, 0, -1, -1, 0, 0).AsBytes(),
 			)
 
 			err := bpfEpMgr.CompleteDeferredWork()
@@ -2306,10 +2306,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			}
 
 			key123 := ifstate.NewKey(123).AsBytes()
-			value124 := ifstate.NewValue(0, "eth124", 2, 5, 6, -1, 0, 4, 7, 1)
+			value124 := ifstate.NewValue(0, "eth124", 2, 5, 6, -1, 0, 4, 7, 1, -1, -1, 0, 0)
 
 			value123 := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgWEP|ifstate.FlgIPv4Ready, "cali12345",
-				-1, 0, 2, -1, 1, 5, 3, 4)
+				-1, 0, 2, -1, 1, 5, 3, 4, -1, -1, 0, 0)
 
 			_ = ifStateMap.Update(
 				key123,
@@ -2361,7 +2361,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			// Oops, we accidentally wrote all zeros to the dataplane...
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv4Ready|ifstate.FlgIPv6Ready|ifstate.FlgWEP, "cali12345",
-				0, 0, 0, 0, 0, 0, 0, 0)
+				0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0)
 
 			_ = ifStateMap.Update(
 				key123,
@@ -2386,7 +2386,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			// XDP gets cleaned up because it's a WEP, ingress keeps its
 			// ID because it was the first; egress gets reallocated.
 			value123Fixed := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				-1, 0, 1, -1, 2, 3, -1, -1)
+				-1, 0, 1, -1, 2, 3, -1, -1, -1, -1, 0, 0)
 			Expect(dumpIfstateMap(ifStateMap)).To(Equal(map[int]string{
 				123: value123Fixed.String(),
 			}))
@@ -2403,9 +2403,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			key124 := ifstate.NewKey(124).AsBytes()
 
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali12345",
-				0, 0, 0, 0, 0, 0, 0, 0)
+				0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0)
 			value124Zeros := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready|ifstate.FlgWEP, "cali56789",
-				0, 0, 0, 0, 0, 0, 0, 0)
+				0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0)
 			_ = ifStateMap.Update(
 				key123,
 				value123Zeros.AsBytes(),
@@ -2479,9 +2479,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			// Using eth0a because the data iface pattern is eth0 (other tests
 			// use eth1 for something else...).
 			value123Zeros := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready, "eth0",
-				0, 0, 0, 0, 0, 0, 0, -1)
+				0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0, 0)
 			value124Zeros := ifstate.NewValue(ifstate.FlgIPv6Ready|ifstate.FlgIPv4Ready, "eth0a",
-				0, 0, 0, 0, 0, 0, -1, 0)
+				0, 0, 0, 0, 0, 0, -1, 0, -1, -1, 0, 0)
 			_ = ifStateMap.Update(key123, value123Zeros.AsBytes())
 			_ = ifStateMap.Update(key124, value124Zeros.AsBytes())
 
@@ -2546,7 +2546,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		It("should clean up with update", func() {
 			_ = ifStateMap.Update(
 				ifstate.NewKey(123).AsBytes(),
-				ifstate.NewValue(ifstate.FlgIPv4Ready, "eth123", -1, -1, -1, -1, -1, -1, -1, -1).AsBytes(),
+				ifstate.NewValue(ifstate.FlgIPv4Ready, "eth123", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0).AsBytes(),
 			)
 
 			genIfaceUpdate("cali12345", ifacemonitor.StateUp, 15)()

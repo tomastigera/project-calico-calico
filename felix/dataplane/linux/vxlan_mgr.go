@@ -197,7 +197,7 @@ func newVXLANManagerWithShims(
 
 	m.routeMgr.routeClassTunnel = routetable.RouteClassVXLANTunnel
 	m.routeMgr.routeClassSameSubnet = routetable.RouteClassVXLANSameSubnet
-	m.routeMgr.setTunnelRouteFunc(m.route)
+	m.routeMgr.setTunnelRouteFunc(m.tunnelRoute)
 	m.routeMgr.triggerRouteUpdate()
 
 	for _, o := range opts {
@@ -337,7 +337,7 @@ func (m *vxlanManager) updateNeighborsAndAllowedSources() {
 	m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, allowedVXLANSources)
 }
 
-func (m *vxlanManager) route(cidr ip.CIDR, r *proto.RouteUpdate) *routetable.Target {
+func (m *vxlanManager) tunnelRoute(cidr ip.CIDR, r *proto.RouteUpdate) *routetable.Target {
 	if isRemoteTunnelRoute(r, proto.IPPoolType_VXLAN) {
 		// We treat remote tunnel routes as directly connected. They don't have a gateway of
 		// the VTEP because they ARE the VTEP!

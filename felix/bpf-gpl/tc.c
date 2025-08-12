@@ -59,6 +59,7 @@
 #include "bpf_helpers.h"
 #include "egw.h"
 #include "rule_counters.h"
+#include "qos.h"
 #ifndef IPVER6
 #include "dns_response.h"
 #endif
@@ -107,6 +108,10 @@ int calico_tc_main(struct __sk_buff *skb)
 
 			CALI_DEBUG("New packet at ifindex=%d; mark=%x", skb->ifindex, skb->mark);
 			parse_packet_ip(ctx);
+			if (enforce_packet_rate_qos(ctx) == TC_ACT_SHOT) {
+				CALI_DEBUG("Final result=DENY (%d). Dropped due to packet rate QoS.", CALI_REASON_DROPPED_BY_QOS);
+				return TC_ACT_SHOT;
+			}
 			CALI_DEBUG("Final result=ALLOW (%d). Bypass mark set.", CALI_REASON_BYPASS);
 		}
 		return TC_ACT_UNSPEC;
@@ -603,6 +608,10 @@ syn_force_policy:
 			goto deny;
 		}
 
+		if (cali_rt_flags_skip_ingress_redirect(r->flags)) {
+			ctx->state->flags |= CALI_ST_SKIP_REDIR_PEER;
+		}
+
 		if (EGRESS_CLIENT) {
 			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(&ctx->state->post_nat_ip_dst))) {
 				// Packet is from an egress client and destined to outside
@@ -748,7 +757,7 @@ syn_force_policy:
 		}
 		ctx->state->flags |= CALI_ST_DEST_IS_HOST;
 	} else if (CALI_F_FROM_HEP) {
-		if (cali_rt_flags_local_workload_vm(dest_rt->flags)) {
+		if (cali_rt_flags_skip_ingress_redirect(dest_rt->flags)) {
 			ctx->state->flags |= CALI_ST_SKIP_REDIR_PEER;
 		} else if (!ctx->nat_dest && !cali_rt_is_local(dest_rt)) {
 			/* Disable FIB, let the packet go through the host after it is
@@ -1430,6 +1439,9 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 	}
 #endif
 
+	if (enforce_packet_rate_qos(ctx) == TC_ACT_SHOT) {
+		goto deny;
+	}
 	ctx->fwd = calico_tc_skb_accepted(ctx);
 	return forward_or_drop(ctx);
 
@@ -2076,6 +2088,9 @@ int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 		goto deny;
 	}
 
+	if (enforce_packet_rate_qos(ctx) == TC_ACT_SHOT) {
+		goto deny;
+	}
 	tc_state_fill_from_iphdr(ctx);
 	ctx->state->sport = ctx->state->dport = 0;
 	return forward_or_drop(ctx);

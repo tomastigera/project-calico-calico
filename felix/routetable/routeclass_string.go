@@ -15,17 +15,18 @@ func _() {
 	_ = x[RouteClassVXLANTunnel-4]
 	_ = x[RouteClassIPIPSameSubnet-5]
 	_ = x[RouteClassIPIPTunnel-6]
-	_ = x[RouteClassIPAMBlockDrop-7]
-	_ = x[RouteClassEgress-8]
-	_ = x[RouteClassAWSDefault-9]
-	_ = x[RouteClassAWSThrow-10]
-	_ = x[RouteClassTPROXY-11]
-	_ = x[RouteClassMax-12]
+	_ = x[RouteClassNoEncap-7]
+	_ = x[RouteClassIPAMBlockDrop-8]
+	_ = x[RouteClassEgress-9]
+	_ = x[RouteClassAWSDefault-10]
+	_ = x[RouteClassAWSThrow-11]
+	_ = x[RouteClassTPROXY-12]
+	_ = x[RouteClassMax-13]
 }
 
-const _RouteClass_name = "RouteClassLocalWorkloadRouteClassBPFSpecialRouteClassWireguardRouteClassVXLANSameSubnetRouteClassVXLANTunnelRouteClassIPIPSameSubnetRouteClassIPIPTunnelRouteClassIPAMBlockDropRouteClassEgressRouteClassAWSDefaultRouteClassAWSThrowRouteClassTPROXYRouteClassMax"
+const _RouteClass_name = "RouteClassLocalWorkloadRouteClassBPFSpecialRouteClassWireguardRouteClassVXLANSameSubnetRouteClassVXLANTunnelRouteClassIPIPSameSubnetRouteClassIPIPTunnelRouteClassNoEncapRouteClassIPAMBlockDropRouteClassEgressRouteClassAWSDefaultRouteClassAWSThrowRouteClassTPROXYRouteClassMax"
 
-var _RouteClass_index = [...]uint16{0, 23, 43, 62, 87, 108, 132, 152, 175, 191, 211, 229, 245, 258}
+var _RouteClass_index = [...]uint16{0, 23, 43, 62, 87, 108, 132, 152, 169, 192, 208, 228, 246, 262, 275}
 
 func (i RouteClass) String() string {
 	if i < 0 || i >= RouteClass(len(_RouteClass_index)-1) {

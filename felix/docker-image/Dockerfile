@@ -55,7 +55,8 @@ RUN apt-get update && apt-get install -y \
     tcpdump \
     wget \
     iperf3 \
-    iperf
+    iperf \
+    jq
 
 RUN apt-get install --no-install-recommends -y wireguard-tools
 

@@ -579,6 +579,7 @@ const (
 	GlobalsRedirectPeer            uint32 = C.CALI_GLOBALS_REDIRECT_PEER
 	GlobalsFlowLogsEnabled         uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
 	GlobalsNATOutgoingExcludeHosts uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
+	GlobalsSkipEgressRedirect      uint32 = C.CALI_GLOBALS_SKIP_EGRESS_REDIRECT
 
 	AttachTypeTcxIngress uint32 = C.BPF_TCX_INGRESS
 	AttachTypeTcxEgress  uint32 = C.BPF_TCX_EGRESS
@@ -626,6 +627,10 @@ func (t *TcGlobalData) Set(m *Map) error {
 		C.uint(t.LogFilterJmp),
 		&cJumps[0], // it is safe because we hold the reference here until we return.
 		&cJumpsV6[0],
+		C.ushort(t.IngressPacketRate),
+		C.ushort(t.IngressPacketBurst),
+		C.ushort(t.EgressPacketRate),
+		C.ushort(t.EgressPacketBurst),
 	)
 
 	return err

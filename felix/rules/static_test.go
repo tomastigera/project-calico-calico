@@ -25,6 +25,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/dataplane/linux/dataplanedefs"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
@@ -1227,7 +1228,7 @@ var _ = Describe("Static", func() {
 							{Action: JumpAction{Target: "cali-nat-outgoing"}},
 							{
 								Match: Match().
-									OutInterface("tunl0").
+									OutInterface(dataplanedefs.IPIPIfaceName).
 									NotSrcAddrType(generictables.AddrTypeLocal, true).
 									SrcAddrType(generictables.AddrTypeLocal, false),
 								Action: MasqAction{},
@@ -1253,7 +1254,7 @@ var _ = Describe("Static", func() {
 								{Action: JumpAction{Target: "cali-nat-outgoing"}},
 								{
 									Match: Match().
-										OutInterface("tunl0").
+										OutInterface(dataplanedefs.IPIPIfaceName).
 										NotSrcAddrType(generictables.AddrTypeLocal, true).
 										SrcAddrType(generictables.AddrTypeLocal, false),
 									Action: MasqAction{},
@@ -1347,14 +1348,14 @@ var _ = Describe("Static", func() {
 									{Action: JumpAction{Target: "cali-nat-outgoing"}},
 									{
 										Match: Match().
-											OutInterface("tunl0").
+											OutInterface(dataplanedefs.IPIPIfaceName).
 											NotSrcAddrType(generictables.AddrTypeLocal, true).
 											SrcAddrType(generictables.AddrTypeLocal, false),
 										Action: MasqAction{},
 									},
 									{
 										Match: Match().
-											OutInterface("vxlan.calico").
+											OutInterface(dataplanedefs.VXLANIfaceNameV4).
 											NotSrcAddrType(generictables.AddrTypeLocal, true).
 											SrcAddrType(generictables.AddrTypeLocal, false),
 										Action: MasqAction{},
@@ -1446,7 +1447,7 @@ var _ = Describe("Static", func() {
 									{Action: JumpAction{Target: "cali-nat-outgoing"}},
 									{
 										Match: Match().
-											OutInterface("vxlan-v6.calico").
+											OutInterface(dataplanedefs.VXLANIfaceNameV6).
 											NotSrcAddrType(generictables.AddrTypeLocal, true).
 											SrcAddrType(generictables.AddrTypeLocal, false),
 										Action: MasqAction{},

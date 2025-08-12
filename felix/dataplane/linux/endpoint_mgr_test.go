@@ -1025,7 +1025,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				nil,
 				nil,
 				false,
-				string(apiv3.BPFAttachOptionTCX),
+				apiv3.BPFAttachOptionTCX,
 				hepListener,
 				common.NewCallbacks(),
 				nlHandle,
