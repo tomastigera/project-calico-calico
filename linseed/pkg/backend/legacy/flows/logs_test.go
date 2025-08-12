@@ -576,7 +576,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog2: true,
 		},
 		{
-			Name: "should support selection based on nested field match",
+			Name: "should support selection based on labels nested field match",
 			Params: v1.FlowLogParams{
 				QueryParams: v1.QueryParams{},
 				LogSelectionParams: v1.LogSelectionParams{
@@ -585,6 +585,17 @@ func TestFlowLogFiltering(t *testing.T) {
 			},
 			ExpectLog1: true,
 			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection based on policies nested field match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "\"policies.pending_policies\" IN {\"*custom-tier2.staged:policy*\"}",
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
 		},
 		{
 			Name: "should support dest_domains empty match",
@@ -683,7 +694,8 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithTCPMaxSmoothRTT(301).
 					WithTCPMeanMinRTT(302).
 					WithTCPMeanSmoothRTT(303).
-					WithDestDomains("tigera.domain")
+					WithDestDomains("tigera.domain").
+					WithPendingPolicy("0|custom-tier2|default/custom-tier2.staged:policy|allow|1")
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 

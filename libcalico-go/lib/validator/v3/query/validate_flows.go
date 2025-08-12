@@ -61,6 +61,8 @@ var (
 		"packets_out":                     PositiveIntValidator,
 		"proto":                           ProtoValidator,
 		"policies.all_policies":           NullValidator,
+		"policies.enforced_policies":      NullValidator,
+		"policies.pending_policies":       NullValidator,
 		"original_source_ips":             IPValidator,
 		"num_original_source_ips":         PositiveIntValidator,
 		"process_name":                    DomainValidator,
