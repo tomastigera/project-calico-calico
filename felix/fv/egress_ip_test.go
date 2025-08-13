@@ -823,6 +823,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								Eventually(getIPRules, "10s", "1s").Should(HaveLen(3))
 
 								triggerStartup()
+								tc.Felixes[0].WaitForReady()
 								if BPFMode() {
 									ensureAllNodesBPFProgramsAttached(tc.Felixes, "egress.calico")
 								}
