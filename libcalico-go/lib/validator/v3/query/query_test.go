@@ -204,4 +204,13 @@ var _ = DescribeTable("Query", func(input, expected string, ok bool) {
 		`a NOTIN NOT {b, "*c", "d?"}`,
 		`a NOTIN NOT {b, *c, d?}`,
 		false),
+
+	Entry(`a EMPTY`,
+		`a EMPTY`,
+		`a EMPTY`,
+		true),
+	Entry(`NOT a EMPTY`,
+		`NOT a EMPTY`,
+		`NOT a EMPTY`,
+		true),
 )

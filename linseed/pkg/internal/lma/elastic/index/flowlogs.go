@@ -35,7 +35,7 @@ type flowLogsIndexHelper struct {
 
 // NewFlowLogsConverter returns a Converter instance defined for flow logs.
 func NewFlowLogsConverter() converter {
-	return converter{flowLogsAtomToElastic, flowLogsSetOpTermToElastic}
+	return converter{atomToElastic: flowLogsAtomToElastic, setOpTermToElastic: flowLogsSetOpTermToElastic, unaryPostfixOpTermToElastic: flowLogsUnaryPostfixOpTermToElastic}
 }
 
 // flowLogsAtomToElastic returns a flow log atom as an elastic JsonObject.
@@ -51,7 +51,7 @@ func flowLogsSetOpTermToElastic(t *query.SetOpTerm) JsonObject {
 // flowLogsQueryObjectToElastic returns a flow log queryObject as an elastic JsonObject.
 func flowLogsQueryObjectToElastic[E queryObject](o E, key string, basicConverter converterFunc[E]) JsonObject {
 	switch key {
-	case "dest_labels.labels", "policies.all_policies", "source_labels.labels":
+	case "dest_labels.labels", "policies.all_policies", "policies.enforced_policies", "policies.pending_policies", "source_labels.labels":
 		path := key[:strings.Index(key, ".")]
 		return JsonObject{
 			"nested": JsonObject{
@@ -62,6 +62,23 @@ func flowLogsQueryObjectToElastic[E queryObject](o E, key string, basicConverter
 	default:
 		return basicConverter(o)
 	}
+}
+
+// flowLogsUnaryPostfixOpTermToElastic returns a flow log UnaryPostfixOpTerm as an elastic JsonObject.
+func flowLogsUnaryPostfixOpTermToElastic(v *query.UnaryPostfixOpTerm) JsonObject {
+	switch v.Key {
+	case "dest_domains":
+		return JsonObject{
+			"bool": JsonObject{
+				"must_not": JsonObject{
+					"exists": JsonObject{
+						"field": v.Key,
+					},
+				},
+			},
+		}
+	}
+	panic("invalid field for unary postfix op term")
 }
 
 // Helper.

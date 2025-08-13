@@ -14,6 +14,9 @@ func (v Value) Atoms() []*Atom {
 	if v.Subquery != nil {
 		return v.Subquery.Atoms()
 	}
+	if v.OpTerm != nil {
+		return nil
+	}
 	panic("empty value")
 }
 

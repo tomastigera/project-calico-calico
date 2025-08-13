@@ -36,7 +36,7 @@ func (h dnsLogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*el
 
 // NewDnsLogsConverter returns a Converter instance defined for dns logs.
 func NewDnsLogsConverter() converter {
-	return converter{dnsAtomToElastic, dnsSetOpTermToElastic}
+	return converter{atomToElastic: dnsAtomToElastic, setOpTermToElastic: dnsSetOpTermToElastic}
 }
 
 // dnsAtomToElastic returns a dns log atom as an elastic JsonObject.

@@ -49,6 +49,12 @@ install -m 755 -d %{buildroot}%{_rundir}/calico
 %preun
 %systemd_preun %{name}.service
 
+# Only run on uninstall, not upgrade
+if [ $1 -eq 0 ]; then
+    echo "Removing Calico iptables rules..."
+    /usr/sbin/iptables-save -c | grep -v -e '^:cali-' -e '-m comment --comment "cali:' | /usr/sbin/iptables-restore -c || echo "iptables cleanup failed or not needed"
+fi
+
 %postun
 %systemd_postun_with_restart %{name}.service
 
@@ -63,6 +69,9 @@ install -m 755 -d %{buildroot}%{_rundir}/calico
 %{_unitdir}/%{name}.service
 
 %changelog
+* Thu Jul 31 2025 Shaun Crampton <shaun@tigera.io> - 3.22.0-2.0-1
+- Clean up Calico iptables rules during Calico node uninstallation
+
 * Thu Mar 13 2025 Jiawei Huang <jiawei@tigera.io> - 3.21.0-2.0-1
 - Add support for scaling with Typha
 

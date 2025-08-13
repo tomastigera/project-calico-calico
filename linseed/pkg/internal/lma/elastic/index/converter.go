@@ -21,11 +21,12 @@ type queryObject interface {
 type converterFunc[E queryObject] func(queryObject E) JsonObject
 
 // Converter contains a single field that defines a function that will implement the query atom to
-// ealstic JsonObject. If the instance does not implement its own version of function, then the
+// elastic JsonObject. If the instance does not implement its own version of function, then the
 // instance can define the basicAtomToElastic as the atomToElastic.
 type converter struct {
-	atomToElastic      func(atom *query.Atom) JsonObject
-	setOpTermToElastic func(s *query.SetOpTerm) JsonObject
+	atomToElastic               func(atom *query.Atom) JsonObject
+	setOpTermToElastic          func(s *query.SetOpTerm) JsonObject
+	unaryPostfixOpTermToElastic func(v *query.UnaryPostfixOpTerm) JsonObject
 }
 
 // comparatorToElastic converts the comparator to an elastic JsonObject.
@@ -103,6 +104,9 @@ func (c converter) valueToElastic(v *query.Value) JsonObject {
 	}
 	if v.Subquery != nil {
 		return c.Convert(v.Subquery)
+	}
+	if v.OpTerm != nil && c.unaryPostfixOpTermToElastic != nil {
+		return c.unaryPostfixOpTermToElastic(v.OpTerm)
 	}
 	panic("empty value")
 }

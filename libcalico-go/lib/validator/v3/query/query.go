@@ -24,6 +24,7 @@ const (
 	OpNot
 	OpIn
 	OpNotIn
+	OpEmpty
 )
 
 var operatorMap = map[string]Operator{
@@ -40,6 +41,8 @@ var operatorMap = map[string]Operator{
 	"in":    OpIn,
 	"NOTIN": OpNotIn,
 	"notin": OpNotIn,
+	"EMPTY": OpEmpty,
+	"empty": OpEmpty,
 }
 
 func (o *Operator) Capture(s []string) error {
@@ -101,9 +104,10 @@ type Atom struct {
 }
 
 type Value struct {
-	Atom     *Atom      `parser:"@@"`
-	Set      *SetOpTerm `parser:"| @@"`
-	Subquery *Query     `parser:"| \"(\" @@ \")\""`
+	Atom     *Atom               `parser:"@@"`
+	Set      *SetOpTerm          `parser:"| @@"`
+	OpTerm   *UnaryPostfixOpTerm `parser:"| @@"`
+	Subquery *Query              `parser:"| \"(\" @@ \")\""`
 }
 
 type Member struct {
@@ -113,6 +117,11 @@ type Member struct {
 type UnaryOpTerm struct {
 	Negator *Operator `parser:"@(\"NOT\" | \"not\" | \"!\")?"`
 	Value   *Value    `parser:"@@"`
+}
+
+type UnaryPostfixOpTerm struct {
+	Key      string   `parser:"@(Ident | String)"`
+	Operator Operator `parser:"@(\"EMPTY\" | \"empty\")"`
 }
 
 type SetOpTerm struct {
@@ -155,6 +164,8 @@ func (o Operator) String() string {
 		return "IN"
 	case OpNotIn:
 		return "NOTIN"
+	case OpEmpty:
+		return "EMPTY"
 	}
 	panic(fmt.Sprintf("unknown operator: %d", o))
 }
@@ -198,6 +209,9 @@ func (v Value) String() string {
 	if v.Subquery != nil {
 		return "(" + v.Subquery.String() + ")"
 	}
+	if v.OpTerm != nil {
+		return v.OpTerm.String()
+	}
 	panic("empty value")
 }
 
@@ -210,6 +224,10 @@ func (v UnaryOpTerm) String() string {
 		return "NOT " + v.Value.String()
 	}
 	return v.Value.String()
+}
+
+func (v UnaryPostfixOpTerm) String() string {
+	return fmt.Sprintf("%s EMPTY", quoteIfNeeded(v.Key))
 }
 
 func (t SetOpTerm) String() string {
