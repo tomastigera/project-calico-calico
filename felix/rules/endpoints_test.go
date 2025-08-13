@@ -29,7 +29,6 @@ import (
 	"github.com/projectcalico/calico/felix/ipsets"
 	. "github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/felix/rules"
 	. "github.com/projectcalico/calico/felix/rules"
 )
 
@@ -442,15 +441,15 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 				})
 
 				It("should render a fully-loaded workload endpoint - staged policy group, end-of-tier pass", func() {
-					polGrpInIngress := &PolicyGroup{
+					polGrpIngress := &PolicyGroup{
 						Tier:        "default",
 						Direction:   PolicyDirectionInbound,
 						PolicyNames: []string{"staged:ai", "staged:bi"},
 						Selector:    "all()",
 					}
-					polGrpInEgress := &PolicyGroup{
+					polGrpEgress := &PolicyGroup{
 						Tier:        "default",
-						Direction:   PolicyDirectionInbound,
+						Direction:   PolicyDirectionOutbound,
 						PolicyNames: []string{"staged:ae", "staged:be"},
 						Selector:    "all()",
 					}
@@ -458,7 +457,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withFlowLogs(flowLogsEnabled),
 						withDenyAction(denyAction),
 						withDenyActionString(denyActionString),
-						withPolicyGroups(polGrpInIngress),
+						withPolicyGroups(polGrpIngress),
 						withProfiles("prof1", "prof2"),
 					).build()
 
@@ -467,7 +466,7 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						withDenyAction(denyAction),
 						withDenyActionString(denyActionString),
 						withEgress(),
-						withPolicyGroups(polGrpInEgress),
+						withPolicyGroups(polGrpEgress),
 						withProfiles("prof1", "prof2"),
 						withDropIPIP(),
 						withDropVXLAN(VXLANPort),
@@ -495,8 +494,8 @@ func endpointRulesTests(flowLogsEnabled bool) func() {
 						[]TierPolicyGroups{
 							{
 								Name:            "default",
-								IngressPolicies: []*PolicyGroup{polGrpInIngress},
-								EgressPolicies:  []*PolicyGroup{polGrpInEgress},
+								IngressPolicies: []*PolicyGroup{polGrpIngress},
+								EgressPolicies:  []*PolicyGroup{polGrpEgress},
 							},
 						},
 						[]string{"prof1", "prof2"},
@@ -1544,7 +1543,7 @@ func withPolicies(policies ...string) ruleBuilderOpt {
 	}
 }
 
-func withPolicyGroups(groups ...*rules.PolicyGroup) ruleBuilderOpt {
+func withPolicyGroups(groups ...*PolicyGroup) ruleBuilderOpt {
 	return func(r *ruleBuilder) {
 		r.policyGroups = append(r.policyGroups, groups...)
 	}
@@ -1652,7 +1651,7 @@ type ruleBuilder struct {
 	dropVXLAN bool
 	vxlanPort int
 
-	policyGroups []*rules.PolicyGroup
+	policyGroups []*PolicyGroup
 	policies     []string
 	profiles     []string
 
