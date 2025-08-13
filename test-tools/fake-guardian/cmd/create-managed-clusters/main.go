@@ -11,7 +11,7 @@ import (
 	yaml2 "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
