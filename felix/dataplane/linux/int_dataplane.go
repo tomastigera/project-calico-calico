@@ -434,8 +434,10 @@ type InternalDataplane struct {
 	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
 
-	noEncapManager      *noEncapManager
-	noEncapParentIfaceC chan string
+	noEncapManager        *noEncapManager
+	noEncapManagerV6      *noEncapManager
+	noEncapParentIfaceC   chan string
+	noEncapParentIfaceCV6 chan string
 
 	vxlanParentIfaceC   chan string
 	vxlanParentIfaceCV6 chan string
@@ -850,23 +852,43 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	// If no overlay is enabled, and Felix is responsible for programming routes, starts a manager to
 	// program no encapsulation routes.
-	if config.ProgramClusterRoutes &&
-		!config.RulesConfig.VXLANEnabled && !config.RulesConfig.IPIPEnabled && !config.RulesConfig.WireguardEnabled {
-		log.Info("No encapsulation enabled, starting thread to keep no encapsulation routes in sync.")
-		// Add a manager to keep the all-hosts IP set up to date.
-		dp.noEncapManager = newNoEncapManager(
-			routeTableV4,
-			4,
-			config,
-			dp.loopSummarizer,
-		)
-		dp.noEncapParentIfaceC = make(chan string, 1)
-		go dp.noEncapManager.monitorParentDevice(
-			context.Background(),
-			time.Second*10,
-			dp.noEncapParentIfaceC,
-		)
-		dp.RegisterManager(dp.noEncapManager)
+	if config.ProgramClusterRoutes {
+		if !config.RulesConfig.VXLANEnabled && !config.RulesConfig.IPIPEnabled && !config.RulesConfig.WireguardEnabled {
+			log.Info("Unencapsulated IPv4 route programming enabled, starting thread to keep no encapsulation routes in sync.")
+			// Add a manager to keep the all-hosts IP set up to date.
+			dp.noEncapManager = newNoEncapManager(
+				routeTableV4,
+				4,
+				config,
+				dp.loopSummarizer,
+			)
+			dp.noEncapParentIfaceC = make(chan string, 1)
+			go dp.noEncapManager.monitorParentDevice(
+				context.Background(),
+				time.Second*10,
+				dp.noEncapParentIfaceC,
+			)
+			dp.RegisterManager(dp.noEncapManager)
+		}
+
+		if config.IPv6Enabled &&
+			!config.RulesConfig.VXLANEnabledV6 && !config.RulesConfig.WireguardEnabledV6 {
+			log.Info("Unencapsulated IPv6 route programming enabled, starting thread to keep no encapsulation routes in sync.")
+			// Add a manager to keep the all-hosts IP set up to date.
+			dp.noEncapManagerV6 = newNoEncapManager(
+				routeTableV6,
+				6,
+				config,
+				dp.loopSummarizer,
+			)
+			dp.noEncapParentIfaceCV6 = make(chan string, 1)
+			go dp.noEncapManagerV6.monitorParentDevice(
+				context.Background(),
+				time.Second*10,
+				dp.noEncapParentIfaceCV6,
+			)
+			dp.RegisterManager(dp.noEncapManagerV6)
+		}
 	}
 
 	if config.RulesConfig.VXLANEnabled {
@@ -2889,6 +2911,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.ipipManager.routeMgr.OnParentDeviceUpdate(name)
 		case name := <-d.noEncapParentIfaceC:
 			d.noEncapManager.routeMgr.OnParentDeviceUpdate(name)
+		case name := <-d.noEncapParentIfaceCV6:
+			d.noEncapManagerV6.routeMgr.OnParentDeviceUpdate(name)
 		case name := <-d.vxlanParentIfaceC:
 			d.vxlanManager.routeMgr.OnParentDeviceUpdate(name)
 		case name := <-d.vxlanParentIfaceCV6:
@@ -3531,7 +3555,7 @@ func (d dummyLock) Unlock() {
 
 func startBPFDataplaneComponents(
 	ipFamily proto.IPVersion,
-	bpfmaps *bpfmap.IPMaps,
+	maps *bpfmap.IPMaps,
 	ipSetIDAllocator *idalloc.IDAllocator,
 	config Config,
 	ipSetsMgr *dpsets.IPSetsManager,
@@ -3577,7 +3601,7 @@ func startBPFDataplaneComponents(
 		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithIPFamily(6))
 	}
 
-	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer, config.BPFEnabled, config.BPFLogLevel)
+	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, maps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer, config.BPFEnabled, config.BPFLogLevel)
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
 	if config.BPFDNSPolicyMode == apiv3.BPFDNSPolicyModeInline {
@@ -3604,7 +3628,7 @@ func startBPFDataplaneComponents(
 	}
 
 	failsafeMgr := failsafes.NewManager(
-		bpfmaps.FailsafesMap,
+		maps.FailsafesMap,
 		config.RulesConfig.FailsafeInboundHostPorts,
 		config.RulesConfig.FailsafeOutboundHostPorts,
 		dp.loopSummarizer,
@@ -3614,16 +3638,25 @@ func startBPFDataplaneComponents(
 	)
 	dp.RegisterManager(failsafeMgr)
 
-	bpfRTMgr := newBPFRouteManager(&config, bpfmaps, ipFamily, dp.loopSummarizer)
+	bpfRTMgr := newBPFRouteManager(&config, maps, ipFamily, dp.loopSummarizer)
 	dp.RegisterManager(bpfRTMgr)
 
-	livenessScanner, err := createBPFConntrackLivenessScanner(ipFamily, config)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create conntrack liveness scanner.")
+	livenessScanner := bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled)
+	ctLogLevel := bpfconntrack.BPFLogLevelNone
+	if config.BPFConntrackLogLevel == "debug" {
+		ctLogLevel = bpfconntrack.BPFLogLevelDebug
 	}
-	conntrackScanner := bpfconntrack.NewScanner(bpfmaps.CtMap, ctKey, ctVal,
+
+	bpfCleaner, err := conntrack.NewBPFProgCleaner(int(ipFamily), config.BPFConntrackTimeouts, ctLogLevel)
+	if err != nil {
+		log.Errorf("error creating the bpf cleaner %v", err)
+	}
+
+	conntrackScanner := bpfconntrack.NewScanner(maps.CtMap, ctKey, ctVal,
 		config.ConfigChangedRestartCallback,
-		config.BPFMapSizeConntrackScaling,
+		config.BPFMapSizeConntrackScaling, maps.CtCleanupMap.(bpfmaps.MapWithExistsCheck),
+		int(ipFamily),
+		bpfCleaner,
 		livenessScanner)
 
 	// Before we start, scan for all finished / timed out connections to
@@ -3635,7 +3668,7 @@ func startBPFDataplaneComponents(
 		kp, err := bpfproxy.StartKubeProxy(
 			config.KubeClientSet,
 			config.Hostname,
-			bpfmaps,
+			maps,
 			bpfproxyOpts...,
 		)
 		if err != nil {
@@ -3649,47 +3682,6 @@ func startBPFDataplaneComponents(
 		log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 	}
 	return conntrackScanner, ipSets
-}
-
-func createBPFConntrackLivenessScanner(ipFamily proto.IPVersion, config Config) (bpfconntrack.EntryScanner, error) {
-	tryBPF := false
-	tryUserspace := false
-	if config.BPFConntrackCleanupMode == apiv3.BPFConntrackModeBPFProgram {
-		tryBPF = true
-	} else if config.BPFConntrackCleanupMode == apiv3.BPFConntrackModeUserspace {
-		tryUserspace = true
-	} else { /* Auto */
-		tryBPF = true
-		tryUserspace = true
-	}
-
-	var livenessScanner bpfconntrack.EntryScanner
-	var err error
-	if tryBPF {
-		ctLogLevel := bpfconntrack.BPFLogLevelNone
-		if config.BPFConntrackLogLevel == "debug" {
-			ctLogLevel = bpfconntrack.BPFLogLevelDebug
-		}
-		livenessScanner, err = bpfconntrack.NewBPFProgLivenessScanner(
-			int(ipFamily),
-			config.BPFConntrackTimeouts,
-			ctLogLevel,
-			config.ConfigChangedRestartCallback,
-			config.BPFMapSizeConntrackScaling,
-		)
-		if err == nil {
-			log.WithField("ipVersion", ipFamily).Info("Using BPF program-based conntrack liveness scanner.")
-			return livenessScanner, nil
-		}
-	}
-
-	if tryUserspace {
-		log.WithField("ipVersion", ipFamily).Info("Using userspace conntrack scanner.")
-		livenessScanner = bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled)
-		return livenessScanner, nil
-	}
-
-	return nil, err
 }
 
 func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,

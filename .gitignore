@@ -9,6 +9,7 @@ vendor/
 artifacts/
 postrelease-checks.xml
 crypto/tmp
+venv/
 
 # Test binary, built with `go test -c`
 *.test
