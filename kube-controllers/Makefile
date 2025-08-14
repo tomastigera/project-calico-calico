@@ -129,13 +129,14 @@ check-copyright:
 ###############################################################################
 # Tests
 ###############################################################################
-ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
-# Determine the tests to run using the test spider tool, which emits a list of impacted packages.
-MAYBE_WHAT=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ../hack/test/spider -commit-range=${SEMAPHORE_GIT_COMMIT_RANGE} -filter-dir kube-controllers/')
-else
+# Disable spider for now, it's barfing on a missing embed file.
+#ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
+## Determine the tests to run using the test spider tool, which emits a list of impacted packages.
+#MAYBE_WHAT=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ../hack/test/spider -commit-range=${SEMAPHORE_GIT_COMMIT_RANGE} -filter-dir kube-controllers/')
+#else
 # By default, run all tests.
 MAYBE_WHAT=.
-endif
+#endif
 
 # Filter the list of directories to only those that have tests.
 ifneq ("$(MAYBE_WHAT)","")
