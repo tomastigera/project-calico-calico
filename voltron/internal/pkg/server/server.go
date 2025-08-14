@@ -503,9 +503,21 @@ func wrapInCORSHandler(cors *cors.CORS, delegate http.HandlerFunc) http.HandlerF
 // if the request should be proxied to a managed cluster, or the local cluster itself and performs
 // the necessary authentication and impersonation.
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
-	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
+	clusterIDs := r.Header.Values(utils.ClusterHeaderField)
+	if len(clusterIDs) > 1 {
+		msg := fmt.Sprintf("multiple %q headers", utils.ClusterHeaderField)
+		logrus.Errorf("clusterMuxer: %s", msg)
+		http.Error(w, msg, 400)
+		return
+	}
+	var tunnelClusterID string
+	if len(clusterIDs) == 1 {
+		if id := clusterIDs[0]; id != lmak8s.DefaultCluster { // the default cluster is not tunneled
+			tunnelClusterID = id
+		}
+	}
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
-	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
+	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && tunnelClusterID != ""
 
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
 		// This request is to a target that can be unauthenticated
@@ -514,15 +526,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// For everything else we authenticate before forwarding on a request
-
-	if len(chdr) > 1 {
-		msg := fmt.Sprintf("multiple %q headers", utils.ClusterHeaderField)
-		logrus.Errorf("clusterMuxer: %s", msg)
-		http.Error(w, msg, 400)
-		return
-	}
-
-	// Perform authentication.
 	usr, status, err := s.authenticator.Authenticate(r)
 	if err != nil {
 		logrus.Errorf("Could not authenticate user from request: %s", err)
@@ -532,7 +535,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	// Perform authorization if an authorizer has been registered for the path.
 	authorizationDetails := s.getAuthorizationDetails(r)
-	if authorizationDetails.FullySet() {
+	if authorizationDetails != nil && authorizationDetails.FullySet() {
 		resAttrs, nonResAttrs, err := authorizationDetails.AttributesFunc(r)
 		if err != nil {
 			logrus.Errorf("Failed to resolve authorization attributes from request: %s", err)
@@ -558,7 +561,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// If shouldUseTunnel=true, we do impersonation and the request will be sent to guardian.
 	// If isK8sRequest=true, we do impersonation.
 	// If neither is true, we proxy the request without impersonation. Authn will also be handled there.
-	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
+	if !(shouldUseTunnel || isK8sRequest) {
 		// This is a request for the backend servers in the management cluster, like ui-apis or compliance.
 		logrus.Debug("Request is for the management cluster backing services")
 		s.defaultProxy.ServeHTTP(w, r)
@@ -575,19 +578,22 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Note, we expect the value passed in the request header field to be the resource
-	// name for a ManagedCluster resource (which will be human-friendly and unique)
-	clusterID := r.Header.Get(utils.ClusterHeaderField)
-	c := s.clusters.get(clusterID)
-	isOlderCluster := false
-
-	// For the management cluster, the cluster object is nil, so skip version check.
-	if c != nil {
-		// TODO: Clean up this logic in v3.25 or v3.26, since only two minor versions are supported.
-		isOlderCluster = isOlderManagedCluster(c)
-	}
+	// Always remove the auth headers before proxying the request. Management cluster requests will
+	// use impersonation, and tunneled requests will either use impersonation or Guardian's AuthN.
+	removeAuthHeaders(r)
 
 	if shouldUseTunnel {
+
+		tunnelCluster := s.clusters.get(tunnelClusterID)
+
+		if tunnelCluster == nil {
+			msg := fmt.Sprintf("Unknown target cluster %q", tunnelClusterID)
+			logrus.Errorf("clusterMuxer: %s", msg)
+			writeHTTPError(w, clusterNotFoundError(tunnelClusterID))
+			return
+		}
+
+		isOlderCluster := isOlderManagedCluster(tunnelCluster)
 		userName := usr.GetName()
 
 		// Strip impersonation headers if the request is destined for a managed cluster and either:
@@ -603,15 +609,53 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 			r.Header.Del(authnv1.ImpersonateUserHeader)
 			r.Header.Del(authnv1.ImpersonateGroupHeader)
 		}
-	}
 
-	// Always remove the auth headers before proxying the request. Management cluster requests will
-	// use impersonation, and tunneled requests will either use impersonation or Guardian's AuthN.
-	removeAuthHeaders(r)
+		// perform an authorization to make sure this user can get this cluster
+		if s.checkManagedClusterAuthorizationBeforeProxy {
+			ok, err := s.checkManagedClusterAuthorizer.Authorize(usr, &authorizationv1.ResourceAttributes{
+				Verb:     "get",
+				Group:    "projectcalico.org",
+				Version:  "v3",
+				Resource: "managedclusters",
+				Name:     tunnelClusterID,
+			}, nil)
+			if err != nil {
+				logrus.Errorf("Could not authenticate user for cluster: %s", err)
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return
+			}
+			if !ok {
+				http.Error(w, "not authorized for managed cluster", http.StatusForbidden)
+				return
+			}
+		}
 
-	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
-	// requests with this value in the ClusterHeaderField.
-	if isK8sRequest && (!hasClusterHeader || clusterID == lmak8s.DefaultCluster) {
+		// Older managed clusters still run the API server in the "tigera-system" namespace.
+		// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
+		// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
+		if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:calico-api") {
+			if isOlderCluster {
+				logrus.Debugf("Redirecting request path for older managed cluster: %s", tunnelClusterID)
+				re := regexp.MustCompile(`/namespaces/calico-system/services/https:calico-api`)
+				r.URL.Path = re.ReplaceAllString(r.URL.Path, `/namespaces/tigera-system/services/https:tigera-api`)
+			}
+		}
+
+		// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
+		// XXX What if we set http2.Transport.AllowHTTP = true ?
+		r.URL.Scheme = "http"
+		if r.ProtoMajor == 2 {
+			r.URL.Scheme = "https"
+		}
+
+		// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
+		// this as the destinatination has been decided by choosing the tunnel.
+		r.URL.Host = "voltron-tunnel"
+		r.Header.Del(utils.ClusterHeaderField)
+		tunnelCluster.ServeHTTP(w, r)
+
+	} else { // must be a local K8S API request
+
 		token, err := s.tokenSource.Token()
 		var voltronSAToken string
 		if err != nil {
@@ -624,59 +668,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", voltronSAToken))
 		s.defaultProxy.ServeHTTP(w, r)
-		return
 	}
-
-	if c == nil {
-		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
-		logrus.Errorf("clusterMuxer: %s", msg)
-		writeHTTPError(w, clusterNotFoundError(clusterID))
-		return
-	}
-
-	// perform an authorization to make sure this user can get this cluster
-	if s.checkManagedClusterAuthorizationBeforeProxy {
-		ok, err := s.checkManagedClusterAuthorizer.Authorize(usr, &authorizationv1.ResourceAttributes{
-			Verb:     "get",
-			Group:    "projectcalico.org",
-			Version:  "v3",
-			Resource: "managedclusters",
-			Name:     clusterID,
-		}, nil)
-		if err != nil {
-			logrus.Errorf("Could not authenticate user for cluster: %s", err)
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
-		}
-		if !ok {
-			http.Error(w, "not authorized for managed cluster", http.StatusForbidden)
-			return
-		}
-	}
-
-	// Older managed clusters still run the API server in the "tigera-system" namespace.
-	// To support UI requests to the queryserver, we must point to the correct service in the old namespace.
-	// TODO: Remove this in v3.24 or v3.25. We only support up to two minor version skews.
-	if strings.Contains(r.URL.Path, "/namespaces/calico-system/services/https:calico-api") {
-		if isOlderCluster {
-			logrus.Debugf("Redirecting request path for older managed cluster: %s", clusterID)
-			re := regexp.MustCompile(`/namespaces/calico-system/services/https:calico-api`)
-			r.URL.Path = re.ReplaceAllString(r.URL.Path, `/namespaces/tigera-system/services/https:tigera-api`)
-		}
-	}
-
-	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
-	// XXX What if we set http2.Transport.AllowHTTP = true ?
-	r.URL.Scheme = "http"
-	if r.ProtoMajor == 2 {
-		r.URL.Scheme = "https"
-	}
-
-	// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
-	// this as the destinatination has been decided by choosing the tunnel.
-	r.URL.Host = "voltron-tunnel"
-	r.Header.Del(utils.ClusterHeaderField)
-	c.ServeHTTP(w, r)
 }
 
 func isOlderManagedCluster(cluster *cluster) bool {
