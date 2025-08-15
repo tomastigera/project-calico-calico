@@ -41,17 +41,17 @@ docker push gcr.io/tigera-dev/<USER_NAME>/tigera/policy-recommendation:latest
 Annotate and edit the tigera-policy-recommendation deployment
 
 ```
-kubectl annotate deployment -n tigera-policy-recommendation tigera-policy-recommendation unsupported.operator.tigera.io/ignore=true
+kubectl annotate deployment -n calico-system tigera-policy-recommendation unsupported.operator.tigera.io/ignore=true
 ```
 
 ```
-kubectl patch deployment -n tigera-policy-recommendation tigera-policy-recommendation \
+kubectl patch deployment -n calico-system tigera-policy-recommendation \
   -p '{"spec":{"template":{"spec":{"containers":[{"name":"policy-recommendation-controller","image":"gcr.io/tigera-dev/<USER_NAME>/tigera/policy-recommendation:latest","imagePullPolicy":"Always"}]}}}}'
 ```
 
 ## Deployment
 
-The deployment creates a pod within the 'tigera-policy-recommendation' namespace, and only within the Standalone or Management cluster. Watchers will be deployed for the ManagedCluster resource within the Management cluster. The Standalone/Management clusters will start a watcher for the PolicyRecommendationScope resource in the cluster and every managed cluster added to the MCM setup.
+The deployment creates a pod within the 'calico-system' namespace, and only within the Standalone or Management cluster. Watchers will be deployed for the ManagedCluster resource within the Management cluster. The Standalone/Management clusters will start a watcher for the PolicyRecommendationScope resource in the cluster and every managed cluster added to the MCM setup.
 
 Enabling/Disabling Policy Recommendations will trigger watchers for the Namespace, NetworkPolicy and StagedNetworkPolicy resources of the cluster.
 

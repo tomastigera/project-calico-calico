@@ -371,8 +371,8 @@ It has the following clients, via service `tigera-linseed.tigera-elasticsearch.s
   deployment `tigera-compliance/compliace-snapshotter`
 - `compliance-server` container from `tigera-compliance/compliance-server-*` pod,
   deployment `tigera-compliance/compliance-server`
-- `policy-recommendation-controller` container from `tigera-policy-recommendation/tigera-policy-recommendation-*` pod,
-  deployment `tigera-policy-recommendation\tigera-policy-recommendation`
+- `policy-recommendation-controller` container from `calico-system/tigera-policy-recommendation-*` pod,
+  deployment `calico-system\tigera-policy-recommendation`
 - `adjobs` container from `tigera-intrusion-detection/cluster-tigera.io.detector.*` cron jobs
 - `api` container from `cc-dashboard-query-api/cc-dashboard-query-api-*` pod, deployment `cc-dashboard-query-api/cc-dashboard-query-api` (Calico Cloud management clusters)
 
