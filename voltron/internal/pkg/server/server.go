@@ -622,7 +622,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 			}
 		}
-	}
 
 		// perform an authorization to make sure this user can get this cluster
 		if s.checkManagedClusterAuthorizationBeforeProxy {
