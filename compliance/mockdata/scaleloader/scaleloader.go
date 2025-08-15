@@ -22,8 +22,6 @@ const (
 	IndexTimeFormat = "20060102"
 )
 
-// yaml "gopkg.in/yaml.v2"
-
 // filesystem:
 //   playbook (scale point, scale by namespace)
 //      pod (scale point, scale by pod name)

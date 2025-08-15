@@ -150,8 +150,8 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.22
 	go.etcd.io/etcd/client/v3 v3.6.4
 	go.uber.org/zap v1.27.0
+	go.yaml.in/yaml/v3 v3.0.3
 	golang.org/x/crypto v0.40.0
-	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3 // indirect
 	golang.org/x/mod v0.26.0
 	golang.org/x/net v0.42.0
 	golang.org/x/oauth2 v0.30.0
@@ -169,8 +169,6 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.4
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
@@ -194,8 +192,6 @@ require (
 	sigs.k8s.io/network-policy-api v0.1.5
 	sigs.k8s.io/yaml v1.6.0
 )
-
-require go.yaml.in/yaml/v3 v3.0.3
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
@@ -454,6 +450,7 @@ require (
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3 // indirect
 	golang.org/x/term v0.34.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
@@ -464,6 +461,8 @@ require (
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 	gorm.io/gorm v1.25.12 // indirect
 	howett.net/plist v1.0.1 // indirect
