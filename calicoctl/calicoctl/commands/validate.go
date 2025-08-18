@@ -118,29 +118,5 @@ Description:
 		return fmt.Errorf("Hit error(s): %v", results.ResErrs)
 	}
 
-	// Old enterprise code.
-	//
-	//filename := argutils.ArgStringOrBlank(parsedArgs, "--filename")
-	//
-	//f, err := os.ReadFile(filename)
-	//if err != nil {
-	//	return fmt.Errorf("error reading license file '%v'", err)
-	//}
-	//
-	//lic := api.NewLicenseKey()
-	//
-	//err = yaml.Unmarshal(f, lic)
-	//if err != nil {
-	//	return fmt.Errorf("error unmarshalling license file '%v'", err)
-	//}
-	//
-	//cl, err := client.Decode(*lic)
-	//if err != nil {
-	//	return fmt.Errorf("error decoding license file '%v'", err)
-	//}
-	//
-	//licenseStatus := cl.Validate()
-	//fmt.Printf("License status: %s\n", licenseStatus.String())
-
 	return nil
 }

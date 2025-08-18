@@ -384,6 +384,20 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 		if err != nil {
 			return nil, err
 		}
+
+		if resource.GetObjectKind().GroupVersionKind().Kind == api.KindLicenseKey {
+			// If the resource is LicenseKey then we validate the license key
+			// using the licensing client.
+			lic, err := licClient.Decode(*resource.(*api.LicenseKey))
+			if err != nil {
+				return nil, fmt.Errorf("error decoding license key: %v", err)
+			}
+			licStatus := lic.Validate()
+
+			// For back-compatibility with older version of calicoctl, we print
+			// the license status.
+			fmt.Printf("License status: %s\n", licStatus.String())
+		}
 		resOut = resource
 	}
 
