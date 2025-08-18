@@ -149,6 +149,7 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 	})
 
 	AfterEach(func() {
+		_ = c.Close()
 		os.Remove(kconfigFile.Name())
 		controllerManager.Stop()
 		nodeController.Stop()
@@ -1097,6 +1098,7 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		heps, err = c.HostEndpoints().List(context.Background(), options.ListOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(len(heps.Items)).To(Equal(1))
+		nodeController.Stop()
 	})
 })
 
