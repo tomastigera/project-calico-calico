@@ -53,8 +53,9 @@ func TestTokenMiddleware(t *testing.T) {
 		Attributes []testAttributes
 
 		// Configure cluster and tenant IDs to be used in headers.
-		ClusterHeader string
-		TenantHeader  string
+		ClusterHeader        string
+		TenantHeader         string
+		ExpectedTenantHeader string
 	}
 
 	userInfo := user.DefaultInfo{Name: "Horseshoe Crab", UID: "055/261"}
@@ -112,13 +113,52 @@ func TestTokenMiddleware(t *testing.T) {
 			TenantHeader:  "tenant-id",
 		},
 		{
-			Name:          "Valid bearer token, authorized",
-			Resp:          okResp,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
-			AuthzMocks:    []interface{}{true, nil},
+			Name:                 "Missing tenant header for MT",
+			Resp:                 `{"Status":401,"Msg":"Bad tenant identifier"}`,
+			Status:               401,
+			Headers:              map[string]string{"Authorization": "Bearer foobar"},
+			AuthnMocks:           []interface{}{nil, 401, fmt.Errorf("Bad tenant identifier")},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "",
+			ExpectedTenantHeader: "tenant-id",
+		},
+		{
+			Name:                 "Mismatch tenant header for MT",
+			Resp:                 `{"Status":401,"Msg":"Bad tenant identifier"}`,
+			Status:               401,
+			Headers:              map[string]string{"Authorization": "Bearer foobar"},
+			AuthnMocks:           []interface{}{nil, 401, fmt.Errorf("Bad tenant identifier")},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "another-tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+		},
+		{
+			Name:                 "Missing tenant header for ST",
+			Resp:                 okResp,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "",
+			ExpectedTenantHeader: "",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthzMocks:           []interface{}{true, nil},
+			Attributes: []testAttributes{
+				{
+					Verb:  "POST",
+					URL:   "/flows",
+					Attrs: &authzv1.ResourceAttributes{},
+				},
+			},
+		},
+
+		{
+			Name:                 "Valid bearer token, authorized",
+			Resp:                 okResp,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthzMocks:           []interface{}{true, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -128,14 +168,15 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Valid bearer token, not authorized",
-			Resp:          `{"Status":401,"Msg":"Unauthorized"}`,
-			Status:        401,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
-			AuthzMocks:    []interface{}{false, nil},
+			Name:                 "Valid bearer token, not authorized",
+			Resp:                 `{"Status":401,"Msg":"Unauthorized"}`,
+			Status:               401,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthzMocks:           []interface{}{false, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -145,14 +186,15 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Valid bearer token, error performing authorization",
-			Resp:          `{"Status":401,"Msg":"Error performing authz"}`,
-			Status:        401,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
-			AuthzMocks:    []interface{}{false, fmt.Errorf("Error performing authz")},
+			Name:                 "Valid bearer token, error performing authorization",
+			Resp:                 `{"Status":401,"Msg":"Error performing authz"}`,
+			Status:               401,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthzMocks:           []interface{}{false, fmt.Errorf("Error performing authz")},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -162,12 +204,13 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Skip authorization for APIs that have it disabled",
-			Resp:          okResp,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Name:                 "Skip authorization for APIs that have it disabled",
+			Resp:                 okResp,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:    "POST",
@@ -177,12 +220,13 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Linseed service account bearer tokens - authorization successful",
-			Resp:          okResp,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Name:                 "Linseed service account bearer tokens - authorization successful",
+			Resp:                 okResp,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",
@@ -191,13 +235,14 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Linseed service account bearer tokens - different tenant",
-			Status:        401,
-			Resp:          `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
-			ClusterHeader: "cluster-id",
-			TenantHeader:  "SpongeBob",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Name:                 "Linseed service account bearer tokens - different tenant",
+			Status:               401,
+			Resp:                 `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader:        "cluster-id",
+			TenantHeader:         "SpongeBob",
+			ExpectedTenantHeader: "SpongeBob",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",
@@ -206,13 +251,14 @@ func TestTokenMiddleware(t *testing.T) {
 			},
 		},
 		{
-			Name:          "Linseed service account bearer tokens - different cluster",
-			Status:        401,
-			Resp:          `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
-			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
-			ClusterHeader: "SquarePants",
-			TenantHeader:  "tenant-id",
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Name:                 "Linseed service account bearer tokens - different cluster",
+			Status:               401,
+			Resp:                 `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
+			Headers:              map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader:        "SquarePants",
+			TenantHeader:         "tenant-id",
+			ExpectedTenantHeader: "tenant-id",
+			AuthnMocks:           []interface{}{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",
@@ -258,7 +304,7 @@ func TestTokenMiddleware(t *testing.T) {
 					authTracker.Register(a.Verb, a.URL, a.Attrs)
 				}
 			}
-			tokenHandler := middleware.NewTokenAuth(an, authTracker).Do()
+			tokenHandler := middleware.NewTokenAuth(an, authTracker, tt.ExpectedTenantHeader).Do()
 
 			// Call the token handler.
 			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -16,23 +16,16 @@ import (
 )
 
 func TestClusterInfo(t *testing.T) {
-	httpErrorMsg := `{"Status":401,"Msg":"Bad tenant identifier"}`
-
 	tests := []struct {
-		name          string
-		xClusterID    string
-		xTenantID     string
-		tenantIDCheck string
-		clusterID     string
-		tenantID      string
-		wantErr       bool
+		name       string
+		xClusterID string
+		xTenantID  string
+		clusterID  string
+		tenantID   string
 	}{
-		{"missing tenant id - multi tenant", "any", "", "any", "any", "", true},
-		{"mismatch tenant id - multi tenant", "any", "other", "any", "any", "", true},
-		{"missing tenant id - single tenant", "any", "", "", "any", "", false},
-		{"missing cluster id - multi tenant", "", "any", "any", lmak8s.DefaultCluster, "any", false},
-		{"missing cluster id - single tenant", "", "any", "any", lmak8s.DefaultCluster, "any", false},
-		{"extract cluster id and tenant id", "any-cluster", "any-tenant", "any-tenant", "any-cluster", "any-tenant", false},
+		{"missing tenant id - multi tenant", "any", "", "any", ""},
+		{"missing cluster id ", "", "any", lmak8s.DefaultCluster, "any"},
+		{"extract cluster id and tenant id", "any-cluster", "any-tenant", "any-cluster", "any-tenant"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -42,7 +35,7 @@ func TestClusterInfo(t *testing.T) {
 				assert.Equal(t, middleware.TenantIDFromContext(r.Context()), tt.tenantID)
 			})
 
-			clusterInfo := middleware.NewClusterInfo(tt.tenantIDCheck).Extract()
+			clusterInfo := middleware.ClusterInfo{}.Extract()
 			req, err := http.NewRequest("POST", "/flows", nil)
 
 			// Set cluster and tenant ID header
@@ -54,15 +47,9 @@ func TestClusterInfo(t *testing.T) {
 			rec := httptest.NewRecorder()
 			clusterInfo(testHandler).ServeHTTP(rec, req)
 
-			bodyBytes, err := io.ReadAll(rec.Body)
+			_, err = io.ReadAll(rec.Body)
 			assert.NoError(t, err)
-
-			if tt.wantErr {
-				assert.Equal(t, http.StatusUnauthorized, rec.Result().StatusCode)
-				assert.JSONEq(t, httpErrorMsg, string(bodyBytes))
-			} else {
-				assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
-			}
+			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 		})
 	}
 }

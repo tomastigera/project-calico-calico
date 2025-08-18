@@ -53,9 +53,9 @@ func UtilityRoutes() []Route {
 
 // Middlewares defines all available intermediary handlers
 func Middlewares(cfg config.Config, authn auth.Authenticator, authz *middleware.KubernetesAuthzTracker) []func(http.Handler) http.Handler {
-	clusterInfo := middleware.NewClusterInfo(cfg.ExpectedTenantID)
+	clusterInfo := middleware.ClusterInfo{}
 	metrics := middleware.Metrics{}
-	tokenAuth := middleware.NewTokenAuth(authn, authz)
+	tokenAuth := middleware.NewTokenAuth(authn, authz, cfg.ExpectedTenantID)
 	return []func(http.Handler) http.Handler{
 		// Track an in-flight request. Do this first so that we count requests even if they encounter issues
 		// in a subsequent middleware.
