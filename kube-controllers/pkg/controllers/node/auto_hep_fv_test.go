@@ -988,8 +988,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName := cn.Name + "-template-eth0-auto-hep"
 		expectedTemplateIPs := []string{"5.5.5.5"}
 		expectedTemplateHepLabels := map[string]string{
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"template-label":                      "template-value",
 		}
 		expectedTemplateInterface := "eth0"
 		Eventually(func() error {
@@ -1025,8 +1026,9 @@ var _ = Describe("Auto Hostendpoint FV tests", func() {
 		expectedTemplateHepName2 := cn.Name + "-template-eth1-auto-hep"
 		expectedTemplateIPs2 := []string{"6.6.6.6"}
 		expectedTemplateHepLabels2 := map[string]string{
-			"projectcalico.org/created-by": "calico-kube-controllers",
-			"template-label":               "template-value",
+			"hostendpoint.projectcalico.org/type": "clusternode",
+			"projectcalico.org/created-by":        "calico-kube-controllers",
+			"template-label":                      "template-value",
 		}
 		expectedTemplateInterface2 := "eth1"
 		Eventually(func() error {

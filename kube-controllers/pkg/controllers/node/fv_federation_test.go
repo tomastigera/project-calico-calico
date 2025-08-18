@@ -365,6 +365,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 	AfterEach(func() {
 		By("Cleaning up after the test should complete")
+		_ = localCalicoClient.Close()
 		federationController.Stop()
 		federationController.Remove()
 		localApiserver.Stop()

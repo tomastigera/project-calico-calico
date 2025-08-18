@@ -1,8 +1,7 @@
 # !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.
 - title: v3.22.1
   release_name: 2025-07-24-v3-22-1-handiness
-  note: 2025-07-24-v3-22-1-handiness - generated from git hash 82c214ea1ee9 and manager
-    git hash 0b813a7a6f3b
+  note: 2025-07-24-v3-22-1-handiness - generated from git hash 82c214ea1ee9 and manager git hash 0b813a7a6f3b
   full_hash: 82c214ea1ee9
   tigera-operator:
     version: v1.22.1

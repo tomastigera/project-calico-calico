@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/projectcalico/calico/licensing/client"
 )

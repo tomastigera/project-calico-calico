@@ -9,9 +9,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 
-	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/utils"
 )
@@ -138,13 +137,22 @@ func (e *EnterpriseReleaseVersions) updateVersionsFile() error {
 	}
 	upd := append([]EnterprisePinnedVersion{e.versions}, dataVersionsFile...)
 	// Write the updated versions file.
-	if b, err := yaml.Marshal(upd); err != nil {
-		return fmt.Errorf("failed to marshal %s: %w", versionsFilePath, err)
-	} else if err := os.WriteFile(versionsFilePath, b, 0o644); err != nil {
-		return fmt.Errorf("failed to write %s: %w", versionsFilePath, err)
+	f, err := os.OpenFile(versionsFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to open %s: %w", versionsFilePath, err)
 	}
-	if _, err := command.Run("sed", []string{"-i", `1s/^/# !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.\n/`, versionsFilePath}); err != nil {
+	defer f.Close()
+
+	if _, err := f.WriteString("# !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.\n"); err != nil {
 		return fmt.Errorf("failed to add warning to %s: %w", versionsFilePath, err)
+	}
+
+	enc := yaml.NewEncoder(f)
+	enc.SetIndent(2)
+	defer enc.Close()
+
+	if err := enc.Encode(upd); err != nil {
+		return fmt.Errorf("failed to encode %s: %w", versionsFilePath, err)
 	}
 	return nil
 }
