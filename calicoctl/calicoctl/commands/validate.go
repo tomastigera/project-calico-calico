@@ -21,7 +21,7 @@ import (
 
 	"github.com/docopt/docopt-go"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"

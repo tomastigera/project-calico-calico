@@ -142,6 +142,11 @@ func main() {
 			// controller in order to make sure we use this service account when calling managed cluster
 			// in a multi-tenant setup. Inside a multi-tenant management setup, we want to be able to use
 			// the tenant's service account when querying the management cluster
+
+			// TODO: Remove this in the 3.25+ release.
+			// The impersonation logic for backend requests from management clusters was already removed in version 3.22+.
+			// Since we only support two minor versions back, we should be safe to drop impersonation
+			// for multitenant managed clusters entirely starting with 3.25.
 			impersonationInfo := user.DefaultInfo{
 				Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
 				Groups: []string{},
