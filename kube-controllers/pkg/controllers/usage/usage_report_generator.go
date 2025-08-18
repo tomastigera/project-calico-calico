@@ -87,6 +87,7 @@ func (r *reportGenerator) updateNodesTracked(event event[*v1.Node]) {
 		delete(r.usage.nodes, string(event.old.UID))
 	}
 	if event.new != nil {
+		log.WithField("node", event.new.Name).Debug("Tracking node update")
 		r.usage.nodes[string(event.new.UID)] = event.new
 	}
 }
@@ -96,6 +97,10 @@ func (r *reportGenerator) updatePodsTracked(event event[*v1.Pod]) {
 		delete(r.usage.pods, string(event.old.UID))
 	}
 	if event.new != nil {
+		log.WithFields(log.Fields{
+			"pod": event.new.Name,
+			"ns":  event.new.Namespace,
+		}).Debug("Tracking pod update")
 		r.usage.pods[string(event.new.UID)] = event.new
 	}
 }
@@ -104,7 +109,14 @@ func (r *reportGenerator) recalculateCurrentCounts() {
 	// Determine the set of nodes that are running calico-node.
 	nodesRunningCalico := set.New[string]()
 	for _, pod := range r.usage.pods {
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithFields(log.Fields{
+				"pod": pod.Name,
+				"ns":  pod.Namespace,
+			}).Debug("Checking if pod is calico-node.")
+		}
 		if pod.Namespace == "calico-system" && strings.HasPrefix(pod.Name, "calico-node-") {
+			log.WithField("pod", pod.Name).Debug("Pod is calico-node, adding node to count.")
 			nodesRunningCalico.Add(pod.Spec.NodeName)
 		}
 	}

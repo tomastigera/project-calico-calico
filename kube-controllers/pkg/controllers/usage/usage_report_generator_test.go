@@ -626,9 +626,9 @@ func calicoNodeWindowsPod(node string) *v1.Pod {
 }
 
 func calicoNodePodConstructor(node string, isWindows bool) *v1.Pod {
-	podName := "calico-node"
+	podName := "calico-node-xxxxx"
 	if isWindows {
-		podName = "calico-node-windows"
+		podName = "calico-node-windows-xxxxx"
 	}
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{

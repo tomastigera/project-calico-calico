@@ -139,6 +139,7 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 	})
 
 	AfterEach(func() {
+		_ = calicoClient.Close()
 		controllerManager.Stop()
 		controller.Stop()
 		apiserver.Stop()

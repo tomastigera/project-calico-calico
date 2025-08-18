@@ -87,6 +87,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 	})
 
 	AfterEach(func() {
+		_ = calicoClient.Close()
 		controllerManager.Stop()
 		policyController.Stop()
 		apiserver.Stop()
@@ -351,6 +352,7 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 		controllerManager = testutils.RunK8sControllerManager(apiserver.IP)
 	})
 	AfterEach(func() {
+		_ = calicoClient.Close()
 		controllerManager.Stop()
 		policyController.Stop()
 		apiserver.Stop()
