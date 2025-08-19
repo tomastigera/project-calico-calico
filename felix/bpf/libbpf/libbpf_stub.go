@@ -247,7 +247,3 @@ func ProgName(id uint32) (string, error) {
 func (o *Obj) AttachTCX(secName, ifName string) (*Link, error) {
 	panic("LIBBPF syscall stub")
 }
-
-func OpenObjectWithLogBuffer(filename string, buf []byte) (*Obj, error) {
-	panic("LIBBPF syscall stub")
-}
