@@ -23,7 +23,7 @@ var collectionFlows = Collection{
 			},
 		},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "cluster", filterDisabled: true},
-		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_domains", filterDisabled: true},
+		collectionFieldGeneric{fieldType: FieldTypeDestDomains, fieldName: "dest_domains", displayFieldType: FieldTypeText},
 		collectionFieldGeneric{fieldType: FieldTypeIP, fieldName: "dest_ip"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_labels.labels"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "dest_name"},

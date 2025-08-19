@@ -19,7 +19,8 @@ const (
 	FieldTypeEnum      = FieldType("enum")
 	FieldTypeNumber    = FieldType("number")
 
-	FieldTypeQName = FieldType("qname")
+	FieldTypeQName       = FieldType("qname")
+	FieldTypeDestDomains = FieldType("dest_domains")
 
 	FieldNamePolicyType = FieldName("policy.type")
 

@@ -169,8 +169,21 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 		}
 		return selector, nil
 	case *filters.CriterionExists:
-		// This selector does not match ES' exists exactly. TODO: Implement a linseed exists selector
 		fieldName := escapeFieldName(c.Field().Name())
+
+		// Unlike other fields, dest_domains requires matching null/non-existing-field instead of empty values since it
+		// might not always be available in the elasticsearch log document.
+		// Use the EMPTY operator to match dest_domains against null/non-existing-field values
+		if c.Field().Type() == collections.FieldTypeDestDomains {
+			if c.Negate() {
+				// A negated "exists dest_domains" filter means dest_domains value must be empty
+				return fmt.Sprintf(`%s EMPTY`, fieldName), nil
+			}
+
+			// An "exists dest_domains" filter means dest_domains value must not be empty
+			return fmt.Sprintf(`NOT %s EMPTY`, fieldName), nil
+		}
+
 		if c.Negate() {
 			return fmt.Sprintf(`%s NOTIN {"*"}`, fieldName), nil
 		} else {

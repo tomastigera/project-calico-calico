@@ -60,5 +60,5 @@ func (c collectionFieldGeneric) DisplayType() FieldType {
 }
 
 func (c collectionFieldGeneric) SupportsExists() bool {
-	return c.fieldType == FieldTypeText || c.fieldType == FieldTypeQName
+	return c.fieldType == FieldTypeText || c.fieldType == FieldTypeQName || c.fieldType == FieldTypeDestDomains
 }

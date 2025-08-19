@@ -96,8 +96,7 @@
   - filterDisabled: true
     name: cluster
     type: text
-  - filterDisabled: true
-    name: dest_domains
+  - name: dest_domains
     type: text
   - name: dest_ip
     type: ip
