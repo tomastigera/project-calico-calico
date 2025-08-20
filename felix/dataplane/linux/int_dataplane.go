@@ -1559,6 +1559,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if !config.BPFEnabled {
 		dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 4, rawTableV4))
+		dp.RegisterManager(newQoSPolicyManager(mangleTableV4, ruleRenderer, 4))
 	}
 
 	if config.RulesConfig.IPIPEnabled {
@@ -1806,6 +1807,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 6, rawTableV6))
+			dp.RegisterManager(newQoSPolicyManager(mangleTableV6, ruleRenderer, 6))
 		}
 
 		// Add a manager for IPv6 wireguard configuration. This is added irrespective of whether wireguard is actually enabled

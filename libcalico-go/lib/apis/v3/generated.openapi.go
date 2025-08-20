@@ -3367,9 +3367,16 @@ func schema_libcalico_go_lib_apis_v3_QoSControls(ref common.ReferenceCallback) c
 							Format:      "int64",
 						},
 					},
+					"dscp": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/tigera/api/pkg/lib/numorstring.DSCP"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/lib/numorstring.DSCP"},
 	}
 }
 

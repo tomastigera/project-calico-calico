@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	googleproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -29,6 +30,10 @@ import (
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
+)
+
+var (
+	dscp numorstring.DSCP = numorstring.DSCPFromString("AF43")
 )
 
 var _ = DescribeTable("ModelWorkloadEndpointToProto",
@@ -112,6 +117,7 @@ var _ = DescribeTable("ModelWorkloadEndpointToProto",
 			EgressPacketBurst:     12000000,
 			IngressMaxConnections: 13000000,
 			EgressMaxConnections:  14000000,
+			DSCP:                  &dscp,
 		},
 	}, &proto.WorkloadEndpoint{
 		State:      "up",
@@ -144,6 +150,11 @@ var _ = DescribeTable("ModelWorkloadEndpointToProto",
 			EgressPacketBurst:     12000000,
 			IngressMaxConnections: 13000000,
 			EgressMaxConnections:  14000000,
+		},
+		QosPolicies: []*proto.QoSPolicy{
+			&proto.QoSPolicy{
+				Dscp: 38,
+			},
 		},
 		SkipRedir: &proto.WorkloadBpfSkipRedir{Ingress: true, Egress: true},
 	}),

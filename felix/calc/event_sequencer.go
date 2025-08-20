@@ -465,7 +465,10 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 	if ep.Mac != nil {
 		mac = ep.Mac.String()
 	}
-	var qosControls *proto.QoSControls
+	var (
+		qosControls *proto.QoSControls
+		qosPolicies []*proto.QoSPolicy
+	)
 	if ep.QoSControls != nil {
 		qosControls = &proto.QoSControls{
 			IngressBandwidth:      ep.QoSControls.IngressBandwidth,
@@ -482,6 +485,12 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 			EgressPacketBurst:     ep.QoSControls.EgressPacketBurst,
 			IngressMaxConnections: ep.QoSControls.IngressMaxConnections,
 			EgressMaxConnections:  ep.QoSControls.EgressMaxConnections,
+		}
+
+		if ep.QoSControls.DSCP != nil {
+			qosPolicies = append(qosPolicies, &proto.QoSPolicy{
+				Dscp: int32(ep.QoSControls.DSCP.ToUint8()),
+			})
 		}
 	}
 
@@ -539,6 +548,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		QosControls:                qosControls,
 		LocalBgpPeer:               localBGPPeer,
 		SkipRedir:                  skipRedir,
+		QosPolicies:                qosPolicies,
 
 		// Enterprise-only flags
 

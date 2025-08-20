@@ -73,7 +73,9 @@ const (
 	ChainMangleOutputTProxy            = ChainNamePrefix + "out-mangle-tproxy"
 	ChainMangleOutputTProxyHostNet     = ChainNamePrefix + "out-mangle-tproxy-host"
 
-	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
+	ChainQoSPolicy = ChainNamePrefix + "qos-policy"
+
+	IPSetIDAllPools             = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
 
 	IPSetIDAllHostNets        = "all-hosts-net"
@@ -349,6 +351,8 @@ type RuleRenderer interface {
 	PolicyGroupToIptablesChains(group *PolicyGroup) []*generictables.Chain
 
 	NATOutgoingChain(active bool, ipVersion uint8) *generictables.Chain
+
+	EgressQoSPolicyChain(policies []QoSPolicy) *generictables.Chain
 
 	DNATsToIptablesChains(dnats map[string]string) []*generictables.Chain
 	SNATsToIptablesChains(snats map[string]string) []*generictables.Chain
