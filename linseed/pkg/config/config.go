@@ -76,6 +76,11 @@ type Config struct {
 	// SingleIndexIndicesCreationEnabled will configure index templates, write aliases and
 	// create boostrap indices at runtime from the request received
 	SingleIndexIndicesCreationEnabled bool `envconfig:"ELASTIC_SINGLE_INDEX_INDICES_CREATION_ENABLED"`
+
+	// ProductVariant informs linseed which product variant it is running under so that
+	// linseed can restrict functionality accordingly, for example by disabling
+	// api's that are not used in oss.
+	ProductVariant ProductVariant `envconfig:"PRODUCT_VARIANT" default:"TigeraSecureEnterprise"`
 }
 
 // ElasticClientConfig represents the elastic configuration
@@ -163,6 +168,13 @@ const (
 
 	// BackendTypeSingleIndex is the backend that stores all cluster and tenant data in a single index.
 	BackendTypeSingleIndex BackendType = "elastic-single-index"
+)
+
+type ProductVariant string
+
+const (
+	ProductVariantTigeraSecureEnterprise ProductVariant = "TigeraSecureEnterprise"
+	ProductVariantCalico                 ProductVariant = "Calico"
 )
 
 // Return a string representation on the Config instance.

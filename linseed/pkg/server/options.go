@@ -88,6 +88,10 @@ func WithAPIVersionRoutes(apiVersion string, routes ...Route) Option {
 		s.router.Route(apiVersion, func(r chi.Router) {
 			for _, route := range routes {
 				r.Method(route.method, route.pattern, route.handler)
+				logrus.WithFields(logrus.Fields{
+					"method":  route.method,
+					"pattern": route.pattern,
+				}).Debug("Added route")
 			}
 		})
 

@@ -42,20 +42,22 @@ func NewLinseedClient(args *RunLinseedArgs, tokenPath string) (client.Client, er
 
 func DefaultLinseedArgs() *RunLinseedArgs {
 	return &RunLinseedArgs{
-		Backend:     config.BackendTypeMultiIndex,
-		TenantID:    "tenant-a",
-		Port:        8443,
-		MetricsPort: 9095,
-		HealthPort:  8080,
+		ProductVariant: config.ProductVariantTigeraSecureEnterprise,
+		Backend:        config.BackendTypeMultiIndex,
+		TenantID:       "tenant-a",
+		Port:           8443,
+		MetricsPort:    9095,
+		HealthPort:     8080,
 	}
 }
 
 type RunLinseedArgs struct {
-	Backend     config.BackendType
-	TenantID    string
-	Port        int
-	MetricsPort int
-	HealthPort  int
+	Backend        config.BackendType
+	TenantID       string
+	Port           int
+	MetricsPort    int
+	HealthPort     int
+	ProductVariant config.ProductVariant
 }
 
 func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
@@ -92,6 +94,7 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 		"-e", fmt.Sprintf("LINSEED_PORT=%d", args.Port),
 		"-e", fmt.Sprintf("LINSEED_BACKEND=%s", args.Backend),
 		"-e", fmt.Sprintf("LINSEED_EXPECTED_TENANT_ID=%s", args.TenantID),
+		"-e", fmt.Sprintf("LINSEED_PRODUCT_VARIANT=%s", args.ProductVariant),
 		"tigera/linseed:latest",
 	}
 

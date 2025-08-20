@@ -394,21 +394,25 @@ func run() {
 	authz := auth.NewCachingAuthorizer(authCache, auth.NewRBACAuthorizer(k))
 	authzHelper := middleware.NewKubernetesAuthzTracker(authz)
 
-	// Create the full list of handlers, and register them
-	// for authorization.
+	// Create list of handlers to be registered.
+	// First, add handlers shared across all product modes.
 	handlers := []handler.Handler{
 		l3.New(flowBackend, flowLogBackend),
 		l3.NewGoldmane(flowLogBackend),
-		l7.New(l7FlowBackend, l7LogBackend),
-		dns.New(dnsFlowBackend, dnsLogBackend),
-		events.New(eventBackend),
-		audit.New(auditBackend),
-		bgp.New(bgpBackend),
-		processes.New(procBackend),
-		waf.New(wafBackend),
-		compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
-		runtime.New(runtimeBackend),
-		threatfeeds.New(ipSetBackend, domainNameSetBackend),
+	}
+	if cfg.ProductVariant == config.ProductVariantTigeraSecureEnterprise {
+		handlers = append(handlers,
+			l7.New(l7FlowBackend, l7LogBackend),
+			dns.New(dnsFlowBackend, dnsLogBackend),
+			events.New(eventBackend),
+			audit.New(auditBackend),
+			bgp.New(bgpBackend),
+			processes.New(procBackend),
+			waf.New(wafBackend),
+			compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
+			runtime.New(runtimeBackend),
+			threatfeeds.New(ipSetBackend, domainNameSetBackend),
+		)
 	}
 
 	// Configure options used to launch the server.
