@@ -909,7 +909,7 @@ message HTTPData {
   int32 duration_max = 12;
   string type = 13;
   int32 latency = 14;
-  string routeName = 15;
+  string route_name = 15;
 }
 
 message WireguardEndpointUpdate {

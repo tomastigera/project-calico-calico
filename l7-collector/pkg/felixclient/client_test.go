@@ -22,6 +22,7 @@ var (
 		RequestPath:   "/ip",
 		RequestMethod: "GET",
 		RequestId:     "e23c0019-36b7-4142-8e86",
+		RouteName:     "test-route",
 
 		DSRemoteAddress: "192.168.138.2:34368",
 		DSLocalAddress:  "192.168.35.210:80",
@@ -43,6 +44,7 @@ var (
 		RequestPath:   "/ip",
 		RequestMethod: "GET",
 		RequestId:     "e23c0019-36b7-4142-8e860019-36b7-4142",
+		RouteName:     "test-route-1",
 
 		DSRemoteAddress: "193.16.18.264:56748",
 		DSLocalAddress:  "192.168.35.210:8080",
@@ -64,6 +66,7 @@ var (
 		RequestPath:   "/ip",
 		RequestMethod: "POST",
 		RequestId:     "e23c0019-36b7-4142-8e860019-36b7-4142",
+		RouteName:     "test-route-2",
 
 		DSRemoteAddress: "193.16.18.264:56748",
 		DSLocalAddress:  "192.168.35.210:8080",
@@ -96,6 +99,7 @@ var _ = Describe("Felix Client Converting single EnvoyLog to DataplaneStats test
 			Expect(httpData.ResponseCode).To(Equal(httpLog.ResponseCode))
 			Expect(httpData.BytesReceived).To(Equal(httpLog.BytesReceived))
 			Expect(httpData.RequestPath).To(Equal(httpLog.RequestPath))
+			Expect(httpData.RouteName).To(Equal(httpLog.RouteName))
 		})
 	})
 })
