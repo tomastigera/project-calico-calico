@@ -24,13 +24,13 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 )
 
-var _ = Describe("QoS policy manager IPv4", qosPolicyManagerTests(4))
-var _ = Describe("QoS policy manager IPv6", qosPolicyManagerTests(6))
+var _ = Describe("DSCP manager IPv4", dscpManagerTests(4))
+var _ = Describe("DSCP manager IPv6", dscpManagerTests(6))
 
-func qosPolicyManagerTests(ipVersion uint8) func() {
+func dscpManagerTests(ipVersion uint8) func() {
 	return func() {
 		var (
-			manager      *qosPolicyManager
+			manager      *dscpManager
 			mangleTable  *mockTable
 			ruleRenderer rules.RuleRenderer
 		)
@@ -50,14 +50,14 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 				MarkDNSPolicy:            0x80,
 				MarkSkipDNSPolicyNfqueue: 0x400000,
 			})
-			manager = newQoSPolicyManager(mangleTable, ruleRenderer, ipVersion)
+			manager = newDSCPManager(mangleTable, ruleRenderer, ipVersion)
 		})
 
-		It("should program QoS policy chain with no rule", func() {
+		It("should program DSCP chain with no rule", func() {
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name:  rules.ChainQoSPolicy,
+				Name:  rules.ChainEgressDSCP,
 				Rules: nil,
 			}}})
 		})
@@ -80,7 +80,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					{
 						Action: iptables.DSCPAction{Value: 44},
@@ -106,7 +106,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					// Rendered policies are sorted.
 					{
@@ -131,7 +131,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					// Rendered policies are sorted.
 					{
@@ -164,7 +164,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					// Rendered policies are sorted.
 					{
@@ -193,7 +193,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					// Rendered policies are sorted.
 					{
@@ -211,7 +211,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 				},
 			}}})
 
-			By("verifying QoS policy rules removed when first workload annotation is removed")
+			By("verifying DSCP rule removed when first workload annotation is removed")
 			endpoint1.QosPolicies = nil
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
 				Id:       &wlEPID1,
@@ -222,7 +222,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					{
 						Action: iptables.DSCPAction{Value: 20},
@@ -235,7 +235,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 				},
 			}}})
 
-			By("verifying QoS policy rules removed when second workload is removed")
+			By("verifying DSCP rule removed when second workload is removed")
 			manager.OnUpdate(&proto.WorkloadEndpointRemove{
 				Id: &wlEPID2,
 			})
@@ -243,7 +243,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			err = manager.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name: rules.ChainQoSPolicy,
+				Name: rules.ChainEgressDSCP,
 				Rules: []generictables.Rule{
 					{
 						Action: iptables.DSCPAction{Value: 30},
@@ -252,7 +252,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 				},
 			}}})
 
-			By("verifying QoS policy rules removed when host endpoint is removed")
+			By("verifying DSCP rule removed when host endpoint is removed")
 			manager.OnUpdate(&proto.HostEndpointRemove{
 				Id: hep1ID,
 			})
@@ -260,7 +260,7 @@ func qosPolicyManagerTests(ipVersion uint8) func() {
 			err = manager.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			mangleTable.checkChains([][]*generictables.Chain{{{
-				Name:  rules.ChainQoSPolicy,
+				Name:  rules.ChainEgressDSCP,
 				Rules: nil,
 			}}})
 		})

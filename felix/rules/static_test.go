@@ -53,7 +53,7 @@ var _ = Describe("Static", func() {
 						SourceIPSet(allPoolSetName).
 						NotDestIPSet(allPoolSetName).
 						NotDestIPSet(allHostsSetName),
-					Action:  JumpAction{Target: ChainQoSPolicy},
+					Action:  JumpAction{Target: ChainEgressDSCP},
 					Comment: []string{"set dscp for workloads traffic leaving cluster."},
 				},
 				{
@@ -61,7 +61,7 @@ var _ = Describe("Static", func() {
 						SourceIPSet(allHostsSetName).
 						NotDestIPSet(allPoolSetName).
 						NotDestIPSet(allHostsSetName),
-					Action:  JumpAction{Target: ChainQoSPolicy},
+					Action:  JumpAction{Target: ChainEgressDSCP},
 					Comment: []string{"set dscp for host endpoints traffic leaving cluster."},
 				},
 				// Accept already accepted.

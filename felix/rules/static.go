@@ -1723,7 +1723,7 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 				SourceIPSet(allIPsSetName).
 				NotDestIPSet(allIPsSetName).
 				NotDestIPSet(allHostsSetName),
-			Action:  r.Jump(ChainQoSPolicy),
+			Action:  r.Jump(ChainEgressDSCP),
 			Comment: []string{"set dscp for workloads traffic leaving cluster."},
 		},
 		generictables.Rule{
@@ -1731,7 +1731,7 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 				SourceIPSet(allHostsSetName).
 				NotDestIPSet(allIPsSetName).
 				NotDestIPSet(allHostsSetName),
-			Action:  r.Jump(ChainQoSPolicy),
+			Action:  r.Jump(ChainEgressDSCP),
 			Comment: []string{"set dscp for host endpoints traffic leaving cluster."},
 		},
 	)

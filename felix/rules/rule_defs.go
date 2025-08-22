@@ -73,7 +73,7 @@ const (
 	ChainMangleOutputTProxy            = ChainNamePrefix + "out-mangle-tproxy"
 	ChainMangleOutputTProxyHostNet     = ChainNamePrefix + "out-mangle-tproxy-host"
 
-	ChainQoSPolicy = ChainNamePrefix + "qos-policy"
+	ChainEgressDSCP = ChainNamePrefix + "egress-dscp"
 
 	IPSetIDAllPools             = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -352,7 +352,7 @@ type RuleRenderer interface {
 
 	NATOutgoingChain(active bool, ipVersion uint8) *generictables.Chain
 
-	EgressQoSPolicyChain(policies []QoSPolicy) *generictables.Chain
+	EgressDSCPChain(policies []DSCPRule) *generictables.Chain
 
 	DNATsToIptablesChains(dnats map[string]string) []*generictables.Chain
 	SNATsToIptablesChains(snats map[string]string) []*generictables.Chain
