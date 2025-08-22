@@ -26,14 +26,17 @@ func (m Metrics) Track() func(next http.Handler) http.Handler {
 				cluster := ClusterIDFromContext(req.Context())
 				tenant := TenantIDFromContext(req.Context())
 
-				if strings.HasSuffix(req.URL.Path, "bulk") {
-					// Increment how many bytes are written via Linseed per cluster ID
-					metrics.BytesWrittenPerClusterIDAndTenantID.
-						With(m.clusterAndTenantLabels(cluster, tenant)).Add(float64(req.ContentLength))
-				} else {
-					// Increment how many bytes are read via Linseed per cluster ID
-					metrics.BytesReadPerClusterIDAndTenantID.
-						With(m.clusterAndTenantLabels(cluster, tenant)).Add(float64(req.ContentLength))
+				contentLength := float64(req.ContentLength)
+				if contentLength > 0 {
+					if strings.HasSuffix(req.URL.Path, "bulk") {
+						// Increment how many bytes are written via Linseed per cluster ID
+						metrics.BytesWrittenPerClusterIDAndTenantID.
+							With(m.clusterAndTenantLabels(cluster, tenant)).Add(contentLength)
+					} else {
+						// Increment how many bytes are read via Linseed per cluster ID
+						metrics.BytesReadPerClusterIDAndTenantID.
+							With(m.clusterAndTenantLabels(cluster, tenant)).Add(contentLength)
+					}
 				}
 
 				// Increment the number of total http request
