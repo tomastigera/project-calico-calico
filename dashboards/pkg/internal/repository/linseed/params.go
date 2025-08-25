@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	reMatchLabel = regexp.MustCompile(`^[^=]+=[^=]+$`)
+	reMatchLabel     = regexp.MustCompile(`^[^=]+=[^=]+$`)
+	reEnclosedQuotes = regexp.MustCompile(`^"(.*?)"$`)
 )
 
 type queryParams struct {
@@ -291,6 +292,9 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 	}
 
 	if valueString, ok := c.Value().(string); ok {
+		if m := reEnclosedQuotes.FindStringSubmatch(valueString); len(m) > 1 {
+			valueString = m[1]
+		}
 		return selectorEqualsString(c, c.Field().Name(), valueString)
 	}
 

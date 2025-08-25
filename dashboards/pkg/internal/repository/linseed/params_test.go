@@ -714,16 +714,48 @@ func TestParams(t *testing.T) {
 		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 		require.NoError(t, err)
 
-		err = subject.setCriteria(filters.Criteria{
-			filters.NewEquals(clientNameField, `test-name1" AND false`, false),
-			filters.NewEquals(clientNameField, `"test-name2"OR 123`, true),
-			filters.NewEquals(clientNameField, `test-name3' NOT 1=1"`, true),
-		}, time.Time{})
-		require.NoError(t, err)
+		testCases := []struct {
+			name             string
+			filterValue      string
+			expectedSelector string
+		}{
+			{
+				name:             "quote within value",
+				filterValue:      `test-name1" AND false`,
+				expectedSelector: `client_name = "test-name1\" AND false"`,
+			},
+			{
+				name:             "starting with quote",
+				filterValue:      `"test-name2 OR 123`,
+				expectedSelector: `client_name = "\"test-name2 OR 123"`,
+			},
+			{
+				name:             "ending in quote",
+				filterValue:      `test-name3' NOT 1=1"`,
+				expectedSelector: `client_name = "test-name3' NOT 1=1\""`,
+			},
+			{
+				name:             "starting with and containing two quotes",
+				filterValue:      `"test-name2"OR 123`,
+				expectedSelector: `client_name = "\"test-name2\"OR 123"`,
+			},
+			{
+				name:             "enclosed in quotes",
+				filterValue:      `"test|name4"`, // expected to be the same as filterValue: `test|name4`,
+				expectedSelector: `client_name = "test|name4"`,
+			},
+		}
 
-		require.Equal(t,
-			`client_name = "test-name1\" AND false" AND client_name != "\"test-name2\"OR 123" AND client_name != "test-name3' NOT 1=1\""`,
-			subject.selector)
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewEquals(clientNameField, tc.filterValue, false),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, tc.expectedSelector, subject.selector)
+			})
+		}
 	})
 
 	t.Run("field name escaping", func(t *testing.T) {
