@@ -336,7 +336,7 @@ func TestParams(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
-					selector:      `"rrsets.type" != "SOA"`,
+					selector:      `NOT "rrsets.type" = "SOA"`,
 					policyMatches: nil,
 					domainMatches: map[lsv1.DomainMatchType][]string{
 						lsv1.DomainMatchQname:  nil,
@@ -709,7 +709,7 @@ func TestParams(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			`"rrsets.type" = "SOA" AND "rrsets.type" != "CNAME"`,
+			`"rrsets.type" = "SOA" AND NOT "rrsets.type" = "CNAME"`,
 			subject.selector)
 	})
 

@@ -308,6 +308,11 @@ func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, 
 	}
 
 	if c.Negate() {
+		if strings.ContainsRune(string(fieldName), '.') {
+			// Nested fields require the linseed es boolean query must_not to be set before the nested query to
+			// correctly filter out logs, which can be achieved with a "NOT field = value" selector
+			return fmt.Sprintf(`NOT %s = %s`, escapeFieldName(fieldName), value), nil
+		}
 		return fmt.Sprintf(`%s != %s`, escapeFieldName(fieldName), value), nil
 	}
 	return fmt.Sprintf(`%s = %s`, escapeFieldName(fieldName), value), nil
