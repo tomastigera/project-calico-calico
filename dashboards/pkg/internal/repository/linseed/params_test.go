@@ -49,7 +49,11 @@ func TestParams(t *testing.T) {
 
 	nestedField, found := collectionsMap[collections.CollectionNameDNS].Field("rrsets.type")
 	require.True(t, found)
-	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
+	require.Equal(t, collections.FieldTypeEnum, nestedField.Type())
+
+	labelsField, found := collectionsMap[collections.CollectionNameFlows].Field("dest_labels.labels")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeLabels, labelsField.Type())
 
 	t.Run("clusterIDs", func(t *testing.T) {
 		t.Run("non-empty", func(t *testing.T) {
@@ -242,6 +246,30 @@ func TestParams(t *testing.T) {
 						filters.NewEquals(enumField, `invalid-value`, false),
 					}, time.Time{})
 					require.ErrorContains(t, err, "invalid value for field 'action': invalid-value")
+				})
+			})
+
+			t.Run("labels fields", func(t *testing.T) {
+				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewEquals(labelsField, `label1=value1`, false),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, `"dest_labels.labels" = "label1=value1"`, subject.selector)
+
+				t.Run("invalid value", func(t *testing.T) {
+					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					require.NoError(t, err)
+
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `invalid`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `invalid=`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `=invalid`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
 				})
 			})
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,10 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+)
+
+var (
+	reMatchLabel = regexp.MustCompile(`^[^=]+=[^=]+$`)
 )
 
 type queryParams struct {
@@ -277,6 +282,12 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 			return selectorEqualsInt(c, v)
 		}
 		return "", fmt.Errorf("equals criterion value is not a number: %v (%T)", c.Value(), c.Value())
+	} else if c.Field().Type().Is(collections.FieldTypeLabels) {
+		if valueString, ok := c.Value().(string); ok {
+			if !reMatchLabel.MatchString(valueString) {
+				return "", fmt.Errorf(`invalid value for "%v": expected format is labelName=labelValue`, c.Field().Name())
+			}
+		}
 	}
 
 	if valueString, ok := c.Value().(string); ok {

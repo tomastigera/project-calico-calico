@@ -21,6 +21,7 @@ const (
 
 	FieldTypeQName       = FieldType("qname")
 	FieldTypeDestDomains = FieldType("dest_domains")
+	FieldTypeLabels      = FieldType("labels")
 
 	FieldNamePolicyType = FieldName("policy.type")
 
