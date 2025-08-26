@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,9 +34,10 @@ type ActionFactory interface {
 	Reject(with RejectWith) Action
 	LimitPacketRate(rate int64, burst int64, mark uint32) Action
 	LimitNumConnections(num int64, rejectWith RejectWith) Action
+	DSCP(value uint8) Action
+	Nflog(group uint16, prefix string, size int) Action
 
 	// Enterprise only actions.
-	Nflog(group uint16, prefix string, size int) Action
 	Nfqueue(queue int64) Action
 	NfqueueWithBypass(queue int64) Action
 	SaveConnMark(saveMask uint32) Action

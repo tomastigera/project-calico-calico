@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ func newMasqManager(
 	// in sync, by which point we'll have added all our CIDRs into the sets.
 	ipsetsDataplane.AddOrReplaceIPSet(ipsets.IPSetMetadata{
 		MaxSize: maxIPSetSize,
-		SetID:   rules.IPSetIDNATOutgoingAllPools,
+		SetID:   rules.IPSetIDAllPools,
 		Type:    ipsets.IPSetTypeHashNet,
 	}, []string{})
 	ipsetsDataplane.AddOrReplaceIPSet(ipsets.IPSetMetadata{
@@ -126,7 +126,7 @@ func (d *masqManager) OnUpdate(msg interface{}) {
 		if oldProgrammablePool == nil {
 			d.logCxt.Panicf("BUG: Tracking CIDR with no programmable pool.")
 		}
-		d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingAllPools, []string{oldProgrammablePool.Cidr})
+		d.ipsetsDataplane.RemoveMembers(rules.IPSetIDAllPools, []string{oldProgrammablePool.Cidr})
 		if !oldPoolIsRemote && oldProgrammablePool.Masquerade {
 			logCxt.Debug("Masquerade was enabled on pool.")
 			d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingMasqPools, []string{oldProgrammablePool.Cidr})
@@ -150,7 +150,7 @@ func (d *masqManager) OnUpdate(msg interface{}) {
 
 		// Update the IP sets.
 		logCxt.Debug("Adding IPAM pool to IP sets.")
-		d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingAllPools, []string{newProgrammablePool.Cidr})
+		d.ipsetsDataplane.AddMembers(rules.IPSetIDAllPools, []string{newProgrammablePool.Cidr})
 		if !newProgrammablePoolIsRemote && newProgrammablePool.Masquerade {
 			logCxt.Debug("IPAM has masquerade enabled.")
 			d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingMasqPools, []string{newProgrammablePool.Cidr})

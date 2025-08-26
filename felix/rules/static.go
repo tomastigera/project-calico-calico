@@ -1253,8 +1253,8 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*gene
 		egressRules = append(egressRules,
 			generictables.Rule{
 				Match: r.NewMatch().
-					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
-					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllPools)).
+					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllPools)).
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)),
 				Action:  r.SetMaskedMark(r.MarkEgress, r.MarkEgress),
 				Comment: []string{"Set mark for egress packet"},
@@ -1380,7 +1380,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		// Restore ConnMark for pod traffic.
 		rules = append(rules,
 			generictables.Rule{
-				Match:   r.NewMatch().SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
+				Match:   r.NewMatch().SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllPools)),
 				Action:  r.RestoreConnMark(r.MarkEgress),
 				Comment: []string{"Restore connmark for pod traffic"},
 			},
@@ -1392,7 +1392,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		rules = append(rules,
 			generictables.Rule{
 				Match: r.NewMatch().
-					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllPools)),
 				Action:  r.RestoreConnMark(r.MarkEgress),
 				Comment: []string{"Restore connmark for external traffic to EGW"},
 			},
@@ -1713,6 +1713,28 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 	// Note, we use RETURN as the Allow action in this chain, rather than ACCEPT because the
 	// mangle table is typically used, if at all, for packet manipulations that might need to
 	// apply to our allowed traffic.
+
+	ipConf := r.ipSetConfig(ipVersion)
+	allIPsSetName := ipConf.NameForMainIPSet(IPSetIDAllPools)
+	allHostsSetName := ipConf.NameForMainIPSet(IPSetIDAllHostNets)
+	rules = append(
+		rules, generictables.Rule{
+			Match: r.NewMatch().
+				SourceIPSet(allIPsSetName).
+				NotDestIPSet(allIPsSetName).
+				NotDestIPSet(allHostsSetName),
+			Action:  r.Jump(ChainEgressDSCP),
+			Comment: []string{"set dscp for workloads traffic leaving cluster."},
+		},
+		generictables.Rule{
+			Match: r.NewMatch().
+				SourceIPSet(allHostsSetName).
+				NotDestIPSet(allIPsSetName).
+				NotDestIPSet(allHostsSetName),
+			Action:  r.Jump(ChainEgressDSCP),
+			Comment: []string{"set dscp for host endpoints traffic leaving cluster."},
+		},
+	)
 
 	// Allow immediately if MarkAccept is set.  Our filter-FORWARD chain sets this for
 	// any packets that reach the end of that chain.  The principle is that we don't want to

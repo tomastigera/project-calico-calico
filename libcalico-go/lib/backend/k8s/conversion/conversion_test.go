@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1396,6 +1396,7 @@ var _ = Describe("Test Pod conversion", func() {
 	})
 
 	It("should parse valid QoSControl annotations", func() {
+		dscp := numorstring.DSCPFromString("cs5")
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podA",
@@ -1416,6 +1417,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"qos.projectcalico.org/egressPacketBurst":     "10k",
 					"qos.projectcalico.org/ingressMaxConnections": "13M",
 					"qos.projectcalico.org/egressMaxConnections":  "14M",
+					"qos.projectcalico.org/dscp":                  "cs5",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -1447,6 +1449,7 @@ var _ = Describe("Test Pod conversion", func() {
 			EgressPacketBurst:     10000,
 			IngressMaxConnections: 13000000,
 			EgressMaxConnections:  14000000,
+			DSCP:                  &dscp,
 		}
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.QoSControls).To(BeEquivalentTo(expectedQoSControls))
 	})
