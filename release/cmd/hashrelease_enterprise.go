@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 
+	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
@@ -297,6 +298,18 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
 			if err := m.PublishRelease(); err != nil {
 				return err
+			}
+
+			if !c.Bool(skipImageScanFlag.Name) {
+				url, err := imagescanner.RetrieveResultURL(cfg.TmpDir)
+				// Only log error as a warning if the image scan result URL could not be retrieved
+				// as it is not an error that should stop the hashrelease process.
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to retrieve image scan result URL")
+				} else if url == "" {
+					logrus.Warn("Image scan result URL is empty")
+				}
+				hashrel.ImageScanResultURL = url
 			}
 
 			// Send a slack message to notify that the hashrelease has been published.
