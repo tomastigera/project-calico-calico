@@ -4,11 +4,13 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -16,6 +18,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
+	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
@@ -909,6 +912,18 @@ func (m *EnterpriseManager) PublishRelease() error {
 	if !m.isHashRelease {
 		if err := m.publishReleaseImages(); err != nil {
 			return err
+		}
+	}
+
+	if m.imageScanning {
+		logrus.Info("Sending images to ISS")
+		imageScanner := imagescanner.New(m.imageScanningConfig)
+		// For ISS, it does not care if it is EP1 or EP2 or GA, we just need the main stream.
+		mainStream := strings.Split(m.hashrelease.Stream, "-")[0]
+		err := imageScanner.Scan(m.productCode, slices.Collect(maps.Values(m.componentImages())), mainStream, false, m.tmpDir)
+		if err != nil {
+			// Error is logged and ignored as a failure fron ISS should not halt the release process.
+			logrus.WithError(err).Error("Failed to scan images")
 		}
 	}
 
