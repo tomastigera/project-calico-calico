@@ -249,7 +249,7 @@ func TestParams(t *testing.T) {
 				})
 			})
 
-			t.Run("labels fields", func(t *testing.T) {
+			t.Run("labels field type", func(t *testing.T) {
 				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 				require.NoError(t, err)
 
@@ -383,41 +383,53 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("exists", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-			require.NoError(t, err)
 
-			err = subject.setCriteria(filters.Criteria{
-				filters.NewExists(clientNameField, false),
-			}, time.Time{})
-			require.NoError(t, err)
+			testCases := []struct {
+				name             string
+				filter           filters.Criterion
+				expectedSelector string
+			}{
+				{
+					name:             "client_name",
+					filter:           filters.NewExists(clientNameField, false),
+					expectedSelector: `client_name IN {"*"}`,
+				},
+				{
+					name:             "client_name negated",
+					filter:           filters.NewExists(clientNameField, true),
+					expectedSelector: `client_name NOTIN {"*"}`,
+				},
+				{
+					name:             "labels field type",
+					filter:           filters.NewExists(labelsField, false),
+					expectedSelector: `"dest_labels.labels" IN {"*"}`,
+				},
+				{
+					name:             "labels field type negated",
+					filter:           filters.NewExists(labelsField, true),
+					expectedSelector: `"dest_labels.labels" NOTIN {"*"}`,
+				},
+			}
 
-			require.Equal(t, &queryParams{
-				selector: `client_name IN {"*"}`,
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					require.NoError(t, err)
 
-				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
-			}, subject)
+					err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
+					require.NoError(t, err)
 
-			t.Run("negated", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-				require.NoError(t, err)
+					require.Equal(t, &queryParams{
+						selector: tc.expectedSelector,
 
-				err = subject.setCriteria(filters.Criteria{
-					filters.NewExists(clientNameField, true),
-				}, time.Time{})
-				require.NoError(t, err)
-
-				require.Equal(t, &queryParams{
-					selector: `client_name NOTIN {"*"}`,
-
-					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
-				}, subject)
-			})
-
+						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
+					}, subject)
+				})
+			}
 		})
+
 		t.Run("ipRange", func(t *testing.T) {
 			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 			require.NoError(t, err)
