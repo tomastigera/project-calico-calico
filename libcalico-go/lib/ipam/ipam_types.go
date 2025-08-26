@@ -81,6 +81,12 @@ type AutoAssignArgs struct {
 	// If specified, only IP pools backed by an AWS subnet with one of the given IDs will be considered.
 	// If nil or empty, AWS-backed IP pools will be excluded.
 	AWSSubnetIDs []string
+
+	// The namespace name for namespaceSelector support.
+	Namespace string
+
+	// The namespace labels for namespaceSelector support.
+	NamespaceLabels map[string]string
 }
 
 // IPAMConfig contains global configuration options for Calico IPAM.

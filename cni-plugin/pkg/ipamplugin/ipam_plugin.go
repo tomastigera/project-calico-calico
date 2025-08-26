@@ -30,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 func Main(version string) {
@@ -240,6 +241,26 @@ func cmdAdd(args *skel.CmdArgs) error {
 			logrus.Info("Running in single-HNS-network mode, limiting number of IPAM blocks to 1.")
 			maxBlocks = 1
 		}
+		// Get namespace information for namespaceSelector support
+		namespace := epIDs.Namespace
+		namespaceLabels := map[string]string{}
+
+		// Only attempt to fetch namespace labels if we have Kubernetes configuration and a valid namespace
+		if (conf.Kubernetes.Kubeconfig != "" || conf.Policy.PolicyType == "k8s") && namespace != "" {
+			logger.Debugf("Getting namespace labels for: %s", namespace)
+
+			labels, err := getNamespaceLabels(calicoClient, namespace, logger)
+			if err != nil {
+				logger.WithError(err).Warnf("Failed to get namespace labels for %s, using empty labels", namespace)
+				namespaceLabels = map[string]string{}
+			} else {
+				namespaceLabels = labels
+				logger.Debugf("Got namespace labels for %s: %v", namespace, namespaceLabels)
+			}
+		} else {
+			logger.Debugf("Using namespace %s without labels (no K8s config or empty namespace)", namespace)
+		}
+
 		assignArgs := ipam.AutoAssignArgs{
 			Num4:             num4,
 			Num6:             num6,
@@ -251,7 +272,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 			Attrs:            attrs,
 			IntendedUse:      v3.IPPoolAllowedUseWorkload,
 			AWSSubnetIDs:     conf.IPAM.AWSSubnetIDs, // Set by the CNI plugin if the pod needs an AWS pool.
+			Namespace:        namespace,
+			NamespaceLabels:  namespaceLabels,
 		}
+
 		if runtime.GOOS == "windows" {
 			rsvdAttrWindows := &ipam.HostReservedAttr{
 				StartOfBlock: 3,
@@ -468,4 +492,23 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	return nil
+}
+
+// getNamespaceLabels retrieves namespace labels using Calico client's Namespaces interface
+func getNamespaceLabels(calicoClient client.Interface, namespace string, logger *logrus.Entry) (map[string]string, error) {
+	if namespace == "" {
+		return map[string]string{}, nil
+	}
+
+	// Use Calico client's Namespaces interface
+	ns, err := calicoClient.Namespaces().Get(context.Background(), namespace, options.GetOptions{})
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	if ns.Labels == nil {
+		return map[string]string{}, nil
+	}
+
+	return ns.Labels, nil
 }

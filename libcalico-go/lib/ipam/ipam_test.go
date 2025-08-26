@@ -3413,7 +3413,7 @@ var _ = DescribeTable("determinePools tests IPV4",
 		}
 
 		// Call determinePools
-		pools, _, err := ic.(*ipamClient).determinePools(context.Background(), reqPools, 4, node, 32)
+		pools, _, err := ic.(*ipamClient).determinePools(context.Background(), reqPools, 4, node, "", map[string]string{}, 32)
 
 		// Assert on any returned error.
 		if expectErr {
@@ -3482,7 +3482,7 @@ var _ = DescribeTable("determinePools tests IPV6",
 		}
 
 		// Call determinePools
-		pools, _, err := ic.(*ipamClient).determinePools(context.Background(), reqPools, 6, node, 128)
+		pools, _, err := ic.(*ipamClient).determinePools(context.Background(), reqPools, 6, node, "", map[string]string{}, 128)
 
 		// Assert on any returned error.
 		if expectErr {
