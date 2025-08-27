@@ -33,6 +33,7 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	licClient "github.com/projectcalico/calico/licensing/client"
 )
 
@@ -45,6 +46,7 @@ const (
 	ActionDelete
 	ActionGetOrList
 	ActionPatch
+	ActionValidate
 )
 
 // Convert loaded resources to a slice of resources for easier processing.
@@ -131,9 +133,12 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 
 	log.Info("Executing config command")
 
-	err := CheckVersionMismatch(args["--config"], args["--allow-version-mismatch"])
-	if err != nil {
-		return CommandResults{Err: err}
+	// Skip version mismatch checking for validation since we don't need datastore access
+	if action != ActionValidate {
+		err := CheckVersionMismatch(args["--config"], args["--allow-version-mismatch"])
+		if err != nil {
+			return CommandResults{Err: err}
+		}
 	}
 
 	errorOnEmpty := !argutils.ArgBoolOrFalse(args, "--skip-empty")
@@ -212,14 +217,18 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 		log.Debugf("Data: %s", string(d))
 	}
 
-	// Load the client config and connect.
-	cf := args["--config"].(string)
-	cclient, err := clientmgr.NewClient(cf)
-	if err != nil {
-		fmt.Printf("Failed to create Calico API client: %s\n", err)
-		os.Exit(1)
+	// Load the client config and connect (skip for validation as we don't need datastore access).
+	var cclient client.Interface
+	var err error
+	if action != ActionValidate {
+		cf := args["--config"].(string)
+		cclient, err = clientmgr.NewClient(cf)
+		if err != nil {
+			fmt.Printf("Failed to create Calico API client: %s\n", err)
+			os.Exit(1)
+		}
+		log.Infof("Client: %v", cclient)
 	}
-	log.Infof("Client: %v", cclient)
 
 	// Initialise the command results with the number of resources and the name of the
 	// kind of resource (if only dealing with a single resource).
@@ -268,7 +277,7 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 		res, err := ExecuteResourceAction(args, cclient, r, action)
 		if err != nil {
 			switch action {
-			case ActionApply, ActionCreate, ActionDelete, ActionGetOrList:
+			case ActionApply, ActionCreate, ActionDelete, ActionGetOrList, ActionValidate:
 				results.ResErrs = append(results.ResErrs, err)
 				continue
 			default:
@@ -368,6 +377,28 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 	case ActionPatch:
 		patch := args["--patch"].(string)
 		resOut, err = rm.Patch(ctx, client, resource, patch)
+	case ActionValidate:
+		// For validation, we validate the resource using Calico-specific validators
+		// This validates both resource structure/schema and Calico-specific validation rules
+		err = validator.Validate(resource)
+		if err != nil {
+			return nil, err
+		}
+
+		if resource.GetObjectKind().GroupVersionKind().Kind == api.KindLicenseKey {
+			// If the resource is LicenseKey then we validate the license key
+			// using the licensing client.
+			lic, err := licClient.Decode(*resource.(*api.LicenseKey))
+			if err != nil {
+				return nil, fmt.Errorf("error decoding license key: %v", err)
+			}
+			licStatus := lic.Validate()
+
+			// For back-compatibility with older version of calicoctl, we print
+			// the license status.
+			fmt.Printf("License status: %s\n", licStatus.String())
+		}
+		resOut = resource
 	}
 
 	// Skip over some errors depending on command line options.

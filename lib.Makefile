@@ -752,10 +752,12 @@ REPO_REL_DIR=$(shell if [ -e hack/format-changed-files.sh ]; then echo '.'; else
 .PHONY: fix-changed go-fmt-changed goimports-changed
 # Format changed files only.
 fix-changed go-fmt-changed goimports-changed:
-	$(DOCKER_RUN) -e release_prefix=$(RELEASE_BRANCH_PREFIX)-v \
-	              -e git_repo_slug=$(GIT_REPO_SLUG) \
-	              -e parent_branch=$(shell git_repo_slug=$(GIT_REPO_SLUG) $(REPO_REL_DIR)/hack/find-parent-release-branch.sh) \
-	              $(CALICO_BUILD) $(REPO_REL_DIR)/hack/format-changed-files.sh
+	if [ "$(SKIP_FIX_CHANGED)" != "true" ]; then \
+	  $(DOCKER_RUN) -e release_prefix=$(RELEASE_BRANCH_PREFIX)-v \
+	                -e git_repo_slug=$(GIT_REPO_SLUG) \
+	                -e parent_branch=$(shell git_repo_slug=$(GIT_REPO_SLUG) $(REPO_REL_DIR)/hack/find-parent-release-branch.sh) \
+	                $(CALICO_BUILD) $(REPO_REL_DIR)/hack/format-changed-files.sh; \
+	fi
 
 .PHONY: fix-all go-fmt-all goimports-all
 fix-all go-fmt-all goimports-all:

@@ -29,7 +29,7 @@ v3_dir = "test-data/v3/"
 
 class TestCalicoctlValidate(TestBase):
     """
-    Test calicoctl validate
+    Test calicoctl validate license extension (only in Enterprise).
     """
 
     def test_validate_license(self):
