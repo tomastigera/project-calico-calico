@@ -162,6 +162,7 @@ func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *prot
 		{
 			Duration:      logData.Duration,
 			ResponseCode:  logData.ResponseCode,
+			RouteName:     logData.RouteName,
 			BytesSent:     logData.BytesSent,
 			BytesReceived: logData.BytesReceived,
 			UserAgent:     logData.UserAgent,

@@ -49,7 +49,11 @@ func TestParams(t *testing.T) {
 
 	nestedField, found := collectionsMap[collections.CollectionNameDNS].Field("rrsets.type")
 	require.True(t, found)
-	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
+	require.Equal(t, collections.FieldTypeEnum, nestedField.Type())
+
+	labelsField, found := collectionsMap[collections.CollectionNameFlows].Field("dest_labels.labels")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeLabels, labelsField.Type())
 
 	t.Run("clusterIDs", func(t *testing.T) {
 		t.Run("non-empty", func(t *testing.T) {
@@ -245,6 +249,30 @@ func TestParams(t *testing.T) {
 				})
 			})
 
+			t.Run("labels field type", func(t *testing.T) {
+				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewEquals(labelsField, `label1=value1`, false),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, `"dest_labels.labels" = "label1=value1"`, subject.selector)
+
+				t.Run("invalid value", func(t *testing.T) {
+					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					require.NoError(t, err)
+
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `invalid`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `invalid=`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
+					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `=invalid`, false)}, time.Time{})
+					require.ErrorContains(t, err, `invalid value for "dest_labels.labels": expected format is labelName=labelValue`)
+				})
+			})
+
 			t.Run("policy match", func(t *testing.T) {
 				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 				require.NoError(t, err)
@@ -336,7 +364,7 @@ func TestParams(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
-					selector:      `"rrsets.type" != "SOA"`,
+					selector:      `NOT "rrsets.type" = "SOA"`,
 					policyMatches: nil,
 					domainMatches: map[lsv1.DomainMatchType][]string{
 						lsv1.DomainMatchQname:  nil,
@@ -355,41 +383,53 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("exists", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-			require.NoError(t, err)
 
-			err = subject.setCriteria(filters.Criteria{
-				filters.NewExists(clientNameField, false),
-			}, time.Time{})
-			require.NoError(t, err)
+			testCases := []struct {
+				name             string
+				filter           filters.Criterion
+				expectedSelector string
+			}{
+				{
+					name:             "client_name",
+					filter:           filters.NewExists(clientNameField, false),
+					expectedSelector: `client_name IN {"*"}`,
+				},
+				{
+					name:             "client_name negated",
+					filter:           filters.NewExists(clientNameField, true),
+					expectedSelector: `client_name NOTIN {"*"}`,
+				},
+				{
+					name:             "labels field type",
+					filter:           filters.NewExists(labelsField, false),
+					expectedSelector: `"dest_labels.labels" IN {"*"}`,
+				},
+				{
+					name:             "labels field type negated",
+					filter:           filters.NewExists(labelsField, true),
+					expectedSelector: `"dest_labels.labels" NOTIN {"*"}`,
+				},
+			}
 
-			require.Equal(t, &queryParams{
-				selector: `client_name IN {"*"}`,
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					require.NoError(t, err)
 
-				domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
-			}, subject)
+					err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
+					require.NoError(t, err)
 
-			t.Run("negated", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-				require.NoError(t, err)
+					require.Equal(t, &queryParams{
+						selector: tc.expectedSelector,
 
-				err = subject.setCriteria(filters.Criteria{
-					filters.NewExists(clientNameField, true),
-				}, time.Time{})
-				require.NoError(t, err)
-
-				require.Equal(t, &queryParams{
-					selector: `client_name NOTIN {"*"}`,
-
-					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
-					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-					linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
-				}, subject)
-			})
-
+						domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
+						linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
+						linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
+					}, subject)
+				})
+			}
 		})
+
 		t.Run("ipRange", func(t *testing.T) {
 			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 			require.NoError(t, err)
@@ -686,16 +726,48 @@ func TestParams(t *testing.T) {
 		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
 		require.NoError(t, err)
 
-		err = subject.setCriteria(filters.Criteria{
-			filters.NewEquals(clientNameField, `test-name1" AND false`, false),
-			filters.NewEquals(clientNameField, `"test-name2"OR 123`, true),
-			filters.NewEquals(clientNameField, `test-name3' NOT 1=1"`, true),
-		}, time.Time{})
-		require.NoError(t, err)
+		testCases := []struct {
+			name             string
+			filterValue      string
+			expectedSelector string
+		}{
+			{
+				name:             "quote within value",
+				filterValue:      `test-name1" AND false`,
+				expectedSelector: `client_name = "test-name1\" AND false"`,
+			},
+			{
+				name:             "starting with quote",
+				filterValue:      `"test-name2 OR 123`,
+				expectedSelector: `client_name = "\"test-name2 OR 123"`,
+			},
+			{
+				name:             "ending in quote",
+				filterValue:      `test-name3' NOT 1=1"`,
+				expectedSelector: `client_name = "test-name3' NOT 1=1\""`,
+			},
+			{
+				name:             "starting with and containing two quotes",
+				filterValue:      `"test-name2"OR 123`,
+				expectedSelector: `client_name = "\"test-name2\"OR 123"`,
+			},
+			{
+				name:             "enclosed in quotes",
+				filterValue:      `"test|name4"`, // expected to be the same as filterValue: `test|name4`,
+				expectedSelector: `client_name = "test|name4"`,
+			},
+		}
 
-		require.Equal(t,
-			`client_name = "test-name1\" AND false" AND client_name != "\"test-name2\"OR 123" AND client_name != "test-name3' NOT 1=1\""`,
-			subject.selector)
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewEquals(clientNameField, tc.filterValue, false),
+				}, time.Time{})
+				require.NoError(t, err)
+
+				require.Equal(t, tc.expectedSelector, subject.selector)
+			})
+		}
 	})
 
 	t.Run("field name escaping", func(t *testing.T) {
@@ -709,7 +781,7 @@ func TestParams(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			`"rrsets.type" = "SOA" AND "rrsets.type" != "CNAME"`,
+			`"rrsets.type" = "SOA" AND NOT "rrsets.type" = "CNAME"`,
 			subject.selector)
 	})
 

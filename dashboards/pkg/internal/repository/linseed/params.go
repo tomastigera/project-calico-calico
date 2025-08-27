@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,11 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+)
+
+var (
+	reMatchLabel     = regexp.MustCompile(`^[^=]+=[^=]+$`)
+	reEnclosedQuotes = regexp.MustCompile(`^"(.*?)"$`)
 )
 
 type queryParams struct {
@@ -169,8 +175,21 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 		}
 		return selector, nil
 	case *filters.CriterionExists:
-		// This selector does not match ES' exists exactly. TODO: Implement a linseed exists selector
 		fieldName := escapeFieldName(c.Field().Name())
+
+		// Unlike other fields, dest_domains requires matching null/non-existing-field instead of empty values since it
+		// might not always be available in the elasticsearch log document.
+		// Use the EMPTY operator to match dest_domains against null/non-existing-field values
+		if c.Field().Type() == collections.FieldTypeDestDomains {
+			if c.Negate() {
+				// A negated "exists dest_domains" filter means dest_domains value must be empty
+				return fmt.Sprintf(`%s EMPTY`, fieldName), nil
+			}
+
+			// An "exists dest_domains" filter means dest_domains value must not be empty
+			return fmt.Sprintf(`NOT %s EMPTY`, fieldName), nil
+		}
+
 		if c.Negate() {
 			return fmt.Sprintf(`%s NOTIN {"*"}`, fieldName), nil
 		} else {
@@ -264,9 +283,18 @@ func selectorEquals(c *filters.CriterionEquals) (string, error) {
 			return selectorEqualsInt(c, v)
 		}
 		return "", fmt.Errorf("equals criterion value is not a number: %v (%T)", c.Value(), c.Value())
+	} else if c.Field().Type().Is(collections.FieldTypeLabels) {
+		if valueString, ok := c.Value().(string); ok {
+			if !reMatchLabel.MatchString(valueString) {
+				return "", fmt.Errorf(`invalid value for "%v": expected format is labelName=labelValue`, c.Field().Name())
+			}
+		}
 	}
 
 	if valueString, ok := c.Value().(string); ok {
+		if m := reEnclosedQuotes.FindStringSubmatch(valueString); len(m) > 1 {
+			valueString = m[1]
+		}
 		return selectorEqualsString(c, c.Field().Name(), valueString)
 	}
 
@@ -295,6 +323,11 @@ func selectorEqualsString(c filters.Criterion, fieldName collections.FieldName, 
 	}
 
 	if c.Negate() {
+		if strings.ContainsRune(string(fieldName), '.') {
+			// Nested fields require the linseed es boolean query must_not to be set before the nested query to
+			// correctly filter out logs, which can be achieved with a "NOT field = value" selector
+			return fmt.Sprintf(`NOT %s = %s`, escapeFieldName(fieldName), value), nil
+		}
 		return fmt.Sprintf(`%s != %s`, escapeFieldName(fieldName), value), nil
 	}
 	return fmt.Sprintf(`%s = %s`, escapeFieldName(fieldName), value), nil

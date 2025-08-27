@@ -80,14 +80,16 @@ type reqdata struct {
 }
 
 type TokenChecker struct {
-	authn auth.Authenticator
-	authz *KubernetesAuthzTracker
+	authn            auth.Authenticator
+	authz            *KubernetesAuthzTracker
+	expectedTenantID string
 }
 
-func NewTokenAuth(authn auth.Authenticator, authz *KubernetesAuthzTracker) *TokenChecker {
+func NewTokenAuth(authn auth.Authenticator, authz *KubernetesAuthzTracker, expectedTenantID string) *TokenChecker {
 	return &TokenChecker{
-		authn: authn,
-		authz: authz,
+		authn:            authn,
+		authz:            authz,
+		expectedTenantID: expectedTenantID,
 	}
 }
 
@@ -151,6 +153,14 @@ func (m TokenChecker) Do() func(next http.Handler) http.Handler {
 				httputils.JSONError(w, &v1.HTTPError{
 					Status: http.StatusUnauthorized,
 					Msg:    err.Error(),
+				}, http.StatusUnauthorized)
+				return
+			}
+
+			if m.expectedTenantID != "" && tenantID != m.expectedTenantID {
+				httputils.JSONError(w, &v1.HTTPError{
+					Status: http.StatusUnauthorized,
+					Msg:    "Bad tenant identifier",
 				}, http.StatusUnauthorized)
 				return
 			}

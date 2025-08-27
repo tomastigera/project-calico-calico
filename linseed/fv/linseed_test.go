@@ -15,7 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 
 // Token to use for HTTP requests against Linseed.
@@ -173,6 +176,44 @@ func TestFV_Linseed(t *testing.T) {
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/liveness", healthAddr), clusterInfo.Tenant, clusterInfo.Cluster, token)
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
+	})
+
+	t.Run("should enable correct handlers", func(t *testing.T) {
+		t.Run("in enterprise mode", func(t *testing.T) {
+			args := DefaultLinseedArgs()
+			defer setupAndTeardown(t, args, nil, index.FlowLogIndex())()
+			defer setupLinseedFV(t, index.FlowLogIndex())()
+			t.Run("flow api should be enabled", func(t *testing.T) {
+				_, err := cli.L3Flows(cluster1).List(ctx, &v1.L3FlowParams{})
+				require.NoError(t, err)
+			})
+
+			t.Run("audit api should be enabled", func(t *testing.T) {
+				_, err := cli.AuditLogs(cluster1).List(ctx, &v1.AuditLogParams{
+					Type: v1.AuditLogType(v1.AuditLogTypeEE),
+				})
+				require.NoError(t, err)
+			})
+		})
+
+		t.Run("in oss mode", func(t *testing.T) {
+			args := DefaultLinseedArgs()
+			args.ProductVariant = config.ProductVariantCalico
+			defer setupAndTeardown(t, args, nil, index.FlowLogIndex())()
+			defer setupLinseedFV(t, index.FlowLogIndex())()
+
+			t.Run("flow api should be enabled", func(t *testing.T) {
+				_, err := cli.L3Flows(cluster1).List(ctx, &v1.L3FlowParams{})
+				require.NoError(t, err)
+			})
+
+			t.Run("audit api should be disabled", func(t *testing.T) {
+				_, err := cli.AuditLogs(cluster1).List(ctx, &v1.AuditLogParams{
+					Type: v1.AuditLogType(v1.AuditLogTypeEE),
+				})
+				require.ErrorContains(t, err, `{"Status":404,"Msg":"No matching authz options for POST /api/v1/audit/logs"}`)
+			})
+		})
 	})
 }
 

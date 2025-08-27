@@ -79,7 +79,7 @@ func (k *k8sAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatus
 	// - No JWT is present
 	_, err = jws.ParseJWTFromRequest(r)
 	if err != nil {
-		return nil, 401, jws.ErrNoTokenInRequest
+		return nil, http.StatusUnauthorized, jws.ErrNoTokenInRequest
 	}
 	authHeader := r.Header.Get("Authorization")
 
@@ -90,17 +90,17 @@ func (k *k8sAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatus
 		authnv1.TokenReviewSpec{Token: token},
 	)
 	if err != nil {
-		return nil, 500, err
+		return nil, http.StatusInternalServerError, err
 	}
 	if !tknReviewStatus.Authenticated {
-		return nil, 401, fmt.Errorf("user is not authenticated")
+		return nil, http.StatusUnauthorized, fmt.Errorf("user is not authenticated")
 	}
 
 	return &user.DefaultInfo{
 		Name:   tknReviewStatus.User.Username,
 		Groups: tknReviewStatus.User.Groups,
 		Extra:  toExtra(tknReviewStatus.User.Extra),
-	}, 200, nil
+	}, http.StatusOK, nil
 }
 
 // WithAuthenticator adds an authenticator for a specific token issuer.
@@ -236,12 +236,12 @@ func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 	// - No JWT is present
 	jwt, err := jws.ParseJWTFromRequest(req)
 	if err != nil {
-		return nil, 401, jws.ErrNoTokenInRequest
+		return nil, http.StatusUnauthorized, jws.ErrNoTokenInRequest
 	}
 
 	issuer, ok := jwt.Claims().Issuer()
 	if !ok {
-		return nil, 401, jws.ErrIsNotJWT
+		return nil, http.StatusUnauthorized, jws.ErrIsNotJWT
 	}
 
 	authn, ok := a.authenticators[issuer]
@@ -253,13 +253,13 @@ func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 		}
 		userInfo = usr
 	} else {
-		return nil, 400, fmt.Errorf("bearer token was not issued by a trusted issuer")
+		return nil, http.StatusBadRequest, fmt.Errorf("bearer token was not issued by a trusted issuer")
 	}
 
 	// If a user was impersonated, see if the impersonating user is allowed to impersonate.
 	impersonatedUser, err := extractUserFromImpersonationHeaders(req)
 	if err != nil {
-		return nil, 401, err
+		return nil, http.StatusUnauthorized, err
 	}
 	if impersonatedUser != nil {
 		attributes := buildResourceAttributesForImpersonation(impersonatedUser)
@@ -267,14 +267,14 @@ func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 		for _, resAtr := range attributes {
 			ok, err = a.Authorize(userInfo, resAtr, nil)
 			if err != nil {
-				return nil, 500, err
+				return nil, http.StatusInternalServerError, err
 			} else if !ok {
-				return nil, 401, fmt.Errorf("user is not allowed to impersonate")
+				return nil, http.StatusUnauthorized, fmt.Errorf("user is not allowed to impersonate")
 			}
 		}
 		userInfo = impersonatedUser
 	}
-	return userInfo, 200, nil
+	return userInfo, http.StatusOK, nil
 }
 
 // toExtra convenience func to convert the extra's from user.info's.

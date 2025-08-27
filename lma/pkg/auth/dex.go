@@ -201,7 +201,7 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 	// - No JWT is present
 	jwt, err := jws.ParseJWTFromRequest(r)
 	if err != nil {
-		return nil, 401, jws.ErrNoTokenInRequest
+		return nil, http.StatusUnauthorized, jws.ErrNoTokenInRequest
 	}
 	authHeader := r.Header.Get("Authorization")
 
@@ -213,37 +213,37 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 
 	iss := tokenPayloadMap["iss"].(string)
 	if iss != d.issuer {
-		return nil, 421, errors.New("not a dex header: issuer of JWT does not match the issuer url of dex")
+		return nil, http.StatusMisdirectedRequest, errors.New("not a dex header: issuer of JWT does not match the issuer url of dex")
 	}
 
 	// Now that we know the token was issued by dex, we can verify if it is (still) valid and extract the user.
 	_, err = jose.ParseSigned(tkn, []jose.SignatureAlgorithm{jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512})
 	if err != nil {
-		return nil, 401, errors.New("dex token has an invalid signature")
+		return nil, http.StatusUnauthorized, errors.New("dex token has an invalid signature")
 	}
 
 	idTkn, err := d.verifier.Verify(context.Background(), tkn)
 	if err != nil {
-		return nil, 401, err
+		return nil, http.StatusUnauthorized, err
 	}
 
 	var claims map[string]interface{}
 	if err := idTkn.Claims(&claims); err != nil {
-		return nil, 500, err
+		return nil, http.StatusInternalServerError, err
 	}
 
 	usr, ok := claims[d.usernameClaim]
 	if !ok {
-		return nil, 401, fmt.Errorf("unable to extract username from JWT using claim %s", d.usernameClaim)
+		return nil, http.StatusUnauthorized, fmt.Errorf("unable to extract username from JWT using claim %s", d.usernameClaim)
 	}
 
 	username, ok := usr.(string)
 	if !ok {
-		return nil, 400, errors.New("the username should be of type string")
+		return nil, http.StatusBadRequest, errors.New("the username should be of type string")
 	}
 
 	if username == "" {
-		return nil, 401, errors.New("no user found in JWT")
+		return nil, http.StatusUnauthorized, errors.New("no user found in JWT")
 	}
 	username = fmt.Sprintf("%s%s", *d.usernamePrefix, usr)
 	groups := []string{}
@@ -251,13 +251,13 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 	if claims[d.groupsClaim] != nil {
 		groupsClaims, ok := claims[d.groupsClaim].([]interface{})
 		if !ok {
-			return nil, 400, errors.New("unexpected type for groups claim")
+			return nil, http.StatusBadRequest, errors.New("unexpected type for groups claim")
 		}
 
 		for _, group := range groupsClaims {
 			groupStr, ok := group.(string)
 			if !ok {
-				return nil, 400, errors.New("unexpected type for element in groups claim")
+				return nil, http.StatusBadRequest, errors.New("unexpected type for element in groups claim")
 			}
 			groups = append(groups, fmt.Sprintf("%s%s", d.groupsPrefix, groupStr))
 		}
@@ -270,7 +270,7 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 			}).
 				WithError(err).
 				Warn("invalid claim")
-			return nil, 401, fmt.Errorf("claim validation failed")
+			return nil, http.StatusUnauthorized, fmt.Errorf("claim validation failed")
 		}
 	}
 
@@ -287,5 +287,5 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 		Name:   username,
 		Groups: groups,
 		Extra:  extra,
-	}, 200, nil
+	}, http.StatusOK, nil
 }
