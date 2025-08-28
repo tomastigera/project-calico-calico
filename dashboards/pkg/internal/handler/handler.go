@@ -26,7 +26,7 @@ func NewHandler(
 	corsOrigins []string,
 	authService *auth.AuthService,
 	queryService *query.QueryService,
-	metadataService *metadata.MetadataService,
+	metadataService metadata.Storer,
 	collectionsService *collections.CollectionsService,
 ) (handleradapters.RootRegistry, error) {
 

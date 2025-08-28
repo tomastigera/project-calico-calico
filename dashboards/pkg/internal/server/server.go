@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata"
+	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/query"
 )
 
@@ -86,7 +87,15 @@ func Start(
 		},
 	)
 
-	metadataService := metadata.NewMetadataService(logger, cfg.MetadataAPIEndpoint)
+	var metadataService metadata.Storer
+	if cfg.ProductMode == config.ProductModeCloud {
+		metadataService = metadata.NewRemoteMetadataService(logger, cfg.MetadataAPIEndpoint)
+	} else {
+		metadataService, err = staticmetadata.NewStaticMetadataService()
+		if err != nil {
+			return err
+		}
+	}
 	collectionsService := collections.NewCollectionsService(logger)
 
 	handlerRegistry, err := handler.NewHandler(

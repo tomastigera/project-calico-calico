@@ -15,20 +15,20 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 )
 
-type MetadataService struct {
+type RemoteMetadataService struct {
 	http.Client
 	logger           logging.Logger
 	metadataEndpoint string
 }
 
-func NewMetadataService(logger logging.Logger, metadataEndpoint string) *MetadataService {
-	return &MetadataService{
+func NewRemoteMetadataService(logger logging.Logger, metadataEndpoint string) *RemoteMetadataService {
+	return &RemoteMetadataService{
 		logger:           logger,
 		metadataEndpoint: metadataEndpoint,
 	}
 }
 
-func (s *MetadataService) authorize(ctx security.Context) error {
+func (s *RemoteMetadataService) authorize(ctx security.Context) error {
 	authorized, err := ctx.IsAnyPermitted(security.APIGroupLMATigera, slices.Map(collections.Collections(), collections.Collection.LmaResourceName))
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (s *MetadataService) authorize(ctx security.Context) error {
 	return nil
 }
 
-func (s *MetadataService) Get(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID) (client.Dashboard, error) {
+func (s *RemoteMetadataService) Get(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID) (client.Dashboard, error) {
 	dashboard, err := executeRequest[ghttp.Nothing, client.Dashboard](ctx, s, projectID, http.MethodGet, dashboardID, ghttp.Nothing{})
 	if err != nil {
 		return client.Dashboard{}, err
@@ -48,7 +48,7 @@ func (s *MetadataService) Get(ctx security.Context, projectID types.ProjectID, d
 	return dashboard, nil
 }
 
-func (s *MetadataService) List(ctx security.Context, projectID types.ProjectID) (client.DashboardListResponse, error) {
+func (s *RemoteMetadataService) List(ctx security.Context, projectID types.ProjectID) (client.DashboardListResponse, error) {
 	dashboardListResponse, err := executeRequest[ghttp.Nothing, client.DashboardListResponse](ctx, s, projectID, http.MethodGet, "", ghttp.Nothing{})
 	if err != nil {
 		return client.DashboardListResponse{}, err
@@ -57,7 +57,7 @@ func (s *MetadataService) List(ctx security.Context, projectID types.ProjectID) 
 	return dashboardListResponse, nil
 }
 
-func (s *MetadataService) Create(ctx security.Context, projectID types.ProjectID, req client.DashboardCreateRequest) (client.Dashboard, error) {
+func (s *RemoteMetadataService) Create(ctx security.Context, projectID types.ProjectID, req client.DashboardCreateRequest) (client.Dashboard, error) {
 	dashboard, err := executeRequest[client.DashboardCreateRequest, client.Dashboard](ctx, s, projectID, http.MethodPost, "", req)
 	if err != nil {
 		return client.Dashboard{}, err
@@ -66,7 +66,7 @@ func (s *MetadataService) Create(ctx security.Context, projectID types.ProjectID
 	return dashboard, nil
 }
 
-func (s *MetadataService) Update(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID, req client.DashboardUpdateRequest) (client.Dashboard, error) {
+func (s *RemoteMetadataService) Update(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID, req client.DashboardUpdateRequest) (client.Dashboard, error) {
 	dashboard, err := executeRequest[client.DashboardUpdateRequest, client.Dashboard](ctx, s, projectID, http.MethodPut, dashboardID, req)
 	if err != nil {
 		return client.Dashboard{}, err
@@ -75,7 +75,7 @@ func (s *MetadataService) Update(ctx security.Context, projectID types.ProjectID
 	return dashboard, nil
 }
 
-func (s *MetadataService) Delete(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID) error {
+func (s *RemoteMetadataService) Delete(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID) error {
 	_, err := executeRequest[ghttp.Nothing, ghttp.Nothing](ctx, s, projectID, http.MethodDelete, dashboardID, ghttp.Nothing{})
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (s *MetadataService) Delete(ctx security.Context, projectID types.ProjectID
 
 func executeRequest[Req any, Resp any](
 	ctx security.Context,
-	s *MetadataService,
+	s *RemoteMetadataService,
 	projectID types.ProjectID,
 	httpMethod string,
 	dashboardID types.DashboardID,

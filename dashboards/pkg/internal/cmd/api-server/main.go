@@ -43,6 +43,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.ProductMode != config.ProductModeEnterprise && cfg.ProductMode != config.ProductModeCloud {
+		logger.Error("invalid product mode", logging.String("productMode", cfg.ProductMode))
+		os.Exit(1)
+	}
+
 	if ready {
 		os.Exit(doHealthCheck(cfg.HealthPort))
 		return

@@ -1,0 +1,717 @@
+{
+  "title": "DNS Logs",
+  "id": "2",
+  "defaultFilters": [],
+  "isImmutable": true,
+  "cards": [
+    {
+      "title": "DNS Total Requests",
+      "id": "0eb7f144-c188-4c8a-b6ee-b8fe090e2faa",
+      "chart": {
+        "type": "halfdonut"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "qtype",
+            "maxValues": 5
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS Requests",
+      "id": "e545a2fb-c251-4cbc-b14e-bc4395c07191",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "qtype",
+            "maxValues": 5
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS Responses",
+      "id": "7037821c-cdf6-476e-ad4f-08b9227a8276",
+      "chart": {
+        "type": "pie",
+        "xAxisLabel": "rcode",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "rcode",
+            "maxValues": 5,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS Top 10 external domains",
+      "id": "24314240-502c-4208-bce4-c996c126d41c",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "qname", "label": "Top external domains" },
+          { "field": "count", "label": "Count" }
+        ]
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.local"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.svc"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.internal"
+            },
+            "negate": true
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "qname",
+            "maxValues": 10,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS Internal Query",
+      "id": "ede304e3-a8c4-46f4-98d4-4817bf3a6cfd",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "Internal query distribution over time",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.local"
+            }
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time"
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS Latency",
+      "id": "2165b9bb-056d-46c8-b4ae-8585f571b6d6",
+      "chart": {
+        "type": "bartimeseries",
+        "xAxisLabel": "Time Period",
+        "yAxisLabel": "Nanoseconds",
+        "maxXValues": 20
+      },
+      "query": {
+        "collectionName": "dns",
+        "aggregations": {
+          "Max": {
+            "fieldName": "latency_max",
+            "function": {
+              "type": "avg"
+            }
+          },
+          "Avg": {
+            "fieldName": "latency_mean",
+            "function": {
+              "type": "avg"
+            }
+          },
+          "Min": {
+            "fieldName": "latency_mean",
+            "function": {
+              "type": "min"
+            }
+          }
+        },
+        "filters": [],
+        "groupBys": [
+          {
+            "fieldName": "end_time",
+            "interval": "PT1M"
+          }
+        ]
+      }
+    },
+    {
+      "title": "DNS External Query",
+      "id": "caf21734-3856-4e2f-bd8f-b6052b8098e3",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "External query distribution over time",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.local"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.svc"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.internal"
+            },
+            "negate": true
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time"
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS internal queries by service",
+      "id": "57c7bfc7-5e73-4b65-92d9-68e598213261",
+      "chart": {
+        "type": "barstacked",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.local"
+            }
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "client_name_aggr",
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          },
+          {
+            "fieldName": "qtype"
+          }
+        ],
+        "aggregations": {
+          "Count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS external queries by service",
+      "id": "953b3bbf-dd47-41e6-b4b2-bf1435a61b37",
+      "chart": {
+        "type": "barstacked",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.local"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.svc"
+            },
+            "negate": true
+          },
+          {
+            "criterion": {
+              "type": "wildcard",
+              "field": "qname",
+              "pattern": "*.internal"
+            },
+            "negate": true
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "client_name_aggr",
+            "maxValues": 5,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          },
+          {
+            "fieldName": "qtype"
+          }
+        ],
+        "aggregations": {
+          "Count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS response code by service",
+      "id": "914034a9-cdbc-4402-8849-b93b9d549e4b",
+      "chart": {
+        "type": "barstacked",
+        "yAxisLabel": "Count"
+      },
+      "query": {
+        "collectionName": "dns",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "client_name_aggr",
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          },
+          {
+            "fieldName": "rcode"
+          }
+        ],
+        "aggregations": {
+          "Count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS query count by server",
+      "id": "ad65b462-4fc8-4dd9-9889-6e44c9507c7e",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "dest_ip", "label": "DNS Servers" },
+          { "field": "agg_bytes_in", "label": "Bytes In" },
+          { "field": "agg_bytes_out", "label": "Bytes Out" },
+          { "field": "count", "label": "Count" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [
+          {
+            "criterion": {
+              "field": "dest_port",
+              "value": 53,
+              "type": "equals"
+            }
+          },
+          {
+            "criterion": {
+              "field": "reporter",
+              "value": "src",
+              "type": "equals"
+            }
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_ip",
+            "maxValues": 10,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "agg_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "agg_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS transfer by service",
+      "id": "1d66d63d-4af9-4ddb-87f0-f4a9008e2c6a",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          {
+            "field": "source_name_aggr",
+            "label": "DNS data transfer by service"
+          },
+          { "field": "sum_bytes_in", "label": "Bytes In" },
+          { "field": "sum_bytes_out", "label": "Bytes Out" },
+          { "field": "count", "label": "Count" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [
+          {
+            "criterion": {
+              "field": "dest_port",
+              "value": 53,
+              "type": "equals"
+            }
+          },
+          {
+            "criterion": {
+              "field": "reporter",
+              "value": "src",
+              "type": "equals"
+            }
+          }
+        ],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_name_aggr",
+            "maxValues": 10,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "DNS logs",
+      "id": "1a402677-6419-4ade-a28f-1aa47c3a0c18",
+      "chart": {
+        "type": "logtable"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "start_time", "label": "Time" },
+          { "field": "client_name_aggr", "label": "Client Name" },
+          {
+            "field": "client_namespace",
+            "label": "Client Namespace"
+          },
+          { "field": "qname", "label": "qname" },
+          { "field": "qtype", "label": "qtype" },
+          { "field": "rcode", "label": "rcode" },
+          { "field": "client_ip", "label": "Client IP" },
+          { "field": "qclass", "label": "qclass" },
+          { "field": "cluster", "label": "Cluster" }
+        ],
+        "fieldHrefs": {
+          "client_namespace": "/service-graph?node=namespace/{client_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "dns",
+        "maxDocs": 100
+      }
+    }
+  ],
+  "layout": [
+    {
+      "w": 1,
+      "h": 2,
+      "x": 0,
+      "y": 0,
+      "i": "0eb7f144-c188-4c8a-b6ee-b8fe090e2faa",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 2,
+      "x": 1,
+      "y": 0,
+      "i": "e545a2fb-c251-4cbc-b14e-bc4395c07191",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 3,
+      "x": 3,
+      "y": 2,
+      "i": "7037821c-cdf6-476e-ad4f-08b9227a8276",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 0,
+      "i": "24314240-502c-4208-bce4-c996c126d41c",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 5,
+      "i": "ede304e3-a8c4-46f4-98d4-4817bf3a6cfd",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 5,
+      "i": "2165b9bb-056d-46c8-b4ae-8585f571b6d6",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 10,
+      "i": "caf21734-3856-4e2f-bd8f-b6052b8098e3",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 3,
+      "x": 0,
+      "y": 7,
+      "i": "57c7bfc7-5e73-4b65-92d9-68e598213261",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 3,
+      "x": 2,
+      "y": 7,
+      "i": "953b3bbf-dd47-41e6-b4b2-bf1435a61b37",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 3,
+      "h": 3,
+      "x": 0,
+      "y": 2,
+      "i": "914034a9-cdbc-4402-8849-b93b9d549e4b",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 10,
+      "i": "ad65b462-4fc8-4dd9-9889-6e44c9507c7e",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 12,
+      "i": "1d66d63d-4af9-4ddb-87f0-f4a9008e2c6a",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 4,
+      "x": 0,
+      "y": 14,
+      "i": "1a402677-6419-4ade-a28f-1aa47c3a0c18",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    }
+  ]
+}

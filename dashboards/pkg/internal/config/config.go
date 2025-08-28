@@ -58,7 +58,8 @@ type Config struct {
 	// MaxRequestAggregations limits the number of aggregations on query requests
 	MaxRequestAggregations int `default:"5" split_words:"true"`
 
-	// MetadataAPIEndpoint dashboards metadata tds api endpoint
+	// MetadataAPIEndpoint is the endpoint for the metadata service that is used to store dashboards if
+	// ProductMode is set to "cloud". If ProductMode is set to "enterprise", this is ignored.
 	MetadataAPIEndpoint string `default:"https://api2.tesla.tigera.io/orgs/dashboards" split_words:"true"`
 
 	// Metrics endpoint configurations.
@@ -68,7 +69,14 @@ type Config struct {
 	// Certificates used to secure metrics endpoint via TLS
 	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
+
+	ProductMode string `default:"enterprise" split_words:"true"`
 }
+
+var (
+	ProductModeEnterprise = "enterprise"
+	ProductModeCloud      = "cloud"
+)
 
 func (c Config) String() string {
 	c2 := c
