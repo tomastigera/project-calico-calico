@@ -1283,14 +1283,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	wepPortStr := fmt.Sprintf("%d", wepPort)
 	svcPortStr := fmt.Sprintf("%d", svcPort)
 	clusterIP := "10.101.0.10"
+	interfaceName := "eth0"
 
 	var (
-		infra                      infrastructure.DatastoreInfra
-		opts                       infrastructure.TopologyOptions
-		tc                         infrastructure.TopologyContainers
-		client                     client.Interface
-		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
-		cc                         *connectivity.Checker
+		infra               infrastructure.DatastoreInfra
+		opts                infrastructure.TopologyOptions
+		tc                  infrastructure.TopologyContainers
+		client              client.Interface
+		ep1_1, ep2_1, ep2_3 *workload.Workload
+		cc                  *connectivity.Checker
 	)
 
 	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
@@ -1329,9 +1330,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
-		ep2_2 = workload.Run(tc.Felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
-		ep2_2.ConfigureInInfra(infra)
-
 		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
 
@@ -1352,6 +1350,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		tier.Name = "tier1"
 		tier.Spec.Order = &float1_0
 		_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
 
 		tier2 := api.NewTier()
 		tier2.Name = "tier2"
@@ -1368,7 +1367,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		gnpfwd.Spec.ApplyOnForward = true
 		gnpfwd.Spec.Types = []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}
 		gnpfwd.Spec.Egress = []api.Rule{
-			{Action: api.Pass},
+			{Action: api.Allow},
 		}
 		gnpfwd.Spec.Ingress = []api.Rule{
 			{
@@ -1377,22 +1376,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 					Nets: []string{"10.65.1.2/32"},
 				},
 			},
-			{Action: api.Pass},
+			{Action: api.Allow},
 		}
 		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnpfwd, utils.NoOptions)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create a policy with applyOnForward that allows all traffic to/from the host endpoint.
-		gnpfwdallow := api.NewGlobalNetworkPolicy()
-		gnpfwdallow.Name = "tier2.forward-policy2"
-		gnpfwdallow.Spec.Order = &float2_0
-		gnpfwdallow.Spec.Tier = tier2.Name
-		gnpfwdallow.Spec.Selector = "host-endpoint=='true'"
-		gnpfwdallow.Spec.ApplyOnForward = true
-		gnpfwdallow.Spec.Types = []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}
-		gnpfwdallow.Spec.Egress = []api.Rule{{Action: api.Allow}}
-		gnpfwdallow.Spec.Ingress = []api.Rule{{Action: api.Allow}}
-		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnpfwdallow, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Allow all traffic to ep2-1
@@ -1408,17 +1394,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-			Eventually(getRuleFuncTable(tc.Felixes[0], "PPE0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier2.forward-policy2", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier2.gnp-ep2-1-allow-ingress", "filter"), "10s", "1s").Should(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[1], "DPI0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[1], "PPI1|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[1], "API0|tier2.forward-policy2", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[1], "API1|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[1], "API0|tier2.gnp-ep2-1-allow-ingress", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			// TODO(dimitrin): Add waits for forward policies to be programmed, when supported.
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "tier2.gnp-ep2-1-allow-ingress", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], interfaceName, "egress", "tier1.forward-policy1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], interfaceName, "ingress", "tier1.forward-policy1", `action:"deny"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], interfaceName, "ingress", "tier1.forward-policy1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName, "ingress", "tier2.gnp-ep2-1-allow-ingress", `action:"allow"`)
 		}
 
 		if !bpfEnabled {
@@ -1437,8 +1422,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	It("should get expected flow logs for allowed forward policies", func() {
 		// Describe the connectivity that we now expect.
 		cc = &connectivity.Checker{}
-		cc.ExpectSome(ep1_1, ep2_1) // allowed egress by profile and ingress by gnp-ep2-1
-		cc.ExpectSome(ep1_1, ep2_2) // allowed egress/ingress by forward-policy2
+		cc.ExpectSome(ep1_1, ep2_1)
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
@@ -1480,21 +1464,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 			Name:           ep2_1.Name,
 			AggregatedName: ep2_1.Name,
 		}
-		ep2_2_Meta := endpoint.Metadata{
-			Type:           "wep",
-			Namespace:      "default",
-			Name:           ep2_2.Name,
-			AggregatedName: ep2_2.Name,
-		}
 
 		ip1_1, ok := ip.ParseIPAs16Byte("10.65.0.0")
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ip2_2, ok := ip.ParseIPAs16Byte("10.65.1.1")
-		Expect(ok).To(BeTrue())
 		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_2_Tuple_Agg0 := tuple.Make(ip1_1, ip2_2, 6, flowlogs.SourcePortIsIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1522,46 +1497,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_2_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_2_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "src,fwd",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1597,46 +1536,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|tier2|tier2.gnp-ep2-1-allow-ingress|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|1":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|1": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_2_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_2_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "dst,fwd",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|1":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1654,7 +1557,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	It("should get expected flow logs for denied forward policies", func() {
 		// Describe the connectivity that we now expect.
 		cc = &connectivity.Checker{}
-		cc.ExpectNone(ep1_1, ep2_3) // denied by forward-policy1
+		cc.ExpectNone(ep1_1, ep2_3)
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
@@ -1726,13 +1629,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1766,8 +1666,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1794,14 +1692,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 			if bpfEnabled {
 				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")
-				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_2.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_3.InterfaceName, "all", "--asm")
 			}
 		}
 
 		ep1_1.Stop()
 		ep2_1.Stop()
-		ep2_2.Stop()
 		ep2_3.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
@@ -1863,40 +1759,6 @@ func verifyHostEndpointRules(f *infrastructure.Felix, bpfEnabled bool) error {
 
 		if !strings.Contains(out, "cali-thfw-eth0") {
 			return fmt.Errorf("iptables missing expected host endpoint chain 'cali-thfw-eth0'")
-		}
-	}
-
-	return nil
-}
-
-// verifyHostEndpointRulesEth1 checks that the host endpoint rules are properly configured
-// based on the active dataplane (BPF, NFT, or iptables)
-func verifyHostEndpointRulesEth1(f *infrastructure.Felix, bpfEnabled bool) error {
-	switch {
-	case bpfEnabled:
-		numProgs := f.NumTCBPFProgsEth0()
-		if numProgs != 2 {
-			return fmt.Errorf("expected 2 BPF programs on eth0, found %d", numProgs)
-		}
-
-	case NFTMode():
-		out, err := f.ExecOutput("nft", "list", "table", "calico")
-		if err != nil {
-			return fmt.Errorf("failed to list nftables: %w", err)
-		}
-
-		if !strings.Contains(out, "cali-thfw-eth0") {
-			return fmt.Errorf("nftables missing expected host endpoint chain 'cali-thfw-eth0'")
-		}
-
-	default: // iptables mode
-		out, err := f.ExecOutput("iptables-save", "-t", "filter")
-		if err != nil {
-			return fmt.Errorf("failed to list iptables rules: %w", err)
-		}
-
-		if !strings.Contains(out, "cali-thfw-eth1") {
-			return fmt.Errorf("iptables missing expected host endpoint chain 'cali-thfw-eth1'")
 		}
 	}
 

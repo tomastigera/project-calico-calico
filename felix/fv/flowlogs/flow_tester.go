@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 )
@@ -222,10 +220,6 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 // been explicitly checked.
 func (t *FlowTester) CheckFlow(fl flowlog.FlowLog) {
 	fm := t.flowMetaFromFlowLog(fl)
-	for key, flow := range t.flows {
-		log.Infof("key: %v", key)
-		log.Infof("flow: %v", flow)
-	}
 	existing, ok := t.flows[fm]
 	if !ok {
 		t.errors = append(t.errors, fmt.Sprintf("Flow was not present in logs: %#v", fm))
