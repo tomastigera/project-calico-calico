@@ -107,6 +107,11 @@ rm -rvf %{buildroot}%{_includedir}
 %exclude /usr/lib64/libluajit.a
 
 %changelog
+* Wed Aug 27 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.8-1
+- Refresh linseed out plugin token when 401 Unauthorized is received
+- Set the maximum idle keepalive timeout for linseed out plugin to 15 seconds
+- Update version to 4.0.8
+
 * Thu Aug 7 2025 Jiawei Huang <jiawei@tigera.io> - 4.0.7-1
 - Update version to 4.0.7
 

@@ -2,7 +2,7 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/fluent-bit
 
-FLUENT_BIT_VERSION = 4.0.7
+FLUENT_BIT_VERSION = 4.0.8
 
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
@@ -14,6 +14,9 @@ include ../lib.Makefile
 ###############################################################################
 # Build
 ###############################################################################
+MOCKERY_FILE_PATHS= \
+	plugins/out_linseed/pkg/token/Interface \
+
 SRC_FILES = $(shell find plugins -name '*.go')
 
 build: out_linseed.so
