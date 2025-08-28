@@ -72,10 +72,10 @@ var _ = Describe("Linseed out plugin tests", func() {
 		})
 
 		It("should refresh token when http response is 401", func() {
-			mockToken := &token.MockInterface{}
+			mockToken := &token.MockTokenProvider{}
 			mockToken.On("Refresh").Return("new-token", nil)
-
 			tk = mockToken
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusUnauthorized)
 			}))

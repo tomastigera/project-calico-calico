@@ -35,7 +35,7 @@ const (
 
 var (
 	client             *http.Client
-	tk                 token.Interface
+	tk                 token.TokenProvider
 	endpointController *endpoint.EndpointController
 
 	stopCh chan struct{}

@@ -15,7 +15,7 @@ include ../lib.Makefile
 # Build
 ###############################################################################
 MOCKERY_FILE_PATHS= \
-	plugins/out_linseed/pkg/token/Interface \
+	plugins/out_linseed/pkg/token/TokenProvider \
 
 SRC_FILES = $(shell find plugins -name '*.go')
 

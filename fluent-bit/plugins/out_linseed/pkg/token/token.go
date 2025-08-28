@@ -25,7 +25,7 @@ const (
 	tokenRenewal = 15 * time.Minute
 )
 
-type Interface interface {
+type TokenProvider interface {
 	Token() (string, error)
 	Refresh() (string, error)
 }
