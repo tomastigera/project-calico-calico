@@ -11,6 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/token"
 )
 
 var _ = Describe("Linseed out plugin tests", func() {
@@ -67,6 +69,23 @@ var _ = Describe("Linseed out plugin tests", func() {
 			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error response from server"))
+		})
+
+		It("should refresh token when http response is 401", func() {
+			mockToken := &token.MockTokenProvider{}
+			mockToken.On("Refresh").Return("new-token", nil)
+			tk = mockToken
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}))
+			defer server.Close()
+
+			client = server.Client()
+			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("error response from server"))
+			Expect(mockToken.AssertCalled(GinkgoT(), "Refresh")).To(BeTrue())
 		})
 	})
 })

@@ -25,6 +25,11 @@ const (
 	tokenRenewal = 15 * time.Minute
 )
 
+type TokenProvider interface {
+	Token() (string, error)
+	Refresh() (string, error)
+}
+
 type Token struct {
 	clientset kubernetes.Interface
 
@@ -58,17 +63,21 @@ func NewToken(cfg *config.Config) (*Token, error) {
 func (c *Token) Token() (string, error) {
 	if time.Until(c.expiration) < tokenRenewal {
 		logrus.Infof("token expired for serviceaccount %q", c.serviceAccountName)
-
-		token, expiration, err := getServiceAccountToken(c.clientset.CoreV1(), resource.CalicoNamespaceName, c.serviceAccountName)
-		if err != nil {
-			return "", err
-		}
-		c.expiration = expiration
-		c.token = token
-		logrus.Infof("successfully renewed token for serviceaccount %q", c.serviceAccountName)
+		return c.Refresh()
 	}
 
 	return c.token, nil
+}
+
+func (c *Token) Refresh() (string, error) {
+	token, expiration, err := getServiceAccountToken(c.clientset.CoreV1(), resource.CalicoNamespaceName, c.serviceAccountName)
+	if err != nil {
+		return "", err
+	}
+	c.expiration = expiration
+	c.token = token
+	logrus.Infof("successfully refreshed token for serviceaccount %q", c.serviceAccountName)
+	return token, nil
 }
 
 func extractServiceAccountName(kubeconfig string) (string, error) {
