@@ -43,7 +43,6 @@ type Interface interface {
 	BlockAffinitiesClient
 	BFDConfigurationsClient
 
-	NamespacesClient
 	// Tiers returns an interface for managing tier resources.
 	Tiers() TierInterface
 	// StagedGlobalNetworkPolicies returns an interface for managing staged global network policy resources.
@@ -219,11 +218,6 @@ type BGPFilterClient interface {
 type BFDConfigurationsClient interface {
 	// BFDConfigurations returns an interface for managing BFD configuration resources.
 	BFDConfigurations() BFDConfigurationInterface
-}
-
-type NamespacesClient interface {
-	// Namespaces returns an interface for accessing Kubernetes namespace resources.
-	Namespaces() NamespaceInterface
 }
 
 // Compile-time assertion that our client implements its interface.
