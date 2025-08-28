@@ -108,7 +108,7 @@ var _ = describe.CalicoDescribe(describe.WithTeam(describe.Core),
 				// Enabled creation of auto host endpoints and creation of default host endpoints.
 				testKCC.Spec.Controllers.Node.HostEndpoint.AutoCreate = "Enabled"
 				testKCC.Spec.Controllers.Node.HostEndpoint.CreateDefaultHostEndpoint = v3.DefaultHostEndpointsEnabled
-				updateHostEndpointConfig(cli, testKCC)
+				UpdateHostEndpointConfig(cli, testKCC)
 				WaitForAutoHEPs(cli, true)
 			}
 
@@ -130,7 +130,7 @@ var _ = describe.CalicoDescribe(describe.WithTeam(describe.Core),
 			// We've updated the kubecontrollersconfiguration, so we need to restore it to its original state.
 			if !reflect.DeepEqual(originalKCC.Spec.Controllers.Node.HostEndpoint, testKCC.Spec.Controllers.Node.HostEndpoint) {
 				logrus.Info("AfterEach: auto host endpoints not previously enabled so disabling")
-				updateHostEndpointConfig(cli, originalKCC)
+				UpdateHostEndpointConfig(cli, originalKCC)
 				WaitForAutoHEPs(cli, false)
 			}
 		})
@@ -279,8 +279,8 @@ func getNodeHostname(node v1.Node) string {
 	return hostname
 }
 
-// updateHostEndpointConfig updates the HostEndpointConfiguration to the desired state
-func updateHostEndpointConfig(client ctrlclient.Client, desiredKCC v3.KubeControllersConfiguration) {
+// UpdateHostEndpointConfig updates the HostEndpointConfiguration to the desired state
+func UpdateHostEndpointConfig(client ctrlclient.Client, desiredKCC v3.KubeControllersConfiguration) {
 	// Get the kubecontrollersconfiguration and patch it to toggle the
 	// auto-creation of host endpoints.
 	var currentKCC v3.KubeControllersConfiguration
