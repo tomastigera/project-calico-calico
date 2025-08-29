@@ -307,6 +307,16 @@ func main() {
 		},
 	}
 
+	if cfg.EnterpriseDashboardEndpoint != "" {
+		targetList = append(targetList, bootstrap.Target{
+			Dest:             cfg.EnterpriseDashboardEndpoint,
+			Path:             fmt.Sprintf("%s/", cfg.EnterpriseDashboardBasePath),
+			PathRegexp:       []byte(fmt.Sprintf("^%s/?", cfg.EnterpriseDashboardBasePath)),
+			PathReplace:      []byte("/api/"),
+			AllowInsecureTLS: true,
+		})
+	}
+
 	if cfg.GoldmaneEnabled {
 		// We need to add a Target to the default proxy so that these requests don't fallthrough to
 		// the default "/" target.

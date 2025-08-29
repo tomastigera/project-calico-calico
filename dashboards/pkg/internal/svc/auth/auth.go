@@ -42,8 +42,11 @@ func NewAuthService(
 			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
 			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
-			lmaauth.WithCalicoCloudTenantClaim(tenantClaim),
 		)
+
+		if tenantClaim != "" {
+			dexOptions = append(dexOptions, lmaauth.WithCalicoCloudTenantClaim(tenantClaim))
+		}
 
 		if cfg.OIDCAuthJWKSURL != "" {
 			dexOptions = append(dexOptions, lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL))

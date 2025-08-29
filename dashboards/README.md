@@ -1,6 +1,6 @@
-# cc-dashboard-query-api
+# dashboard-query-api
 
-Calico Cloud Dashboard Query API
+Dashboard Query API
 
 ## Development
 
@@ -17,36 +17,36 @@ TENANT="" # Set this for multi-tenant
 
 # Environment variables
 
-export CC_DASHBOARD_QUERY_API_LOG_LEVEL=INFO
+export LOG_LEVEL=INFO
 
 # Kubeconfig and open telemetry
-export CC_DASHBOARD_QUERY_API_KUBECONFIG=${KUBECONFIG}
-export CC_DASHBOARD_QUERY_API_OPEN_TELEMETRY_ENABLED=false
+export KUBECONFIG=${KUBECONFIG}
+export OPEN_TELEMETRY_ENABLED=false
 
 # Tenant
-export CC_DASHBOARD_QUERY_API_TENANT_ID=${TENANT}
-export CC_DASHBOARD_QUERY_API_TENANT_NAMESPACE=${TENANT_NAMESPACE}
+export TENANT_ID=${TENANT}
+export TENANT_NAMESPACE=${TENANT_NAMESPACE}
 
 # HTTPS Server
-export CC_DASHBOARD_QUERY_API_HTTPS_KEY=${FILES_DIR}/https-server.key
-export CC_DASHBOARD_QUERY_API_HTTPS_CERT=${FILES_DIR}/https-server.crt
+export HTTPS_KEY=${FILES_DIR}/https-server.key
+export HTTPS_CERT=${FILES_DIR}/https-server.crt
 
 # Linseed client
-export CC_DASHBOARD_QUERY_API_LINSEED_CA=${FILES_DIR}/tigera-ca.crt
-export CC_DASHBOARD_QUERY_API_LINSEED_TOKEN=${FILES_DIR}/token
-export CC_DASHBOARD_QUERY_API_LINSEED_CLIENT_KEY=${FILES_DIR}/linseed-client.key
-export CC_DASHBOARD_QUERY_API_LINSEED_CLIENT_CERT=${FILES_DIR}/linseed-client.crt
-export CC_DASHBOARD_QUERY_API_LINSEED_URL=https://tigera-linseed:9443/
+export LINSEED_CA=${FILES_DIR}/tigera-ca.crt
+export LINSEED_TOKEN=${FILES_DIR}/token
+export LINSEED_CLIENT_KEY=${FILES_DIR}/linseed-client.key
+export LINSEED_CLIENT_CERT=${FILES_DIR}/linseed-client.crt
+export LINSEED_URL=https://tigera-linseed:9443/
 
 # CORS
-export CC_DASHBOARD_QUERY_API_CORS_ORIGINS=https://www.dev.calicocloud.io
+export CORS_ORIGINS=https://www.dev.calicocloud.io
 
 # OIDC auth
-export CC_DASHBOARD_QUERY_API_OIDC_AUTH_ISSUER=
-export CC_DASHBOARD_QUERY_API_OIDC_AUTH_JWKSURL=
-export CC_DASHBOARD_QUERY_API_OIDC_AUTH_CLIENT_ID=
-export CC_DASHBOARD_QUERY_API_OIDC_AUTH_GROUPS_CLAIM=
-export CC_DASHBOARD_QUERY_API_OIDC_AUTH_USERNAME_CLAIM=
+export OIDC_AUTH_ISSUER=
+export OIDC_AUTH_JWKSURL=
+export OIDC_AUTH_CLIENT_ID=
+export OIDC_AUTH_GROUPS_CLAIM=
+export OIDC_AUTH_USERNAME_CLAIM=
 
 ```
 

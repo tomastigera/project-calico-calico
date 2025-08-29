@@ -1,16 +1,20 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"runtime/debug"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/swaggest/openapi-go/openapi3"
 	"github.com/tigera/tds-apiserver/lib/logging"
+	tdsclient "github.com/tigera/tds-apiserver/pkg/client"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
 	"github.com/tigera/tds-apiserver/pkg/types"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/handler/middleware/cors"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/auth"
@@ -22,6 +26,7 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func NewHandler(
+	cfg *config.Config,
 	logger logging.Logger,
 	corsOrigins []string,
 	authService *auth.AuthService,
@@ -59,8 +64,23 @@ func NewHandler(
 		handleradapters.WithSpecDescription("Dashboard Query API for Calico Cloud"),
 	)
 
-	withRequiredProjectIDHeader := handleradapters.WithRequiredHeader[types.ProjectID]("x-project-id",
-		handleradapters.WithParamDescription("Organization Project ID"))
+	projectIDHeader := "x-project-id"
+	projectIDDocOpts := []handleradapters.ParamDocOption{handleradapters.WithParamDescription("Organization Project ID")}
+	withVerifiedProjectHeader := handleradapters.NewReqMapper[types.ProjectID](
+		func(w http.ResponseWriter, r *http.Request, p httprouter.Params) (types.ProjectID, bool) {
+			value := r.Header.Get(projectIDHeader)
+			if value == "" && cfg.ProductMode == config.ProductModeCloud {
+				handleradapters.WriteErr(tdsclient.BadRequest("header-required", fmt.Sprintf("the '%s' header is required", projectIDHeader)), w, r)
+				return "", false
+			}
+			return types.ProjectID(value), true
+		},
+		func(op *openapi3.Operation, specOps *handleradapters.SpecOps) {
+			if cfg.ProductMode == config.ProductModeCloud {
+				handleradapters.HeaderParameterDoc[types.ProjectID](op, projectIDHeader, cfg.ProductMode == config.ProductModeCloud, projectIDDocOpts)
+			}
+		},
+	)
 
 	reg.Group("Query").Apply(func(reg handleradapters.Registry) {
 
@@ -85,31 +105,31 @@ func NewHandler(
 
 		reg.GET("/metadata/:dashboardID", handleradapters.In3Out1(metadataService.Get,
 			withAuthContext(),
-			withRequiredProjectIDHeader,
+			withVerifiedProjectHeader,
 			withDashboardID,
 			handleradapters.WithRespBody[client.Dashboard]()))
 
 		reg.GET("/metadata", handleradapters.In2Out1(metadataService.List,
 			withAuthContext(),
-			withRequiredProjectIDHeader,
+			withVerifiedProjectHeader,
 			handleradapters.WithRespBody[client.DashboardListResponse]()))
 
 		reg.POST("/metadata", handleradapters.In3Out1(metadataService.Create,
 			withAuthContext(),
-			withRequiredProjectIDHeader,
+			withVerifiedProjectHeader,
 			handleradapters.WithReqBody[client.DashboardCreateRequest](),
 			handleradapters.WithRespBody[client.Dashboard]()))
 
 		reg.PUT("/metadata/:dashboardID", handleradapters.In4Out1(metadataService.Update,
 			withAuthContext(),
-			withRequiredProjectIDHeader,
+			withVerifiedProjectHeader,
 			withDashboardID,
 			handleradapters.WithReqBody[client.DashboardUpdateRequest](),
 			handleradapters.WithRespBody[client.Dashboard]()))
 
 		reg.DELETE("/metadata/:dashboardID", handleradapters.In3Out0(metadataService.Delete,
 			withAuthContext(),
-			withRequiredProjectIDHeader,
+			withVerifiedProjectHeader,
 			withDashboardID))
 	})
 

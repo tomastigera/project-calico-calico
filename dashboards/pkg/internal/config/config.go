@@ -25,8 +25,8 @@ type Config struct {
 	CorsOrigins string `default:"https://www.calicocloud.io" split_words:"true"`
 
 	// HttpsCert, HttpsKey - path to a x509 certificate and its private key for the https server
-	HttpsCert string `default:"/certs/https/cert" split_words:"true"`
-	HttpsKey  string `default:"/certs/https/key" split_words:"true"`
+	HttpsCert string `default:"" split_words:"true"`
+	HttpsKey  string `default:"" split_words:"true"`
 
 	// HttpsCACert Used to verify client certificates for mTLS.
 	HttpsCACert string `default:"" split_words:"true"`

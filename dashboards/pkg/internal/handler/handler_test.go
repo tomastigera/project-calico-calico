@@ -8,6 +8,7 @@ import (
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
 
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
 )
 
@@ -31,6 +32,7 @@ func TestMain(m *testing.M) {
 	}
 
 	handlerRegistry, err = NewHandler(
+		&config.Config{},
 		logger,
 		nil,
 		nil,
