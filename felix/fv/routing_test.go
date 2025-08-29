@@ -623,6 +623,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 				})
 
 				It("should have no connectivity from third felix and expected number of IPs in allow list", func() {
+					expectedSizeOfIPSet := len(felixes) - 1
+					if ipipMode == api.IPIPModeNever {
+						expectedSizeOfIPSet = len(felixes)
+					}
 					if BPFMode() {
 						// one host and one host tunnel routes per node
 						expectedNumRoutes := (len(felixes) - 1) * 2
@@ -635,9 +639,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 						}).Should(Equal(expectedNumRoutes),
 							fmt.Sprintf("Expected %v route per node, not: %v", expectedNumRoutes, felixes[0].BPFRoutes()))
 					} else if NFTMode() {
-						Eventually(felixes[0].NFTSetSizeFn("cali40all-hosts-net"), "15s", "200ms").Should(Equal(len(felixes)))
+						Eventually(felixes[0].NFTSetSizeFn("cali40all-hosts-net"), "15s", "200ms").Should(Equal(expectedSizeOfIPSet))
 					} else {
-						Eventually(felixes[0].IPSetSizeFn("cali40all-hosts-net"), "15s", "200ms").Should(Equal(len(felixes)))
+						Eventually(felixes[0].IPSetSizeFn("cali40all-hosts-net"), "15s", "200ms").Should(Equal(expectedSizeOfIPSet))
 					}
 
 					cc.ExpectSome(w[0], w[1])
