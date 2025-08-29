@@ -427,9 +427,8 @@ type InternalDataplane struct {
 	filterTables    []generictables.Table
 	ipSets          []dpsets.IPSetsDataplane
 
-	ipipParentIfaceC     chan string
-	ipipManager          *ipipManager
-	allHostsIpsetManager *allHostsIpsetManager
+	ipipParentIfaceC chan string
+	ipipManager      *ipipManager
 
 	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
