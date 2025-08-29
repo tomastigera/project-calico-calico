@@ -588,10 +588,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 			Context("after removing BGP address from third node", func() {
 				// Simulate having a host send IPIP traffic from an unknown source, should get blocked.
 				BeforeEach(func() {
-					if ipipMode == api.IPIPModeNever {
-						Skip("external nodes is not applicable to no encap routing")
-					}
-
 					for _, f := range felixes {
 						if BPFMode() {
 							// one host and one host tunnel routes per node
