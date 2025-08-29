@@ -121,7 +121,7 @@ ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 ENV WAF_LOG_FILE=/var/log/calico/waf/waf.log
 
 # TLS Settings
-ENV CA_CRT_PATH=/etc/pki/tigera/ca.crt
+ENV CA_CRT_PATH=/etc/pki/tls/certs/tigera-ca-bundle.crt
 ENV TLS_CRT_PATH=/tls/tls.crt
 ENV TLS_KEY_PATH=/tls/tls.key
 
