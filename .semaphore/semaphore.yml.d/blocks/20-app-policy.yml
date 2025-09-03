@@ -1,6 +1,6 @@
 - name: app-policy
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(app-policy)}"
   dependencies:
     - Prerequisites
   task:

@@ -1,6 +1,6 @@
 - name: "Felix: Build"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix,typha)}"
   dependencies:
     - Prerequisites
   task:
@@ -37,7 +37,7 @@
           - ../.semaphore/run-and-monitor static-checks.log make static-checks
 - name: "Felix: Build - native arm64 runner"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix)}"
   dependencies:
     - "Felix: Build"
   task:
@@ -55,7 +55,7 @@
           - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
 - name: "Felix: Build Windows binaries"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix)}"
   dependencies:
     - Prerequisites
   task:
@@ -66,7 +66,7 @@
           - make bin/calico-felix.exe fv/win-fv.exe
 - name: "Felix: Windows FV capz"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or ${CHANGE_IN(felix)}"
   dependencies: ["Felix: Build Windows binaries"]
   task:
     secrets:
@@ -106,7 +106,7 @@
           - ./.semaphore/run-win-fv
 - name: "Felix: FV Tests"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix,typha)}"
   dependencies:
     - "Felix: Build"
   task:
@@ -181,7 +181,7 @@
           - test-results publish /home/semaphore/calico/felix/report/fv_nft_suite.xml --name "felix-fv-nft-${SEMAPHORE_JOB_INDEX}" || true
 - name: "Felix: BPF UT/FV tests on Ubuntu 24.04"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix,typha)}"
   dependencies:
     - Prerequisites
   task:
@@ -220,7 +220,7 @@
       - name: google-service-account-for-gce
 - name: "Felix: BPF UT/FV tests on Ubuntu 22.04 (nftables)"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/cni-plugin/pkg/dataplane/linux/dataplane_linux.go'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(felix,typha)}"
   dependencies:
     - Prerequisites
   task:

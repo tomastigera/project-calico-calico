@@ -1,6 +1,6 @@
 - name: crypto
   run:
-    when: "${FORCE_RUN} or change_in(['/lib.Makefile', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(crypto)}"
   dependencies:
     - Prerequisites
   task:
@@ -8,6 +8,6 @@
       commands:
         - cd crypto
     jobs:
-      - name: crypto tests
+      - name: "crypto tests"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
