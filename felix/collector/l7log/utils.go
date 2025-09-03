@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package l7log
 
@@ -14,6 +14,7 @@ import (
 func newMetaSpecFromUpdate(update Update, ak AggregationKind) (L7Meta, L7Spec, error) {
 	meta := L7Meta{
 		ResponseCode:     update.ResponseCode,
+		RouteName:        update.RouteName,
 		Method:           update.Method,
 		Domain:           update.Domain,
 		Path:             update.Path,

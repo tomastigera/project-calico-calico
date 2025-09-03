@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package l7log
 
@@ -93,19 +93,17 @@ func (r *L7Reporter) run() {
 		// TODO(doublek): Stop and flush cases.
 		select {
 		case <-r.flushTrigger:
-			// Fetch from different aggregators and then dispatch them to wherever
-			// the flow logs need to end up.
 			log.Debug("L7 log flush tick")
 			for _, agg := range r.aggregators {
-				fl := agg.a.Get()
-				log.Debugf("Flush %v L7 logs", len(fl))
-				if len(fl) > 0 {
+				l7Log := agg.a.Get()
+				log.Debugf("Flush %v L7 logs", len(l7Log))
+				if len(l7Log) > 0 {
 					for _, d := range agg.d {
 						log.WithFields(log.Fields{
-							"size":       len(fl),
+							"size":       len(l7Log),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						if err := d.Report(fl); err != nil {
+						if err := d.Report(l7Log); err != nil {
 							log.WithError(err).Debug("failed to dispatch L7 log")
 						}
 					}
