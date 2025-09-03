@@ -652,7 +652,6 @@ func (c *KubeClient) EnsureInitialized() error {
 func (c *KubeClient) Clean() error {
 	log.Warning("Cleaning KDD of all Calico-creatable data")
 
-	// Cleanup IPAM resources that have slightly different backend semantics.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
@@ -662,6 +661,8 @@ func (c *KubeClient) Clean() error {
 	var listEG, delEG errgroup.Group
 	listEG.SetLimit(runtime.NumCPU() / 2)
 	delEG.SetLimit(runtime.NumCPU() / 2)
+
+	// First delete "normal" resources by kind.
 	kinds := []string{
 		apiv3.KindBGPConfiguration,
 		apiv3.KindBGPPeer,
@@ -754,6 +755,8 @@ func (c *KubeClient) Clean() error {
 		log.WithField("kinds", kindsWithProblems).Error("Failed to delete all resources of these kinds")
 	}
 
+	// Delete IPAM resources using the older API, since they don't all support
+	// the new.
 	listIfaceProblems := set.New[model.ListInterface]()
 	listIfaces := []model.ListInterface{
 		model.BlockListOptions{},
