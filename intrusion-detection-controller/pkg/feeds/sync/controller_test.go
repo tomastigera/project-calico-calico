@@ -15,8 +15,8 @@ import (
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 )

@@ -18,8 +18,8 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
