@@ -54,7 +54,7 @@
 
 - name: elasticsearch
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(elasticsearch)}"
   dependencies:
     - Publish tigera/elasticsearch multi-arch manifests
   task:

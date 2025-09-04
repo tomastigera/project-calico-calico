@@ -35,7 +35,7 @@
 
 - name: kibana
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(kibana)}"
   dependencies:
     - Publish tigera/kibana multi-arch manifests
   task:

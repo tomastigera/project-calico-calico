@@ -73,6 +73,18 @@ else
   fi
 fi
 
+# Check that all change_in clauses ignore the pipeline file.  We now regenerate the
+# pipeline file often, so any jobs that need this should depend on it explicitly.
+if find semaphore.yml.d/ -name '*.yml' -print0 | xargs -0 grep change_in | grep -v pipeline_file; then
+  echo
+  echo "ERROR: All change_in clauses must include the \"pipeline_file: 'ignore'\""
+  echo "option to prevent unnecessary job runs when the pipeline file is updated."
+  echo "Or, if you really want a job to run when the pipeline file changes, add"
+  echo "\"pipeline_file: 'track'\"."
+  echo
+  exit 1
+fi
+
 # generate semaphore yaml file for PR and nightly builds
 for out_file in semaphore.yml semaphore-scheduled-builds.yml; do
   write_disclaimer $out_file

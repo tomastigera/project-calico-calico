@@ -259,7 +259,7 @@ blocks:
   - name: Check images availability
     run:
       # Script fails on enterprise due to missing values.yaml.
-      when: "false and (true or change_in(['/charts/', '/manifests/']))"
+      when: "false and (true or change_in(['/charts/', '/manifests/'], {pipeline_file: 'ignore'}))"
     dependencies: []
     task:
       jobs:
@@ -279,7 +279,7 @@ blocks:
             - make ci-preflight-checks
   - name: API
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/api/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -334,7 +334,7 @@ blocks:
 
   - name: app-policy - native arm64 runner
     run:
-      when: "true or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - app-policy
     task:
@@ -479,7 +479,7 @@ blocks:
             - ../.semaphore/run-and-monitor ci.log make ci
   - name: e2e script & pipeline validations
     run:
-      when: "true or change_in(['/.semaphore/end-to-end/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/.semaphore/end-to-end/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
       minutes: 5
     dependencies:
@@ -518,7 +518,7 @@ blocks:
             - .semaphore/run-and-monitor e2e-test.log make e2e-test
   - name: envoy-gateway
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     task:
@@ -536,7 +536,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: envoy-proxy
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -558,7 +558,7 @@ blocks:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
   - name: envoy-ratelimit
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     task:
@@ -865,7 +865,7 @@ blocks:
             - test-results publish report
   - name: lib
     run:
-      when: "true or change_in(['/lib/'])"
+      when: "true or change_in(['/lib/'], {pipeline_file: 'ignore'})"
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -996,7 +996,7 @@ blocks:
         - name: test-customer-license
   - name: pkg
     run:
-      when: "true or change_in(['/lib/std/', '/pkg/'])"
+      when: "true or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     task:
@@ -1030,7 +1030,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: "Tools (hack directory)"
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/hack/', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/hack/', '/api/', '/libcalico-go/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1085,7 +1085,7 @@ blocks:
             - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
   - name: calicoq
     run:
-      when: "true or change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1107,7 +1107,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: compliance
     run:
-      when: "true or change_in(['/*', '/compliance/','/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1127,7 +1127,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: dashboards
     run:
-      when: "true or change_in(['/*', '/dashboards/', '/crypto/', '/libcalico-go/', '/linseed/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1147,7 +1147,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/snort3 images
     run:
-      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     task:
@@ -1166,7 +1166,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
     run:
-      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     task:
@@ -1184,7 +1184,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/snort3 images
       - Publish tigera/snort3 images - native arm64 runner
@@ -1201,7 +1201,7 @@ blocks:
 
   - name: deep-packet-inspection
     run:
-      when: "true or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Publish tigera/snort3 multi-arch manifests
     task:
@@ -1224,7 +1224,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: egress-gateway
     run:
-      when: "true or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1242,7 +1242,7 @@ blocks:
 
   - name: egress-gateway - native arm64 runner
     run:
-      when: "true or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - egress-gateway
     task:
@@ -1266,7 +1266,7 @@ blocks:
             - ../.semaphore/publish-artifacts
   - name: elasticsearch-metrics
     run:
-      when: "true or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1340,7 +1340,7 @@ blocks:
 
   - name: elasticsearch
     run:
-      when: "true or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Publish tigera/elasticsearch multi-arch manifests
     task:
@@ -1363,7 +1363,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: es-gateway
     run:
-      when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1383,7 +1383,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: firewall-integration
     run:
-      when: "true or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1453,7 +1453,7 @@ blocks:
 
   - name: fluentd
     run:
-      when: "true or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Publish tigera/fluentd-base multi-arch manifests
     task:
@@ -1527,7 +1527,7 @@ blocks:
 
   - name: fluentd Windows
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:
@@ -1543,7 +1543,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
   - name: gateway
     run:
-      when: "true or change_in(['/*', '/gateway/', '/app-policy', '/felix/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1566,7 +1566,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: ingress-collector
     run:
-      when: "true or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1586,7 +1586,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: intrusion-detection-controller
     run:
-      when: "true or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1663,7 +1663,7 @@ blocks:
 
   - name: kibana
     run:
-      when: "true or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Publish tigera/kibana multi-arch manifests
     task:
@@ -1679,7 +1679,7 @@ blocks:
             - ../.semaphore/run-and-monitor ci.log make ci
   - name: l7-admission-controller
     run:
-      when: "true or change_in(['/*', '/l7-admission-controller/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1699,7 +1699,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: l7-collector
     run:
-      when: "true or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1722,7 +1722,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: license-agent
     run:
-      when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1742,7 +1742,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: licensing
     run:
-      when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1762,7 +1762,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: linseed
     run:
-      when: "true or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/', '/goldmane/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1782,7 +1782,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: lma
     run:
-      when: "true or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1795,7 +1795,7 @@ blocks:
             - ../.semaphore/run-and-monitor ci.log make ci
   - name: oiler
     run:
-      when: "true or change_in(['/*', '/linseed/', '/oiler/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1815,7 +1815,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: packetcapture
     run:
-      when: "true or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1835,7 +1835,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: policy-recommendation
     run:
-      when: "true or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1855,7 +1855,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: prometheus-service
     run:
-      when: "true or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1875,7 +1875,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: queryserver
     run:
-      when: "true or change_in(['/*', '/queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1895,7 +1895,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: ui-apis
     run:
-      when: "true or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1915,7 +1915,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: voltron
     run:
-      when: "true or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1935,7 +1935,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: webhooks-processor
     run:
-      when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -1955,7 +1955,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: fluent-bit
     run:
-      when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1980,7 +1980,7 @@ blocks:
             - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
   - name: selinux
     run:
-      when: "true or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2005,7 +2005,7 @@ blocks:
             - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
   - name: alertmanager
     run:
-      when: "true or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2026,7 +2026,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: dex
     run:
-      when: "true or change_in(['/*', '/third_party/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/*', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2046,7 +2046,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: eck-operator
     run:
-      when: "true or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2066,7 +2066,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: prometheus-operator
     run:
-      when: "true or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2086,7 +2086,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: prometheus
     run:
-      when: "true or change_in(['/third_party/prometheus/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/third_party/prometheus/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -2110,7 +2110,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: Fake guardian
     run:
-      when: "true or change_in(['/*', '/test-tools/fake-guardian/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:
@@ -2123,7 +2123,7 @@ blocks:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
   - name: Fake log generator
     run:
-      when: "true or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true"
     dependencies:
       - Prerequisites
     task:

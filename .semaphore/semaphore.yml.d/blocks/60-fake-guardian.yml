@@ -1,6 +1,6 @@
 - name: Fake guardian
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/test-tools/fake-guardian/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${CHANGE_IN(test-tools/fake-guardian)}"
   dependencies:
     - Prerequisites
   task:

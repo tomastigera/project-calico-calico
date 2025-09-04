@@ -1,6 +1,6 @@
 - name: packetcapture
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(packetcapture)}"
   dependencies:
     - Prerequisites
   task:

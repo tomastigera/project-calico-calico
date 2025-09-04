@@ -87,6 +87,20 @@ var nonGoDeps = map[string][]string{
 		"/felix/bpf-apache",
 		"/felix/bpf-gpl",
 	},
+
+	// Enterprise-only components follow...
+	"deep-packet-inspection": {
+		"third_party/snort3",
+	},
+	"elasticsearch": {
+		"third_party/elasticsearch",
+	},
+	"fluentd": {
+		"third_party/fluentd-base",
+	},
+	"kibana": {
+		"third_party/kibana",
+	},
 }
 
 var defaultExclusions = []string{
@@ -205,8 +219,8 @@ func loadLocalDirs(pkg string) (out []string, err error) {
 		os.Exit(1)
 	}
 	for _, pkg := range packageDeps {
-		const ourPackage = "github.com/projectcalico/calico/"
-		if strings.HasPrefix(pkg, ourPackage) {
+		const ourPackage = "github.com/projectcalico/calico"
+		if strings.HasPrefix(pkg, ourPackage+"/") {
 			pkg = strings.TrimPrefix(pkg, ourPackage)
 			out = append(out, pkg)
 		}

@@ -1,6 +1,6 @@
 - name: voltron
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(voltron)}"
   dependencies:
     - Prerequisites
   task:
