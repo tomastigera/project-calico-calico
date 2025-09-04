@@ -101,7 +101,7 @@
   - name: dest_ip
     type: ip
   - name: dest_labels.labels
-    type: text
+    type: labels
   - name: dest_name
     type: text
   - name: dest_name_aggr
@@ -197,7 +197,7 @@
   - name: source_ip
     type: ip
   - name: source_labels.labels
-    type: text
+    type: labels
   - name: source_name
     type: text
   - name: source_name_aggr
