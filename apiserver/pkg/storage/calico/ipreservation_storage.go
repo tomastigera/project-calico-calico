@@ -6,7 +6,6 @@ import (
 	"context"
 	"reflect"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -55,8 +54,8 @@ func NewIPReservationStorage(opts Options) (registry.DryRunnableStorage, factory
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.IPReservation{}),
-		aapiListType:      reflect.TypeOf(aapi.IPReservationList{}),
+		aapiType:          reflect.TypeOf(api.IPReservation{}),
+		aapiListType:      reflect.TypeOf(api.IPReservationList{}),
 		libCalicoType:     reflect.TypeOf(api.IPReservation{}),
 		libCalicoListType: reflect.TypeOf(api.IPReservationList{}),
 		isNamespaced:      false,
@@ -77,7 +76,7 @@ type IPReservationConverter struct {
 }
 
 func (gc IPReservationConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiIPReservation := aapiObj.(*aapi.IPReservation)
+	aapiIPReservation := aapiObj.(*api.IPReservation)
 	lcgIPReservation := &api.IPReservation{}
 	lcgIPReservation.TypeMeta = aapiIPReservation.TypeMeta
 	lcgIPReservation.ObjectMeta = aapiIPReservation.ObjectMeta
@@ -89,7 +88,7 @@ func (gc IPReservationConverter) convertToLibcalico(aapiObj runtime.Object) reso
 
 func (gc IPReservationConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
 	lcgIPReservation := libcalicoObject.(*api.IPReservation)
-	aapiIPReservation := aapiObj.(*aapi.IPReservation)
+	aapiIPReservation := aapiObj.(*api.IPReservation)
 	aapiIPReservation.Spec = lcgIPReservation.Spec
 	aapiIPReservation.TypeMeta = lcgIPReservation.TypeMeta
 	aapiIPReservation.ObjectMeta = lcgIPReservation.ObjectMeta
@@ -97,15 +96,15 @@ func (gc IPReservationConverter) convertToAAPI(libcalicoObject resourceObject, a
 
 func (gc IPReservationConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgIPReservationList := libcalicoListObject.(*api.IPReservationList)
-	aapiIPReservationList := aapiListObj.(*aapi.IPReservationList)
+	aapiIPReservationList := aapiListObj.(*api.IPReservationList)
 	if libcalicoListObject == nil {
-		aapiIPReservationList.Items = []aapi.IPReservation{}
+		aapiIPReservationList.Items = []api.IPReservation{}
 		return
 	}
 	aapiIPReservationList.TypeMeta = lcgIPReservationList.TypeMeta
 	aapiIPReservationList.ListMeta = lcgIPReservationList.ListMeta
 	for _, item := range lcgIPReservationList.Items {
-		aapiIPReservation := aapi.IPReservation{}
+		aapiIPReservation := api.IPReservation{}
 		gc.convertToAAPI(&item, &aapiIPReservation)
 		if matched, err := pred.Matches(&aapiIPReservation); err == nil && matched {
 			aapiIPReservationList.Items = append(aapiIPReservationList.Items, aapiIPReservation)
