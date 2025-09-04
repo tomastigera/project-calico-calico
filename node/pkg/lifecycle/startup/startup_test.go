@@ -92,11 +92,33 @@ func makeK8sNode(ipv4 string, ipv6 string) *v1.Node {
 	return node
 }
 
+// temporarilySetEnv sets an environment variable and returns a function to restore the original value.
+// The returned function should be deferred immediately after calling temporarilySetEnv, in order to
+// guarantee restoration of the original value.
+//
+// For example:
+//
+//	defer temporarilySetEnv("MY_ENV_VAR", "my_value")()
+func temporarilySetEnv(k, v string) func() {
+	originalValue, hadOriginalValue := os.LookupEnv(k)
+	err := os.Setenv(k, v)
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Error setting env var %s: %v", k, err))
+	return func() {
+		var err error
+		if hadOriginalValue {
+			err = os.Setenv(k, originalValue)
+		} else {
+			err = os.Unsetenv(k)
+		}
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Error restoring env var %s: %v", k, err))
+	}
+}
+
 var _ = DescribeTable("Node IP detection failure cases",
 	func(networkingBackend string, expectedExitCode int, rrCId string, expectedUpdate bool) {
-		os.Setenv("CALICO_NETWORKING_BACKEND", networkingBackend)
-		os.Setenv("IP", "none")
-		os.Setenv("IP6", "")
+		defer temporarilySetEnv("CALICO_NETWORKING_BACKEND", networkingBackend)()
+		defer temporarilySetEnv("IP", "none")()
+		defer temporarilySetEnv("IP6", "")()
 
 		my_ec := 0
 		oldExit := utils.GetExitFunction()
@@ -218,13 +240,8 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			// Set the env variables specified.
 			for _, env := range envList {
-				os.Setenv(env.key, env.value)
+				defer temporarilySetEnv(env.key, env.value)()
 			}
-			defer func() {
-				for _, env := range envList {
-					os.Unsetenv(env.key)
-				}
-			}()
 
 			poolList, err := c.IPPools().List(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -482,7 +499,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Set the env variables specified.
-		os.Setenv("NO_DEFAULT_POOLS", "true")
+		defer temporarilySetEnv("NO_DEFAULT_POOLS", "true")()
 
 		// Run the UUT.
 		configureIPPools(ctx, c, kubeadmConfig)
@@ -513,13 +530,8 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			// Set the env variables specified.
 			for _, env := range envList {
-				os.Setenv(env.key, env.value)
+				defer temporarilySetEnv(env.key, env.value)()
 			}
-			defer func() {
-				for _, env := range envList {
-					os.Unsetenv(env.key)
-				}
-			}()
 
 			// Run the UUT.
 			configureIPPools(ctx, c, kubeadmConfig)
@@ -584,7 +596,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			// Set the env variables specified.
 			for _, env := range envList {
-				os.Setenv(env.key, env.value)
+				defer temporarilySetEnv(env.key, env.value)()
 			}
 
 			// Run the UUT.
@@ -738,7 +750,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 			nodeName := utils.DetermineNodeName()
 			node := getNode(ctx, c, nodeName)
 
-			os.Setenv("CLUSTER_TYPE", "theType")
+			defer temporarilySetEnv("CLUSTER_TYPE", "theType")()
 
 			localRancherState := &v1.ConfigMap{Data: map[string]string{"foo": "bar"}}
 			err = ensureDefaultConfig(ctx, cfg, c, node, OSTypeWindows, kubeadmConfig, localRancherState)
@@ -787,7 +799,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			_, err = c.ClusterInformation().Create(ctx, clusterInfo, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			os.Setenv("CLUSTER_TYPE", "theType")
+			defer temporarilySetEnv("CLUSTER_TYPE", "theType")()
 
 			err = ensureDefaultConfig(ctx, cfg, c, node, OSTypeLinux, kubeadmConfig, rancherState)
 			By("ensureDefaultConfig", func() {
@@ -837,7 +849,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			_, err = c.ClusterInformation().Create(ctx, clusterInfo, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			os.Setenv("CLUSTER_TYPE", "theType")
+			defer temporarilySetEnv("CLUSTER_TYPE", "theType")()
 
 			err = ensureDefaultConfig(ctx, cfg, c, node, OSTypeLinux, kubeadmConfig, rancherState)
 			By("ensureDefaultConfig", func() {
@@ -889,7 +901,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			_, err = c.ClusterInformation().Create(ctx, clusterInfo, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			os.Setenv("CLUSTER_TYPE", "")
+			defer temporarilySetEnv("CLUSTER_TYPE", "")()
 
 			err = ensureDefaultConfig(ctx, cfg, c, node, OSTypeLinux, kubeadmConfig, rancherState)
 			By("ensureDefaultConfig", func() {
@@ -937,7 +949,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 			_, err = c.ClusterInformation().Create(ctx, clusterInfo, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			os.Setenv("CLUSTER_TYPE", "type1,type1")
+			defer temporarilySetEnv("CLUSTER_TYPE", "type1,type1")()
 
 			err = ensureDefaultConfig(ctx, cfg, c, node, OSTypeLinux, kubeadmConfig, rancherState)
 			By("ensureDefaultConfig", func() {
@@ -962,7 +974,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 				node := &libapi.Node{}
 
 				for _, env := range envs {
-					os.Setenv(env.key, env.value)
+					defer temporarilySetEnv(env.key, env.value)()
 				}
 
 				Expect(configureNodeRef(node)).To(Equal(true))
@@ -979,15 +991,16 @@ var _ = Describe("FV tests against a real etcd", func() {
 			)
 
 			It("Should not configure any OrchRefs when no valid env vars are passed", func() {
-				os.Setenv("CALICO_UNKNOWN_NODE_REF", "node1")
+				defer temporarilySetEnv("CALICO_UNKNOWN_NODE_REF", "node1")()
 
 				node := &libapi.Node{}
 				Expect(configureNodeRef(node)).To(Equal(false))
 
 				Expect(node.Spec.OrchRefs).To(HaveLen(0))
 			})
+
 			It("Should not set an OrchRef if it is already set", func() {
-				os.Setenv("CALICO_K8S_NODE_REF", "node1")
+				defer temporarilySetEnv("CALICO_K8S_NODE_REF", "node1")()
 
 				node := &libapi.Node{}
 				node.Spec.OrchRefs = append(node.Spec.OrchRefs, libapi.OrchRef{NodeName: "node1", Orchestrator: "k8s"}) // nolint: vet
@@ -1055,7 +1068,7 @@ var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
 	DescribeTable("Test variations on how IPs are detected.",
 		func(node *libapi.Node, items []EnvItem, expected bool) {
 			for _, item := range items {
-				os.Setenv(item.key, item.value)
+				defer temporarilySetEnv(item.key, item.value)()
 			}
 
 			mockGetInterface := func([]string, []string, ...int) ([]autodetection.Interface, error) {
@@ -1083,7 +1096,7 @@ var _ = Describe("UT for autodetection method k8s-internal-ip", func() {
 	DescribeTable("Test variations on k8s-internal-ip",
 		func(node *libapi.Node, k8sNode *v1.Node, items []EnvItem, expected bool) {
 			for _, item := range items {
-				os.Setenv(item.key, item.value)
+				defer temporarilySetEnv(item.key, item.value)()
 			}
 
 			mockGetInterface := func([]string, []string, ...int) ([]autodetection.Interface, error) {
@@ -1130,7 +1143,7 @@ var _ = Describe("UT for node interface autodetection", func() {
 	DescribeTable("Test interface is correctly set on Node",
 		func(node *libapi.Node, k8sNode *v1.Node, items []EnvItem) {
 			for _, item := range items {
-				os.Setenv(item.key, item.value)
+				defer temporarilySetEnv(item.key, item.value)()
 			}
 
 			mockGetInterface := func([]string, []string, ...int) ([]autodetection.Interface, error) {
@@ -1229,12 +1242,12 @@ var _ = Describe("UT for node name determination", func() {
 	DescribeTable("Test variations on how node names are detected.",
 		func(nodenameEnv, hostnameEnv, expectedNodeName string) {
 			if nodenameEnv != "" {
-				os.Setenv("NODENAME", nodenameEnv)
+				defer temporarilySetEnv("NODENAME", nodenameEnv)()
 			} else {
 				os.Unsetenv("NODENAME")
 			}
 			if hostnameEnv != "" {
-				os.Setenv("HOSTNAME", hostnameEnv)
+				defer temporarilySetEnv("HOSTNAME", hostnameEnv)()
 			} else {
 				os.Unsetenv("HOSTNAME")
 			}
@@ -1409,11 +1422,11 @@ var _ = DescribeTable("UT for extractKubeadmCIDRs",
 
 var _ = Describe("UTs for monitor-addresses option", func() {
 	It("poll-interval handles invalid values", func() {
-		os.Setenv("AUTODETECT_POLL_INTERVAL", "foobar")
+		defer temporarilySetEnv("AUTODETECT_POLL_INTERVAL", "foobar")()
 		Expect(getMonitorPollInterval()).To(Equal(DEFAULT_MONITOR_IP_POLL_INTERVAL))
 	})
 	It("poll-interval handles valid values", func() {
-		os.Setenv("AUTODETECT_POLL_INTERVAL", "30m")
+		defer temporarilySetEnv("AUTODETECT_POLL_INTERVAL", "30m")()
 		Expect(getMonitorPollInterval()).To(Equal(30 * time.Minute))
 	})
 })
