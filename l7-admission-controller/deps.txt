@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.24.6
+go 1.25.1
 dario.cat/mergo v1.0.1
 github.com/fxamacker/cbor/v2 v2.7.0
 github.com/go-logr/logr v1.4.3
