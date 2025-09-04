@@ -73,7 +73,8 @@ const (
 	ChainMangleOutputTProxy            = ChainNamePrefix + "out-mangle-tproxy"
 	ChainMangleOutputTProxyHostNet     = ChainNamePrefix + "out-mangle-tproxy-host"
 
-	ChainEgressDSCP = ChainNamePrefix + "egress-dscp"
+	ChainEgressDSCP      = ChainNamePrefix + "egress-dscp"
+	IPSetIDDSCPEndpoints = "dscp-src-net"
 
 	IPSetIDAllPools             = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
