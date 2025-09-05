@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -650,32 +650,25 @@ func (c *KubeClient) EnsureInitialized() error {
 // Remove Calico-creatable data from the datastore.  This is purely used for the
 // test framework.
 func (c *KubeClient) Clean() error {
-	log.Warning("Cleaning KDD of all Calico-creatable data")
+	timeout := 2 * time.Minute
+	log.Warningf("Cleaning KDD of all Calico-creatable data: timeout %v", timeout)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-
-	// Need two layers of errgroup because we schedule deletion work from the
-	// list go-routines.  If we scheduled it on the same errgroup then it could
-	// deadlock.
-	var listEG, delEG errgroup.Group
-	listEG.SetLimit(runtime.NumCPU() / 2)
-	delEG.SetLimit(runtime.NumCPU() / 2)
 
 	// First delete "normal" resources by kind.
 	kinds := []string{
 		apiv3.KindBGPConfiguration,
 		apiv3.KindBGPPeer,
-		apiv3.KindBGPFilter,
 		apiv3.KindClusterInformation,
 		apiv3.KindCalicoNodeStatus,
-		apiv3.KindTier,
+		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
+		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
-		apiv3.KindUISettings,
-		apiv3.KindUISettingsGroup,
+		apiv3.KindTier,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
@@ -684,11 +677,10 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindKubeControllersConfiguration,
 		libapiv3.KindIPAMConfig,
 		libapiv3.KindBlockAffinity,
-		apiv3.KindFelixConfiguration,
+		apiv3.KindBGPFilter,
 
 		// Enterprise
 		apiv3.KindLicenseKey,
-		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		apiv3.KindPolicyRecommendationScope,
@@ -708,6 +700,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindEgressGatewayPolicy,
 		apiv3.KindSecurityEventWebhook,
 		apiv3.KindBFDConfiguration,
+		apiv3.KindUISettings,
+		apiv3.KindUISettingsGroup,
 	}
 
 	// Deletion can fail due to CAS conflicts if multiple resources are
@@ -721,6 +715,13 @@ func (c *KubeClient) Clean() error {
 			kindsWithProblems.Add(k)
 		}
 
+		// Need two layers of errgroup because we schedule deletion work from the
+		// list go-routines.  If we scheduled it on the same errgroup then it could
+		// deadlock.
+		var listEG, delEG errgroup.Group
+		listEG.SetLimit(runtime.NumCPU() / 2)
+		delEG.SetLimit(runtime.NumCPU() / 2)
+
 		for _, k := range kinds {
 			listEG.Go(func() error {
 				lo := model.ResourceListOptions{Kind: k}
@@ -732,7 +733,7 @@ func (c *KubeClient) Clean() error {
 					for _, r := range rs.KVPairs {
 						delEG.Go(func() error {
 							if _, err := c.DeleteKVP(ctx, r); err != nil {
-								log.WithField("Key", r.Key).Warning("Failed to delete entry from KDD")
+								log.WithError(err).WithField("Key", r.Key).Warning("Failed to delete entry from KDD")
 								recordKindProblem(k)
 							}
 							return nil // Problems are reported through kindsWithProblems set.
@@ -742,12 +743,19 @@ func (c *KubeClient) Clean() error {
 				return nil
 			})
 		}
-		_ = listEG.Wait()
-		_ = delEG.Wait()
+		err := listEG.Wait()
+		if err != nil {
+			log.WithError(err).Error("Unexpected error during listing")
+		}
+		err = delEG.Wait()
+		if err != nil {
+			log.WithError(err).Error("Unexpected error from deletion errgroup")
+		}
 
 		if len(kindsWithProblems) == 0 {
 			break
 		}
+		// Retry only the kinds that had problems on the next attempt.
 		kinds = kindsWithProblems.Slice()
 		kindsWithProblems.Clear()
 	}
@@ -770,6 +778,13 @@ func (c *KubeClient) Clean() error {
 			listIfaceProblems.Add(l)
 		}
 
+		// Need two layers of errgroup because we schedule deletion work from the
+		// list go-routines.  If we scheduled it on the same errgroup then it could
+		// deadlock.
+		var listEG, delEG errgroup.Group
+		listEG.SetLimit(runtime.NumCPU() / 2)
+		delEG.SetLimit(runtime.NumCPU() / 2)
+
 		for _, li := range listIfaces {
 			listEG.Go(func() error {
 				if rs, err := c.List(ctx, li, ""); err != nil {
@@ -789,12 +804,19 @@ func (c *KubeClient) Clean() error {
 				return nil
 			})
 		}
-		_ = listEG.Wait()
-		_ = delEG.Wait()
+		err := listEG.Wait()
+		if err != nil {
+			log.WithError(err).Error("Unexpected error during listing")
+		}
+		err = delEG.Wait()
+		if err != nil {
+			log.WithError(err).Error("Unexpected error from deletion errgroup")
+		}
 
 		if listIfaceProblems.Len() == 0 {
 			break
 		}
+		// Retry only the list ifaces that had problems on the next attempt.
 		listIfaces = listIfaceProblems.Slice()
 		listIfaceProblems.Clear()
 	}
