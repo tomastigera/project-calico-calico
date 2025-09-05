@@ -200,7 +200,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
 		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 &&
-			fl.FlowReportedStats.TransitPacketsIn+fl.FlowReportedStats.TransitPacketsOut == 0 {
+			fl.FlowProcessReportedStats.TransitPacketsOut+fl.FlowProcessReportedStats.TransitPacketsIn == 0 {
 			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}
@@ -243,6 +243,12 @@ func (t *FlowTester) CheckFlow(fl flowlog.FlowLog) {
 		}
 		if fl.PacketsOut != existing.PacketsOut {
 			errs = append(errs, fmt.Sprintf("PacketsOut actual != expected (%d != %d)", existing.PacketsOut, fl.PacketsOut))
+		}
+		if fl.TransitPacketsIn != existing.TransitPacketsIn {
+			errs = append(errs, fmt.Sprintf("TransitPacketsIn actual != expected (%d != %d)", existing.TransitPacketsIn, fl.TransitPacketsIn))
+		}
+		if fl.TransitPacketsOut != existing.TransitPacketsOut {
+			errs = append(errs, fmt.Sprintf("TransitPacketsOut actual != expected (%d != %d)", existing.TransitPacketsOut, fl.TransitPacketsOut))
 		}
 	}
 
