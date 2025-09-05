@@ -90,6 +90,7 @@ type Config struct {
 	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 	FluentdHTTPPath              string `default:"https://fluentd-http-input.tigera-fluentd.svc.cluster.local:9880" split_words:"true"`
 	FluentdCABundlePath          string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
+	TigeraIssuerCABundlePath     string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	LinseedEndpoint     string `default:"https://tigera-linseed.tigera-elasticsearch.svc.cluster.local" split_words:"true"`
 	LinseedCABundlePath string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`

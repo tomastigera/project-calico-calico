@@ -4,22 +4,29 @@ package auth
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
-	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/lma/pkg/cache"
+	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
 // Common claim names
@@ -103,6 +110,65 @@ func (k *k8sAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatus
 	}, http.StatusOK, nil
 }
 
+type tigeraAuthn struct {
+	k8sClient kubernetes.Interface
+	publicKey *rsa.PublicKey
+}
+
+func (n *tigeraAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatusCode int, err error) {
+	_, err = jws.ParseJWTFromRequest(r)
+	if err != nil {
+		return nil, http.StatusUnauthorized, jws.ErrNoTokenInRequest
+	}
+	authHeader := r.Header.Get("Authorization")
+
+	// Strip the "Bearer " part of the token.
+	token := authHeader[7:]
+	// Parse the JWT claims.
+	claims := &jwt.RegisteredClaims{}
+	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return n.publicKey, nil
+	})
+	// jwt.ParseWithClaims automatically validates time-based claims ("exp", "iat", "nbf")
+	// by calling claims.Valid(). Therefore, token.Valid ensures these claims are checked.
+	if err != nil || !tkn.Valid {
+		return nil, http.StatusUnauthorized, err
+	}
+
+	// Must match Tigera issuer
+	if claims.Issuer != nonclusterhost.TigeraIssuer {
+		return nil, http.StatusUnauthorized, fmt.Errorf("invalid issuer")
+	}
+	// Audience must match tigera-manager
+	if len(claims.Audience) != 1 || claims.Audience[0] != nonclusterhost.TigeraManagerAudience {
+		return nil, http.StatusUnauthorized, fmt.Errorf("invalid audience")
+	}
+
+	// Service account must exist in the cluster
+	namespace, name, err := serviceaccount.SplitUsername(claims.Subject)
+	if err != nil {
+		return nil, http.StatusUnauthorized, err
+	}
+
+	sa, err := n.k8sClient.CoreV1().ServiceAccounts(namespace).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		return nil, http.StatusUnauthorized, err
+	}
+
+	return &user.DefaultInfo{
+		Name: claims.Subject,
+		UID:  string(sa.UID),
+		Groups: []string{
+			serviceaccount.AllServiceAccountsGroup,
+			"system:authenticated",
+			fmt.Sprintf("%s%s", serviceaccount.ServiceAccountGroupPrefix, sa.Namespace),
+		},
+	}, http.StatusOK, nil
+}
+
 // WithAuthenticator adds an authenticator for a specific token issuer.
 func WithAuthenticator(issuer string, authenticator Authenticator) JWTAuthOption {
 	return func(a *jwtAuthConfig) error {
@@ -163,6 +229,33 @@ func WithAuthzCacheTTL(ctx context.Context, ttl time.Duration) JWTAuthOption {
 	}
 }
 
+func WithTigeraIssuerPublicKey(certPath string) JWTAuthOption {
+	return func(c *jwtAuthConfig) error {
+		certPEM, err := os.ReadFile(certPath)
+		if err != nil {
+			return err
+		}
+
+		block, _ := pem.Decode(certPEM)
+		if block == nil || block.Type != "CERTIFICATE" {
+			return fmt.Errorf("failed to decode certificate PEM")
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return err
+		}
+
+		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return fmt.Errorf("failed to assert public key type")
+		}
+
+		c.tigeraIssuerPublicKey = pubKey
+		return nil
+	}
+}
+
 // NewJWTAuth creates an object adhering to the Auth interface. It can perform authN and authZ.
 func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ...JWTAuthOption) (JWTAuth, error) {
 	// This will return an error when:
@@ -193,6 +286,12 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 		}
 	}
 
+	// tigeraAuthn is the authenticator for tokens issued by the Tigera issuer.
+	cfg.authenticators[nonclusterhost.TigeraIssuer] = &tigeraAuthn{
+		k8sClient: k8sCli,
+		publicKey: cfg.tigeraIssuerPublicKey,
+	}
+	// k8sAuthn is the authenticator for tokens issued by the Kubernetes API server.
 	authn := &k8sAuthn{cfg.tokenReviewer}
 
 	jAuth := &jwtAuth{
@@ -224,6 +323,9 @@ type jwtAuthConfig struct {
 	// these values are stored to ensure their WithXXX functions are not run more than once
 	tokenReviewCacheTTL time.Duration
 	authzCacheTTL       time.Duration
+
+	// TigeraAuthPublicKey is the public key used to verify JWTs issued by the Tigera issuer.
+	tigeraIssuerPublicKey *rsa.PublicKey
 }
 
 // Authenticate checks if a request is authenticated. It accepts only JWT bearer tokens.
@@ -324,7 +426,7 @@ func extractUserFromImpersonationHeaders(req *http.Request) (user.Info, error) {
 // and authz come into play when authenticating.
 func buildResourceAttributesForImpersonation(usr user.Info) []*authzv1.ResourceAttributes {
 	var result []*authzv1.ResourceAttributes
-	namespace, name, err := k8sserviceaccount.SplitUsername(usr.GetName())
+	namespace, name, err := serviceaccount.SplitUsername(usr.GetName())
 	if err == nil {
 		result = append(result, &authzv1.ResourceAttributes{
 			Verb:      "impersonate",

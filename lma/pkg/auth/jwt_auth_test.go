@@ -4,8 +4,10 @@ package auth_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +15,10 @@ import (
 	. "github.com/onsi/gomega"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	apiserverserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -23,7 +28,14 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 )
 
-var _ = Describe("Test dex username prefixes", func() {
+var (
+	//go:embed testdata/tigera-issuer.crt
+	tigeraIssuerPublicCert []byte
+	//go:embed testdata/tigera-issuer.jwt
+	tigeraIssuedJWT string
+)
+
+var _ = Describe("JWT authentication tests", func() {
 
 	const (
 		iss           = "https://127.0.0.1:9443/dex"
@@ -64,7 +76,7 @@ var _ = Describe("Test dex username prefixes", func() {
 
 		usr, stat, err := jwtAuth.Authenticate(req)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat).To(Equal(200))
+		Expect(stat).To(Equal(http.StatusOK))
 		Expect(usr.GetName()).To(Equal("tigera-prometheus:default"))
 	})
 
@@ -72,7 +84,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		req := &http.Request{}
 		usr, stat, err := jwtAuth.Authenticate(req)
 		Expect(err).To(HaveOccurred())
-		Expect(stat).To(Equal(401))
+		Expect(stat).To(Equal(http.StatusUnauthorized))
 		Expect(usr).To(BeNil())
 	})
 
@@ -89,10 +101,46 @@ var _ = Describe("Test dex username prefixes", func() {
 
 		usr, stat, err := jwtAuth.Authenticate(req)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat).To(Equal(200))
+		Expect(stat).To(Equal(http.StatusOK))
 		Expect(usr.GetName()).To(Equal("jane"))
 		Expect(usr.GetGroups()).To(HaveLen(1))
 		Expect(usr.GetGroups()[0]).To(Equal("admin"))
+	})
+
+	It("Should authenticate when the JWT token is issued by Tigera", func() {
+		saNamespace := "calico-system"
+		saName := "tigera-noncluster-host"
+
+		fakeK8sCli = fake.NewSimpleClientset()
+		sa, err := fakeK8sCli.CoreV1().ServiceAccounts(saNamespace).Create(context.TODO(), &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      saName,
+				Namespace: saNamespace,
+			},
+		}, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		hdrs := http.Header{}
+		hdrs.Set("Authorization", "Bearer "+tigeraIssuedJWT)
+		req := &http.Request{Header: hdrs}
+
+		tmpFile, err := os.CreateTemp("", "tigera-issuer-*.crt")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+		_, err = tmpFile.Write(tigeraIssuerPublicCert)
+		Expect(err).NotTo(HaveOccurred())
+
+		jwtAuth, err = newJWTAuth(auth.WithTigeraIssuerPublicKey(tmpFile.Name()))
+		Expect(err).NotTo(HaveOccurred())
+
+		usr, stat, err := jwtAuth.Authenticate(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat).To(Equal(http.StatusOK))
+		Expect(usr.GetName()).To(Equal(apiserverserviceaccount.MakeUsername(saNamespace, saName)))
+		Expect(usr.GetUID()).To(Equal(string(sa.UID)))
+		Expect(usr.GetGroups()).To(HaveLen(3))
+		Expect(usr.GetGroups()).To(Equal([]string{"system:serviceaccounts", "system:authenticated", "system:serviceaccounts:calico-system"}))
 	})
 
 	It("Should cache impersonation authorizations by token when caching is enabled", func() {
@@ -122,7 +170,7 @@ var _ = Describe("Test dex username prefixes", func() {
 
 		usr, stat, err := jwtAuth.Authenticate(newRequest(impersonatingJWT, "jane", "admin"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat).To(Equal(200))
+		Expect(stat).To(Equal(http.StatusOK))
 		Expect(usr.GetName()).To(Equal("jane"))
 		Expect(usr.GetGroups()).To(HaveLen(1))
 		Expect(usr.GetGroups()[0]).To(Equal("admin"))
@@ -131,7 +179,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		By("impersonating a different user should not return cached results")
 		usr, stat, err = jwtAuth.Authenticate(newRequest(impersonatingJWT, "bob", "admin"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat).To(Equal(200))
+		Expect(stat).To(Equal(http.StatusOK))
 		Expect(usr.GetName()).To(Equal("bob"))
 		Expect(usr.GetGroups()).To(HaveLen(1))
 		Expect(usr.GetGroups()[0]).To(Equal("admin"))
@@ -140,17 +188,17 @@ var _ = Describe("Test dex username prefixes", func() {
 		By("using a different token should not return cached results")
 		usr, stat, err = jwtAuth.Authenticate(newRequest(otherJWT, "jane", "admin"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat).To(Equal(200))
+		Expect(stat).To(Equal(http.StatusOK))
 		Expect(usr.GetName()).To(Equal("jane"))
 		Expect(usr.GetGroups()).To(HaveLen(1))
 		Expect(usr.GetGroups()[0]).To(Equal("admin"))
 		Expect(accessReviewCallCounter.Load()).To(Equal(int32(5))) // new token so a call for each header
 
 		By("repeating the same calls should return cached results")
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			usr, stat, err = jwtAuth.Authenticate(newRequest(otherJWT, "jane", "admin"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stat).To(Equal(200))
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(usr.GetName()).To(Equal("jane"))
 			Expect(usr.GetGroups()).To(HaveLen(1))
 			Expect(usr.GetGroups()[0]).To(Equal("admin"))
@@ -171,7 +219,7 @@ var _ = Describe("Test dex username prefixes", func() {
 
 		_, stat, err := jwtAuth.Authenticate(req)
 		Expect(err).To(HaveOccurred())
-		Expect(stat).To(Equal(401))
+		Expect(stat).To(Equal(http.StatusUnauthorized))
 	})
 })
 

@@ -24,7 +24,8 @@ import (
 const (
 	// TigeraIssuer name should match the value of OperatorCSRSignerName in Tigera operator's certificatemanager.
 	// See: https://github.com/tigera/operator/blob/b4c2b9b3e7acef144ef8f38929f1ab3321526a05/pkg/controller/certificatemanager/certificatemanager.go#L50
-	TigeraIssuer = "tigera.io/operator-signer"
+	TigeraIssuer          = "tigera.io/operator-signer"
+	TigeraManagerAudience = "tigera-manager"
 
 	currentContextName        = "noncluster-hosts"
 	tigeraOperatorNamespace   = "tigera-operator"
@@ -182,7 +183,7 @@ func (c *ConfigGenerator) createToken(ctx context.Context) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   apiserverserviceaccount.MakeUsername(sa.Namespace, sa.Name),
 			Issuer:    TigeraIssuer,
-			Audience:  jwt.ClaimStrings{"tigera-manager"},
+			Audience:  jwt.ClaimStrings{TigeraManagerAudience},
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 		},
