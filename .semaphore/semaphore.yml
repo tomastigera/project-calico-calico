@@ -354,7 +354,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
   - name: calicoctl
     run:
-      when: "false or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/api/', '/calicoctl/', '/libcalico-go/', '/licensing/', '/hack/test/certs/', '/pkg/nonclusterhost/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -995,7 +995,7 @@ blocks:
         - name: test-customer-license
   - name: pkg
     run:
-      when: "false or change_in(['/pkg/'])"
+      when: "false or change_in(['/lib/std/', '/pkg/'])"
     dependencies:
       - Prerequisites
     task:

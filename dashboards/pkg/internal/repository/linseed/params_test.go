@@ -35,6 +35,10 @@ func TestParams(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeIP, clientIPField.Type())
 
+	destDomainsField, found := collectionsMap[collections.CollectionNameFlows].Field("dest_domains")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeDestDomains, destDomainsField.Type())
+
 	policyTypeField, found := collectionsMap[collections.CollectionNameFlows].Field(collections.FieldNamePolicyType)
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, policyTypeField.Type())
@@ -273,56 +277,59 @@ func TestParams(t *testing.T) {
 				})
 			})
 
-			t.Run("policy match", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-				require.NoError(t, err)
+			t.Run("policy type", func(t *testing.T) {
 
-				err = subject.setCriteria(filters.Criteria{
-					filters.NewEquals(policyTypeField, "staged", false),
-				}, time.Time{})
-				require.NoError(t, err)
-
-				require.Equal(t, &queryParams{
-					policyMatches: []lsv1.PolicyMatch{
-						{Staged: true},
+				testCases := []struct {
+					name             string
+					filter           filters.Criterion
+					expectedSelector string
+				}{
+					{
+						name:             "staged",
+						filter:           filters.NewEquals(policyTypeField, "staged", false),
+						expectedSelector: `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`,
 					},
-					domainMatches: map[lsv1.DomainMatchType][]string{
-						lsv1.DomainMatchQname:  nil,
-						lsv1.DomainMatchRRSet:  nil,
-						lsv1.DomainMatchRRData: nil,
+					{
+						name:             "staged negated",
+						filter:           filters.NewEquals(policyTypeField, "staged", true),
+						expectedSelector: `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`,
 					},
-					linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-					linseedQuerySortParams: lsv1.QuerySortParams{
-						Sort: []lsv1.SearchRequestSortBy{
-							{Field: "start_time", Descending: true},
-						},
+					{
+						name:             "enforced",
+						filter:           filters.NewEquals(policyTypeField, "enforced", false),
+						expectedSelector: `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`,
 					},
-				}, subject)
+					{
+						name:             "enforced negated",
+						filter:           filters.NewEquals(policyTypeField, "enforced", true),
+						expectedSelector: `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`,
+					},
+				}
 
-				t.Run("negated", func(t *testing.T) {
-					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
-					require.NoError(t, err)
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+						require.NoError(t, err)
 
-					err = subject.setCriteria(filters.Criteria{
-						filters.NewEquals(policyTypeField, "staged", true),
-					}, time.Time{})
-					require.NoError(t, err)
+						err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
+						require.NoError(t, err)
 
-					require.Equal(t, &queryParams{
-						policyMatches: nil,
-						domainMatches: map[lsv1.DomainMatchType][]string{
-							lsv1.DomainMatchQname:  nil,
-							lsv1.DomainMatchRRSet:  nil,
-							lsv1.DomainMatchRRData: nil,
-						},
-						linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
-						linseedQuerySortParams: lsv1.QuerySortParams{
-							Sort: []lsv1.SearchRequestSortBy{
-								{Field: "start_time", Descending: true},
+						require.Equal(t, &queryParams{
+							domainMatches: map[lsv1.DomainMatchType][]string{
+								lsv1.DomainMatchQname:  nil,
+								lsv1.DomainMatchRRSet:  nil,
+								lsv1.DomainMatchRRData: nil,
 							},
-						},
-					}, subject)
-				})
+							linseedQueryParams: lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
+							linseedQuerySortParams: lsv1.QuerySortParams{
+								Sort: []lsv1.SearchRequestSortBy{
+									{Field: "start_time", Descending: true},
+								},
+							},
+							selector: tc.expectedSelector,
+						}, subject)
+					})
+				}
 			})
 
 			t.Run("invalid numbers", func(t *testing.T) {
@@ -364,8 +371,7 @@ func TestParams(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
-					selector:      `NOT "rrsets.type" = "SOA"`,
-					policyMatches: nil,
+					selector: `NOT "rrsets.type" = "SOA"`,
 					domainMatches: map[lsv1.DomainMatchType][]string{
 						lsv1.DomainMatchQname:  nil,
 						lsv1.DomainMatchRRSet:  nil,
@@ -408,6 +414,16 @@ func TestParams(t *testing.T) {
 					name:             "labels field type negated",
 					filter:           filters.NewExists(labelsField, true),
 					expectedSelector: `"dest_labels.labels" NOTIN {"*"}`,
+				},
+				{
+					name:             "dest_domains",
+					filter:           filters.NewExists(destDomainsField, false),
+					expectedSelector: `NOT dest_domains EMPTY`,
+				},
+				{
+					name:             "dest_domains negated",
+					filter:           filters.NewExists(destDomainsField, true),
+					expectedSelector: `dest_domains EMPTY`,
 				},
 			}
 

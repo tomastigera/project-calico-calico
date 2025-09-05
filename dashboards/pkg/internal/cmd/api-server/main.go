@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	logger = logging.New("cc-dashboard-query-api")
+	logger = logging.New("dashboard-query-api")
 	ready  bool
 )
 
@@ -38,8 +38,13 @@ func main() {
 	defer cancel()
 
 	cfg := &config.Config{}
-	if err := envconfig.Process("CC_DASHBOARD_QUERY_API", cfg); err != nil {
+	if err := envconfig.Process("", cfg); err != nil {
 		logger.Error("failed to process config", logging.Error(err))
+		os.Exit(1)
+	}
+
+	if cfg.ProductMode != config.ProductModeEnterprise && cfg.ProductMode != config.ProductModeCloud {
+		logger.Error("invalid product mode", logging.String("productMode", cfg.ProductMode))
 		os.Exit(1)
 	}
 

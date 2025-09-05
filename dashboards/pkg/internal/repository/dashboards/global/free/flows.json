@@ -1,0 +1,301 @@
+{
+  "title": "Flow Logs",
+  "id": "3",
+  "defaultFilters": [],
+  "isImmutable": true,
+  "cards": [
+    {
+      "title": "Flow Count",
+      "id": "ce394a3e-d73e-4280-81df-305f9159ab3f",
+      "chart": {
+        "type": "areatimeseries",
+        "yAxisLabel": "flow"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "end_time"
+          },
+          {
+            "fieldName": "action",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_num_flows": {
+            "fieldName": "num_flows",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes Out - Source Namespace",
+      "id": "5a612972-cae9-461c-924d-cada7f36f10e",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes In - Destination Namespace",
+      "id": "a4505a21-5e62-405f-b6df-9c6d6460acb2",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Unique Ports",
+      "id": "904c86bd-f496-40ea-9316-3460b5e2def7",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "dest_port", "label": "Top values of Dst Port" },
+          { "field": "count", "label": "Count of records" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_port",
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Flow Summary",
+      "id": "c969f0fa-2547-455c-be10-aeed2465b361",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          { "field": "dest_name_aggr", "label": "Dst Name" },
+          { "field": "dest_port", "label": "Dst Port" },
+          { "field": "count", "label": "Count of records" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "source_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_port",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Flows By Time",
+      "id": "ba2dc2d7-7153-48cc-aa1a-10a29b02cb55",
+      "chart": {
+        "type": "bartimeseries",
+        "xAxisLabel": "Time",
+        "yAxisLabel": "Flows",
+        "maxXValues": 20
+      },
+      "query": {
+        "collectionName": "flows",
+        "aggregations": {
+          "#flows": {
+            "fieldName": "num_flows",
+            "function": {
+              "type": "sum"
+            }
+          }
+        },
+        "filters": [],
+        "groupBys": [
+          {
+            "fieldName": "end_time",
+            "interval": "PT2M"
+          }
+        ],
+        "maxDocs": 0
+      }
+    },
+    {
+      "title": "Flow Logs",
+      "id": "ece2f229-b72c-4443-abdd-ce32b1550e53",
+      "chart": {
+        "type": "logtable"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          {
+            "field": "dest_service_name",
+            "label": "Dst Service Name"
+          },
+          { "field": "dest_name_aggr", "label": "Dst Name" },
+          { "field": "action", "label": "Action" },
+          { "field": "reporter", "label": "Reporter" },
+          { "field": "cluster", "label": "Cluster" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 100
+      }
+    }
+  ],
+  "layout": [
+    {
+      "i": "ce394a3e-d73e-4280-81df-305f9159ab3f",
+      "x": 0,
+      "y": 0,
+      "w": 4,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "5a612972-cae9-461c-924d-cada7f36f10e",
+      "x": 0,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "a4505a21-5e62-405f-b6df-9c6d6460acb2",
+      "x": 2,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "904c86bd-f496-40ea-9316-3460b5e2def7",
+      "x": 2,
+      "y": 6,
+      "w": 4,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "c969f0fa-2547-455c-be10-aeed2465b361",
+      "x": 0,
+      "y": 8,
+      "w": 4,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "ba2dc2d7-7153-48cc-aa1a-10a29b02cb55",
+      "x": 0,
+      "y": 10,
+      "w": 4,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "ece2f229-b72c-4443-abdd-ce32b1550e53",
+      "x": 0,
+      "y": 12,
+      "w": 4,
+      "h": 4,
+      "minH": 2,
+      "isResizable": true
+    }
+  ]
+}

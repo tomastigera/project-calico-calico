@@ -1351,7 +1351,7 @@ func (c *collector) getInterfaceName(pktInfo *types.PacketInfo) string {
 
 	link, err := c.netlinkList.LinkByIndex(interfaceIndex)
 	if err != nil {
-		log.WithError(err).WithField("index", interfaceIndex).Warn("Failed to get interface name by index")
+		log.WithError(err).WithField("index", interfaceIndex).Debug("Failed to get interface name by index")
 		return ""
 	}
 	// Return the interface name.

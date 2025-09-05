@@ -37,6 +37,5 @@ func ValidateEnvVars() {
 func getCloudManagedClusterControllerManagers(esK8sREST relastic.RESTClient, esClientBuilder elasticsearch.ClientBuilder, cfg config.RunConfig) []managedcluster.ControllerManager {
 	return []managedcluster.ControllerManager{
 		managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
-		managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
 	}
 }

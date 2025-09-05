@@ -20,11 +20,14 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -1283,14 +1286,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	wepPortStr := fmt.Sprintf("%d", wepPort)
 	svcPortStr := fmt.Sprintf("%d", svcPort)
 	clusterIP := "10.101.0.10"
+	interfaceName := "eth0"
 
 	var (
-		infra                      infrastructure.DatastoreInfra
-		opts                       infrastructure.TopologyOptions
-		tc                         infrastructure.TopologyContainers
-		client                     client.Interface
-		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
-		cc                         *connectivity.Checker
+		infra               infrastructure.DatastoreInfra
+		opts                infrastructure.TopologyOptions
+		tc                  infrastructure.TopologyContainers
+		client              client.Interface
+		ep1_1, ep2_1, ep2_3 *workload.Workload
+		cc                  *connectivity.Checker
 	)
 
 	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
@@ -1300,6 +1304,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 		opts.IPIPMode = api.IPIPModeNever
+		opts.EnableIPv6 = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "5"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
@@ -1329,16 +1334,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
-		ep2_2 = workload.Run(tc.Felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
-		ep2_2.ConfigureInInfra(infra)
-
 		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
 
 		// Create a workload on host 2.
 		var heps []api.HostEndpoint
 		for _, f := range tc.Felixes {
-			hep, err := createHEP(f, client)
+			hep, err := createHEP(f, client, interfaceName)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() error {
 				return verifyHostEndpointRules(f, bpfEnabled)
@@ -1352,6 +1354,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		tier.Name = "tier1"
 		tier.Spec.Order = &float1_0
 		_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
 
 		tier2 := api.NewTier()
 		tier2.Name = "tier2"
@@ -1368,7 +1371,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		gnpfwd.Spec.ApplyOnForward = true
 		gnpfwd.Spec.Types = []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}
 		gnpfwd.Spec.Egress = []api.Rule{
-			{Action: api.Pass},
+			{Action: api.Allow},
 		}
 		gnpfwd.Spec.Ingress = []api.Rule{
 			{
@@ -1377,22 +1380,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 					Nets: []string{"10.65.1.2/32"},
 				},
 			},
-			{Action: api.Pass},
+			{Action: api.Allow},
 		}
 		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnpfwd, utils.NoOptions)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create a policy with applyOnForward that allows all traffic to/from the host endpoint.
-		gnpfwdallow := api.NewGlobalNetworkPolicy()
-		gnpfwdallow.Name = "tier2.forward-policy2"
-		gnpfwdallow.Spec.Order = &float2_0
-		gnpfwdallow.Spec.Tier = tier2.Name
-		gnpfwdallow.Spec.Selector = "host-endpoint=='true'"
-		gnpfwdallow.Spec.ApplyOnForward = true
-		gnpfwdallow.Spec.Types = []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}
-		gnpfwdallow.Spec.Egress = []api.Rule{{Action: api.Allow}}
-		gnpfwdallow.Spec.Ingress = []api.Rule{{Action: api.Allow}}
-		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnpfwdallow, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Allow all traffic to ep2-1
@@ -1408,17 +1398,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-			Eventually(getRuleFuncTable(tc.Felixes[0], "PPE0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier2.forward-policy2", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|tier2.gnp-ep2-1-allow-ingress", "filter"), "10s", "1s").Should(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[1], "DPI0|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[1], "PPI1|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFuncTable(tc.Felixes[1], "API0|tier2.forward-policy2", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[1], "API1|tier1.forward-policy1", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFuncTable(tc.Felixes[1], "API0|tier2.gnp-ep2-1-allow-ingress", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			// TODO(dimitrin): Add waits for forward policies to be programmed, when supported.
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "tier2.gnp-ep2-1-allow-ingress", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], interfaceName, "egress", "tier1.forward-policy1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], interfaceName, "ingress", "tier1.forward-policy1", `action:"deny"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], interfaceName, "ingress", "tier1.forward-policy1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName, "ingress", "tier2.gnp-ep2-1-allow-ingress", `action:"allow"`)
 		}
 
 		if !bpfEnabled {
@@ -1437,8 +1426,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	It("should get expected flow logs for allowed forward policies", func() {
 		// Describe the connectivity that we now expect.
 		cc = &connectivity.Checker{}
-		cc.ExpectSome(ep1_1, ep2_1) // allowed egress by profile and ingress by gnp-ep2-1
-		cc.ExpectSome(ep1_1, ep2_2) // allowed egress/ingress by forward-policy2
+		cc.ExpectSome(ep1_1, ep2_1)
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
@@ -1480,21 +1468,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 			Name:           ep2_1.Name,
 			AggregatedName: ep2_1.Name,
 		}
-		ep2_2_Meta := endpoint.Metadata{
-			Type:           "wep",
-			Namespace:      "default",
-			Name:           ep2_2.Name,
-			AggregatedName: ep2_2.Name,
-		}
 
 		ip1_1, ok := ip.ParseIPAs16Byte("10.65.0.0")
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ip2_2, ok := ip.ParseIPAs16Byte("10.65.1.1")
-		Expect(ok).To(BeTrue())
 		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_2_Tuple_Agg0 := tuple.Make(ip1_1, ip2_2, 6, flowlogs.SourcePortIsIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1522,46 +1501,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_2_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_2_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "src,fwd",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1597,46 +1540,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|tier2|tier2.gnp-ep2-1-allow-ingress|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|1":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|1": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_2_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_2_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "dst,fwd",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|1":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1654,7 +1561,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	It("should get expected flow logs for denied forward policies", func() {
 		// Describe the connectivity that we now expect.
 		cc = &connectivity.Checker{}
-		cc.ExpectNone(ep1_1, ep2_3) // denied by forward-policy1
+		cc.ExpectNone(ep1_1, ep2_3)
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
@@ -1726,13 +1633,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|pass|0":  {},
-						"1|tier2|tier2.forward-policy2|allow|0": {},
+						"0|tier1|tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1766,8 +1670,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
 							NumFlowsStarted: 3,
 						},
 					},
@@ -1794,14 +1696,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 			if bpfEnabled {
 				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")
-				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_2.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_3.InterfaceName, "all", "--asm")
 			}
 		}
 
 		ep1_1.Stop()
 		ep2_1.Stop()
-		ep2_2.Stop()
 		ep2_3.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
@@ -1817,16 +1717,601 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	})
 })
 
-func createHEP(f *infrastructure.Felix, client client.Interface) (hep *api.HostEndpoint, err error) {
+// PreDNAT policy flow log tests.
+var _ = infrastructure.DatastoreDescribe(
+	"_BPF-SAFE_ flow log with PreDNAT policy tests",
+	[]apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes},
+	func(getInfra infrastructure.InfraFactory) {
+		const (
+			nodePort       = 32010
+			wepPort        = 8055
+			svcPort80      = 80
+			svcPort81      = 81
+			extIP1, extIP2 = "10.1.2.3", "10.1.2.4"
+		)
+		wepPortStr := fmt.Sprintf("%d", wepPort)
+
+		var (
+			infra          infrastructure.DatastoreInfra
+			opts           infrastructure.TopologyOptions
+			tc             infrastructure.TopologyContainers
+			client         client.Interface
+			ep1_1, ep1_2   *workload.Workload
+			externalClient *containers.Container
+		)
+
+		bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
+
+		BeforeEach(func() {
+			if NFTMode() {
+				Skip("Not supported in NFT mode")
+			}
+
+			infra = getInfra()
+			opts = infrastructure.DefaultTopologyOptions()
+			opts.FlowLogSource = infrastructure.FlowLogSourceFile
+			opts.IPIPMode = api.IPIPModeNever
+			opts.ExternalIPs = true
+			opts.EnableIPv6 = false
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "5"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
+			opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
+			opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancing"] = string(api.BPFConnectTimeLBDisabled)
+			opts.ExtraEnvVars["FELIX_BPFHostNetworkedNATWithoutCTLB"] = string(api.BPFHostNetworkedNATEnabled)
+			opts.ExtraEnvVars["FELIX_FLOWLOGSPOLICYSCOPE"] = "AllPolicies"
+
+			tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
+
+			if bpfEnabled {
+				ensureBPFProgramsAttached(tc.Felixes[0])
+			}
+
+			infra.AddDefaultAllow()
+
+			ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
+			ep1_1.ConfigureInInfra(infra)
+
+			ep1_2 = workload.Run(tc.Felixes[0], "ep1-2", "default", "10.65.0.1", wepPortStr, "tcp")
+			ep1_2.ConfigureInInfra(infra)
+
+			externalClient = infrastructure.RunExtClient("ext-client")
+			externalClient.Exec("ip", "r", "add", "10.65.0.0/24", "via", tc.Felixes[0].IP)
+			externalClient.Exec("ip", "r", "add", extIP1+"/32", "via", tc.Felixes[0].IP)
+			externalClient.Exec("ip", "r", "add", extIP2+"/32", "via", tc.Felixes[0].IP)
+		})
+
+		AfterEach(func() {
+			if CurrentGinkgoTestDescription().Failed {
+				for _, felix := range tc.Felixes {
+					logNFTDiags(felix)
+					felix.Exec("iptables-save", "-c")
+					felix.Exec("ipset", "list")
+					felix.Exec("ip", "r")
+					felix.Exec("ip", "a")
+				}
+				if bpfEnabled {
+					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
+					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_2.InterfaceName, "all", "--asm")
+					tc.Felixes[0].Exec("calico-bpf", "nat", "dump")
+				}
+			}
+			ep1_1.Stop()
+			ep1_2.Stop()
+			externalClient.Stop()
+			for _, f := range tc.Felixes {
+				if bpfEnabled {
+					f.Exec("calico-bpf", "connect-time", "clean")
+				}
+				f.Stop()
+			}
+			if CurrentGinkgoTestDescription().Failed {
+				infra.DumpErrorData()
+			}
+			infra.Stop()
+		})
+
+		Context("preDNAT policies applied", func() {
+			var (
+				tier                           *api.Tier
+				privateMeta                    endpoint.Metadata
+				ep1_1_Meta                     endpoint.Metadata
+				ep1_2_Meta                     endpoint.Metadata
+				ext_svc_80_Meta                flowlog.FlowService
+				ext_svc_81_Meta                flowlog.FlowService
+				external_to_ep1_1_80_Agg0      tuple.Tuple
+				external_to_ep1_2_81_Agg0      tuple.Tuple
+				external_to_extService_80_Agg0 tuple.Tuple
+				external_to_extService_81_Agg0 tuple.Tuple
+			)
+
+			tcp := numorstring.ProtocolFromString("TCP")
+			interfaceEth0 := "eth0"
+
+			denyPort81Policy := func() {
+				preDNATDenyServicePort81 := api.NewGlobalNetworkPolicy()
+				preDNATDenyServicePort81.Name = "tier1.prednat-deny-service-port-81-policy"
+				preDNATDenyServicePort81.Spec.Order = &float1_0
+				preDNATDenyServicePort81.Spec.Tier = tier.Name
+				preDNATDenyServicePort81.Spec.Selector = "host-endpoint=='true'"
+				preDNATDenyServicePort81.Spec.ApplyOnForward = true
+				preDNATDenyServicePort81.Spec.PreDNAT = true
+				preDNATDenyServicePort81.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+				preDNATDenyServicePort81.Spec.Ingress = []api.Rule{
+					{
+						Action:   api.Allow,
+						Protocol: &tcp,
+						Source: api.EntityRule{
+							Nets: []string{externalClient.IP + "/32"},
+						},
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(svcPort80)},
+						},
+					},
+					{
+						Action:   api.Deny,
+						Protocol: &tcp,
+						Source: api.EntityRule{
+							Nets: []string{externalClient.IP + "/32"},
+						},
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(svcPort81)},
+						},
+					},
+				}
+				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, preDNATDenyServicePort81, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				if !bpfEnabled {
+					Eventually(getRuleFuncTable(tc.Felixes[0], "API0|tier1.prednat-deny-service-port-81-policy", "mangle"), "10s", "1s").ShouldNot(HaveOccurred())
+					Eventually(getRuleFuncTable(tc.Felixes[0], "DPI1|tier1.prednat-deny-service-port-81-policy", "mangle"), "10s", "1s").ShouldNot(HaveOccurred())
+					Eventually(getRuleFuncTable(tc.Felixes[0], "API0|tier1.default-allow-prednat-policy", "mangle"), "10s", "1s").ShouldNot(HaveOccurred())
+				} else {
+					bpfWaitForPolicyRule(tc.Felixes[0], interfaceEth0, "ingress", "tier1.prednat-deny-service-port-81-policy", `action:"allow"`)
+					bpfWaitForPolicyRule(tc.Felixes[0], interfaceEth0, "ingress", "tier1.prednat-deny-service-port-81-policy", `action:"deny"`)
+					bpfWaitForPolicyRule(tc.Felixes[0], interfaceEth0, "ingress", "tier1.default-allow-prednat-policy", `action:"allow"`)
+				}
+			}
+
+			BeforeEach(func() {
+				service1Name := "load-balancer-service-1"
+				service2Name := "load-balancer-service-2"
+
+				privateMeta = endpoint.Metadata{
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pvt",
+				}
+				ep1_1_Meta = endpoint.Metadata{
+					Type:           "wep",
+					Namespace:      "default",
+					Name:           ep1_1.Name,
+					AggregatedName: ep1_1.Name,
+				}
+				ep1_2_Meta = endpoint.Metadata{
+					Type:           "wep",
+					Namespace:      "default",
+					Name:           ep1_2.Name,
+					AggregatedName: ep1_2.Name,
+				}
+				ext_svc_80_Meta = flowlog.FlowService{
+					Namespace: "default",
+					Name:      service1Name,
+					PortName:  fmt.Sprintf("port-%d", wepPort),
+					PortNum:   svcPort80,
+				}
+				ext_svc_81_Meta = flowlog.FlowService{
+					Namespace: "default",
+					Name:      service2Name,
+					PortName:  fmt.Sprintf("port-%d", wepPort),
+					PortNum:   svcPort81,
+				}
+				externalIP, ok := ip.ParseIPAs16Byte(externalClient.IP)
+				Expect(ok).To(BeTrue())
+				externalServiceIP1, ok := ip.ParseIPAs16Byte(extIP1)
+				Expect(ok).To(BeTrue())
+				externalServiceIP2, ok := ip.ParseIPAs16Byte(extIP2)
+				Expect(ok).To(BeTrue())
+				ep1_1_IP, ok := ip.ParseIPAs16Byte(ep1_1.IP)
+				Expect(ok).To(BeTrue())
+				ep1_2_IP, ok := ip.ParseIPAs16Byte(ep1_2.IP)
+				Expect(ok).To(BeTrue())
+				external_to_ep1_1_80_Agg0 = tuple.Make(externalIP, ep1_1_IP, 6, flowlogs.SourcePortIsIncluded, wepPort)
+				external_to_ep1_2_81_Agg0 = tuple.Make(externalIP, ep1_2_IP, 6, flowlogs.SourcePortIsIncluded, wepPort)
+				external_to_extService_80_Agg0 = tuple.Make(externalIP, externalServiceIP1, 6, flowlogs.SourcePortIsIncluded, svcPort80)
+				external_to_extService_81_Agg0 = tuple.Make(externalIP, externalServiceIP2, 6, flowlogs.SourcePortIsIncluded, svcPort81)
+
+				// Create HEPs.
+				for _, f := range tc.Felixes {
+					hep, err := createHEP(f, client, interfaceEth0)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(func() error {
+						return verifyHostEndpointRules(f, bpfEnabled)
+					}, "30s", "1s").Should(BeNil())
+					logrus.Infof("Created host endpoint %+v", hep)
+				}
+
+				// Create a tier for the policies.
+				tier = api.NewTier()
+				tier.Name = "tier1"
+				tier.Spec.Order = &float1_0
+				_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+
+				// Create a policy with preDNAT that allows all traffic to the host endpoint.
+				gnpPreDnatAllow := api.NewGlobalNetworkPolicy()
+				gnpPreDnatAllow.Name = "tier1.default-allow-prednat-policy"
+				gnpPreDnatAllow.Spec.Order = &float2_0
+				gnpPreDnatAllow.Spec.Tier = tier.Name
+				gnpPreDnatAllow.Spec.Selector = "host-endpoint=='true'"
+				gnpPreDnatAllow.Spec.ApplyOnForward = true
+				gnpPreDnatAllow.Spec.PreDNAT = true
+				gnpPreDnatAllow.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+				gnpPreDnatAllow.Spec.Ingress = []api.Rule{{Action: api.Allow}}
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnpPreDnatAllow, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				if !bpfEnabled {
+					Eventually(getRuleFuncTable(tc.Felixes[0], "API0|tier1.default-allow-prednat-policy", "mangle"), "10s", "1s").ShouldNot(HaveOccurred())
+				} else {
+					bpfWaitForPolicyRule(tc.Felixes[0], interfaceEth0, "ingress", "tier1.default-allow-prednat-policy", `action:"allow"`)
+				}
+
+				if !bpfEnabled {
+					for _, f := range tc.Felixes {
+						f.Exec(
+							"iptables", "-t", "nat",
+							"-w", "10", "-W", "100000",
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-d", extIP1, "--dport", fmt.Sprintf("%d", svcPort80),
+							"-j", "DNAT", "--to", ep1_1.IP+":"+wepPortStr,
+						)
+						f.Exec(
+							"iptables", "-t", "nat",
+							"-w", "10", "-W", "100000",
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-d", extIP2, "--dport", fmt.Sprintf("%d", svcPort81),
+							"-j", "DNAT", "--to", ep1_2.IP+":"+wepPortStr,
+						)
+					}
+				}
+
+				serviceExternalIP1 := []string{extIP1}
+				tSvc := k8sLBService(service1Name, "10.101.0.10", ep1_1.Name, svcPort80, wepPort, "tcp", serviceExternalIP1, []string{})
+				k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
+				_, err = k8sClient.CoreV1().Services(tSvc.Namespace).Create(context.Background(), tSvc, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(k8sGetEpsForServiceFunc(k8sClient, tSvc), "10s").Should(HaveLen(1), "Expected service endpoint: %s to be created", tSvc.Name)
+
+				serviceExternalIP2 := []string{extIP2}
+				tSvc2 := k8sLBService(service2Name, "10.101.0.11", ep1_2.Name, svcPort81, wepPort, "tcp", serviceExternalIP2, []string{})
+				_, err = k8sClient.CoreV1().Services(tSvc2.Namespace).Create(context.Background(), tSvc2, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(k8sGetEpsForServiceFunc(k8sClient, tSvc2), "10s").Should(HaveLen(1), "Expected service endpoint: %s to be created", tSvc2.Name)
+			})
+
+			It("allows traffic from external client to pod within the cluster", func() {
+				cc := &connectivity.Checker{}
+
+				cc.ExpectSome(externalClient, connectivity.TargetIP(extIP1), svcPort80)
+				cc.ExpectSome(externalClient, connectivity.TargetIP(extIP2), svcPort81)
+
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()
+
+				flowlogs.WaitForConntrackScan(bpfEnabled)
+
+				for _, f := range tc.Felixes {
+					f.Exec("conntrack", "-F")
+				}
+
+				var filters []flowlogs.IncludeFilter
+				if !bpfEnabled {
+					filters = []flowlogs.IncludeFilter{
+						flowlogs.IncludeByDestPort(svcPort80),
+						flowlogs.IncludeByDestPort(svcPort81),
+					}
+				} else {
+					filters = []flowlogs.IncludeFilter{
+						flowlogs.IncludeByDestPort(wepPort),
+					}
+				}
+
+				// Create a flow tester and check for the expected flow logs
+				flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+					ExpectLabels:            true,
+					ExcludeAllPolicies:      true,
+					ExcludeEnforcedPolicies: true,
+					ExcludePendingPolicies:  true,
+					MatchPendingPolicies:    true,
+					ExpectTransitPolicies:   true,
+					MatchTransitPolicies:    true,
+					MatchLabels:             false,
+					Includes:                filters,
+					CheckNumFlowsStarted:    true,
+				})
+
+				Eventually(func() error {
+					if err := flowTester.PopulateFromFlowLogs(tc.Felixes[0]); err != nil {
+						return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
+					}
+
+					if !bpfEnabled {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_extService_80_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    privateMeta,
+								DstService: flowlog.EmptyService,
+								Action:     "allow",
+								Reporter:   "fwd",
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					} else {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_ep1_1_80_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    ep1_1_Meta,
+								DstService: ext_svc_80_Meta,
+								Action:     "allow",
+								Reporter:   "dst,fwd",
+							},
+							FlowAllPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowPendingPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					}
+
+					if !bpfEnabled {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_extService_81_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    privateMeta,
+								DstService: flowlog.EmptyService,
+								Action:     "allow",
+								Reporter:   "fwd",
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					} else {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_ep1_2_81_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    ep1_2_Meta,
+								DstService: ext_svc_81_Meta,
+								Action:     "allow",
+								Reporter:   "dst,fwd",
+							},
+							FlowAllPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowPendingPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					}
+
+					if err := flowTester.Finish(); err != nil {
+						return fmt.Errorf("Flows incorrect on Felix[0]:\n%v", err)
+					}
+
+					return nil
+				}, "20s", "1s").ShouldNot(HaveOccurred())
+			})
+
+			It("denies traffic from external client to target with port 81", func() {
+				cc := &connectivity.Checker{}
+
+				denyPort81Policy()
+
+				cc.ExpectSome(externalClient, connectivity.TargetIP(extIP1), svcPort80)
+				cc.ExpectNone(externalClient, connectivity.TargetIP(extIP2), svcPort81)
+
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()
+
+				flowlogs.WaitForConntrackScan(bpfEnabled)
+
+				for _, f := range tc.Felixes {
+					f.Exec("conntrack", "-F")
+				}
+
+				var filters []flowlogs.IncludeFilter
+				if !bpfEnabled {
+					filters = []flowlogs.IncludeFilter{
+						flowlogs.IncludeByDestPort(svcPort80),
+						flowlogs.IncludeByDestPort(svcPort81),
+					}
+				} else {
+					filters = []flowlogs.IncludeFilter{
+						flowlogs.IncludeByDestPort(wepPort),
+					}
+				}
+
+				// Create a flow tester and check for the expected flow logs
+				flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+					ExpectLabels:            true,
+					ExcludeAllPolicies:      true,
+					ExcludeEnforcedPolicies: true,
+					ExcludePendingPolicies:  true,
+					MatchPendingPolicies:    true,
+					ExpectTransitPolicies:   true,
+					MatchTransitPolicies:    true,
+					MatchLabels:             false,
+					Includes:                filters,
+					CheckNumFlowsStarted:    true,
+				})
+
+				Eventually(func() error {
+					if err := flowTester.PopulateFromFlowLogs(tc.Felixes[0]); err != nil {
+						return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
+					}
+
+					if !bpfEnabled {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_extService_80_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    privateMeta,
+								DstService: flowlog.EmptyService,
+								Action:     "allow",
+								Reporter:   "fwd",
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.prednat-deny-service-port-81-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					} else {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_ep1_1_80_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    ep1_1_Meta,
+								DstService: ext_svc_80_Meta,
+								Action:     "allow",
+								Reporter:   "dst,fwd",
+							},
+							FlowAllPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowPendingPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.prednat-deny-service-port-81-policy|allow|0": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					}
+
+					if !bpfEnabled {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_extService_81_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    privateMeta,
+								DstService: flowlog.EmptyService,
+								Action:     "deny",
+								Reporter:   "fwd",
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.prednat-deny-service-port-81-policy|deny|1": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 3,
+								},
+							},
+						})
+					} else {
+						flowTester.CheckFlow(flowlog.FlowLog{
+							FlowMeta: flowlog.FlowMeta{
+								Tuple:      external_to_ep1_2_81_Agg0,
+								SrcMeta:    privateMeta,
+								DstMeta:    ep1_2_Meta,
+								DstService: ext_svc_81_Meta,
+								Action:     "deny",
+								Reporter:   "fwd",
+							},
+							FlowPendingPolicySet: flowlog.FlowPolicySet{
+								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+							},
+							FlowTransitPolicySet: flowlog.FlowPolicySet{
+								"0|tier1|tier1.prednat-deny-service-port-81-policy|deny|1": {},
+							},
+							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+								FlowReportedStats: flowlog.FlowReportedStats{
+									NumFlowsStarted: 4,
+								},
+							},
+						})
+					}
+
+					if err := flowTester.Finish(); err != nil {
+						return fmt.Errorf("Flows incorrect on Felix[0]:\n%v", err)
+					}
+
+					return nil
+				}, "20s", "1s").ShouldNot(HaveOccurred())
+			})
+		})
+	},
+)
+
+func createHEP(f *infrastructure.Felix, client client.Interface, ifname string) (hep *api.HostEndpoint, err error) {
 	hep = api.NewHostEndpoint()
-	hep.Name = "eth0-" + f.Name
+	hep.Name = ifname + "-" + f.Name
 	hep.Labels = map[string]string{
 		"name":          hep.Name,
 		"host-endpoint": "true",
 	}
 	hep.Spec.Node = f.Hostname
 	hep.Spec.ExpectedIPs = []string{f.IP}
-	hep.Spec.InterfaceName = "eth0"
+	hep.Spec.InterfaceName = ifname
 	_, err = client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 	if err != nil {
 		return nil, err
@@ -1863,40 +2348,6 @@ func verifyHostEndpointRules(f *infrastructure.Felix, bpfEnabled bool) error {
 
 		if !strings.Contains(out, "cali-thfw-eth0") {
 			return fmt.Errorf("iptables missing expected host endpoint chain 'cali-thfw-eth0'")
-		}
-	}
-
-	return nil
-}
-
-// verifyHostEndpointRulesEth1 checks that the host endpoint rules are properly configured
-// based on the active dataplane (BPF, NFT, or iptables)
-func verifyHostEndpointRulesEth1(f *infrastructure.Felix, bpfEnabled bool) error {
-	switch {
-	case bpfEnabled:
-		numProgs := f.NumTCBPFProgsEth0()
-		if numProgs != 2 {
-			return fmt.Errorf("expected 2 BPF programs on eth0, found %d", numProgs)
-		}
-
-	case NFTMode():
-		out, err := f.ExecOutput("nft", "list", "table", "calico")
-		if err != nil {
-			return fmt.Errorf("failed to list nftables: %w", err)
-		}
-
-		if !strings.Contains(out, "cali-thfw-eth0") {
-			return fmt.Errorf("nftables missing expected host endpoint chain 'cali-thfw-eth0'")
-		}
-
-	default: // iptables mode
-		out, err := f.ExecOutput("iptables-save", "-t", "filter")
-		if err != nil {
-			return fmt.Errorf("failed to list iptables rules: %w", err)
-		}
-
-		if !strings.Contains(out, "cali-thfw-eth1") {
-			return fmt.Errorf("iptables missing expected host endpoint chain 'cali-thfw-eth1'")
 		}
 	}
 

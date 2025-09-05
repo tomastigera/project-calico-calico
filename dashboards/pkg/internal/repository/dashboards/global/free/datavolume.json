@@ -1,0 +1,498 @@
+{
+  "title": "Traffic Volume",
+  "id": "1",
+  "defaultFilters": [
+    {
+      "criterion": {
+        "type": "or",
+        "criteria": [
+          { "type": "equals", "field": "dest_name_aggr", "value": "pvt" },
+          { "type": "equals", "field": "dest_name_aggr", "value": "pub" }
+        ]
+      }
+    }
+  ],
+  "isImmutable": true,
+  "cards": [
+    {
+      "title": "Outgoing (Bytes)",
+      "id": "2780b7b6-888a-4357-afc5-110d924e86c7",
+      "chart": {
+        "type": "halfdonut"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Incoming (Bytes)",
+      "id": "5d0f2dd6-5d3e-466d-ab2d-0d97ff84a584",
+      "chart": {
+        "type": "halfdonut"
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "aggregations": {
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes Out - Source Namespace",
+      "id": "ceb0f836-3cd6-4c6f-84c0-fed701760996",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes In - Destination Namespace",
+      "id": "91eaf083-8be9-4c1a-8417-8c9b46006ca1",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes Out Graph",
+      "id": "8f4e7fd9-cceb-470f-9ecb-15884cd30554",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "start_time per 10 minutes",
+        "yAxisLabel": "bytes_out"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "source_namespace",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Bytes In Graph",
+      "id": "4eee83f5-9c25-4b01-ac76-71cb41809465",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "start_time per 10 minutes",
+        "yAxisLabel": "bytes_in"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "dest_namespace",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 30
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Data Volume per Namespace",
+      "id": "9d3d8156-aed9-40ca-b9ff-96c83c82f554",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          {
+            "field": "source_namespace",
+            "label": "Top values of source_namespace"
+          },
+          { "field": "sum_bytes_out", "label": "Sum Out (Bytes)" },
+          { "field": "sum_bytes_in", "label": "Sum In (Bytes)" },
+          {
+            "field": "sum_packets_out",
+            "label": "Sum Out (Packets)"
+          },
+          { "field": "sum_packets_in", "label": "Sum In (Packets)" },
+          { "field": "count", "label": "Count of records" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_in": {
+            "fieldName": "packets_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_packets_out": {
+            "fieldName": "packets_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_packets_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Data Volume per Pod",
+      "id": "e076f23d-062e-41c7-b28b-9311237c52ca",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_name", "label": "Source Pod" },
+          { "field": "dest_name", "label": "Destination Pod" },
+          { "field": "sum_bytes_out", "label": "Bytes Out (Bytes)" },
+          { "field": "sum_bytes_in", "label": "Bytes In (Bytes)" },
+          { "field": "count", "label": "Count of records" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_name",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Data Volume per Cluster per Namespace",
+      "id": "52f02ed4-532f-4442-9533-9dae88949e73",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "cluster", "label": "Top values of cluster" },
+          {
+            "field": "source_namespace",
+            "label": "Top values of source_namespace"
+          },
+          { "field": "sum_bytes_out", "label": "Sum Out (MB)" },
+          { "field": "sum_bytes_in", "label": "Sum In (MB)" },
+          {
+            "field": "sum_packets_out",
+            "label": "Sum Out (Packets)"
+          },
+          { "field": "sum_packets_in", "label": "Sum In (Packets)" },
+          { "field": "count", "label": "Count of records" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "type": "discrete",
+            "fieldName": "cluster",
+            "maxValues": 100
+          },
+          {
+            "type": "discrete",
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_in": {
+            "fieldName": "packets_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_packets_out": {
+            "fieldName": "packets_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_packets_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Flow Logs",
+      "id": "add694e1-00d4-4a4c-b777-3350e1492620",
+      "chart": {
+        "type": "logtable"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          {
+            "field": "dest_service_name",
+            "label": "Dst Service Name"
+          },
+          { "field": "dest_name_aggr", "label": "Dst Name" },
+          { "field": "action", "label": "Action" },
+          { "field": "cluster", "label": "Cluster" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 100
+      }
+    }
+  ],
+  "layout": [
+    {
+      "w": 1,
+      "h": 2,
+      "x": 0,
+      "y": 0,
+      "i": "2780b7b6-888a-4357-afc5-110d924e86c7",
+      "minH": 2,
+
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 2,
+      "x": 1,
+      "y": 0,
+      "i": "5d0f2dd6-5d3e-466d-ab2d-0d97ff84a584",
+      "minH": 2,
+
+      "isResizable": true
+    },
+
+    {
+      "i": "ceb0f836-3cd6-4c6f-84c0-fed701760996",
+      "x": 0,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "i": "91eaf083-8be9-4c1a-8417-8c9b46006ca1",
+      "x": 2,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 4,
+      "i": "8f4e7fd9-cceb-470f-9ecb-15884cd30554",
+      "minH": 2,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 4,
+      "i": "4eee83f5-9c25-4b01-ac76-71cb41809465",
+      "minH": 2,
+
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 0,
+      "i": "9d3d8156-aed9-40ca-b9ff-96c83c82f554",
+      "minH": 2,
+
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 8,
+      "i": "e076f23d-062e-41c7-b28b-9311237c52ca",
+      "minH": 2,
+
+      "isResizable": true
+    },
+
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 10,
+      "i": "52f02ed4-532f-4442-9533-9dae88949e73",
+      "minH": 2,
+
+      "isResizable": true
+    },
+
+    {
+      "w": 4,
+      "h": 4,
+      "x": 0,
+      "y": 12,
+      "i": "add694e1-00d4-4a4c-b777-3350e1492620",
+      "minH": 2,
+
+      "isResizable": true
+    }
+  ]
+}

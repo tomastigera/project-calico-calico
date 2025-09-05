@@ -1,6 +1,6 @@
 - name: pkg
   run:
-    when: "${FORCE_RUN} or change_in(['/pkg/'])"
+    when: "${FORCE_RUN} or change_in(['/lib/std/', '/pkg/'])"
   dependencies:
     - Prerequisites
   task:

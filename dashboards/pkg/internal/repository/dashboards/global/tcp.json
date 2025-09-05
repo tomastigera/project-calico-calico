@@ -1,0 +1,836 @@
+{
+  "title": "Network Performance",
+  "id": "5",
+  "defaultFilters": [],
+  "isImmutable": true,
+  "cards": [
+    {
+      "title": "Round Trip Time - Minimum - 95th Percentile",
+      "id": "9145cb4e-5f35-4aa0-a87a-9969a7fcb2d0",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "Time per 10 minutes",
+        "yAxisLabel": "tcp min rtt (ms)"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "filters": [
+          {
+            "criterion": {
+              "type": "equals",
+              "field": "proto",
+              "value": "udp"
+            },
+            "negate": true
+          }
+        ],
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "host",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 30
+          }
+        ],
+        "aggregations": {
+          "maxmin": {
+            "fieldName": "tcp_max_min_rtt",
+            "function": {
+              "type": "p95"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Round Trip Time - Minimum - Max",
+      "id": "b9c1b39f-218b-4e94-9490-2895c5a13d2a",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "Time per 10 minutes",
+        "yAxisLabel": "tcp min rtt (ms)"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "filters": [
+          {
+            "criterion": {
+              "type": "equals",
+              "field": "proto",
+              "value": "udp"
+            },
+            "negate": true
+          }
+        ],
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "host",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 30
+          }
+        ],
+        "aggregations": {
+          "maxmin": {
+            "fieldName": "tcp_max_min_rtt",
+            "function": {
+              "type": "max"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Round Trip Time - Maximum - 95th Percentile",
+      "id": "24a27c1b-b279-4a8a-9e4c-e8d1b5de491d",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "Time per 10 minutes",
+        "yAxisLabel": "tcp min rtt (ms)"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "filters": [
+          {
+            "criterion": {
+              "type": "equals",
+              "field": "proto",
+              "value": "udp"
+            },
+            "negate": true
+          }
+        ],
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "host",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 30
+          }
+        ],
+        "aggregations": {
+          "max": {
+            "fieldName": "tcp_max_smooth_rtt",
+            "function": {
+              "type": "p95"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Round Trip Time - Maximum - Max",
+      "id": "9c8826e0-4b91-4383-8d75-4d6c4697897d",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "Time per 10 minutes",
+        "yAxisLabel": "tcp min rtt (ms)"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "filters": [
+          {
+            "criterion": {
+              "type": "equals",
+              "field": "proto",
+              "value": "udp"
+            },
+            "negate": true
+          }
+        ],
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          },
+          {
+            "fieldName": "host",
+            "orderBy": {
+              "type": "self"
+            },
+            "maxValues": 30
+          }
+        ],
+        "aggregations": {
+          "max": {
+            "fieldName": "tcp_max_smooth_rtt",
+            "function": {
+              "type": "max"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Cluster Nodes",
+      "id": "bfe452b8-5c35-4d6f-b689-24ba4bc004de",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          {
+            "field": "host",
+            "label": "Top values of host"
+          },
+          {
+            "field": "tcp_total_retransmissions",
+            "label": "Sum of Retransmissions"
+          },
+          {
+            "field": "tcp_lost_packets",
+            "label": "Sum of Lost Packets"
+          },
+          { "field": "count", "label": "Count of records" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "host",
+            "maxValues": 10,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "tcp_total_retransmissions": {
+            "fieldName": "tcp_total_retransmissions",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "tcp_lost_packets": {
+            "fieldName": "tcp_lost_packets",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+
+    {
+      "title": "TCP Retransmissions - Maximum",
+      "id": "d6af30f7-2417-455b-85fa-f5f8f52cb193",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "start_time per 30 minutes",
+        "yAxisLabel": "Maximum of tcp_total_retransmissions"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT30M"
+          }
+        ],
+        "aggregations": {
+          "max_tcp_total_retransmissions": {
+            "fieldName": "tcp_total_retransmissions",
+            "function": {
+              "type": "max"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "TCP Lost Packets - Sum",
+      "id": "d2d4a142-3083-4045-b973-38a1f1c0e8d8",
+      "chart": {
+        "type": "areatimeseries",
+        "xAxisLabel": "start_time per 30 minutes",
+        "yAxisLabel": "Sum of tcp_lost_packets"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT30M"
+          }
+        ],
+        "aggregations": {
+          "sum_tcp_lost_packets": {
+            "fieldName": "tcp_lost_packets",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Total Flows Started and Completed",
+      "id": "647e37f8-3472-44a2-b29e-6f4902b8771f",
+      "chart": {
+        "type": "areatimeseries",
+        "yAxisLabel": "Sum of num_flows_completed",
+        "xAxisLabel": "start_time per 10 minutes"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          }
+        ],
+        "aggregations": {
+          "sum_num_flows_completed": {
+            "fieldName": "num_flows_completed",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_num_flows_started": {
+            "fieldName": "num_flows_started",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Total Unrecovered Timeouts",
+      "id": "b8ec4b73-0a98-4996-935a-4bc104e41aa7",
+      "chart": {
+        "type": "areatimeseries",
+        "yAxisLabel": "Sum of tcp_unrecovered_to",
+        "xAxisLabel": "start_time per 30 minutes"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT30M"
+          }
+        ],
+        "aggregations": {
+          "sum_tcp_unrecovered_to": {
+            "fieldName": "tcp_unrecovered_to",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Throughput",
+      "id": "3d617635-5199-4007-85ba-4e348d5b1ba6",
+      "chart": {
+        "type": "areatimeseries",
+        "yAxisLabel": "sum bytes_in",
+        "xAxisLabel": "start_time per 10 minutes"
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT10M"
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "TCP Stats Summary",
+      "id": "d2d4a142-3083-4045-b973-91a1f1c0e8d8",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Replicaset" },
+          { "field": "source_name", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          { "field": "dest_name_aggr", "label": "Dst Replicaset" },
+          { "field": "dest_name", "label": "Dst Name" },
+          {
+            "field": "tcp_max_min_rtt_95",
+            "label": "min RTT (ms) - 95th"
+          },
+          {
+            "field": "tcp_max_min_rtt_100",
+            "label": "min RTT (ms) - max"
+          },
+          {
+            "field": "tcp_max_smooth_rtt",
+            "label": "max RTT (ms) - 95th"
+          }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "source_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "source_name",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "tcp_max_min_rtt_95": {
+            "fieldName": "tcp_max_min_rtt",
+            "function": {
+              "type": "p95"
+            }
+          },
+          "tcp_max_min_rtt_100": {
+            "fieldName": "tcp_max_min_rtt",
+            "function": {
+              "type": "p100"
+            }
+          },
+          "tcp_max_smooth_rtt": {
+            "fieldName": "tcp_max_smooth_rtt",
+            "function": {
+              "type": "p95"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Retransmissions and Lost Packets",
+      "id": "c6f75b5a-f083-4037-82ad-29e2b9c58d7d",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Replicaset" },
+          { "field": "source_name", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          { "field": "dest_name_aggr", "label": "Dst Replicaset" },
+          { "field": "dest_name", "label": "Dst Name" },
+          {
+            "field": "tcp_max_min_rtt_100",
+            "label": "Retransmissions"
+          },
+          { "field": "sum_tcp_lost_packets", "label": "Lost Packets" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "source_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "source_name",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_namespace",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name_aggr",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_tcp_lost_packets": {
+            "fieldName": "tcp_lost_packets",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "tcp_max_min_rtt_100": {
+            "fieldName": "tcp_total_retransmissions",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Volume",
+      "id": "c6f75b5a-f083-4037-82ad-29e2b9c58d69",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          {
+            "field": "source_name",
+            "label": "Top values of source_name"
+          },
+          {
+            "field": "dest_name",
+            "label": "Top values of dest_name"
+          },
+          { "field": "sum_bytes_out", "label": "sum bytes_out (MB)" },
+          { "field": "sum_bytes_in", "label": "sum bytes_in" },
+          { "field": "count", "label": "Count of records" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "source_name",
+            "maxValues": 100
+          },
+          {
+            "fieldName": "dest_name",
+            "maxValues": 100
+          }
+        ],
+        "aggregations": {
+          "sum_bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "sum_bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Clusters",
+      "id": "e1a5b57d-d3b2-42f1-b6c3-fb2f20f2b497",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "cluster", "label": "Top values of cluster" },
+          { "field": "count", "label": "Count of records" }
+        ]
+      },
+      "query": {
+        "collectionName": "flows",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "type": "discrete",
+            "fieldName": "cluster",
+            "maxValues": 20,
+            "orderBy": {
+              "type": "count"
+            }
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Flows Logs",
+      "id": "c6f75b5a-f083-4037-82ad-29e2b9c59d7d",
+      "chart": {
+        "type": "logtable"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "source_namespace", "label": "Src NS" },
+          { "field": "source_name_aggr", "label": "Src Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          {
+            "field": "dest_service_name",
+            "label": "Dst Service Name"
+          },
+          { "field": "dest_name_aggr", "label": "Dst Name" },
+          { "field": "dest_port", "label": "Dst Port" },
+          { "field": "num_flows", "label": "# Flows" },
+          { "field": "action", "label": "Action" },
+          { "field": "cluster", "label": "Cluster" }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "flows",
+        "maxDocs": 100
+      }
+    }
+  ],
+  "layout": [
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 0,
+      "i": "9145cb4e-5f35-4aa0-a87a-9969a7fcb2d0",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 0,
+      "i": "b9c1b39f-218b-4e94-9490-2895c5a13d2a",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 2,
+      "i": "24a27c1b-b279-4a8a-9e4c-e8d1b5de491d",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 2,
+      "i": "9c8826e0-4b91-4383-8d75-4d6c4697897d",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 4,
+      "i": "bfe452b8-5c35-4d6f-b689-24ba4bc004de",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 6,
+      "i": "d6af30f7-2417-455b-85fa-f5f8f52cb193",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 8,
+      "i": "647e37f8-3472-44a2-b29e-6f4902b8771f",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 8,
+      "i": "b8ec4b73-0a98-4996-935a-4bc104e41aa7",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 10,
+      "i": "3d617635-5199-4007-85ba-4e348d5b1ba6",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 3,
+      "x": 0,
+      "y": 12,
+      "i": "d2d4a142-3083-4045-b973-91a1f1c0e8d8",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 6,
+      "i": "d2d4a142-3083-4045-b973-38a1f1c0e8d8",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 3,
+      "x": 0,
+      "y": 15,
+      "i": "c6f75b5a-f083-4037-82ad-29e2b9c58d7d",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 18,
+      "i": "c6f75b5a-f083-4037-82ad-29e2b9c58d69",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 2,
+      "x": 0,
+      "y": 20,
+      "i": "e1a5b57d-d3b2-42f1-b6c3-fb2f20f2b497",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 4,
+      "x": 0,
+      "y": 22,
+      "i": "c6f75b5a-f083-4037-82ad-29e2b9c59d7d",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    }
+  ]
+}

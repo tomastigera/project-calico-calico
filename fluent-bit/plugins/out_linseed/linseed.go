@@ -28,13 +28,14 @@ import "C"
 const (
 	// This is the default network configuration suggested by the fluent-bit documentation.
 	// https://docs.fluentbit.io/manual/administration/networking#configuration-options
-	defaultConnectTimeout = 10 * time.Second
-	defaultTimeout        = 30 * time.Second
+	defaultConnectTimeout     = 10 * time.Second
+	defaultConnectIdleTimeout = 15 * time.Second
+	defaultTimeout            = 30 * time.Second
 )
 
 var (
 	client             *http.Client
-	tk                 *token.Token
+	tk                 token.TokenProvider
 	endpointController *endpoint.EndpointController
 
 	stopCh chan struct{}
@@ -79,6 +80,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecureSkipVerify,
 			},
+			IdleConnTimeout: defaultConnectIdleTimeout,
 		},
 		Timeout: defaultTimeout,
 	}
@@ -175,6 +177,14 @@ func doRequest(endpoint, tag, token string, ndjsonBuffer *bytes.Buffer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			// We got a 401 Unauthorized, so the token is probably expired or invalid.
+			// Force a token refresh for the next request.
+			logrus.Info("received 401 Unauthorized, refreshing token")
+			if _, err := tk.Refresh(); err != nil {
+				return err
+			}
+		}
 		return fmt.Errorf("error response from server %q", resp.Status)
 	}
 

@@ -109,7 +109,7 @@ func TestMetadataService(t *testing.T) {
 
 	fakeDashboardID := types.DashboardID("fake-dashboard-id")
 
-	subject := NewMetadataService(logger, httpServer.URL+"/server-path")
+	subject := NewRemoteMetadataService(logger, httpServer.URL+"/server-path")
 
 	ctx := security.NewUserAuthContext(
 		context.Background(),

@@ -24,7 +24,9 @@ include ../lib.Makefile
 
 CALICOCTL_DIR=calicoctl
 CTL_CONTAINER_CREATED=$(CALICOCTL_DIR)/.calico_ctl.created-$(ARCH)
-SRC_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go') $(shell find ../libcalico-go -name '*.go')
+SRC_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go') \
+	$(shell find ../libcalico-go -name '*.go') \
+	$(shell find ../pkg/nonclusterhost -name '*.go')
 
 TEST_CONTAINER_NAME ?= calico/test
 

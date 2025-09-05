@@ -16,8 +16,8 @@ import (
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"

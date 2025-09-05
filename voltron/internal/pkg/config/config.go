@@ -75,6 +75,8 @@ type Config struct {
 	KibanaEndpoint               string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
 	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
+	EnterpriseDashboardEndpoint  string `default:"http://127.0.0.1:8444" split_words:"true"`
+	EnterpriseDashboardBasePath  string `default:"/dashboards" split_words:"true"`
 	PacketCaptureCABundlePath    string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
 	PacketCaptureEndpoint        string `default:"https://tigera-packetcapture.tigera-packetcapture.svc" split_words:"true"`
 	EnableImageAssurance         bool   `split_words:"true"`

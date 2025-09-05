@@ -1,0 +1,494 @@
+{
+  "title": "HTTP Traffic",
+  "id": "4",
+  "defaultFilters": [],
+  "isImmutable": true,
+  "cards": [
+    {
+      "title": "L7 HTTP requests",
+      "id": "e3c5b6ad-c8b2-456f-89fa-b88a6d39662c",
+      "chart": {
+        "type": "halfdonut"
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 all services",
+      "id": "5c92b3ad-a537-41b6-8585-5bba3070ec63",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "l7",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_service_name",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP duration",
+      "id": "fa87b2d6-7c77-4515-b82b-9ae0c36b9de4",
+      "chart": {
+        "type": "areatimeseries",
+        "yAxisLabel": "mean duration in nanoseconds",
+        "xAxisLabel": "request duration by service"
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT30S"
+          },
+          {
+            "fieldName": "dest_service_name",
+            "maxValues": 15
+          }
+        ],
+        "aggregations": {
+          "duration_mean": {
+            "fieldName": "duration_mean",
+            "function": {
+              "type": "avg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP response codes",
+      "id": "1288e3d9-4628-438e-a1db-00396b96a4ff",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "l7",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "response_code",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP methods",
+      "id": "712d3195-3d53-478b-aefa-7394d55f9e2e",
+      "chart": {
+        "type": "pie"
+      },
+      "query": {
+        "collectionName": "l7",
+        "filters": [],
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "method",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP request duration",
+      "id": "fe06e5a2-647e-4dcb-809f-35b938d98e29",
+      "chart": {
+        "type": "bartimeseries",
+        "xAxisLabel": "HTTP duration",
+        "yAxisLabel": "Nanoseconds"
+      },
+      "query": {
+        "collectionName": "l7",
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT30S"
+          }
+        ],
+        "aggregations": {
+          "maxDuration": {
+            "fieldName": "duration_max",
+            "function": {
+              "type": "avg"
+            }
+          },
+          "avgDuration": {
+            "fieldName": "duration_mean",
+            "function": {
+              "type": "avg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP requests over time",
+      "id": "d1d8e032-92a3-4f66-813f-3dc9b1efb71e",
+      "chart": {
+        "type": "bartimeseries",
+        "xAxisLabel": "HTTP requests over time",
+        "yAxisLabel": "HTTP requests",
+        "maxXValues": 20
+      },
+      "query": {
+        "collectionName": "l7",
+        "groupBys": [
+          {
+            "fieldName": "start_time",
+            "interval": "PT1M"
+          }
+        ],
+        "aggregations": {
+          "count": { "function": { "type": "count" } }
+        },
+        "maxDocs": 0
+      }
+    },
+    {
+      "title": "L7 HTTP method by service",
+      "id": "6276e5f3-240f-4960-97b0-b3d957b55664",
+      "chart": {
+        "type": "barstacked",
+        "yAxisLabel": "Count",
+        "xAxisLabel": "HTTP request distribution by service"
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_service_name",
+            "maxValues": 10
+          },
+          {
+            "fieldName": "method",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "Count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP response by service",
+      "id": "9b26a64d-1f7f-471b-bb5e-c97c511a6c68",
+      "chart": {
+        "type": "barstacked",
+        "yAxisLabel": "Count",
+        "xAxisLabel": "HTTP response distribution by service"
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_service_name",
+            "maxValues": 10
+          },
+          {
+            "fieldName": "response_code",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "Count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 HTTP bytes transferred",
+      "id": "3aef1cf7-8fbc-456e-9a67-7d3b52d8e411",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "dest_service_name", "label": "Services" },
+          { "field": "bytes_in", "label": "Bytes In" },
+          { "field": "bytes_out", "label": "Bytes Out" }
+        ]
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "dest_service_name",
+            "maxValues": 10
+          }
+        ],
+        "aggregations": {
+          "bytes_in": {
+            "fieldName": "bytes_in",
+            "function": {
+              "type": "sum"
+            }
+          },
+          "bytes_out": {
+            "fieldName": "bytes_out",
+            "function": {
+              "type": "sum"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7 Top URLs",
+      "id": "d176bc9b-64b7-4a55-9864-74fb6d014263",
+      "chart": {
+        "type": "table"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "url", "label": "Top URLs" },
+          { "field": "count", "label": "Count" }
+        ]
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 0,
+        "groupBys": [
+          {
+            "fieldName": "url",
+            "maxValues": 10,
+            "orderBy": {
+              "type": "count",
+              "sortAsc": false
+            }
+          }
+        ],
+        "aggregations": {
+          "count": {
+            "fieldName": "_",
+            "function": {
+              "type": "count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "L7-search",
+      "id": "fe1964bb-0cfa-4675-8a2f-16d57d693d09",
+      "chart": {
+        "type": "logtable"
+      },
+      "responseMapping": {
+        "fieldLabels": [
+          { "field": "src_namespace", "label": "Src NS" },
+          { "field": "src_name_aggr", "label": "Src Name" },
+          { "field": "dest_name_aggr", "label": "Dst Name" },
+          { "field": "dest_namespace", "label": "Dst NS" },
+          {
+            "field": "dest_service_name",
+            "label": "Dst Service Name"
+          },
+          {
+            "field": "dest_service_namespace",
+            "label": "Dst Service NS"
+          },
+          { "field": "method", "label": "Method" },
+          { "field": "response_code", "label": "Response Code" },
+          { "field": "url", "label": "Url" },
+          {
+            "field": "dest_service_port",
+            "label": "Dst Service Port"
+          }
+        ],
+        "fieldHrefs": {
+          "source_namespace": "/service-graph?node=namespace/{source_namespace}",
+          "dest_namespace": "/service-graph?node=namespace/{dest_namespace}"
+        }
+      },
+      "query": {
+        "collectionName": "l7",
+        "maxDocs": 100
+      }
+    }
+  ],
+  "layout": [
+    {
+      "w": 1,
+      "h": 2,
+      "x": 0,
+      "y": 0,
+      "i": "e3c5b6ad-c8b2-456f-89fa-b88a6d39662c",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 2,
+      "x": 1,
+      "y": 0,
+      "i": "5c92b3ad-a537-41b6-8585-5bba3070ec63",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 4,
+      "x": 2,
+      "y": 0,
+      "i": "fa87b2d6-7c77-4515-b82b-9ae0c36b9de4",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 2,
+      "x": 1,
+      "y": 2,
+      "i": "1288e3d9-4628-438e-a1db-00396b96a4ff",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 1,
+      "h": 2,
+      "x": 0,
+      "y": 2,
+      "i": "712d3195-3d53-478b-aefa-7394d55f9e2e",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 4,
+      "i": "fe06e5a2-647e-4dcb-809f-35b938d98e29",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 4,
+      "i": "d1d8e032-92a3-4f66-813f-3dc9b1efb71e",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 6,
+      "i": "6276e5f3-240f-4960-97b0-b3d957b55664",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 6,
+      "i": "9b26a64d-1f7f-471b-bb5e-c97c511a6c68",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 0,
+      "y": 8,
+      "i": "3aef1cf7-8fbc-456e-9a67-7d3b52d8e411",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 2,
+      "h": 2,
+      "x": 2,
+      "y": 8,
+      "i": "d176bc9b-64b7-4a55-9864-74fb6d014263",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    },
+    {
+      "w": 4,
+      "h": 4,
+      "x": 0,
+      "y": 10,
+      "i": "fe1964bb-0cfa-4675-8a2f-16d57d693d09",
+      "minH": 2,
+      "moved": false,
+      "static": false,
+      "isResizable": true
+    }
+  ]
+}

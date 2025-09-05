@@ -13,6 +13,10 @@ type Config struct {
 	// LogLevel
 	LogLevel string `envconfig:"LOG_LEVEL"`
 
+	// Whether to ingest logs through reading from the filesystem
+	// or to start a GRPC server to review logs
+	EnableLogTail bool `envconfig:"ENABLE_LOG_TAIL"`
+
 	// Socket to dial
 	DialTarget string `envconfig:"FELIX_DIAL_TARGET"`
 	// Location of the envoy access log file in the shared filesystem.

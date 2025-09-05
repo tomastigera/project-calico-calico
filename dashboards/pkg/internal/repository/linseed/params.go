@@ -18,6 +18,11 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
+const (
+	policyTypeStagedSelector   = `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`
+	policyTypeEnforcedSelector = `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`
+)
+
 var (
 	reMatchLabel     = regexp.MustCompile(`^[^=]+=[^=]+$`)
 	reEnclosedQuotes = regexp.MustCompile(`^"(.*?)"$`)
@@ -29,7 +34,6 @@ type queryParams struct {
 
 	selector        string
 	domainMatches   map[lsv1.DomainMatchType][]string
-	policyMatches   []lsv1.PolicyMatch
 	requestedPeriod time.Duration
 }
 
@@ -133,9 +137,10 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			if c.Field().Name() == collections.FieldNamePolicyType {
 				if (value == collections.FieldPolicyStaged && !c.Negate()) ||
 					(value != collections.FieldPolicyStaged && c.Negate()) {
-					p.policyMatches = append(p.policyMatches, lsv1.PolicyMatch{Staged: true})
+
+					return policyTypeStagedSelector, nil
 				}
-				return "", nil
+				return policyTypeEnforcedSelector, nil
 			}
 		}
 		return selectorEquals(c)

@@ -7,6 +7,9 @@ import (
 
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
+
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
 )
 
 var (
@@ -23,13 +26,18 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	var err error
+	metadataService, err := staticmetadata.NewStaticMetadataService()
+	if err != nil {
+		handleError("failed to create metadata service", err)
+	}
+
 	handlerRegistry, err = NewHandler(
+		&config.Config{},
 		logger,
 		nil,
 		nil,
 		nil,
-		nil,
+		metadataService,
 		nil,
 	)
 	if err != nil {

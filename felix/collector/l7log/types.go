@@ -71,6 +71,7 @@ type L7Log struct {
 	UserAgent    string `json:"user_agent"`
 	URL          string `json:"url"`
 	ResponseCode string `json:"response_code"`
+	RouteName    string `json:"route_name"`
 	Type         string `json:"type"`
 }
 
@@ -92,6 +93,7 @@ type L7Meta struct {
 	ServicePortNum   int
 
 	ResponseCode string
+	RouteName    string
 	Method       string
 	Domain       string
 	Path         string
@@ -155,6 +157,7 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 		Method:       ld.Method,
 		UserAgent:    ld.UserAgent,
 		ResponseCode: ld.ResponseCode,
+		RouteName:    ld.RouteName,
 		Type:         ld.Type,
 	}
 

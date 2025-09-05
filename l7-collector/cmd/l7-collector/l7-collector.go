@@ -22,8 +22,6 @@ import (
 
 func main() {
 	var ver bool
-	var grpcServer bool
-	flag.BoolVar(&grpcServer, "grpc", true, "Run gRPC server for log collection")
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.Parse()
 
@@ -51,13 +49,13 @@ func main() {
 
 	log.Infof("setting up Felixclient at %s", cfg.DialTarget)
 
-	if grpcServer {
+	if !cfg.EnableLogTail {
 		// Start gRPC log collector
 		gRPCServerStart(cfg, reportCh)
 	}
 
 	// Start the log collector
-	CollectAndSend(context.Background(), felixClient, c, grpcServer)
+	CollectAndSend(context.Background(), felixClient, c, cfg.EnableLogTail)
 }
 
 func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
@@ -91,17 +89,17 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	}()
 }
 
-func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, grpcServer bool) {
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, readFiles bool) {
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go func() {
 		log.Info("Starting log collection...")
-		if grpcServer {
-			collector.ReadLogs(ctx)
-		} else {
+		if readFiles {
 			collector.ReadAccessLogs(ctx)
+		} else {
+			collector.ReadLogs(ctx)
 		}
 		cancel()
 		wg.Done()

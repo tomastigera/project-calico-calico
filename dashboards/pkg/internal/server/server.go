@@ -27,10 +27,10 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata"
+	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/query"
 )
 
-// Start starts the HTTPS server.
 func Start(
 	ctx context.Context,
 	cfg *config.Config,
@@ -40,9 +40,12 @@ func Start(
 	k8sRestConfig *rest.Config,
 	dynamicClient dynamic.Interface,
 ) error {
-	tenantClaim := cfg.CalicoCloudTenantClaim
-	if tenantClaim == "" {
-		tenantClaim = cfg.TenantID
+	var tenantClaim string
+	if cfg.ProductMode == config.ProductModeCloud {
+		tenantClaim = cfg.CalicoCloudTenantClaim
+		if tenantClaim == "" {
+			tenantClaim = cfg.TenantID
+		}
 	}
 
 	authService, err := auth.NewAuthService(
@@ -86,10 +89,19 @@ func Start(
 		},
 	)
 
-	metadataService := metadata.NewMetadataService(logger, cfg.MetadataAPIEndpoint)
+	var metadataService metadata.Storer
+	if cfg.ProductMode == config.ProductModeCloud {
+		metadataService = metadata.NewRemoteMetadataService(logger, cfg.MetadataAPIEndpoint)
+	} else {
+		metadataService, err = staticmetadata.NewStaticMetadataService()
+		if err != nil {
+			return err
+		}
+	}
 	collectionsService := collections.NewCollectionsService(logger)
 
 	handlerRegistry, err := handler.NewHandler(
+		cfg,
 		logger,
 		strings.Split(cfg.CorsOrigins, ","),
 		authService,
@@ -103,9 +115,14 @@ func Start(
 
 	rootHandler := otel.NewHandlerIfEnabled(cfg.OpenTelemetryEnabled, handlerRegistry.Handler())
 
-	tlsConfig, err := getTLSConfig(cfg.HttpsCACert)
-	if err != nil {
-		return err
+	var tlsConfig *tls.Config
+	if cfg.HttpsCert != "" && cfg.HttpsKey != "" {
+		tlsConfig, err = getTLSConfig(cfg.HttpsCACert)
+		if err != nil {
+			return err
+		}
+	} else if cfg.ProductMode == config.ProductModeCloud {
+		return fmt.Errorf("https cert and key must be provided in cloud product mode")
 	}
 
 	errCh := make(chan error)
@@ -146,7 +163,13 @@ func Start(
 			TLSConfig: tlsConfig,
 		}
 
-		errCh <- httpServer.ListenAndServeTLS(cfg.HttpsCert, cfg.HttpsKey)
+		var err error
+		if tlsConfig != nil {
+			err = httpServer.ListenAndServeTLS(cfg.HttpsCert, cfg.HttpsKey)
+		} else {
+			err = httpServer.ListenAndServe()
+		}
+		errCh <- err
 	}()
 
 	return <-errCh

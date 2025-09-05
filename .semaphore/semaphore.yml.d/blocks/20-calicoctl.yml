@@ -1,6 +1,6 @@
 - name: calicoctl
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/calicoctl/', '/libcalico-go/', '/licensing/', '/hack/test/certs/', '/pkg/nonclusterhost/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:

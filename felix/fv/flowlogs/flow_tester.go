@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 )
@@ -202,7 +200,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
 		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 &&
-			fl.FlowReportedStats.TransitPacketsIn+fl.FlowReportedStats.TransitPacketsOut == 0 {
+			fl.FlowProcessReportedStats.TransitPacketsOut+fl.FlowProcessReportedStats.TransitPacketsIn == 0 {
 			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}
@@ -222,10 +220,6 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 // been explicitly checked.
 func (t *FlowTester) CheckFlow(fl flowlog.FlowLog) {
 	fm := t.flowMetaFromFlowLog(fl)
-	for key, flow := range t.flows {
-		log.Infof("key: %v", key)
-		log.Infof("flow: %v", flow)
-	}
 	existing, ok := t.flows[fm]
 	if !ok {
 		t.errors = append(t.errors, fmt.Sprintf("Flow was not present in logs: %#v", fm))
@@ -249,6 +243,12 @@ func (t *FlowTester) CheckFlow(fl flowlog.FlowLog) {
 		}
 		if fl.PacketsOut != existing.PacketsOut {
 			errs = append(errs, fmt.Sprintf("PacketsOut actual != expected (%d != %d)", existing.PacketsOut, fl.PacketsOut))
+		}
+		if fl.TransitPacketsIn != existing.TransitPacketsIn {
+			errs = append(errs, fmt.Sprintf("TransitPacketsIn actual != expected (%d != %d)", existing.TransitPacketsIn, fl.TransitPacketsIn))
+		}
+		if fl.TransitPacketsOut != existing.TransitPacketsOut {
+			errs = append(errs, fmt.Sprintf("TransitPacketsOut actual != expected (%d != %d)", existing.TransitPacketsOut, fl.TransitPacketsOut))
 		}
 	}
 

@@ -49,6 +49,7 @@ func main() {
     cluster                  Access cluster information.
     bgp                      Access BGP related information.
     captured-packets         Capture packet file command.
+    nonclusterhost           Non-cluster host management.
     version                  Display the version of this binary.
 
 Options:
@@ -143,6 +144,8 @@ Description:
 			err = commands.Capture(args)
 		case "datastore":
 			err = commands.Datastore(args)
+		case "nonclusterhost":
+			err = commands.NonClusterHost(args)
 		default:
 			err = fmt.Errorf("Unknown command: %q\n%s", command, doc)
 		}

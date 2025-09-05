@@ -57,6 +57,7 @@ var _ = Describe("L7 log type tests", func() {
 			ServicePortName:  "testPort",
 
 			ResponseCode: "200",
+			RouteName:    "test/route-name",
 			Method:       "POST",
 			Domain:       "www.server.com",
 			Path:         "/test/path",
@@ -104,6 +105,7 @@ var _ = Describe("L7 log type tests", func() {
 			Expect(log.DestServicePortName).To(Equal("testPort"))
 
 			Expect(log.ResponseCode).To(Equal(meta.ResponseCode))
+			Expect(log.RouteName).To(Equal(meta.RouteName))
 			Expect(log.Method).To(Equal(meta.Method))
 			Expect(log.URL).To(Equal("www.server.com/test/path"))
 			Expect(log.UserAgent).To(Equal(meta.UserAgent))
@@ -139,6 +141,7 @@ var _ = Describe("L7 log type tests", func() {
 			Expect(log.DestServicePortName).To(Equal("testPort"))
 
 			Expect(log.ResponseCode).To(Equal(meta.ResponseCode))
+			Expect(log.RouteName).To(Equal(meta.RouteName))
 			Expect(log.Method).To(Equal(meta.Method))
 			Expect(log.URL).To(Equal("www.server.com/test/path"))
 			Expect(log.UserAgent).To(Equal(meta.UserAgent))

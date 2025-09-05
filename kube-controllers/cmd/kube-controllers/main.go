@@ -33,8 +33,6 @@ import (
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
-	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -44,7 +42,6 @@ import (
 	"k8s.io/klog/v2"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
@@ -678,21 +675,11 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		}
 	}
 
-	// Zero and single tenant used managedcluster configuration that enables both the managed cluster
-	// controller (this configures users for elasticsearch for managed clusters) and the licensing controller.
-	// (this copies licensed for managed cluster). Multi-tenant controller will only be using managedclusterlicensing
-	// configuration to copy licenses to the managed clusters
-	if cfg.Controllers.ManagedCluster != nil && cfg.Controllers.ManagedClusterLicensing != nil {
-		log.Fatal("Invalid configuration. You can activate either managedcluster controller or managedclusterlicensing controller")
-	}
-
-	if cfg.Controllers.ManagedCluster != nil || cfg.Controllers.ManagedClusterLicensing != nil {
+	if cfg.Controllers.ManagedCluster != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
 		var kcPath string
 		if cfg.Controllers.ManagedCluster != nil {
 			kcPath = cfg.Controllers.ManagedCluster.Kubeconfig
-		} else if cfg.Controllers.ManagedClusterLicensing != nil {
-			kcPath = cfg.Controllers.ManagedClusterLicensing.Kubeconfig
 		}
 
 		kubeconfig, err := clientcmd.BuildConfigFromFlags("", kcPath)
@@ -752,59 +739,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 					*cfg.Controllers.ManagedCluster,
 					cc.restartCntrlChan,
 					getCloudManagedClusterControllerManagers(esK8sREST, esClientBuilder, cfg),
-				),
-				licenseFeature: features.MultiClusterManagement,
-			}
-		}
-
-		if cfg.Controllers.ManagedClusterLicensing != nil {
-			// we enable this only for multi-tenancy
-			cc.controllerStates["ManagedClusterLicensing"] = &controllerState{
-				controller: managedcluster.New(
-					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
-						kubeconfig := restclient.CopyConfig(kubeconfig)
-						kubeconfig.Host = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingEndpoint
-						kubeconfig.CAFile = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingCA
-						kubeconfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
-							return &addHeaderRoundTripper{
-								headers: map[string][]string{"x-cluster-id": {clustername}},
-								rt:      rt,
-							}
-						})
-						userKubeControllers := user.DefaultInfo{
-							Name: "system:serviceaccount:calico-system:calico-kube-controllers",
-							Groups: []string{
-								k8sserviceaccount.AllServiceAccountsGroup,
-								"system:authenticated",
-								fmt.Sprintf("%s%s", k8sserviceaccount.ServiceAccountGroupPrefix, common.CalicoNamespace),
-							},
-						}
-						kubeconfig.Impersonate = restclient.ImpersonationConfig{
-							UserName: userKubeControllers.Name,
-							Groups:   userKubeControllers.Groups,
-							Extra:    userKubeControllers.Extra,
-							UID:      userKubeControllers.UID,
-						}
-						kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
-						if err != nil {
-							return kubeClientSet, nil, err
-						}
-
-						calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
-						if err != nil {
-							return kubeClientSet, calicoClientSet, err
-						}
-
-						return kubeClientSet, calicoClientSet, nil
-					},
-					k8sClientset,
-					calicoClientSet,
-					client,
-					*cfg.Controllers.ManagedClusterLicensing,
-					cc.restartCntrlChan,
-					[]managedcluster.ControllerManager{
-						managedcluster.NewLicensingController(cfg.Controllers.ManagedClusterLicensing.LicenseConfig),
-					},
 				),
 				licenseFeature: features.MultiClusterManagement,
 			}
