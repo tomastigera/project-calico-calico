@@ -6,13 +6,13 @@
 #
 # For Calico components, the second version parameter is empty.
 # * Official release: v3.20.1 -> 3.20.1
-# * Early preview: v3.20.0-1.1 -> 3.20.0~pre1.1^20240823gitc210c473
-# * Main branch or versions.yml title starts with "release-calient-": 0.0.0^20240823gitc210c473
+# * Early preview: v3.20.0-1.1 -> 3.20.0~pre1.1^20240823gc210c473
+# * Main branch or values.yaml tag starts with "release-calient-": 0.0.0~20240823gc210c473
 #
 # For third-party components built by us, the vendor version is passed in as the second parameter.
 # * Official release: v3.1.6 -> 3.1.6
-# * Early preview: v3.1.6 -> 3.1.6~pre1.1^20240823gitc210c473
-# * Main branch: 3.1.6^20240823gitc210c473
+# * Early preview: v3.1.6 -> 3.1.6~pre1.1^20240823gc210c473
+# * Main branch: 3.1.6~20240823gc210c473
 
 repo_root=$1
 
@@ -22,42 +22,45 @@ if [[ -z "$repo_root" ]]; then
 fi
 
 version=${2#v}
-title=$(bin/yq .calicoctl.tag <$repo_root/charts/tigera-operator/values.yaml)
+tag=$(bin/yq .calicoctl.tag <$repo_root/charts/tigera-operator/values.yaml)
 
 is_dev=false
 is_early_preview=false
 is_release=false
 
-if [[ "$title" == "master" || "$title" == release-calient-* ]]; then
+if [[ "$tag" == "master" || "$tag" == release-calient-* ]]; then
     is_dev=true
-elif [[ "$title" =~ ^v[0-9]\.[0-9]+\.[0-9]+-[0-9]\.[0-9]$ ]]; then
+elif [[ "$tag" =~ ^v[0-9]\.[0-9]+\.[0-9]+-[0-9]\.[0-9]$ ]]; then
     is_early_preview=true
-elif [[ "$title" =~ ^v[0-9]\.[0-9]+\.[0-9]+$ ]]; then
+elif [[ "$tag" =~ ^v[0-9]\.[0-9]+\.[0-9]+$ ]]; then
     is_release=true
 else
-    echo "Unexpected version: $version" >&2
+    echo "Unexpected tag: $tag" >&2
     exit 1
 fi
 
-# For master and release-calient-vx.yz, we always use 0.0.0 as the version string.
-# For early preview, we convert x.y.z-n.m to x.y.z~pren.m.
-# For release, we use the version string as-is.
-if [[ -z "$version" ]]; then
-    if [[ "$is_dev" = true ]]; then
-        version="0.0.0"
-    elif [[ "$is_early_preview" = true ]]; then
-        title=${title#v}
-        version="${title//-/"~pre"}"
-    elif [[ "$is_release" = true ]]; then
-        version=${title#v}
-    else
-        echo "None of the dev, early preview, or release flag is set" >&2
-        exit 1
-    fi
-fi
+date_hash=$(date -u +'%Y%m%d')g$(git rev-parse --short=7 HEAD)
 
-if [[ "$is_dev" = true ]] || [[ "$is_early_preview" = true ]]; then
-    echo "$version^$(date -u +'%Y%m%d')git$(git rev-parse --short=7 HEAD)"
+if [[ "$is_dev" = true ]]; then
+    if [[ -z "$version" ]]; then
+        echo "0.0.0~$date_hash"
+    else
+        echo "$version~$date_hash"
+    fi
+elif [[ "$is_early_preview" = true ]]; then
+    if [[ -z "$version" ]]; then
+        tag=${tag#v}
+        echo "${tag//-/"~pre"}^$date_hash"
+    else
+        echo "$version~$date_hash"
+    fi
+elif [[ "$is_release" = true ]]; then
+    if [[ -z "$version" ]]; then
+        echo "${tag#v}"
+    else
+        echo "$version"
+    fi
 else
-    echo "$version"
+    echo "None of the dev, early preview, or release flag is set" >&2
+    exit 1
 fi
