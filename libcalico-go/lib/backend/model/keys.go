@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -85,6 +86,11 @@ type ListInterface interface {
 	// Key type for this list.  It returns nil if passed a different kind
 	// of path.
 	KeyFromDefaultPath(key string) Key
+}
+
+type LabelSelectingListInterface interface {
+	ListInterface
+	GetLabelSelector() labels.Selector
 }
 
 // KVPair holds a typed key and value object as well as datastore specific
