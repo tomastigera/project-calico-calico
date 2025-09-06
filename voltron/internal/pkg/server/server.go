@@ -561,7 +561,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// If shouldUseTunnel=true, we do impersonation and the request will be sent to guardian.
 	// If isK8sRequest=true, we do impersonation.
 	// If neither is true, we proxy the request without impersonation. Authn will also be handled there.
-	if !(shouldUseTunnel || isK8sRequest) {
+	if !shouldUseTunnel && !isK8sRequest {
 		// This is a request for the backend servers in the management cluster, like ui-apis or compliance.
 		logrus.Debug("Request is for the management cluster backing services")
 		s.defaultProxy.ServeHTTP(w, r)
@@ -571,6 +571,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// There are two cases where we want to propagate the authenticated user info via impersonation headers:
 	// 1. The request is going to a managed cluster, and Guardian has impersonation capabilities.
 	// 2. The request is going to the management cluster.
+	// 3. The request is from non-cluster hosts using Tigera signed JWT tokens.
 	if s.clusters.voltronCfg.ManagedClusterSupportsImpersonation || !shouldUseTunnel {
 		// Don't overwrite impersonation headers set by clients.
 		if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {

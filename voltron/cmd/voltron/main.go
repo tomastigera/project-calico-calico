@@ -429,6 +429,7 @@ func main() {
 	jwtAuthOpts = append(jwtAuthOpts,
 		auth.WithTokenReviewCacheTTL(ctx, cfg.OIDCTokenReviewCacheTTL),
 		auth.WithAuthzCacheTTL(ctx, cfg.LMAAuthorizationCacheTTL),
+		auth.WithTigeraIssuerPublicKey(cfg.TigeraIssuerCABundlePath),
 	)
 
 	authn, err := auth.NewJWTAuth(k8sConfig, k8s, jwtAuthOpts...)
