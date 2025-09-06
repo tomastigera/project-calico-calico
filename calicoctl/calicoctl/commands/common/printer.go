@@ -167,13 +167,12 @@ func (r ResourcePrinterTable) Print(client client.Interface, resources []runtime
 			}
 		}
 
-		writer.Flush()
-
 		// Templates for ps format are internally defined and therefore we should not
 		// hit errors writing the table formats.
 		if err != nil {
 			panic(err)
 		}
+		_ = writer.Flush()
 
 		// Leave a gap after each table.
 		fmt.Printf("\n")
