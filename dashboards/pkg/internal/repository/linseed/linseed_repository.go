@@ -59,6 +59,7 @@ func NewLinseedRepositoryWithClient(logger logging.Logger, url string, linseedCl
 			collections.CollectionNameL7:    newLinseedCollectionClientL7(logger, linseedClient),
 			collections.CollectionNameDNS:   newLinseedCollectionClientDNS(logger, linseedClient),
 			collections.CollectionNameFlows: newLinseedCollectionClientFlows(logger, linseedClient),
+			collections.CollectionNameWAF:   newLinseedCollectionClientWAF(logger, linseedClient),
 		},
 	}
 }
