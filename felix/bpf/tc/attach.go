@@ -76,6 +76,7 @@ type AttachPoint struct {
 	AttachType                  apiv3.BPFAttachOption
 	IngressPacketRateConfigured bool
 	EgressPacketRateConfigured  bool
+	DSCP                        int8
 
 	// EE only
 	VethNS                  uint16
@@ -506,6 +507,7 @@ func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 		VethNS:        ap.VethNS,
+		DSCP:          ap.DSCP,
 	}
 
 	if ap.Profiling == "Enabled" {
