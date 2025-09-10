@@ -195,6 +195,8 @@ const (
 	GlobalsFlowLogsEnabled
 	GlobalsNATOutgoingExcludeHosts
 	GlobalsSkipEgressRedirect
+	GlobalsIngressPacketRateConfigured
+	GlobalsEgressPacketRateConfigured
 
 	AttachTypeTcxIngress
 	AttachTypeTcxEgress
