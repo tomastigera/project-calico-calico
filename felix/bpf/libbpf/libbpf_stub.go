@@ -251,3 +251,7 @@ func ProgName(id uint32) (string, error) {
 func (o *Obj) AttachTCX(secName, ifName string) (*Link, error) {
 	panic("LIBBPF syscall stub")
 }
+
+func CreateBPFMap(mapType string, keySize int, valueSize int, maxEntries int, flags int, name string) (int, error) {
+	panic("LIBBPF syscall stub")
+}
