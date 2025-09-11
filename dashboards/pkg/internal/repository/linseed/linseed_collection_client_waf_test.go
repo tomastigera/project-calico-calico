@@ -64,9 +64,11 @@ func TestLinseedCollectionClientWAF(t *testing.T) {
 			endpoint2 := lsv1.WAFEndpoint{
 				PodNameSpace: "test-namespace2",
 			}
+			date1 := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+			date2 := time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)
 			wafLogs := []lsv1.WAFLog{
-				{Destination: &endpoint1, Cluster: "fake-cluster", Timestamp: time.Unix(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(), 0)},
-				{Destination: &endpoint2, Cluster: "fake-cluster", Timestamp: time.Unix(time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(), 0)},
+				{Destination: &endpoint1, Cluster: "fake-cluster", Timestamp: time.Unix(date1.Unix(), 0).UTC()},
+				{Destination: &endpoint2, Cluster: "fake-cluster", Timestamp: time.Unix(date2.Unix(), 0).UTC()},
 			}
 
 			mockClient.SetResults(rest.MockResult{
@@ -80,8 +82,8 @@ func TestLinseedCollectionClientWAF(t *testing.T) {
 			require.Equal(t, result.QueryResult{
 				Hits: 22,
 				Documents: []result.QueryResultDocument{
-					{Content: wafLogs[0], Timestamp: time.Unix(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC).Unix(), 0)},
-					{Content: wafLogs[1], Timestamp: time.Unix(time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC).Unix(), 0)},
+					{Content: wafLogs[0], Timestamp: time.Unix(date1.Unix(), 0).UTC()},
+					{Content: wafLogs[1], Timestamp: time.Unix(date2.Unix(), 0).UTC()},
 				},
 			}, queryResult)
 		})
