@@ -206,14 +206,60 @@ func (ap *AttachPoint) AttachProgram() error {
 	return nil
 }
 
-func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
+func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16, tcxSupported bool) error {
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileName)
-	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.TcStatsGlobalData{VethNS: nsId})
+	var configurator bpf.ObjectConfigurator
+	if tcxSupported {
+		configurator = func(obj *libbpf.Obj) error {
+			return obj.SetAttachType("calico_tcp_stats", libbpf.AttachTypeTcxIngress)
+		}
+	} else {
+		configurator = nil
+	}
+	obj, err := bpf.LoadObjectWithOptions(preCompiledBinary, &libbpf.TcStatsGlobalData{VethNS: nsId}, configurator)
 	if err != nil {
 		return fmt.Errorf("error loading tcp stats program %w", err)
 	}
 	defer obj.Close()
-	return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
+	if !tcxSupported {
+		return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
+	}
+	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.Replace(ifaceName, ".", "", -1), "tcp"))
+	if _, err := os.Stat(progPinPath); err == nil {
+		link, err := libbpf.OpenLink(progPinPath)
+		if err != nil {
+			return fmt.Errorf("error opening link %s : %w", progPinPath, err)
+		}
+		defer link.Close()
+		if err := link.Update(obj, "calico_tcp_stats"); err != nil {
+			return fmt.Errorf("error updating program %s : %w", progPinPath, err)
+		}
+		return nil
+	}
+	link, err := obj.AttachTCX("calico_tcp_stats", ifaceName)
+	if err != nil {
+		return err
+	}
+	defer link.Close()
+	err = link.Pin(progPinPath)
+	if err != nil {
+		return fmt.Errorf("error pinning link %w", err)
+	}
+	return nil
+}
+
+func DetachTcpStatsProgram(ifaceName string, tcxSupported bool) error {
+	if !tcxSupported {
+		return RemoveQdisc(ifaceName)
+	}
+	ap := &AttachPoint{
+		AttachPoint: bpf.AttachPoint{
+			Iface: ifaceName,
+			Hook:  hook.Ingress,
+		},
+	}
+	// Remove any tcx program.
+	return ap.detachTcxProgram()
 }
 
 func (ap *AttachPoint) progPinPath() string {
@@ -594,6 +640,10 @@ var IsTcxSupported = sync.OnceValue(func() bool {
 		return false
 	}
 	defer obj.Close()
-	_, err = obj.AttachTCX("cali_tcx_test", name)
-	return err == nil
+	link, err := obj.AttachTCX("cali_tcx_test", name)
+	if err != nil {
+		return false
+	}
+	link.Close()
+	return true
 })

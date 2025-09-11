@@ -21,9 +21,12 @@ import (
 )
 
 func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
-	_, err := tc.EnsureQdisc(ifaceName)
-	if err != nil {
-		return err
+	tcxSupported := tc.IsTcxSupported()
+	if !tcxSupported {
+		_, err := tc.EnsureQdisc(ifaceName)
+		if err != nil {
+			return err
+		}
 	}
 
 	logLevel = strings.ToLower(logLevel)
@@ -32,5 +35,5 @@ func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
 	}
 
 	fileName := fmt.Sprintf("tcp_stats_%s.o", logLevel)
-	return tc.AttachTcpStatsProgram(ifaceName, fileName, nsID)
+	return tc.AttachTcpStatsProgram(ifaceName, fileName, nsID, tcxSupported)
 }

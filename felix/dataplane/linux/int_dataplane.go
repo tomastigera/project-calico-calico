@@ -1261,7 +1261,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
 			config.FlowLogsCollectTcpStats = false
 		}
-
+	} else {
+		if !config.BPFEnabled {
+			tc.CleanUpTcpStatsPrograms()
+		}
 	}
 
 	var ipSetsV6 *ipsets.IPSets
