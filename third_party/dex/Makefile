@@ -24,7 +24,7 @@ include ../../lib.Makefile
 # This section builds the output binaries.
 DEX_DOWNLOADED=.dex.downloaded
 
-build: dex/bin/dex-$(ARCH)
+build: dex/bin/dex-$(ARCH) wrapper/bin/dex-wrapper-$(ARCH)
 
 # Commit the changes made by init-cmd if the tree is dirty
 init-source: $(DEX_DOWNLOADED)
@@ -40,6 +40,11 @@ dex/bin/dex-$(ARCH): init-source
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		cd dex && CGO_ENABLED=0 go build -o bin/dex-$(ARCH) -v -buildvcs=false -ldflags "-X main.version=$(DEX_VERSION) -s -w" ./cmd/dex/*.go'
 
+.PHONY: wrapper/bin/dex-wrapper-$(ARCH)
+wrapper/bin/dex-wrapper-$(ARCH):
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		cd wrapper && CGO_ENABLED=0 go build -o bin/dex-wrapper-$(ARCH) -v -buildvcs=false ./cmd'
+
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
@@ -54,7 +59,7 @@ sub-image-%:
 image: $(DEX_IMAGE)
 
 $(DEX_IMAGE): $(DEX_CONTAINER_CREATED)
-$(DEX_CONTAINER_CREATED): dex/bin/dex-$(ARCH)
+$(DEX_CONTAINER_CREATED): dex/bin/dex-$(ARCH) wrapper/bin/dex-wrapper-$(ARCH)
 	$(DOCKER_BUILD) -t $(DEX_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
@@ -74,5 +79,5 @@ cd: image-all cd-common
 
 clean:
 	rm -rf dex
-	rm -f $(DEX_DOWNLOADED) $(DEX_CONTAINER_CREATED)-*
+	rm -f $(DEX_DOWNLOADED) $(DEX_CONTAINER_CREATED)-* wrapper/bin/dex-wrapper-*
 	-docker image rm -f $$(docker images $(DEX_IMAGE) -a -q)
