@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/labels"
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
