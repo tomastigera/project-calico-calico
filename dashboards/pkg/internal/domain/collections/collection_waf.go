@@ -2,21 +2,23 @@ package collections
 
 var collectionWAF = Collection{
 	name:                 CollectionName("waf"),
-	defaultTimeFieldName: "timestamp",
+	defaultTimeFieldName: "@timestamp",
 	fields: []CollectionField{
-		collectionFieldGeneric{fieldName: "timestamp", fieldType: FieldTypeDate},
+		collectionFieldGeneric{fieldName: "@timestamp", fieldType: FieldTypeDate},
 
 		collectionFieldGeneric{
 			fieldName: "source.ip",
 			fieldType: FieldTypeIP,
 		},
 		collectionFieldGeneric{
-			fieldName: "source.pod_name",
-			fieldType: FieldTypeText,
+			fieldName:      "source.pod_name",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "source.pod_namespace",
-			fieldType: FieldTypeText,
+			fieldName:      "source.pod_namespace",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
 			fieldName: "source.port_num",
@@ -32,12 +34,14 @@ var collectionWAF = Collection{
 			fieldType: FieldTypeIP,
 		},
 		collectionFieldGeneric{
-			fieldName: "destination.pod_name",
-			fieldType: FieldTypeText,
+			fieldName:      "destination.pod_name",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "destination.pod_namespace",
-			fieldType: FieldTypeText,
+			fieldName:      "destination.pod_namespace",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
 			fieldName: "destination.port_num",
@@ -49,16 +53,18 @@ var collectionWAF = Collection{
 		},
 
 		collectionFieldGeneric{
-			fieldName: "level",
-			fieldType: FieldTypeText,
+			fieldName:      "level",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
 			fieldName: "method",
 			fieldType: FieldTypeText,
 		},
 		collectionFieldGeneric{
-			fieldName: "msg",
-			fieldType: FieldTypeText,
+			fieldName:      "msg",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
 			fieldName: "path",
@@ -69,33 +75,39 @@ var collectionWAF = Collection{
 			fieldType: FieldTypeText,
 		},
 		collectionFieldGeneric{
-			fieldName: "request_id",
-			fieldType: FieldTypeText,
+			fieldName:      "request_id",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
 			fieldName: "rule_info",
 			fieldType: FieldTypeText,
 		},
 		collectionFieldGeneric{
-			fieldName: "host",
-			fieldType: FieldTypeText,
+			fieldName:      "host",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "gateway_name",
-			fieldType: FieldTypeText,
+			fieldName:      "gateway_name",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "gateway_namespace",
-			fieldType: FieldTypeText,
+			fieldName:      "gateway_namespace",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 
 		collectionFieldGeneric{
-			fieldName: "cluster",
-			fieldType: FieldTypeText,
+			fieldName:      "cluster",
+			fieldType:      FieldTypeText,
+			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "generated_time",
-			fieldType: FieldTypeDate,
+			fieldName:      "generated_time",
+			fieldType:      FieldTypeDate,
+			filterDisabled: true,
 		},
 	},
 	groupBys: []GroupBy{
