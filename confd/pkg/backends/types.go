@@ -17,6 +17,7 @@ type BGPPeer struct {
 	DirectlyConnected bool                 `json:"directly_connected"`
 	RestartMode       string               `json:"restart_mode"`
 	RestartTime       string               `json:"restart_time"`
+	KeepaliveTime     string               `json:"keepalive_time"`
 	GatewayMode       string               `json:"gateway_mode"`
 	EnableBFD         bool                 `json:"enable_bfd"`
 	Port              uint16               `json:"port"`
