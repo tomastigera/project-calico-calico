@@ -198,11 +198,11 @@ func NewFlowSpec(mu *metric.Update, maxOriginalIPsSize, maxDomains int, includeP
 }
 
 func (f *FlowSpec) ContainsActiveRefs(mu *metric.Update) bool {
-	return f.FlowStatsByProcess.containsActiveRefs(mu)
+	return f.containsActiveRefs(mu)
 }
 
 func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, includeLabels bool, includePolicies bool) []*FlowLog {
-	stats := f.FlowStatsByProcess.toFlowProcessReportedStats()
+	stats := f.toFlowProcessReportedStats()
 
 	flogs := make([]*FlowLog, 0, len(stats))
 	for _, stat := range stats {
@@ -272,8 +272,8 @@ func (f *FlowSpec) AggregateMetricUpdate(mu *metric.Update) {
 		f.FlowEnforcedPolicySets = nil
 		f.FlowPendingPolicySet = nil
 		f.FlowTransitPolicySet = nil
-		f.FlowLabels.SrcLabels = uniquelabels.Nil
-		f.FlowLabels.DstLabels = uniquelabels.Nil
+		f.SrcLabels = uniquelabels.Nil
+		f.DstLabels = uniquelabels.Nil
 		f.FlowDestDomains.reset()
 		f.resetAggrData = false
 	}
@@ -322,7 +322,7 @@ func (f *FlowSpec) Reset() {
 }
 
 func (f *FlowSpec) GetActiveFlowsCount() int {
-	return f.FlowStatsByProcess.getActiveFlowsCount()
+	return f.getActiveFlowsCount()
 }
 
 // GarbageCollect provides a chance to remove process names and corresponding stats that don't have
@@ -330,7 +330,7 @@ func (f *FlowSpec) GetActiveFlowsCount() int {
 // As an added optimization, we also return the remaining active flows so that we don't have to
 // iterate over all the flow stats grouped by processes a second time.
 func (f *FlowSpec) GarbageCollect() int {
-	return f.FlowStatsByProcess.gc()
+	return f.gc()
 }
 
 type FlowLabels struct {
