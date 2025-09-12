@@ -60,9 +60,7 @@ func (r *DefaultRuleRenderer) makeNATOutgoingRuleIPTables(ipVersion uint8, proto
 		SourceIPSet(masqIPsSetName).
 		NotDestIPSet(allIPsSetName)
 
-	check := apiv3.NATOutgoingExclusionsType(r.Config.NATOutgoingExclusions)
-
-	if check == apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs ||
+	if r.Config.NATOutgoingExclusions == string(apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs) ||
 		r.Config.IPSecEnabled && ipVersion == 4 {
 		// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
 		// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
