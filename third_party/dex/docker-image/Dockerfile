@@ -6,7 +6,9 @@ FROM scratch AS source
 
 ARG TARGETARCH
 
+# Copy Dex binary, wrapper, and web UI
 COPY dex/bin/dex-${TARGETARCH} /usr/bin/dex
+COPY wrapper/bin/dex-wrapper-${TARGETARCH} /usr/bin/dex-wrapper
 COPY docker-image/web /srv/dex/web
 
 FROM ${CALICO_BASE}
@@ -17,9 +19,4 @@ ENV DEX_FRONTEND_DIR=/srv/dex/web
 
 USER 10001:10001
 
-# Tigera operator overrides this entry point and passes a config
-# with values defined by config map tigera-dex in namespace tigera-dex
-# In order to run this locally, replace /etc/dex/config.docker.yaml with
-# a config that uses K8S as a datastore as gomplate will not be invoked
-# to tailor the config file based on environment variables
-ENTRYPOINT ["/usr/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
+ENTRYPOINT ["/usr/bin/dex-wrapper"]

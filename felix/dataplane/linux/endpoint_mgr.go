@@ -212,8 +212,6 @@ type endpointManager struct {
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]types.HostEndpointID
 	newIfaceNameToHostEpID    map[string]types.HostEndpointID
-	// tcpStatsProgramAttached holds the list of workloads with tcp stats bpf program attached.
-	tcpStatsProgramAttached map[string]struct{}
 	// Interfaces to which we've added a host-side address, for egress IP function to work.
 	egressGatewayAddressAdded map[string]netlink.Addr
 
@@ -389,8 +387,6 @@ func newEndpointManagerWithShims(
 		hostEndpointsDirty: true,
 
 		egressGatewayAddressAdded: map[string]netlink.Addr{},
-
-		tcpStatsProgramAttached: map[string]struct{}{},
 
 		activeHostIfaceToRawChains:           map[string][]*generictables.Chain{},
 		activeHostIfaceToFiltChains:          map[string][]*generictables.Chain{},
@@ -899,18 +895,13 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 
 				if !m.bpfEnabled {
 					if m.tcpStatsEnabled {
-						_, ok := m.tcpStatsProgramAttached[workload.Name]
-						if !ok {
-							l, err := netlink.LinkByName(workload.Name)
+						l, err := netlink.LinkByName(workload.Name)
+						if err != nil {
+							log.Errorf("error getting workload %v namespace", workload.Name)
+						} else {
+							err = stats.AttachTcpStatsBpfProgram(workload.Name, m.bpfLogLevel, uint16(l.Attrs().NetNsID))
 							if err != nil {
-								log.Errorf("error getting workload %v namespace", workload.Name)
-							} else {
-								err = stats.AttachTcpStatsBpfProgram(workload.Name, m.bpfLogLevel, uint16(l.Attrs().NetNsID))
-								if err != nil {
-									log.Errorf("error attaching tcp stats program %v %v", workload.Name, err)
-								} else {
-									m.tcpStatsProgramAttached[workload.Name] = struct{}{}
-								}
+								log.Errorf("error attaching tcp stats program %v %v", workload.Name, err)
 							}
 						}
 					}
@@ -946,9 +937,6 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 					if bestShadowedId.EndpointId != "" {
 						m.pendingWlEpUpdates[bestShadowedId] = m.shadowedWlEndpoints[bestShadowedId]
 						delete(m.shadowedWlEndpoints, bestShadowedId)
-					}
-					if m.tcpStatsEnabled {
-						delete(m.tcpStatsProgramAttached, oldWorkload.Name)
 					}
 				}
 			}

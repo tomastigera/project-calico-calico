@@ -29,6 +29,7 @@ const (
 	ObjectDir    = "/usr/lib/calico/bpf"
 	CtlbPinDir   = "ctlb"
 	TcxPinDir    = DefaultBPFfsPath + "/tcx"
+	TcxPinDirTcp = DefaultBPFfsPath + "/tcp_stats"
 
 	DnsObjDir            = DefaultBPFfsPath + "/dns"
 	DnsParserProgram     = "cali_ipt_parse_dns"

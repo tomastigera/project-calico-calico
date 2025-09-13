@@ -567,19 +567,21 @@ func (o *Obj) AttachCGroupLegacy(cgroup, progName string) error {
 
 const (
 	// Set when IPv6 is enabled to configure bpf dataplane accordingly
-	GlobalsTCPStatsEnabled         uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
-	GlobalsIsEgressGateway         uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
-	GlobalsIsEgressClient          uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
-	GlobalsRPFOptionEnabled        uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
-	GlobalsRPFOptionStrict         uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
-	GlobalsEgressIPEnabled         uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
-	GlobalsNoDSRCidrs              uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
-	GlobalsLoUDPOnly               uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
-	GlobalsDNSInline               uint32 = C.CALI_GLOBALS_DNS_INLINE
-	GlobalsRedirectPeer            uint32 = C.CALI_GLOBALS_REDIRECT_PEER
-	GlobalsFlowLogsEnabled         uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
-	GlobalsNATOutgoingExcludeHosts uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
-	GlobalsSkipEgressRedirect      uint32 = C.CALI_GLOBALS_SKIP_EGRESS_REDIRECT
+	GlobalsTCPStatsEnabled             uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
+	GlobalsIsEgressGateway             uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
+	GlobalsIsEgressClient              uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
+	GlobalsRPFOptionEnabled            uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
+	GlobalsRPFOptionStrict             uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
+	GlobalsEgressIPEnabled             uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
+	GlobalsNoDSRCidrs                  uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
+	GlobalsLoUDPOnly                   uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
+	GlobalsDNSInline                   uint32 = C.CALI_GLOBALS_DNS_INLINE
+	GlobalsRedirectPeer                uint32 = C.CALI_GLOBALS_REDIRECT_PEER
+	GlobalsFlowLogsEnabled             uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
+	GlobalsNATOutgoingExcludeHosts     uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
+	GlobalsSkipEgressRedirect          uint32 = C.CALI_GLOBALS_SKIP_EGRESS_REDIRECT
+	GlobalsIngressPacketRateConfigured uint32 = C.CALI_GLOBALS_INGRESS_PACKET_RATE_CONFIGURED
+	GlobalsEgressPacketRateConfigured  uint32 = C.CALI_GLOBALS_EGRESS_PACKET_RATE_CONFIGURED
 
 	AttachTypeTcxIngress uint32 = C.BPF_TCX_INGRESS
 	AttachTypeTcxEgress  uint32 = C.BPF_TCX_EGRESS
@@ -627,10 +629,7 @@ func (t *TcGlobalData) Set(m *Map) error {
 		C.uint(t.LogFilterJmp),
 		&cJumps[0], // it is safe because we hold the reference here until we return.
 		&cJumpsV6[0],
-		C.ushort(t.IngressPacketRate),
-		C.ushort(t.IngressPacketBurst),
-		C.ushort(t.EgressPacketRate),
-		C.ushort(t.EgressPacketBurst),
+		C.short(t.DSCP),
 	)
 
 	return err
@@ -736,4 +735,34 @@ func MapUpdateBatch(fd int, k, v []byte, count int, flags uint64) (int, error) {
 	}
 
 	return count, nil
+}
+
+var bpfMapTypeMap = map[string]int{
+	"unspec":           0,
+	"hash":             1,
+	"array":            2,
+	"prog_array":       3,
+	"perf_event_array": 4,
+	"percpu_hash":      5,
+	"percpu_array":     6,
+	"lru_hash":         9,
+	"lpm_trie":         11,
+}
+
+func CreateBPFMap(mapType string, keySize int, valueSize int, maxEntries int, flags int, name string) (int, error) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+
+	fd := C.create_bpf_map(
+		C.enum_bpf_map_type(bpfMapTypeMap[mapType]),
+		C.uint(keySize),
+		C.uint(valueSize),
+		C.uint(maxEntries),
+		C.uint(flags),
+		cname,
+	)
+	if fd < 0 {
+		return int(fd), fmt.Errorf("failed to create bpf map")
+	}
+	return int(fd), nil
 }

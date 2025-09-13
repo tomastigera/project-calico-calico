@@ -15,11 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/gateway/pkg/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 var wafEvents []*proto.WAFEvent
+var l *license.FakeGatewayLicense
 
 func InMemoryLogger(wafEvent *proto.WAFEvent) {
 	logrus.Warnf("New WAF event! Need to do something about that! %v", wafEvent)
@@ -27,7 +29,8 @@ func InMemoryLogger(wafEvent *proto.WAFEvent) {
 }
 
 func setupServer(t *testing.T, opts waf.ServerOptions) func() {
-	srv := waf.NewWAFHTTPFilter(opts, InMemoryLogger)
+	l = &license.FakeGatewayLicense{IsLicenseEnabled: true}
+	srv := waf.NewWAFHTTPFilter(opts, l, InMemoryLogger)
 
 	// We keep track of whether we're stopping the server to catch errors on startup
 	stopping := false
@@ -282,6 +285,60 @@ func TestWAFConfig(t *testing.T) {
 	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "deny")
 }
 
+func TestUnlicensedBehaviour(t *testing.T) {
+	setupTest(t, waf.ServerOptions{
+		TcpPort:  9002,
+		HttpPort: 8080,
+	}, []string{"testdata/lds.yaml", "testdata/lds-blocking.yaml"})
+
+	transport := &http.Transport{
+		DialContext: dialContextFromLocalPort(8000),
+	}
+	client := &http.Client{
+		Transport: transport,
+	}
+
+	// Setup the waf-http-filter config with a blocking WAF.
+	cmd := exec.Command("mv", "testdata/lds-blocking.yaml", "testdata/lds.yaml")
+	_, err := cmd.Output()
+	require.NoError(t, err)
+
+	waitForConfigChange(t, func(t require.TestingT, config string) {
+		require.Contains(t, config, "SecRuleEngine On")
+	})
+
+	testRequestEventually(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+	})
+
+	// Eventually the new config is used
+	require.Equal(t, wafEvents[len(wafEvents)-1].Action, "deny")
+
+	// Keep track of reference index
+	initialNumEvents := len(wafEvents)
+
+	// Disable license
+	l.IsLicenseEnabled = false
+
+	// Make sure WAF is inactive
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 200, resp.StatusCode)
+		require.Contains(t, body, "subpath?artist=")
+		require.Len(t, wafEvents, initialNumEvents)
+	})
+
+	// Re-enable license
+	l.IsLicenseEnabled = true
+
+	// Make sure WAF is active
+	testRequest(t, client, "GET", "http://example.com:8000/subpath?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user", nil, "WAF'ed (blocking)", func(t require.TestingT, resp *http.Response, body string) {
+		require.Equal(t, 403, resp.StatusCode)
+		require.Contains(t, body, "deny (403)")
+		require.Len(t, wafEvents, initialNumEvents+1)
+	})
+}
+
 func TestFileLogger(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -299,9 +356,10 @@ func TestFileLogger(t *testing.T) {
 	fileLogger, stopAggController, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName, opts.LogAggregationPeriod, opts.MustKeepFields)
 	require.NoError(t, err)
 
+	l = &license.FakeGatewayLicense{IsLicenseEnabled: true}
 	logFilePath := fmt.Sprintf("%s/%s", opts.LogFileDirectory, opts.LogFileName)
 
-	srv := waf.NewWAFHTTPFilter(opts, fileLogger)
+	srv := waf.NewWAFHTTPFilter(opts, l, fileLogger)
 
 	// We keep track of whether we're stopping the server to catch errors on startup
 	stopping := false

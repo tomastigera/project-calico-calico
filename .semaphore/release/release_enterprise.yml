@@ -32,9 +32,35 @@ blocks:
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
       jobs:
         - name: "Release on Semaphore VM"
-          env_vars:
-            - name: AWS_PROFILE
-              value: helm
           commands:
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make GIT_BRANCH=${SEMAPHORE_GIT_BRANCH} release; fi
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make GIT_BRANCH=${SEMAPHORE_GIT_BRANCH} release-publish; fi
+  - name: "Update Helm index"
+    dependencies:
+      - "Publish official release"
+    skip:
+      when: "branch !~ '^release-calient-v/'"
+    task:
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: marvin-aws-config
+        - name: marvin-aws-credentials
+      prologue:
+        commands:
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          - git clone git@github.com:tigera/process.git ~/process
+      jobs:
+        - name: "Update Helm index"
+          commands:
+            - |
+              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+                cd ~/process/releases/calico/helmindex
+                docker build --progress plain -t helm_updater:stable .
+                docker run --rm -t \
+                  --net=host \
+                  -e AWS_PROFILE \
+                  -e PRODUCT=calient \
+                  -v $HOME/.aws:/root/.aws:ro \
+                  helm_updater:stable || exit 1
+              fi

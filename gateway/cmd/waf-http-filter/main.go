@@ -7,6 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/gateway/pkg/waf"
 )
 
@@ -26,13 +27,17 @@ func main() {
 
 	opts.MustKeepFields = strings.Split(mustKeepFields, ",")
 
+	// Initialize license monitoring before starting the filter
+	gatewayLicense := license.NewIngressGatewayLicenseMonitor()
+	gatewayLicense.InitializeLicenseMonitor()
+
 	fileLogger, stopAggController, err := waf.NewFileLogger(opts.LogFileDirectory, opts.LogFileName, opts.LogAggregationPeriod, opts.MustKeepFields)
 	if err != nil {
 		logrus.WithError(err).Fatal("Execution stopped with an error.")
 	}
 	defer stopAggController()
 
-	filter := waf.NewWAFHTTPFilter(opts, fileLogger)
+	filter := waf.NewWAFHTTPFilter(opts, gatewayLicense, fileLogger)
 	err = filter.Start()
 	if err != nil {
 		logrus.WithError(err).Fatal("Execution stopped with an error.")

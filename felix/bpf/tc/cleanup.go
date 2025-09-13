@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -32,6 +30,11 @@ import (
 )
 
 func CleanUpTcpStatsPrograms() {
+	if IsTcxSupported() {
+		os.RemoveAll(bpfdefs.TcxPinDirTcp)
+		return
+	}
+
 	bpftool := exec.Command("bpftool", "prog", "list", "--json")
 	progsJSON, err := bpftool.Output()
 	if err != nil {
@@ -61,32 +64,10 @@ func CleanUpTcpStatsPrograms() {
 	}
 	// Find all the interfaces with a clsact qdisc and examine the attached filters to see if any belong to
 	// us.
-	calicoIfaces := set.New[string]()
-	for _, iface := range ifacesWithClsact() {
-		for _, dir := range []string{"ingress", "egress"} {
-			tc := exec.Command("tc", "filter", "show", dir, "dev", iface)
-			out, err := tc.Output()
-			if err != nil {
-				log.WithError(err).Debugf("Cleanup failed for interface %s; ignoring", iface)
-			}
-			for _, id := range findBPFProgIDs(out) {
-				if calicoProgIDs.Contains(id) {
-					log.Infof("Found calico program on interface %s", iface)
-					calicoIfaces.Add(iface)
-				}
-			}
-		}
+	err = deleteFilters(calicoProgIDs)
+	if err != nil {
+		log.WithError(err).Info("Failed to delete filters")
 	}
-
-	calicoIfaces.Iter(func(iface string) error {
-		cmd := exec.Command("tc", "qdisc", "del", "dev", iface, "clsact")
-		err = cmd.Run()
-		if err != nil {
-			log.WithError(err).WithField("iface", iface).Info(
-				"Failed to remove BPF program from interface, maybe interface has gone?")
-		}
-		return nil
-	})
 }
 
 func CleanUpProgramsAndPins() {
@@ -162,9 +143,20 @@ func cleanUpProgramsAndPins(excludeDNS bool, mapsToExclude ...string) {
 
 	// Find all the interfaces with a clsact qdisc and examine the attached filters to see if any belong to
 	// us.
+	err = deleteFilters(calicoProgIDs)
+	if err != nil {
+		log.WithError(err).Info("Failed to delete filters")
+	}
+	// Remove all tcx pins
+	os.RemoveAll(bpfdefs.TcxPinDir)
+	bpf.CleanUpCalicoPins(bpfdefs.DefaultBPFfsPath, excludeDNS, mapsToExclude...)
+}
+
+func deleteFilters(calicoProgIDs set.Set[int]) error {
 	qdiscs, err := netlink.QdiscList(nil)
 	if err != nil {
 		log.WithError(err).Info("Failed to list qdiscs for cleanup")
+		return err
 	}
 	for _, qdisc := range qdiscs {
 		_, isClsact := qdisc.(*netlink.Clsact)
@@ -175,12 +167,14 @@ func cleanUpProgramsAndPins(excludeDNS bool, mapsToExclude ...string) {
 		if err != nil {
 			log.WithError(err).WithField("iface", link.Attrs().Name).Info(
 				"Failed to remove BPF qdisc from interface, maybe interface is gone?")
+			continue
 		}
 		for _, parent := range []uint32{netlink.HANDLE_MIN_INGRESS, netlink.HANDLE_MIN_EGRESS} {
 			filters, err := netlink.FilterList(link, parent)
 			if err != nil {
 				log.WithError(err).WithFields(log.Fields{"iface": link.Attrs().Name, "parent": parent}).Info(
 					"Failed to list filters on interface for cleanup")
+				continue
 			}
 			for _, filter := range filters {
 				bpfFilter, ok := filter.(*netlink.BpfFilter)
@@ -198,45 +192,5 @@ func cleanUpProgramsAndPins(excludeDNS bool, mapsToExclude ...string) {
 			}
 		}
 	}
-	// Remove all tcx pins
-	os.RemoveAll(bpfdefs.TcxPinDir)
-	bpf.CleanUpCalicoPins(bpfdefs.DefaultBPFfsPath, excludeDNS, mapsToExclude...)
-}
-
-var tcFiltRegex = regexp.MustCompile(`filter .*? bpf .*? id (\d+)`)
-var tcQdiscRegex = regexp.MustCompile(`qdisc clsact .*? dev ([^ ]+)`)
-
-func ifacesWithClsact() []string {
-	tc := exec.Command("tc", "qdisc", "list")
-	out, err := tc.Output()
-	if err != nil {
-		log.WithError(err).Warn("Failed to run tc.")
-		return nil
-	}
-	// Example line:
-	// qdisc clsact ffff: dev cali866cd63afec parent ffff:fff1
-	result := findClsactQdiscs(out)
-	return result
-}
-
-func findClsactQdiscs(tcOutput []byte) []string {
-	matches := tcQdiscRegex.FindAllSubmatch(tcOutput, -1)
-	var result []string
-	for _, m := range matches {
-		result = append(result, string(m[1]))
-	}
-	return result
-}
-
-func findBPFProgIDs(tcOutput []byte) []int {
-	matches := tcFiltRegex.FindAllSubmatch(tcOutput, -1)
-	var result []int
-	for _, m := range matches {
-		id, err := strconv.Atoi(string(m[1]))
-		if err != nil {
-			log.WithError(err).Panic("Bug: failed to parse ID from regex.")
-		}
-		result = append(result, id)
-	}
-	return result
+	return nil
 }

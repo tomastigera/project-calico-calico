@@ -41,43 +41,42 @@ import (
 type AttachPoint struct {
 	bpf.AttachPoint
 
-	LogFilter               string
-	LogFilterIdx            int
-	Type                    tcdefs.EndpointType
-	ToOrFrom                tcdefs.ToOrFromEp
-	HookLayoutV4            hook.Layout
-	HookLayoutV6            hook.Layout
-	HostIPv4                net.IP
-	HostIPv6                net.IP
-	HostTunnelIPv4          net.IP
-	HostTunnelIPv6          net.IP
-	IntfIPv4                net.IP
-	IntfIPv6                net.IP
-	FIB                     bool
-	ToHostDrop              bool
-	DSR                     bool
-	DSROptoutCIDRs          bool
-	SkipEgressRedirect      bool
-	TunnelMTU               uint16
-	VXLANPort               uint16
-	WgPort                  uint16
-	Wg6Port                 uint16
-	ExtToServiceConnmark    uint32
-	PSNATStart              uint16
-	PSNATEnd                uint16
-	RPFEnforceOption        uint8
-	NATin                   uint32
-	NATout                  uint32
-	NATOutgoingExcludeHosts bool
-	UDPOnly                 bool
-	RedirectPeer            bool
-	FlowLogsEnabled         bool
-	OverlayTunnelID         uint32
-	AttachType              apiv3.BPFAttachOption
-	IngressPacketRate       uint16
-	IngressPacketBurst      uint16
-	EgressPacketRate        uint16
-	EgressPacketBurst       uint16
+	LogFilter                   string
+	LogFilterIdx                int
+	Type                        tcdefs.EndpointType
+	ToOrFrom                    tcdefs.ToOrFromEp
+	HookLayoutV4                hook.Layout
+	HookLayoutV6                hook.Layout
+	HostIPv4                    net.IP
+	HostIPv6                    net.IP
+	HostTunnelIPv4              net.IP
+	HostTunnelIPv6              net.IP
+	IntfIPv4                    net.IP
+	IntfIPv6                    net.IP
+	FIB                         bool
+	ToHostDrop                  bool
+	DSR                         bool
+	DSROptoutCIDRs              bool
+	SkipEgressRedirect          bool
+	TunnelMTU                   uint16
+	VXLANPort                   uint16
+	WgPort                      uint16
+	Wg6Port                     uint16
+	ExtToServiceConnmark        uint32
+	PSNATStart                  uint16
+	PSNATEnd                    uint16
+	RPFEnforceOption            uint8
+	NATin                       uint32
+	NATout                      uint32
+	NATOutgoingExcludeHosts     bool
+	UDPOnly                     bool
+	RedirectPeer                bool
+	FlowLogsEnabled             bool
+	OverlayTunnelID             uint32
+	AttachType                  apiv3.BPFAttachOption
+	IngressPacketRateConfigured bool
+	EgressPacketRateConfigured  bool
+	DSCP                        int8
 
 	// EE only
 	VethNS                  uint16
@@ -208,14 +207,60 @@ func (ap *AttachPoint) AttachProgram() error {
 	return nil
 }
 
-func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
+func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16, tcxSupported bool) error {
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileName)
-	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.TcStatsGlobalData{VethNS: nsId})
+	var configurator bpf.ObjectConfigurator
+	if tcxSupported {
+		configurator = func(obj *libbpf.Obj) error {
+			return obj.SetAttachType("calico_tcp_stats", libbpf.AttachTypeTcxIngress)
+		}
+	} else {
+		configurator = nil
+	}
+	obj, err := bpf.LoadObjectWithOptions(preCompiledBinary, &libbpf.TcStatsGlobalData{VethNS: nsId}, configurator)
 	if err != nil {
 		return fmt.Errorf("error loading tcp stats program %w", err)
 	}
 	defer obj.Close()
-	return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
+	if !tcxSupported {
+		return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
+	}
+	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.Replace(ifaceName, ".", "", -1), "tcp"))
+	if _, err := os.Stat(progPinPath); err == nil {
+		link, err := libbpf.OpenLink(progPinPath)
+		if err != nil {
+			return fmt.Errorf("error opening link %s : %w", progPinPath, err)
+		}
+		defer link.Close()
+		if err := link.Update(obj, "calico_tcp_stats"); err != nil {
+			return fmt.Errorf("error updating program %s : %w", progPinPath, err)
+		}
+		return nil
+	}
+	link, err := obj.AttachTCX("calico_tcp_stats", ifaceName)
+	if err != nil {
+		return err
+	}
+	defer link.Close()
+	err = link.Pin(progPinPath)
+	if err != nil {
+		return fmt.Errorf("error pinning link %w", err)
+	}
+	return nil
+}
+
+func DetachTcpStatsProgram(ifaceName string, tcxSupported bool) error {
+	if !tcxSupported {
+		return RemoveQdisc(ifaceName)
+	}
+	ap := &AttachPoint{
+		AttachPoint: bpf.AttachPoint{
+			Iface: ifaceName,
+			Hook:  hook.Ingress,
+		},
+	}
+	// Remove any tcx program.
+	return ap.detachTcxProgram()
 }
 
 func (ap *AttachPoint) progPinPath() string {
@@ -448,24 +493,21 @@ func (ap *AttachPoint) Config() string {
 
 func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 	globalData := &libbpf.TcGlobalData{
-		ExtToSvcMark:       ap.ExtToServiceConnmark,
-		VxlanPort:          ap.VXLANPort,
-		Tmtu:               ap.TunnelMTU,
-		PSNatStart:         ap.PSNATStart,
-		PSNatLen:           ap.PSNATEnd,
-		WgPort:             ap.WgPort,
-		Wg6Port:            ap.Wg6Port,
-		NatIn:              ap.NATin,
-		NatOut:             ap.NATout,
-		LogFilterJmp:       uint32(ap.LogFilterIdx),
-		IngressPacketRate:  ap.IngressPacketRate,
-		IngressPacketBurst: ap.IngressPacketBurst,
-		EgressPacketRate:   ap.EgressPacketRate,
-		EgressPacketBurst:  ap.EgressPacketBurst,
+		ExtToSvcMark: ap.ExtToServiceConnmark,
+		VxlanPort:    ap.VXLANPort,
+		Tmtu:         ap.TunnelMTU,
+		PSNatStart:   ap.PSNATStart,
+		PSNatLen:     ap.PSNATEnd,
+		WgPort:       ap.WgPort,
+		Wg6Port:      ap.Wg6Port,
+		NatIn:        ap.NATin,
+		NatOut:       ap.NATout,
+		LogFilterJmp: uint32(ap.LogFilterIdx),
 
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 		VethNS:        ap.VethNS,
+		DSCP:          ap.DSCP,
 	}
 
 	if ap.Profiling == "Enabled" {
@@ -488,6 +530,14 @@ func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 
 	if ap.SkipEgressRedirect {
 		globalData.Flags |= libbpf.GlobalsSkipEgressRedirect
+	}
+
+	if ap.IngressPacketRateConfigured {
+		globalData.Flags |= libbpf.GlobalsIngressPacketRateConfigured
+	}
+
+	if ap.EgressPacketRateConfigured {
+		globalData.Flags |= libbpf.GlobalsEgressPacketRateConfigured
 	}
 
 	switch ap.RPFEnforceOption {
@@ -592,6 +642,10 @@ var IsTcxSupported = sync.OnceValue(func() bool {
 		return false
 	}
 	defer obj.Close()
-	_, err = obj.AttachTCX("cali_tcx_test", name)
-	return err == nil
+	link, err := obj.AttachTCX("cali_tcx_test", name)
+	if err != nil {
+		return false
+	}
+	link.Close()
+	return true
 })

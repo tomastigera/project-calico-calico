@@ -25,8 +25,10 @@ import (
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/gateway/pkg/waf/service"
 	"github.com/projectcalico/calico/gateway/pkg/waf/transaction"
+	"github.com/projectcalico/calico/gateway/pkg/waf/unlicensed"
 )
 
 type ServerOptions struct {
@@ -42,6 +44,7 @@ type ServerOptions struct {
 
 type WAFHTTPFilter struct {
 	options          ServerOptions
+	license          license.GatewayLicense
 	logger           func(*proto.WAFEvent)
 	wafServerManager *service.WAFServiceManager
 	healthServer     *http.Server
@@ -52,7 +55,7 @@ type WAFHTTPFilter struct {
 	grpcListenAddr net.Addr
 }
 
-func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
+func NewWAFHTTPFilter(opts ServerOptions, license license.GatewayLicense, logger func(*proto.WAFEvent)) *WAFHTTPFilter {
 
 	var wafRulesetRootFS fs.FS
 
@@ -72,6 +75,7 @@ func NewWAFHTTPFilter(opts ServerOptions, logger func(*proto.WAFEvent)) *WAFHTTP
 
 	res := &WAFHTTPFilter{
 		options:          opts,
+		license:          license,
 		logger:           logger,
 		wafServerManager: wafServerManager,
 		HealthServer:     health.NewHealthCheckService(&alwaysReadyReporter{}),
@@ -228,6 +232,9 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 	// Update config in parallel so that we don't delay request processing
 	go s.handleDirectivesUpdate(md["directivesjson"])
 
+	// Request processor when we're unlicensed (license status can change over time)
+	unlicensedRequestProcessor := unlicensed.NewUnlicensedRequestHandler()
+
 	// Use latest wafServer in case there was a config change since handling the previous request.
 	errCh := make(chan error, 1)
 	s.wafServerManager.Read(func(w coraza.WAF, evp *waf.WafEventsPipeline) {
@@ -269,10 +276,18 @@ func (s *WAFHTTPFilter) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				return
 			}
 
-			logrus.Infof("Processing request %v", req)
-			resp := requestProcessor.Process(req)
-			if err := srv.Send(resp); err != nil {
-				logrus.Warnf("send error %v", err)
+			if s.license.IsLicensed() {
+				logrus.Debug("Processing request")
+				resp := requestProcessor.Process(req)
+				if err := srv.Send(resp); err != nil {
+					logrus.Warnf("send error %v", err)
+				}
+			} else {
+				logrus.Debug("Processing (unlicensed) request")
+				resp := unlicensedRequestProcessor.Process(req)
+				if err := srv.Send(resp); err != nil {
+					logrus.Warnf("send error %v", err)
+				}
 			}
 		}
 	})

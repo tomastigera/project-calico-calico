@@ -15,7 +15,6 @@ const volatile struct cali_stats_globals __globals;
 #include "skb.h"
 #undef GLOBAL_FLAGS
 #define GLOBAL_FLAGS 0
-#define deny_reason(...) /* used in parsin.h but only for tc.c, we do not care here */
 #include "parsing.h"
 
 SEC("tc")

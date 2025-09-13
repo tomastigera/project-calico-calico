@@ -264,7 +264,6 @@ type Config struct {
 	BPFConnTimeLBEnabled               bool
 	BPFConnTimeLB                      string
 	BPFHostNetworkedNAT                string
-	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
 	BPFDSROptoutCIDRs                  []string
 	BPFPSNATPorts                      numorstring.Port
@@ -679,11 +678,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.BPFEnabled && config.BPFKubeProxyIptablesCleanupEnabled {
 		// If BPF-mode is enabled, clean up kube-proxy's rules too.
-		if !config.RulesConfig.NFTables {
-			log.Info("BPF enabled, configuring iptables layer to clean up kube-proxy's rules.")
-			iptablesOptions.ExtraCleanupRegexPattern = rules.KubeProxyInsertRuleRegex
-			iptablesOptions.HistoricChainPrefixes = append(iptablesOptions.HistoricChainPrefixes, rules.KubeProxyChainPrefixes...)
-		}
+		log.Info("BPF enabled, configuring iptables/nftables layer to clean up kube-proxy's rules.")
+		iptablesOptions.ExtraCleanupRegexPattern = rules.KubeProxyInsertRuleRegex
+		iptablesOptions.HistoricChainPrefixes = append(iptablesOptions.HistoricChainPrefixes, rules.KubeProxyChainPrefixes...)
 	}
 
 	if config.BPFEnabled && !config.BPFPolicyDebugEnabled {
@@ -1131,12 +1128,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		defaultRPFilter = []byte{'1'}
 	}
 
-	if config.BPFMapRepin {
-		bpfmaps.EnableRepin()
-	} else {
-		bpfmaps.DisableRepin()
-	}
-
 	bpfMapSizeConntrack := config.BPFMapSizeConntrack
 	if config.BPFMapSizePerCPUConntrack > 0 {
 		bpfMapSizeConntrack = config.BPFMapSizePerCPUConntrack * bpfmaps.NumPossibleCPUs()
@@ -1270,7 +1261,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
 			config.FlowLogsCollectTcpStats = false
 		}
-
+	} else {
+		if !config.BPFEnabled {
+			tc.CleanUpTcpStatsPrograms()
+		}
 	}
 
 	var ipSetsV6 *ipsets.IPSets
@@ -1393,7 +1387,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 			// Activate the connect-time load balancer.
 			err = bpfnat.InstallConnectTimeLoadBalancer(true, config.BPFIpv6Enabled,
-				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP)
+				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMap)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -1554,11 +1548,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.endpointsSourceV4 = epManager
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4, config.FloatingIPsEnabled))
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
-	dp.RegisterManager(newHostsIPSetManager(ipSetsV4, 4, config))
+
+	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled || config.EgressIPEnabled ||
+		config.RulesConfig.NATOutgoingExclusions == string(apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs) {
+		dp.RegisterManager(newHostsIPSetManager(ipSetsV4, 4, config))
+	}
 
 	if !config.BPFEnabled {
 		dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 4, rawTableV4))
-		dp.RegisterManager(newDSCPManager(mangleTableV4, ruleRenderer, 4))
+		dp.RegisterManager(newDSCPManager(ipSetsV4, mangleTableV4, ruleRenderer, 4, config))
 	}
 
 	if config.RulesConfig.IPIPEnabled {
@@ -1796,11 +1794,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6, config.FloatingIPsEnabled))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 		dp.RegisterManager(newServiceLoopManager(filterTableV6, ruleRenderer, 6))
-		dp.RegisterManager(newHostsIPSetManager(ipSetsV6, 6, config))
+
+		if config.RulesConfig.NATOutgoingExclusions == string(apiv3.NATOutgoingExclusionsIPPoolsAndHostIPs) {
+			dp.RegisterManager(newHostsIPSetManager(ipSetsV6, 6, config))
+		}
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 6, rawTableV6))
-			dp.RegisterManager(newDSCPManager(mangleTableV6, ruleRenderer, 6))
+			dp.RegisterManager(newDSCPManager(ipSetsV6, mangleTableV6, ruleRenderer, 6, config))
 		}
 
 		// Add a manager for IPv6 wireguard configuration. This is added irrespective of whether wireguard is actually enabled
