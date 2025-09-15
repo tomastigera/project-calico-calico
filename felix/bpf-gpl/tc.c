@@ -635,7 +635,6 @@ syn_force_policy:
 		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
 		// client. This is because, packets from egress clients are destined outside the cluster
 		// the SNATing is done by the egw itself.
-		// Check whether the workload needs outgoing NAT to this address.
 		if (!EGRESS_CLIENT && (src_flags & CALI_RT_NAT_OUT)) {
 			bool exclude_hosts = (GLOBAL_FLAGS & CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS);
 			if (cali_rt_flags_should_perform_nat_outgoing(dst_flags, exclude_hosts)) {
