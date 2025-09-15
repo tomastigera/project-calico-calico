@@ -374,15 +374,17 @@
   - field: method
   - field: url
   name: l7
-- defaultTimeFieldName: timestamp
+- defaultTimeFieldName: '@timestamp'
   fields:
-  - name: timestamp
+  - name: '@timestamp'
     type: date
   - name: source.ip
     type: ip
-  - name: source.pod_name
+  - filterDisabled: true
+    name: source.pod_name
     type: text
-  - name: source.pod_namespace
+  - filterDisabled: true
+    name: source.pod_namespace
     type: text
   - name: source.port_num
     type: number
@@ -390,37 +392,47 @@
     type: text
   - name: destination.ip
     type: ip
-  - name: destination.pod_name
+  - filterDisabled: true
+    name: destination.pod_name
     type: text
-  - name: destination.pod_namespace
+  - filterDisabled: true
+    name: destination.pod_namespace
     type: text
   - name: destination.port_num
     type: number
   - name: destination.hostname
     type: text
-  - name: level
+  - filterDisabled: true
+    name: level
     type: text
   - name: method
     type: text
-  - name: msg
+  - filterDisabled: true
+    name: msg
     type: text
   - name: path
     type: text
   - name: protocol
     type: text
-  - name: request_id
+  - filterDisabled: true
+    name: request_id
     type: text
   - name: rule_info
     type: text
-  - name: host
+  - filterDisabled: true
+    name: host
     type: text
-  - name: gateway_name
+  - filterDisabled: true
+    name: gateway_name
     type: text
-  - name: gateway_namespace
+  - filterDisabled: true
+    name: gateway_namespace
     type: text
-  - name: cluster
+  - filterDisabled: true
+    name: cluster
     type: text
-  - name: generated_time
+  - filterDisabled: true
+    name: generated_time
     type: date
   groupBys:
   - field: source.pod_namespace

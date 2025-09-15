@@ -26,9 +26,9 @@ func TestCollections(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "start_time"}, field, c.name)
 			} else {
-				field, found := c.Field("timestamp")
+				field, found := c.Field("@timestamp")
 				require.True(t, found)
-				require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "timestamp"}, field, c.name)
+				require.Equal(t, collectionFieldGeneric{fieldType: FieldTypeDate, fieldName: "@timestamp"}, field, c.name)
 			}
 
 		}
