@@ -19496,7 +19496,6 @@ spec:
                     - DockerEnterprise
                     - RKE2
                     - TKG
-                    - Kind
                   type: string
                 logging:
                   description: Logging Configuration for Components
@@ -28454,7 +28453,6 @@ spec:
                         - DockerEnterprise
                         - RKE2
                         - TKG
-                        - Kind
                       type: string
                     logging:
                       description: Logging Configuration for Components
