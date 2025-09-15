@@ -96,6 +96,29 @@ func (p *EnterprisePinnedVersion) GetComponentImageNames() []string {
 	return componentNames
 }
 
+func (p *EnterprisePinnedVersion) ImageComponents() map[string]registry.Component {
+	components := p.Components
+	operator := registry.OperatorComponent{Component: p.TigeraOperator}
+	components[operator.Image] = operator.Component
+	initImage := operator.InitImage()
+	components[initImage.Image] = operator.InitImage()
+	for name, component := range components {
+		// Remove components that do not produce images.
+		if utils.Contains(noEntepriseImageComponents, name) {
+			delete(components, name)
+			continue
+		}
+		img := registry.EnterpriseImageMap[name]
+		if img != "" {
+			component.Image = img
+		} else if component.Image == "" {
+			component.Image = name
+		}
+		components[name] = component
+	}
+	return components
+}
+
 type enterpriseTemplateData struct {
 	calicoTemplateData
 	HelmReleaseVersion string
@@ -303,26 +326,7 @@ func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Co
 	if err != nil {
 		return nil, err
 	}
-	components := pinnedVersion.Components
-	operator := registry.OperatorComponent{Component: pinnedVersion.TigeraOperator}
-	components[operator.Image] = operator.Component
-	initImage := operator.InitImage()
-	components[initImage.Image] = operator.InitImage()
-	for name, component := range components {
-		// Remove components that do not produce images.
-		if utils.Contains(noEntepriseImageComponents, name) {
-			delete(components, name)
-			continue
-		}
-		img := registry.EnterpriseImageMap[name]
-		if img != "" {
-			component.Image = img
-		} else if component.Image == "" {
-			component.Image = name
-		}
-		components[name] = component
-	}
-	return components, nil
+	return pinnedVersion.ImageComponents(), nil
 }
 
 func LoadEnterpriseHashreleaseFromRemote(hashreleaseName, outputDir, repoRootDir string) (*hashreleaseserver.EnterpriseHashrelease, error) {
