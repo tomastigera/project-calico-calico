@@ -11,7 +11,10 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
+<<<<<<< HEAD
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+=======
+>>>>>>> regenerate files
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
