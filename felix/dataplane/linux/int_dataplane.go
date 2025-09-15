@@ -291,6 +291,7 @@ type Config struct {
 
 	BPFProfiling                   string
 	KubeProxyMinSyncPeriod         time.Duration
+	KubeProxyHealtzPort            int
 	KubeProxyEndpointSlicesEnabled bool
 	FlowLogsCollectProcessInfo     bool
 	FlowLogsCollectTcpStats        bool
@@ -298,13 +299,11 @@ type Config struct {
 	FlowLogsFileIncludeService     bool
 	FlowLogsFileDomainsLimit       int
 	SidecarAccelerationEnabled     bool
-	bpfProxyHealthzServer          *k8shealthcheck.ProxyHealthServer
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool
 	DebugUseShortPollIntervals       bool
 	DebugSimulateDataplaneApplyDelay time.Duration
-	KubeProxyHealtzPort              int
 
 	// Flow logs related fields.
 	NfNetlinkBufSize int
@@ -3576,8 +3575,9 @@ func startBPFDataplaneComponents(
 	ctVal := bpfconntrack.ValueFromBytes
 
 	if config.bpfProxyHealthzServer == nil {
+		healthzAddr := fmt.Sprintf(":%d", config.KubeProxyHealtzPort)
 		config.bpfProxyHealthzServer = k8shealthcheck.NewProxyHealthServer(
-			":10256", config.KubeProxyMinSyncPeriod)
+			healthzAddr, config.KubeProxyMinSyncPeriod)
 
 		// We cannot wait for the healthz server as we cannot stop it.
 		go func() {
