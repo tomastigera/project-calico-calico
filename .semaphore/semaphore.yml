@@ -279,7 +279,7 @@ blocks:
             - make ci-preflight-checks
   - name: API
     run:
-      when: "false or change_in(['/*', '/libcalico-go/', '/api/', '/apiserver/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -292,16 +292,9 @@ blocks:
         - name: make ci
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
-        - name: Build binary
-          matrix:
-            - env_var: ARCH
-              values:
-                - arm64
-          commands:
-            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: API
+  - name: apiserver
     run:
-      when: "false or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/*', '/libcalico-go/', '/api/', '/apiserver/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -319,10 +312,8 @@ blocks:
             - env_var: ARCH
               values:
                 - arm64
-                - ppc64le
-                - s390x
           commands:
-            - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: app-policy
     run:
       when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -872,7 +863,7 @@ blocks:
         always:
           commands:
             - test-results publish report
-  - name: libcalico-go
+  - name: lib
     run:
       when: "false or change_in(['/lib/'])"
     execution_time_limit:
@@ -1504,7 +1495,7 @@ blocks:
           - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
           # Save windows-instances terraform.
           - tar czf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
-          - artifact push job ~/windows-tf.tar.gz
+          - artifact push job --expire-in 2w ~/windows-tf.tar.gz
           - popd
           - cd fluentd
       epilogue:
