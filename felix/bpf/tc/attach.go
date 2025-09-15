@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
@@ -131,10 +132,17 @@ func (ap *AttachPoint) attachTCXProgram(binaryToLoad string) error {
 		}
 		defer link.Close()
 		if err := link.Update(obj, "cali_tc_preamble"); err != nil {
+			if errors.Is(err, unix.ENOLINK) {
+				// The link was deleted out from under us, so try attaching a new one.
+				logCxt.Debug("Link severed from interface, re-attaching")
+				os.Remove(progPinPath)
+				goto attachNew
+			}
 			return fmt.Errorf("error updating program %s : %w", progPinPath, err)
 		}
 		return nil
 	}
+attachNew:
 	link, err := obj.AttachTCX("cali_tc_preamble", ap.Iface)
 	if err != nil {
 		return err
