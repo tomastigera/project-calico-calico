@@ -45,7 +45,7 @@ const (
 
 const (
 	// numBaseFelixConfigs should match the OS value.
-	numBaseFelixConfigs = 166
+	numBaseFelixConfigs = 167
 
 	// Add private-only fields to this count.
 	numPrivateOnlyFelixConfigs = 115

@@ -476,6 +476,7 @@ func StartDataplaneDriver(
 			BPFEnabled:                         configParams.BPFEnabled,
 			BPFPolicyDebugEnabled:              configParams.BPFPolicyDebugEnabled,
 			BPFDisableUnprivileged:             configParams.BPFDisableUnprivileged,
+			BPFJITHardening:                    configParams.BPFJITHardening,
 			BPFConnTimeLBEnabled:               configParams.BPFConnectTimeLoadBalancingEnabled,
 			BPFConnTimeLB:                      configParams.BPFConnectTimeLoadBalancing,
 			BPFHostNetworkedNAT:                configParams.BPFHostNetworkedNATWithoutCTLB,
