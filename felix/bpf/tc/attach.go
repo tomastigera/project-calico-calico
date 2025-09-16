@@ -208,7 +208,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	}
 	logCxt.Info("Program attached to tc.")
 	// Remove any tcx program.
-	err = ap.detachTcxProgram()
+	err = ap.DetachTcxProgram()
 	if err != nil {
 		logCxt.Warnf("error removing tcx program from %s", err)
 	}
@@ -275,7 +275,7 @@ func (ap *AttachPoint) progPinPath() string {
 	return path.Join(bpfdefs.TcxPinDir, fmt.Sprintf("%s_%s", strings.Replace(ap.Iface, ".", "", -1), ap.Hook))
 }
 
-func (ap *AttachPoint) detachTcxProgram() error {
+func (ap *AttachPoint) DetachTcxProgram() error {
 	progPinPath := ap.progPinPath()
 	if _, err := os.Stat(progPinPath); os.IsNotExist(err) {
 		return nil
@@ -302,7 +302,7 @@ func (ap *AttachPoint) detachTcProgram() error {
 }
 
 func (ap *AttachPoint) DetachProgram() error {
-	err := ap.detachTcxProgram()
+	err := ap.DetachTcxProgram()
 	if err != nil {
 		log.Warnf("error detaching tcx program from %s hook %s : %s", ap.Iface, ap.Hook, err)
 	}
