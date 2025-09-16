@@ -225,14 +225,14 @@ func NewEndpointConverter() Converter {
 
 // Convert takes a Kubernetes Endpoint and returns a Calico api.NetworkSet representation if corresponding NetworkSet already exists.
 func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
-	ep, ok := k8sObj.(*corev1.Endpoints)
+	ep, ok := k8sObj.(*corev1.Endpoints) //nolint:staticcheck
 
 	if !ok {
 		tombstone, ok := k8sObj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return nil, fmt.Errorf("couldn't get object from tombstone %+v", k8sObj)
 		}
-		ep, ok = tombstone.Obj.(*corev1.Endpoints)
+		ep, ok = tombstone.Obj.(*corev1.Endpoints) //nolint:staticcheck
 		if !ok {
 			return nil, fmt.Errorf("tombstone contained object that is not an Endpoint %+v", k8sObj)
 		}
@@ -252,7 +252,7 @@ func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
 
 // GetKey gets a K8s Endpoint an returns the 'namespace/name' for the Calico NetworkSet as its key.
 func (s *endpointConverter) GetKey(obj interface{}) string {
-	k8sResource := obj.(*v1.Endpoints)
+	k8sResource := obj.(*v1.Endpoints) //nolint:staticcheck
 	if len(k8sResource.ObjectMeta.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
 		return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, hashName(k8sResource.ObjectMeta.Name))
 	}
@@ -270,7 +270,7 @@ func (s *endpointConverter) DeleteArgsFromKey(key string) (string, string) {
 // name = NetworkSetNamePrefix+<service name> (or hash(service name) if prefix+name would be longer than max allowed)
 // namespace = <service namespace>
 // spec.Nets = endpoints addresses
-func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*model.KVPair, error) {
+func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*model.KVPair, error) { //nolint:staticcheck
 	// Pull out important fields.
 	key := s.GetKey(ep)
 	nsNamespace, nsName := s.DeleteArgsFromKey(key)

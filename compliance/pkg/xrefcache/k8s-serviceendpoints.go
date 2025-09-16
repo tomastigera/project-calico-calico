@@ -122,7 +122,7 @@ func (c *serviceEndpointsHandler) newCacheEntry() CacheEntry {
 }
 
 func (c *serviceEndpointsHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
-	in := res.(*corev1.Endpoints)
+	in := res.(*corev1.Endpoints) //nolint:staticcheck
 	return &versionedK8sServiceEndpoints{Endpoints: in}, nil
 }
 

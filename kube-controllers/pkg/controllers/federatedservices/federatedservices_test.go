@@ -68,24 +68,24 @@ var (
 			},
 		},
 	}
-	ep1 = &v1.Endpoints{
+	ep1 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "my-local-service",
 			Namespace: "namespace1",
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.1",
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -94,12 +94,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -130,14 +130,14 @@ var (
 			},
 		},
 	}
-	ep2 = &v1.Endpoints{
+	ep2 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "my-remote-service",
 			Namespace: "namespace1",
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.1",
 						TargetRef: &v1.ObjectReference{
@@ -145,7 +145,7 @@ var (
 						},
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.100.100",
 						TargetRef: &v1.ObjectReference{
@@ -153,7 +153,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -172,12 +172,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1090,
@@ -206,19 +206,19 @@ var (
 			Ports: []v1.ServicePort{},
 		},
 	}
-	ep3 = &v1.Endpoints{
+	ep3 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "my-non-matching-remote-service",
 			Namespace: "namespace2",
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "4.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -239,19 +239,19 @@ var (
 			Ports: []v1.ServicePort{},
 		},
 	}
-	ep4 = &v1.Endpoints{
+	ep4 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "my-non-matching-remote-service2",
 			Namespace: "namespace1",
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "4.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -262,7 +262,7 @@ var (
 		},
 	}
 
-	fedEpExpected = &v1.Endpoints{
+	fedEpExpected = &v1.Endpoints{ //nolint:staticcheck
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
 			APIVersion: "v1",
@@ -274,19 +274,19 @@ var (
 				FederationServiceSelectorAnnotation: "run == \"nginx\"",
 			},
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.1",
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -295,12 +295,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -309,7 +309,7 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.1",
 						TargetRef: &v1.ObjectReference{
@@ -317,7 +317,7 @@ var (
 						},
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.100.100",
 						TargetRef: &v1.ObjectReference{
@@ -325,7 +325,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -334,12 +334,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1090,
@@ -350,7 +350,7 @@ var (
 		},
 	}
 
-	fedEpExpectedNoSvc1 = &v1.Endpoints{
+	fedEpExpectedNoSvc1 = &v1.Endpoints{ //nolint:staticcheck
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
 			APIVersion: "v1",
@@ -362,9 +362,9 @@ var (
 				FederationServiceSelectorAnnotation: "run == \"nginx\"",
 			},
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.1",
 						TargetRef: &v1.ObjectReference{
@@ -372,7 +372,7 @@ var (
 						},
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.100.100",
 						TargetRef: &v1.ObjectReference{
@@ -380,7 +380,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -389,12 +389,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1090,
@@ -405,7 +405,7 @@ var (
 		},
 	}
 
-	fedEpExpectedNoSvc2 = &v1.Endpoints{
+	fedEpExpectedNoSvc2 = &v1.Endpoints{ //nolint:staticcheck
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
 			APIVersion: "v1",
@@ -417,19 +417,19 @@ var (
 				FederationServiceSelectorAnnotation: "run == \"nginx\"",
 			},
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.1",
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "1.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -438,12 +438,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -454,7 +454,7 @@ var (
 		},
 	}
 
-	svc1FedEpExpected = &v1.Endpoints{
+	svc1FedEpExpected = &v1.Endpoints{ //nolint:staticcheck
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
 			APIVersion: "v1",
@@ -466,9 +466,9 @@ var (
 				FederationServiceSelectorAnnotation: "run == \"nginx\"",
 			},
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.1",
 						TargetRef: &v1.ObjectReference{
@@ -476,7 +476,7 @@ var (
 						},
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.100.100",
 						TargetRef: &v1.ObjectReference{
@@ -484,7 +484,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port3",
 						Port:     1234,
@@ -493,12 +493,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.2",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port3",
 						Port:     3333,
@@ -618,7 +618,7 @@ var _ = Describe("Federated Endpoints Controller tests", func() {
 		// Create a Cache to store federated Endpoints in.
 		cacheArgs := rcache.ResourceCacheArgs{
 			ListFunc:    listFunc,
-			ObjectType:  reflect.TypeOf(v1.Endpoints{}),
+			ObjectType:  reflect.TypeOf(v1.Endpoints{}), //nolint:staticcheck
 			LogTypeDesc: "FederatedEndpoints",
 		}
 
@@ -1114,7 +1114,7 @@ var _ = Describe("Federated Endpoints Controller tests", func() {
 		Expect(fsc.dirtyServices.Len()).To(Equal(0))
 		val, present = fsc.cache.Get("namespace1/federated")
 		Expect(present).To(BeTrue())
-		Expect(val.(v1.Endpoints).Subsets).To(HaveLen(0))
+		Expect(val.(v1.Endpoints).Subsets).To(HaveLen(0)) //nolint:staticcheck
 
 		_, present = fsc.cache.Get("namespace1/my-local-service")
 		Expect(present).To(BeFalse())
@@ -1355,7 +1355,7 @@ var _ = Describe("Federated Endpoints Controller tests", func() {
 		Expect(fsc.dirtyServices.Len()).To(Equal(0))
 		val, present = fsc.cache.Get("namespace1/federated")
 		Expect(present).To(BeTrue())
-		Expect(val.(v1.Endpoints).Subsets).To(HaveLen(0))
+		Expect(val.(v1.Endpoints).Subsets).To(HaveLen(0)) //nolint:staticcheck
 
 		// Deleting the federated service should leave the reconciliation cache empty.
 		By("Deleting federated service")

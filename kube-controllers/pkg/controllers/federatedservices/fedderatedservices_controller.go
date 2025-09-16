@@ -77,7 +77,7 @@ type federatedServicesController struct {
 type serviceInfo struct {
 	// The service and corresponding endpoints.
 	service   *v1.Service
-	endpoints *v1.Endpoints
+	endpoints *v1.Endpoints //nolint:staticcheck
 
 	// The service federation config (or the error parsing the config). If either are non-nil then this is a federated
 	// service.  If this service is local to this cluster then the endpoints will be updated by this controller.  If
@@ -151,7 +151,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 	// Create a Cache to store federated Endpoints in.
 	cacheArgs := rcache.ResourceCacheArgs{
 		ListFunc:    listFunc,
-		ObjectType:  reflect.TypeOf(v1.Endpoints{}),
+		ObjectType:  reflect.TypeOf(v1.Endpoints{}), //nolint:staticcheck
 		LogTypeDesc: "FederatedEndpoints",
 	}
 
@@ -273,9 +273,9 @@ func (c *federatedServicesController) syncToDatastore(key string) error {
 	}
 	// The federated object should exist - update the kubernetes datastore to reflect the latest settings.
 	clog.Debug("Create/Update Endpoints in Kubernetes datastore")
-	requiredEP := value.(v1.Endpoints)
+	requiredEP := value.(v1.Endpoints) //nolint:staticcheck
 
-	var newEP *v1.Endpoints
+	var newEP *v1.Endpoints //nolint:staticcheck
 	if currentEP == nil {
 		clog.Info("Creating Endpoints in Kubernetes datastore")
 		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Create(ctx, &requiredEP, metav1.CreateOptions{}); err != nil {
@@ -439,7 +439,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 			case bapi.UpdateTypeKVUpdated, bapi.UpdateTypeKVNew:
 				// Store the endpoints associated with this service, adjusting the endpoint names to include
 				// the cluster name as well.
-				entry.endpoints = u.Value.(*v1.Endpoints)
+				entry.endpoints = u.Value.(*v1.Endpoints) //nolint:staticcheck
 				if id.cluster != "" {
 					for _, s := range entry.endpoints.Subsets {
 						for _, a := range s.Addresses {
@@ -572,7 +572,7 @@ func (c *federatedServicesController) handleDirtyServices() {
 		// the reconciler cache.
 		clog.Debug("Service is federated")
 		endpoints := *c.calculateEndpoints(fsid, fcEntry)
-		if !existsInReconcilerCache || !reflect.DeepEqual(rval.(v1.Endpoints), endpoints) {
+		if !existsInReconcilerCache || !reflect.DeepEqual(rval.(v1.Endpoints), endpoints) { //nolint:staticcheck
 			clog.Debugf("Service Endpoints added or modified, setting in cache: %#v", endpoints)
 			c.cache.Set(k, endpoints)
 		}
@@ -586,7 +586,7 @@ func (c *federatedServicesController) handleDirtyServices() {
 
 // calculateEndpoints calculates the federated service endpoints from the cached service and endpoint
 // data.
-func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceInfo *serviceInfo) *v1.Endpoints {
+func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceInfo *serviceInfo) *v1.Endpoints { //nolint:staticcheck
 	// Extract the set of ports (name and protocol) that we are federating in this service.
 	ports := make(map[portId]struct{})
 	for _, p := range serviceInfo.service.Spec.Ports {
@@ -602,7 +602,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 	// Iterate through the services that are contributing to the federated service and expand out the addresses and
 	// ports.  Order the services to avoid overly large deltas to the endpoints data, and to ensure a non-changing
 	// update doesn't cause any unnecessary update churn.
-	var subsets []v1.EndpointSubset
+	var subsets []v1.EndpointSubset //nolint:staticcheck
 	serviceInfo.backingServices.Iter(func(sid serviceID) error {
 		if c.allServices[sid].endpoints == nil {
 			// The endpoints data is missing, so nothing to include.
@@ -625,7 +625,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 			}
 			if len(filteredPorts) > 0 {
 				log.Debug("Including subset")
-				subsets = append(subsets, v1.EndpointSubset{
+				subsets = append(subsets, v1.EndpointSubset{ //nolint:staticcheck
 					Addresses:         ss.Addresses,
 					NotReadyAddresses: ss.NotReadyAddresses,
 					Ports:             filteredPorts,
@@ -636,7 +636,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 	})
 
 	// Return an Endpoints object, with deduplicated, ordered and expanded Subsets.
-	return &v1.Endpoints{
+	return &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        id.name,
 			Namespace:   id.namespace,
@@ -724,7 +724,7 @@ func (c *federatedServicesController) onServiceMatchStopped(federatedId, backing
 // sanitizeMetadata returns a cleaned Metadata that allows comparison between the calculated service and endpoint
 // configuration and the data actually read from the API. This removes all but the name, namespace and federation
 // specific annotations.
-func (_ *federatedServicesController) sanitizeEndpoints(e *v1.Endpoints) {
+func (_ *federatedServicesController) sanitizeEndpoints(e *v1.Endpoints) { //nolint:staticcheck
 	// Sanitize the metadata: we only require the Name, Namespace and the Tigera-specific annotations.
 	// Everything else we remove to ensure our cache comparisons only check the required data fields.
 	annotations := make(map[string]string)

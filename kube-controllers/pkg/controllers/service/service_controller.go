@@ -79,7 +79,7 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 	epHandler := cache.ResourceEventHandlerFuncs{AddFunc: sc.onEndpointsAdd, UpdateFunc: sc.onEndpointsUpdate, DeleteFunc: sc.onEPDelete}
 	sc.epIndexer, sc.epInformer = cache.NewInformerWithOptions(cache.InformerOptions{
 		ListerWatcher: epWatcher,
-		ObjectType:    &v1.Endpoints{},
+		ObjectType:    &v1.Endpoints{}, //nolint:staticcheck
 		ResyncPeriod:  0,
 		Handler:       epHandler,
 		Indexers:      cache.Indexers{},
@@ -139,7 +139,7 @@ func (c *serviceController) getServiceKey(svc *v1.Service) string {
 }
 
 // getEndpointKey returns the key corresponding to service
-func (c *serviceController) getEndpointKey(ep *v1.Endpoints) string {
+func (c *serviceController) getEndpointKey(ep *v1.Endpoints) string { //nolint:staticcheck
 	serviceKey, err := cache.MetaNamespaceKeyFunc(ep)
 	if err != nil {
 		log.WithField("ep", ep.Name).WithError(err).Warn("error on retrieving key for endpoints, passing")
@@ -163,7 +163,7 @@ func (c *serviceController) getServiceForEndpoints(endpointKey string) *v1.Servi
 }
 
 // getEndpointsForService retrieves the corresponding ep for the given svc
-func (c *serviceController) getEndpointsForService(serviceKey string) *v1.Endpoints {
+func (c *serviceController) getEndpointsForService(serviceKey string) *v1.Endpoints { //nolint:staticcheck
 	// get ep
 	epIface, exists, err := c.epIndexer.GetByKey(serviceKey)
 	if err != nil {
@@ -173,13 +173,13 @@ func (c *serviceController) getEndpointsForService(serviceKey string) *v1.Endpoi
 		log.WithField("key", serviceKey).Debug("endpoint for service not found, passing")
 		return nil
 	}
-	return epIface.(*v1.Endpoints)
+	return epIface.(*v1.Endpoints) //nolint:staticcheck
 }
 
 // shouldCreateNetworkSet return false if networkset corresponding to service/endpoint pair should not be created. True otherwise.
 // If service should be created, it also returns the NetworkSet from service to networkset conversion and the NetworkSet from
 // endpoints to networkset conversion
-func (c *serviceController) shouldCreateNetworkSet(svc *v1.Service, ep *v1.Endpoints) (bool, *api.NetworkSet, *api.NetworkSet) {
+func (c *serviceController) shouldCreateNetworkSet(svc *v1.Service, ep *v1.Endpoints) (bool, *api.NetworkSet, *api.NetworkSet) { //nolint:staticcheck
 	// Both must be not present for a networkset to be eventually created.
 	if (svc != nil && ep == nil) || (ep != nil && svc == nil) {
 		return false, nil, nil
@@ -241,7 +241,7 @@ func (c *serviceController) convertToNetworkSet(nsFromSvc, nsFromEp *api.Network
 
 // setNetworkSetForSvc handles the main logic to check if a specified service or endpoint
 // should have corresponding calico networkset created
-func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) {
+func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) { //nolint:staticcheck
 	// ensure both are not nil
 	if svc == nil && ep == nil {
 		log.Error("both service and endpoint cannot be nil, passing...")
@@ -280,7 +280,7 @@ func (c *serviceController) setNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoint
 }
 
 // unsetNetworkSetForSvc removes the NetworkSet created for this service.
-func (c *serviceController) unsetNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) {
+func (c *serviceController) unsetNetworkSetForSvc(svc *v1.Service, ep *v1.Endpoints) { //nolint:staticcheck
 	// ensure both are not nil
 	if svc == nil && ep == nil {
 		log.Error("both service and endpoint cannot be nil, passing...")
@@ -504,7 +504,7 @@ func (c *serviceController) onSvcDelete(obj interface{}) {
 
 // onEndpointsAdd is called when a k8s endpoint is created
 func (c *serviceController) onEndpointsAdd(obj interface{}) {
-	ep, ok := obj.(*v1.Endpoints)
+	ep, ok := obj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
 		return
@@ -515,12 +515,12 @@ func (c *serviceController) onEndpointsAdd(obj interface{}) {
 
 // onEndpointsUpdates is called when a k8s endpoint is updated
 func (c *serviceController) onEndpointsUpdate(oldObj, currentObj interface{}) {
-	current, ok := currentObj.(*v1.Endpoints)
+	current, ok := currentObj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
 		return
 	}
-	old, ok := oldObj.(*v1.Endpoints)
+	old, ok := oldObj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
 		return
@@ -537,7 +537,7 @@ func (c *serviceController) onEndpointsUpdate(oldObj, currentObj interface{}) {
 
 // onEPDelete is called when a k8s endpoint is deleted
 func (c *serviceController) onEPDelete(obj interface{}) {
-	ep, ok := obj.(*v1.Endpoints)
+	ep, ok := obj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
 		return

@@ -792,28 +792,28 @@ func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips
 	ipAddrs := ipByteToIPStringSlice(ips)
 
 	// Convert the IP addresses to endpoint subsets, splitting over multiple if there is more than a single address.
-	ss := []corev1.EndpointSubset{}
+	ss := []corev1.EndpointSubset{} //nolint:staticcheck
 	if len(ipAddrs) > 1 {
-		ss = append(ss, corev1.EndpointSubset{
-			Addresses: []corev1.EndpointAddress{{
+		ss = append(ss, corev1.EndpointSubset{ //nolint:staticcheck
+			Addresses: []corev1.EndpointAddress{{ //nolint:staticcheck
 				IP: ipAddrs[0],
 			}},
 		})
 		ipAddrs = ipAddrs[1:]
 	}
-	addrs := []corev1.EndpointAddress{}
+	addrs := []corev1.EndpointAddress{} //nolint:staticcheck
 	for _, ip := range ipAddrs {
-		addrs = append(addrs, corev1.EndpointAddress{
+		addrs = append(addrs, corev1.EndpointAddress{ //nolint:staticcheck
 			IP: ip,
 		})
 	}
-	ss = append(ss, corev1.EndpointSubset{
+	ss = append(ss, corev1.EndpointSubset{ //nolint:staticcheck
 		Addresses: addrs,
 	})
 	if len(pods) > 0 {
-		addrs := []corev1.EndpointAddress{}
+		addrs := []corev1.EndpointAddress{} //nolint:staticcheck
 		for _, pod := range pods {
-			addrs = append(addrs, corev1.EndpointAddress{
+			addrs = append(addrs, corev1.EndpointAddress{ //nolint:staticcheck
 				IP: "0.0.0.0",
 				TargetRef: &corev1.ObjectReference{
 					Kind:      "Pod",
@@ -822,12 +822,12 @@ func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips
 				},
 			})
 		}
-		ss = append(ss, corev1.EndpointSubset{
+		ss = append(ss, corev1.EndpointSubset{ //nolint:staticcheck
 			Addresses: addrs,
 		})
 	}
 
-	res := &corev1.Endpoints{
+	res := &corev1.Endpoints{ //nolint:staticcheck
 		TypeMeta:   r.TypeMeta,
 		ObjectMeta: getObjectMeta(r, NoLabels),
 		Subsets:    ss,

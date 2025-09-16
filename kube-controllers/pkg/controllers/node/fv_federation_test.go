@@ -67,17 +67,17 @@ var (
 		},
 	}
 
-	eps1 = &v1.Endpoints{
+	eps1 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -88,7 +88,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -97,13 +97,13 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -114,7 +114,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port3",
 						Port:     1200,
@@ -123,12 +123,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -137,12 +137,12 @@ var (
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "3.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port3",
 						Port:     1200,
@@ -181,21 +181,21 @@ var (
 		},
 	}
 
-	eps2 = &v1.Endpoints{
+	eps2 = &v1.Endpoints{ //nolint:staticcheck
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"federate": "yes",
 			},
 		},
-		Subsets: []v1.EndpointSubset{
+		Subsets: []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "10.10.10.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "10.10.10.2",
 						NodeName: &node2Name,
@@ -206,7 +206,7 @@ var (
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -232,7 +232,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localKubeconfig      string
 	)
 
-	getSubsets := func(namespace, name string) []v1.EndpointSubset {
+	getSubsets := func(namespace, name string) []v1.EndpointSubset { //nolint:staticcheck
 		eps, err := localK8sClient.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
 			return nil
@@ -241,8 +241,8 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		return endpoints.RepackSubsets(eps.Subsets)
 	}
 
-	getSubsetsFn := func(namespace, name string) func() []v1.EndpointSubset {
-		return func() []v1.EndpointSubset {
+	getSubsetsFn := func(namespace, name string) func() []v1.EndpointSubset { //nolint:staticcheck
+		return func() []v1.EndpointSubset { //nolint:staticcheck
 			return getSubsets(namespace, name)
 		}
 	}
@@ -353,7 +353,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		copy.ObjectMeta = *prev.ObjectMeta.DeepCopy()
 		return copy
 	}
-	makeEndpoints := func(base *v1.Endpoints, name string, prev *v1.Endpoints) *v1.Endpoints {
+	makeEndpoints := func(base *v1.Endpoints, name string, prev *v1.Endpoints) *v1.Endpoints { //nolint:staticcheck
 		copy := base.DeepCopy()
 		if prev == nil {
 			copy.Name = name
@@ -433,14 +433,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		infrastructure.ApplyValidLicense(localCalicoClient)
 
 		By("Checking the federated endpoints contain the expected set ips/ports")
-		eSubset := []v1.EndpointSubset{
+		eSubset := []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -449,13 +449,13 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -466,7 +466,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -501,14 +501,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [2]")
-		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{
+		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -517,7 +517,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
@@ -527,7 +527,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -547,7 +547,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -564,15 +564,15 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		By("Checking the federated endpoints contain the expected set ips/ports [3]")
 		// Store this set of expected endpoints as we'll use it a few times below.
-		es := []v1.EndpointSubset{
+		es := []v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "10.10.10.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "10.10.10.2",
 						NodeName: &node2Name,
@@ -583,7 +583,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -678,14 +678,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		By("Checking the federated endpoints contain the expected set ips/ports [6]")
 		// Any port that has a name in the target object, should be updated to include the remote cluster name.
-		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{
+		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -694,7 +694,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
@@ -704,7 +704,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -724,7 +724,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,
@@ -743,14 +743,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [7]")
-		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{
+		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{ //nolint:staticcheck
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP: "2.0.0.1",
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port2",
 						Port:     1234,
@@ -759,13 +759,13 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 				},
 			},
 			{
-				Addresses: []v1.EndpointAddress{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
 					},
 				},
-				NotReadyAddresses: []v1.EndpointAddress{
+				NotReadyAddresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
 						IP:       "1.0.0.2",
 						NodeName: &node2Name,
@@ -776,7 +776,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						},
 					},
 				},
-				Ports: []v1.EndpointPort{
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
 					{
 						Name:     "port1",
 						Port:     1234,

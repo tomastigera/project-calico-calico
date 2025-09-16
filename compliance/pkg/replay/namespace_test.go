@@ -98,7 +98,7 @@ var (
 			ResourceVersion: "1",
 		},
 	}
-	ep1 = corev1.Endpoints{
+	ep1 = corev1.Endpoints{ //nolint:staticcheck
 		TypeMeta: resources.TypeK8sEndpoints,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "svc1",
@@ -106,7 +106,7 @@ var (
 			ResourceVersion: "1",
 		},
 	}
-	ep2 = corev1.Endpoints{
+	ep2 = corev1.Endpoints{ //nolint:staticcheck
 		TypeMeta: resources.TypeK8sEndpoints,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "svc2",
@@ -234,9 +234,9 @@ func resourceListForType(tm metav1.TypeMeta) *list.TimestampedResourceList {
 			Items:    []apiv3.Tier{tier1},
 		}
 	case resources.TypeK8sEndpoints:
-		l = &corev1.EndpointsList{
+		l = &corev1.EndpointsList{ //nolint:staticcheck
 			TypeMeta: resources.TypeK8sEndpoints,
-			Items:    []corev1.Endpoints{ep1, ep2},
+			Items:    []corev1.Endpoints{ep1, ep2}, //nolint:staticcheck
 		}
 	case resources.TypeK8sNamespaces:
 		l = &corev1.NamespaceList{
