@@ -10,6 +10,7 @@ const (
 	CollectionNameL7    = CollectionName("l7")
 	CollectionNameDNS   = CollectionName("dns")
 	CollectionNameFlows = CollectionName("flows")
+	CollectionNameWAF   = CollectionName("waf")
 
 	FieldTypeIP   = FieldType("ip")
 	FieldTypeText = FieldType("text")
@@ -37,7 +38,7 @@ type Collection struct {
 	defaultTimeFieldName FieldType
 }
 
-var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7}
+var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7, collectionWAF}
 
 func Collections() []Collection {
 	return slices.Clone(allCollections)

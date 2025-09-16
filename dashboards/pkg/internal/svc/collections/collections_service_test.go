@@ -57,10 +57,11 @@ func TestCollectionsService(t *testing.T) {
 			return collection.Name
 		})
 
-		require.Len(t, collectionMap, 3)
+		require.Len(t, collectionMap, 4)
 		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameL7))
 		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameDNS))
 		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameFlows))
+		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameWAF))
 	})
 
 	t.Run("internal fields are absent from the collection response", func(t *testing.T) {
