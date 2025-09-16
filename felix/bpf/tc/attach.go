@@ -124,7 +124,7 @@ func (ap *AttachPoint) attachTCXProgram(binaryToLoad string) error {
 		return fmt.Errorf("object %w", err)
 	}
 	defer obj.Close()
-	progPinPath := ap.progPinPath()
+	progPinPath := ap.ProgPinPath()
 	if _, err := os.Stat(progPinPath); err == nil {
 		link, err := libbpf.OpenLink(progPinPath)
 		if err != nil {
@@ -208,7 +208,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	}
 	logCxt.Info("Program attached to tc.")
 	// Remove any tcx program.
-	err = ap.DetachTcxProgram()
+	err = ap.detachTcxProgram()
 	if err != nil {
 		logCxt.Warnf("error removing tcx program from %s", err)
 	}
@@ -271,15 +271,13 @@ func DetachTcpStatsProgram(ifaceName string, tcxSupported bool) error {
 	return ap.detachTcxProgram()
 }
 
-func (ap *AttachPoint) progPinPath() string {
+func (ap *AttachPoint) ProgPinPath() string {
 	return path.Join(bpfdefs.TcxPinDir, fmt.Sprintf("%s_%s", strings.Replace(ap.Iface, ".", "", -1), ap.Hook))
 }
 
-func (ap *AttachPoint) DetachTcxProgram() error {
-	progPinPath := ap.progPinPath()
-	if _, err := os.Stat(progPinPath); os.IsNotExist(err) {
-		return nil
-	}
+func (ap *AttachPoint) detachTcxProgram() error {
+	progPinPath := ap.ProgPinPath()
+	defer os.Remove(progPinPath)
 	link, err := libbpf.OpenLink(progPinPath)
 	if err != nil {
 		return fmt.Errorf("error opening link %s:%w", progPinPath, err)
@@ -289,7 +287,6 @@ func (ap *AttachPoint) DetachTcxProgram() error {
 	if err != nil {
 		return fmt.Errorf("error detaching link %s:%w", progPinPath, err)
 	}
-	os.Remove(progPinPath)
 	return nil
 }
 
@@ -302,7 +299,7 @@ func (ap *AttachPoint) detachTcProgram() error {
 }
 
 func (ap *AttachPoint) DetachProgram() error {
-	err := ap.DetachTcxProgram()
+	err := ap.detachTcxProgram()
 	if err != nil {
 		log.Warnf("error detaching tcx program from %s hook %s : %s", ap.Iface, ap.Hook, err)
 	}
