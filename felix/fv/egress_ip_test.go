@@ -37,6 +37,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	libcalicoapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -383,7 +384,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			)
 
 			JustBeforeEach(func() {
-				extHost = infrastructure.RunExtClient("external-server")
+				extHostOpts := infrastructure.ExtClientOpts{
+					Image: utils.Config.FelixImage,
+				}
+				extHost = infrastructure.RunExtClientWithOpts("external-server", extHostOpts)
 
 				extWorkload = &workload.Workload{
 					C:        extHost,
@@ -475,7 +479,20 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								gw.Stop()
 							})
 
-							It("server should see gateway IP when client connects to it", func() {
+							It("should preserve DSCP with traffic SNATed by egress gateways", func() {
+								extWorkload.C.Exec("ip", "route", "add", egwClient.IP, "via", tc.Felixes[0].IP)
+								extWorkload.C.Exec("iptables", "-A", "INPUT", "-m", "dscp", "!", "--dscp", "0x20", "-j", "DROP")
+
+								cc.ExpectNone(egwClient, extWorkload)
+								cc.CheckConnectivity()
+
+								dscp32 := numorstring.DSCPFromInt(32) // 0x20
+								egwClient.WorkloadEndpoint.Spec.QoSControls = &libcalicoapi.QoSControls{
+									DSCP: &dscp32,
+								}
+								egwClient.UpdateInInfra(infra)
+
+								cc.ResetExpectations()
 								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
 								cc.CheckConnectivity()
 							})
