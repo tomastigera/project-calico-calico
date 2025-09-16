@@ -6410,6 +6410,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"cgroupV2Path": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CgroupV2Path overrides the default location where to find the cgroup hierarchy.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"syslogReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SyslogReporterEnabled turns on the feature to write logs to Syslog. Please note that this can incur significant disk space usage when running felix on non-cluster hosts.",

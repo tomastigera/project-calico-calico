@@ -277,6 +277,21 @@ blocks:
         - name: Pre-flight checks
           commands:
             - make ci-preflight-checks
+  - name: API
+    run:
+      when: "true or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    execution_time_limit:
+      minutes: 30
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cd api
+      jobs:
+        - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: apiserver
     run:
       when: "true or change_in(['/*', '/libcalico-go/', '/api/', '/apiserver/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -299,21 +314,6 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: API
-    run:
-      when: "true or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-    execution_time_limit:
-      minutes: 30
-    dependencies:
-      - Prerequisites
-    task:
-      prologue:
-        commands:
-          - cd api
-      jobs:
-        - name: make ci
-          commands:
-            - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: app-policy
     run:
       when: "true or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -424,8 +424,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-            - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+            - artifact push job ${REPORT_DIR} --destination semaphore/test-results || true
+            - artifact push job ${LOGS_DIR} --destination semaphore/logs || true
             - cd ~/calico-private/process/testing/winfv-cni-plugin/aso && make dist-clean
       env_vars:
         - name: SEMAPHORE_ARTIFACT_EXPIRY
@@ -666,7 +666,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - artifact push job ${REPORT_DIR} --destination test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+            - artifact push job ${REPORT_DIR} --destination test-results || true
       env_vars:
         - name: FV_PROVISIONER
           value: "capz"
@@ -863,19 +863,6 @@ blocks:
         always:
           commands:
             - test-results publish report
-  - name: libcalico-go
-    run:
-      when: "true or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-    dependencies:
-      - Prerequisites
-    task:
-      prologue:
-        commands:
-          - cd libcalico-go
-      jobs:
-        - name: "libcalico-go: tests"
-          commands:
-            - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: lib
     run:
       when: "true or change_in(['/lib/'])"
@@ -889,6 +876,19 @@ blocks:
           - cd lib
       jobs:
         - name: make ci
+          commands:
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+  - name: libcalico-go
+    run:
+      when: "true or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cd libcalico-go
+      jobs:
+        - name: "libcalico-go: tests"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: "Node: Build"

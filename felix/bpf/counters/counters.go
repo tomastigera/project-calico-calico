@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 24
+	MaxCounterNumber    int = 25
 	counterMapKeySize   int = 8
 	counterMapValueSize int = 8
 )
@@ -82,6 +82,7 @@ const (
 	RedirectPeer
 	DroppedFragWait
 	DroppedFragReorder
+	DroppedFragUnsupported
 	DroppedQoS
 	// Add counters above this
 	AcceptedByXDP
@@ -203,6 +204,10 @@ var descriptions DescList = DescList{
 	{
 		Counter:  DroppedFragReorder,
 		Category: "Dropped", Caption: "fragment out of order within host",
+	},
+	{
+		Counter:  DroppedFragUnsupported,
+		Category: "Dropped", Caption: "fragments not supported",
 	},
 	{
 		Counter:  DroppedQoS,
