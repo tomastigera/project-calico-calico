@@ -35,7 +35,7 @@ type Collection struct {
 	name                 CollectionName
 	fields               []CollectionField
 	groupBys             []GroupBy
-	defaultTimeFieldName FieldType
+	defaultTimeFieldName FieldName
 }
 
 var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7, collectionWAF}
@@ -56,7 +56,7 @@ func (c Collection) GroupBys() []GroupBy {
 	return slices.Clone(c.groupBys)
 }
 
-func (c Collection) DefaultTimeFieldName() FieldType {
+func (c Collection) DefaultTimeFieldName() FieldName {
 	return c.defaultTimeFieldName
 }
 

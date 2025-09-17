@@ -61,12 +61,12 @@ func TestParams(t *testing.T) {
 
 	t.Run("clusterIDs", func(t *testing.T) {
 		t.Run("non-empty", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 			require.False(t, subject.linseedQueryParams.AllClusters)
 		})
 		t.Run("empty", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{})
+			subject, err := newQueryParams(0, 0, "start_time", []string{})
 			require.NoError(t, err)
 			require.True(t, subject.linseedQueryParams.AllClusters)
 		})
@@ -74,7 +74,7 @@ func TestParams(t *testing.T) {
 
 	t.Run("filter criterion", func(t *testing.T) {
 		t.Run("in", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -93,7 +93,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("or", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -118,7 +118,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("range", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -135,7 +135,7 @@ func TestParams(t *testing.T) {
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -160,7 +160,7 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("single parameter", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				t.Run("gte", func(t *testing.T) {
@@ -211,7 +211,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("equals", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -232,7 +232,7 @@ func TestParams(t *testing.T) {
 			}, subject)
 
 			t.Run("enum fields", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -243,7 +243,7 @@ func TestParams(t *testing.T) {
 				require.Equal(t, `action = "allow"`, subject.selector)
 
 				t.Run("invalid value", func(t *testing.T) {
-					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 					require.NoError(t, err)
 
 					err = subject.setCriteria(filters.Criteria{
@@ -254,7 +254,7 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("labels field type", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -265,7 +265,7 @@ func TestParams(t *testing.T) {
 				require.Equal(t, `"dest_labels.labels" = "label1=value1"`, subject.selector)
 
 				t.Run("invalid value", func(t *testing.T) {
-					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 					require.NoError(t, err)
 
 					err = subject.setCriteria(filters.Criteria{filters.NewEquals(labelsField, `invalid`, false)}, time.Time{})
@@ -308,7 +308,7 @@ func TestParams(t *testing.T) {
 
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
-						subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+						subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 						require.NoError(t, err)
 
 						err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
@@ -334,7 +334,7 @@ func TestParams(t *testing.T) {
 
 			t.Run("invalid numbers", func(t *testing.T) {
 				setEqualsCriterion := func(t *testing.T, value any) error {
-					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 					require.NoError(t, err)
 
 					return subject.setCriteria(filters.Criteria{
@@ -362,7 +362,7 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("nested fields", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -429,7 +429,7 @@ func TestParams(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+					subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 					require.NoError(t, err)
 
 					err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
@@ -447,7 +447,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("ipRange", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -464,7 +464,7 @@ func TestParams(t *testing.T) {
 			}, subject)
 
 			t.Run("negated", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -483,7 +483,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("wildcard", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -502,7 +502,7 @@ func TestParams(t *testing.T) {
 			}, subject)
 
 			t.Run("nested fields", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -521,7 +521,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("dateRange", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			to := time.Date(2021, 12, 11, 10, 9, 8, 7, time.UTC)
@@ -542,7 +542,7 @@ func TestParams(t *testing.T) {
 			require.Equal(t, time.Duration(365*24)*time.Hour, subject.requestedPeriod)
 
 			t.Run("negated", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(nil, from, &to, true),
@@ -551,7 +551,7 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("with field set", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, &to, false),
@@ -567,7 +567,7 @@ func TestParams(t *testing.T) {
 			})
 
 			t.Run("defaults lte field to now", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), from, nil, false),
@@ -580,7 +580,7 @@ func TestParams(t *testing.T) {
 				lte := time.Date(2020, 0, 0, 0, 0, 0, 0, time.UTC)
 				gte := time.Date(2020, 0, 0, 0, 0, 0, 1, time.UTC)
 
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, &lte, false),
@@ -590,7 +590,7 @@ func TestParams(t *testing.T) {
 			t.Run("gte is not greater than default lte", func(t *testing.T) {
 				gte := time.Date(10000, 0, 0, 0, 0, 0, 1, time.UTC)
 
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 				err = subject.setCriteria(filters.Criteria{
 					filters.NewDateRange(collections.NewCollectionFieldGeneric("test-field", collections.FieldTypeDate, ""), gte, nil, false),
@@ -600,7 +600,7 @@ func TestParams(t *testing.T) {
 		})
 
 		t.Run("startsWith", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -619,7 +619,7 @@ func TestParams(t *testing.T) {
 			}, subject)
 
 			t.Run("value escaping", func(t *testing.T) {
-				subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
@@ -640,7 +640,7 @@ func TestParams(t *testing.T) {
 
 		})
 		t.Run("relativeTimeRange", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			now := time.Date(2025, 12, 11, 10, 30, 8, 7, time.UTC)
@@ -729,7 +729,7 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("sort documents by timestamp", func(t *testing.T) {
-		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+		subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 		require.NoError(t, err)
 		require.Equal(t, lsv1.QuerySortParams{
 			Sort: []lsv1.SearchRequestSortBy{
@@ -739,7 +739,7 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("value escaping", func(t *testing.T) {
-		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+		subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 		require.NoError(t, err)
 
 		testCases := []struct {
@@ -787,7 +787,7 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("field name escaping", func(t *testing.T) {
-		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+		subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 		require.NoError(t, err)
 
 		err = subject.setCriteria(filters.Criteria{
@@ -802,7 +802,7 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("string to numeric value conversion", func(t *testing.T) {
-		subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+		subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 		require.NoError(t, err)
 
 		err = subject.setCriteria(filters.Criteria{
@@ -816,7 +816,7 @@ func TestParams(t *testing.T) {
 			subject.selector)
 
 		t.Run("negative numbers", func(t *testing.T) {
-			subject, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			err = subject.setCriteria(filters.Criteria{
@@ -827,7 +827,7 @@ func TestParams(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		subject, err := newQueryParams(10, 5, []string{"fake-cluster"})
+		subject, err := newQueryParams(10, 5, "start_time", []string{"fake-cluster"})
 		require.NoError(t, err)
 
 		require.Equal(t, lsv1.QueryParams{
@@ -837,6 +837,17 @@ func TestParams(t *testing.T) {
 			},
 			Clusters: []string{"fake-cluster"},
 		}, subject.linseedQueryParams)
+	})
+
+	t.Run("sort field", func(t *testing.T) {
+		subject, err := newQueryParams(10, 5, "another-field", []string{"fake-cluster"})
+		require.NoError(t, err)
+		require.NoError(t, err)
+		require.Equal(t, lsv1.QuerySortParams{
+			Sort: []lsv1.SearchRequestSortBy{
+				{Field: "another-field", Descending: true},
+			},
+		}, subject.linseedQuerySortParams)
 	})
 }
 

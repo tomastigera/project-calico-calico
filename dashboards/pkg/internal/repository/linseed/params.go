@@ -37,7 +37,7 @@ type queryParams struct {
 	requestedPeriod time.Duration
 }
 
-func newQueryParams(maxDocuments, pageNum int, clusterIDs []string) (*queryParams, error) {
+func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs []string) (*queryParams, error) {
 	params := &queryParams{
 		linseedQueryParams: lsv1.QueryParams{
 			MaxPageSize: maxDocuments,
@@ -54,7 +54,7 @@ func newQueryParams(maxDocuments, pageNum int, clusterIDs []string) (*queryParam
 		},
 		linseedQuerySortParams: lsv1.QuerySortParams{
 			Sort: []lsv1.SearchRequestSortBy{
-				{Field: "start_time", Descending: true},
+				{Field: sortFieldName, Descending: true},
 			},
 		},
 	}

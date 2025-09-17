@@ -93,6 +93,19 @@ func TestLinseedRepository(t *testing.T) {
 			require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 			require.ErrorContains(t, err, "invalid criterion filter: (bytes_in = -1)'")
 		})
+
+		t.Run("returns unauthorized on auth error", func(t *testing.T) {
+			mockClient.SetResults(rest.MockResult{
+				StatusCode: 500,
+				Err:        errors.New(`[status 401] server error: Unauthorized`),
+			})
+
+			_, err := subject.Query(ctx, query.QueryRequest{
+				CollectionName: collections.CollectionNameDNS,
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
+			})
+			require.Equal(t, err, httpreply.ReplyAccessDenied)
+		})
 	})
 
 	t.Run("aggregations", func(t *testing.T) {
@@ -106,6 +119,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
+				SortFieldName:  "start_time",
 				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 				Aggregations: aggregations.Aggregations{
 					aggregations.NewAggregationSum("agg1", 0, "f1", false),
@@ -154,6 +168,7 @@ func TestLinseedRepository(t *testing.T) {
 
 			_, err = subject.Query(ctx, query.QueryRequest{
 				CollectionName: collections.CollectionNameDNS,
+				SortFieldName:  "start_time",
 				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 				Aggregations: aggregations.Aggregations{
 					aggregations.NewAggregationSum("agg1", 0, "f1", false),

@@ -30,7 +30,7 @@ func TestLinseedCollectionClientWAF(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			repositoryQueryParams, err := newQueryParams(0, 0, "@timestamp", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
@@ -51,7 +51,7 @@ func TestLinseedCollectionClientWAF(t *testing.T) {
 
 				QuerySortParams: lsv1.QuerySortParams{
 					Sort: []lsv1.SearchRequestSortBy{
-						{Field: "start_time", Descending: true},
+						{Field: "@timestamp", Descending: true},
 					},
 				},
 			}, params)

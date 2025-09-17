@@ -150,6 +150,7 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		MaxDocuments:   maxDocuments,
 		PageNum:        pageNum,
 		CollectionName: queryCollection.Name(),
+		SortFieldName:  queryCollection.DefaultTimeFieldName(),
 	}
 
 	repositoryRequest.Filters, err = slices.MapOrError(req.Filters, func(from client.QueryRequestFilter) (filters.Criterion, error) {
