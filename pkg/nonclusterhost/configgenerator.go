@@ -4,8 +4,10 @@ package nonclusterhost
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -173,9 +175,16 @@ func (c *ConfigGenerator) createToken(ctx context.Context) (string, error) {
 	}
 
 	block, _ := pem.Decode(c.caKey)
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return "", err
+	var pkey any
+	if pkey, err = x509.ParsePKCS1PrivateKey(block.Bytes); err != nil {
+		if pkey, err = x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
+			return "", err
+		}
+	}
+
+	privateKey, ok := pkey.(*rsa.PrivateKey)
+	if !ok {
+		return "", errors.New("CA private key is not an RSA private key")
 	}
 
 	now := time.Now()
