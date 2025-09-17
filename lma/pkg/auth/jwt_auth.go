@@ -16,7 +16,7 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/golang-jwt/jwt/v4"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,8 +42,13 @@ const (
 )
 
 const (
-	// ServiceAccountIss is the value for iss in service account tokens.
+	// ServiceAccountIss is the issuer value for Kubernetes service account tokens.
 	ServiceAccountIss = "kubernetes/serviceaccount"
+
+	// tigeraOperatorCAIssuer is the CommonName for the Tigera operator signed certificates.
+	// NOTE: This value must match the Tigera operator source:
+	// https://github.com/tigera/operator/blob/ef576c48ab9537ee8579f7c8cbe0c7430e5f1af4/pkg/render/common/meta/meta.go#L38
+	tigeraOperatorCAIssuer = "tigera-operator-signer"
 )
 
 // JWTAuth replaces the now deprecated AggregateAuthenticator for the following reasons:
@@ -223,7 +228,7 @@ func WithAuthzCacheTTL(ctx context.Context, ttl time.Duration) JWTAuthOption {
 		}
 		c.authorizer = NewCachingAuthorizer(expiringCache, c.authorizer)
 		c.authzCacheTTL = ttl
-		log.Infof("lma-authz-cache is enabled for jwtAuth.Authorize() requests with TTL of %v", ttl)
+		logrus.Infof("lma-authz-cache is enabled for jwtAuth.Authorize() requests with TTL of %v", ttl)
 
 		return nil
 	}
@@ -233,26 +238,38 @@ func WithTigeraIssuerPublicKey(certPath string) JWTAuthOption {
 	return func(c *jwtAuthConfig) error {
 		certPEM, err := os.ReadFile(certPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read certificate file: %w", err)
 		}
 
-		block, _ := pem.Decode(certPEM)
-		if block == nil || block.Type != "CERTIFICATE" {
-			return fmt.Errorf("failed to decode certificate PEM")
-		}
+		var block *pem.Block
+		rest := certPEM
+		for {
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				break
+			}
 
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return err
-		}
+			if block.Type != "CERTIFICATE" {
+				continue
+			}
 
-		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return fmt.Errorf("failed to assert public key type")
-		}
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				logrus.WithError(err).Warn("Invalid certificate encountered in PEM file, skipping")
+				continue
+			}
 
-		c.tigeraIssuerPublicKey = pubKey
-		return nil
+			if cert.Subject.CommonName == tigeraOperatorCAIssuer {
+				pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+				if !ok {
+					logrus.Warn("Certificate does not contain an RSA public key, skipping")
+					continue
+				}
+				c.tigeraIssuerPublicKey = pubKey
+				return nil
+			}
+		}
+		return fmt.Errorf("no valid Tigera issuer public key found in bundle: %s", certPath)
 	}
 }
 
@@ -401,7 +418,7 @@ func extractUserFromImpersonationHeaders(req *http.Request) (user.Info, error) {
 			extraKey, err := url.PathUnescape(encodedKey)
 			if err != nil {
 				err := fmt.Errorf("malformed extra key for impersonation request")
-				log.WithError(err).Errorf("Could not decode extra key %s", encodedKey)
+				logrus.WithError(err).Errorf("Could not decode extra key %s", encodedKey)
 			}
 			extras[extraKey] = value
 		}
