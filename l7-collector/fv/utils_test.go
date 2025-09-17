@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/l7-collector/pkg/api"
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
@@ -27,7 +28,7 @@ const EnvoyLogFile = "envoy.log"
 // needed for running collector FV tests.
 type CollectorTestHandler struct {
 	config     *config.Config
-	collector  collector.EnvoyCollector
+	collector  api.EnvoyCollector
 	client     felixclient.FelixClient
 	context    context.Context
 	cancel     context.CancelFunc
@@ -38,7 +39,7 @@ type CollectorTestHandler struct {
 
 func NewCollectorTestHandler() *CollectorTestHandler {
 	cfg := createTestConfig()
-	ch := make(chan collector.EnvoyInfo)
+	ch := make(chan api.EnvoyInfo)
 	c := collector.NewEnvoyCollector(cfg, ch)
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/resolver"
 
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/l7-collector/pkg/collector"
+	"github.com/projectcalico/calico/l7-collector/pkg/api"
 )
 
 const (
@@ -18,8 +18,8 @@ const (
 )
 
 type FelixClient interface {
-	SendStats(context.Context, collector.EnvoyCollector)
-	SendData(context.Context, proto.PolicySyncClient, collector.EnvoyInfo) error
+	SendStats(context.Context, api.EnvoyCollector)
+	SendData(context.Context, proto.PolicySyncClient, api.EnvoyInfo) error
 }
 
 // felixClient provides the means to send data to Felix
@@ -40,7 +40,7 @@ func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
 }
 
 // SendStats listens for data from the collector and sends it.
-func (fc *felixClient) SendStats(ctx context.Context, collector collector.EnvoyCollector) {
+func (fc *felixClient) SendStats(ctx context.Context, collector api.EnvoyCollector) {
 	log.Info("Starting sending L7 Stats to Policy Sync server")
 	conn, err := grpc.NewClient(fc.target, fc.dialOpts...)
 	if err != nil {
@@ -67,7 +67,7 @@ func (fc *felixClient) SendStats(ctx context.Context, collector collector.EnvoyC
 
 // SendData takes EnvoyLog data and sends the it with the
 // protobuf client.
-func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClient, logData collector.EnvoyInfo) error {
+func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClient, logData api.EnvoyInfo) error {
 	// Batch the data by 5 tuple
 	data := fc.batchAndConvertEnvoyLogs(logData)
 
@@ -89,14 +89,14 @@ func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClie
 	return nil
 }
 
-func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[collector.TupleKey]*proto.DataplaneStats {
-	data := make(map[collector.TupleKey]*proto.DataplaneStats)
+func (fc *felixClient) batchAndConvertEnvoyLogs(info api.EnvoyInfo) map[api.TupleKey]*proto.DataplaneStats {
+	data := make(map[api.TupleKey]*proto.DataplaneStats)
 	for _, l := range info.Logs {
 		// Convert the EnvoyLog to DataplaneStats
 		d := fc.dataplaneStatsFromL7Log(l)
 
 		// Join the HttpData fields by 5 tuple
-		tupleKey := collector.TupleKeyFromEnvoyLog(l)
+		tupleKey := api.TupleKeyFromEnvoyLog(l)
 		if existing, ok := data[tupleKey]; ok {
 			// Add the HttpData to the existing log
 			existing.HttpData = append(existing.HttpData, d.HttpData...)
@@ -119,7 +119,7 @@ func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[co
 	// include requests we have recorded.
 	for key, count := range info.Connections {
 		if _, ok := data[key]; !ok {
-			l := collector.EnvoyLogFromTupleKey(key)
+			l := api.EnvoyLogFromTupleKey(key)
 			d := fc.dataplaneStatsFromL7Log(l)
 			// Add the count statistics
 			httpStat := &proto.Statistic{
@@ -137,7 +137,7 @@ func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[co
 	return data
 }
 
-func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *proto.DataplaneStats {
+func (fc *felixClient) dataplaneStatsFromL7Log(logData api.EnvoyLog) *proto.DataplaneStats {
 	// policy syn server is already configured to consume DataplaneStats object
 	// so we use the same object with envoy l7 data
 

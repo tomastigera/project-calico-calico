@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/projectcalico/calico/l7-collector/pkg/api"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -31,37 +32,37 @@ const (
 )
 
 type connectionCounter struct {
-	connectionCounts map[TupleKey]int
+	connectionCounts map[api.TupleKey]int
 	mu               sync.Locker
 }
 
 func newConnectionCounter() *connectionCounter {
 	return &connectionCounter{
-		connectionCounts: make(map[TupleKey]int),
+		connectionCounts: make(map[api.TupleKey]int),
 		mu:               &sync.Mutex{},
 	}
 }
 
-func (instance *connectionCounter) incr(key TupleKey) {
+func (instance *connectionCounter) incr(key api.TupleKey) {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 	instance.connectionCounts[key] = instance.connectionCounts[key] + 1
 }
 
-func (instance *connectionCounter) val() map[TupleKey]int {
+func (instance *connectionCounter) val() map[api.TupleKey]int {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 	return instance.connectionCounts
 }
 
 type envoyCollector struct {
-	collectedLogs    chan EnvoyInfo
+	collectedLogs    chan api.EnvoyInfo
 	config           *config.Config
 	batch            *BatchEnvoyLog
 	connectionCounts *connectionCounter
 }
 
-func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
+func EnvoyCollectorNew(cfg *config.Config, ch chan api.EnvoyInfo) api.EnvoyCollector {
 	return &envoyCollector{
 		collectedLogs:    ch,
 		config:           cfg,
@@ -149,30 +150,30 @@ type AccessLog struct {
 	Route                string `json:"route_name"`
 }
 
-func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
+func (ec *envoyCollector) ParseAccessLogs(line string) (api.EnvoyLog, error) {
 	log.Debug("parsing envoy access logs ")
 	log.Printf("line %v", line)
 	// Unmarshall the bytes into the EnvoyLog data
 	var accLog AccessLog
 	err := json.Unmarshal([]byte(line), &accLog)
 	if err != nil {
-		return EnvoyLog{}, fmt.Errorf("failed to Unmarshal access log line: %w", err)
+		return api.EnvoyLog{}, fmt.Errorf("failed to Unmarshal access log line: %w", err)
 	}
 
 	src := strings.Split(accLog.DSRemoteAddress, ":")
 	srcPort, err := strconv.Atoi(src[1])
 	if err != nil {
-		return EnvoyLog{}, fmt.Errorf("failed to parse source port: %w", err)
+		return api.EnvoyLog{}, fmt.Errorf("failed to parse source port: %w", err)
 	}
 
 	dest := strings.Split(accLog.DSLocalAddress, ":")
 
 	destPort, err := strconv.Atoi(dest[1])
 	if err != nil {
-		return EnvoyLog{}, fmt.Errorf("failed to parse destination port: %w", err)
+		return api.EnvoyLog{}, fmt.Errorf("failed to parse destination port: %w", err)
 	}
 
-	entry := EnvoyLog{
+	entry := api.EnvoyLog{
 		Reporter:            "destination",
 		Count:               1,
 		StartTime:           accLog.StartTime,
@@ -199,7 +200,7 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 	}
 	// write entry out to envoy log file
 	ec.batch.Insert(entry)
-	key := TupleKeyFromEnvoyLog(entry)
+	key := api.TupleKeyFromEnvoyLog(entry)
 	ec.connectionCounts.incr(key)
 
 	return entry, nil
@@ -318,7 +319,7 @@ func (ec *envoyCollector) processLine(line *tail.Line) {
 	ec.batch.Insert(envoyLog)
 
 	// count connection statistics, this will contain connection counts even when batch is full
-	tupleKey := TupleKeyFromEnvoyLog(envoyLog)
+	tupleKey := api.TupleKeyFromEnvoyLog(envoyLog)
 	ec.connectionCounts.incr(tupleKey)
 }
 
@@ -331,27 +332,27 @@ func (ec *envoyCollector) ingestLogs() {
 	// Send a batch if there is data.
 	if len(intervalBatch) != 0 {
 		log.Debugf("Sending batch of logs to the channel: %v, %v", intervalBatch, intervalCounts)
-		ec.collectedLogs <- EnvoyInfo{Logs: intervalBatch, Connections: intervalCounts}
+		ec.collectedLogs <- api.EnvoyInfo{Logs: intervalBatch, Connections: intervalCounts}
 	}
 }
 
-func (ec *envoyCollector) Report() <-chan EnvoyInfo {
+func (ec *envoyCollector) Report() <-chan api.EnvoyInfo {
 	return ec.collectedLogs
 }
 
 // ParseRawLogs takes a log in the format: {} // TODO: add final format of the logs. Recent version can be found in data_test.go in FVs
 // and returns an EnvoyLog with the relevant information.
-func (ec *envoyCollector) ParseRawLogs(text string) (EnvoyLog, error) {
+func (ec *envoyCollector) ParseRawLogs(text string) (api.EnvoyLog, error) {
 	log.Debug("parsing raw envoy logs ")
 
 	// Unmarshall the bytes into the EnvoyLog data
-	var envoyLog EnvoyLog
+	var envoyLog api.EnvoyLog
 	err := json.Unmarshal([]byte(text), &envoyLog)
 
 	if err != nil {
 		// TODO: Figure out proper error handling
 		log.Warnf("Failed to unmarshal L7 logs. Logs may be formatted incorrectly: %v", err)
-		return EnvoyLog{}, err
+		return api.EnvoyLog{}, err
 	}
 
 	// calculate latency
@@ -362,7 +363,7 @@ func (ec *envoyCollector) ParseRawLogs(text string) (EnvoyLog, error) {
 	return ParseFiveTupleInformation(envoyLog)
 }
 
-func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
+func ParseFiveTupleInformation(envoyLog api.EnvoyLog) (api.EnvoyLog, error) {
 	switch envoyLog.Reporter {
 	case EnvoyGatewayProxiedReporter:
 		firstXFFHost := ""
@@ -373,7 +374,7 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 				// For XFF, we need to get the port from downstream_direct_remote_address
 				_, sp, err := net.SplitHostPort(envoyLog.DSDirectRemoteAddress)
 				if err != nil {
-					return EnvoyLog{}, fmt.Errorf("error parsing port from downstream_direct_remote_address: %w", err)
+					return api.EnvoyLog{}, fmt.Errorf("error parsing port from downstream_direct_remote_address: %w", err)
 				}
 				srcWithPort := net.JoinHostPort(firstXFFHost, sp)
 				return parseFiveTupleInformationFromFields(envoyLog, envoyLog.UpstreamHost, srcWithPort)
@@ -388,19 +389,19 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 		// If the reporter is not "gateway" or "destination", we do not process
 		// the log at this time.
 		log.Warnf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
-		return EnvoyLog{}, fmt.Errorf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
+		return api.EnvoyLog{}, fmt.Errorf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
 	}
 }
 
-func parseFiveTupleInformationFromFields(envoyLog EnvoyLog, dest, src string) (EnvoyLog, error) {
+func parseFiveTupleInformationFromFields(envoyLog api.EnvoyLog, dest, src string) (api.EnvoyLog, error) {
 	dh, dp, derr := net.SplitHostPort(dest)
 	if derr != nil {
-		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from destination information: %w", derr)
+		return api.EnvoyLog{}, fmt.Errorf("error parsing five tuple from destination information: %w", derr)
 	}
 
 	sh, sp, serr := net.SplitHostPort(src)
 	if serr != nil {
-		return EnvoyLog{}, fmt.Errorf("error parsing five tuple from source information: %w", serr)
+		return api.EnvoyLog{}, fmt.Errorf("error parsing five tuple from source information: %w", serr)
 	}
 
 	envoyLog.SrcIp = sh
@@ -446,7 +447,7 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 		responseCode = wrapperspb.UInt32(504)
 	}
 
-	entry := EnvoyLog{
+	entry := api.EnvoyLog{
 		Reporter:              DestinationEnvoyReporter,
 		StartTime:             startTime.String(),
 		Duration:              int32(duration.Nanos / 1000000),
@@ -475,6 +476,6 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 		Latency:               int32(duration.Nanos / 1000000),
 	}
 	ec.batch.Insert(entry)
-	key := TupleKeyFromEnvoyLog(entry)
+	key := api.TupleKeyFromEnvoyLog(entry)
 	ec.connectionCounts.incr(key)
 }

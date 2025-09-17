@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/l7-collector/pkg/collector"
+	"github.com/projectcalico/calico/l7-collector/pkg/api"
 )
 
 var (
-	httpLog = collector.EnvoyLog{
+	httpLog = api.EnvoyLog{
 		Reporter:      "destination",
 		StartTime:     "2020-11-24T22:24:29.237Z",
 		Duration:      3,
@@ -33,7 +33,7 @@ var (
 		SrcPort: int32(34368),
 		DstPort: int32(80),
 	}
-	httpLog1 = collector.EnvoyLog{
+	httpLog1 = api.EnvoyLog{
 		Reporter:      "destination",
 		StartTime:     "2020-11-24T22:24:29.237Z",
 		Duration:      3,
@@ -55,7 +55,7 @@ var (
 		SrcPort: int32(56748),
 		DstPort: int32(8080),
 	}
-	httpLog2 = collector.EnvoyLog{
+	httpLog2 = api.EnvoyLog{
 		Reporter:      "destination",
 		StartTime:     "2020-11-24T22:24:29.237Z",
 		Duration:      3,
@@ -106,17 +106,17 @@ var _ = Describe("Felix Client Converting single EnvoyLog to DataplaneStats test
 
 var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", func() {
 	testClient := &felixClient{}
-	logKey := collector.GetEnvoyLogKey(httpLog)
-	logKey1 := collector.GetEnvoyLogKey(httpLog1)
-	logKey2 := collector.GetEnvoyLogKey(httpLog2)
+	logKey := api.GetEnvoyLogKey(httpLog)
+	logKey1 := api.GetEnvoyLogKey(httpLog1)
+	logKey2 := api.GetEnvoyLogKey(httpLog2)
 	Context("when same 5 tuple EnvoyLogs are passed in envoy collector", func() {
-		logs := map[collector.EnvoyLogKey]collector.EnvoyLog{logKey: httpLog, logKey1: httpLog}
-		info := collector.EnvoyInfo{
+		logs := map[api.EnvoyLogKey]api.EnvoyLog{logKey: httpLog, logKey1: httpLog}
+		info := api.EnvoyInfo{
 			Logs: logs,
 		}
 		It("It Should create a single DataplaneStat with multiple HttpData objects", func() {
 			data := testClient.batchAndConvertEnvoyLogs(info)
-			value, found := data[collector.TupleKey{
+			value, found := data[api.TupleKey{
 				SrcIp:   "192.168.138.2",
 				DstIp:   "192.168.35.210",
 				SrcPort: 34368,
@@ -129,14 +129,14 @@ var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", f
 		})
 	})
 	Context("when distinct 5 tuple EnvoyLogs are passed in envoy collector", func() {
-		logs := map[collector.EnvoyLogKey]collector.EnvoyLog{logKey: httpLog, logKey1: httpLog1, logKey2: httpLog2}
-		info := collector.EnvoyInfo{
+		logs := map[api.EnvoyLogKey]api.EnvoyLog{logKey: httpLog, logKey1: httpLog1, logKey2: httpLog2}
+		info := api.EnvoyInfo{
 			Logs: logs,
 		}
 		It("It Should create as many logs as distinct 5 tuple logs passed", func() {
 			data := testClient.batchAndConvertEnvoyLogs(info)
 			Expect(len(data)).To(Equal(2))
-			value, found := data[collector.TupleKey{
+			value, found := data[api.TupleKey{
 				SrcIp:   "192.168.138.2",
 				DstIp:   "192.168.35.210",
 				SrcPort: 34368,
@@ -146,7 +146,7 @@ var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", f
 			Expect(found).To(Equal(true))
 			Expect(len(value.HttpData)).To(Equal(1))
 
-			value2, found := data[collector.TupleKey{
+			value2, found := data[api.TupleKey{
 				SrcIp:   "193.16.18.264",
 				DstIp:   "192.168.35.210",
 				SrcPort: 56748,
