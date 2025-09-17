@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -968,6 +969,70 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		})
 	})
 })
+
+func TestIsEndpointDeleted(t *testing.T) {
+	// Create a cache with a short deletion delay for testing
+	cache := calc.NewEndpointLookupsCache(calc.WithDeletionDelay(50 * time.Millisecond))
+
+	// Create a test endpoint key
+	key := model.WorkloadEndpointKey{
+		Hostname:       "test-node",
+		OrchestratorID: "cni",
+		WorkloadID:     "test-workload",
+		EndpointID:     "eth0",
+	}
+
+	// Create endpoint data using the same pattern as existing tests
+	ip := net.ParseIP("10.0.0.1")
+	cidr := net.IPNet{
+		IP:   ip,
+		Mask: net.CIDRMask(32, 32),
+	}
+
+	endpoint := &model.WorkloadEndpoint{
+		State:      "active",
+		Name:       "test-endpoint",
+		ProfileIDs: []string{"test-profile"},
+		IPv4Nets:   []libcaliconet.IPNet{{IPNet: cidr}},
+	}
+
+	// Add the endpoint to the cache using the correct API pattern
+	ed := calc.CalculateRemoteEndpoint(key, endpoint)
+	cache.OnUpdate(api.Update{
+		UpdateType: api.UpdateTypeKVNew,
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: endpoint,
+		},
+	})
+
+	// Check if the endpoint is deleted (should be false)
+	if cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to not be deleted before deletion")
+	}
+
+	// Remove the endpoint (this should mark it for deletion)
+	cache.OnUpdate(api.Update{
+		UpdateType: api.UpdateTypeKVDeleted,
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: nil,
+		},
+	})
+
+	// Check if the endpoint is now marked as deleted (should be true)
+	if !cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to be marked as deleted after deletion")
+	}
+
+	// Wait for the deletion delay to pass
+	time.Sleep(100 * time.Millisecond)
+
+	// Check if the endpoint is still marked as deleted (should be false as it's been cleaned up)
+	if cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to not be marked as deleted after cleanup")
+	}
+}
 
 func newTierInfoSlice() []calc.TierInfo {
 	return nil
