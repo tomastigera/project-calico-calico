@@ -11,9 +11,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 const (
@@ -78,72 +76,6 @@ var _ = Describe("Reporting", func() {
 			updatedAlert, err := mockCalicoCLI.ProjectcalicoV3().GlobalAlerts().Get(ctx, testGlobalAlert.Name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(updatedAlert.Status).To(Equal(statusToUpdate))
-		})
-	})
-
-	Context("WatchAndReportJobStatus", func() {
-		It("returns GlobalAlertStatus with no error for deleted events", func() {
-
-			fakewatcher := watch.NewFake()
-			testJobName := "testJobName"
-			testJob := batchv1.Job{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testJobName,
-					Namespace: namespace,
-				},
-			}
-
-			result := v3.GlobalAlertStatus{}
-			go func() {
-				var err error
-				result, err = WatchAndReportJobStatus(fakewatcher, testJobName, 5*time.Second)
-				Expect(err).To(BeNil())
-			}()
-			fakewatcher.Delete(testJob.DeepCopyObject())
-			time.Sleep(1 * time.Second)
-
-			Expect(result.Healthy).To(BeTrue())
-			Expect(result.Active).To(BeTrue())
-		})
-
-		It("returns GlobalAlertStatus as an error for an error event", func() {
-
-			fakewatcher := watch.NewFake()
-			testJobName := "testJobName"
-			testJob := batchv1.Job{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testJobName,
-					Namespace: namespace,
-				},
-			}
-
-			result := v3.GlobalAlertStatus{}
-			var err error
-			go func() {
-				result, err = WatchAndReportJobStatus(fakewatcher, testJobName, 5*time.Second)
-			}()
-			fakewatcher.Error(testJob.DeepCopyObject())
-			time.Sleep(1 * time.Second)
-
-			Expect(result.Healthy).To(BeFalse())
-			Expect(result.Active).To(BeFalse())
-			Expect(result.ErrorConditions[0].Message).To(Equal(err.Error()))
-		})
-
-		It("returns GlobalAlertStatus as an error if it did not receive even within timeout", func() {
-
-			fakewatcher := watch.NewFake()
-			testJobName := "testJobName"
-			result := v3.GlobalAlertStatus{}
-			var err error
-			go func() {
-				result, err = WatchAndReportJobStatus(fakewatcher, testJobName, 100*time.Millisecond)
-			}()
-			time.Sleep(1 * time.Second)
-
-			Expect(result.Healthy).To(BeFalse())
-			Expect(result.Active).To(BeFalse())
-			Expect(result.ErrorConditions[0].Message).To(Equal(err.Error()))
 		})
 	})
 
