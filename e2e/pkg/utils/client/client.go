@@ -15,12 +15,11 @@
 package client
 
 import (
-	"context"
-
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	operatorv1 "github.com/tigera/operator/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -33,17 +32,28 @@ func New(cfg *rest.Config) (client.Client, error) {
 		return nil, err
 	}
 
-	// Check to see if an APIServer is available.
-	l := &operatorv1.APIServerList{}
-	err = c.List(context.TODO(), l)
-	if err == nil && len(l.Items) > 0 {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Checks to see if the projectcalico.org/v3 API is available.
+	available, err := calicoV3APIAvailable(discoveryClient)
+	if err != nil {
+		return nil, err
+	}
+
+	if available {
+		// API is available, we can return the calicoclient
 		logrus.Infof("Using API server client for projectcalico.org/v3 API")
 		return c, nil
 	} else {
 		logrus.WithError(err).Infof("Falling back to calicoctl exec client for projectcalico.org/v3 API")
 	}
 
-	// No API server available, fall back to calicoctl exec client.
+	// If the projectcalico.org/v3 apigroup is not found,
+	// then we can assume that the API server is not present and default to calicoctl.
+	logrus.Infof("projectcalico.org/v3 API not available, falling back to calicoctl exec client")
 	return NewCalicoctlExecClient(c)
 }
 
@@ -81,4 +91,21 @@ func newScheme() (*runtime.Scheme, error) {
 		return nil, err
 	}
 	return scheme, nil
+}
+
+func calicoV3APIAvailable(discoveryClient discovery.DiscoveryInterface) (bool, error) {
+	groups, err := discoveryClient.ServerGroups()
+	if err != nil {
+		return false, err
+	}
+	for _, group := range groups.Groups {
+		if group.Name == "projectcalico.org" {
+			for _, version := range group.Versions {
+				if version.Version == "v3" {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
 }
