@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+# Cherry-pick one or more PRs from the OSS repo into the Enterprise repo.
+# Assumes that it's running in an Enterprise fork repo clone, with the
+# Enterprise upstream and the OSS repo added as remotes.
+#
+# For example:
+#  git remote -v
+#     origin    git@github.com:lucastigera/calico-private.git (fetch)
+#     origin    git@github.com:lucastigera/calico-private.git (push)
+#     upstream  git@github.com:tigera/calico-private.git (fetch)
+#     upstream  git@github.com:tigera/calico-private.git (push)
+#     calico    git@github.com:projectcalico/calico.git (fetch)
+#     calico    git@github.com:projectcalico/calico.git (push)
+#
+#  bash pick-oss-pr 3320 3321
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+
+if [[ "$#" -lt 1 ]]; then
+  echo "${0} <pr-number>...: cherry pick one or more PRs onto tigera/calico-private/master and propose pull request"
+  echo
+  echo "  Checks out target branch and handles the cherry-pick of <pr> (possibly multiple) for you."
+  echo "  Examples:"
+  echo "    $(basename $0) 12345        # Cherry-picks PR 12345 onto tigera/calico-private/master and proposes that as a PR."
+  echo "    $(basename $0) 12345 56789  # Cherry-picks PR 12345, then 56789 and proposes the combination as a single PR."
+  echo
+  echo " Set the DRY_RUN environment var to skip git push and creating PR."
+  echo " This is useful for creating patches to a release branch without making a PR."
+  echo " When DRY_RUN is set the script will leave you in a branch containing the commits you cherry-picked."
+  echo
+  echo " Set FORK_REMOTE environment var (default: origin) to override the default remote name to what you have locally."
+  echo
+  exit 2
+fi
+
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "$dir/cherry-pick-pull"
+
+if [ -z "${CALICO_REMOTE:-}" ]; then
+  CALICO_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]projectcalico/calico\.git' || true; } | awk '{print $1}' | uniq)
+fi
+
+if [ -z "${CALICO_REMOTE:-}" ]; then
+  echo "Calico OpenSource remote not found. Please set up one to projectcalico/calico."
+  exit 1
+fi
+
+if [ -z "${CALICO_PRIVATE_REMOTE:-}" ]; then
+  CALICO_PRIVATE_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]tigera/calico-private\.git' || true; } | awk '{print $1}' | uniq)
+fi
+
+if [ -z "${CALICO_PRIVATE_REMOTE:-}" ]; then
+  echo "Calico Private remote not found. Please set up one to tigera/calico-private."
+  exit 1
+fi
+
+SRC_UPSTREAM_REMOTE=${CALICO_REMOTE:-open-source}
+DST_UPSTREAM_REMOTE=${CALICO_PRIVATE_REMOTE:-upstream}
+TARGET_BRANCH=${TARGET_BRANCH:-master}
+
+init-vars "$DST_UPSTREAM_REMOTE/$TARGET_BRANCH" "$@"
+
+orig_pr_ids=()
+orig_commit_shas=()
+for pullnumber in "${PULLS[@]}"; do
+  pull_json=$(hub api repos/${SRC_MAIN_REPO_ORG}/${SRC_MAIN_REPO_NAME}/pulls/${pullnumber})
+  pull_title=$(echo "${pull_json}" | jq -r '.title')
+  pull_body=$(echo "${pull_json}" | jq -r '.body')
+  pull_labels=$(echo "${pull_json}" | jq -r '.labels[].name' | paste -sd$'\n')
+
+  # Gather metadata for the summary block
+  merge_sha=$(echo "${pull_json}" | jq -r '.merge_commit_sha // empty')
+  if [[ -z "${merge_sha}" || "${merge_sha}" == "null" ]]; then
+    merge_sha=$(echo "${pull_json}" | jq -r '.head.sha // empty')
+  fi
+  
+  merge_sha_short=""
+
+  if [[ -n "${merge_sha}" && "${merge_sha}" != "null" ]]; then
+    merge_sha_short="${merge_sha:0:10}"
+  fi
+
+  orig_pr_ids+=( "\`${pullnumber}\`" )
+  if [[ -n "${merge_sha_short}" ]]; then
+    orig_commit_shas+=( "\`${merge_sha_short}\`" )
+  fi
+done
+
+# Compose the Automated Cherry-Pick meta block
+orig_shas_joined=""
+source_repo="${SRC_MAIN_REPO_ORG}/${SRC_MAIN_REPO_NAME}"
+target_repo="${DST_MAIN_REPO_ORG}/${DST_MAIN_REPO_NAME}"
+target_branch="$(basename "${BRANCH}")"
+
+orig_prs_joined=$(IFS=', '; echo "${orig_pr_ids[*]}")
+if [[ ${#orig_commit_shas[@]} -gt 0 ]]; then
+  orig_shas_joined=$(IFS=', '; echo "${orig_commit_shas[*]}")
+else
+  orig_shas_joined="(n/a)"
+fi
+
+current_commit_hash=$(git rev-parse --short HEAD)
+
+meta_block=$'## Automated Cherry-Pick PR\n\n'
+meta_block+=$'This pull request was automatically created by the '
+meta_block+=$'[cherry-pick script](https://github.com/tigera/calico-private/blob/'"${current_commit_hash}"'/hack/pick-oss-pr)'
+meta_block+=$' to synchronize the changes detailed below.\n\n'
+meta_block+=$'- **Original PR ID**: `'"${orig_prs_joined}"$'`\n'
+meta_block+=$'- **Original Commit SHA**: `'"${orig_shas_joined}"$'`\n'
+meta_block+=$'- **Source Repo**: `'"${source_repo}"$'`\n'
+meta_block+=$'- **Target Repo**: `'"${target_repo}"$'`\n'
+meta_block+=$'- **Target Branch**: `'"${target_branch}"$'`\n\n'
+
+# Export variables for use in cherry-pick-pull script
+META_BLOCK="${meta_block}"
+EXTRA_LABELS="merge-oss-cherry-pick"
+create-branch-and-pr
