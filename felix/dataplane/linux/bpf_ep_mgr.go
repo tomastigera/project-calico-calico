@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -3601,6 +3602,30 @@ func (m *bpfEndpointManager) setRPFilter(iface string, val int) error {
 
 	log.Infof("%s set to %s", path, numval)
 	return nil
+}
+
+func (m *bpfEndpointManager) setJITHardening(val int) error {
+	numval := strconv.Itoa(val)
+	err := writeProcSys(jitHardenPath, numval)
+	if err != nil {
+		logrus.WithField("err", err).Errorf("Failed to set %s to %s", jitHardenPath, numval)
+		return err
+	}
+
+	logrus.Infof("%s set to %s", jitHardenPath, numval)
+	return nil
+}
+
+func (m *bpfEndpointManager) getJITHardening() (int, error) {
+	data, err := os.ReadFile(jitHardenPath)
+	if err != nil {
+		return 0, err
+	}
+	val, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
 }
 
 func (m *bpfEndpointManager) ensureStarted() {
