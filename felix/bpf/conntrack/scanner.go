@@ -277,17 +277,6 @@ func (s *Scanner) Scan() {
 				s.handleNATEntries(ctKey, ctVal, uint64(ts))
 				continue
 			}
-			if verdict == ScanVerdictDeleteImmediate {
-				cleaned++
-				if debug {
-					log.WithFields(log.Fields{
-						"key":   ctKey,
-						"entry": ctVal,
-					}).Debug("Deleting conntrack entry immediately.")
-				}
-				// Delete without adding to cleanup map.
-				return maps.IterDelete
-			}
 			// NAT entry has expired.
 			if ctVal.Type() != TypeNormal {
 				s.handleNATEntries(ctKey, ctVal, uint64(ts))
