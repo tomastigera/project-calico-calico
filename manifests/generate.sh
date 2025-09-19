@@ -36,9 +36,15 @@ OPERATOR_REGISTRY=${OPERATOR_REGISTRY_OVERRIDE:-$defaultOperatorRegistry}
 defaultOperatorImage=$($YQ .tigeraOperator.image <../charts/tigera-operator/values.yaml)
 OPERATOR_IMAGE=${OPERATOR_IMAGE_OVERRIDE:-$defaultOperatorImage}
 
+defaultPrometheusImage=$($YQ .prometheusOperator.image <../charts/tigera-prometheus-operator/values.yaml)
+PROMETHEUS_OPERATOR_IMAGE=${PROMETHEUS_OPERATOR_IMAGE_OVERRIDE:-$defaultPrometheusImage}
+
+defaultPromConfigReloaderImage=$($YQ .prometheusConfigReloader.image <../charts/tigera-prometheus-operator/values.yaml)
+PROMETHEUS_CONFIG_RELOADER_IMAGE=${PROMETHEUS_CONFIG_RELOADER_IMAGE_OVERRIDE:-$defaultPromConfigReloaderImage}
+
 # Images used in manifests that are not rendered by Helm.
 NON_HELM_MANIFEST_IMAGES="compliance-reporter firewall-integration ingress-collector \
-  license-agent prometheus-operator prometheus-config-reloader anomaly_detection_jobs \
+  license-agent anomaly_detection_jobs \
   calico-windows calicoctl"
 
 # Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
@@ -136,17 +142,15 @@ done) >>prometheus-operator-crds.yaml
 ##########################################################################
 # Build tigera-prometheus-operator manifests.
 ##########################################################################
-: >tigera-prometheus-operator.yaml
 ${HELM} -n tigera-operator template \
-  --set policyRecommendation.enabled=false \
   --set imagePullSecrets.tigera-pull-secret="\{}" \
-  --set tigeraOperator.image=$OPERATOR_IMAGE \
-  --set tigeraOperator.version=$OPERATOR_VERSION \
-  --set tigeraOperator.registry=$OPERATOR_REGISTRY \
-  --set calicoctl.tag=$CALICO_VERSION \
+  --set prometheusOperator.image=$PROMETHEUS_OPERATOR_IMAGE \
+  --set prometheusOperator.tag=$CALICO_VERSION \
+  --set prometheusConfigReloader.image=$PROMETHEUS_CONFIG_RELOADER_IMAGE \
+  --set prometheusConfigReloader.tag=$CALICO_VERSION \
   --include-crds \
   --no-hooks \
-  ../charts/tigera-prometheus-operator >>tigera-prometheus-operator.yaml
+  ../charts/tigera-prometheus-operator > tigera-prometheus-operator.yaml
 
 ##########################################################################
 # Build tigera-operator manifests for OCP.
@@ -181,6 +185,19 @@ mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
 
 # The rendered pull secret base64 encodes our dummy value - restore it to ensure doc references are valid.
 sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
+
+##########################################################################
+# Build tigera-prometheus-operator manifests for OCP.
+##########################################################################
+${HELM} -n tigera-operator template \
+  --set imagePullSecrets.tigera-pull-secret="\{}" \
+  --set installation.kubernetesProvider=openshift \
+  --set prometheusOperator.image=$PROMETHEUS_OPERATOR_IMAGE \
+  --set prometheusOperator.tag=$CALICO_VERSION \
+  --set prometheusConfigReloader.image=$PROMETHEUS_CONFIG_RELOADER_IMAGE \
+  --set prometheusConfigReloader.tag=$CALICO_VERSION \
+  --no-hooks \
+  ../charts/tigera-prometheus-operator > ocp/tigera-prometheus-operator.yaml
 
 # Generating the upgrade manifest for OCP.
 # It excludes the CRs (01-*) and the specific BPF files to maintain compatibility with iptables.

@@ -9,7 +9,6 @@ metadata:
   labels:
     name: tigera-prometheus
     openshift.io/run-level: "0"
-
 ---
 # Source: tigera-prometheus-operator/templates/02-serviceaccount-prometheus-operator.yaml
 apiVersion: v1
@@ -17,20 +16,16 @@ kind: ServiceAccount
 metadata:
   name: calico-prometheus-operator
   namespace: tigera-prometheus
-
 ---
-# Apply an empty image pull secret (e30K={}), as MKE does not allow deployments referring non-existing pull-secrets. As
-# soon as the tigera-operator comes up, it will replace this secret with the contents of the pull secret from the
-# operator namespace.
+# Source: tigera-prometheus-operator/templates/01-imagepullsecret-tigera-prometheus.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-pull-secret
   namespace: tigera-prometheus
-type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: e30K
-
+  .dockerconfigjson: e30=
+type: kubernetes.io/dockerconfigjson
 ---
 # Source: tigera-prometheus-operator/templates/04-deployment-prometheus-operator.yaml
 apiVersion: apps/v1
@@ -50,8 +45,14 @@ spec:
       labels:
         operator: prometheus
     spec:
+      automountServiceAccountToken: true
       nodeSelector:
         kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
       serviceAccountName: calico-prometheus-operator
       imagePullSecrets:
         - name: tigera-pull-secret
@@ -59,24 +60,25 @@ spec:
         - name: calico-prometheus-operator
           image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
           args:
-            - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
+            - --cluster-domain=cluster.local
             - --config-reloader-memory-request=50Mi
             - --namespaces=tigera-prometheus
-            - --cluster-domain=cluster.local
+            - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
             - --config-reloader-cpu-limit=150m
           resources:
             requests:
               cpu: 100m
-              memory: 50Mi
+              memory: 100Mi
             limits:
               cpu: 200m
-              memory: 100Mi
+              memory: 200Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
             privileged: false
+            readOnlyRootFilesystem: true
             runAsGroup: 10001
             runAsNonRoot: true
             runAsUser: 10001
