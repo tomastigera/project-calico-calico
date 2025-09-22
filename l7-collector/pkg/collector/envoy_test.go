@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/l7-collector/pkg/api"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -37,7 +36,7 @@ var (
 
 var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
 	// Can use an empty config since the config is not used in ParseRawLogs
-	ch := make(chan api.EnvoyInfo)
+	ch := make(chan EnvoyInfo)
 	c := EnvoyCollectorNew(&config.Config{}, ch)
 
 	Context("With a log with HTTP destination json format", func() {

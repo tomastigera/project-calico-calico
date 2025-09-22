@@ -7,12 +7,12 @@ import (
 	"flag"
 	"net"
 	"os"
+	"sync"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/projectcalico/calico/l7-collector/pkg/api"
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
@@ -38,7 +38,7 @@ func main() {
 	log.Infof("Configuration: %+v", cfg)
 
 	// Instantiate the log collector
-	reportCh := make(chan api.EnvoyInfo)
+	reportCh := make(chan collector.EnvoyInfo)
 	c := collector.NewEnvoyCollector(cfg, reportCh)
 
 	log.Info("creating l7-collector...")
@@ -55,10 +55,10 @@ func main() {
 	}
 
 	// Start the log collector
-	collector.CollectAndSend(context.Background(), felixClient, c, cfg.EnableLogTail)
+	CollectAndSend(context.Background(), felixClient, c, cfg.EnableLogTail)
 }
 
-func gRPCServerStart(cfg *config.Config, reportCh chan api.EnvoyInfo) {
+func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	log.Info("Starting gRCP server...")
 	ctx := context.Background()
 	gs := grpc.NewServer()
@@ -87,4 +87,33 @@ func gRPCServerStart(cfg *config.Config, reportCh chan api.EnvoyInfo) {
 		}
 		defer lis.Close()
 	}()
+}
+
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, readFiles bool) {
+	ctx, cancel := context.WithCancel(ctx)
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		log.Info("Starting log collection...")
+		if readFiles {
+			collector.ReadAccessLogs(ctx)
+		} else {
+			collector.ReadLogs(ctx)
+		}
+		cancel()
+		wg.Done()
+	}()
+
+	// Start the DataplaneStats reporting go routine.
+	wg.Add(1)
+	go func() {
+		client.SendStats(ctx, collector)
+		cancel()
+		wg.Done()
+	}()
+
+	// Wait for the go routine to complete before exiting
+	wg.Wait()
+	log.Info("All go routines completed, exiting l7-collector.")
 }
