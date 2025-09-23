@@ -64,8 +64,8 @@ $(WAF_HTTP_FILTER_CONTAINER_CREATED): Dockerfile bin/waf-http-filter-$(ARCH)
 	touch $@
 
 $(GW_L7_COLLECTOR_IMAGE): $(GW_L7_COLLECTOR_CONTAINER_CREATED)
-$(GW_L7_COLLECTOR_CONTAINER_CREATED): Dockerfile.l7-collector bin/gateway-l7-collector-$(ARCH)
-	$(DOCKER_BUILD) -t $(GW_L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.l7-collector .
+$(GW_L7_COLLECTOR_CONTAINER_CREATED): Dockerfile-l7-collector bin/gateway-l7-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(GW_L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile-l7-collector .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(GW_L7_COLLECTOR_IMAGE)
 	touch $@
 
