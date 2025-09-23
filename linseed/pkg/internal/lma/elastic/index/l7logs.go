@@ -77,15 +77,15 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 				case "hostendpoints":
 					// HostEndpoints are neither tiered nor namespaced, and AuthorizationReview does not
 					// determine RBAC at the instance level, so must be able to list all HostEndpoints.
-					should = append(should,
+					should = append(should, resourceGroupFilter(rg,
 						elastic.NewTermQuery("src_type", "hep"),
 						elastic.NewTermQuery("dest_type", "hep"),
-					)
+					)...)
 				case "networksets":
 					if rg.Namespace == "" {
 						// Can list all NetworkSets. Check type is "ns" and namespace is not "-" (which would
 						// be a GlobalNetworkSet).
-						should = append(should,
+						should = append(should, resourceGroupFilter(rg,
 							elastic.NewBoolQuery().Must(
 								elastic.NewTermQuery("src_type", "ns"),
 							).MustNot(
@@ -96,11 +96,11 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 							).MustNot(
 								elastic.NewTermQuery("dest_namespace", "-"),
 							),
-						)
+						)...)
 					} else {
 						// Can list NetworkSets in a specific namespace. Check type is "ns" and namespace
 						// matches.
-						should = append(should,
+						should = append(should, resourceGroupFilter(rg,
 							elastic.NewBoolQuery().Must(
 								elastic.NewTermQuery("src_type", "ns"),
 								elastic.NewTermQuery("src_namespace", rg.Namespace),
@@ -109,13 +109,13 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 								elastic.NewTermQuery("dest_type", "ns"),
 								elastic.NewTermQuery("dest_namespace", rg.Namespace),
 							),
-						)
+						)...)
 					}
 				case "globalnetworksets":
 					// GlobalNetworkSets are neither tiered nor namespaced, and AuthorizationReview does not
 					// determine RBAC at the instance level, so must be able to list all GlobalNetworkSets.
 					// Check type is "ns" and namespace is "-".
-					should = append(should,
+					should = append(should, resourceGroupFilter(rg,
 						elastic.NewBoolQuery().Must(
 							elastic.NewTermQuery("src_type", "ns"),
 							elastic.NewTermQuery("src_namespace", "-"),
@@ -124,17 +124,17 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 							elastic.NewTermQuery("dest_type", "ns"),
 							elastic.NewTermQuery("dest_namespace", "-"),
 						),
-					)
+					)...)
 				case "pods":
 					if rg.Namespace == "" {
 						// Can list all Pods. Check type is "wep".
-						should = append(should,
+						should = append(should, resourceGroupFilter(rg,
 							elastic.NewTermQuery("src_type", "wep"),
 							elastic.NewTermQuery("dest_type", "wep"),
-						)
+						)...)
 					} else {
 						// Can list Pods in a specific namespace. Check type is "wep" and namespace matches.
-						should = append(should,
+						should = append(should, resourceGroupFilter(rg,
 							elastic.NewBoolQuery().Must(
 								elastic.NewTermQuery("src_type", "wep"),
 								elastic.NewTermQuery("src_namespace", rg.Namespace),
@@ -143,7 +143,7 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 								elastic.NewTermQuery("dest_type", "wep"),
 								elastic.NewTermQuery("dest_namespace", rg.Namespace),
 							),
-						)
+						)...)
 					}
 				}
 			}

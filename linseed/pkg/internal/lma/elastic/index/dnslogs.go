@@ -120,9 +120,9 @@ func (h dnsLogsIndexHelper) NewRBACQuery(
 						return nil, nil
 					}
 					// Can list Pods in a specific namespace.
-					should = append(should,
+					should = append(should, resourceGroupFilter(rg,
 						elastic.NewTermQuery("client_namespace", rg.Namespace),
-					)
+					)...)
 				}
 			}
 			break

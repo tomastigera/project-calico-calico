@@ -104,6 +104,66 @@ var (
 		}},
 	}}
 
+	authorizationMatrixManagedCluster = []apiv3.AuthorizedResourceVerbs{{
+		APIGroup: "projectcalico.org",
+		Resource: "hostendpoints",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				ManagedCluster: "cluster1",
+			}},
+		}},
+	}, {
+		APIGroup: "projectcalico.org",
+		Resource: "networksets",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				Namespace:      "ns1",
+				ManagedCluster: "cluster2",
+			}},
+		}},
+	}, {
+		APIGroup: "projectcalico.org",
+		Resource: "networksets",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				Namespace:      "ns2",
+				ManagedCluster: "cluster2",
+			}},
+		}},
+	}, {
+		APIGroup: "projectcalico.org",
+		Resource: "networksets",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				Namespace:      "ns1",
+				ManagedCluster: "cluster3",
+			}},
+		}},
+	}, {
+		APIGroup: "",
+		Resource: "pods",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				Namespace:      "ns3",
+				ManagedCluster: "cluster3",
+			}},
+		}},
+	}, {
+		APIGroup: "",
+		Resource: "pods",
+		Verbs: []apiv3.AuthorizedResourceVerb{{
+			Verb: "list",
+			ResourceGroups: []apiv3.AuthorizedResourceGroup{{
+				Namespace: "ns4",
+			}},
+		}},
+	}}
+
 	authorizationMatrixNone = []apiv3.AuthorizedResourceVerbs{}
 )
 
@@ -347,6 +407,239 @@ var _ = Describe("RBAC query tests", func() {
                   {
                     "term": {
                       "dest_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }`)
+	})
+
+	It("handles flows with managed cluster perms", func() {
+		query, err := MultiIndexFlowLogs().NewRBACQuery(authorizationMatrixManagedCluster)
+		Expect(err).NotTo(HaveOccurred())
+		expectQueryJson(query, `{
+        "bool": {
+          "should": [
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster1"
+                  }
+                },
+                "minimum_should_match": "1",
+                "should": [
+                  {
+                    "term": {
+                      "source_type": "hep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_type": "hep"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "source_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "source_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "source_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "source_namespace": "ns2"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns2"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "source_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "source_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "source_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "source_namespace": "ns3"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns3"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "source_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "source_namespace": "ns4"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns4"
                     }
                   }
                 ]
@@ -605,6 +898,239 @@ var _ = Describe("RBAC query tests", func() {
       }`)
 	})
 
+	It("handles l7 with managed cluster perms", func() {
+		query, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixManagedCluster)
+		Expect(err).NotTo(HaveOccurred())
+		expectQueryJson(query, `{
+        "bool": {
+          "should": [
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster1"
+                  }
+                },
+                "minimum_should_match": "1",
+                "should": [
+                  {
+                    "term": {
+                      "src_type": "hep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_type": "hep"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "src_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "src_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "src_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "src_namespace": "ns2"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster2"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns2"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "src_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "src_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "ns"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "src_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "src_namespace": "ns3"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns3"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "src_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "src_namespace": "ns4"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "bool": {
+                "must": [
+                  {
+                    "term": {
+                      "dest_type": "wep"
+                    }
+                  },
+                  {
+                    "term": {
+                      "dest_namespace": "ns4"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }`)
+	})
+
 	It("handles l7 with no perms", func() {
 		_, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixNone)
 		Expect(err).To(HaveOccurred())
@@ -632,6 +1158,37 @@ var _ = Describe("RBAC query tests", func() {
             {
               "term": {
                 "client_namespace": "ns2"
+              }
+            }
+          ]
+        }
+      }`)
+	})
+
+	It("handles dns with managed cluster perms", func() {
+		query, err := MultiIndexDNSLogs().NewRBACQuery(authorizationMatrixManagedCluster)
+		Expect(err).NotTo(HaveOccurred())
+		expectQueryJson(query, `{
+        "bool": {
+          "should": [
+            {
+              "bool": {
+                "filter": {
+                  "term": {
+                    "cluster": "cluster3"
+                  }
+                },
+                "minimum_should_match": "1",
+                "should": {
+				  "term": {
+                    "client_namespace": "ns3"
+                  }
+                }
+              }
+            },
+            {
+              "term": {
+                "client_namespace": "ns4"
               }
             }
           ]
