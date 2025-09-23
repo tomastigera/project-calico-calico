@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -59,6 +60,7 @@ type envoyCollector struct {
 	config           *config.Config
 	batch            *BatchEnvoyLog
 	connectionCounts *connectionCounter
+	isActive         bool
 }
 
 func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
@@ -77,13 +79,15 @@ func stop(t *tail.Tail) {
 	}
 }
 
-func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
+func (ec *envoyCollector) ReadAccessLogs(ctx context.Context, gatewayLicense license.GatewayLicense) {
 	// Read logs from the file and add them to the batch
 	if ec.config.EnvoyAccessLogPath == "" {
 		log.Warn("Envoy access log path is not set, skipping log collection")
 		return
 	}
 
+	// We tail the file regardless of license status to keep things simple,
+	// as the license status can change at any time.
 	t, err := tail.TailFile(ec.config.EnvoyAccessLogPath, tail.Config{
 		Follow: true,
 		ReOpen: true,
@@ -114,8 +118,14 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
+			if !gatewayLicense.IsLicensed() {
+				continue
+			}
 			ec.ingestLogs()
 		case line := <-t.Lines:
+			if !gatewayLicense.IsLicensed() {
+				continue
+			}
 			log.Infof("Received line from envoy log: %v", line.Text)
 			if _, err := ec.ParseAccessLogs(line.Text); err != nil {
 				log.Errorf("Error parsing access log: %v", err)
@@ -215,6 +225,9 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 		if _, err := os.Stat(ec.config.EnvoyLogPath); !errors.Is(err, os.ErrNotExist) {
 			break
 		}
+
+		// Wait and try again
+		time.Sleep(1 * time.Second)
 	}
 
 	t, err := tail.TailFile(ec.config.EnvoyLogPath, tail.Config{
@@ -414,9 +427,18 @@ func parseFiveTupleInformationFromFields(envoyLog EnvoyLog, dest, src string) (E
 }
 
 func (ec *envoyCollector) Start(ctx context.Context) {
+	// Don't start if already started
+	if ec.isActive {
+		return
+	}
+
+	ec.isActive = true
 	t := time.NewTicker(time.Second * time.Duration(ec.config.EnvoyLogIntervalSecs))
 	defer t.Stop()
 	for {
+		if !ec.isActive {
+			return
+		}
 		select {
 		case <-t.C:
 			ec.ingestLogs()
@@ -424,6 +446,14 @@ func (ec *envoyCollector) Start(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (ec *envoyCollector) Stop() {
+	ec.isActive = false
+}
+
+func (ec *envoyCollector) IsActive() bool {
+	return ec.isActive
 }
 
 // gRPC functions

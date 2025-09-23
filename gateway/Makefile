@@ -7,7 +7,8 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/gateway
 # Env vars related to packaging and releasing
 #############################################
 WAF_HTTP_FILTER_IMAGE	?=waf-http-filter
-BUILD_IMAGES?=$(WAF_HTTP_FILTER_IMAGE)
+GW_L7_COLLECTOR_IMAGE	?=gateway-l7-collector
+BUILD_IMAGES?=$(WAF_HTTP_FILTER_IMAGE) $(GW_L7_COLLECTOR_IMAGE)
 BUILD_TAGS   ?= coraza.rule.multiphase_evaluation
 EXTRA_GOTEST_ARGS ?= 
 
@@ -27,17 +28,22 @@ SRC_FILES = $(shell find pkg cmd -name '*.go')
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
-build: bin/waf-http-filter-$(ARCH)
+build: bin/waf-http-filter-$(ARCH) bin/gateway-l7-collector-$(ARCH)
 
 .PHONY: bin/waf-http-filter-$(ARCH)
 bin/waf-http-filter-$(ARCH): $(SRC_FILES)
 	$(call build_binary, cmd/waf-http-filter/*.go, $@)
+
+.PHONY: bin/gateway-l7-collector-$(ARCH)
+bin/gateway-l7-collector-$(ARCH): $(SRC_FILES)
+	$(call build_binary, cmd/gateway-l7-collector/*.go, $@)
 
 
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
 WAF_HTTP_FILTER_CONTAINER_CREATED=.waf-http-filter.created-$(ARCH)
+GW_L7_COLLECTOR_CONTAINER_CREATED=.gateway-l7-collector.created-$(ARCH)
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES)
@@ -49,12 +55,18 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(WAF_HTTP_FILTER_IMAGE)
+image: $(WAF_HTTP_FILTER_IMAGE) $(GW_L7_COLLECTOR_IMAGE)
 
 $(WAF_HTTP_FILTER_IMAGE): $(WAF_HTTP_FILTER_CONTAINER_CREATED)
 $(WAF_HTTP_FILTER_CONTAINER_CREATED): Dockerfile bin/waf-http-filter-$(ARCH)
 	$(DOCKER_BUILD) -t $(WAF_HTTP_FILTER_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(WAF_HTTP_FILTER_IMAGE)
+	touch $@
+
+$(GW_L7_COLLECTOR_IMAGE): $(GW_L7_COLLECTOR_CONTAINER_CREATED)
+$(GW_L7_COLLECTOR_CONTAINER_CREATED): Dockerfile.l7-collector bin/gateway-l7-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(GW_L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.l7-collector .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(GW_L7_COLLECTOR_IMAGE)
 	touch $@
 
 .PHONY: clean
@@ -63,8 +75,9 @@ clean:
 		report/*.xml \
 		config/
 	find . -name '*.coverprofile' -type f -delete
-	rm -f $(WAF_HTTP_FILTER_CONTAINER_CREATED)
+	rm -f $(WAF_HTTP_FILTER_CONTAINER_CREATED) $(GW_L7_COLLECTOR_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(WAF_HTTP_FILTER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(GW_L7_COLLECTOR_IMAGE) -a -q)
 
 
 #############################################

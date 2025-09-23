@@ -1,18 +1,15 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
 package main
 
 import (
 	"context"
 	"flag"
-	"net"
-	"os"
 	"sync"
-	"syscall"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
@@ -37,6 +34,10 @@ func main() {
 
 	log.Infof("Configuration: %+v", cfg)
 
+	// Initialize license monitoring before starting l7-collector
+	gatewayLicense := license.NewIngressGatewayLicenseMonitor()
+	gatewayLicense.InitializeLicenseMonitor()
+
 	// Instantiate the log collector
 	reportCh := make(chan collector.EnvoyInfo)
 	c := collector.NewEnvoyCollector(cfg, reportCh)
@@ -49,52 +50,18 @@ func main() {
 
 	log.Infof("setting up Felixclient at %s", cfg.DialTarget)
 
-	// Start gRPC log collector
-	gRPCServerStart(cfg, reportCh)
-
 	// Start the log collector
-	CollectAndSend(context.Background(), felixClient, c)
+	CollectAndSend(context.Background(), felixClient, c, gatewayLicense)
 }
 
-func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
-	log.Info("Starting gRCP server...")
-	ctx := context.Background()
-	gs := grpc.NewServer()
-	grpcCollector := collector.NewEnvoyCollector(cfg, reportCh)
-	logServer := collector.NewLoggingServer(grpcCollector.ReceiveLogs)
-	logServer.RegisterAccessLogServiceServer(gs)
-	go grpcCollector.Start(ctx)
-
-	// Run gRPC server on separate goroutine so we catch any signals and clean up.
-	if cfg.ListenNetwork == "unix" {
-		_ = syscall.Unlink(cfg.ListenAddress)
-	}
-	lis, err := net.Listen(cfg.ListenNetwork, cfg.ListenAddress)
-	if err != nil {
-		log.Fatal("could not start listener: ", err)
-	}
-	if cfg.ListenNetwork == "unix" {
-		// anyone on system can connect.
-		if err := os.Chmod(cfg.ListenAddress, 0o777); err != nil {
-			log.Fatal("unable to set write permission on socket: ", err)
-		}
-	}
-	go func() {
-		if err := gs.Serve(lis); err != nil {
-			log.Errorf("failed to serve: %v", err)
-		}
-		defer lis.Close()
-	}()
-}
-
-func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, gatewayLicense license.GatewayLicense) {
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go func() {
 		log.Info("Starting log collection...")
-		collector.ReadLogs(ctx)
+		collector.ReadAccessLogs(ctx, gatewayLicense)
 		cancel()
 		wg.Done()
 	}()
