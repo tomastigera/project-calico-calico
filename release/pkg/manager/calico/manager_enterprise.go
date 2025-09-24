@@ -1153,8 +1153,9 @@ func (m *EnterpriseManager) prepPrereqs() error {
 	}
 
 	// Check that we're not on the master branch. We never prep releases from master.
-	branch := m.determineBranch()
-	if branch == "master" {
+	if branch, err := m.determineBranch(); err != nil {
+		return fmt.Errorf("failed to determine current git branch: %w", err)
+	} else if branch == "master" {
 		return fmt.Errorf("cannot cut release from branch: %s", branch)
 	}
 
