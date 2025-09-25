@@ -4,11 +4,13 @@ package snapshot
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
@@ -43,9 +45,22 @@ type snapshotter struct {
 	listDest api.ListDestination
 }
 
+type ComplianceWarningHandler struct{}
+
+func (h *ComplianceWarningHandler) HandleWarningHeader(code int, agent string, text string) {
+	if strings.Contains(text, "v1 Endpoints is deprecated") {
+		// We suppress warning about Endpoints api deprecation in k8s 1.33+
+		// TODO: remove this suppression when Compliance stops using Endpoints and migrate to EndpointSlices
+		return
+	}
+	restclient.WarningLogger{}.HandleWarningHeader(code, agent, text)
+}
+
 // Run aligns the current state with the last time a snapshot was made with the expected time of the next snapshot and
 // then continuously snapshots with daily periodicity.
 func (s *snapshotter) run() error {
+	restclient.SetDefaultWarningHandler(&ComplianceWarningHandler{})
+
 	log.Infof("Executing snapshot continuously once every day at required time (%0.2d00hr)", s.cfg.SnapshotHour)
 
 	// Assume we are initially healthy.
