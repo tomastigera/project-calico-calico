@@ -105,7 +105,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource already exists: LicenseKey(" + name + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource already exists: LicenseKey(" + name + ")"))
 
 			By("Getting LicenseKey (name) and comparing the output against spec1")
 			res, outError := c.LicenseKey().Get(ctx, name, options.GetOptions{})

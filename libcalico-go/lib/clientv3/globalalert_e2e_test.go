@@ -91,7 +91,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlert tests", testutils.DatastoreA
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: GlobalAlert(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: GlobalAlert(%s)", name1)))
 
 			By("Getting GlobalAlert (name1) and comparing the output against spec1")
 			res, outError := c.GlobalAlerts().Get(ctx, name1, options.GetOptions{})

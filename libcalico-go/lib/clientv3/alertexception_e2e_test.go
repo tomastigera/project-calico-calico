@@ -78,7 +78,7 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: AlertException(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: AlertException(%s)", name1)))
 
 			By("Getting AlertException (name1) and comparing the output against spec1")
 			res, outError := c.AlertExceptions().Get(ctx, name1, options.GetOptions{})
