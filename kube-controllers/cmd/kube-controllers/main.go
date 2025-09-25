@@ -140,7 +140,19 @@ func init() {
 	ValidateEnvVars()
 }
 
+type KubeControllerWarningHandler struct{}
+
+func (h *KubeControllerWarningHandler) HandleWarningHeader(code int, agent string, text string) {
+	if strings.Contains(text, "v1 Endpoints is deprecated") {
+		// We suppress warning about Endpoints api deprecation in k8s 1.33+
+		// TODO: remove this suppression when Kube-Controllers stop using Endpoints and migrate to EndpointSlices
+		return
+	}
+	restclient.WarningLogger{}.HandleWarningHeader(code, agent, text)
+}
+
 func main() {
+	restclient.SetDefaultWarningHandler(&KubeControllerWarningHandler{})
 
 	flag.Parse()
 	if version {
