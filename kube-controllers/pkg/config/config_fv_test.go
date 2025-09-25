@@ -90,7 +90,7 @@ var _ = Describe("KubeControllersConfiguration FV tests", func() {
 
 	AfterEach(func() {
 		_ = c.Close()
-		os.Remove(kconfigFile.Name())
+		_ = os.Remove(kconfigFile.Name())
 		controllerManager.Stop()
 		uut.Stop()
 		if !autoRemoveUut {
