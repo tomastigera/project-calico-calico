@@ -53,7 +53,7 @@ class TestCalicoctlCLIFlags(TestBase):
         # The "datastore migrate import" command bypasses version mismatch checking
         # rc = calicoctl("datastore migrate import -f a", allowVersionMismatch=False)
         # Assert that the error is not "version mismatch"
-        # rc.assert_error("Invalid datastore type")
+        # rc.assert_error("invalid datastore type")
 
         # CalicoVersion is unset in the cluster, expect no error
         rc = calicoctl("replace", data=node_name1_rev1, allowVersionMismatch=False)
@@ -73,12 +73,12 @@ class TestCalicoctlCLIFlags(TestBase):
 
         # CalicoVersion is incorrect in the cluster, expect error
         rc = calicoctl("replace", data=node_name1_rev1, allowVersionMismatch=False)
-        rc.assert_error("Version mismatch.")
+        rc.assert_error("version mismatch.")
 
         # Test that the bgp peers <peer-name> command accepts the --allow-version-mismatch flag
         # Without the --allow-version-mismatch flag, it should error but not with "Usage:"
         rc = calicoctl("bgp peers peer-name", allowVersionMismatch=False)
-        rc.assert_error("Version mismatch.")
+        rc.assert_error("version mismatch.")
         rc = calicoctl("bgp peers peer-name", allowVersionMismatch=True)
         rc.assert_error()
         rc.assert_output_not_contains("Usage:")

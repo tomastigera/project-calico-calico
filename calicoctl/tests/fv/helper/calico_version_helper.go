@@ -52,7 +52,7 @@ Description:
 	}
 
 	if context := parsedArgs["--context"]; context != nil {
-		os.Setenv("K8S_CURRENT_CONTEXT", context.(string))
+		_ = os.Setenv("K8S_CURRENT_CONTEXT", context.(string))
 	}
 
 	cf, _ := parsedArgs["--config"].(string)
