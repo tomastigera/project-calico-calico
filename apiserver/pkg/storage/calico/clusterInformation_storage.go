@@ -6,7 +6,7 @@ import (
 	"context"
 	"reflect"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -40,10 +40,10 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(v3.ClusterInformation{}),
-		aapiListType:      reflect.TypeOf(v3.ClusterInformationList{}),
-		libCalicoType:     reflect.TypeOf(v3.ClusterInformation{}),
-		libCalicoListType: reflect.TypeOf(v3.ClusterInformationList{}),
+		aapiType:          reflect.TypeOf(api.ClusterInformation{}),
+		aapiListType:      reflect.TypeOf(api.ClusterInformationList{}),
+		libCalicoType:     reflect.TypeOf(api.ClusterInformation{}),
+		libCalicoListType: reflect.TypeOf(api.ClusterInformationList{}),
 		isNamespaced:      false,
 		get:               getFn,
 		list:              listFn,
@@ -59,35 +59,35 @@ type ClusterInformationConverter struct {
 }
 
 func (gc ClusterInformationConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiClusterInformation := aapiObj.(*v3.ClusterInformation)
-	lcgClusterInformation := &v3.ClusterInformation{}
+	aapiClusterInformation := aapiObj.(*api.ClusterInformation)
+	lcgClusterInformation := &api.ClusterInformation{}
 	lcgClusterInformation.TypeMeta = aapiClusterInformation.TypeMeta
 	lcgClusterInformation.ObjectMeta = aapiClusterInformation.ObjectMeta
-	lcgClusterInformation.Kind = v3.KindClusterInformation
-	lcgClusterInformation.APIVersion = v3.GroupVersionCurrent
+	lcgClusterInformation.Kind = api.KindClusterInformation
+	lcgClusterInformation.APIVersion = api.GroupVersionCurrent
 	lcgClusterInformation.Spec = aapiClusterInformation.Spec
 	return lcgClusterInformation
 }
 
 func (gc ClusterInformationConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgClusterInformation := libcalicoObject.(*v3.ClusterInformation)
-	aapiClusterInformation := aapiObj.(*v3.ClusterInformation)
+	lcgClusterInformation := libcalicoObject.(*api.ClusterInformation)
+	aapiClusterInformation := aapiObj.(*api.ClusterInformation)
 	aapiClusterInformation.Spec = lcgClusterInformation.Spec
 	aapiClusterInformation.TypeMeta = lcgClusterInformation.TypeMeta
 	aapiClusterInformation.ObjectMeta = lcgClusterInformation.ObjectMeta
 }
 
 func (gc ClusterInformationConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgClusterInformationList := libcalicoListObject.(*v3.ClusterInformationList)
-	aapiClusterInformationList := aapiListObj.(*v3.ClusterInformationList)
+	lcgClusterInformationList := libcalicoListObject.(*api.ClusterInformationList)
+	aapiClusterInformationList := aapiListObj.(*api.ClusterInformationList)
 	if libcalicoListObject == nil {
-		aapiClusterInformationList.Items = []v3.ClusterInformation{}
+		aapiClusterInformationList.Items = []api.ClusterInformation{}
 		return
 	}
 	aapiClusterInformationList.TypeMeta = lcgClusterInformationList.TypeMeta
 	aapiClusterInformationList.ListMeta = lcgClusterInformationList.ListMeta
 	for _, item := range lcgClusterInformationList.Items {
-		aapiClusterInformation := v3.ClusterInformation{}
+		aapiClusterInformation := api.ClusterInformation{}
 		gc.convertToAAPI(&item, &aapiClusterInformation)
 		if matched, err := pred.Matches(&aapiClusterInformation); err == nil && matched {
 			aapiClusterInformationList.Items = append(aapiClusterInformationList.Items, aapiClusterInformation)
