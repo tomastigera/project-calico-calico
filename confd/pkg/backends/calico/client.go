@@ -1161,7 +1161,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 	for _, u := range updates {
 		if v3key, ok := u.Key.(model.ResourceKey); ok && v3key.Kind == apiv3.KindBGPConfiguration {
 			// Convert v3 BGPConfiguration to equivalent v1 cache values
-			v3res, _ := u.KVPair.Value.(*apiv3.BGPConfiguration)
+			v3res, _ := u.Value.(*apiv3.BGPConfiguration)
 			c.updateBGPConfigCache(v3key.Name, v3res, &needServiceAdvertisementUpdates, &needUpdatePeersV1, &needUpdatePeersReasons)
 		}
 		c.updateCache(u.UpdateType, &u.KVPair)
@@ -1554,7 +1554,7 @@ func (c *client) getNodeMeshRestartTimeKVPair(v3res *apiv3.BGPConfiguration, key
 
 	if v3res != nil && v3res.Spec.NodeMeshMaxRestartTime != nil {
 		restartTime := *v3res.Spec.NodeMeshMaxRestartTime
-		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(meshRestartKey, fmt.Sprintf("%v", int(math.Round(restartTime.Duration.Seconds())))))
+		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(meshRestartKey, fmt.Sprintf("%v", int(math.Round(restartTime.Seconds())))))
 	} else {
 		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(meshRestartKey))
 	}
@@ -2125,7 +2125,7 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*backends.BGPPeer, v3
 		peer.SourceAddr = withDefault(string(v3res.Spec.SourceAddress), string(apiv3.SourceAddressUseNodeIP))
 		peer.RestartMode = withDefault(string(v3res.Spec.RestartMode), string(apiv3.RestartModeGracefulRestart))
 		if v3res.Spec.MaxRestartTime != nil {
-			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Duration.Seconds())))
+			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Seconds())))
 		}
 		for _, subnet := range localSubnets {
 			if subnet.Contains(peer.PeerIP.IP) {
