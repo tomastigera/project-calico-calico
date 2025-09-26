@@ -40,6 +40,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/kubernetes"
+	k8shealthcheck "k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"sigs.k8s.io/knftables"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -296,6 +297,7 @@ type Config struct {
 	FlowLogsFileIncludeService     bool
 	FlowLogsFileDomainsLimit       int
 	SidecarAccelerationEnabled     bool
+	bpfProxyHealthzServer          *k8shealthcheck.ProxyHealthServer
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool

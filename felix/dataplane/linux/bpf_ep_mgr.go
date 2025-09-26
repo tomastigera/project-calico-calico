@@ -3604,6 +3604,8 @@ func (m *bpfEndpointManager) setRPFilter(iface string, val int) error {
 	return nil
 }
 
+const jitHardenPath = "/proc/sys/net/core/bpf_jit_harden"
+
 func (m *bpfEndpointManager) setJITHardening(val int) error {
 	numval := strconv.Itoa(val)
 	err := writeProcSys(jitHardenPath, numval)
