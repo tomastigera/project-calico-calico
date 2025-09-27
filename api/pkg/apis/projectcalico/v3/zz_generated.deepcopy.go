@@ -3010,6 +3010,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.BPFJITHardening != nil {
+		in, out := &in.BPFJITHardening, &out.BPFJITHardening
+		*out = new(BPFJITHardeningType)
+		**out = **in
+	}
 	if in.BPFConntrackCleanupMode != nil {
 		in, out := &in.BPFConntrackCleanupMode, &out.BPFConntrackCleanupMode
 		*out = new(BPFConntrackMode)
@@ -3068,6 +3073,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.BPFKubeProxyMinSyncPeriod != nil {
 		in, out := &in.BPFKubeProxyMinSyncPeriod, &out.BPFKubeProxyMinSyncPeriod
 		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.BPFKubeProxyHealtzPort != nil {
+		in, out := &in.BPFKubeProxyHealtzPort, &out.BPFKubeProxyHealtzPort
+		*out = new(int)
 		**out = **in
 	}
 	if in.BPFKubeProxyEndpointSlicesEnabled != nil {

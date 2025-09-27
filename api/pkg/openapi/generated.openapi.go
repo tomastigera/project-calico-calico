@@ -6144,6 +6144,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"bpfJITHardening": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFJITHardening controls BPF JIT hardening. When set to \"Auto\", Felix will set JIT hardening to 1 if it detects the current value is 2 (strict mode that hurts performance). When set to \"Strict\", Felix will not modify the JIT hardening setting. [Default: Auto]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"bpfLogLevel": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFLogLevel controls the log level of the BPF programs when in BPF dataplane mode.  One of \"Off\", \"Info\", or \"Debug\".  The logs are emitted to the BPF trace pipe, accessible with the command `tc exec bpf debug`. [Default: Off].",
@@ -6269,6 +6276,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFKubeProxyMinSyncPeriod, in BPF mode, controls the minimum time between updates to the dataplane for Felix's embedded kube-proxy.  Lower values give reduced set-up latency.  Higher values reduce Felix CPU usage by batching up more work.  [Default: 1s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"bpfKubeProxyHealtzPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFKubeProxyHealtzPort, in BPF mode, controls the port that Felix's embedded kube-proxy health check server binds to. The health check server is used by external load balancers to determine if this node should receive traffic.  [Default: 10256]",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"bpfKubeProxyEndpointSlicesEnabled": {
