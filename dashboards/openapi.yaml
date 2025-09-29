@@ -21,14 +21,6 @@ paths:
       - Collections
   /api/metadata:
     get:
-      parameters:
-      - description: Organization Project ID
-        in: header
-        name: X-Project-Id
-        required: true
-        schema:
-          format: types.ProjectID
-          type: string
       responses:
         "200":
           content:
@@ -41,14 +33,6 @@ paths:
       tags:
       - Metadata
     post:
-      parameters:
-      - description: Organization Project ID
-        in: header
-        name: X-Project-Id
-        required: true
-        schema:
-          format: types.ProjectID
-          type: string
       requestBody:
         content:
           application/json:
@@ -69,13 +53,6 @@ paths:
   /api/metadata/{dashboardID}:
     delete:
       parameters:
-      - description: Organization Project ID
-        in: header
-        name: X-Project-Id
-        required: true
-        schema:
-          format: types.ProjectID
-          type: string
       - description: Dashboard ID
         in: path
         name: dashboardID
@@ -91,13 +68,6 @@ paths:
       - Metadata
     get:
       parameters:
-      - description: Organization Project ID
-        in: header
-        name: X-Project-Id
-        required: true
-        schema:
-          format: types.ProjectID
-          type: string
       - description: Dashboard ID
         in: path
         name: dashboardID
@@ -117,13 +87,6 @@ paths:
       - Metadata
     put:
       parameters:
-      - description: Organization Project ID
-        in: header
-        name: X-Project-Id
-        required: true
-        schema:
-          format: types.ProjectID
-          type: string
       - description: Dashboard ID
         in: path
         name: dashboardID

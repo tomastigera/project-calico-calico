@@ -657,6 +657,19 @@ from workloads.
 | `FelixConfiguration` schema | Boolean. |
 | Default value (YAML) | `false` |
 
+### `CgroupV2Path` (config file) / `cgroupV2Path` (YAML)
+
+Overrides the default location where to find the cgroup hierarchy.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_CgroupV2Path` |
+| Encoding (env var/config file) | String |
+| Default value (above encoding) | none |
+| `FelixConfiguration` field | `cgroupV2Path` (YAML) `CgroupV2Path` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | none |
+
 ### `ChainInsertMode` (config file) / `chainInsertMode` (YAML)
 
 Controls whether Felix hooks the kernel's top-level iptables chains by inserting a rule
@@ -1986,6 +1999,22 @@ determines the CTLB behavior.
 | Default value (YAML) | `Enabled` |
 | Notes | Required. | 
 
+### `BPFJITHardening` (config file) / `bpfJITHardening` (YAML)
+
+Controls BPF JIT hardening. When set to "Auto", Felix will set JIT hardening to 1
+if it detects the current value is 2 (strict mode that hurts performance). When set to "Strict",
+Felix will not modify the JIT hardening setting.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFJITHardening` |
+| Encoding (env var/config file) | One of: <code>Auto</code>, <code>Strict</code> (case insensitive) |
+| Default value (above encoding) | `Auto` |
+| `FelixConfiguration` field | `bpfJITHardening` (YAML) `BPFJITHardening` (Go API) |
+| `FelixConfiguration` schema | `string` |
+| Default value (YAML) | `Auto` |
+| Notes | Required. | 
+
 ### `BPFKubeProxyEndpointSlicesEnabled` (config file) / `bpfKubeProxyEndpointSlicesEnabled` (YAML)
 
 Deprecated and has no effect. BPF
@@ -2000,6 +2029,21 @@ the next release.
 | `FelixConfiguration` field | `bpfKubeProxyEndpointSlicesEnabled` (YAML) `BPFKubeProxyEndpointSlicesEnabled` (Go API) |
 | `FelixConfiguration` schema | Boolean. |
 | Default value (YAML) | `true` |
+
+### `BPFKubeProxyHealtzPort` (config file) / `bpfKubeProxyHealtzPort` (YAML)
+
+In BPF mode, controls the port that Felix's embedded kube-proxy health check server binds to.
+The health check server is used by external load balancers to determine if this node should receive traffic.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFKubeProxyHealtzPort` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `10256` |
+| `FelixConfiguration` field | `bpfKubeProxyHealtzPort` (YAML) `BPFKubeProxyHealtzPort` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `10256` |
+| Notes | Required. | 
 
 ### `BPFKubeProxyIptablesCleanupEnabled` (config file) / `bpfKubeProxyIptablesCleanupEnabled` (YAML)
 

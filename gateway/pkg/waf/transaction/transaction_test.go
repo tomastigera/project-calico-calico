@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+
 package transaction_test
 
 // WARNING this file requires the build tag 'coraza.rule.multiphase_evaluation' to be set.

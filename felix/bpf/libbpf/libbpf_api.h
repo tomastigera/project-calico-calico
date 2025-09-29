@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -301,7 +301,8 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			ushort egw_health_port,
 			uint log_filter_jmp,
 			uint *jumps,
-			uint *jumps6)
+			uint *jumps6,
+			short dscp)
 {
 	struct cali_tc_global_data v4 = {
 		.tunnel_mtu = tmtu,
@@ -319,6 +320,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.if_ns = if_ns,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
+		.dscp = dscp,
 	};
 
 	strncpy(v4.iface_name, iface_name, sizeof(v4.iface_name));
@@ -523,6 +525,14 @@ void bpf_map_batch_update(int fd, const void *keys, const void *values, __u32 *c
 		.flags = flags);
 
 	set_errno(bpf_map_update_batch(fd, keys, values, count, &opts));
+}
+
+void bpf_map_batch_delete(int fd, const void *keys, __u32 *count, __u64 flags)
+{
+	DECLARE_LIBBPF_OPTS(bpf_map_batch_opts, opts,
+		.flags = flags);
+
+	set_errno(bpf_map_delete_batch(fd, keys, count, &opts));
 }
 
 int num_possible_cpu()

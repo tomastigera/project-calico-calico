@@ -94,7 +94,7 @@ int calico_tc_main(struct __sk_buff *skb)
 			/* If we are on vxlan and we do not have the key set, we cannot short-cirquit */
 			!(CALI_F_VXLAN &&
 			 !skb_mark_equals(skb, CALI_SKB_MARK_TUNNEL_KEY_SET, CALI_SKB_MARK_TUNNEL_KEY_SET))) {
-		if  (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_DEBUG) {
+		if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_DEBUG) {
 			/* This generates a bit more richer output for logging */
 			DECLARE_TC_CTX(_ctx,
 				.skb = skb,
@@ -108,11 +108,6 @@ int calico_tc_main(struct __sk_buff *skb)
 
 			CALI_DEBUG("New packet at ifindex=%d; mark=%x", skb->ifindex, skb->mark);
 			parse_packet_ip(ctx);
-			if (enforce_packet_rate_qos(ctx) == TC_ACT_SHOT) {
-				CALI_DEBUG("Final result=DENY (%d). Dropped due to packet rate QoS.", CALI_REASON_DROPPED_BY_QOS);
-				deny_reason(ctx, CALI_REASON_DROPPED_BY_QOS);
-				return TC_ACT_SHOT;
-			}
 			CALI_DEBUG("Final result=ALLOW (%d). Bypass mark set.", CALI_REASON_BYPASS);
 		}
 		return TC_ACT_UNSPEC;
@@ -172,6 +167,13 @@ int calico_tc_main(struct __sk_buff *skb)
 	CALI_DEBUG("New packet at ifindex=%d; mark=%x", skb->ifindex, skb->mark);
 
 	counter_inc(ctx, COUNTER_TOTAL_PACKETS);
+
+	if (CALI_F_WEP && qos_enforce_packet_rate(ctx) == TC_ACT_SHOT) {
+		CALI_DEBUG("Drop packet due to QoS packet rate limit.");
+		deny_reason(ctx, CALI_REASON_DROPPED_BY_QOS);
+		ctx->fwd.res = TC_ACT_SHOT;
+		goto finalize;
+	}
 
 	if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_INFO || PROFILING) {
 		ctx->state->prog_start_time = bpf_ktime_get_ns();
@@ -385,6 +387,9 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 	if (ctx->state->ct_result.flags & CALI_CT_FLAG_NAT_OUT) {
 		ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 	}
+	if (ctx->state->ct_result.flags & CALI_CT_FLAG_CLUSTER_EXTERNAL) {
+		ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
+	}
 
 	if (CALI_F_TO_HOST && !CALI_F_NAT_IF &&
 			(ct_result_rc(ctx->state->ct_result.rc) == CALI_CT_ESTABLISHED ||
@@ -543,9 +548,19 @@ syn_force_policy:
 		}
 	}
 
+	struct cali_rt *src_rt = cali_rt_lookup(&ctx->state->ip_src);
+	struct cali_rt *dst_rt = NULL;
+
+	if (CALI_F_TO_HEP || CALI_F_FROM_WEP) {
+		dst_rt = cali_rt_lookup(&ctx->state->post_nat_ip_dst);
+	}
+
+	__u32 src_flags = src_rt ? src_rt->flags : CALI_RT_UNKNOWN;
+	__u32 dst_flags = dst_rt ? dst_rt->flags : CALI_RT_UNKNOWN;
+
 	if (CALI_F_TO_WEP && (!skb_seen(ctx->skb) ||
 			skb_mark_equals(ctx->skb, CALI_SKB_MARK_FROM_NAT_IFACE_OUT, CALI_SKB_MARK_FROM_NAT_IFACE_OUT)) &&
-			cali_rt_flags_local_host(cali_rt_lookup_flags(&ctx->state->ip_src))) {
+			cali_rt_flags_local_host(src_flags)) {
 		/* Host to workload traffic always allowed.  We discount traffic that was
 		 * seen by another program since it must have come in via another interface.
 		 */
@@ -603,51 +618,55 @@ syn_force_policy:
 		 * on egress from an egress gateway, because the whole point of egress
 		 * gateways, on the return path, is to forward from destination IPs that
 		 * are not their own IP. */
-		struct cali_rt *r = cali_rt_lookup(&ctx->state->ip_src);
-		/* Do RPF check since it's our responsibility to police that. */
-		if (wep_rpf_check(ctx, r) == RPF_RES_FAIL) {
+		if (wep_rpf_check(ctx, src_rt) == RPF_RES_FAIL) {
 			goto deny;
 		}
 
-		if (cali_rt_flags_skip_ingress_redirect(r->flags)) {
+		if (cali_rt_flags_skip_ingress_redirect(src_flags)) {
 			ctx->state->flags |= CALI_ST_SKIP_REDIR_PEER;
 		}
 
-		if (EGRESS_CLIENT) {
-			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(&ctx->state->post_nat_ip_dst))) {
-				// Packet is from an egress client and destined to outside
-				// the cluster, so CT state will be marked as an egress
-				// gateway flow.
-				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
-				ctx->state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
-			}
+		if ((EGRESS_CLIENT) && (cali_rt_flags_outside_cluster(dst_flags))) {
+			// Packet is from an egress client and destined to outside
+			// the cluster, so CT state will be marked as an egress
+			// gateway flow.
+			CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
+			ctx->state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
 		}
 
 		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
 		// client. This is because, packets from egress clients are destined outside the cluster
 		// the SNATing is done by the egw itself.
-		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
-			struct cali_rt *rt = cali_rt_lookup(&ctx->state->post_nat_ip_dst);
-			enum cali_rt_flags flags = CALI_RT_UNKNOWN;
-			if (rt) {
-				flags = rt->flags;
-			}
+		if (!EGRESS_CLIENT && (src_flags & CALI_RT_NAT_OUT)) {
 			bool exclude_hosts = (GLOBAL_FLAGS & CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS);
-			if (rt_flags_should_perform_nat_outgoing(flags, exclude_hosts)) {
+			if (cali_rt_flags_should_perform_nat_outgoing(dst_flags, exclude_hosts)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool but dest is not, need to SNAT.");
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
-
 		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
-		if (!(r->flags & CALI_RT_IN_POOL)) {
+		if (!(cali_rt_flags_is_in_pool(src_flags))) {
 			CALI_DEBUG("Source " IP_FMT " not in IP pool", debug_ip(ctx->state->ip_src));
-			r = cali_rt_lookup(&ctx->state->post_nat_ip_dst);
-			if (!r || !(r->flags & (CALI_RT_WORKLOAD | CALI_RT_HOST))) {
+			if (!(dst_flags & (CALI_RT_WORKLOAD | CALI_RT_HOST))) {
 				CALI_DEBUG("Outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
 				ctx->state->flags |= CALI_ST_SKIP_FIB;
 			}
+		} else {
+			if (cali_rt_flags_should_set_dscp(dst_flags)) {
+				CALI_DEBUG("Remote host or outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
+				ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
+			}
 		}
+	}
+
+	/* If either source or destination is outside cluster, set flag as might need to update DSCP later. */
+	if ((CALI_F_TO_HEP) && (cali_rt_flags_local_host(src_flags)) && cali_rt_flags_should_set_dscp(dst_flags)) {
+		CALI_DEBUG("Remote host or outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
+		ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
+	}
+	if ((CALI_F_FROM_HEP) && cali_rt_flags_should_set_dscp(src_flags)) {
+		CALI_DEBUG("Remote host or outside cluster source " IP_FMT "", debug_ip(ctx->state->ip_src));
+		ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
 	}
 
 	/* [SMC] I had to add this revalidation when refactoring the conntrack code to use the context and
@@ -1440,8 +1459,7 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 	}
 #endif
 
-	if (enforce_packet_rate_qos(ctx) == TC_ACT_SHOT) {
-		deny_reason(ctx, CALI_REASON_DROPPED_BY_QOS);
+	if ((CALI_F_FROM_WEP || CALI_F_TO_HEP) && qos_dscp_needs_update(ctx) && !qos_dscp_set(ctx)) {
 		goto deny;
 	}
 	ctx->fwd = calico_tc_skb_accepted(ctx);
@@ -1521,6 +1539,9 @@ int calico_tc_skb_new_flow_entrypoint(struct __sk_buff *skb)
 	ct_ctx_nat->allow_from_host_side = false;
 	if (state->flags & CALI_ST_NAT_OUTGOING) {
 		ct_ctx_nat->flags |= CALI_CT_FLAG_NAT_OUT;
+	}
+	if (state->flags & CALI_ST_CLUSTER_EXTERNAL) {
+		ct_ctx_nat->flags |= CALI_CT_FLAG_CLUSTER_EXTERNAL;
 	}
 	if (CALI_F_TO_HOST && state->flags & CALI_ST_SKIP_FIB) {
 		ct_ctx_nat->flags |= CALI_CT_FLAG_SKIP_FIB;
@@ -2274,6 +2295,11 @@ int calico_tc_skb_ipv4_frag(struct __sk_buff *skb)
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
 
+#ifndef BPF_CORE_SUPPORTED
+	deny_reason(ctx, CALI_REASON_FRAG_UNSUPPORTED);
+	CALI_DEBUG("IPv4 fragmentation not supported in this kernel version");
+	goto deny;
+#else
 	CALI_DEBUG("Entering calico_tc_skb_ipv4_frag");
 	CALI_DEBUG("iphdr_offset %d ihl %d", skb_iphdr_offset(ctx), ctx->ipheader_len);
 
@@ -2286,13 +2312,18 @@ int calico_tc_skb_ipv4_frag(struct __sk_buff *skb)
 	tc_state_fill_from_iphdr_v4(ctx);
 
 	if (!frags4_handle(ctx)) {
-		deny_reason(ctx, CALI_REASON_FRAG_WAIT);
+		if (!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_loop)) {
+			deny_reason(ctx, CALI_REASON_FRAG_UNSUPPORTED);
+		} else {
+			deny_reason(ctx, CALI_REASON_FRAG_WAIT);
+		}
 		goto deny;
 	}
 	/* force it through stack to trigger any further necessary fragmentation */
 	ctx->state->flags |= CALI_ST_SKIP_REDIR_ONCE;
 
 	return pre_policy_processing(ctx);
+#endif /* !BPF_CORE_SUPPORTED */
 
 finalize:
 	return forward_or_drop(ctx);

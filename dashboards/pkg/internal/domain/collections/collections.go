@@ -10,6 +10,7 @@ const (
 	CollectionNameL7    = CollectionName("l7")
 	CollectionNameDNS   = CollectionName("dns")
 	CollectionNameFlows = CollectionName("flows")
+	CollectionNameWAF   = CollectionName("waf")
 
 	FieldTypeIP   = FieldType("ip")
 	FieldTypeText = FieldType("text")
@@ -34,10 +35,10 @@ type Collection struct {
 	name                 CollectionName
 	fields               []CollectionField
 	groupBys             []GroupBy
-	defaultTimeFieldName FieldType
+	defaultTimeFieldName FieldName
 }
 
-var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7}
+var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7, collectionWAF}
 
 func Collections() []Collection {
 	return slices.Clone(allCollections)
@@ -55,7 +56,7 @@ func (c Collection) GroupBys() []GroupBy {
 	return slices.Clone(c.groupBys)
 }
 
-func (c Collection) DefaultTimeFieldName() FieldType {
+func (c Collection) DefaultTimeFieldName() FieldName {
 	return c.defaultTimeFieldName
 }
 

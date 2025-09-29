@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -700,6 +701,15 @@ func NewBPFEndpointManager(
 		m.updatePolicyProgramFn = m.updatePolicyProgram
 	}
 
+	if config.BPFJITHardening == "Auto" {
+		if v, err := m.getJITHardening(); err == nil && v == 2 {
+			err := m.setJITHardening(1)
+			if err != nil {
+				log.WithError(err).Warn("Failed to set jit hardening to 1, continuing with 2 - performance may be degraded")
+			}
+		}
+	}
+
 	return m, nil
 }
 
@@ -1107,6 +1117,18 @@ func (m *bpfEndpointManager) cleanupOldXDPAttach(iface string) error {
 	return nil
 }
 
+func cleanupTcxPins(iface string) {
+	for _, attachHook := range []hook.Hook{hook.Ingress, hook.Egress} {
+		ap := tc.AttachPoint{
+			AttachPoint: bpf.AttachPoint{
+				Iface: iface,
+				Hook:  attachHook,
+			},
+		}
+		os.Remove(ap.ProgPinPath())
+	}
+}
+
 func (m *bpfEndpointManager) cleanupOldTcAttach(iface string) error {
 	ap := tc.AttachPoint{
 		AttachPoint: bpf.AttachPoint{
@@ -1172,6 +1194,14 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceStateUpdate) {
 		return
 	}
 
+	if update.State == ifacemonitor.StateNotPresent && m.bpfAttachType == apiv3.BPFAttachOptionTCX {
+		// Delete the tcx pins if the interface is gone.
+		// Check if the interface still exists, as we might get events out of order.
+		_, err := m.dp.getIfaceLink(update.Name)
+		if err != nil {
+			cleanupTcxPins(update.Name)
+		}
+	}
 	// Should be safe without the lock since there shouldn't be any active background threads
 	// but taking it now makes us robust to refactoring.
 	m.ifacesLock.Lock()
@@ -2468,6 +2498,17 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 		}
 	}
 
+	ap.DSCP = -1
+	if wep != nil && len(wep.QosPolicies) > 0 {
+		// Only one QoS policy is supported at the moment.
+		dscp := int8(wep.QosPolicies[0].Dscp)
+		if dscp < 0 || dscp > 63 {
+			log.WithField("wep", wep.Name).Errorf("Invalid DSCP value %v - Skipping.", dscp)
+		} else {
+			ap.DSCP = dscp
+		}
+	}
+
 	if err := m.wepStateFillJumps(ap, &state); err != nil {
 		return state, err
 	}
@@ -2908,6 +2949,17 @@ func (d *bpfEndpointManagerDataplane) attachDataIfaceProgram(
 
 	if err := m.loadPrograms(ap, d.ipFamily); err != nil {
 		return nil, err
+	}
+
+	ap.DSCP = -1
+	if ep != nil && len(ep.QosPolicies) > 0 {
+		// Only one QoS policy is supported at the moment.
+		dscp := int8(ep.QosPolicies[0].Dscp)
+		if dscp < 0 || dscp > 63 {
+			log.WithField("hep", ep.Name).Errorf("Invalid DSCP value %v - Skipping.", dscp)
+		} else {
+			ap.DSCP = dscp
+		}
 	}
 
 	if ep != nil {
@@ -3550,6 +3602,32 @@ func (m *bpfEndpointManager) setRPFilter(iface string, val int) error {
 
 	log.Infof("%s set to %s", path, numval)
 	return nil
+}
+
+const jitHardenPath = "/proc/sys/net/core/bpf_jit_harden"
+
+func (m *bpfEndpointManager) setJITHardening(val int) error {
+	numval := strconv.Itoa(val)
+	err := writeProcSys(jitHardenPath, numval)
+	if err != nil {
+		logrus.WithField("err", err).Errorf("Failed to set %s to %s", jitHardenPath, numval)
+		return err
+	}
+
+	logrus.Infof("%s set to %s", jitHardenPath, numval)
+	return nil
+}
+
+func (m *bpfEndpointManager) getJITHardening() (int, error) {
+	data, err := os.ReadFile(jitHardenPath)
+	if err != nil {
+		return 0, err
+	}
+	val, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
 }
 
 func (m *bpfEndpointManager) ensureStarted() {

@@ -17,4 +17,5 @@ type QueryRequest struct {
 	MaxDocuments   int
 	PageNum        int
 	CollectionName collections.CollectionName
+	SortFieldName  collections.FieldName
 }

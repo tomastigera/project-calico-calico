@@ -14,7 +14,7 @@ DOCKER_RUN := mkdir -p ./.go-pkg-cache bin $(GOMOD_CACHE) && \
 		-e GOPATH=/go \
 		-e OS=$(BUILDOS) \
 		-e GOOS=$(BUILDOS) \
-		-e GOFLAGS=$(GOFLAGS) \
+		-e "GOFLAGS=$(GOFLAGS)" \
 		-v $(CURDIR):/go/src/github.com/projectcalico/calico:rw \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
@@ -213,7 +213,7 @@ get-operator-crds: var-require-all-OPERATOR_BRANCH
 	$(MAKE) fix-changed
 
 gen-semaphore-yaml:
-	cd .semaphore && ./generate-semaphore-yaml.sh
+	$(DOCKER_GO_BUILD) sh -c "cd .semaphore && ./generate-semaphore-yaml.sh"
 
 # Build the tigera-operator helm chart.
 ifdef CHART_RELEASE

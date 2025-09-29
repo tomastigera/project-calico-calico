@@ -30,7 +30,9 @@ import (
 
 var (
 	//go:embed testdata/tigera-issuer.crt
-	tigeraIssuerPublicCert []byte
+	tigeraIssuerCertBundle []byte
+	//go:embed testdata/no-tigera-issuer.crt
+	noTigeraIssuerCertBundle []byte
 	//go:embed testdata/tigera-issuer.jwt
 	tigeraIssuedJWT string
 )
@@ -128,7 +130,7 @@ var _ = Describe("JWT authentication tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer func() { _ = os.Remove(tmpFile.Name()) }()
 
-		_, err = tmpFile.Write(tigeraIssuerPublicCert)
+		_, err = tmpFile.Write(tigeraIssuerCertBundle)
 		Expect(err).NotTo(HaveOccurred())
 
 		jwtAuth, err = newJWTAuth(auth.WithTigeraIssuerPublicKey(tmpFile.Name()))
@@ -141,6 +143,19 @@ var _ = Describe("JWT authentication tests", func() {
 		Expect(usr.GetUID()).To(Equal(string(sa.UID)))
 		Expect(usr.GetGroups()).To(HaveLen(3))
 		Expect(usr.GetGroups()).To(Equal([]string{"system:serviceaccounts", "system:authenticated", "system:serviceaccounts:calico-system"}))
+	})
+
+	It("Should return error when the tigera-operator-signer certificate is not in the CA bundle", func() {
+		tmpFile, err := os.CreateTemp("", "no-tigera-issuer-*.crt")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+		_, err = tmpFile.Write(noTigeraIssuerCertBundle)
+		Expect(err).NotTo(HaveOccurred())
+
+		jwtAuth, err = newJWTAuth(auth.WithTigeraIssuerPublicKey(tmpFile.Name()))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("no valid Tigera issuer public key found"))
 	})
 
 	It("Should cache impersonation authorizations by token when caching is enabled", func() {

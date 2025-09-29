@@ -1,6 +1,6 @@
 # Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE
+ARG CALICO_BASE=calico/base:latest
 
 FROM scratch AS source
 

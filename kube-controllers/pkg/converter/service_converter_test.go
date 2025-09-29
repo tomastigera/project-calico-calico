@@ -235,7 +235,7 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 	endpointConverter := converter.NewEndpointConverter()
 
 	It("should parse a basic Endpoints", func() {
-		endpoints := corev1.Endpoints{
+		endpoints := corev1.Endpoints{ //nolint:staticcheck
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testEndpoint",
 				Namespace: "policy-demo",
@@ -247,18 +247,18 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 					"country": "italy",
 				},
 			},
-			Subsets: []corev1.EndpointSubset{
-				corev1.EndpointSubset{
-					Addresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+			Subsets: []corev1.EndpointSubset{ //nolint:staticcheck
+				{
+					Addresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "1.1.1.1",
 						},
-						corev1.EndpointAddress{
+						{
 							IP: "2.2.2.2",
 						},
 					},
-					NotReadyAddresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+					NotReadyAddresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "3.3.3.3",
 						},
 					},
@@ -302,37 +302,37 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 	})
 
 	It("should parse a basic Endpoints with multiple addresses", func() {
-		endpoints := corev1.Endpoints{
+		endpoints := corev1.Endpoints{ //nolint:staticcheck
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testEndpoint",
 				Namespace: "policy-demo",
 			},
-			Subsets: []corev1.EndpointSubset{
-				corev1.EndpointSubset{
-					Addresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+			Subsets: []corev1.EndpointSubset{ //nolint:staticcheck
+				{
+					Addresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "1.1.1.1",
 						},
-						corev1.EndpointAddress{
+						{
 							IP: "2.2.2.2",
 						},
 					},
-					NotReadyAddresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+					NotReadyAddresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "3.3.3.3",
 						},
 					},
 				},
-				corev1.EndpointSubset{
-					Addresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+				{
+					Addresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "10.10.10.10",
 						},
 					},
 				},
-				corev1.EndpointSubset{
-					NotReadyAddresses: []corev1.EndpointAddress{
-						corev1.EndpointAddress{
+				{
+					NotReadyAddresses: []corev1.EndpointAddress{ //nolint:staticcheck
+						{
 							IP: "20.20.20.20",
 						},
 					},
@@ -366,7 +366,7 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 	})
 
 	It("should parse an Endpoints with no addresses", func() {
-		endpoints := corev1.Endpoints{
+		endpoints := corev1.Endpoints{ //nolint:staticcheck
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testEndpoint",
 				Namespace: "policy-demo",
@@ -395,15 +395,15 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 	})
 
 	It("should parse an Endpoints with no addresses just ports", func() {
-		endpoints := corev1.Endpoints{
+		endpoints := corev1.Endpoints{ //nolint:staticcheck
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testEndpoint",
 				Namespace: "policy-demo",
 			},
-			Subsets: []corev1.EndpointSubset{
-				corev1.EndpointSubset{
-					Ports: []corev1.EndpointPort{
-						corev1.EndpointPort{
+			Subsets: []corev1.EndpointSubset{ //nolint:staticcheck
+				{
+					Ports: []corev1.EndpointPort{ //nolint:staticcheck
+						{
 							Name:     "http",
 							Protocol: "TCP",
 							Port:     80,

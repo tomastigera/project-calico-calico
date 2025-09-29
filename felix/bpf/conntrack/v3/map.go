@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -210,21 +210,22 @@ const (
 	TypeNATForward
 	TypeNATReverse
 
-	FlagNATOut      uint16 = (1 << 0)
-	FlagNATFwdDsr   uint16 = (1 << 1)
-	FlagNATNPFwd    uint16 = (1 << 2)
-	FlagSkipFIB     uint16 = (1 << 3)
-	FlagTrustDNS    uint16 = (1 << 4)
-	FlagEgressGW    uint16 = (1 << 5)
-	FlagExtLocal    uint16 = (1 << 6)
-	FlagViaNATIf    uint16 = (1 << 7)
-	FlagSrcDstBA    uint16 = (1 << 8)
-	FlagHostPSNAT   uint16 = (1 << 9)
-	FlagSvcSelf     uint16 = (1 << 10)
-	FlagNPLoop      uint16 = (1 << 11)
-	FlagNPRemote    uint16 = (1 << 12)
-	FlagNoDSR       uint16 = (1 << 13)
-	FlagNoRedirPeer uint16 = (1 << 14)
+	FlagNATOut          uint16 = (1 << 0)
+	FlagNATFwdDsr       uint16 = (1 << 1)
+	FlagNATNPFwd        uint16 = (1 << 2)
+	FlagSkipFIB         uint16 = (1 << 3)
+	FlagTrustDNS        uint16 = (1 << 4)
+	FlagEgressGW        uint16 = (1 << 5)
+	FlagExtLocal        uint16 = (1 << 6)
+	FlagViaNATIf        uint16 = (1 << 7)
+	FlagSrcDstBA        uint16 = (1 << 8)
+	FlagHostPSNAT       uint16 = (1 << 9)
+	FlagSvcSelf         uint16 = (1 << 10)
+	FlagNPLoop          uint16 = (1 << 11)
+	FlagNPRemote        uint16 = (1 << 12)
+	FlagNoDSR           uint16 = (1 << 13)
+	FlagNoRedirPeer     uint16 = (1 << 14)
+	FlagClusterExternal uint16 = (1 << 15)
 )
 
 func (e Value) ReverseNATKey() KeyInterface {

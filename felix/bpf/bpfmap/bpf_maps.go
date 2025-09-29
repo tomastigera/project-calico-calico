@@ -63,6 +63,7 @@ type CommonMaps struct {
 	XDPJumpMap      maps.MapWithDeleteIfExists
 	ProfilingMap    maps.Map
 	QoSMap          maps.MapWithUpdateWithFlags
+	CTLBProgramsMap maps.Map
 }
 
 type Maps struct {
@@ -96,6 +97,7 @@ func getCommonMaps() *CommonMaps {
 		XDPJumpMap:      jump.XDPMap().(maps.MapWithDeleteIfExists),
 		ProfilingMap:    profiling.Map(),
 		QoSMap:          qos.Map().(maps.MapWithUpdateWithFlags),
+		CTLBProgramsMap: nat.ProgramsMap(),
 	}
 }
 
@@ -193,6 +195,7 @@ func (c *CommonMaps) slice() []maps.Map {
 		c.XDPJumpMap,
 		c.ProfilingMap,
 		c.QoSMap,
+		c.CTLBProgramsMap,
 	}
 }
 

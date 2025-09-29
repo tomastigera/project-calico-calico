@@ -49,13 +49,11 @@ func main() {
 
 	log.Infof("setting up Felixclient at %s", cfg.DialTarget)
 
-	if !cfg.EnableLogTail {
-		// Start gRPC log collector
-		gRPCServerStart(cfg, reportCh)
-	}
+	// Start gRPC log collector
+	gRPCServerStart(cfg, reportCh)
 
 	// Start the log collector
-	CollectAndSend(context.Background(), felixClient, c, cfg.EnableLogTail)
+	CollectAndSend(context.Background(), felixClient, c)
 }
 
 func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
@@ -89,18 +87,14 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 	}()
 }
 
-func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector, readFiles bool) {
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go func() {
 		log.Info("Starting log collection...")
-		if readFiles {
-			collector.ReadAccessLogs(ctx)
-		} else {
-			collector.ReadLogs(ctx)
-		}
+		collector.ReadLogs(ctx)
 		cancel()
 		wg.Done()
 	}()

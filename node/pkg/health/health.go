@@ -228,7 +228,7 @@ func checkService(serviceName string) error {
 
 	cmdOutput := string(out)
 	if !strings.HasPrefix(cmdOutput, "run") {
-		return fmt.Errorf("Service %s is not running. Output << %s >>", serviceName, strings.Trim(cmdOutput, "\n"))
+		return fmt.Errorf("service %s is not running. Output << %s >>", serviceName, strings.Trim(cmdOutput, "\n"))
 	}
 
 	return nil
@@ -311,7 +311,7 @@ func checkHealthEndpoint(ctx context.Context, endpoint, probeType string, config
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("%s probe reporting %d", probeType, resp.StatusCode)

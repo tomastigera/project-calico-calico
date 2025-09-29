@@ -1,5 +1,5 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
-package token
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+package http
 
 import (
 	"context"

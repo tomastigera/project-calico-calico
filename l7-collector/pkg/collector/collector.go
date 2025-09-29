@@ -9,6 +9,7 @@ import (
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -25,7 +26,7 @@ type EnvoyCollector interface {
 	ReadLogs(context.Context)
 	Report() <-chan EnvoyInfo
 	ParseRawLogs(string) (EnvoyLog, error)
-	ReadAccessLogs(context.Context)
+	ReadAccessLogs(context.Context, license.GatewayLicense)
 	ParseAccessLogs(string) (EnvoyLog, error)
 	ReceiveLogs(*accesslogv3.HTTPAccessLogEntry)
 	Start(context.Context)

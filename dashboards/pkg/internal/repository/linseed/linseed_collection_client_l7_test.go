@@ -30,7 +30,7 @@ func TestLinseedCollectionClientL7(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		t.Run("params", func(t *testing.T) {
 			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, 0, []string{"fake-cluster"})
+			repositoryQueryParams, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
 			require.NoError(t, err)
 
 			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{

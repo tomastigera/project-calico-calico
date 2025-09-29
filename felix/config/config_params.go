@@ -188,6 +188,7 @@ type Config struct {
 	// BPF configuration.
 	BPFEnabled                         bool              `config:"bool;false"`
 	BPFDisableUnprivileged             bool              `config:"bool;true"`
+	BPFJITHardening                    string            `config:"oneof(Auto,Strict);Auto;non-zero"`
 	BPFLogLevel                        string            `config:"oneof(off,info,debug);off;non-zero"`
 	BPFConntrackLogLevel               string            `config:"oneof(off,debug);off;non-zero"`
 	BPFConntrackCleanupMode            string            `config:"oneof(Auto,Userspace,BPFProgram);Auto"`
@@ -203,6 +204,7 @@ type Config struct {
 	BPFDSROptoutCIDRs                  []string          `config:"cidr-list;;"`
 	BPFKubeProxyIptablesCleanupEnabled bool              `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration     `config:"seconds;1"`
+	BPFKubeProxyHealtzPort             int               `config:"int;10256;non-zero"`
 	BPFKubeProxyEndpointSlicesEnabled  bool              `config:"bool;true"`
 	BPFExtToServiceConnmark            int               `config:"int;0"`
 	BPFPSNATPorts                      numorstring.Port  `config:"portrange;20000:29999"`
@@ -226,6 +228,9 @@ type Config struct {
 	BPFAttachType                      string            `config:"oneof(TCX,TC);TCX;non-zero"`
 	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
 	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
+
+	// CgroupV2Path is not used by Felix, but its init container
+	CgroupV2Path string `config:"string;;"`
 
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful

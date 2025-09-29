@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -59,6 +60,7 @@ type envoyCollector struct {
 	config           *config.Config
 	batch            *BatchEnvoyLog
 	connectionCounts *connectionCounter
+	isActive         bool
 }
 
 func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
@@ -77,13 +79,15 @@ func stop(t *tail.Tail) {
 	}
 }
 
-func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
+func (ec *envoyCollector) ReadAccessLogs(ctx context.Context, gatewayLicense license.GatewayLicense) {
 	// Read logs from the file and add them to the batch
 	if ec.config.EnvoyAccessLogPath == "" {
 		log.Warn("Envoy access log path is not set, skipping log collection")
 		return
 	}
 
+	// We tail the file regardless of license status to keep things simple,
+	// as the license status can change at any time.
 	t, err := tail.TailFile(ec.config.EnvoyAccessLogPath, tail.Config{
 		Follow: true,
 		ReOpen: true,
@@ -114,8 +118,14 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
+			if !gatewayLicense.IsLicensed() {
+				continue
+			}
 			ec.ingestLogs()
 		case line := <-t.Lines:
+			if !gatewayLicense.IsLicensed() {
+				continue
+			}
 			log.Infof("Received line from envoy log: %v", line.Text)
 			if _, err := ec.ParseAccessLogs(line.Text); err != nil {
 				log.Errorf("Error parsing access log: %v", err)
@@ -129,24 +139,26 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context) {
 }
 
 type AccessLog struct {
-	Reporter             string `json:"reporter"`
-	StartTime            string `json:"start_time"`
-	Duration             int32  `json:"duration"`
-	ResponseCode         int32  `json:"response_code"`
-	BytesSent            int32  `json:"bytes_sent"`
-	BytesReceived        int32  `json:"bytes_received"`
-	UserAgent            string `json:"user_agent"`
-	RequestPath          string `json:"request_path"`
-	RequestMethod        string `json:"request_method"`
-	RequestId            string `json:"request_id"`
-	Type                 string `json:"type"`
-	DSRemoteAddress      string `json:"downstream_remote_address"`
-	DSLocalAddress       string `json:"downstream_local_address"`
-	Domain               string `json:"domain"`
-	UpstreamHost         string `json:"upstream_host"`
-	UpstreamLocalAddress string `json:"upstream_local_address"`
-	UpstreamServiceTime  string `json:"upstream_service_time"`
-	Route                string `json:"route_name"`
+	Reporter              string `json:"reporter"`
+	StartTime             string `json:"start_time"`
+	Duration              int32  `json:"duration"`
+	ResponseCode          int32  `json:"response_code"`
+	BytesSent             int32  `json:"bytes_sent"`
+	BytesReceived         int32  `json:"bytes_received"`
+	UserAgent             string `json:"user_agent"`
+	RequestPath           string `json:"request_path"`
+	RequestMethod         string `json:"request_method"`
+	RequestId             string `json:"request_id"`
+	Type                  string `json:"type"`
+	DSRemoteAddress       string `json:"downstream_remote_address"`
+	DSLocalAddress        string `json:"downstream_local_address"`
+	DSDirectRemoteAddress string `json:"downstream_direct_remote_address"`
+	Domain                string `json:"domain"`
+	UpstreamHost          string `json:"upstream_host"`
+	UpstreamLocalAddress  string `json:"upstream_local_address"`
+	UpstreamServiceTime   string `json:"upstream_service_time"`
+	Route                 string `json:"route_name"`
+	XForwardedFor         string `json:"x_forwarded_for"`
 }
 
 func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
@@ -173,31 +185,38 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 	}
 
 	entry := EnvoyLog{
-		Reporter:            "destination",
-		Count:               1,
-		StartTime:           accLog.StartTime,
-		Duration:            accLog.Duration,
-		ResponseCode:        accLog.ResponseCode,
-		BytesSent:           accLog.BytesSent,
-		BytesReceived:       accLog.BytesReceived,
-		UserAgent:           accLog.UserAgent,
-		RequestPath:         accLog.RequestPath,
-		RequestMethod:       accLog.RequestMethod,
-		RequestId:           accLog.RequestId,
-		Type:                accLog.Type,
-		DSRemoteAddress:     accLog.DSRemoteAddress,
-		DSLocalAddress:      accLog.DSLocalAddress,
-		Domain:              accLog.Domain,
-		SrcIp:               src[0],
-		SrcPort:             int32(srcPort),
-		DstIp:               dest[0],
-		DstPort:             int32(destPort),
-		DurationMax:         accLog.Duration,
-		Latency:             accLog.Duration,
-		UpstreamServiceTime: accLog.UpstreamServiceTime,
-		RouteName:           accLog.Route,
+		Reporter:              accLog.Reporter,
+		Count:                 1,
+		StartTime:             accLog.StartTime,
+		Duration:              accLog.Duration,
+		ResponseCode:          accLog.ResponseCode,
+		BytesSent:             accLog.BytesSent,
+		BytesReceived:         accLog.BytesReceived,
+		UserAgent:             accLog.UserAgent,
+		RequestPath:           accLog.RequestPath,
+		RequestMethod:         accLog.RequestMethod,
+		RequestId:             accLog.RequestId,
+		Type:                  accLog.Type,
+		DSRemoteAddress:       accLog.DSRemoteAddress,
+		DSDirectRemoteAddress: accLog.DSDirectRemoteAddress,
+		DSLocalAddress:        accLog.DSLocalAddress,
+		Domain:                accLog.Domain,
+		SrcIp:                 src[0],
+		SrcPort:               int32(srcPort),
+		DstIp:                 dest[0],
+		DstPort:               int32(destPort),
+		DurationMax:           accLog.Duration,
+		Latency:               accLog.Duration,
+		UpstreamServiceTime:   accLog.UpstreamServiceTime,
+		UpstreamHost:          accLog.UpstreamHost,
+		RouteName:             accLog.Route,
+		XForwardedFor:         accLog.XForwardedFor,
 	}
 	// write entry out to envoy log file
+	entry, err = ParseFiveTupleInformation(entry)
+	if err != nil {
+		return entry, err
+	}
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)
 	ec.connectionCounts.incr(key)
@@ -215,6 +234,9 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 		if _, err := os.Stat(ec.config.EnvoyLogPath); !errors.Is(err, os.ErrNotExist) {
 			break
 		}
+
+		// Wait and try again
+		time.Sleep(1 * time.Second)
 	}
 
 	t, err := tail.TailFile(ec.config.EnvoyLogPath, tail.Config{
@@ -414,9 +436,18 @@ func parseFiveTupleInformationFromFields(envoyLog EnvoyLog, dest, src string) (E
 }
 
 func (ec *envoyCollector) Start(ctx context.Context) {
+	// Don't start if already started
+	if ec.isActive {
+		return
+	}
+
+	ec.isActive = true
 	t := time.NewTicker(time.Second * time.Duration(ec.config.EnvoyLogIntervalSecs))
 	defer t.Stop()
 	for {
+		if !ec.isActive {
+			return
+		}
 		select {
 		case <-t.C:
 			ec.ingestLogs()
@@ -424,6 +455,14 @@ func (ec *envoyCollector) Start(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (ec *envoyCollector) Stop() {
+	ec.isActive = false
+}
+
+func (ec *envoyCollector) IsActive() bool {
+	return ec.isActive
 }
 
 // gRPC functions

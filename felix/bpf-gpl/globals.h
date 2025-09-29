@@ -29,6 +29,7 @@ struct name {                              \
 	__be16 egw_health_port;		\
 	__u32 log_filter_jmp;                  \
 	__u32 jumps[40];                       \
+	__s8 dscp;                             \
 }
 
 DECLARE_TC_GLOBAL_DATA(cali_tc_global_data, ipv6_addr_t);

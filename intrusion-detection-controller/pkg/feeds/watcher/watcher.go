@@ -132,7 +132,6 @@ func NewWatcher(
 		ListerWatcher:    lw,
 		ObjectType:       &v3.GlobalThreatFeed{},
 		FullResyncPeriod: DefaultResyncPeriod,
-		RetryOnError:     false,
 		Process:          w.processQueue,
 	}
 	w.controller = cache.New(cfg)

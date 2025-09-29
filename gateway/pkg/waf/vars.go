@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+
 package waf
 
 // DefaultDirectives are default directives with early blocking enabled

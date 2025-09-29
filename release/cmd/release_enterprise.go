@@ -62,23 +62,6 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
-			// Create versions file.
-			cfg := &pinnedversion.EnterpriseReleaseVersions{
-				Hashrelease:     c.String(hashreleaseNameFlag.Name),
-				RepoRootDir:     cfg.RepoRootDir,
-				TmpDir:          cfg.TmpDir,
-				ProductVersion:  c.String(releaseVersionFlag.Name),
-				OperatorVersion: c.String(operatorVersionFlag.Name),
-				OperatorCfg: pinnedversion.OperatorConfig{
-					Image:    c.String(operatorImageFlag.Name),
-					Registry: c.String(operatorRegistryFlag.Name),
-				},
-				HelmReleaseVersion: c.String(chartVersionFlag.Name),
-			}
-			if err := cfg.AddToEnterprisePinnedVersionFile(); err != nil {
-				return fmt.Errorf("failed to create pinned version file: %w", err)
-			}
-
 			calicoOpts := []calico.Option{
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithVersion(ver),
@@ -97,6 +80,13 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
+				calico.WithEnterpriseHashrelease(hashreleaseserver.EnterpriseHashrelease{
+					Hashrelease: hashreleaseserver.Hashrelease{
+						Name:    c.String(hashreleaseNameFlag.Name),
+						Product: utils.EnterpriseProductCode,
+					},
+				}, hashreleaseserver.Config{}),
+				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 			}
 
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
@@ -192,15 +182,17 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		registryFlag,
 		hashReleaseRegistryFlag,
 		publishImagesFlag,
+		awsProfileFlag,
 		s3BucketFlag,
 		publishToS3Flag,
 		windowsArchiveBucketFlag,
 		publishWindowsArchiveFlag,
 	}
 	flags = append(flags, managerFlags...)
+	flags = append(flags, imageScannerAPIFlags...)
 	flags = append(flags,
 		skipManagerFlag,
-		awsProfileFlag,
+		skipImageScanFlag,
 		skipValidationFlag,
 		skipBranchCheckFlag,
 		skipReleaseVersionCheckFlag,
@@ -296,6 +288,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, versions.Title)),
 				calico.WithTmpDir(cfg.TmpDir),
+				calico.WithComponents(versions.ImageComponents()),
+				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 			}
 			if len(registries) > 0 {
 				opts = append(opts, calico.WithImageRegistries(registries))
@@ -306,6 +300,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
+				calico.WithPublishCharts(c.Bool(publishToS3Flag.Name)), // Release charts are published to S3
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 			}
