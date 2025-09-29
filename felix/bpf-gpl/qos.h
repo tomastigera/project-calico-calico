@@ -32,7 +32,7 @@ CALI_MAP(cali_qos,,
 		struct calico_qos_key, struct calico_qos_val,
 		2*IFACE_STATE_MAP_SIZE, BPF_F_NO_PREALLOC)
 
-static CALI_BPF_INLINE int enforce_packet_rate_qos(struct cali_tc_ctx *ctx)
+static CALI_BPF_INLINE int qos_enforce_packet_rate(struct cali_tc_ctx *ctx)
 {
 #if !CALI_F_WEP
 		return TC_ACT_UNSPEC;

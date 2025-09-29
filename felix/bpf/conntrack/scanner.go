@@ -277,6 +277,11 @@ func (s *Scanner) Scan() {
 				s.handleNATEntries(ctKey, ctVal, uint64(ts))
 				continue
 			}
+			// NAT entry has expired.
+			if ctVal.Type() != TypeNormal {
+				s.handleNATEntries(ctKey, ctVal, uint64(ts))
+				continue
+			}
 			dummy := s.versionHelper.dummyKey()
 			s.updateCleanupMap(ctKey, dummy, uint64(ts), uint64(ts))
 		}

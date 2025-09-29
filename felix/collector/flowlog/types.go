@@ -790,8 +790,8 @@ func (f *FlowStats) aggregateFlowStats(mu metric.Update, displayDebugTraceLogs b
 		f.processArgs.Clear()
 		f.resetProcessIDs = false
 	}
-	switch {
-	case mu.UpdateType == metric.UpdateTypeReport:
+	switch mu.UpdateType {
+	case metric.UpdateTypeReport:
 		// Add / update the flowStartedRefs if we either haven't seen this tuple before OR the tuple is already in the
 		// flowStartRefs (we may have an updated value).
 		if !f.flowsRefsActive.Contains(mu.Tuple) || f.flowsStartedRefs.Contains(mu.Tuple) {
@@ -799,7 +799,7 @@ func (f *FlowStats) aggregateFlowStats(mu metric.Update, displayDebugTraceLogs b
 		}
 
 		f.flowsRefsActive.AddWithValue(mu.Tuple, mu.NatOutgoingPort)
-	case mu.UpdateType == metric.UpdateTypeExpire:
+	case metric.UpdateTypeExpire:
 		f.flowsCompletedRefs.AddWithValue(mu.Tuple, mu.NatOutgoingPort)
 		f.flowsRefsActive.Discard(mu.Tuple)
 	}

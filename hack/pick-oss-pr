@@ -40,8 +40,22 @@ fi
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$dir/cherry-pick-pull"
 
+if [[ -z ${GITHUB_USER:-} ]]; then
+  echo "GITHUB_USER env var not found. Please export GITHUB_USER=<your-user>."
+  exit 1
+fi
+
+if [ -z "${FORK_REMOTE:-}" ]; then
+  FORK_REMOTE=$(git remote -v | { grep -E "github\.com[:/]${GITHUB_USER}/calico-private\.git" || true; } | awk '{print $1}' | head -n1)
+fi
+
+if [ -z "${FORK_REMOTE:-}" ]; then
+  echo "Fork remote not found. Please set up one to $GITHUB_USER/calico-private."
+  exit 1
+fi
+
 if [ -z "${CALICO_REMOTE:-}" ]; then
-  CALICO_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]projectcalico/calico\.git' || true; } | awk '{print $1}' | uniq)
+  CALICO_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]projectcalico/calico\.git' || true; } | awk '{print $1}' | head -n1)
 fi
 
 if [ -z "${CALICO_REMOTE:-}" ]; then
@@ -50,7 +64,7 @@ if [ -z "${CALICO_REMOTE:-}" ]; then
 fi
 
 if [ -z "${CALICO_PRIVATE_REMOTE:-}" ]; then
-  CALICO_PRIVATE_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]tigera/calico-private\.git' || true; } | awk '{print $1}' | uniq)
+  CALICO_PRIVATE_REMOTE=$(git remote -v | { grep -E 'github\.com[:/]tigera/calico-private\.git' || true; } | awk '{print $1}' | head -n1)
 fi
 
 if [ -z "${CALICO_PRIVATE_REMOTE:-}" ]; then

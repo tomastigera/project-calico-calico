@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
@@ -123,7 +124,7 @@ func (ap *AttachPoint) attachTCXProgram(binaryToLoad string) error {
 		return fmt.Errorf("object %w", err)
 	}
 	defer obj.Close()
-	progPinPath := ap.progPinPath()
+	progPinPath := ap.ProgPinPath()
 	if _, err := os.Stat(progPinPath); err == nil {
 		link, err := libbpf.OpenLink(progPinPath)
 		if err != nil {
@@ -131,10 +132,17 @@ func (ap *AttachPoint) attachTCXProgram(binaryToLoad string) error {
 		}
 		defer link.Close()
 		if err := link.Update(obj, "cali_tc_preamble"); err != nil {
+			if errors.Is(err, unix.ENOLINK) {
+				// The link was deleted out from under us, so try attaching a new one.
+				logCxt.Debug("Link severed from interface, re-attaching")
+				os.Remove(progPinPath)
+				goto attachNew
+			}
 			return fmt.Errorf("error updating program %s : %w", progPinPath, err)
 		}
 		return nil
 	}
+attachNew:
 	link, err := obj.AttachTCX("cali_tc_preamble", ap.Iface)
 	if err != nil {
 		return err
@@ -263,15 +271,13 @@ func DetachTcpStatsProgram(ifaceName string, tcxSupported bool) error {
 	return ap.detachTcxProgram()
 }
 
-func (ap *AttachPoint) progPinPath() string {
+func (ap *AttachPoint) ProgPinPath() string {
 	return path.Join(bpfdefs.TcxPinDir, fmt.Sprintf("%s_%s", strings.Replace(ap.Iface, ".", "", -1), ap.Hook))
 }
 
 func (ap *AttachPoint) detachTcxProgram() error {
-	progPinPath := ap.progPinPath()
-	if _, err := os.Stat(progPinPath); os.IsNotExist(err) {
-		return nil
-	}
+	progPinPath := ap.ProgPinPath()
+	defer os.Remove(progPinPath)
 	link, err := libbpf.OpenLink(progPinPath)
 	if err != nil {
 		return fmt.Errorf("error opening link %s:%w", progPinPath, err)
@@ -281,7 +287,6 @@ func (ap *AttachPoint) detachTcxProgram() error {
 	if err != nil {
 		return fmt.Errorf("error detaching link %s:%w", progPinPath, err)
 	}
-	os.Remove(progPinPath)
 	return nil
 }
 

@@ -71,9 +71,9 @@ func WipeDatastore() {
 }
 
 func MustDeleteIPPool(c client.Interface, cidr string) {
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
+	name := strings.ReplaceAll(cidr, ".", "-")
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, "/", "-")
 
 	_, err := c.IPPools().Delete(context.Background(), name, options.DeleteOptions{})
 	if err != nil {
@@ -88,9 +88,9 @@ func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipa
 
 // MustCreateNewIPPoolBlockSize creates a new Calico IPAM IP Pool with support for setting the block size.
 func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutgoing, ipam bool, blockSize int) string {
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
+	name := strings.ReplaceAll(cidr, ".", "-")
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, "/", "-")
 	var mode api.IPIPMode
 	if ipip {
 		mode = api.IPIPModeAlways
@@ -115,9 +115,9 @@ func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutg
 
 // MustCreateNewIPPoolAWS creates a new Calico IPAM IP Pool with the given AWS subnet ID.
 func MustCreateNewIPPoolAWS(c client.Interface, cidr string, awsSubnetID string) string {
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
+	name := strings.ReplaceAll(cidr, ".", "-")
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, "/", "-")
 
 	pool := api.NewIPPool()
 	pool.Name = name

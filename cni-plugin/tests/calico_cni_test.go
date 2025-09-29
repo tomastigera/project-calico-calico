@@ -895,7 +895,7 @@ var _ = Describe("CalicoCni", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			go func() {
-				defer stdin.Close()
+				defer func() { _ = stdin.Close() }()
 				_, _ = io.WriteString(stdin, netconf)
 			}()
 
@@ -930,7 +930,7 @@ var _ = Describe("CalicoCni", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			go func() {
-				defer stdin.Close()
+				defer func() { _ = stdin.Close() }()
 				_, _ = io.WriteString(stdin, netconf)
 			}()
 

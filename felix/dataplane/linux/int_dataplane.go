@@ -40,6 +40,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/kubernetes"
+	k8shealthcheck "k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"sigs.k8s.io/knftables"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -248,6 +249,7 @@ type Config struct {
 	BPFEnabled                         bool
 	BPFPolicyDebugEnabled              bool
 	BPFDisableUnprivileged             bool
+	BPFJITHardening                    string
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
 	BPFConntrackLogLevel               string
@@ -295,11 +297,13 @@ type Config struct {
 	FlowLogsFileIncludeService     bool
 	FlowLogsFileDomainsLimit       int
 	SidecarAccelerationEnabled     bool
+	bpfProxyHealthzServer          *k8shealthcheck.ProxyHealthServer
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool
 	DebugUseShortPollIntervals       bool
 	DebugSimulateDataplaneApplyDelay time.Duration
+	KubeProxyHealtzPort              int
 
 	// Flow logs related fields.
 	NfNetlinkBufSize int
@@ -3569,6 +3573,23 @@ func startBPFDataplaneComponents(
 
 	ctKey := bpfconntrack.KeyFromBytes
 	ctVal := bpfconntrack.ValueFromBytes
+
+	if config.bpfProxyHealthzServer == nil {
+		healthzAddr := fmt.Sprintf(":%d", config.KubeProxyHealtzPort)
+		config.bpfProxyHealthzServer = k8shealthcheck.NewProxyHealthServer(
+			healthzAddr, config.KubeProxyMinSyncPeriod)
+
+		// We cannot wait for the healthz server as we cannot stop it.
+		go func() {
+			for {
+				err := config.bpfProxyHealthzServer.Run(context.Background()) // context is mosstly ignored inside
+				if err != nil {
+					log.WithError(err).Error("BPF Proxy Healthz server failed, restarting in 1s")
+					time.Sleep(time.Second)
+				}
+			}
+		}()
+	}
 
 	bpfproxyOpts := []bpfproxy.Option{
 		bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
