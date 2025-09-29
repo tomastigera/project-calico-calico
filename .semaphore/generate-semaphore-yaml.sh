@@ -101,8 +101,6 @@ for out_file in semaphore.yml semaphore-scheduled-builds.yml; do
   cat semaphore.yml.d/99-after_pipeline.yml >>$out_file
 done
 
-# FIXME default_branch support
-
 grep -o --perl '\$\{CHANGE_IN\(\K[^)]+' --no-filename semaphore.yml | \
   sort --reverse -u | \
   while read -r dep; do

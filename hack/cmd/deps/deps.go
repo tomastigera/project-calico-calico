@@ -264,7 +264,7 @@ func calculateChangeIn(pkg string, pretty bool) (string, error) {
 		incl = "\n" + strings.ReplaceAll(incl, ",", ",\n  ") + "\n"
 		excl = "\n" + strings.ReplaceAll(excl, ",", ",\n  ") + "\n"
 	}
-	out := fmt.Sprintf("change_in(%s, {pipeline_file: 'ignore', exclude: %s})", incl, excl)
+	out := fmt.Sprintf("change_in(%s, {pipeline_file: 'ignore', exclude: %s${DEFAULT_BRANCH}})", incl, excl)
 	return out, nil
 }
 
