@@ -77,7 +77,6 @@ fi
 if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
 	rm -rf /etc/service/enabled/allocate-tunnel-addrs/log
 	rm -rf /etc/service/enabled/bgp-metrics/log
-	rm -rf /etc/service/enabled/calico-bgp-daemon/log
 	rm -rf /etc/service/enabled/cni/log
 	rm -rf /etc/service/enabled/confd/log
 	rm -rf /etc/service/enabled/felix/log

@@ -20,8 +20,11 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/calico/cni-plugin/pkg/k8s"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	"github.com/projectcalico/calico/cni-plugin/pkg/upgrade"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
@@ -240,6 +243,26 @@ func cmdAdd(args *skel.CmdArgs) error {
 			logrus.Info("Running in single-HNS-network mode, limiting number of IPAM blocks to 1.")
 			maxBlocks = 1
 		}
+		// Get namespace information for namespaceSelector support
+		namespace := epIDs.Namespace
+		var namespaceObj *corev1.Namespace
+
+		// Only attempt to fetch namespace if we have Kubernetes configuration and a valid namespace
+		if (conf.Kubernetes.Kubeconfig != "" || conf.Policy.PolicyType == "k8s") && namespace != "" {
+			logger.Debugf("Getting namespace for: %s", namespace)
+
+			ns, err := getNamespace(conf, namespace, logger)
+			if err != nil {
+				logger.WithError(err).Warnf("Failed to get namespace for %s, using nil", namespace)
+				namespaceObj = nil
+			} else {
+				namespaceObj = ns
+				logger.Debugf("Got namespace for %s: %v", namespace, ns.Labels)
+			}
+		} else {
+			logger.Debugf("Using namespace %s without object (no K8s config or empty namespace)", namespace)
+		}
+
 		assignArgs := ipam.AutoAssignArgs{
 			Num4:             num4,
 			Num6:             num6,
@@ -251,7 +274,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 			Attrs:            attrs,
 			IntendedUse:      v3.IPPoolAllowedUseWorkload,
 			AWSSubnetIDs:     conf.IPAM.AWSSubnetIDs, // Set by the CNI plugin if the pod needs an AWS pool.
+			Namespace:        namespaceObj,
 		}
+
 		if runtime.GOOS == "windows" {
 			rsvdAttrWindows := &ipam.HostReservedAttr{
 				StartOfBlock: 3,
@@ -468,4 +493,25 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	return nil
+}
+
+// getNamespace retrieves namespace object using Kubernetes clientset
+func getNamespace(conf types.NetConf, namespace string, logger *logrus.Entry) (*corev1.Namespace, error) {
+	if namespace == "" {
+		return nil, nil
+	}
+
+	// Create Kubernetes clientset
+	k8sClient, err := k8s.NewK8sClient(conf, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get namespace directly from Kubernetes API
+	ns, err := k8sClient.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }

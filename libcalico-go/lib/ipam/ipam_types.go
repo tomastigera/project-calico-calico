@@ -7,6 +7,7 @@ import (
 	"net"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	corev1 "k8s.io/api/core/v1"
 
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -77,6 +78,9 @@ type AutoAssignArgs struct {
 	// The intended use for the IP address.  Used to filter the available IP pools on their AllowedUses field.
 	// This field is required.
 	IntendedUse v3.IPPoolAllowedUse
+
+	// The namespace object for namespaceSelector support.
+	Namespace *corev1.Namespace
 
 	// If specified, only IP pools backed by an AWS subnet with one of the given IDs will be considered.
 	// If nil or empty, AWS-backed IP pools will be excluded.

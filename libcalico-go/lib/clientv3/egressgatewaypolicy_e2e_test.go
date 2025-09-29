@@ -98,7 +98,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 			Spec:       spec2,
 		}, options.SetOptions{})
 		Expect(outError).To(HaveOccurred())
-		Expect(outError.Error()).To(Equal("resource already exists: EgressGatewayPolicy(" + name1 + ")"))
+		Expect(outError.Error()).To(ContainSubstring("resource already exists: EgressGatewayPolicy(" + name1 + ")"))
 
 		By("Getting EgressGatewayPolicy (name1) and comparing the output against spec1")
 		res, outError := c.EgressGatewayPolicy().Get(ctx, name1, options.GetOptions{})

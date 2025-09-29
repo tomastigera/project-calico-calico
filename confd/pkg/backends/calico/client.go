@@ -2142,6 +2142,9 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*backends.BGPPeer, v3
 		if v3res.Spec.FailureDetectionMode == apiv3.FailureDetectionModeBFDIfDirectlyConnected && peer.DirectlyConnected {
 			peer.EnableBFD = true
 		}
+		if v3res.Spec.KeepaliveTime != nil {
+			peer.KeepaliveTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.KeepaliveTime.Seconds())))
+		}
 	}
 }
 

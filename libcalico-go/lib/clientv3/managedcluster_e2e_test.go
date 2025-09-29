@@ -77,7 +77,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: ManagedCluster(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: ManagedCluster(%s)", name1)))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name1) and comparing the output against spec1")

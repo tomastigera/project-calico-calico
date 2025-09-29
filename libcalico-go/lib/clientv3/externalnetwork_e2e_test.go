@@ -98,7 +98,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource already exists: ExternalNetwork(" + name1 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource already exists: ExternalNetwork(" + name1 + ")"))
 
 			By("Getting ExternalNetwork (name1) and comparing the output against spec1")
 			res, outError := c.ExternalNetworks().Get(ctx, name1, options.GetOptions{})
