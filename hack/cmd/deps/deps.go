@@ -204,7 +204,11 @@ func replaceSemChangeInPlaceholders(yamlFile string) {
 }
 
 func printSemChangeIn(pkg string, pretty bool) {
-	_, _ = fmt.Println(calculateChangeIn(pkg, pretty))
+	changeIn, err := calculateChangeIn(pkg, pretty)
+	if err != nil {
+		logrus.Fatalf("Failed to calculate change_in for package %s: %v", pkg, err)
+	}
+	_, _ = fmt.Println(changeIn)
 }
 
 func calculateChangeIn(pkg string, pretty bool) (string, error) {

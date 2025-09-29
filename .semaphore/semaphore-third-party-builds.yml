@@ -331,7 +331,7 @@ blocks:
 
   - name: fluentd Windows
     run:
-      when: "${CHANGE_IN(fluentd)}"
+      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:

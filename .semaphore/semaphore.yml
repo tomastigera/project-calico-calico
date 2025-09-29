@@ -1527,7 +1527,7 @@ blocks:
 
   - name: fluentd Windows
     run:
-      when: "change_in(['/crypto/pkg/tls/*.go','/fluentd/**','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/pkg/buildinfo/*.go','/third_party/fluentd-base'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
+      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:
@@ -2026,7 +2026,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: dex
     run:
-      when: "false or change_in(['/*', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:

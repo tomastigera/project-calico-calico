@@ -1,6 +1,6 @@
 - name: dex
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:

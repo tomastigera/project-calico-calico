@@ -1527,7 +1527,7 @@ blocks:
 
   - name: fluentd Windows
     run:
-      when: "true"
+      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:
@@ -2026,7 +2026,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: dex
     run:
-      when: "true or change_in(['/*', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
