@@ -9,10 +9,11 @@ import (
 	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/jitter"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 )
 
 const checkInterval = 5 * time.Second
@@ -88,10 +89,24 @@ func (pr *PrometheusReporter) Report(u any) error {
 
 // servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
 func (pr *PrometheusReporter) servePrometheusMetrics() {
+	var err error
 	for {
-		err := security.ServePrometheusMetrics(pr.registry, "", pr.port, pr.certFile, pr.keyFile, pr.caFile)
-		log.WithError(err).Error(
-			"Prometheus reporter metrics endpoint failed, trying to restart it...")
+		if pr.certFile != "" && pr.keyFile != "" {
+			// Configured for TLS, serve securely.
+			err = metricsserver.ServePrometheusMetricsHTTPS(
+				pr.registry,
+				"",
+				pr.port,
+				pr.certFile,
+				pr.keyFile,
+				string(v3.RequireAndVerifyClientCert),
+				pr.caFile,
+			)
+		} else {
+			// Not configured for TLS, serve insecurely.
+			metricsserver.ServePrometheusMetricsHTTP(pr.registry, "", pr.port)
+		}
+		log.WithError(err).Error("Prometheus reporter metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
 	}
 }

@@ -113,6 +113,7 @@ type Config struct {
 	PrometheusMetricsCertFile       string `config:"file(must-exist);;"`
 	PrometheusMetricsKeyFile        string `config:"file(must-exist);;"`
 	PrometheusMetricsCAFile         string `config:"file(must-exist);;"`
+	PrometheusMetricsClientAuth     string `config:"oneof(RequireAndVerifyClientCert,RequireAnyClientCert,VerifyClientCertIfGiven,NoClientCert);RequireAndVerifyClientCert"`
 
 	SnapshotCacheMaxBatchSize int `config:"int(1,);100"`
 
@@ -401,16 +402,20 @@ func loadParams() {
 		case "seconds":
 			param = &SecondsParam{}
 		case "iface-list":
-			param = &RegexpParam{Regexp: IfaceListRegexp,
-				Msg: "invalid Linux interface name"}
+			param = &RegexpParam{
+				Regexp: IfaceListRegexp,
+				Msg:    "invalid Linux interface name",
+			}
 		case "file":
 			param = &FileParam{
 				MustExist:  strings.Contains(kindParams, "must-exist"),
 				Executable: strings.Contains(kindParams, "executable"),
 			}
 		case "authority":
-			param = &RegexpParam{Regexp: AuthorityRegexp,
-				Msg: "invalid URL authority"}
+			param = &RegexpParam{
+				Regexp: AuthorityRegexp,
+				Msg:    "invalid URL authority",
+			}
 		case "ipv4":
 			param = &Ipv4Param{}
 		case "endpoint-list":
@@ -420,8 +425,10 @@ func loadParams() {
 		case "port-list":
 			param = &PortListParam{}
 		case "hostname":
-			param = &RegexpParam{Regexp: HostnameRegexp,
-				Msg: "invalid hostname"}
+			param = &RegexpParam{
+				Regexp: HostnameRegexp,
+				Msg:    "invalid hostname",
+			}
 		case "oneof":
 			options := strings.Split(kindParams, ",")
 			lowerCaseToCanon := make(map[string]string)
@@ -429,13 +436,18 @@ func loadParams() {
 				lowerCaseToCanon[strings.ToLower(option)] = option
 			}
 			param = &OneofListParam{
-				lowerCaseOptionsToCanonical: lowerCaseToCanon}
+				lowerCaseOptionsToCanonical: lowerCaseToCanon,
+			}
 		case "string":
-			param = &RegexpParam{Regexp: StringRegexp,
-				Msg: "invalid string"}
+			param = &RegexpParam{
+				Regexp: StringRegexp,
+				Msg:    "invalid string",
+			}
 		case "host-address":
-			param = &RegexpParam{Regexp: HostAddressRegexp,
-				Msg: "invalid host address"}
+			param = &RegexpParam{
+				Regexp: HostAddressRegexp,
+				Msg:    "invalid host address",
+			}
 		default:
 			log.Panicf("Unknown type of parameter: %v", kind)
 		}

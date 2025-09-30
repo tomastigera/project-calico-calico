@@ -423,6 +423,7 @@ type Config struct {
 	PrometheusMetricsCertFile         string `config:"file(must-exist);"`
 	PrometheusMetricsKeyFile          string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile           string `config:"file(must-exist);"`
+	PrometheusMetricsClientAuth       string `config:"oneof(RequireAndVerifyClientCert,RequireAnyClientCert,VerifyClientCertIfGiven,NoClientCert);RequireAndVerifyClientCert"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
