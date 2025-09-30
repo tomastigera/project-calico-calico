@@ -132,6 +132,7 @@ cat semaphore.yml.d/blocks/30-fluentd.yml | sed -e 's/^./  &/' >>$out_file
 
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-third-party-builds.yml
 sed -i "s/\${WEEKLY_RUN}/true/g" semaphore-third-party-builds.yml
+sed -i "s/\${CHANGE_IN(.*)}/true/g" semaphore-third-party-builds.yml
 
 # Add the `default_branch` parameter to `change_in` clauses
 sed -i "s/\${DEFAULT_BRANCH}/${branch_stanza}/" \

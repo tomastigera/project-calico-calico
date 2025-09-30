@@ -107,7 +107,7 @@ blocks:
 
   - name: deep-packet-inspection
     run:
-      when: "${CHANGE_IN(deep-packet-inspection)}"
+      when: "true"
     dependencies:
       - Publish tigera/snort3 multi-arch manifests
     task:
@@ -184,7 +184,7 @@ blocks:
 
   - name: elasticsearch
     run:
-      when: "${CHANGE_IN(elasticsearch)}"
+      when: "true"
     dependencies:
       - Publish tigera/elasticsearch multi-arch manifests
     task:
@@ -257,7 +257,7 @@ blocks:
 
   - name: fluentd
     run:
-      when: "${CHANGE_IN(fluentd)}"
+      when: "true"
     dependencies:
       - Publish tigera/fluentd-base multi-arch manifests
     task:
