@@ -37294,6 +37294,8 @@ spec:
                   type: array
                 keepOriginalNextHop:
                   type: boolean
+                keepaliveTime:
+                  type: string
                 localASNumber:
                   format: int32
                   type: integer
@@ -41263,6 +41265,8 @@ spec:
                       type: string
                   type: object
                 ipipMode:
+                  type: string
+                namespaceSelector:
                   type: string
                 nat-outgoing:
                   type: boolean

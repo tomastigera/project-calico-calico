@@ -602,7 +602,8 @@ type controllerState struct {
 }
 
 func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig,
-	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder, dataFeed *utils.DataFeed) {
+	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder, dataFeed *utils.DataFeed,
+) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
 	// Create a shared informer factory to allow cache sharing between controllers monitoring the
@@ -611,6 +612,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 	podInformer := factory.Core().V1().Pods().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
 	serviceInformer := factory.Core().V1().Services().Informer()
+	namespaceInformer := factory.Core().V1().Namespaces().Informer()
 
 	if cfg.Controllers.WorkloadEndpoint != nil {
 		podController := pod.NewPodController(ctx, k8sClientset, calicoClient, *cfg.Controllers.WorkloadEndpoint, podInformer)
@@ -637,9 +639,9 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 	}
 
 	if cfg.Controllers.LoadBalancer != nil {
-		loadBalancerController := loadbalancer.NewLoadBalancerController(k8sClientset, calicoClient, *cfg.Controllers.LoadBalancer, serviceInformer, dataFeed)
+		loadBalancerController := loadbalancer.NewLoadBalancerController(k8sClientset, calicoClient, *cfg.Controllers.LoadBalancer, serviceInformer, namespaceInformer, dataFeed)
 		cc.controllerStates["LoadBalancer"] = &controllerState{controller: loadBalancerController}
-		cc.registerInformers(serviceInformer)
+		cc.registerInformers(serviceInformer, namespaceInformer)
 	}
 
 	// We don't need the full Pod object. In order to reduce memory usage, add a transform that only

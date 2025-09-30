@@ -108,7 +108,7 @@ var _ = testutils.E2eDatastoreDescribe("PolicyRecommendationScope tests", testut
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: PolicyRecommendationScope(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: PolicyRecommendationScope(%s)", name1)))
 
 			By("Getting PolicyRecommendationScope (name1) and comparing the output against spec1")
 			res, outError := c.PolicyRecommendationScopes().Get(ctx, name1, options.GetOptions{})

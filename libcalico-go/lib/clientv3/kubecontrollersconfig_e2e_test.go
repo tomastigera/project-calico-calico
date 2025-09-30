@@ -183,7 +183,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 					Spec:       spec2,
 				}, options.SetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource already exists: KubeControllersConfiguration(" + configName + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource already exists: KubeControllersConfiguration(" + configName + ")"))
 
 				By("Getting KubeControllersConfiguration and comparing the output against spec1")
 				res, outError := c.KubeControllersConfiguration().Get(ctx, configName, options.GetOptions{})

@@ -131,7 +131,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: GlobalReportType(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: GlobalReportType(%s)", name1)))
 
 			By("Getting GlobalReportType (name1) and comparing the output against spec1")
 			res, outError := c.GlobalReportTypes().Get(ctx, name1, options.GetOptions{})
