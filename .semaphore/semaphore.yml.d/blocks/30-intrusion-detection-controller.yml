@@ -1,6 +1,6 @@
 - name: intrusion-detection-controller
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(intrusion-detection-controller)}"
   dependencies:
     - Prerequisites
   task:

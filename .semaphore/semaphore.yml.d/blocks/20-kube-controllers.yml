@@ -1,6 +1,6 @@
 - name: kube-controllers
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/', '/hack/test/certs/', 'felix/bpf/libbpf/libbpf_stub.go', '/felix/fv/containers', '/felix/fv/infrastructure', '/felix/labelindex', '/felix/calc'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(kube-controllers)}"
   dependencies:
     - Prerequisites
   task:

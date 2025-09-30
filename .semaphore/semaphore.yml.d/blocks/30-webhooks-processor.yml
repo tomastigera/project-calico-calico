@@ -1,6 +1,6 @@
 - name: webhooks-processor
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(webhooks-processor)}"
   dependencies:
     - Prerequisites
   task:

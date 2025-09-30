@@ -1,6 +1,6 @@
 - name: firewall-integration
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(firewall-integration)}"
   dependencies:
     - Prerequisites
   task:

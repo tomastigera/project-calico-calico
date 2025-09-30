@@ -1,6 +1,6 @@
 - name: alertmanager
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
