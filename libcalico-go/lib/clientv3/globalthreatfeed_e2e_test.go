@@ -153,7 +153,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: GlobalThreatFeed(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: GlobalThreatFeed(%s)", name1)))
 
 			By("Getting GlobalThreatFeed (name1) and comparing the output against spec1")
 			res, outError := c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{})

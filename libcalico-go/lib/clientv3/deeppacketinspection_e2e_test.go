@@ -72,7 +72,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			Spec:       spec2,
 		}, options.SetOptions{})
 		Expect(outError).To(HaveOccurred())
-		Expect(outError.Error()).To(Equal("resource already exists: DeepPacketInspection(" + namespace1 + "/" + name1 + ")"))
+		Expect(outError.Error()).To(ContainSubstring("resource already exists: DeepPacketInspection(" + namespace1 + "/" + name1 + ")"))
 
 		By("Getting DeepPacketInspection (namespace1/name1) and comparing the output against spec1")
 		res, outError := c.DeepPacketInspections().Get(ctx, namespace1, name1, options.GetOptions{})

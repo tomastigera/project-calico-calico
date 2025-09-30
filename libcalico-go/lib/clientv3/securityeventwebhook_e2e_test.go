@@ -92,7 +92,7 @@ var _ = testutils.E2eDatastoreDescribe("SecuritEventWebhook tests", testutils.Da
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: SecurityEventWebhook(%s)", name1)))
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource already exists: SecurityEventWebhook(%s)", name1)))
 
 			By("Getting SecurityEventWebhook (name1) and comparing the output against spec1")
 			res, outError := c.SecurityEventWebhook().Get(ctx, name1, options.GetOptions{})

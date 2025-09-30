@@ -26,6 +26,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/sync/semaphore"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -120,7 +123,7 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) (*IPAMA
 				return nil, nil, fmt.Errorf("provided IPv4 IPPools list contains one or more IPv6 IPPools")
 			}
 		}
-		v4ia, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv4s, args.IntendedUse, args.AWSSubnetIDs)
+		v4ia, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv4s, args.IntendedUse, args.AWSSubnetIDs, args.Namespace)
 		if err != nil {
 			log.Errorf("Error assigning IPV4 addresses: %v", err)
 			return v4ia, nil, err
@@ -135,7 +138,7 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) (*IPAMA
 				return nil, nil, fmt.Errorf("provided IPv6 IPPools list contains one or more IPv4 IPPools")
 			}
 		}
-		v6ia, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv6s, args.IntendedUse, args.AWSSubnetIDs)
+		v6ia, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv6s, args.IntendedUse, args.AWSSubnetIDs, args.Namespace)
 		if err != nil {
 			log.Errorf("Error assigning IPV6 addresses: %v", err)
 			return v4ia, v6ia, err
@@ -249,9 +252,9 @@ func detectOS(ctx context.Context) string {
 // determinePools compares a list of requested pools with the enabled pools and returns the intersect.
 // If any requested pool does not exist, or is not enabled, an error is returned.
 // If no pools are requested, all enabled pools are returned.
-// Also applies selector logic on node labels to determine if the pool is a match.
+// Also applies selector logic on node labels and namespace labels to determine if the pool is a match.
 // Returns the set of matching pools as well as the full set of ip pools.
-func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.IPNet, version int, node libapiv3.Node, maxPrefixLen int) (matchingPools, enabledPools []v3.IPPool, err error) {
+func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.IPNet, version int, node libapiv3.Node, namespace *corev1.Namespace, maxPrefixLen int) (matchingPools, enabledPools []v3.IPPool, err error) {
 	// Get all the enabled IP pools from the datastore.
 	enabledPools, err = c.pools.GetEnabledPools(ctx, version)
 	if err != nil {
@@ -298,34 +301,48 @@ func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.
 		}
 	}
 
-	// If requested IP pools are provided, use those unconditionally. We will ignore
-	// IP pool selectors in this case. We need this for backwards compatibility, since IP pool
-	// node selectors have not always existed.
+	// If requested IP pools are provided, use those unconditionally.
+	// We will ignore IP pool selectors in this case for backwards compatibility.
 	if len(requestedPools) > 0 {
 		log.Debugf("Using the requested IP pools")
 		matchingPools = requestedPools
 		return
 	}
 
-	// At this point, we've determined the set of enabled IP pools which are valid for use.
-	// We only want to use IP pools which actually match this node, so do a filter based on
-	// selector. Additionally, we check the ippools assignmentMode type so we don't use ips from Manual pool when no pool was specified
+	// At this point, we need to apply both namespaceSelector and nodeSelector logic.
+	// We only want to use IP pools which actually match both this node and namespace.
 	for _, pool := range enabledPools {
 		if len(requestedPoolNets) == 0 && *pool.Spec.AssignmentMode != v3.Automatic {
 			continue
 		}
-		var matches bool
-		matches, err = SelectsNode(pool, node)
+
+		// Check node selector
+		var nodeMatches bool
+		nodeMatches, err = SelectsNode(pool, node)
 		if err != nil {
 			log.WithError(err).WithField("pool", pool).Error("failed to determine if node matches pool")
 			return
 		}
-		if !matches {
+		if !nodeMatches {
 			// Do not consider pool enabled if the nodeSelector doesn't match the node's labels.
 			log.Debugf("IP pool does not match this node: %s", pool.Name)
 			continue
 		}
-		log.Debugf("IP pool matches this node: %s", pool.Name)
+
+		// Check namespace selector
+		var namespaceMatches bool
+		namespaceMatches, err = SelectsNamespace(pool, namespace)
+		if err != nil {
+			log.WithError(err).WithField("pool", pool).Error("failed to determine if namespace matches pool")
+			return
+		}
+		if !namespaceMatches {
+			// Do not consider pool enabled if the namespaceSelector doesn't match the namespace's labels.
+			log.WithField("namespace", namespace).Debugf("IP pool does not match this namespace: %s", pool.Name)
+			continue
+		}
+
+		log.Debugf("IP pool matches both node and namespace: %s", pool.Name)
 		matchingPools = append(matchingPools, pool)
 	}
 
@@ -335,7 +352,7 @@ func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.
 // prepareAffinityBlocksForHost returns a list of blocks affine to a node based on requested IP pools.
 // It also releases any emptied blocks still affine to this host but no longer part of an IP Pool which
 // selects this node. It returns matching pools, list of host-affine blocks and any error encountered.
-func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedPools []net.IPNet, version int, host string, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string) ([]v3.IPPool, []net.IPNet, error) {
+func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedPools []net.IPNet, version int, host string, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string, namespace *corev1.Namespace) ([]v3.IPPool, []net.IPNet, error) {
 	// Retrieve node for given hostname to use for ip pool node selection
 	var node *model.KVPair
 	var err error
@@ -371,7 +388,35 @@ func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedP
 	}
 
 	// Determine the correct set of IP pools to use for this request.
-	poolsSelectingNode, allPools, err := c.determinePools(ctx, requestedPools, version, *v3n, maxPrefixLen)
+	// For LoadBalancer use, we don't have namespace context, so use empty values
+	var poolsNamespace string
+	var poolsNamespaceLabels map[string]string
+	if use == v3.IPPoolAllowedUseLoadBalancer {
+		poolsNamespace = ""
+		poolsNamespaceLabels = map[string]string{}
+	} else {
+		// Use the namespace information passed from the caller
+		if namespace != nil {
+			poolsNamespace = namespace.Name
+			poolsNamespaceLabels = namespace.Labels
+		} else {
+			poolsNamespace = ""
+			poolsNamespaceLabels = map[string]string{}
+		}
+	}
+
+	// Create namespace object for determinePools
+	var namespaceObj *corev1.Namespace
+	if poolsNamespace != "" {
+		namespaceObj = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   poolsNamespace,
+				Labels: poolsNamespaceLabels,
+			},
+		}
+	}
+
+	poolsSelectingNode, allPools, err := c.determinePools(ctx, requestedPools, version, *v3n, namespaceObj, maxPrefixLen)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -600,6 +645,7 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 			// allocated affine block. This may happen due to a race condition where another process on the host allocates a new block
 			// after we decide that a new block is required to satisfy this request, but before we actually allocate a new block.
 			logCtx.Info("Tried all affine blocks. Looking for an affine block with space, or a new unclaimed block")
+			findStart := time.Now()
 			subnet, err := s.client.blockReaderWriter.findUsableBlock(ctx, s.affinityCfg, s.version, s.pools, s.reservations, *config)
 			if err != nil {
 				if _, ok := err.(noFreeBlocksError); ok {
@@ -611,7 +657,7 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 				return nil, false, err
 			}
 			logCtx := log.WithFields(log.Fields{string(s.affinityCfg.AffinityType): s.affinityCfg.Host, "subnet": subnet})
-			logCtx.Info("Found unclaimed block")
+			logCtx.Infof("Found unclaimed block in %v", time.Since(findStart))
 
 			for j := 0; j < datastoreRetries; j++ {
 				// We found an unclaimed block - claim affinity for it.
@@ -703,7 +749,7 @@ func (i *IPAMAssignments) PartialFulfillmentError() error {
 
 var ErrUseRequired = errors.New("must specify the intended use when assigning an IP")
 
-func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string) (*IPAMAssignments, error) {
+func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string, namespace *corev1.Namespace) (*IPAMAssignments, error) {
 	// Default parameters.
 	if use == "" {
 		log.Error("Attempting to auto-assign an IP without specifying intended use.")
@@ -731,7 +777,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 		logCtx = logCtx.WithField("handle", *handleID)
 	}
 	logCtx.Info("Looking up existing affinities for host")
-	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, use, awsSubnetIDs)
+	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, use, awsSubnetIDs, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -817,6 +863,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 
 		// We have got a block b.
 		for i := 0; i < datastoreRetries; i++ {
+			assignStart := time.Now()
 			newIPs, err := c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, affinityCfg, config.StrictAffinity, reservations)
 			if err != nil {
 				if _, ok := err.(cerrors.ErrorResourceUpdateConflict); ok {
@@ -838,7 +885,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 				ia.AddMsg("Failed to assign IPs in newly allocated block")
 				break
 			}
-			logCtx.Debugf("Assigned IPs from new block: %s", newIPs)
+			logCtx.Debugf("Assigned IPs from new block: %s (%v)", newIPs, time.Since(assignStart))
 			ia.IPs = append(ia.IPs, newIPs...)
 			rem = num - len(ia.IPs)
 			break
@@ -2330,7 +2377,8 @@ func (c ipamClient) ensureBlock(ctx context.Context, rsvdAttr *HostReservedAttr,
 	logCtx := log.WithFields(log.Fields{string(affinityCfg.AffinityType): affinityCfg.Host})
 
 	logCtx.Info("Looking up existing affinities for host")
-	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, affinityCfg.Host, rsvdAttr, v3.IPPoolAllowedUseWorkload, awsSubnetIDs)
+	// For ensureBlock, we don't have namespace context, so pass nil
+	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, affinityCfg.Host, rsvdAttr, v3.IPPoolAllowedUseWorkload, awsSubnetIDs, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2391,4 +2439,78 @@ func (c ipamClient) getReservedIPs(ctx context.Context) (addrFilter, error) {
 		}
 	}
 	return cidrs, nil
+}
+
+func (c ipamClient) UpgradeHost(ctx context.Context, nodeName string) error {
+	delay := 100 * time.Millisecond
+	for {
+		err := c.attemptUpgradeHost(ctx, nodeName)
+		if err == nil {
+			return nil
+		}
+		log.WithError(err).Errorf("Failed to upgrade IPAM blocks of this host.")
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(delay):
+			delay *= 2
+		}
+		log.WithError(err).Error("Retrying...")
+	}
+}
+
+func (c ipamClient) attemptUpgradeHost(ctx context.Context, nodeName string) error {
+	// Upgrade the block affinities that belong to this host.  Add labels that
+	// allow for efficient lookups in KDD.  Note that etcd still stores the
+	// old "v1" model.BlockAffinity objects directly so this List() will
+	// return no results in etcd.
+	log.WithField("node", nodeName).Info("Upgrading any IPAM affinities from older versions....")
+
+	// We know that already-upgraded blocks will have the affinityType label,
+	// we can list only non-upgraded blocks.  We can't limit to any particular
+	// host here because host matches now make use of the labels that we're
+	// about to add.
+	ls, err := labels.Parse("!" + v3.LabelAffinityType)
+	if err != nil {
+		return err
+	}
+	kvs, err := c.client.List(ctx, model.ResourceListOptions{
+		Kind:          libapiv3.KindBlockAffinity,
+		LabelSelector: ls,
+	}, "")
+	if err != nil {
+		return err
+	}
+
+	var errs []error
+	numUpgraded := 0
+	for _, kv := range kvs.KVPairs {
+		if val, ok := kv.Value.(*libapiv3.BlockAffinity); ok {
+			if val.Spec.Node != nodeName {
+				// Only do _our_ affinities to avoid n x n conflicts with other
+				// nodes also doing this operation.
+				continue
+			}
+			model.EnsureBlockAffinityLabels(val)
+			_, err := c.client.Update(ctx, kv)
+			if err != nil {
+				errs = append(errs, err)
+				if errors.Is(err, context.DeadlineExceeded) {
+					break
+				}
+				continue
+			}
+			numUpgraded++
+		}
+	}
+	if numUpgraded == 0 && len(errs) == 0 {
+		log.Info("No affinities needed to be upgraded.")
+		return nil
+	}
+
+	log.Infof("Upgraded %d block affinities belonging to this host.", numUpgraded)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to upgrade some block affinities: %v", errs)
+	}
+	return nil
 }

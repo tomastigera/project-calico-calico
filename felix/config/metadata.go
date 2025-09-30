@@ -291,8 +291,10 @@ func CombinedFieldInfo() ([]*FieldInfo, error) {
 	return params, nil
 }
 
-var backtickRegex = regexp.MustCompile("`([^`]+)`")
-var doubleStarRegex = regexp.MustCompile(`\*\*(.+?)\*\*`)
+var (
+	backtickRegex   = regexp.MustCompile("`([^`]+)`")
+	doubleStarRegex = regexp.MustCompile(`\*\*(.+?)\*\*`)
+)
 
 func convertDescriptionToHTML(description string) string {
 	// The description is basically simple markdown:
@@ -619,9 +621,11 @@ type YAMLInfo struct {
 	EnumValues  []string
 }
 
-var trimDefaultRegex = regexp.MustCompile(`(?i)\[default[^]]+]`)
-var replaceNewlinesRegex = regexp.MustCompile(`\s*\n\s*`)
-var multiSpaceRegex = regexp.MustCompile(` +`)
+var (
+	trimDefaultRegex     = regexp.MustCompile(`(?i)\[default[^]]+]`)
+	replaceNewlinesRegex = regexp.MustCompile(`\s*\n\s*`)
+	multiSpaceRegex      = regexp.MustCompile(` +`)
+)
 
 func tweakDescription(name, description string, doubleNewlines bool) string {
 	description = strings.TrimSpace(description)

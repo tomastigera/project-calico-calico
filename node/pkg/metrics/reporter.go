@@ -10,8 +10,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 	"github.com/projectcalico/calico/node/pkg/bgp"
 )
 
@@ -117,12 +118,13 @@ func (pr *prometheusBGPReporter) servePrometheusMetrics(stop <-chan struct{}) {
 			return
 		default:
 			log.Infof("listening for requests at %s", fmt.Sprintf("[%v]:%v", "localhost", pr.port))
-			err := security.ServePrometheusMetrics(
+			err := metricsserver.ServePrometheusMetricsHTTPS(
 				pr.registry,
 				"",
 				pr.port,
 				pr.certFile,
 				pr.keyFile,
+				string(v3.RequireAndVerifyClientCert),
 				pr.caFile,
 			)
 			log.WithError(err).Error("BGP Prometheus metrics endpoint failed, trying to restart it...")
@@ -158,7 +160,6 @@ func (pr *prometheusBGPReporter) recordMetrics(stop <-chan struct{}) {
 							log.WithFields(fields).Debugln("Trigger compute metrics")
 						}
 					}
-
 				}
 			}
 			time.Sleep(reportingInterval)
