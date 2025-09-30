@@ -42,6 +42,35 @@ type FakeCalicoClient struct {
 	ipamClient ipam.Interface
 }
 
+// Expose helpers for tests to introspect/drive the fake IPAM client.
+func (f *FakeCalicoClient) SetIPAMUpgradeErrors(errs ...error) {
+	if fic, ok := f.ipamClient.(*fakeIPAMClient); ok {
+		fic.Lock()
+		defer fic.Unlock()
+		fic.upgradeErrors = append([]error{}, errs...)
+	}
+}
+
+func (f *FakeCalicoClient) IPAMUpgradeCallCount() int {
+	if fic, ok := f.ipamClient.(*fakeIPAMClient); ok {
+		fic.Lock()
+		defer fic.Unlock()
+		return fic.upgradeCalls
+	}
+	return 0
+}
+
+func (f *FakeCalicoClient) IPAMUpgradeNodeNames() []string {
+	if fic, ok := f.ipamClient.(*fakeIPAMClient); ok {
+		fic.Lock()
+		defer fic.Unlock()
+		out := make([]string, len(fic.upgradeNodeNames))
+		copy(out, fic.upgradeNodeNames)
+		return out
+	}
+	return nil
+}
+
 func (f *FakeCalicoClient) AlertExceptions() clientv3.AlertExceptionInterface {
 	panic("implement me")
 }
@@ -331,6 +360,10 @@ type fakeIPAMClient struct {
 	sync.Mutex
 	affinitiesReleased map[string]bool
 	handlesReleased    map[string]bool
+	// Tracking for UpgradeHost calls
+	upgradeCalls     int
+	upgradeNodeNames []string
+	upgradeErrors    []error // returned in order on successive calls
 }
 
 func (f *fakeIPAMClient) affinityReleased(aff string) bool {
@@ -480,4 +513,17 @@ func (f *fakeIPAMClient) GetUtilization(ctx context.Context, args ipam.GetUtiliz
 // It returns IPv4, IPv6 block CIDR and any error encountered.
 func (f *fakeIPAMClient) EnsureBlock(ctx context.Context, args ipam.BlockArgs) (*cnet.IPNet, *cnet.IPNet, error) {
 	panic("not implemented") // TODO: Implement
+}
+
+func (c *fakeIPAMClient) UpgradeHost(ctx context.Context, nodeName string) error {
+	c.Lock()
+	defer c.Unlock()
+	c.upgradeCalls++
+	c.upgradeNodeNames = append(c.upgradeNodeNames, nodeName)
+	if len(c.upgradeErrors) > 0 {
+		err := c.upgradeErrors[0]
+		c.upgradeErrors = c.upgradeErrors[1:]
+		return err
+	}
+	return nil
 }

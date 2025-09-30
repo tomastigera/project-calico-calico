@@ -1,6 +1,6 @@
 - name: eck-operator
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:

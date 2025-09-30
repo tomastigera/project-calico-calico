@@ -1,6 +1,6 @@
 - name: pkg
   run:
-    when: "${FORCE_RUN} or change_in(['/lib/std/', '/pkg/'])"
+    when: "${FORCE_RUN} or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:

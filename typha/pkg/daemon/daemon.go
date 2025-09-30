@@ -41,7 +41,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/calico/pkg/buildinfo"
@@ -441,16 +441,32 @@ func (t *TyphaDaemon) Start(cxt context.Context) {
 		debugserver.StartDebugPprofServer(t.ConfigParams.DebugHost, t.ConfigParams.DebugPort)
 	}
 	if t.ConfigParams.PrometheusMetricsEnabled {
-		log.Info("Prometheus metrics enabled.  Starting server.")
+		log.Info("Prometheus metrics enabled.")
 		t.configurePrometheusMetrics()
-		go security.ServePrometheusMetricsForever(
-			prometheus.DefaultGatherer,
-			t.ConfigParams.PrometheusMetricsHost,
-			t.ConfigParams.PrometheusMetricsPort,
-			t.ConfigParams.PrometheusMetricsCertFile,
-			t.ConfigParams.PrometheusMetricsKeyFile,
-			t.ConfigParams.PrometheusMetricsCAFile,
-		)
+		if t.ConfigParams.PrometheusMetricsKeyFile != "" || t.ConfigParams.PrometheusMetricsCertFile != "" {
+			log.Info("Trying to start metrics https server.")
+			go func() {
+				err := metricsserver.ServePrometheusMetricsHTTPS(
+					prometheus.DefaultGatherer,
+					t.ConfigParams.PrometheusMetricsHost,
+					t.ConfigParams.PrometheusMetricsPort,
+					t.ConfigParams.PrometheusMetricsCertFile,
+					t.ConfigParams.PrometheusMetricsKeyFile,
+					t.ConfigParams.PrometheusMetricsClientAuth,
+					t.ConfigParams.PrometheusMetricsCAFile,
+				)
+				if err != nil {
+					log.Info("Error starting metrics https server.", err)
+				}
+			}()
+		} else {
+			log.Info("Starting metrics http server.")
+			go metricsserver.ServePrometheusMetricsHTTP(
+				prometheus.DefaultGatherer,
+				t.ConfigParams.PrometheusMetricsHost,
+				t.ConfigParams.PrometheusMetricsPort,
+			)
+		}
 	}
 
 	if t.ConfigParams.HealthEnabled {

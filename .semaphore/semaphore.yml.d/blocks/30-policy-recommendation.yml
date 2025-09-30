@@ -1,6 +1,6 @@
 - name: policy-recommendation
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(policy-recommendation)}"
   dependencies:
     - Prerequisites
   task:

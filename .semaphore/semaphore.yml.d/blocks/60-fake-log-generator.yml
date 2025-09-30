@@ -1,6 +1,6 @@
 - name: Fake log generator
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(test-tools/fake-log-generator)}"
   dependencies:
     - Prerequisites
   task:

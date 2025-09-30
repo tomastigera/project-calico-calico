@@ -1,6 +1,6 @@
 - name: l7-admission-controller
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/l7-admission-controller/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(l7-admission-controller)}"
   dependencies:
     - Prerequisites
   task:

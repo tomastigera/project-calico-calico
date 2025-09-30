@@ -11,11 +11,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
 	licenseClient "github.com/projectcalico/calico/licensing/client"
 )
 
@@ -51,20 +52,19 @@ var (
 // License Reporter contains data which is required to start webserver,
 // and serve prometheus requests
 type LicenseReporter struct {
-	//Prometheus requests are served on this port
+	// Prometheus requests are served on this port
 	port int
 	host string
-	//CA, certifciate and Key file location for secured connections
+	// CA, certifciate and Key file location for secured connections
 	caFile   string
 	keyFile  string
 	certFile string
-	//Sampling Interval to scrape data
+	// Sampling Interval to scrape data
 	pollInterval time.Duration
 	client       clientv3.Interface
 }
 
 func NewLicenseReporter(host, certFile, keyFile, caFile string, pollInterval time.Duration, port int) *LicenseReporter {
-
 	return &LicenseReporter{
 		port:         port,
 		host:         host,
@@ -95,15 +95,23 @@ func init() {
 	prometheus.MustRegister(gaugeNumNodes)
 	prometheus.MustRegister(gaugeMaxNodes)
 	prometheus.MustRegister(gaugeValidLicense)
-	//Discard GolangMetrics
+	// Discard GolangMetrics
 	prometheus.Unregister(collectors.NewGoCollector())
-	//Discard process metrics
+	// Discard process metrics
 	prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 }
 
 // servePrometheusMetrics starts a lightweight web server to serve prometheus metrics.
 func (lr *LicenseReporter) servePrometheusMetrics() {
-	err := security.ServePrometheusMetrics(prometheus.DefaultGatherer, lr.host, lr.port, lr.certFile, lr.keyFile, lr.caFile)
+	err := metricsserver.ServePrometheusMetricsHTTPS(
+		prometheus.DefaultGatherer,
+		lr.host,
+		lr.port,
+		lr.certFile,
+		lr.keyFile,
+		string(v3.RequireAndVerifyClientCert),
+		lr.caFile,
+	)
 	if err != nil {
 		log.WithError(err).Error("Error from libcalico library")
 	}
@@ -114,7 +122,7 @@ func (lr *LicenseReporter) servePrometheusMetrics() {
 // Maximum number of nodes licensed and Number of nodes in Use
 func (lr *LicenseReporter) startReporter() {
 	for {
-		//Get Licensekey from datastore, only if license exists scrape data
+		// Get Licensekey from datastore, only if license exists scrape data
 		lic, err := lr.client.LicenseKey().Get(context.Background(), "default", options.GetOptions{})
 		if err != nil {
 			switch err.(type) {
@@ -148,7 +156,6 @@ func (lr *LicenseReporter) startReporter() {
 
 // Decode License, get expiry date, maximum allowed nodes
 func (lr *LicenseReporter) LicenseHandler(lic apiv3.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
-
 	// Decode the LicenseKey
 	claims, err := licenseClient.Decode(lic)
 	if err != nil {

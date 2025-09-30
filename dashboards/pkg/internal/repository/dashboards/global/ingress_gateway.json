@@ -20,7 +20,7 @@
                 "fieldLabels": [
                     {
                         "field": "dest_name_aggr",
-                        "label": "Destination  Name"
+                        "label": "Destination Name"
                     },
                     {
                         "field": "response_code",
@@ -32,32 +32,7 @@
                     },
                     {
                         "field": "url",
-                        "label": "endpoint"
-                    }
-                ]
-            }
-        },
-        {
-            "id": "c7f91b61-df6d-4563-a90c-643e514f238e",
-            "title": "Response codes per Route",
-            "chart": {
-                "type": "logtable",
-                "xAxisLabel": "",
-                "yAxisLabel": ""
-            },
-            "query": {
-                "collectionName": "l7",
-                "maxDocs": 100
-            },
-            "responseMapping": {
-                "fieldLabels": [
-                    {
-                        "field": "route_name",
-                        "label": "Route Name"
-                    },
-                    {
-                        "field": "response_code",
-                        "label": "Response"
+                        "label": "url"
                     }
                 ]
             }
@@ -104,8 +79,8 @@
             "title": "Queries per minute ",
             "chart": {
                 "type": "linetimeseries",
-                "xAxisLabel": "No. of Queries ",
-                "yAxisLabel": "Time"
+                "xAxisLabel": "Time",
+                "yAxisLabel": "No. of Queries "
             },
             "query": {
                 "aggregations": {
@@ -121,7 +96,7 @@
                 "groupBys": [
                     {
                         "fieldName": "start_time",
-                        "interval": "PT1H",
+                        "interval": "PT15M",
                         "maxValues": 10
                     },
                     {
@@ -190,26 +165,26 @@
         },
         {
             "id": "316ec3b4-5071-4c8d-a364-0ca0bc5a02de",
-            "title": "Service names",
+            "title": "Route Traffic",
             "chart": {
-                "type": "barstacked",
+                "type": "pie",
                 "xAxisLabel": "Request bytes per Service ",
                 "yAxisLabel": "bytes in count "
             },
             "query": {
                 "aggregations": {
-                    "count_bytes_in_0": {
-                        "fieldName": "bytes_in",
+                    "avg_duration_mean_0": {
+                        "fieldName": "duration_mean",
                         "function": {
-                            "type": "count"
+                            "type": "avg"
                         },
-                        "key": "count_bytes_in_0"
+                        "key": "avg_duration_mean_0"
                     }
                 },
                 "collectionName": "l7",
                 "groupBys": [
                     {
-                        "fieldName": "dest_service_name",
+                        "fieldName": "route_name",
                         "maxValues": 10
                     }
                 ],
@@ -218,12 +193,12 @@
             "responseMapping": {
                 "fieldLabels": [
                     {
-                        "field": "dest_service_name",
-                        "label": "dest_service_name"
+                        "field": "route_name",
+                        "label": "route_name"
                     },
                     {
-                        "field": "count_bytes_in_0",
-                        "label": "count_bytes_in_0"
+                        "field": "avg_duration_mean_0",
+                        "label": "avg_duration_mean_0"
                     }
                 ]
             }
@@ -239,18 +214,7 @@
             "static": false,
             "w": 4,
             "x": 0,
-            "y": 4
-        },
-        {
-            "h": 2,
-            "i": "c7f91b61-df6d-4563-a90c-643e514f238e",
-            "isResizable": true,
-            "minH": 2,
-            "moved": false,
-            "static": false,
-            "w": 2,
-            "x": 0,
-            "y": 2
+            "y": 6
         },
         {
             "h": 2,
@@ -261,7 +225,7 @@
             "static": false,
             "w": 4,
             "x": 0,
-            "y": 6
+            "y": 8
         },
         {
             "h": 2,
@@ -275,7 +239,7 @@
             "y": 2
         },
         {
-            "h": 2,
+            "h": 4,
             "i": "697fe7d9-64db-4ceb-8fae-ba8b9bcaed70",
             "isResizable": true,
             "minH": 2,

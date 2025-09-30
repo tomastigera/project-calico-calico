@@ -1,6 +1,6 @@
 - name: oiler
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/linseed/', '/oiler/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(oiler)}"
   dependencies:
     - Prerequisites
   task:

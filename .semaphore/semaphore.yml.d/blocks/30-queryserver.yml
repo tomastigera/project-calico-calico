@@ -1,6 +1,6 @@
 - name: queryserver
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(queryserver)}"
   dependencies:
     - Prerequisites
   task:

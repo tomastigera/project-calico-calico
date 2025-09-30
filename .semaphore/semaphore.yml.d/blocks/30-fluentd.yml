@@ -50,7 +50,7 @@
 
 - name: fluentd
   run:
-    when: "${FORCE_RUN} or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(fluentd)}"
   dependencies:
     - Publish tigera/fluentd-base multi-arch manifests
   task:
@@ -124,7 +124,7 @@
 
 - name: fluentd Windows
   run:
-    when: "${FORCE_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Publish tigera/fluentd-base Windows multi-arch manifests
   task:

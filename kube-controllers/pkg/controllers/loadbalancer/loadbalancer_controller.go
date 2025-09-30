@@ -125,6 +125,7 @@ type loadBalancerController struct {
 	namespaceInformer cache.SharedIndexInformer
 	namespaceLister   v1lister.NamespaceLister
 	allocationTracker allocationTracker
+	datastoreUpgraded bool
 }
 
 // NewLoadBalancerController returns a controller which manages Service LoadBalancer objects.
@@ -235,6 +236,14 @@ func (c *loadBalancerController) onUpdate(update bapi.Update) {
 func (c *loadBalancerController) acceptScheduledRequests(stopCh <-chan struct{}) {
 	log.Infof("Will run periodic IPAM sync every %s", timer)
 	t := time.NewTicker(timer)
+	for {
+		if err := c.ensureDatastoreUpgraded(); err != nil {
+			log.WithError(err).Error("Failed to upgrade load balancer's IPAM block affinities.  Unable to sync load balancer services.  Will retry.")
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		break
+	}
 	for {
 		select {
 		case update := <-c.syncerUpdates:
@@ -376,6 +385,18 @@ func (c *loadBalancerController) syncIPAM() {
 	for svcKey := range svcKeys {
 		c.syncService(svcKey)
 	}
+}
+
+func (c *loadBalancerController) ensureDatastoreUpgraded() error {
+	if c.datastoreUpgraded {
+		return nil
+	}
+	err := c.calicoClient.IPAM().UpgradeHost(context.Background(), api.VirtualLoadBalancer)
+	if err != nil {
+		return err
+	}
+	c.datastoreUpgraded = true
+	return nil
 }
 
 // syncService does the following:

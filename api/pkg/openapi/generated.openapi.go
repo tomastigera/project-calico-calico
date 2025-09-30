@@ -5750,20 +5750,6 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
-					"prometheusMetricsHost": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsHost is the host that the Prometheus metrics server should bind to. [Default: empty]",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"prometheusMetricsPort": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsPort is the TCP port that the Prometheus metrics server should bind to. [Default: 9091]",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
 					"prometheusGoMetricsEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PrometheusGoMetricsEnabled disables Go runtime metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
@@ -5785,23 +5771,44 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"prometheusMetricsHost": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusMetricsHost is the host that the Prometheus metrics server should bind to. [Default: empty]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"prometheusMetricsPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusMetricsPort is the TCP port that the Prometheus metrics server should bind to. [Default: 9091]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"prometheusMetricsCAFile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusMetricsCAFile defines the absolute path to the TLS CA certificate file used for securing the /metrics endpoint. This certificate must be valid and accessible by the calico-node process.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"prometheusMetricsCertFile": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsCertFile is the path to the TLS certificate file for the Prometheus metrics server. [Default: empty]",
+							Description: "PrometheusMetricsCertFile defines the absolute path to the TLS certificate file used for securing the /metrics endpoint. This certificate must be valid and accessible by the calico-node process.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"prometheusMetricsKeyFile": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsKeyFile is the path to the TLS private key file for the Prometheus metrics server. [Default: empty]",
+							Description: "PrometheusMetricsKeyFile defines the absolute path to the private key file corresponding to the TLS certificate used for securing the /metrics endpoint. The private key must be valid and accessible by the calico-node process.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"prometheusMetricsCAFile": {
+					"prometheusMetricsClientAuth": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsCAFile is the path to the TLS CA file for the Prometheus metrics server. [Default: empty]",
+							Description: "PrometheusMetricsClientAuth specifies the client authentication type for the /metrics endpoint. This determines how the server validates client certificates. Default is \"RequireAndVerifyClientCert\".",
 							Type:        []string{"string"},
 							Format:      "",
 						},
