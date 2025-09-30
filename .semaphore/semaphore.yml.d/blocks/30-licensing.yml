@@ -1,6 +1,6 @@
 - name: licensing
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(licensing)}"
   dependencies:
     - Prerequisites
   task:

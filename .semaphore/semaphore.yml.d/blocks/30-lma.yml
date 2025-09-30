@@ -1,6 +1,6 @@
 - name: lma
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(lma)}"
   dependencies:
     - Prerequisites
   task:

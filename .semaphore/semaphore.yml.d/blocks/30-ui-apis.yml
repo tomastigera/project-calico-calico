@@ -1,6 +1,6 @@
 - name: ui-apis
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+    when: "${CHANGE_IN(ui-apis)}"
   dependencies:
     - Prerequisites
   task:
