@@ -26,10 +26,6 @@ CALI_MAP(cali_counters, 5,
 		struct counters_key, counters_t, 20000,
 		0)
 
-CALI_MAP(cali_counters_scratch, 3,
-		BPF_MAP_TYPE_PERCPU_ARRAY,
-		__u32, counters_t, 1, 0)
-
 static CALI_BPF_INLINE counters_t *counters_get(int ifindex)
 {
 	struct counters_key key = {
@@ -48,26 +44,7 @@ static CALI_BPF_INLINE counters_t *counters_get(int ifindex)
 		key.hook = COUNTERS_TC_INGRESS;
 	}
 
-	void * val = cali_counters_lookup_elem(&key);
-
-	if (!val) {
-		/* If there was no entry created yet, create it. It is a hash
-		 * map so any entry must be created first!
-		 */
-		int scratch_zero = 0;
-		counters_t *ctrs = cali_counters_scratch_lookup_elem(&scratch_zero);
-		if (!ctrs) {
-			return NULL;
-		}
-
-		if (cali_counters_update_elem(&key, ctrs, BPF_ANY)) {
-			return NULL;
-		}
-
-		val = cali_counters_lookup_elem(&key);
-	}
-
-	return val;
+	return cali_counters_lookup_elem(&key);
 }
 
 static CALI_BPF_INLINE void counter_inc(struct cali_tc_ctx *ctx, int type)
