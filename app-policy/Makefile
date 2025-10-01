@@ -164,7 +164,5 @@ $(MMDB_FILES):
 	mkdir -p $(MMDB_DIR)
 	wget -O $(MMDB_DIR)/dbip-city-lite.mmdb.gz $(MMDB_SRC_URL)
 	gzip --force -d $(MMDB_DIR)/dbip-city-lite.mmdb.gz
-	cp $(MMDB_DIR)/dbip-city-lite.mmdb ./internal/testdata/geoip/
-
 .PHONY: mmdb
 mmdb: $(MMDB_FILES)

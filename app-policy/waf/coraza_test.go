@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
 
-	geoiptestdata "github.com/projectcalico/calico/app-policy/internal/testdata/geoip"
 	"github.com/projectcalico/calico/app-policy/internal/util/testutils"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/waf"
@@ -132,7 +131,12 @@ func TestCorazaWAFAuthzScenarios(t *testing.T) {
 	// geoip database tests
 	geoIPInitFn := func(t *testing.T) func() error {
 		return func() error {
-			if err := geo.RegisterGeoDatabase(geoiptestdata.DBIPCityLite, "city"); err != nil {
+			mmdbBytes, err := createSingleRUEntryMMDB()
+			if err != nil {
+				t.Fatalf("Failed to create MMDB: %v", err)
+				return err
+			}
+			if err := geo.RegisterGeoDatabase(mmdbBytes, "city"); err != nil {
 				t.Fatalf("Failed to register GeoIP database: %s", err)
 				return err
 			}
@@ -221,6 +225,7 @@ func TestCorazaWAFAuthzScenarios(t *testing.T) {
 			runCorazaWAFAuthzScenario(t, &scenario)
 		})
 	}
+
 }
 
 func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
