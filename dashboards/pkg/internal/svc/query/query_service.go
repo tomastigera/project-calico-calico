@@ -341,7 +341,10 @@ func (s *QueryService) mapClientCriterion(
 		return filters.NewWildcard(field, from.Pattern, negate), nil
 	case client.CriterionTypeOr:
 		criteria, err := slices.MapOrError(from.Criteria, func(subCriterion client.QueryRequestFilterCriterion) (filters.Criterion, error) {
-			return s.mapClientCriterion(ctx, subCriterion, negate, queryCollection)
+			// negate is not applied to sub-criteria of an "or" criterion
+			// e.g. { "negate": "true", "criterion": { "type": "or", "criteria": [ { "type": "equals", ...}, ... ] } }
+			// means NOT (criterion1 OR criterion2 ...)
+			return s.mapClientCriterion(ctx, subCriterion, false, queryCollection)
 		})
 		if err != nil {
 			return nil, err

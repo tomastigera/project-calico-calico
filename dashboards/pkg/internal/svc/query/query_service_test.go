@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository/linseed"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
@@ -1345,6 +1346,43 @@ func TestQueryService(t *testing.T) {
 			require.Empty(t, resp.Aggregations)
 
 			require.Equal(t, expectedFlowLogsIDs, slices.Map(resp.Documents, documentToFlowLogID))
+		})
+	})
+
+	t.Run("mapping", func(t *testing.T) {
+		t.Run("client criterion or", func(t *testing.T) {
+			collection, found := slices.Find(collections.Collections(), func(c collections.Collection) bool { return c.Name() == "flows" })
+			require.True(t, found)
+
+			testCases := []struct {
+				name    string
+				negated bool
+			}{
+				{name: "not negated", negated: false},
+				{name: "negated", negated: true},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					filterCriterion, err := subject.mapClientCriterion(ctx, client.QueryRequestFilterCriterion{
+						Type: client.CriterionTypeOr,
+						Criteria: []client.QueryRequestFilterCriterion{
+							{Type: client.CriterionTypeEquals, Field: "source_namespace", Value: client.NewQueryRequestFilterCriterionValue("fake-namespace1")},
+							{Type: client.CriterionTypeEquals, Field: "source_namespace", Value: client.NewQueryRequestFilterCriterionValue("fake-namespace2")},
+						},
+					}, tc.negated, collection)
+					require.NoError(t, err)
+
+					filterCriterionOr, ok := filterCriterion.(*filters.CriterionOr)
+					require.True(t, ok)
+					require.Equal(t, tc.negated, filterCriterionOr.Negate())
+
+					subCriteria := filterCriterionOr.SubCriteria()
+					require.Len(t, subCriteria, 2)
+					require.False(t, subCriteria[0].Negate())
+					require.False(t, subCriteria[1].Negate())
+				})
+			}
 		})
 	})
 }
