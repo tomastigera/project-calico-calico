@@ -24,6 +24,7 @@ import (
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/ethtool"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/logutils"
@@ -328,6 +329,10 @@ type egressIPManager struct {
 	hopRand *rand.Rand
 
 	bpfIPSets egressIPSets
+
+	pendingIfaceStateChanges map[string]*ifaceStateUpdate
+	srcValidMarkPathFmt      string
+	writeProcSysFunc         func(path, value string) error
 }
 
 func newEgressIPManager(
@@ -342,6 +347,7 @@ func newEgressIPManager(
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
 	featureDetector environment.FeatureDetectorIface,
+	writeProcSysFunc func(path, value string) error,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -379,6 +385,7 @@ func newEgressIPManager(
 		ipsets,
 		bpfIPSets,
 		featureDetector,
+		writeProcSysFunc,
 	)
 	return mgr
 }
@@ -401,8 +408,11 @@ func newEgressIPManagerWithShims(
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
 	featureDetector environment.FeatureDetectorIface,
+	writeProcSysFunc func(path, value string) error,
 ) *egressIPManager {
-
+	if writeProcSysFunc == nil {
+		log.Panic("Manager has no way to write proc-sys")
+	}
 	mgr := egressIPManager{
 		vxlanFDB:                   vxlanFDB,
 		rrGenerator:                rrGenerator,
@@ -422,20 +432,23 @@ func newEgressIPManagerWithShims(
 			dpConfig.EgressGatewayPollInterval,
 			dpConfig.EgressGatewayPollFailureCount,
 		),
-		vxlanDevice:            deviceName,
-		vxlanID:                dpConfig.RulesConfig.EgressIPVXLANVNI,
-		vxlanPort:              dpConfig.RulesConfig.EgressIPVXLANPort,
-		dpConfig:               dpConfig,
-		nlHandle:               nlHandle,
-		opRecorder:             opRecorder,
-		disableChecksumOffload: disableChecksumOffload,
-		statusCallback:         statusCallback,
-		healthAgg:              healthAgg,
-		hopRand:                rand.New(hopRandSource),
-		myNodeIPChangedC:       make(chan struct{}, 1),
-		ipsets:                 ipsets,
-		bpfIPSets:              bpfIPSets,
-		featureDetector:        featureDetector,
+		vxlanDevice:              deviceName,
+		vxlanID:                  dpConfig.RulesConfig.EgressIPVXLANVNI,
+		vxlanPort:                dpConfig.RulesConfig.EgressIPVXLANPort,
+		dpConfig:                 dpConfig,
+		nlHandle:                 nlHandle,
+		opRecorder:               opRecorder,
+		disableChecksumOffload:   disableChecksumOffload,
+		statusCallback:           statusCallback,
+		healthAgg:                healthAgg,
+		hopRand:                  rand.New(hopRandSource),
+		myNodeIPChangedC:         make(chan struct{}, 1),
+		ipsets:                   ipsets,
+		bpfIPSets:                bpfIPSets,
+		featureDetector:          featureDetector,
+		pendingIfaceStateChanges: make(map[string]*ifaceStateUpdate),
+		srcValidMarkPathFmt:      "/proc/sys/net/ipv4/conf/%s/src_valid_mark",
+		writeProcSysFunc:         writeProcSysFunc,
 	}
 
 	if healthAgg != nil {
@@ -479,6 +492,11 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 			}
 			m.lock.Unlock()
 		}
+	case *ifaceStateUpdate:
+		if len(m.dpConfig.EgressIPHostIfacePattern) > 0 {
+			log.WithField("msg", msg).Debug("iface state change")
+			m.pendingIfaceStateChanges[msg.Name] = msg
+		}
 	default:
 		return
 	}
@@ -496,6 +514,23 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		m.unblockingUpdateOccurred = false
 		m.lock.Unlock()
 	}()
+
+	for name, stateChange := range m.pendingIfaceStateChanges {
+	patternMatch:
+		for _, pattern := range m.dpConfig.EgressIPHostIfacePattern {
+			if pattern.MatchString(name) {
+				log.WithField("iface", name).Info("Iface matches pattern")
+				switch stateChange.State {
+				case ifacemonitor.StateUp, ifacemonitor.StateDown:
+					m.writeProcSys(name)
+				default:
+				}
+
+				break patternMatch
+			}
+		}
+		delete(m.pendingIfaceStateChanges, name)
+	}
 
 	// Retry completing deferred work once.
 	// The VXLAN device may have come online, or
@@ -1765,6 +1800,16 @@ func (m *egressIPManager) getActiveGateways(gateways gatewaysByIP, preferNodeLoc
 func (m *egressIPManager) OnVXLANDeviceUpdate() {
 	log.Debug("VXLAN device has been updated.")
 	m.unblockingUpdateOccurred = true
+}
+
+func (m *egressIPManager) writeProcSys(linkName string) {
+	log.WithField("LinkName", linkName).Info("Ensuring egress IP host iface has src_valid_mark")
+	procSysPath := fmt.Sprintf(m.srcValidMarkPathFmt, linkName)
+	log.WithField("path", procSysPath).Info("Writing src_valid_mark for iface")
+	err := m.writeProcSysFunc(procSysPath, "1")
+	if err != nil {
+		log.WithError(err).Warn("Failed to write src_valid_mark for iface")
+	}
 }
 
 // hardwareAddrForNode deterministically creates a unique hardware address from a hostname.

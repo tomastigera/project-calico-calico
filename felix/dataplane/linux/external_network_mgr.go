@@ -80,7 +80,7 @@ func newExternalNetworkManagerWithShims(
 	rrGenerator routeRulesGenerator,
 	opRecorder logutils.OpRecorder,
 ) *externalNetworkManager {
-	mgr := externalNetworkManager{
+	return &externalNetworkManager{
 		dpConfig:                      dpConfig,
 		rrGenerator:                   rrGenerator,
 		externalNetworksInfoByID:      map[types.WorkloadEndpointID]*externalNetworksInfo{},
@@ -89,8 +89,6 @@ func newExternalNetworkManagerWithShims(
 		pendingExternalNetworkUpdates: make(map[types.ExternalNetworkID]*proto.ExternalNetwork),
 		opRecorder:                    opRecorder,
 	}
-
-	return &mgr
 }
 
 func (m *externalNetworkManager) OnUpdate(msg interface{}) {
@@ -204,7 +202,6 @@ func (m *externalNetworkManager) CompleteDeferredWork() error {
 	// Regardless of the routeRule dataplane is in sync or not,
 	// it will try to program the latest rule set.
 	m.ProgramRouteRules()
-
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"regexp"
 	"time"
 
 	"github.com/golang-collections/collections/stack"
@@ -19,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
@@ -41,6 +43,7 @@ var _ = Describe("EgressIPManager", func() {
 	var rtFactory *mockRouteTableFactory
 	var podStatusCallback *mockEgressPodStatusCallback
 	var healthAgg *health.HealthAggregator
+	var procSysWrites chan procSysWrite
 
 	BeforeEach(func() {
 		rrFactory = &mockRouteRulesFactory{routeRules: nil}
@@ -60,6 +63,9 @@ var _ = Describe("EgressIPManager", func() {
 			tableIndexSet.Add(i)
 		}
 
+		var writeProcSys func(string, string) error
+		procSysWrites, writeProcSys = createDummyWriteProcSys(100, 10*time.Second)
+		matchEth0 := regexp.MustCompile("eth0")
 		dpConfig = Config{
 			RulesConfig: rules.Config{
 				MarkEgress:        0x200,
@@ -69,6 +75,7 @@ var _ = Describe("EgressIPManager", func() {
 			EgressIPRoutingRulePriority: 100,
 			FelixHostname:               "host0",
 			Hostname:                    "host0",
+			EgressIPHostIfacePattern:    []*regexp.Regexp{matchEth0},
 		}
 
 		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
@@ -99,6 +106,7 @@ var _ = Describe("EgressIPManager", func() {
 			ipsets,
 			bpfIPsets,
 			&environment.FakeFeatureDetector{},
+			writeProcSys,
 		)
 
 		Expect(healthAgg.Summary().Ready).To(BeFalse())
@@ -190,6 +198,8 @@ var _ = Describe("EgressIPManager", func() {
 				formatActiveEgressMemberPortStr("10.0.1.2", 8080, "host1"),
 				formatActiveEgressMemberPortStr("10.0.1.3", 8082, "host2"),
 			}
+
+			manager.OnUpdate(&ifaceStateUpdate{"eth0", ifacemonitor.StateUp, 2})
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "set0",
@@ -376,6 +386,24 @@ var _ = Describe("EgressIPManager", func() {
 					HostIP:    ip.FromString("10.0.1.3"),
 				},
 			))
+		})
+
+		It("should attempt to write procSys for dummy link", func() {
+			expectedWrite := procSysWrite{
+				path:  "/proc/sys/net/ipv4/conf/eth0/src_valid_mark",
+				value: "1",
+			}
+			Eventually(procSysWrites).Should(Receive(Equal(expectedWrite)))
+		})
+		It("should not double-write procSys link is updated with same state", func() {
+			expectedWrite := procSysWrite{
+				path:  "/proc/sys/net/ipv4/conf/eth0/src_valid_mark",
+				value: "1",
+			}
+			Eventually(procSysWrites).Should(Receive(Equal(expectedWrite)))
+
+			manager.OnUpdate(&ifaceStateUpdate{"eth0", ifacemonitor.StateUp, 2})
+			Consistently(procSysWrites).ShouldNot(Receive())
 		})
 
 		It("should update route rules when workload address changes", func() {
@@ -2171,4 +2199,31 @@ func egressGatewayRule(ipSetId string, maxNextHops int) *proto.EgressGatewayRule
 
 func egwPolicyWithSingleRule(ipSetId string, maxNextHops int) []*proto.EgressGatewayRule {
 	return []*proto.EgressGatewayRule{egressGatewayRule(ipSetId, maxNextHops)}
+}
+
+type procSysWrite struct {
+	path, value string
+}
+
+// Returns a dummy `writeProcSys` func to be given to the module under test.
+// Every time the module under test calls the func, the call values will be
+// passed across the notif chan to the test harness for consumption.
+// Important to note: not draining the chan will result in tests deadlocking.
+// For that reason, timeouts should be used diligently.
+func createDummyWriteProcSys(notifChannelSize int, writeTimeout time.Duration) (chan procSysWrite, func(string, string) error) {
+	notifs := make(chan procSysWrite, notifChannelSize)
+	return notifs, func(path, value string) error {
+		writeEvent := procSysWrite{
+			path:  path,
+			value: value,
+		}
+
+		select {
+		case notifs <- writeEvent:
+		case <-time.After(writeTimeout):
+			return fmt.Errorf("Test issue: dummy writeProcSys timed out")
+		}
+
+		return nil
+	}
 }

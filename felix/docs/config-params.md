@@ -4194,6 +4194,24 @@ fail the health check will be taken our of use as if they have been deleted.
 | `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
 | Default value (YAML) | `10s` |
 
+### `EgressIPHostIfacePattern` (config file) / `egressIPHostIfacePattern` (YAML)
+
+A comma-separated list of interface names which might send and receive egress traffic
+across the cluster boundary, after it has left an Egress Gateway pod. Felix will ensure `src_valid_mark` sysctl flags
+are set correctly for matching interfaces.
+To target multiple interfaces with a single string, the list supports regular expressions.
+For regular expressions, wrap the value with `/`.
+Example: `/^bond/,eth0` will match all interfaces that begin with `bond` and also the interface `eth0`.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_EgressIPHostIfacePattern` |
+| Encoding (env var/config file) | Comma-delimited list of Linux interface names/regex patterns. Regex patterns must start/end with <code>/</code>. |
+| Default value (above encoding) | none |
+| `FelixConfiguration` field | `egressIPHostIfacePattern` (YAML) `EgressIPHostIfacePattern` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | none |
+
 ### `EgressIPRoutingRulePriority` (config file) / `egressIPRoutingRulePriority` (YAML)
 
 Controls the priority value to use for the egress IP routing rule.

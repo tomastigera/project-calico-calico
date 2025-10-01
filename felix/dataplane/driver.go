@@ -444,6 +444,7 @@ func StartDataplaneDriver(
 			EgressIPRoutingRulePriority:   configParams.EgressIPRoutingRulePriority,
 			EgressGatewayPollInterval:     configParams.EgressGatewayPollInterval,
 			EgressGatewayPollFailureCount: configParams.EgressGatewayPollFailureCount,
+			EgressIPHostIfacePattern:      configParams.EgressIPHostIfacePattern,
 
 			ExternalNetworkEnabled:             configParams.ExternalNetworkCheckEnabled(),
 			ExternalNetworkRoutingRulePriority: configParams.ExternalNetworkRoutingRulePriority,

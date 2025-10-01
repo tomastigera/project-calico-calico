@@ -324,6 +324,7 @@ type Config struct {
 	EgressIPVXLANPort             int
 	EgressGatewayPollInterval     time.Duration
 	EgressGatewayPollFailureCount int
+	EgressIPHostIfacePattern      []*regexp.Regexp
 
 	ExternalNetworkEnabled             bool
 	ExternalNetworkRoutingRulePriority int
@@ -1484,6 +1485,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsV4,
 			bpfIPSetsV4,
 			featureDetector,
+			writeProcSys,
 		)
 		dp.RegisterManager(dp.egressIPManager)
 	} else {
