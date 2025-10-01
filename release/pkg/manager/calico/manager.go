@@ -426,7 +426,7 @@ func (r *CalicoManager) PreReleaseValidate() error {
 	out, err := r.git("describe", "--exact-match", "--tags", "HEAD")
 	if err == nil {
 		// On a current tag.
-		return fmt.Errorf("Already on a tag (%s), refusing to create release", out)
+		return fmt.Errorf("already on a tag (%s), refusing to create release", out)
 	}
 
 	// Check that the repository is not a shallow clone. We need correct history.
@@ -435,7 +435,7 @@ func (r *CalicoManager) PreReleaseValidate() error {
 		return fmt.Errorf("rev-parse failed: %s", err)
 	}
 	if strings.TrimSpace(out) == "true" {
-		return fmt.Errorf("Attempt to release from a shallow clone is not possible")
+		return fmt.Errorf("attempt to release from a shallow clone is not possible")
 	}
 
 	// Check that code generation is up-to-date.
@@ -460,7 +460,7 @@ func (r *CalicoManager) PreReleaseValidate() error {
 func (r *CalicoManager) DeleteTag(ver string) error {
 	_, err := r.git("tag", "-d", ver)
 	if err != nil {
-		return fmt.Errorf("Failed to delete tag: %s", err)
+		return fmt.Errorf("failed to delete tag: %s", err)
 	}
 	return nil
 }
@@ -470,7 +470,7 @@ func (r *CalicoManager) TagRelease(ver string) error {
 	logrus.WithFields(logrus.Fields{"branch": branch, "version": ver}).Infof("Creating Calico release from branch")
 	_, err := r.git("tag", ver)
 	if err != nil {
-		return fmt.Errorf("Failed to tag release: %s", err)
+		return fmt.Errorf("failed to tag release: %s", err)
 	}
 	return nil
 }
@@ -924,7 +924,7 @@ func (r *CalicoManager) buildReleaseTar(ver string, targetDir string) error {
 	releaseBase := filepath.Join(r.repoRoot, "release", "_output", fmt.Sprintf("release-%s", ver))
 	err := os.MkdirAll(releaseBase+"/images", os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("Failed to create images dir: %s", err)
+		return fmt.Errorf("failed to create images dir: %s", err)
 	}
 	imgDir := filepath.Join(releaseBase, "images")
 	registry := r.imageRegistries[0]
@@ -948,7 +948,7 @@ func (r *CalicoManager) buildReleaseTar(ver string, targetDir string) error {
 	binDir := filepath.Join(releaseBase, "bin")
 	err = os.MkdirAll(binDir, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("Failed to create images dir: %s", err)
+		return fmt.Errorf("failed to create images dir: %s", err)
 	}
 
 	binaries := map[string]string{
@@ -1006,7 +1006,7 @@ func (r *CalicoManager) buildContainerImages() error {
 		out, err := r.makeInDirectoryWithOutput(filepath.Join(r.repoRoot, dir), "release-build", env...)
 		if err != nil {
 			logrus.Error(out)
-			return fmt.Errorf("Failed to build %s: %s", dir, err)
+			return fmt.Errorf("failed to build %s: %s", dir, err)
 		}
 		logrus.Info(out)
 	}
@@ -1015,7 +1015,7 @@ func (r *CalicoManager) buildContainerImages() error {
 		out, err := r.makeInDirectoryWithOutput(filepath.Join(r.repoRoot, dir), "image-windows", env...)
 		if err != nil {
 			logrus.Error(out)
-			return fmt.Errorf("Failed to build %s: %s", dir, err)
+			return fmt.Errorf("failed to build %s: %s", dir, err)
 		}
 		logrus.Info(out)
 	}
@@ -1110,7 +1110,7 @@ func (r *CalicoManager) publishContainerImages() error {
 					continue
 				}
 				logrus.Error(out)
-				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+				return fmt.Errorf("failed to publish %s: %s", dir, err)
 			}
 
 			// Success - move on to the next directory.
@@ -1129,7 +1129,7 @@ func (r *CalicoManager) publishContainerImages() error {
 					continue
 				}
 				logrus.Error(out)
-				return fmt.Errorf("Failed to publish %s: %s", dir, err)
+				return fmt.Errorf("failed to publish %s: %s", dir, err)
 			}
 
 			// Success - move on to the next directory.
@@ -1178,7 +1178,7 @@ func (r *CalicoManager) assertManifestVersions(ver string) error {
 				continue
 			}
 			if !strings.HasSuffix(i, ver) {
-				return fmt.Errorf("Incorrect image version (expected %s) in manifest %s: %s", ver, m, i)
+				return fmt.Errorf("incorrect image version (expected %s) in manifest %s: %s", ver, m, i)
 			}
 		}
 	}
