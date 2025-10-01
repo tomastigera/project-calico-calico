@@ -15,9 +15,14 @@ import (
 	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
+const (
+	defaultFelixConfig      = "/etc/calico/calico-node/calico-node.conf"
+	nodeEnvironmentFilePath = "/etc/calico/calico-node/calico-node.env"
+)
+
 var flagSet = flag.NewFlagSet("CalicoNonClusterHostInit", flag.ContinueOnError)
 
-var felixConfig = flagSet.String("felix-config", "/etc/calico/calico-node/calico-node.conf", "Path to the Felix config file")
+var felixConfig = flagSet.String("felix-config", defaultFelixConfig, "Path to the Felix config file")
 var renewalThreshold = flagSet.Duration("renewal-threshold", 90*24*time.Hour, "Threshold for certificate renewal")
 var timeout = flagSet.Duration("timeout", 3*time.Minute, "Timeout for the certificate request")
 
@@ -61,36 +66,61 @@ func maybeRenewCertificate(caFile, pkFile, certFile string) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), *timeout)
 	defer cancel()
 
-	resCh := make(chan error, 1)
-	defer close(resCh)
+	certManager, err := nonclusterhost.NewCertificateManager(ctx, caFile, pkFile, certFile, nodeEnvironmentFilePath)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create certificate manager")
+		return err
+	}
 
-	go func() {
-		certManager, err := nonclusterhost.NewCertificateManager(ctx, caFile, pkFile, certFile)
+	valid, err := certManager.IsCertificateValid(*renewalThreshold)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to validate certificate")
+		return err
+	}
+
+	if !valid {
+		logrus.Info("Certificate is not valid or is nearing expiry, attempting to renew")
+
+		isBYO, err := certManager.IsBYO()
 		if err != nil {
-			resCh <- err
-			return
+			logrus.WithError(err).Warn("Failed to determine if using BYO certificate, assuming Tigera Operator managed")
 		}
 
-		certValid, err := certManager.IsCertificateValid(*renewalThreshold)
-		if err != nil || !certValid {
-			// Rotate private key and request a new certificate when the current certificate is expired.
-			if err := certManager.RequestAndWriteCertificate(); err != nil {
-				resCh <- err
+		if !isBYO {
+			// Send a CSR to the Tigera Operator signer to request a new certificate.
+			logrus.Info("Requesting new certificate from Tigera Operator")
+
+			resCh := make(chan error, 1)
+			defer close(resCh)
+
+			go func() {
+				// Rotate private key and request a new certificate when the current certificate is expired.
+				if err := certManager.RequestAndWriteCertificate(); err != nil {
+					resCh <- err
+				}
+				resCh <- nil
+			}()
+
+			select {
+			case err := <-resCh:
+				if err != nil {
+					logrus.WithError(err).Fatal("Failed to obtain certificate")
+					return err
+				}
+			case <-ctx.Done():
+				if err := ctx.Err(); err != nil {
+					logrus.WithError(err).Fatal("Context canceled while obtaining certificate")
+					return err
+				}
 			}
-		}
-		resCh <- nil
-	}()
+		} else {
+			// Use BYO certificate.
+			logrus.Info("Using BYO certificate")
 
-	select {
-	case err := <-resCh:
-		if err != nil {
-			logrus.WithError(err).Fatal("Failed to obtain certificate")
-			return err
-		}
-	case <-ctx.Done():
-		if err := ctx.Err(); err != nil {
-			logrus.WithError(err).Fatal("Context canceled while obtaining certificate")
-			return err
+			if err := certManager.WriteBYOCertificate(); err != nil {
+				logrus.WithError(err).Fatal("Failed to write BYO certificates")
+				return err
+			}
 		}
 	}
 	return nil
