@@ -72,7 +72,6 @@ const (
 	DroppedFailedDecap
 	DroppedUnauthSource
 	DroppedUnknownRoute
-	AcceptedByEgressGW
 	DroppedBlackholeRoute
 	SourceCollisionHit
 	SourceCollisionResolutionFailed
@@ -84,6 +83,7 @@ const (
 	DroppedFragReorder
 	DroppedFragUnsupported
 	DroppedQoS
+	AcceptedByEgressGW
 	// Add counters above this
 	AcceptedByXDP
 	WEPNotReady

@@ -4410,6 +4410,7 @@ spec:
                     type: string
                   type: array
                 assignmentMode:
+                  default: Automatic
                   enum:
                     - Automatic
                     - Manual
@@ -4554,7 +4555,7 @@ spec:
                                     items:
                                       type: string
                                     type: array
-                                  interfaceSelector:
+                                  interfacePattern:
                                     type: string
                                   labels:
                                     additionalProperties:
@@ -4645,7 +4646,7 @@ spec:
                                         items:
                                           type: string
                                         type: array
-                                      interfaceSelector:
+                                      interfacePattern:
                                         type: string
                                       labels:
                                         additionalProperties:

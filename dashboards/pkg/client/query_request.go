@@ -135,6 +135,10 @@ type QueryRequestAggregationFunction struct {
 	Type AggregationFunctionType `json:"type"`
 }
 
+func NewQueryRequestFilterCriterionValue(value any) QueryRequestFilterCriterionValue {
+	return QueryRequestFilterCriterionValue{value: value}
+}
+
 func (v *QueryRequestFilterCriterionValue) UnmarshalJSON(data []byte) error {
 
 	var valueString string
