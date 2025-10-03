@@ -68,6 +68,8 @@ func main() {
 		log.WithError(err).Fatal("Error processing kubeconfig file in environment variable KUBECONFIG")
 	}
 	restCfg.Timeout = 15 * time.Second
+	restCfg.Burst = serverCfg.K8sClientBurst
+	restCfg.QPS = serverCfg.K8sClientQPS
 
 	// Create a k8s and calico v3 clientset, and associated informer factories.
 	k8sClient, err := kubernetes.NewForConfig(restCfg)

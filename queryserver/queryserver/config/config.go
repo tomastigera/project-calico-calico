@@ -19,4 +19,9 @@ type Config struct {
 	OIDCAuthGroupsPrefix   string `envconfig:"OIDC_AUTH_GROUPS_PREFIX" split_words:"true"`
 
 	PrometheusEndpoint string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
+
+	// K8sClientQPS => rest.Config.QPS
+	K8sClientQPS float32 `default:"100.0" split_words:"true"`
+	// K8sClientBurst => rest.Config.Burst
+	K8sClientBurst int `default:"1000" split_words:"true"`
 }
