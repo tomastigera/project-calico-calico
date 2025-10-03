@@ -103,11 +103,13 @@ func releaseSubCommands(cfg *Config) []*cli.Command {
 					calico.WithVersion(ver.FormattedString()),
 					calico.WithOperatorVersion(operatorVer.FormattedString()),
 					calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, ver.FormattedString())),
+					calico.WithTmpDir(cfg.TmpDir),
 					calico.WithArchitectures(c.StringSlice(archFlag.Name)),
 					calico.WithGithubOrg(c.String(orgFlag.Name)),
 					calico.WithRepoName(c.String(repoFlag.Name)),
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 					calico.WithBuildImages(c.Bool(buildImagesFlag.Name)),
+					calico.WithArchiveImages(c.Bool(archiveImagesFlag.Name)),
 				}
 				if c.Bool(skipValidationFlag.Name) {
 					opts = append(opts, calico.WithValidate(false))
@@ -138,6 +140,7 @@ func releaseSubCommands(cfg *Config) []*cli.Command {
 					calico.WithVersion(ver.FormattedString()),
 					calico.WithOperatorVersion(operatorVer.FormattedString()),
 					calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, ver.FormattedString())),
+					calico.WithTmpDir(cfg.TmpDir),
 					calico.WithGithubOrg(c.String(orgFlag.Name)),
 					calico.WithRepoName(c.String(repoFlag.Name)),
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
