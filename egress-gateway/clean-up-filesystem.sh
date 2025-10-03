@@ -46,6 +46,9 @@ bin_allow_list_patterns=(
   iptables
   ip6tables
 
+  nftables
+  nft
+
   # kmod is a multi-binary backing depmod/insmod/etc; used by iptables
   kmod depmod insmod modinfo modprobe rmmod lsmod
 
@@ -204,6 +207,7 @@ packages_to_keep=(
   libz
   mpfr
   ncurses
+  nftables
   openssl-libs
   pcre
   readline
@@ -223,6 +227,22 @@ for pattern in "${packages_to_keep[@]}"; do
   ((i += 2))
 done
 
+# Removing one of the packages deletes some files that shouldn't be removed.
+# Move them out of the way first, then restore them.
+files_to_save=(
+  /etc/rc.local
+
+  # These are all used by the nft binary.
+  /usr/lib64/libreadline.so.*
+  /usr/lib64/libjansson.so.*
+)
+
+for file in "${files_to_save[@]}"; do
+  fn=$(basename ${file})
+  echo "Moving ${file} -> /etc/${fn}.bak"
+  mv $file /etc/$fn.bak
+done
+
 # List all the packages and use an inverse grep to filter out the ones that we want to
 # keep.  The output from microdnf repoquery includes the full version of each package
 # but rpm only wants the package name, not its version.
@@ -240,9 +260,12 @@ packages_to_remove=$(microdnf repoquery --installed |
 
 echo "Removing ${packages_to_remove}"
 # Removing one of the packages deletes rc.local, move it out of the way.
-mv /etc/rc.local /etc/rc.local.bak
 rpm -e --nodeps $packages_to_remove
-mv /etc/rc.local.bak /etc/rc.local
+for file in "${files_to_save[@]}"; do
+  fn=$(basename ${file})
+  echo "Restoring /etc/${fn}.bak -> ${file}"
+  mv /etc/$fn.bak $file
+done
 
 # Sanity check that we didn't remove anything we want to keep.
 for path in "${!binaries_to_keep[@]}"; do
