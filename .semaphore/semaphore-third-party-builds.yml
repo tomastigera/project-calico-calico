@@ -1,5 +1,6 @@
-# !! WARNING, DO NOT EDIT !! This file is generated from semaphore.yml.d.
-# To update, modify the template and then run 'make gen-semaphore-yaml'.
+# !! WARNING, DO NOT EDIT !! This file is generated from the templates
+# in /.semaphore/semaphore.yml.d. To update, modify the relevant
+# template and then run 'make gen-semaphore-yaml'.
 version: v1.0
 name: Calico
 execution_time_limit:
@@ -104,7 +105,6 @@ blocks:
         - name: Linux multi-arch manifests
           commands:
             - make -C third_party/snort3 push-manifest CONFIRM=true
-
   - name: deep-packet-inspection
     run:
       when: "true"
@@ -181,7 +181,6 @@ blocks:
         - name: Linux multi-arch manifests
           commands:
             - make -C third_party/elasticsearch push-manifest CONFIRM=true
-
   - name: elasticsearch
     run:
       when: "true"
@@ -254,7 +253,6 @@ blocks:
         - name: Linux multi-arch manifests
           commands:
             - make -C third_party/fluentd-base push-manifest CONFIRM=true
-
   - name: fluentd
     run:
       when: "true"
@@ -278,7 +276,6 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-
   - name: Publish tigera/fluentd-base Windows images
     run:
       when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -328,7 +325,6 @@ blocks:
         - name: Windows multi-arch manifests
           commands:
             - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
-
   - name: fluentd Windows
     run:
       when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
