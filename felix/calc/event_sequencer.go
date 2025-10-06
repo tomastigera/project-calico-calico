@@ -372,6 +372,10 @@ func (buf *EventSequencer) flushPolicyUpdates() {
 }
 
 func ParsedRulesToActivePolicyUpdate(key model.PolicyKey, rules *ParsedRules) *proto.ActivePolicyUpdate {
+	var perfHints []string
+	for _, hint := range rules.PerformanceHints {
+		perfHints = append(perfHints, string(hint))
+	}
 	return &proto.ActivePolicyUpdate{
 		Id: &proto.PolicyID{
 			Tier: key.Tier,
@@ -390,6 +394,7 @@ func ParsedRulesToActivePolicyUpdate(key model.PolicyKey, rules *ParsedRules) *p
 			Untracked:        rules.Untracked,
 			PreDnat:          rules.PreDNAT,
 			OriginalSelector: rules.OriginalSelector,
+			PerfHints:        perfHints,
 		},
 	}
 }

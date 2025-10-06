@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -189,12 +190,12 @@ func NewRuleScanner() *RuleScanner {
 }
 
 func (rs *RuleScanner) OnProfileActive(key model.ProfileRulesKey, profile *model.ProfileRules) {
-	parsedRules := rs.updateRules(key, profile.InboundRules, profile.OutboundRules, false, false, "", "")
+	parsedRules := rs.updateRules(key, profile.InboundRules, profile.OutboundRules, false, false, "", "", nil)
 	rs.RulesUpdateCallbacks.OnProfileActive(key, parsedRules)
 }
 
 func (rs *RuleScanner) OnProfileInactive(key model.ProfileRulesKey) {
-	rs.updateRules(key, nil, nil, false, false, "", "")
+	rs.updateRules(key, nil, nil, false, false, "", "", nil)
 	rs.RulesUpdateCallbacks.OnProfileInactive(key)
 }
 
@@ -207,12 +208,13 @@ func (rs *RuleScanner) OnPolicyActive(key model.PolicyKey, policy *model.Policy)
 		policy.PreDNAT,
 		policy.Namespace,
 		selector.Normalise(policy.Selector),
+		policy.PerformanceHints,
 	)
 	rs.RulesUpdateCallbacks.OnPolicyActive(key, parsedRules)
 }
 
 func (rs *RuleScanner) OnPolicyInactive(key model.PolicyKey) {
-	rs.updateRules(key, nil, nil, false, false, "", "")
+	rs.updateRules(key, nil, nil, false, false, "", "", nil)
 	rs.RulesUpdateCallbacks.OnPolicyInactive(key)
 }
 
@@ -222,6 +224,7 @@ func (rs *RuleScanner) updateRules(
 	untracked, preDNAT bool,
 	origNamespace string,
 	origSelector string,
+	perfHints []apiv3.PolicyPerformanceHint,
 ) (parsedRules *ParsedRules) {
 	log.Debugf("Scanning rules (%v in, %v out) for key %v",
 		len(inbound), len(outbound), key)
@@ -263,6 +266,7 @@ func (rs *RuleScanner) updateRules(
 		Untracked:        untracked,
 		PreDNAT:          preDNAT,
 		OriginalSelector: origSelector,
+		PerformanceHints: perfHints,
 	}
 
 	// Figure out which IP sets are new.
@@ -348,6 +352,8 @@ type ParsedRules struct {
 	PreDNAT bool
 
 	OriginalSelector string
+
+	PerformanceHints []apiv3.PolicyPerformanceHint
 }
 
 // ParsedRule is like a backend.model.Rule, except the selector matches and named ports are

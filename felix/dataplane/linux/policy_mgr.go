@@ -15,9 +15,11 @@
 package intdataplane
 
 import (
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/proto"
@@ -104,6 +106,20 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		// The iptables layer will avoid programming it if it is not actually used.
 		m.rawTable.UpdateChains(chains)
 		m.mangleTable.UpdateChains(chains)
+
+		if slices.Contains(msg.Policy.PerfHints, string(v3.PerfHintAssumeNeededOnEveryNode)) {
+			// For the filter table only (since it is the mainline), treat the
+			// AssumeNeededOnEveryNode hint as a trigger to program the policy
+			// even if it's not referenced yet.
+			var chainsCopy []*generictables.Chain
+			for _, chain := range chains {
+				chainCopy := *chain
+				chainCopy.ForceProgramming = true
+				chainsCopy = append(chainsCopy, &chainCopy)
+			}
+			log.WithField("id", msg.Id).Debug("Forcing programming of policy chains due to AssumeNeededOnEveryNode hint")
+			chains = chainsCopy
+		}
 		m.filterTable.UpdateChains(chains)
 	case *proto.ActivePolicyRemove:
 		log.WithField("id", msg.Id).Debug("Removing policy chains")
