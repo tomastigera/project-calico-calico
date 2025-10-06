@@ -11,20 +11,17 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"embed"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-//go:embed cert
-var certs embed.FS
 
 type httpReqSpec struct {
 	method  string
@@ -97,8 +94,7 @@ func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Respo
 }
 
 func mTLSClient(t *testing.T) *http.Client {
-	// Read the CA from the embedded files
-	caCert, err := certs.ReadFile("cert/RootCA.crt")
+	caCert, err := os.ReadFile("cert/RootCA.crt")
 	require.NoError(t, err)
 
 	// Get client  for mTLS.
@@ -136,7 +132,7 @@ func mustGetTLSKeyPair(t *testing.T, certPEM, keyPEM []byte) tls.Certificate {
 }
 
 func tlsClient(t *testing.T) *http.Client {
-	caCert, err := certs.ReadFile("cert/RootCA.crt")
+	caCert, err := os.ReadFile("cert/RootCA.crt")
 	require.NoError(t, err)
 
 	tlsConfig := &tls.Config{

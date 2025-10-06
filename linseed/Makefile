@@ -65,6 +65,7 @@ $(LINSEED_CONTAINER_CREATED): Dockerfile bin/linseed-$(ARCH)
 .PHONY: clean
 clean: stop-elastic
 	rm -rf bin \
+		fv/cert/*.{crt,csr,key,srl} \
 		report/*.xml \
 		config/
 	find . -name '*.coverprofile' -type f -delete
@@ -100,7 +101,7 @@ MOCKERY_FILE_PATHS= \
 .PHONY: ut
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
-ut-fast:
+ut-fast: gen-certs
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
 
 st:
@@ -118,6 +119,7 @@ run-image: stop-image stop-elastic run-elastic k8s-setup
 	docker run --detach \
 		--net=host \
 		--name=tigera-$(LINSEED_IMAGE) \
+		--user=$(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
@@ -141,7 +143,7 @@ stop-image:
 ## Run the FVs
 WHAT=.
 fv: clean image run-elastic k8s-setup fv-fast
-fv-fast: build-tests
+fv-fast: build-tests gen-certs
 	 cd fv && ./fv.test -test.run $(WHAT)
 
 
@@ -180,6 +182,23 @@ fv-token-file:  run-k8s-apiserver
 # to interact with docker.
 build-tests: $(shell find ./fv -type f -name '*.go' -print)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+
+# Generate certificates for use by Linseed UT/FV tests.
+gen-certs:
+	openssl genrsa -out $(REPO_ROOT)/linseed/fv/cert/RootCA.key 2048
+	openssl req -x509 -new -nodes -key $(REPO_ROOT)/linseed/fv/cert/RootCA.key -days 3 -sha256 \
+		-out $(REPO_ROOT)/linseed/fv/cert/RootCA.crt \
+		-subj "/C=US/CN=linseed-fv-ca"
+	
+	openssl genrsa -out $(REPO_ROOT)/linseed/fv/cert/localhost.key 2048
+	openssl req -new -key $(REPO_ROOT)/linseed/fv/cert/localhost.key \
+		-out $(REPO_ROOT)/linseed/fv/cert/localhost.csr \
+		-subj "/C=US/CN=localhost.local"
+	openssl x509 -req -in $(REPO_ROOT)/linseed/fv/cert/localhost.csr \
+		-CA $(REPO_ROOT)/linseed/fv/cert/RootCA.crt \
+		-CAkey $(REPO_ROOT)/linseed/fv/cert/RootCA.key \
+		-CAcreateserial -out $(REPO_ROOT)/linseed/fv/cert/localhost.crt -days 3 -sha256 \
+		-extfile $(REPO_ROOT)/linseed/fv/cert/localhost-tls.cnf
 
 ###############################################################################
 # CI/CD
