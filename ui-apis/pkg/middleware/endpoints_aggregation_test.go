@@ -50,10 +50,10 @@ var _ = Describe("", func() {
 
 	It("test buildQueryServerEndpointKeyString result", func() {
 		result := buildQueryServerEndpointKeyString("ns", "name", "nameaggr")
-		Expect(result).To(Equal(".*ns/.*-name"))
+		Expect(result).To(Equal("(.*?ns/.*?-name)"))
 
 		result = buildQueryServerEndpointKeyString("ns", "-", "nameaggr")
-		Expect(result).To(Equal(".*ns/.*-nameaggr"))
+		Expect(result).To(Equal("(.*?ns/.*?-nameaggr)"))
 	})
 
 	Context("test validateEndpointsAggregationRequest", func() {
@@ -254,11 +254,11 @@ var _ = Describe("", func() {
 			endpointsRespBody = querycacheclient.QueryEndpointsResp{
 				Count: 5,
 				Items: []querycacheclient.Endpoint{
-					{Name: "ep1", Namespace: "ns1", Node: "node1", Pod: "ep1"},
-					{Name: "ep2", Namespace: "ns1", Node: "node2", Pod: "ep2"},
-					{Name: "ep10", Namespace: "ns2", Node: "node1", Pod: "ep10"},
-					{Name: "ep11", Namespace: "ns2", Node: "node1", Pod: "bp11"},
-					{Name: "ep10", Namespace: "ns3", Node: "node2", Pod: "ep10"},
+					{Name: "node1-ep1", Namespace: "ns1", Node: "node1", Pod: "ep1"},
+					{Name: "node2-ep2", Namespace: "ns1", Node: "node2", Pod: "ep2"},
+					{Name: "node1-ep10", Namespace: "ns2", Node: "node1", Pod: "ep10"},
+					{Name: "node1-ep11", Namespace: "ns2", Node: "node1", Pod: "bp11"},
+					{Name: "node2-ep10", Namespace: "ns3", Node: "node2", Pod: "ep10"},
 				},
 			}
 		})
@@ -294,7 +294,7 @@ var _ = Describe("", func() {
 		})
 	})
 
-	Context("test getDeniedEndpointsFromLinseed", func() {
+	Context("test deniedEndpointsRegex", func() {
 
 		endpointsAggregatedReq := &EndpointsAggregationRequest{
 			ClusterName: "cluster",
@@ -326,7 +326,7 @@ var _ = Describe("", func() {
 			}
 			lsc := client.NewMockClient("", results...)
 
-			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReview)
+			deniedEndpoints, err := deniedEndpointsRegex(ctx, endpointsAggregatedReq, lsc, authReview)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deniedEndpoints).To(HaveLen(0))
 		})
@@ -352,7 +352,7 @@ var _ = Describe("", func() {
 			}
 			lsc := client.NewMockClient("", results...)
 
-			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReview)
+			deniedEndpoints, err := deniedEndpointsRegex(ctx, endpointsAggregatedReq, lsc, authReview)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deniedEndpoints).To(HaveLen(2))
 
@@ -382,7 +382,7 @@ var _ = Describe("", func() {
 			}
 			lsc := client.NewMockClient("", results...)
 
-			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReviewNoGetToFlows)
+			deniedEndpoints, err := deniedEndpointsRegex(ctx, endpointsAggregatedReq, lsc, authReviewNoGetToFlows)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deniedEndpoints).To(BeNil())
 		})

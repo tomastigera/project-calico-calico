@@ -131,10 +131,12 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 					{
 						Namespace: "ns-src",
 						Pod:       "ep-src-1234",
+						Name:      "node--1-orchestrator-ep--src--1234-eth0",
 					},
 					{
 						Namespace: "ns-dst",
 						Pod:       "ep-dst-1234",
+						Name:      "node--1-orchestrator-ep--dst--1234-eth0",
 					},
 				},
 			}
@@ -142,8 +144,8 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 				// If showDeniedEndpointsOnly is true, the endpoints aggregation handler will generate
 				// an endpoint list based on the result of the linseedResults.
 				Expect(requestBody.EndpointsList).Should(ConsistOf([]string{
-					".*ns-src/.*-ep--src--*",
-					".*ns-dst/.*-ep--dst--*",
+					"(.*?ns-src/.*?-ep--src--*)",
+					"(.*?ns-dst/.*?-ep--dst--*)",
 				}))
 			})
 			defer server.Close()
@@ -202,14 +204,17 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 					{
 						Namespace: "ns-src",
 						Pod:       "ep-src-1234",
+						Name:      "node--1-orchestrator-ep--src--1234-eth0",
 					},
 					{
 						Namespace: "ns-dst",
 						Pod:       "ep-dst-1234",
+						Name:      "node-1-orchestrator-ep--dst--1234-eth0",
 					},
 					{
 						Namespace: "ns-allow",
 						Pod:       "ep-allow-1234",
+						Name:      "node-1-orchestrator-ep--allow--1234-eth0",
 					},
 				},
 			}

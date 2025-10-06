@@ -3,21 +3,20 @@ package staticmetadata
 import (
 	"encoding/json"
 	"io/fs"
-	"maps"
 	"net/http"
-	"slices"
 
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
 	"github.com/tigera/tds-apiserver/pkg/types"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/map/orderedmap"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository/dashboards"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 )
 
 type StaticMetadataService struct {
-	dashboards map[client.DashboardID]client.Dashboard
+	dashboards *orderedmap.OrderedMap[client.DashboardID, client.Dashboard]
 }
 
 func NewStaticMetadataService() (*StaticMetadataService, error) {
@@ -31,8 +30,8 @@ func NewStaticMetadataService() (*StaticMetadataService, error) {
 	}, nil
 }
 
-func loadDashboards() (map[client.DashboardID]client.Dashboard, error) {
-	globalDashboards := map[client.DashboardID]client.Dashboard{}
+func loadDashboards() (*orderedmap.OrderedMap[client.DashboardID, client.Dashboard], error) {
+	globalDashboards := orderedmap.New[client.DashboardID, client.Dashboard]()
 	return globalDashboards, fs.WalkDir(dashboards.GlobalDashboardsEmbed, ".", func(fsPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// keep walking
@@ -53,14 +52,14 @@ func loadDashboards() (map[client.DashboardID]client.Dashboard, error) {
 		}
 
 		dashboard.IsImmutable = true
-		globalDashboards[dashboard.ID] = dashboard
+		globalDashboards.Put(dashboard.ID, dashboard)
 
 		return nil
 	})
 }
 
 func (s *StaticMetadataService) Get(ctx security.Context, _ types.ProjectID, dashboardID types.DashboardID) (client.Dashboard, error) {
-	dashboard, ok := s.dashboards[client.DashboardID(dashboardID)]
+	dashboard, ok := s.dashboards.Get(client.DashboardID(dashboardID))
 	if !ok {
 		return client.Dashboard{}, httpreply.ReplyNotFound
 	}
@@ -70,7 +69,7 @@ func (s *StaticMetadataService) Get(ctx security.Context, _ types.ProjectID, das
 
 func (s *StaticMetadataService) List(ctx security.Context, _ types.ProjectID) (client.DashboardListResponse, error) {
 	return client.DashboardListResponse{
-		Dashboards: tdsslices.Map(slices.Collect(maps.Values(s.dashboards)), func(dashboard client.Dashboard) client.DashboardSummary {
+		Dashboards: tdsslices.Map(s.dashboards.ValuesInOrder(), func(dashboard client.Dashboard) client.DashboardSummary {
 			return client.DashboardSummary{
 				ID:    dashboard.ID,
 				Title: dashboard.Title,

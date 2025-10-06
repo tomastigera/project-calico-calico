@@ -117,6 +117,7 @@ COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
 
 RUN microdnf --enablerepo=baseos install \
     iproute-tc \
+    nftables \
     # Needed for conntrack
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
     conntrack-tools

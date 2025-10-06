@@ -38,6 +38,9 @@ configure_nftables()
   MSS_CLAMP_VALUE=$1
 
   nft -f - <<EOF
+create table ip nat
+add chain ip nat POSTROUTING { type nat hook postrouting priority 100; }
+add rule ip nat POSTROUTING masquerade
 create table egw
 add chain egw mangle-FORWARD { type filter hook forward priority mangle; }
 add rule ip egw mangle-FORWARD oifname "eth0" tcp flags & (syn|rst) == syn counter tcp option maxseg size set ${MSS_CLAMP_VALUE}
