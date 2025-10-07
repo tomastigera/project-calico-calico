@@ -77,6 +77,7 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 
 	dockerArgs := []string{
 		"--net=host",
+		fmt.Sprintf("--user=%d:%d", os.Getuid(), os.Getgid()),
 		"-v", fmt.Sprintf("%s/cert/localhost.crt:/certs/https/tls.crt", cwd),
 		"-v", fmt.Sprintf("%s/cert/localhost.key:/certs/https/tls.key", cwd),
 		"-v", fmt.Sprintf("%s/cert/RootCA.crt:/certs/https/client.crt", cwd),
@@ -169,6 +170,7 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 
 	dockerArgs := []string{
 		"--net=host",
+		fmt.Sprintf("--user=%d:%d", os.Getuid(), os.Getgid()),
 		"-e", "ELASTIC_HOST=localhost",
 		"-e", "ELASTIC_SCHEME=http",
 		"-e", "LINSEED_LOG_LEVEL=debug",

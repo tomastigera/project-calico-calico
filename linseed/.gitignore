@@ -1,4 +1,10 @@
-fv/linseed-token
+fv/cert/RootCA.crt
+fv/cert/RootCA.key
+fv/cert/RootCA.srl
+fv/cert/localhost.crt
+fv/cert/localhost.csr
+fv/cert/localhost.key
 fv/client-token
 fv/client-token-multi-cluster
 fv/data-races.log
+fv/linseed-token

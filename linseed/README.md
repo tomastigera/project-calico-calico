@@ -62,13 +62,13 @@ curl -vvv "https://tigera-linseed.tigera-elasticsearch.svc/api/v1/flows/logs/" \
 
 To build this locally, use one of the following commands:
 
-```
+```bash
 make image
 ```
 
 or
 
-```
+```bash
 make ci
 ```
 
@@ -76,13 +76,13 @@ make ci
 
 To run all tests
 
-```
+```bash
 make test
 ```
 
 In order to run locally, start an elastic server on localhost and k8s server using:
 
-```
+```bash
 make run-elastic k8s-setup copy-es-cacert
 ```
 
@@ -98,7 +98,7 @@ Start Linseed with the following environment variables:
 
 Or simply use the following command:
 
-```
+```bash
 make run-image
 ```
 
@@ -110,48 +110,48 @@ In order to call Linseed API, you can make use of the clients provided as part o
 
 An example to make a paginated query to read flow logs from the last 5 minutes is provided below:
 
-```
-	// Create linseed client.
-	config := rest.Config{
-		URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
-		CACertPath:      "<replace with Linseed CA>",
-		ClientKeyPath:   "<replace with Linseed Client Certificate Path>",
-		ClientCertPath:  "<replace with Linseed Client Certificate Key>",
-	}
-	linseed, err := client.NewClient("<replace with Tenant ID or leave blank>", config, rest.WithTokenPath("<replace with Token path>"))
-	if err != nil {
-		log.WithError(err).Fatal("failed to create linseed client")
-	}
+```go
+// Create linseed client.
+config := rest.Config{
+	URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
+	CACertPath:      "<replace with Linseed CA>",
+	ClientKeyPath:   "<replace with Linseed Client Certificate Path>",
+	ClientCertPath:  "<replace with Linseed Client Certificate Key>",
+}
+linseed, err := client.NewClient("<replace with Tenant ID or leave blank>", config, rest.WithTokenPath("<replace with Token path>"))
+if err != nil {
+	log.WithError(err).Fatal("failed to create linseed client")
+}
 
-	// Define a context that will be used to make requests to Linseed
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-	defer cancel()
+// Define a context that will be used to make requests to Linseed
+ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+defer cancel()
 
-	// Define query parameters
-	params := v1.FlowLogParams{
-		QueryParams: v1.QueryParams{
-			TimeRange: &lmav1.TimeRange{
-				From: time.Now().Add(-5 * time.Second),
-				To:   time.Now().Add(5 * time.Second),
-			},
-			MaxPageSize: 10,
+// Define query parameters
+params := v1.FlowLogParams{
+	QueryParams: v1.QueryParams{
+		TimeRange: &lmav1.TimeRange{
+			From: time.Now().Add(-5 * time.Second),
+			To:   time.Now().Add(5 * time.Second),
 		},
-	}
+		MaxPageSize: 10,
+	},
+}
 
-	// Perform paginated list.
-	pager := client.NewListPager[v1.FlowLog](&params)
-	pages, errors := pager.Stream(ctx, linseed.FlowLogs("<replace with managed CLUSTER name or leave blank>").List)
+// Perform paginated list.
+pager := client.NewListPager[v1.FlowLog](&params)
+pages, errors := pager.Stream(ctx, linseed.FlowLogs("<replace with managed CLUSTER name or leave blank>").List)
 
-	for page := range pages {
-		for _, item := range page.Items {
-			// Process returned data
-			log.Infof("Received item %v", item)
-		}
+for page := range pages {
+	for _, item := range page.Items {
+		// Process returned data
+		log.Infof("Received item %v", item)
 	}
+}
 
-	if err, ok := <-errors; ok {
-		log.WithError(err).Error("failed to read flow logs")
-	}
+if err, ok := <-errors; ok {
+	log.WithError(err).Error("failed to read flow logs")
+}
 ```
 
 ### mTLS connections
@@ -164,6 +164,7 @@ client. Operator will also configure tigera-ca-bundle in the namespace of the co
 generate Linseed server certificate.
 
 ### Multi Cluster Queries
+
 By default, all requests are made for a single cluster, which is specified in the `X-Cluster-Id` header.
 
 Some components, e.g. the (e.g. `cc-dashboard-query-api`) need to query and aggregate data from multiple clusters.
@@ -203,7 +204,7 @@ Operator will also create ClusterRoleBindings using the service account of the c
 
 Sample ClusterRole
 
-```
+```yaml
 kind: ClusterRole
 metadata:
   name: sample-write-cluster-role
@@ -227,7 +228,7 @@ rules:
 The following RBAC can be specified:
 
 | RESOURCE                    | VERB                      |
-|-----------------------------|---------------------------|
+| --------------------------- | ------------------------- |
 | `auditlogs`                 | GET                       |
 | `benchmarks`                | GET/CREATE                |
 | `bgplogs`                   | GET/CREATE                |
@@ -254,7 +255,7 @@ The ability to query across multiple clusters requires additional RBAC permissio
 For each resource used in a multi-cluster query, the following permissions are required:
 
 | RESOURCE                                  | VERB |
-|-------------------------------------------|------|
+| ----------------------------------------- | ---- |
 | `auditlogs-multi-cluster`                 | GET  |
 | `benchmarks-multi-cluster`                | GET  |
 | `bgplogs-multi-cluster`                   | GET  |
@@ -273,33 +274,32 @@ For each resource used in a multi-cluster query, the following permissions are r
 | `threatfeeds_ipset-multi-cluster`         | GET  |
 | `waflogs-multi-cluster`                   | GET  |
 
-
 ### Environment variables
 
 A component running inside a management/standalona cluster will have the following environment variables configured:
 
-```
-│       LINSEED_URL:                  https://tigera-linseed.tigera-elasticsearch.svc                                                                                                                     │
-│       LINSEED_CA:                   /etc/pki/tls/certs/ca.crt                                                                                                                             │
-│       LINSEED_CLIENT_CERT:          /<REPLACE_COMPONENT_NAME>-tls/tls.crt                                                                                                                                    │
-│       LINSEED_CLIENT_KEY:           /<REPLACE_COMPONENT_NAME>-tls/tls.key                                                                                                                                    │
-│       LINSEED_TOKEN:                /var/run/secrets/kubernetes.io/serviceaccount/token
+```text
+LINSEED_URL:                https://tigera-linseed.tigera-elasticsearch.svc
+LINSEED_CA:                 /etc/pki/tls/certs/ca.crt
+LINSEED_CLIENT_CERT:        /<REPLACE_COMPONENT_NAME>-tls/tls.crt
+LINSEED_CLIENT_KEY:         /<REPLACE_COMPONENT_NAME>-tls/tls.key
+LINSEED_TOKEN:              /var/run/secrets/kubernetes.io/serviceaccount/token
 ```
 
 A component running inside a managed cluster will have the following environment variables configured
 
-```
-│       LINSEED_URL:                  https://tigera-linseed.tigera-elasticsearch.svc                                                                                                                     │
-│       LINSEED_CA:                   /etc/pki/tls/certs/ca.crt                                                                                                                             │
-│       LINSEED_CLIENT_CERT:          /<REPLACE_COMPONENT_NAME>-tls/tls.crt                                                                                                                                    │
-│       LINSEED_CLIENT_KEY:           /<REPLACE_COMPONENT_NAME>-tls/tls.key                                                                                                                                    │
-│       LINSEED_TOKEN:                /var/run/secrets/tigera.io/linseed/token
+```text
+LINSEED_URL:                https://tigera-linseed.tigera-elasticsearch.svc
+LINSEED_CA:                 /etc/pki/tls/certs/ca.crt
+LINSEED_CLIENT_CERT:        /<REPLACE_COMPONENT_NAME>-tls/tls.crt
+LINSEED_CLIENT_KEY:         /<REPLACE_COMPONENT_NAME>-tls/tls.key
+LINSEED_TOKEN:              /var/run/secrets/tigera.io/linseed/token
 ```
 
 ## Configuration and permissions
 
 | ENV                                       |                  Default value                   |                                                                                                                          Description |
-|-------------------------------------------|:------------------------------------------------:|-------------------------------------------------------------------------------------------------------------------------------------:|
+| ----------------------------------------- | :----------------------------------------------: | -----------------------------------------------------------------------------------------------------------------------------------: |
 | LINSEED_PORT                              |                      `443`                       |                                                                                                      Local Port to start the service |
 | LINSEED_HOST                              |                     <empty>                      |                                                                                                                 Host for the service |
 | LINSEED_LOG_LEVEL                         |                      `Info`                      |                                                                                                             Log Level across service |
@@ -317,7 +317,7 @@ A component running inside a managed cluster will have the following environment
 | MANAGEMENT_OPERATOR_NS                    |                `tigera-operator`                 |                                                      The namespace in which tigera-operator is running inside the management cluster |
 | TOKEN_CONTROLLER_ENABLED                  |                     `false`                      |                                     Enabling Token controller. Will provision tokens for components running inside a managed cluster |
 | LINSEED_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://tigera-manager.tigera-manager.svc:9443` |                                  Tigera Manager Endpoint used to override K8S API Endpoint to make requests inside a managed cluster |
-| LINSEED_MULTI_CLUSTER_FORWARDING_CA       |    `/etc/pki/tls/certs/ca.crt`     |                                                        Path to the CA that trust the certificate provided by tigera manager endpoint |
+| LINSEED_MULTI_CLUSTER_FORWARDING_CA       |           `/etc/pki/tls/certs/ca.crt`            |                                                        Path to the CA that trust the certificate provided by tigera manager endpoint |
 | LINSEED_HEALTH_PORT                       |                      `8080`                      |                                                                                   Health port used for readiness and liveness probes |
 | ELASTIC_HOST                              | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                                                    Elastic Host; For local development use localhost |
 | ELASTIC_PORT                              |                      `9200`                      |                                                                                         Elastic Port; For local development use 9200 |
@@ -388,6 +388,3 @@ All communication with Linseed requires mTLS. X509 certificates will be mounted 
 
 - [Low level design for changes to the log storage subsystem](https://docs.google.com/document/d/1raHOohq0UWlLD9ygqsvu4vPMNNS9iGeY5xhHKt0O3Hc/edit?usp=sharing)
 - [Multi-tenancy Proposal](https://docs.google.com/document/d/1HM0gba3hlR_cdTqHWc-NSqoiGHrVdTc_g1w3k8NmSdM/edit?usp=sharing)
-
-
-
