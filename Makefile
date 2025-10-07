@@ -213,7 +213,7 @@ get-operator-crds: var-require-all-OPERATOR_BRANCH
 	$(MAKE) fix-changed
 
 gen-semaphore-yaml:
-	$(DOCKER_GO_BUILD) sh -c "go run ./hack/cmd/deps generate-semaphore-yamls"
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ./hack/cmd/deps generate-semaphore-yamls'
 
 GO_DIRS=$(shell find -name '*.go' | grep -v -e './lib/' -e './pkg/' | grep -o --perl '^./\K[^/]+' | sort -u)
 DEP_FILES=$(patsubst %, %/deps.txt, $(GO_DIRS))
@@ -228,7 +228,7 @@ $(DEP_FILES): go.mod go.sum $(shell find . -name '*.go') Makefile hack/cmd/deps/
 	  echo "in order to trigger CI on changes" && \
 	  echo && \
 	  grep '^go' go.mod && \
-	  $(DOCKER_GO_BUILD) sh -c "go run ./hack/cmd/deps modules $(dir $@)"; \
+	  $(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) go run ./hack/cmd/deps modules $(dir $@)"; \
 	} > $@
 
 # Build the tigera-operator helm chart.
