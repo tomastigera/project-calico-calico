@@ -11,12 +11,12 @@ var collectionWAF = Collection{
 			fieldType: FieldTypeIP,
 		},
 		collectionFieldGeneric{
-			fieldName:      "source.pod_name",
+			fieldName:      "source.name",
 			fieldType:      FieldTypeText,
 			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName:      "source.pod_namespace",
+			fieldName:      "source.namespace",
 			fieldType:      FieldTypeText,
 			filterDisabled: true,
 		},
@@ -34,12 +34,12 @@ var collectionWAF = Collection{
 			fieldType: FieldTypeIP,
 		},
 		collectionFieldGeneric{
-			fieldName:      "destination.pod_name",
+			fieldName:      "destination.name",
 			fieldType:      FieldTypeText,
 			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName:      "destination.pod_namespace",
+			fieldName:      "destination.namespace",
 			fieldType:      FieldTypeText,
 			filterDisabled: true,
 		},
@@ -112,10 +112,10 @@ var collectionWAF = Collection{
 	},
 	groupBys: []GroupBy{
 		groupBy{
-			field: "source.pod_namespace",
+			field: "source.namespace",
 			nested: []GroupBy{
 				groupBy{
-					field: "source.pod_name",
+					field: "source.name",
 					nested: []GroupBy{
 						groupBy{
 							field:  "source.hostname",
@@ -124,10 +124,10 @@ var collectionWAF = Collection{
 					},
 				},
 				groupBy{
-					field: "destination.pod_namespace",
+					field: "destination.namespace",
 					nested: []GroupBy{
 						groupBy{
-							field:  "destination.pod_name",
+							field:  "destination.name",
 							nested: []GroupBy{},
 						},
 					},
@@ -138,8 +138,8 @@ var collectionWAF = Collection{
 		groupBy{field: "source.port_num"},
 		groupBy{field: "source.hostname"},
 		groupBy{field: "destination.ip"},
-		groupBy{field: "destination.pod_name"},
-		groupBy{field: "destination.pod_namespace"},
+		groupBy{field: "destination.name"},
+		groupBy{field: "destination.namespace"},
 		groupBy{field: "destination.port_num"},
 		groupBy{field: "destination.hostname"},
 
