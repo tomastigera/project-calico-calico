@@ -1,0 +1,14 @@
+f075ba6b4ae62f4f1aca2d0da4fc06c192910821:third_party/prometheus-operator/patches/0001-Update-libraries.patch:generic-api-key:90
+b95d1fb9767f73f665f73a363eca66eeb5da0bc9:pod2daemon/patches/0002-Patch-go-CVEs.patch:generic-api-key:47
+1fb97dfe872e3166bd09a0322484c5143994c562:calico/security/comms/certificate-management.md:generic-api-key:53
+18526a4c970fd1a3c0558407f5e577639d8a64b5:anomaly-detection-api/fv/resources/tls/tls.key:private-key:1
+c6b4f1c786aff371f2641771b49a866172daa4c5:_includes/master/install-upgrade-operator-openshift.md:generic-api-key:164
+c6b4f1c786aff371f2641771b49a866172daa4c5:_includes/master/non-helm-manifests/operator/monitor-calico.yaml:generic-api-key:580
+c6b4f1c786aff371f2641771b49a866172daa4c5:_includes/master/non-helm-manifests/operator/monitor-calico.yaml:kubernetes-secret-yaml:328
+42868004783d3b7bc07f2b2632a5269fdc037a1e:_includes/v2.5/charts/tigera-secure-ee/templates/monitor-calico.yaml:kubernetes-secret-yaml:276
+42868004783d3b7bc07f2b2632a5269fdc037a1e:_includes/v2.5/charts/tigera-secure-ee/templates/monitor-calico.yaml:generic-api-key:589
+4c2d5a8c9a695279c6cb4c2d0b822f98640ef68e:_includes/v2.4/charts/tigera-secure-ee/templates/monitor-calico.yaml:generic-api-key:554
+4c2d5a8c9a695279c6cb4c2d0b822f98640ef68e:_includes/v2.4/charts/tigera-secure-ee/templates/monitor-calico.yaml:kubernetes-secret-yaml:255
+741acc18640982566a5037ee48d3016041e8f6a2:_includes/master/manifests/monitor-calico.yaml:generic-api-key:516
+741acc18640982566a5037ee48d3016041e8f6a2:_includes/v2.3/manifests/monitor-calico.yaml:generic-api-key:516
+451f487365ba01da7466fd0784e8b839e7204995:_includes/v2.2/manifests/monitor-calico.yaml:kubernetes-secret-yaml:206
