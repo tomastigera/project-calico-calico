@@ -508,10 +508,10 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- else }}
   multihop;
 {{- end }}
+{{- end}}
 {{- if ne ($data.local_as_num) "0"}}
   local as {{$data.local_as_num}};
 {{- end }}
-{{- end}}
   import filter {
     {{- range $filter := $data.filters }}
     {{- $filterKey := printf "/resources/v3/projectcalico.org/bgpfilters/%s" $filter }}
