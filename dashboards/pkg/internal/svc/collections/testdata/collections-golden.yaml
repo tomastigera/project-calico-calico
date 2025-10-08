@@ -447,7 +447,7 @@
   - field: method
   - field: path
   - field: protocol
-  - field: rule_info
+  - field: rules
   - field: host
   - field: gateway_name
   - field: gateway_namespace
