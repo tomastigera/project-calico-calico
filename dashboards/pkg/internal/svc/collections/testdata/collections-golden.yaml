@@ -381,27 +381,23 @@
   - name: source.ip
     type: ip
   - filterDisabled: true
-    name: source.pod_name
+    name: source.name
     type: text
   - filterDisabled: true
-    name: source.pod_namespace
+    name: source.namespace
     type: text
   - name: source.port_num
     type: number
-  - name: source.hostname
-    type: text
   - name: destination.ip
     type: ip
   - filterDisabled: true
-    name: destination.pod_name
+    name: destination.name
     type: text
   - filterDisabled: true
-    name: destination.pod_namespace
+    name: destination.namespace
     type: text
   - name: destination.port_num
     type: number
-  - name: destination.hostname
-    type: text
   - filterDisabled: true
     name: level
     type: text
@@ -417,7 +413,7 @@
   - filterDisabled: true
     name: request_id
     type: text
-  - name: rule_info
+  - name: rules
     type: text
   - filterDisabled: true
     name: host
@@ -435,22 +431,18 @@
     name: generated_time
     type: date
   groupBys:
-  - field: source.pod_namespace
+  - field: source.namespace
     nested:
-    - field: source.pod_name
+    - field: source.name
+    - field: destination.namespace
       nested:
-      - field: source.hostname
-    - field: destination.pod_namespace
-      nested:
-      - field: destination.pod_name
+      - field: destination.name
   - field: source.ip
   - field: source.port_num
-  - field: source.hostname
   - field: destination.ip
-  - field: destination.pod_name
-  - field: destination.pod_namespace
+  - field: destination.name
+  - field: destination.namespace
   - field: destination.port_num
-  - field: destination.hostname
   - field: level
   - field: method
   - field: path
