@@ -25,11 +25,6 @@ var collectionWAF = Collection{
 			fieldType: FieldTypeNumber,
 		},
 		collectionFieldGeneric{
-			fieldName: "source.hostname",
-			fieldType: FieldTypeText,
-		},
-
-		collectionFieldGeneric{
 			fieldName: "destination.ip",
 			fieldType: FieldTypeIP,
 		},
@@ -47,11 +42,6 @@ var collectionWAF = Collection{
 			fieldName: "destination.port_num",
 			fieldType: FieldTypeNumber,
 		},
-		collectionFieldGeneric{
-			fieldName: "destination.hostname",
-			fieldType: FieldTypeText,
-		},
-
 		collectionFieldGeneric{
 			fieldName:      "level",
 			fieldType:      FieldTypeText,
@@ -80,7 +70,7 @@ var collectionWAF = Collection{
 			filterDisabled: true,
 		},
 		collectionFieldGeneric{
-			fieldName: "rule_info",
+			fieldName: "rules",
 			fieldType: FieldTypeText,
 		},
 		collectionFieldGeneric{
@@ -115,13 +105,8 @@ var collectionWAF = Collection{
 			field: "source.namespace",
 			nested: []GroupBy{
 				groupBy{
-					field: "source.name",
-					nested: []GroupBy{
-						groupBy{
-							field:  "source.hostname",
-							nested: []GroupBy{},
-						},
-					},
+					field:  "source.name",
+					nested: []GroupBy{},
 				},
 				groupBy{
 					field: "destination.namespace",
@@ -136,12 +121,10 @@ var collectionWAF = Collection{
 		},
 		groupBy{field: "source.ip"},
 		groupBy{field: "source.port_num"},
-		groupBy{field: "source.hostname"},
 		groupBy{field: "destination.ip"},
 		groupBy{field: "destination.name"},
 		groupBy{field: "destination.namespace"},
 		groupBy{field: "destination.port_num"},
-		groupBy{field: "destination.hostname"},
 
 		groupBy{field: "level"},
 		groupBy{field: "method"},
