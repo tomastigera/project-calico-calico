@@ -130,7 +130,7 @@ var collectionWAF = Collection{
 		groupBy{field: "method"},
 		groupBy{field: "path"},
 		groupBy{field: "protocol"},
-		groupBy{field: "rule_info"},
+		groupBy{field: "rules"},
 		groupBy{field: "host"},
 		groupBy{field: "gateway_name"},
 		groupBy{field: "gateway_namespace"},
