@@ -239,10 +239,11 @@ type Config struct {
 	FatalErrorRestartCallback    func(error)
 	ChildExitedRestartCallback   func()
 
-	PostInSyncCallback func()
-	HealthAggregator   *health.HealthAggregator
-	WatchdogTimeout    time.Duration
-	RouteTableManager  *idalloc.IndexAllocator
+	PostInSyncCallback    func()
+	HealthAggregator      *health.HealthAggregator
+	WatchdogTimeout       time.Duration
+	RouteTableManager     *idalloc.IndexAllocator
+	bpfProxyHealthzServer *k8shealthcheck.ProxyHealthServer
 
 	ExternalNodesCidrs []string
 
@@ -290,6 +291,7 @@ type Config struct {
 
 	BPFProfiling                   string
 	KubeProxyMinSyncPeriod         time.Duration
+	KubeProxyHealtzPort            int
 	KubeProxyEndpointSlicesEnabled bool
 	FlowLogsCollectProcessInfo     bool
 	FlowLogsCollectTcpStats        bool
@@ -297,13 +299,11 @@ type Config struct {
 	FlowLogsFileIncludeService     bool
 	FlowLogsFileDomainsLimit       int
 	SidecarAccelerationEnabled     bool
-	bpfProxyHealthzServer          *k8shealthcheck.ProxyHealthServer
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool
 	DebugUseShortPollIntervals       bool
 	DebugSimulateDataplaneApplyDelay time.Duration
-	KubeProxyHealtzPort              int
 
 	// Flow logs related fields.
 	NfNetlinkBufSize int
@@ -3574,7 +3574,7 @@ func startBPFDataplaneComponents(
 	ctKey := bpfconntrack.KeyFromBytes
 	ctVal := bpfconntrack.ValueFromBytes
 
-	if config.bpfProxyHealthzServer == nil {
+	if config.bpfProxyHealthzServer == nil && config.KubeProxyHealtzPort != 0 {
 		healthzAddr := fmt.Sprintf(":%d", config.KubeProxyHealtzPort)
 		config.bpfProxyHealthzServer = k8shealthcheck.NewProxyHealthServer(
 			healthzAddr, config.KubeProxyMinSyncPeriod)
@@ -3593,6 +3593,12 @@ func startBPFDataplaneComponents(
 
 	bpfproxyOpts := []bpfproxy.Option{
 		bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
+	}
+
+	if config.bpfProxyHealthzServer != nil {
+		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithHealthzServer(config.bpfProxyHealthzServer))
+	} else {
+		log.Info("No healthz server configured for BPF kube-proxy.")
 	}
 
 	if config.BPFNodePortDSREnabled {
