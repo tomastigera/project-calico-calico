@@ -51,6 +51,8 @@ type Config struct {
 
 	// Endpoint for authorization requests
 	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	// CA used to verify the forwarding endpoint when contacting voltron (Cloud mode)
+	MultiClusterForwardingCA string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	// MaxRequestFilters limits the number of filters on query requests
 	MaxRequestFilters int `default:"10" split_words:"true"`

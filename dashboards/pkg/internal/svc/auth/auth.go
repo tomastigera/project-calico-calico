@@ -20,10 +20,13 @@ import (
 )
 
 type AuthService struct {
-	logger           logging.Logger
-	jwtAuth          lmaauth.JWTAuth
-	authorizer       security.Authorizer
-	k8sManagerConfig *rest.Config
+	logger                         logging.Logger
+	jwtAuth                        lmaauth.JWTAuth
+	authorizer                     security.Authorizer
+	baseK8sConfig                  *rest.Config
+	productMode                    string
+	multiClusterForwardingEndpoint string
+	multiClusterForwardingCA       string
 }
 
 func NewAuthService(
@@ -64,18 +67,20 @@ func NewAuthService(
 		opts = append(opts, lmaauth.WithAuthenticator(cfg.OIDCAuthIssuer, dexAuth))
 	}
 
-	jwtAuth, err := lmaauth.NewJWTAuth(k8sRestConfig, k8sClient, opts...)
+	baseCfg := rest.CopyConfig(k8sRestConfig)
+	jwtAuth, err := lmaauth.NewJWTAuth(baseCfg, k8sClient, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create jwtAuth: %v", err)
 	}
 
 	return &AuthService{
-		logger:     logger,
-		jwtAuth:    jwtAuth,
-		authorizer: authorizer,
-		k8sManagerConfig: &rest.Config{
-			Host: cfg.MultiClusterForwardingEndpoint,
-		},
+		logger:                         logger,
+		jwtAuth:                        jwtAuth,
+		authorizer:                     authorizer,
+		baseK8sConfig:                  baseCfg,
+		productMode:                    cfg.ProductMode,
+		multiClusterForwardingEndpoint: cfg.MultiClusterForwardingEndpoint,
+		multiClusterForwardingCA:       cfg.MultiClusterForwardingCA,
 	}, nil
 }
 
@@ -122,8 +127,27 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		return nil, fmt.Errorf("unexpected authentication status code: %d", statusCode)
 	}
 
-	k8sRestConfig := rest.CopyConfig(s.k8sManagerConfig)
-	k8sRestConfig.BearerToken = strings.TrimPrefix(authHeader, "Bearer ")
+	k8sRestConfig := rest.CopyConfig(s.baseK8sConfig)
+
+	// Configure the Kubernetes client based on product mode.
+	switch s.productMode {
+	case config.ProductModeEnterprise:
+		// In Enterprise mode, we impersonate the authenticated user directly in the k8s client.
+		k8sRestConfig.Impersonate = rest.ImpersonationConfig{
+			UserName: userInfo.GetName(),
+			Groups:   userInfo.GetGroups(),
+		}
+	case config.ProductModeCloud:
+		// In Cloud mode, talk to voltron via the multi-cluster forwarding endpoint and CA so that voltron performs
+		// impersonation on our behalf.
+		if s.multiClusterForwardingEndpoint != "" {
+			k8sRestConfig.Host = s.multiClusterForwardingEndpoint
+		}
+		if s.multiClusterForwardingCA != "" {
+			k8sRestConfig.TLSClientConfig.CAFile = s.multiClusterForwardingCA
+		}
+		k8sRestConfig.BearerToken = strings.TrimPrefix(authHeader, "Bearer ")
+	}
 
 	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
 	if err != nil {
