@@ -395,7 +395,7 @@ release-publish: release/bin/release bin/gh var-require-all-AWS_PROFILE var-requ
 
 # Create a release branch.
 create-release-branch: release/bin/release
-	@MANAGER_BRANCH=$(MANAGER_BRANCH) release/bin/release branch cut -git-publish
+	@MANAGER_BRANCH=$(MANAGER_BRANCH) release/bin/release branch cut
 
 # Test the release code
 release-test:

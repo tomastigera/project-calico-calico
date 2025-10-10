@@ -71,3 +71,10 @@ func WithRetagThirdPartyBaseImages(retag bool) Option {
 		return nil
 	}
 }
+
+func WithRepoManager(m RepoManager) Option {
+	return func(b *BranchManager) error {
+		b.repoManager = m
+		return nil
+	}
+}
