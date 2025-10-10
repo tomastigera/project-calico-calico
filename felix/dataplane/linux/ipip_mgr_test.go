@@ -318,8 +318,8 @@ const (
 )
 
 var (
-	notFound    = errors.New("not found")
-	mockFailure = errors.New("mock failure")
+	errNotFound    = errors.New("not found")
+	errMockFailure = errors.New("mock failure")
 )
 
 type mockTunnelDataplane struct {
@@ -351,7 +351,7 @@ func (d *mockTunnelDataplane) incCallCount() error {
 	d.NumCalls += 1
 	if d.NumCalls == d.ErrorAtCall {
 		logrus.Warn("Simulating an error due to call count")
-		return mockFailure
+		return errMockFailure
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func (d *mockTunnelDataplane) LinkByName(name string) (netlink.Link, error) {
 
 	Expect(name).To(Equal(d.tunnelLinkName))
 	if d.tunnelLink == nil {
-		return nil, notFound
+		return nil, errNotFound
 	}
 	return d.tunnelLink, nil
 }

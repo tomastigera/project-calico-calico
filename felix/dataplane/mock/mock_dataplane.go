@@ -19,7 +19,9 @@ import (
 	"reflect"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
+
+	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
@@ -338,7 +340,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	d.numEvents++
 
 	evType := reflect.TypeOf(event).String()
-	fmt.Fprintf(GinkgoWriter, "       <- Event: %v %v\n", evType, event)
+	fmt.Fprintf(ginkgo.GinkgoWriter, "       <- Event: %v %v\n", evType, event)
 	Expect(event).NotTo(BeNil())
 	Expect(reflect.TypeOf(event).Kind()).To(Equal(reflect.Ptr))
 
@@ -366,7 +368,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.IPSetDeltaUpdate:
 		members, ok := d.ipSets[event.Id]
 		if !ok {
-			Fail(fmt.Sprintf("IP set delta to missing ipset %v", event.Id))
+			ginkgo.Fail(fmt.Sprintf("IP set delta to missing ipset %v", event.Id))
 			return
 		}
 
@@ -385,7 +387,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.IPSetRemove:
 		_, ok := d.ipSets[event.Id]
 		if !ok {
-			Fail(fmt.Sprintf("IP set remove for unknown ipset %v", event.Id))
+			ginkgo.Fail(fmt.Sprintf("IP set remove for unknown ipset %v", event.Id))
 			return
 		}
 		delete(d.ipSets, event.Id)
@@ -419,7 +421,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		for ep, profs := range d.endpointToProfiles {
 			for _, p := range profs {
 				if p == event.Id.Name {
-					Fail(fmt.Sprintf("Profile %s removed while still in use by endpoint %s", p, ep))
+					ginkgo.Fail(fmt.Sprintf("Profile %s removed while still in use by endpoint %s", p, ep))
 				}
 			}
 		}
