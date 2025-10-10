@@ -10,7 +10,6 @@ github.com/coreos/go-systemd/v22 v22.5.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 github.com/go-logr/logr v1.4.3
-github.com/golang/protobuf v1.5.4
 github.com/kelseyhightower/envconfig v1.4.0
 github.com/mattn/go-runewidth v0.0.16
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
