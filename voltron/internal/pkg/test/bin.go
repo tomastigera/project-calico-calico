@@ -19,7 +19,7 @@ type HTTPSBin struct {
 
 // Close stops the HTTPSBin
 func (h *HTTPSBin) Close() {
-	h.srv.Close()
+	_ = h.srv.Close()
 	h.wg.Wait()
 }
 

@@ -47,7 +47,7 @@ func (s *SimpleServer) Start() {
 	if err != nil {
 		log.Fatalf("Main Fail to Listen, %s", err)
 	}
-	defer lisServer.Close()
+	defer func() { _ = lisServer.Close() }()
 
 	// Tunnel Starts Listening
 	lisTunnel, err := net.Listen("tcp", s.tunnelAddress)

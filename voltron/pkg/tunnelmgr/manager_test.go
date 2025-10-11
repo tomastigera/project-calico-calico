@@ -43,13 +43,13 @@ var _ = Describe("Manager", func() {
 			It("opens a connection to a tunnel and writes to it", func() {
 				cliConn, srvConn := net.Pipe()
 				srv := getServerFromConnection(srvConn, "Response")
-				defer srv.Close()
+				defer func() { _ = srv.Close() }()
 
 				tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				conn, err := m.Open()
@@ -66,7 +66,7 @@ var _ = Describe("Manager", func() {
 			It("adheres to the timeout and fails to setup when it is too low", func() {
 				cliConn, srvConn := net.Pipe()
 				srv := getServerFromConnection(srvConn, "Response")
-				defer srv.Close()
+				defer func() { _ = srv.Close() }()
 
 				tun, err := tunnel.NewClientTunnel(cliConn,
 					tunnel.WithKeepAliveSettings(true, 100*time.Second),
@@ -75,7 +75,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				// When the timeout  is only 1 ns, the context times out.
 				Expect(m.SetTunnel(tun)).To(HaveOccurred())
 				errStruct := state.ErrChannelWriteTimeout{}
@@ -85,13 +85,13 @@ var _ = Describe("Manager", func() {
 			It("opens multiple connections over the single tunnel", func() {
 				cliConn, srvConn := net.Pipe()
 				srv := getServerFromConnection(srvConn, "Response 1", "Response 2")
-				defer srv.Close()
+				defer func() { _ = srv.Close() }()
 
 				tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				conn, err := m.Open()
@@ -116,7 +116,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				Expect(tun.Close()).ShouldNot(HaveOccurred())
@@ -133,7 +133,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
@@ -159,7 +159,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
@@ -183,7 +183,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
@@ -198,7 +198,7 @@ var _ = Describe("Manager", func() {
 					Expect(conn).Should(BeNil())
 				}()
 
-				m.Close()
+				_ = m.Close()
 				Expect(err).ShouldNot(HaveOccurred())
 				wg.Wait()
 			})
@@ -210,7 +210,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				m := tunnelmgr.NewManager()
-				defer m.Close()
+				defer func() { _ = m.Close() }()
 				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener1, err := m.Listener()
@@ -241,8 +241,8 @@ var _ = Describe("Manager", func() {
 			Context("Dialing for the tunnel", func() {
 				It("Successfully dials for a tunnel and allows the user to get a listener", func() {
 					cliConn, srvConn := net.Pipe()
-					defer cliConn.Close()
-					defer srvConn.Close()
+					defer func() { _ = cliConn.Close() }()
+					defer func() { _ = srvConn.Close() }()
 
 					tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 					Expect(err).ShouldNot(HaveOccurred())
@@ -252,7 +252,7 @@ var _ = Describe("Manager", func() {
 					mockDialer.On("Timeout").Return(5 * time.Second)
 
 					m := tunnelmgr.NewManagerWithDialer(mockDialer)
-					defer m.Close()
+					defer func() { _ = m.Close() }()
 
 					Eventually(func() error {
 						_, err := m.Listener()
@@ -264,10 +264,10 @@ var _ = Describe("Manager", func() {
 						"after the dialer has finished",
 						func() {
 							cliConn, srvConn := net.Pipe()
-							defer cliConn.Close()
+							defer func() { _ = cliConn.Close() }()
 
 							srv := getServerFromConnection(srvConn, "Response")
-							defer srv.Close()
+							defer func() { _ = srv.Close() }()
 
 							tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 							Expect(err).ShouldNot(HaveOccurred())
@@ -281,7 +281,7 @@ var _ = Describe("Manager", func() {
 							mockDialer.On("Timeout").Return(5 * time.Second)
 
 							m := tunnelmgr.NewManagerWithDialer(mockDialer)
-							defer m.Close()
+							defer func() { _ = m.Close() }()
 
 							// While dialing all the functions should return ErrStillDialing errors.
 							_, err = m.Listener()
@@ -325,8 +325,8 @@ var _ = Describe("Manager", func() {
 				errChan := m.ListenForErrors()
 				Expect(<-errChan).Should(Equal(tunnelmgr.ErrManagerClosed))
 				cliConn, srvConn := net.Pipe()
-				defer cliConn.Close()
-				defer srvConn.Close()
+				defer func() { _ = cliConn.Close() }()
+				defer func() { _ = srvConn.Close() }()
 
 				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				Expect(err).ShouldNot(Equal(tunnelmgr.ErrManagerClosed))

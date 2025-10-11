@@ -331,7 +331,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		c := s.clusters.get(clusterID)
 		if c == nil {
 			logrus.Errorf("cluster %q does not exist", clusterID)
-			t.Close()
+			_ = t.Close()
 			continue
 		}
 		managedCertificate := c.Certificate
