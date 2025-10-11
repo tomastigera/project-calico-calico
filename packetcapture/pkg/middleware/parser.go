@@ -22,8 +22,8 @@ const GET = "get"
 // DELETE represents the user intent to delete packet capture files
 const DELETE = "delete"
 
-// MalformedRequest is the error message when the API received an invalid request
-var MalformedRequest = fmt.Errorf("request URL is malformed")
+// errMalformedRequest is the error message when the API received an invalid request
+var errMalformedRequest = fmt.Errorf("request URL is malformed")
 
 // Parse is a middleware handler that parses the request and sets the common attributes
 // on its context
@@ -51,25 +51,25 @@ func Parse(handlerFunc http.HandlerFunc) http.HandlerFunc {
 func parse(url *url.URL) (string, string, string, error) {
 	var tokens = strings.Split(url.Path, "/")
 	if len(tokens) < 1 {
-		return "", "", "", MalformedRequest
+		return "", "", "", errMalformedRequest
 	}
 	switch tokens[1] {
 	case "files":
 
 		if len(tokens) != 4 {
-			return "", "", "", MalformedRequest
+			return "", "", "", errMalformedRequest
 		}
 		return tokens[2], tokens[3], DELETE, nil
 	case "download":
 		if len(tokens) != 5 {
-			return "", "", "", MalformedRequest
+			return "", "", "", errMalformedRequest
 		}
 		if tokens[4] != ZipFiles {
-			return "", "", "", MalformedRequest
+			return "", "", "", errMalformedRequest
 		}
 		return tokens[2], tokens[3], GET, nil
 	}
 
-	return "", "", "", MalformedRequest
+	return "", "", "", errMalformedRequest
 
 }

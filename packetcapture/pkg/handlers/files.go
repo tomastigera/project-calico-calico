@@ -63,7 +63,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var captureName = middleware.CaptureNameFromContext(r.Context())
 	var clusterID = middleware.ClusterIDFromContext(r.Context())
 
-	packetCapture, err := f.K8sCommands.GetPacketCapture(clusterID, captureName, namespace)
+	packetCapture, err := f.GetPacketCapture(clusterID, captureName, namespace)
 	if err != nil {
 		log.WithError(err).Errorf("failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
@@ -86,7 +86,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var filesRead = 0
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("copying files %v", file.FileNames)
-		entryPod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
+		entryPod, err := f.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("failed to locate entry pods for %s/%s", namespace, captureName)
 			continue
@@ -100,7 +100,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Debugf("entry pods is %v", entryPoint)
 
-		reader, errorReader, err := f.FileCommands.OpenTarReader(clusterID, entryPoint)
+		reader, errorReader, err := f.OpenTarReader(clusterID, entryPoint)
 		if err != nil {
 			log.WithError(err).Errorf("failed to create a remote command to retrieve the files from %v", entryPoint)
 			continue
@@ -144,7 +144,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 				}
 				log.Debugf("zip writer written %d for file %s (size = %d)", written, header.FileInfo().Name(), header.FileInfo().Size())
 
-				zipWriter.Flush()
+				_ = zipWriter.Flush()
 			}
 		}
 
@@ -156,7 +156,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Close the zip writer
-	zipWriter.Close()
+	_ = zipWriter.Close()
 
 	if filesRead > 0 {
 		// Write headers for the request
@@ -213,7 +213,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	var captureName = middleware.CaptureNameFromContext(r.Context())
 	var clusterID = middleware.ClusterIDFromContext(r.Context())
 
-	packetCapture, err := f.K8sCommands.GetPacketCapture(clusterID, captureName, namespace)
+	packetCapture, err := f.GetPacketCapture(clusterID, captureName, namespace)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
@@ -244,7 +244,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	var nodes = make(map[string]struct{})
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("Delete files %v", file)
-		entryPod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
+		entryPod, err := f.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("Failed locate entry pods for %s/%s", namespace, captureName)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -283,13 +283,13 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
+	err = f.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
 	if err != nil {
 		switch err.(type) {
 		case cerrors.ErrorResourceUpdateConflict:
 			var ctx = context.Background()
 			var err = retryFor(ctx, 3, 500*time.Millisecond, 2*time.Second, func() error {
-				return f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
+				return f.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
 			})
 			if err != nil {
 				log.WithError(err).Error("Failed to update status for packet capture")

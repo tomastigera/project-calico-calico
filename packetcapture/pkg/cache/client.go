@@ -87,10 +87,10 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 			return
 		}
 		if isConnected(*cluster) {
-			log.Debugf("Cluster %s is connected after add", cluster.ObjectMeta.Name)
-			var _, err = cc.load(cluster.ObjectMeta.Name)
+			log.Debugf("Cluster %s is connected after add", cluster.Name)
+			var _, err = cc.load(cluster.Name)
 			if err != nil {
-				log.WithError(err).Errorf("Failed to load cluster after add %s", cluster.ObjectMeta.Name)
+				log.WithError(err).Errorf("Failed to load cluster after add %s", cluster.Name)
 			}
 		}
 	}
@@ -100,8 +100,8 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 			log.Debugf("Interface conversion failed for %v", obj)
 			return
 		}
-		log.Debugf("Cluster %s not is connected after delete", cluster.ObjectMeta.Name)
-		cc.delete(cluster.ObjectMeta.Name)
+		log.Debugf("Cluster %s not is connected after delete", cluster.Name)
+		cc.delete(cluster.Name)
 	}
 
 	var onUpdate = func(oldObj, newObj interface{}) {
@@ -117,14 +117,14 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 		}
 
 		if isConnected(*newCluster) {
-			log.Debugf("Cluster %s is connected after update", newCluster.ObjectMeta.Name)
-			var _, err = cc.load(newCluster.ObjectMeta.Name)
+			log.Debugf("Cluster %s is connected after update", newCluster.Name)
+			var _, err = cc.load(newCluster.Name)
 			if err != nil {
-				log.WithError(err).Errorf("Failed to load cluster after update %s", newCluster.ObjectMeta.Name)
+				log.WithError(err).Errorf("Failed to load cluster after update %s", newCluster.Name)
 			}
 		} else {
-			log.Debugf("Cluster %s not is connected after update", newCluster.ObjectMeta.Name)
-			cc.delete(newCluster.ObjectMeta.Name)
+			log.Debugf("Cluster %s not is connected after update", newCluster.Name)
+			cc.delete(newCluster.Name)
 		}
 	}
 

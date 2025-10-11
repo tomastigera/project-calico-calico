@@ -76,7 +76,7 @@ func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command 
 	}
 
 	go func() {
-		defer writer.Close()
+		defer func() { _ = writer.Close() }()
 		err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 			Stdin:  nil,
 			Stdout: writer,
