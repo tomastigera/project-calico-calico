@@ -53,7 +53,7 @@ Description:
 `
 	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {
-		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
+		return fmt.Errorf("invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand", strings.Join(args, " "))
 	}
 	if len(parsedArgs) == 0 {
 		return nil
@@ -95,7 +95,7 @@ func showPeers(input string) error {
 	))
 	// Stop if we get an error
 	if err != nil {
-		return fmt.Errorf("Could not retrieve node with host node name %s: %s", nodeName, err)
+		return fmt.Errorf("could not retrieve node with host node name %s: %s", nodeName, err)
 	}
 
 	extractedPodName := extractPodName(output.String())
@@ -105,7 +105,7 @@ func showPeers(input string) error {
 		log.Debugf("Second attempt, assume user provided pod name [%s] ... verify it is valid", nodeName)
 		_, err = common.ExecCmd(fmt.Sprintf("kubectl get pod %s -n %s", nodeName, common.CalicoNamespace))
 		if err != nil {
-			return fmt.Errorf("Could not retrieve node with pod name %s: %s", nodeName, err)
+			return fmt.Errorf("could not retrieve node with pod name %s: %s", nodeName, err)
 		}
 		podName = nodeName
 	} else {
@@ -118,7 +118,7 @@ func showPeers(input string) error {
 		fmt.Sprintf("kubectl exec %s -n %s -- %s", podName, common.CalicoNamespace, birdCmd),
 	)
 	if err != nil {
-		return fmt.Errorf("Could not retrieve info for BGP peers: %s", err)
+		return fmt.Errorf("could not retrieve info for BGP peers: %s", err)
 	}
 
 	// Since BGP peers could be either Mesh, Node or Global we want to filter out all other pseudo-protocols
@@ -161,7 +161,7 @@ func validateAndPrint(birdOutput string, w io.Writer) {
 			log.Debugf("process row: [%s] ... reset", row)
 			// Print explicit newline separator
 			if !skipLines && i < n-1 {
-				fmt.Fprint(w, "\n")
+				_, _ = fmt.Fprint(w, "\n")
 			}
 			skipLines = false
 			continue
@@ -173,7 +173,7 @@ func validateAndPrint(birdOutput string, w io.Writer) {
 		}
 		// Print table header as is
 		if strings.HasPrefix("2002", row) {
-			fmt.Fprintf(w, "%s\n", row)
+			_, _ = fmt.Fprintf(w, "%s\n", row)
 			log.Debugf("process row: [%s] ... print (table header)", row)
 			continue
 		}
@@ -186,7 +186,7 @@ func validateAndPrint(birdOutput string, w io.Writer) {
 				skipLines = true
 				log.Debugf("process row: [%s] ... skip non-BGP procotol listing [%s]", row, data)
 			} else {
-				fmt.Fprintf(w, "%s\n", data)
+				_, _ = fmt.Fprintf(w, "%s\n", data)
 				log.Debugf("process row: [%s] ... print (BGP procotol listing) [%s]", row, data)
 			}
 			continue
@@ -195,7 +195,7 @@ func validateAndPrint(birdOutput string, w io.Writer) {
 		if protocolDetailsRegex.MatchString(row) {
 			// Trim off any BIRD reply code prefix from the row
 			trimmed := protocolDetailsRegex.ReplaceAllString(row, "${1}")
-			fmt.Fprintf(w, "%s\n", trimmed)
+			_, _ = fmt.Fprintf(w, "%s\n", trimmed)
 			log.Debugf("process row: [%s] ... print (1st row of protocol details) [%s]", row, trimmed)
 			continue
 		}
@@ -203,7 +203,7 @@ func validateAndPrint(birdOutput string, w io.Writer) {
 		if protocolDataRegex.MatchString(row) {
 			// Trim off any BIRD reply code prefix from the row
 			trimmed := protocolDataRegex.ReplaceAllString(row, "${1}")
-			fmt.Fprintf(w, "%s\n", trimmed)
+			_, _ = fmt.Fprintf(w, "%s\n", trimmed)
 			log.Debugf("process row: [%s] ... print (follow-up row of protocol details) [%s]", row, trimmed)
 			continue
 		}

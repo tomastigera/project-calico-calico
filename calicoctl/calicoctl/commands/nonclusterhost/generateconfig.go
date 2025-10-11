@@ -48,7 +48,7 @@ Description:
 
 	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {
-		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
+		return fmt.Errorf("invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand", strings.Join(args, " "))
 	}
 
 	// Load the client config and connect.
@@ -58,7 +58,7 @@ Description:
 		return err
 	}
 
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", clientConfig.Spec.KubeConfig.Kubeconfig)
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", clientConfig.Spec.Kubeconfig)
 	if err != nil {
 		return err
 	}
