@@ -23,10 +23,10 @@ var _ = Describe("Config test", func() {
 	})
 
 	It("should get env vars set for the corresponding Config fields", func() {
-		os.Setenv("LISTEN_ADDR", "localhost:9090")
-		os.Setenv("PROMETHEUS_ENDPOINT_URL", "http://calico-node-prometheus.tigera-prometheus.svc.cluster.local:9090")
-		defer os.Unsetenv("LISTEN_ADDR")
-		defer os.Unsetenv("PROMETHEUS_ENDPOINT_URL")
+		_ = os.Setenv("LISTEN_ADDR", "localhost:9090")
+		_ = os.Setenv("PROMETHEUS_ENDPOINT_URL", "http://calico-node-prometheus.tigera-prometheus.svc.cluster.local:9090")
+		defer func() { _ = os.Unsetenv("LISTEN_ADDR") }()
+		defer func() { _ = os.Unsetenv("PROMETHEUS_ENDPOINT_URL") }()
 
 		config, err := server.NewConfigFromEnv()
 

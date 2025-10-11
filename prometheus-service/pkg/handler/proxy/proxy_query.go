@@ -62,11 +62,12 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 
 		// Perform AuthZ checks
 		var resources []*authzv1.ResourceAttributes
-		if req.Method == http.MethodGet {
+		switch req.Method {
+		case http.MethodGet:
 			resources = getResources
-		} else if req.Method == http.MethodPost {
+		case http.MethodPost:
 			resources = createResources
-		} else {
+		default:
 			// At this time only HTTP GET/POST are allowed
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			_, err := w.Write([]byte("Method Not Allowed"))
@@ -96,7 +97,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 
 		if !authorized {
 			w.WriteHeader(http.StatusForbidden)
-			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)))
+			_, err := fmt.Fprintf(w, "user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)
 			if err != nil {
 				log.Errorf("Error when writing body to response: %v", err)
 			}
