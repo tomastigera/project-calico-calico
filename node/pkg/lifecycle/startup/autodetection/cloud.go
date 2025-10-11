@@ -46,7 +46,7 @@ func GetCloudOrchRef() (api.OrchRef, error) {
 		}
 		log.WithError(err).WithField("cloud", c).Info("failed to get instance ID")
 	}
-	return api.OrchRef{}, errors.New("No cloud metadata found")
+	return api.OrchRef{}, errors.New("no cloud metadata found")
 }
 
 // GetOrchRef attempts to query the EC2 metadata service to determine the instance ID.

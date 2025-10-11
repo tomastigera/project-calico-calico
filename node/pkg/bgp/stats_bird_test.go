@@ -261,7 +261,7 @@ func Test_parsePeers(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parsePeers() = %v, want %v", got, tt.want)
 			}
-			f.Close()
+			_ = f.Close()
 		})
 	}
 }

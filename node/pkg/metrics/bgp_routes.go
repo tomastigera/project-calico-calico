@@ -73,7 +73,7 @@ func (aggr *routeCountAggregator) computeMetrics(stats *bgp.Stats) error {
 	peers, ok := stats.Data.([]bgp.Peer)
 	if !ok {
 		log.Errorf("Failed to extract peers: %+v", stats.Data)
-		return fmt.Errorf("Failed to extract peers: %+v", stats.Data)
+		return fmt.Errorf("failed to extract peers: %+v", stats.Data)
 	}
 	fields := log.Fields{
 		"peers": peers,
