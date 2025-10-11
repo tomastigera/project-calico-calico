@@ -111,8 +111,8 @@ current-context: test-context`
 	}
 
 	deleteAndUnsetKubeConfig := func() {
-		os.Unsetenv("KUBECONFIG")
-		os.Remove(kconfigFile.Name())
+		_ = os.Unsetenv("KUBECONFIG")
+		_ = os.Remove(kconfigFile.Name())
 	}
 
 	Context("with unset env values except for kubeconfig", func() {

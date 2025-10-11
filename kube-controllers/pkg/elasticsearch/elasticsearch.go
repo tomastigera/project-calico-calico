@@ -191,7 +191,7 @@ func (cli *client) createRole(role Role) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
@@ -219,7 +219,7 @@ func (cli *client) DeleteRole(role Role) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
 		body, err := io.ReadAll(response.Body)
@@ -267,7 +267,7 @@ func (cli *client) CreateUser(user User) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
@@ -291,7 +291,7 @@ func (cli *client) DeleteUser(user User) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
 		body, err := io.ReadAll(response.Body)
@@ -346,7 +346,7 @@ func (cli *client) UpdateUser(user User) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
@@ -370,7 +370,7 @@ func (cli *client) UserExists(username string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 
 	return response.StatusCode == 200, nil
 }
@@ -393,7 +393,7 @@ func (cli *client) GetUsers() ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -443,7 +443,7 @@ func (cli *client) SetUserPassword(user User) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -473,7 +473,7 @@ func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
@@ -498,7 +498,7 @@ func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 {
 		body, err := io.ReadAll(response.Body)
@@ -541,7 +541,7 @@ func (cli *client) DeleteRoleMapping(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
 		body, err := io.ReadAll(response.Body)

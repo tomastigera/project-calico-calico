@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -324,7 +324,7 @@ func (e *errorReturningFakeRuntimeClient) List(ctx context.Context, list ctrlcli
 		}
 
 		err := meta.SetList(list, runtimeObjs)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		return nil
 	})
 }

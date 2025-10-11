@@ -25,7 +25,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/cache"
@@ -87,12 +86,12 @@ func (s *serviceConverter) isServiceToBeExcluded(service *corev1.Service) bool {
 		return true
 	}
 
-	if _, ok := service.ObjectMeta.Annotations[ExcludeServiceAnnotation]; ok {
+	if _, ok := service.Annotations[ExcludeServiceAnnotation]; ok {
 		clog.Info("Service annotation indicate to exclude service. Ignoring it")
 		return true
 	}
 
-	if _, ok := service.ObjectMeta.Annotations[ExcludeFederetedServiceAnnotation]; ok {
+	if _, ok := service.Annotations[ExcludeFederetedServiceAnnotation]; ok {
 		clog.Info("Service annotation indicate to exclude service. Ignoring it")
 		return true
 	}
@@ -135,11 +134,11 @@ func (s *serviceConverter) Convert(k8sObj interface{}) (interface{}, error) {
 
 // GetKey gets a K8s Services an returns the 'namespace/name' for the Calico NetworkSet as its key.
 func (s *serviceConverter) GetKey(obj interface{}) string {
-	k8sResource := obj.(*v1.Service)
-	if len(k8sResource.ObjectMeta.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
-		return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, hashName(k8sResource.ObjectMeta.Name))
+	k8sResource := obj.(*corev1.Service)
+	if len(k8sResource.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
+		return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, hashName(k8sResource.Name))
 	}
-	return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, k8sResource.ObjectMeta.Name)
+	return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, k8sResource.Name)
 }
 
 func (s *serviceConverter) DeleteArgsFromKey(key string) (string, string) {
@@ -166,11 +165,11 @@ func (s *serviceConverter) k8sServiceToNetworkSet(service *corev1.Service) (*mod
 		Annotations: make(map[string]string),
 	}
 
-	ns.ObjectMeta.Annotations[NsServiceNameAnnotation] = service.Name
+	ns.Annotations[NsServiceNameAnnotation] = service.Name
 
 	if len(service.Spec.Ports) != 0 {
-		ns.ObjectMeta.Annotations[NsPortsAnnotation] = ""
-		ns.ObjectMeta.Annotations[NsProtocolsAnnotation] = ""
+		ns.Annotations[NsPortsAnnotation] = ""
+		ns.Annotations[NsProtocolsAnnotation] = ""
 
 		// Collect ports && protocol
 		ports := make([]string, len(service.Spec.Ports))
@@ -194,16 +193,16 @@ func (s *serviceConverter) k8sServiceToNetworkSet(service *corev1.Service) (*mod
 			return numA < numB
 		})
 
-		ns.ObjectMeta.Annotations[NsPortsAnnotation] += strings.Join(ports, ",")
-		ns.ObjectMeta.Annotations[NsProtocolsAnnotation] += strings.Join(protocols, ",")
+		ns.Annotations[NsPortsAnnotation] += strings.Join(ports, ",")
+		ns.Annotations[NsProtocolsAnnotation] += strings.Join(protocols, ",")
 	}
 
-	ns.ObjectMeta.Labels = make(map[string]string)
+	ns.Labels = make(map[string]string)
 	for l := range service.Labels {
-		ns.ObjectMeta.Labels[l] = service.Labels[l]
+		ns.Labels[l] = service.Labels[l]
 	}
 
-	ns.ObjectMeta.Labels[NsServiceNameLabel] = service.Name
+	ns.Labels[NsServiceNameLabel] = service.Name
 
 	// Build and return the KVPair.
 	return &model.KVPair{
@@ -252,11 +251,11 @@ func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
 
 // GetKey gets a K8s Endpoint an returns the 'namespace/name' for the Calico NetworkSet as its key.
 func (s *endpointConverter) GetKey(obj interface{}) string {
-	k8sResource := obj.(*v1.Endpoints) //nolint:staticcheck
-	if len(k8sResource.ObjectMeta.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
-		return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, hashName(k8sResource.ObjectMeta.Name))
+	k8sResource := obj.(*corev1.Endpoints) //nolint:staticcheck
+	if len(k8sResource.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
+		return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, hashName(k8sResource.Name))
 	}
-	return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, k8sResource.ObjectMeta.Name)
+	return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, k8sResource.Name)
 }
 
 func (s *endpointConverter) DeleteArgsFromKey(key string) (string, string) {

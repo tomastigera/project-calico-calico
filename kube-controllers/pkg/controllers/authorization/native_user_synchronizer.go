@@ -297,7 +297,7 @@ func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updat
 		secret.Data = make(map[string][]byte)
 	}
 	for subjectID, esUser := range updateEsUsers {
-		if "" != esUser.Password {
+		if esUser.Password != "" {
 			secret.Data[subjectID] = []byte(esUser.Password)
 		} else if _, ok := secret.Data[subjectID]; !ok {
 			esUser.Password = utils.GeneratePassword(32)

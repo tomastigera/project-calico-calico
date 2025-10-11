@@ -217,17 +217,17 @@ func (c *serviceController) convertToNetworkSet(nsFromSvc, nsFromEp *api.Network
 		Namespace: nsFromSvc.Namespace,
 	}
 
-	if len(nsFromSvc.ObjectMeta.Labels) > 0 {
-		networkSet.ObjectMeta.Labels = make(map[string]string)
-		for k, v := range nsFromSvc.ObjectMeta.Labels {
-			networkSet.ObjectMeta.Labels[k] = v
+	if len(nsFromSvc.Labels) > 0 {
+		networkSet.Labels = make(map[string]string)
+		for k, v := range nsFromSvc.Labels {
+			networkSet.Labels[k] = v
 		}
 	}
 
-	if len(nsFromSvc.ObjectMeta.Annotations) > 0 {
-		networkSet.ObjectMeta.Annotations = make(map[string]string)
-		for k, v := range nsFromSvc.ObjectMeta.Annotations {
-			networkSet.ObjectMeta.Annotations[k] = v
+	if len(nsFromSvc.Annotations) > 0 {
+		networkSet.Annotations = make(map[string]string)
+		for k, v := range nsFromSvc.Annotations {
+			networkSet.Annotations[k] = v
 		}
 	}
 
@@ -307,7 +307,7 @@ func (c *serviceController) updateDatastore(key string, ns *api.NetworkSet) erro
 	clog.Infof("Create/Update NetworkSet in Calico datastore")
 
 	// Lookup to see if this object already exists in the datastore.
-	nsFromDatastore, err := c.calicoClient.NetworkSets().Get(c.ctx, ns.ObjectMeta.Namespace, ns.ObjectMeta.Name, options.GetOptions{})
+	nsFromDatastore, err := c.calicoClient.NetworkSets().Get(c.ctx, ns.Namespace, ns.Name, options.GetOptions{})
 	if err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); !ok {
 			clog.WithError(err).Warning("Failed to get networkset from datastore")
@@ -327,8 +327,8 @@ func (c *serviceController) updateDatastore(key string, ns *api.NetworkSet) erro
 
 	// The networkset already exists, update it and write it back to the datastore.
 	nsFromDatastore.Spec = ns.Spec
-	nsFromDatastore.ObjectMeta.Labels = ns.ObjectMeta.Labels
-	nsFromDatastore.ObjectMeta.Annotations = ns.ObjectMeta.Annotations
+	nsFromDatastore.Labels = ns.Labels
+	nsFromDatastore.Annotations = ns.Annotations
 	clog.Infof("Update NetworkSet in Calico datastore with resource version %s", ns.ResourceVersion)
 	_, err = c.calicoClient.NetworkSets().Update(c.ctx, nsFromDatastore, options.SetOptions{})
 	if err != nil {
