@@ -605,7 +605,7 @@ func getWorkloadEndpoint(ctx context.Context, calicoClient clientv3.Interface, w
 		if len(endpoints.Items) > 0 {
 			logger.Debugf("List of WorkloadEndpoints %v", endpoints.Items)
 			for _, endpoint := range endpoints.Items {
-				match, err := wepIDs.WorkloadEndpointIdentifiers.NameMatches(endpoint.Name)
+				match, err := wepIDs.NameMatches(endpoint.Name)
 				if err != nil {
 					// We should never hit this error, because it should have already been
 					// caught by CalculateWorkloadEndpointName.
