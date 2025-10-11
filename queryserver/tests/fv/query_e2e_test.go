@@ -57,7 +57,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			Expect(err).NotTo(HaveOccurred())
 			addr := listener.Addr().String()
-			listener.Close()
+			_ = listener.Close()
 
 			// Get server configuration variables meant for FVs.
 			servercfg := getDummyConfigFromEnvFv(addr, "", "")
@@ -134,7 +134,7 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 		if err != nil {
 			return err
 		}
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			return err
@@ -322,7 +322,7 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 
 		r, err := netClient.Post(qurl, "Application/Json", bytes.NewReader(bodyData))
 		Expect(err).NotTo(HaveOccurred())
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		bodyBytes, err := io.ReadAll(r.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.StatusCode).To(Equal(http.StatusOK))
@@ -359,7 +359,7 @@ func crossCheckEndpointQuery(tqd testQueryData, addr string, netClient *http.Cli
 
 		r, err := netClient.Get(qurl)
 		Expect(err).NotTo(HaveOccurred())
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		bodyBytes, err := io.ReadAll(r.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.StatusCode).To(Equal(http.StatusOK))
