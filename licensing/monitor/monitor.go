@@ -131,6 +131,7 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 	defer slowRefreshTicker.Stop()
 	defer fastRefreshTicker.Stop()
 
+loop:
 	for ctx.Err() == nil {
 		// We may have already loaded the license (if someone called RefreshLicense() before calling this method).
 		// Trigger any needed notification now and make sure the timer is scheduled.  We also hit this each time around
@@ -154,7 +155,7 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.Info("Context finished.")
-			break
+			break loop
 		case <-refreshTicker.C:
 			_ = l.RefreshLicense(ctx)
 

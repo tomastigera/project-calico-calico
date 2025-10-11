@@ -88,7 +88,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		claims.Customer = strings.ToLower(claims.Customer)
 
 		// Replace spaces with '-' so the generated file name doesn't have spaces in the name.
-		claims.Customer = strings.Replace(claims.Customer, " ", "-", -1)
+		claims.Customer = strings.ReplaceAll(claims.Customer, " ", "-")
 
 		// Parse expiration date into time format and set it to end of the day for that date.
 		claims.Expiry = parseExpiryDate(exp)
@@ -143,7 +143,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		fmt.Println("_________________________________________________________________________")
 		fmt.Printf("Customer name:                  %s\n", claims.Customer)
 		fmt.Printf("Number of nodes:                %s\n", nodeCountStr)
-		fmt.Printf("License term expiration date:   %v\n", claims.Claims.Expiry.Time())
+		fmt.Printf("License term expiration date:   %v\n", claims.Expiry.Time())
 		fmt.Printf("Features (License Package):     %s\n", claims.Features)
 		fmt.Printf("Checkin interval:               %s\n", checkinIntervalStr)
 		fmt.Printf("Grace period (days):            %d\n", claims.GracePeriod)

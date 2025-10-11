@@ -32,7 +32,7 @@ func GenerateLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) 
 
 	priv, err := cryptolicensing.ReadPrivateKeyFromFile(pkeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading private key: %s\n", err)
+		return nil, fmt.Errorf("error reading private key: %s", err)
 	}
 
 	// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.

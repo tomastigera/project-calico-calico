@@ -56,7 +56,7 @@ func SavePrivateKeyAsPEM(priv *rsa.PrivateKey, filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer keyPEMFile.Close()
+	defer func() { _ = keyPEMFile.Close() }()
 
 	if err := pem.Encode(keyPEMFile, &pem.Block{Type: PrivKeyType, Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
 		return err
@@ -113,7 +113,7 @@ func SavePublicKeyAsPEM(pub *rsa.PublicKey, filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer keyPEMFile.Close()
+	defer func() { _ = keyPEMFile.Close() }()
 
 	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
