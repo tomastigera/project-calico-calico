@@ -51,7 +51,7 @@ func (l *TimestampedResourceList) UnmarshalJSON(b []byte) error {
 	// Generate the appropriate list resource.
 	l.ResourceList = resources.NewResourceList(meta.TypeMeta)
 	if l.ResourceList == nil {
-		return fmt.Errorf("unable to process resource: %s", meta.TypeMeta.GroupVersionKind())
+		return fmt.Errorf("unable to process resource: %s", meta.GroupVersionKind())
 	}
 
 	// Unmarshal the full list object.
@@ -88,9 +88,9 @@ func (l *TimestampedResourceList) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		if generatedTime != nil {
-			buf.WriteString(fmt.Sprintf(`,"generated_time":%s`, generatedTime))
+			fmt.Fprintf(buf, `,"generated_time":%s`, generatedTime)
 		}
 	}
-	buf.WriteString(fmt.Sprintf(`,"requestStartedTimestamp":%s,"requestCompletedTimestamp":%s, "cluster":"%s"}`, rst, rct, l.Cluster))
+	fmt.Fprintf(buf, `,"requestStartedTimestamp":%s,"requestCompletedTimestamp":%s, "cluster":"%s"}`, rst, rct, l.Cluster)
 	return buf.Bytes(), nil
 }
