@@ -284,9 +284,10 @@ var _ = Describe("File Parser", func() {
 
 				numberOfCallsToSend++
 				logrus.Infof("Calling %d", numberOfCallsToSend)
-				if numberOfCallsToSend == 1 {
+				switch numberOfCallsToSend {
+				case 1:
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event1))
-				} else if numberOfCallsToSend == 2 {
+				case 2:
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event2))
 				}
 			}).Return(nil, false, nil).Times(2)

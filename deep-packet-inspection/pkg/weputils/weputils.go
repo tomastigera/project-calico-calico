@@ -12,5 +12,5 @@ func ExtractNamespaceAndNameFromWepName(wepName string) (ns string, podName stri
 	if len(parts) == 2 {
 		return parts[0], parts[1], nil
 	}
-	return "", "", fmt.Errorf("Could not parse name %v", wepName)
+	return "", "", fmt.Errorf("could not parse name %v", wepName)
 }
