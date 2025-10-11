@@ -83,7 +83,7 @@ func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
 		if err := gs.Serve(lis); err != nil {
 			log.Errorf("failed to serve: %v", err)
 		}
-		defer lis.Close()
+		defer func() { _ = lis.Close() }()
 	}()
 }
 

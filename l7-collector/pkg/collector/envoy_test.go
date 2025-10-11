@@ -238,8 +238,8 @@ var _ = Describe("Envoy Log Collector ReadAccessLogs test", func() {
 			// Force cleanup if ReadAccessLogs doesn't finish quickly
 		}
 		if tmpFile != nil {
-			os.Remove(tmpFile.Name())
-			tmpFile.Close()
+			_ = os.Remove(tmpFile.Name())
+			_ = tmpFile.Close()
 		}
 	})
 

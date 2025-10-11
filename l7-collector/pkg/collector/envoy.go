@@ -260,7 +260,7 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 
 	// Open the file for  monitoring it's size
 	file, _ := os.Open(ec.config.EnvoyLogPath)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Set up the ticker for reading the log files
 	ticker := time.NewTicker(time.Duration(ec.config.EnvoyLogIntervalSecs) * time.Second)
