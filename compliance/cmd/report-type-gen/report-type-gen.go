@@ -128,8 +128,8 @@ func maybeCompressJSON(template *api.ReportTemplate) {
 	}
 
 	// Start by removing tabs and newlines from the json.
-	template.Template = strings.Replace(template.Template, "\n", "", -1)
-	template.Template = strings.Replace(template.Template, "\t", "", -1)
+	template.Template = strings.ReplaceAll(template.Template, "\n", "")
+	template.Template = strings.ReplaceAll(template.Template, "\t", "")
 
 	// The JSON should be convertable, if it isn't then print a warning and return the original JSON.
 	v := new(interface{})
@@ -148,7 +148,7 @@ func maybeCompressJSON(template *api.ReportTemplate) {
 
 	// Remove any instances of `"@@@` and `@@@"` - these are put in around template directives which would not convert
 	// as JSON.
-	s := strings.Replace(string(j), "\"@@@", "", -1)
-	s = strings.Replace(s, "@@@\"", "", -1)
+	s := strings.ReplaceAll(string(j), "\"@@@", "")
+	s = strings.ReplaceAll(s, "@@@\"", "")
 	template.Template = s
 }

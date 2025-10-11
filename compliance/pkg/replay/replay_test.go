@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/replay"
@@ -191,16 +190,16 @@ func createAuditEventChannel(events ...*api.AuditEventResult) <-chan *api.AuditE
 	return auditChan
 }
 
-func newAuditEvent(verb v1.Verb, stage auditv1.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) *api.AuditEventResult {
+func newAuditEvent(verb v1.Verb, stage audit.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) *api.AuditEventResult {
 	// Get the resource helper.
 	tm := resources.GetTypeMeta(objRef)
 	rh := resources.GetResourceHelperByTypeMeta(tm)
 
 	// Create the audit event.
-	ev := &auditv1.Event{
+	ev := &audit.Event{
 		Verb:  string(verb),
 		Stage: stage,
-		ObjectRef: &auditv1.ObjectReference{
+		ObjectRef: &audit.ObjectReference{
 			Name:       objRef.GetObjectMeta().GetName(),
 			Namespace:  objRef.GetObjectMeta().GetNamespace(),
 			APIGroup:   objRef.GetObjectKind().GroupVersionKind().Group,
@@ -211,7 +210,7 @@ func newAuditEvent(verb v1.Verb, stage auditv1.Stage, objRef resources.Resource,
 	}
 
 	// Set the response object if this is a response complete stage event.
-	if stage == auditv1.StageResponseComplete {
+	if stage == audit.StageResponseComplete {
 		if obj, ok := respObj.(resources.Resource); ok {
 			obj.GetObjectMeta().SetResourceVersion(resVer)
 		}

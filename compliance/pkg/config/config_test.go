@@ -20,9 +20,9 @@ var (
 var _ = Describe("Load config from environments", func() {
 	It("should parse valid configuration", func() {
 		By("parsing with valid config")
-		os.Setenv(ReportNameEnv, reportName)
-		os.Setenv(ReportStartEnv, start)
-		os.Setenv(ReportEndEnv, end)
+		_ = os.Setenv(ReportNameEnv, reportName)
+		_ = os.Setenv(ReportStartEnv, start)
+		_ = os.Setenv(ReportEndEnv, end)
 
 		By("validating the environments parsed correct")
 		cfg, err := LoadConfig()
@@ -35,9 +35,9 @@ var _ = Describe("Load config from environments", func() {
 
 	It("should handle relative times", func() {
 		By("parsing with valid config")
-		os.Setenv(ReportNameEnv, reportName)
-		os.Setenv(ReportStartEnv, "now-14m")
-		os.Setenv(ReportEndEnv, "now")
+		_ = os.Setenv(ReportNameEnv, reportName)
+		_ = os.Setenv(ReportStartEnv, "now-14m")
+		_ = os.Setenv(ReportEndEnv, "now")
 
 		By("validating the environments parsed correct")
 		cfg, err := LoadConfig()
@@ -49,9 +49,9 @@ var _ = Describe("Load config from environments", func() {
 		// failures by re-running with an additional hour removed from each time.
 		if cfg.ParsedReportEnd.Sub(cfg.ParsedReportStart) != 14*time.Minute {
 			By("parsing with valid config")
-			os.Setenv(ReportNameEnv, reportName)
-			os.Setenv(ReportStartEnv, "now-74m")
-			os.Setenv(ReportEndEnv, "now - 60m")
+			_ = os.Setenv(ReportNameEnv, reportName)
+			_ = os.Setenv(ReportStartEnv, "now-74m")
+			_ = os.Setenv(ReportEndEnv, "now - 60m")
 
 			By("validating the environments parsed correct")
 			cfg, err := LoadConfig()
@@ -64,25 +64,25 @@ var _ = Describe("Load config from environments", func() {
 
 	It("should error with invalid configuration", func() {
 		By("parsing with invalid start time")
-		os.Setenv(ReportNameEnv, reportName)
-		os.Setenv(ReportStartEnv, "this is not a valid time")
-		os.Setenv(ReportEndEnv, end)
+		_ = os.Setenv(ReportNameEnv, reportName)
+		_ = os.Setenv(ReportStartEnv, "this is not a valid time")
+		_ = os.Setenv(ReportEndEnv, end)
 		cfg, err := LoadConfig()
 		Expect(err).To(HaveOccurred())
 		Expect(cfg).To(BeNil())
 
 		By("parsing with invalid end time")
-		os.Setenv(ReportNameEnv, reportName)
-		os.Setenv(ReportStartEnv, start)
-		os.Setenv(ReportEndEnv, "this is not a valid time")
+		_ = os.Setenv(ReportNameEnv, reportName)
+		_ = os.Setenv(ReportStartEnv, start)
+		_ = os.Setenv(ReportEndEnv, "this is not a valid time")
 		cfg, err = LoadConfig()
 		Expect(cfg).To(BeNil())
 		Expect(err).To(HaveOccurred())
 
 		By("parsing with end time before start time")
-		os.Setenv(ReportNameEnv, reportName)
-		os.Setenv(ReportStartEnv, end)
-		os.Setenv(ReportEndEnv, start)
+		_ = os.Setenv(ReportNameEnv, reportName)
+		_ = os.Setenv(ReportStartEnv, end)
+		_ = os.Setenv(ReportEndEnv, start)
 		cfg, err = LoadConfig()
 		Expect(cfg).To(BeNil())
 		Expect(err).To(HaveOccurred())

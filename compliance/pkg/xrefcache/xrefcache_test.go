@@ -383,9 +383,9 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		var tier *apiv3.Tier
 		tester.SetTier(Name1, Order1)
 		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoTiers)).To(HaveLen(1))
-		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoTiers, func(ce xrefcache.CacheEntry) error {
+		_ = tester.EachCacheEntry(resources.TypeCalicoTiers, func(ce xrefcache.CacheEntry) error {
 			tier = ce.GetCalicoV3().(*apiv3.Tier)
-			tester.XrefCache.OnUpdates([]syncer.Update{
+			tester.OnUpdates([]syncer.Update{
 				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
 			})
 			return nil
@@ -400,7 +400,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.Tier{TypeMeta: tier.TypeMeta, ObjectMeta: tier.ObjectMeta, Spec: tier.Spec},
 			},
 		})
-		res := tester.XrefCache.Get(resources.GetResourceID(tier))
+		res := tester.Get(resources.GetResourceID(tier))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(tier))
 
@@ -408,9 +408,9 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		var gns *apiv3.GlobalNetworkSet
 		tester.SetGlobalNetworkSet(Name1, Label1, Public|Private)
 		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkSets)).To(HaveLen(1))
-		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoGlobalNetworkSets, func(ce xrefcache.CacheEntry) error {
+		_ = tester.EachCacheEntry(resources.TypeCalicoGlobalNetworkSets, func(ce xrefcache.CacheEntry) error {
 			gns = ce.GetCalicoV3().(*apiv3.GlobalNetworkSet)
-			tester.XrefCache.OnUpdates([]syncer.Update{
+			tester.OnUpdates([]syncer.Update{
 				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
 			})
 			return nil
@@ -425,7 +425,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.GlobalNetworkSet{TypeMeta: gns.TypeMeta, ObjectMeta: gns.ObjectMeta, Spec: gns.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(gns))
+		res = tester.Get(resources.GetResourceID(gns))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(gns))
 
@@ -433,9 +433,9 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		var netset *apiv3.NetworkSet
 		tester.SetNetworkSet(Name1, Namespace1, Label1, Public|Private)
 		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkSets)).To(HaveLen(1))
-		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoNetworkSets, func(ce xrefcache.CacheEntry) error {
+		_ = tester.EachCacheEntry(resources.TypeCalicoNetworkSets, func(ce xrefcache.CacheEntry) error {
 			netset = ce.GetCalicoV3().(*apiv3.NetworkSet)
-			tester.XrefCache.OnUpdates([]syncer.Update{
+			tester.OnUpdates([]syncer.Update{
 				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
 			})
 			return nil
@@ -450,7 +450,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.NetworkSet{TypeMeta: netset.TypeMeta, ObjectMeta: netset.ObjectMeta, Spec: netset.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(netset))
+		res = tester.Get(resources.GetResourceID(netset))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(netset))
 
@@ -458,9 +458,9 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		var gnp *apiv3.GlobalNetworkPolicy
 		tester.SetGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1)
 		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkPolicies)).To(HaveLen(1))
-		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoGlobalNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+		_ = tester.EachCacheEntry(resources.TypeCalicoGlobalNetworkPolicies, func(ce xrefcache.CacheEntry) error {
 			gnp = ce.GetCalicoV3().(*apiv3.GlobalNetworkPolicy)
-			tester.XrefCache.OnUpdates([]syncer.Update{
+			tester.OnUpdates([]syncer.Update{
 				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
 			})
 			return nil
@@ -475,7 +475,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.GlobalNetworkPolicy{TypeMeta: gnp.TypeMeta, ObjectMeta: gnp.ObjectMeta, Spec: gnp.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(gnp))
+		res = tester.Get(resources.GetResourceID(gnp))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(gnp))
 
@@ -483,9 +483,9 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		var np *apiv3.NetworkPolicy
 		tester.SetNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10)
 		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkPolicies)).To(HaveLen(1))
-		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+		_ = tester.EachCacheEntry(resources.TypeCalicoNetworkPolicies, func(ce xrefcache.CacheEntry) error {
 			np = ce.GetCalicoV3().(*apiv3.NetworkPolicy)
-			tester.XrefCache.OnUpdates([]syncer.Update{
+			tester.OnUpdates([]syncer.Update{
 				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
 			})
 			return nil
@@ -500,18 +500,18 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.NetworkPolicy{TypeMeta: np.TypeMeta, ObjectMeta: np.ObjectMeta, Spec: np.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(np))
+		res = tester.Get(resources.GetResourceID(np))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(np))
 
 		By("Creating, storing and then deleting a staged calico network policy")
 		snp := tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet).(*apiv3.StagedNetworkPolicy)
-		ids := tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
+		ids := tester.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
 		Expect(ids).To(HaveLen(1))
 
 		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
 		var ok bool
-		res = tester.XrefCache.Get(ids[0])
+		res = tester.Get(ids[0])
 		Expect(res).ToNot(BeNil())
 		snp2, ok := res.GetPrimary().(*apiv3.StagedNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -519,7 +519,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 
 		// Delete and re-check cache
 		tester.DeleteStagedNetworkPolicy(Name1, Name1, Namespace1)
-		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
+		ids = tester.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
 		Expect(ids).To(HaveLen(0))
 
 		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
@@ -530,7 +530,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.StagedNetworkPolicy{TypeMeta: snp.TypeMeta, ObjectMeta: snp.ObjectMeta, Spec: snp.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		res = tester.Get(resources.GetResourceID(snp))
 		Expect(res).ToNot(BeNil())
 		snp2, ok = res.GetPrimary().(*apiv3.StagedNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -538,11 +538,11 @@ var _ = Describe("xref cache multiple update transactions", func() {
 
 		By("Creating, storing and then deleting a staged calico global network policy")
 		sgnp := tester.SetStagedGlobalNetworkPolicy(Name1, Name1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet).(*apiv3.StagedGlobalNetworkPolicy)
-		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
+		ids = tester.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
 		Expect(ids).To(HaveLen(1))
 
 		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
-		res = tester.XrefCache.Get(ids[0])
+		res = tester.Get(ids[0])
 		Expect(res).ToNot(BeNil())
 		sgnp2, ok := res.GetPrimary().(*apiv3.StagedGlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -550,7 +550,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 
 		// Delete and re-check cache
 		tester.DeleteStagedGlobalNetworkPolicy(Name1, Name1)
-		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
+		ids = tester.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
 		Expect(ids).To(HaveLen(0))
 
 		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
@@ -561,7 +561,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.StagedGlobalNetworkPolicy{TypeMeta: sgnp.TypeMeta, ObjectMeta: sgnp.ObjectMeta, Spec: sgnp.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		res = tester.Get(resources.GetResourceID(sgnp))
 		Expect(res).ToNot(BeNil())
 		sgnp2, ok = res.GetPrimary().(*apiv3.StagedGlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -569,11 +569,11 @@ var _ = Describe("xref cache multiple update transactions", func() {
 
 		By("Creating, storing and then deleting a staged kubernetes network policy")
 		sknp := tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, apiv3.StagedActionSet).(*apiv3.StagedKubernetesNetworkPolicy)
-		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
+		ids = tester.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
 		Expect(ids).To(HaveLen(1))
 
 		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
-		res = tester.XrefCache.Get(ids[0])
+		res = tester.Get(ids[0])
 		Expect(res).ToNot(BeNil())
 		sknp2, ok := res.GetPrimary().(*apiv3.StagedKubernetesNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -581,7 +581,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 
 		// Delete and re-check cache
 		tester.DeleteStagedKubernetesNetworkPolicy(Name1, Namespace1)
-		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
+		ids = tester.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
 		Expect(ids).To(HaveLen(0))
 
 		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
@@ -592,7 +592,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 				Resource:   &apiv3.StagedKubernetesNetworkPolicy{TypeMeta: sknp.TypeMeta, ObjectMeta: sknp.ObjectMeta, Spec: sknp.Spec},
 			},
 		})
-		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		res = tester.Get(resources.GetResourceID(sknp))
 		Expect(res).ToNot(BeNil())
 		sknp2, ok = res.GetPrimary().(*apiv3.StagedKubernetesNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -610,21 +610,21 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		np := tester.SetNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10).(*apiv3.NetworkPolicy)
 		knp := tester.SetK8sNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil).(*networkingv1.NetworkPolicy)
 
-		res := tester.XrefCache.Get(resources.GetResourceID(gnp))
+		res := tester.Get(resources.GetResourceID(gnp))
 		Expect(res).ToNot(BeNil())
 		cegnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(cegnp.GetCalicoV3()).To(Equal(gnp))
 		Expect(cegnp.IsStaged()).To(BeFalse())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(np))
+		res = tester.Get(resources.GetResourceID(np))
 		Expect(res).ToNot(BeNil())
 		cenp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(cenp.GetCalicoV3()).To(Equal(np))
 		Expect(cenp.IsStaged()).To(BeFalse())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(knp))
+		res = tester.Get(resources.GetResourceID(knp))
 		Expect(res).ToNot(BeNil())
 		ceknp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -636,26 +636,26 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		snp := tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet)
 		sknp := tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, "")
 
-		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		res = tester.Get(resources.GetResourceID(sgnp))
 		Expect(res).ToNot(BeNil())
 		cesgnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(cesgnp.IsStaged()).To(BeTrue())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		res = tester.Get(resources.GetResourceID(snp))
 		Expect(res).ToNot(BeNil())
 		cesnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(cesnp.IsStaged()).To(BeTrue())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		res = tester.Get(resources.GetResourceID(sknp))
 		Expect(res).ToNot(BeNil())
 		cesknp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(cesknp.IsStaged()).To(BeTrue())
 
 		By("Checking staged policies come immediately before the v3 policy")
-		ordered := tester.XrefCache.GetOrderedTiersAndPolicies()
+		ordered := tester.GetOrderedTiersAndPolicies()
 		Expect(ordered).To(HaveLen(2))
 		Expect(ordered[0].Tier.GetObjectMeta().GetName()).To(Equal("tier-1"))
 		Expect(ordered[0].OrderedPolicies).To(HaveLen(4))
@@ -670,17 +670,17 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionDelete)
 		tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, apiv3.StagedActionDelete)
 
-		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		res = tester.Get(resources.GetResourceID(sgnp))
 		Expect(res).To(BeNil())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		res = tester.Get(resources.GetResourceID(snp))
 		Expect(res).To(BeNil())
 
-		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		res = tester.Get(resources.GetResourceID(sknp))
 		Expect(res).To(BeNil())
 
 		By("Checking staged policies are no longer in ordered tiers")
-		ordered = tester.XrefCache.GetOrderedTiersAndPolicies()
+		ordered = tester.GetOrderedTiersAndPolicies()
 		Expect(ordered).To(HaveLen(2))
 		Expect(ordered[0].Tier.GetObjectMeta().GetName()).To(Equal("tier-1"))
 		Expect(ordered[0].OrderedPolicies).To(HaveLen(2))

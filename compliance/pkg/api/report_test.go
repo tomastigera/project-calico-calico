@@ -125,9 +125,9 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			if err != nil {
 				return time.Time{}, err
 			}
-			return rep.StartTime.Time.UTC(), nil
+			return rep.StartTime.UTC(), nil
 		}
-		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.Time.UTC()))
+		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.UTC()))
 
 		By("storing a more recent report with a different name")
 		rep3 := &v1.ReportData{
@@ -139,7 +139,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		Expect(complianceStore.StoreArchivedReport(rep3)).ToNot(HaveOccurred())
 
 		By("retrieving report-foo and not returning report-foo2")
-		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.Time.UTC()))
+		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.UTC()))
 	})
 
 	It("should retrieve no reportTypeName/reportName combinations when no reports are added", func() {

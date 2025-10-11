@@ -10,7 +10,7 @@ import (
 )
 
 // handleVersion implements the version endpoint which returns JSON encapsulated version info.
-func (_ *server) handleVersion(response http.ResponseWriter, _ *http.Request) {
+func (*server) handleVersion(response http.ResponseWriter, _ *http.Request) {
 	log.WithFields(log.Fields{
 		"Version":   buildinfo.Version,
 		"BuildDate": buildinfo.BuildDate,
