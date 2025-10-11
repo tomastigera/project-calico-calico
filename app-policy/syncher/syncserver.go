@@ -100,7 +100,7 @@ func (s *SyncClient) Start(ctx context.Context) error {
 	// go routine to close the connection when the context is Done
 	go func() {
 		<-ctx.Done()
-		cc.Close()
+		_ = cc.Close()
 	}()
 
 	go s.sync(ctx)

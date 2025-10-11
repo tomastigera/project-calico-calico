@@ -156,7 +156,7 @@ func (w *Server) CheckWAF(req *CheckRequest) (*envoyauthz.CheckResponse, error) 
 	tx := w.NewTransactionWithID(req.Id)
 	//  process the http info for the events pipeline and close the
 	//  transaction
-	defer tx.Close()
+	defer func() { _ = tx.Close() }()
 
 	if tx.IsRuleEngineOff() {
 		return OK, nil
