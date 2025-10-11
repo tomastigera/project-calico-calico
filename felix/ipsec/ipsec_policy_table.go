@@ -356,9 +356,10 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 			// (2) GraceRemoveOutbound: we remove all outbound policies.  This disables sending of IPsec traffic.
 			// (3) GraceRemoveAll: we remove all policies.
 			makePolOptional := false
-			if p.gracePhase == GraceAllOptional {
+			switch p.gracePhase {
+			case GraceAllOptional:
 				makePolOptional = true
-			} else if p.gracePhase == GraceRemoveOutbound {
+			case GraceRemoveOutbound:
 				makePolOptional = sel.Dir != netlink.XFRM_DIR_OUT
 			}
 			if makePolOptional {

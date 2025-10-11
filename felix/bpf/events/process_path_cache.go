@@ -179,7 +179,7 @@ func (r *BPFProcessPathCache) Lookup(pid int) (ProcessPathInfo, bool) {
 	// If the lookup failed, updateSinglePIDFromProcfs will have written a
 	// tombstone entry to the cache.  Caller only cares about whether we have
 	// a path or not.
-	ok = entry.ProcessPathInfo.Path != ""
+	ok = entry.Path != ""
 	return entry.ProcessPathInfo, ok
 }
 

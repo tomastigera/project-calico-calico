@@ -32,7 +32,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/vishvananda/netlink"
@@ -55,7 +54,6 @@ import (
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	bpfiptables "github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
-	"github.com/projectcalico/calico/felix/bpf/maps"
 	bpfmaps "github.com/projectcalico/calico/felix/bpf/maps"
 	bpfnat "github.com/projectcalico/calico/felix/bpf/nat"
 	bpfproxy "github.com/projectcalico/calico/felix/bpf/proxy"
@@ -179,12 +177,12 @@ func init() {
 func EnableTimestamping() error {
 	s, err := unix.Socket(unix.AF_INET, unix.SOCK_RAW, unix.IPPROTO_RAW)
 	if err != nil || s < 0 {
-		return fmt.Errorf("Failed to create raw socket: %v", err)
+		return fmt.Errorf("failed to create raw socket: %v", err)
 	}
 
 	err = unix.SetsockoptInt(s, unix.SOL_SOCKET, unix.SO_TIMESTAMP, 1)
 	if err != nil {
-		return fmt.Errorf("Failed to set SO_TIMESTAMP socket option: %v", err)
+		return fmt.Errorf("failed to set SO_TIMESTAMP socket option: %v", err)
 	}
 
 	return nil
@@ -544,9 +542,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
 		// up via NFLOG and NFQUEUE.
 		if err := EnableTimestamping(); err != nil {
-			log.WithError(err).Warning("Couldn't enable timestamping, so DNS and NFQUEUE latency will not be measured")
+			logrus.WithError(err).Warning("Couldn't enable timestamping, so DNS and NFQUEUE latency will not be measured")
 		} else {
-			log.Info("Timestamping enabled, so DNS latency will be measured")
+			logrus.Info("Timestamping enabled, so DNS latency will be measured")
 		}
 	}
 
@@ -561,12 +559,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dataplaneFeatures := featureDetector.GetFeatures()
 
-	var bpfIPSetsMap, dnsMpx, dnsSets maps.Map
-	var bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 maps.Map
+	var bpfIPSetsMap, dnsMpx, dnsSets bpfmaps.Map
+	var bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 bpfmaps.Map
 	if !config.BPFEnabled {
 		setDefault := false
 		if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse() && !dataplaneFeatures.NFQueueBypass {
-			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
+			logrus.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			setDefault = true
 		}
 		if config.RulesConfig.IsDNSPolicyModeInline() {
@@ -576,7 +574,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 			err := bpfiptables.LoadDNSParserBPFProgram(config.BPFLogLevel, bpfmap.DNSMapsToPin())
 			if err != nil {
-				log.WithError(err).Warning("Failed to load BPF DNS parser program. Maybe the kernel is old. Falling back to DelayDeniedPacket")
+				logrus.WithError(err).Warning("Failed to load BPF DNS parser program. Maybe the kernel is old. Falling back to DelayDeniedPacket")
 				setDefault = true
 			}
 		}
@@ -589,7 +587,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	log.WithField("config", config).Info("Creating internal dataplane driver.")
+	logrus.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 
 	if ruleRenderer == nil {
@@ -597,7 +595,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			var err error
 			config.RulesConfig.EKSPrimaryENI, err = aws.PrimaryInterfaceName()
 			if err != nil {
-				log.WithError(err).Error("Failed to find primary EKS link name based default route " +
+				logrus.WithError(err).Error("Failed to find primary EKS link name based default route " +
 					"- proxied nodeports may not work correctly")
 			}
 		}
@@ -611,7 +609,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	// Auto-detect host MTU.
 	hostMTU, err := findHostMTU(config.MTUIfacePattern)
 	if err != nil {
-		log.WithError(err).Fatal("Unable to detect host MTU, shutting down")
+		logrus.WithError(err).Fatal("Unable to detect host MTU, shutting down")
 		return nil
 	}
 	ConfigureDefaultMTUs(hostMTU, &config)
@@ -619,10 +617,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if err := writeMTUFile(podMTU); err != nil {
 		// Fail early if RequireMTUFile is true
 		if config.RequireMTUFile {
-			log.WithError(err).Error("Failed to write MTU file shutting, down")
+			logrus.WithError(err).Error("Failed to write MTU file shutting, down")
 			return nil
 		}
-		log.WithError(err).Error("Failed to write MTU file, pod MTU may not be properly set")
+		logrus.WithError(err).Error("Failed to write MTU file, pod MTU may not be properly set")
 	}
 
 	// Determine the action set and new match function based on the underlying generictables implementation.
@@ -679,7 +677,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.BPFEnabled && config.BPFKubeProxyIptablesCleanupEnabled {
 		// If BPF-mode is enabled, clean up kube-proxy's rules too.
-		log.Info("BPF enabled, configuring iptables/nftables layer to clean up kube-proxy's rules.")
+		logrus.Info("BPF enabled, configuring iptables/nftables layer to clean up kube-proxy's rules.")
 		iptablesOptions.ExtraCleanupRegexPattern = rules.KubeProxyInsertRuleRegex
 		iptablesOptions.HistoricChainPrefixes = append(iptablesOptions.HistoricChainPrefixes, rules.KubeProxyChainPrefixes...)
 	}
@@ -687,7 +685,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.BPFEnabled && !config.BPFPolicyDebugEnabled {
 		err := os.RemoveAll(bpf.RuntimePolDir)
 		if err != nil && !os.IsNotExist(err) {
-			log.WithError(err).Info("Policy debug disabled but failed to remove the debug directory.  Ignoring.")
+			logrus.WithError(err).Info("Policy debug disabled but failed to remove the debug directory.  Ignoring.")
 		}
 	}
 
@@ -704,17 +702,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		iptablesLock = dummyLock{}
 	} else {
 		if dataplaneFeatures.RestoreSupportsLock {
-			log.Debug("Calico implementation of iptables lock disabled (because detected version of " +
+			logrus.Debug("Calico implementation of iptables lock disabled (because detected version of " +
 				"iptables-restore will use its own implementation).")
 			iptablesLock = dummyLock{}
 		} else if config.IptablesLockTimeout <= 0 {
-			log.Debug("Calico implementation of iptables lock disabled (by configuration).")
+			logrus.Debug("Calico implementation of iptables lock disabled (by configuration).")
 			iptablesLock = dummyLock{}
 		} else {
 			// Create the shared iptables lock.  This allows us to block other processes from
 			// manipulating iptables while we make our updates.  We use a shared lock because we
 			// actually do multiple updates in parallel (but to different tables), which is safe.
-			log.WithField("timeout", config.IptablesLockTimeout).Debug(
+			logrus.WithField("timeout", config.IptablesLockTimeout).Debug(
 				"Calico implementation of iptables lock enabled")
 			iptablesLock = iptables.NewSharedLock(
 				config.IptablesLockFilePath,
@@ -792,7 +790,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var routeTableV6 routetable.Interface
 
 	if !config.RouteSyncDisabled {
-		log.Debug("Route management is enabled.")
+		logrus.Debug("Route management is enabled.")
 		routeTableV4 = routetable.New(
 			ownershippol.NewMainTable(
 				dataplanedefs.VXLANIfaceNameV4,
@@ -836,7 +834,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			)
 		}
 	} else {
-		log.Info("Route management is disabled, using DummyTables.")
+		logrus.Info("Route management is disabled, using DummyTables.")
 		routeTableV4 = &routetable.DummyTable{}
 		if config.IPv6Enabled {
 			routeTableV6 = &routetable.DummyTable{}
@@ -851,7 +849,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	// program no encapsulation routes.
 	if config.ProgramClusterRoutes {
 		if !config.RulesConfig.VXLANEnabled && !config.RulesConfig.IPIPEnabled && !config.RulesConfig.WireguardEnabled {
-			log.Info("Unencapsulated IPv4 route programming enabled, starting thread to keep no encapsulation routes in sync.")
+			logrus.Info("Unencapsulated IPv4 route programming enabled, starting thread to keep no encapsulation routes in sync.")
 			// Add a manager to keep the all-hosts IP set up to date.
 			dp.noEncapManager = newNoEncapManager(
 				routeTableV4,
@@ -870,7 +868,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		if config.IPv6Enabled &&
 			!config.RulesConfig.VXLANEnabledV6 && !config.RulesConfig.WireguardEnabledV6 {
-			log.Info("Unencapsulated IPv6 route programming enabled, starting thread to keep no encapsulation routes in sync.")
+			logrus.Info("Unencapsulated IPv6 route programming enabled, starting thread to keep no encapsulation routes in sync.")
 			// Add a manager to keep the all-hosts IP set up to date.
 			dp.noEncapManagerV6 = newNoEncapManager(
 				routeTableV6,
@@ -931,12 +929,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	tproxyRTIndex4, err = config.RouteTableManager.GrabIndex()
 	if err != nil {
-		log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v4")
+		logrus.WithError(err).Fatal("Failed to allocate routing table index for tproxy v4")
 	}
 	if config.IPv6Enabled {
 		tproxyRTIndex6, err = config.RouteTableManager.GrabIndex()
 		if err != nil {
-			log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
+			logrus.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
 		}
 	}
 
@@ -1003,21 +1001,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.callbacks = callbacks
 	if config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {
-			log.WithError(err).Warn("Can't enable XDP acceleration.")
+			logrus.WithError(err).Warn("Can't enable XDP acceleration.")
 			config.XDPEnabled = false
 		} else if !config.BPFEnabled {
 			st, err := NewXDPState(config.XDPAllowGeneric)
 			if err != nil {
-				log.WithError(err).Warn("Can't enable XDP acceleration.")
+				logrus.WithError(err).Warn("Can't enable XDP acceleration.")
 			} else {
 				dp.xdpState = st
 				dp.xdpState.PopulateCallbacks(callbacks)
 				dp.RegisterManager(st)
-				log.Info("XDP acceleration enabled.")
+				logrus.Info("XDP acceleration enabled.")
 			}
 		}
 	} else {
-		log.Info("XDP acceleration disabled.")
+		logrus.Info("XDP acceleration disabled.")
 	}
 
 	// TODO Support cleaning up non-BPF XDP state from a previous Felix run, when BPF mode has just been enabled.
@@ -1025,7 +1023,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		xdpState, err := NewXDPState(config.XDPAllowGeneric)
 		if err == nil {
 			if err := xdpState.WipeXDP(); err != nil {
-				log.WithError(err).Warn("Failed to cleanup preexisting XDP state")
+				logrus.WithError(err).Warn("Failed to cleanup preexisting XDP state")
 			}
 		}
 		// if we can't create an XDP state it means we couldn't get a working
@@ -1034,20 +1032,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.SidecarAccelerationEnabled {
 		if err := bpf.SupportsSockmap(); err != nil {
-			log.WithError(err).Warn("Can't enable Sockmap acceleration.")
+			logrus.WithError(err).Warn("Can't enable Sockmap acceleration.")
 		} else {
 			st, err := NewSockmapState()
 			if err != nil {
-				log.WithError(err).Warn("Can't enable Sockmap acceleration.")
+				logrus.WithError(err).Warn("Can't enable Sockmap acceleration.")
 			} else {
 				dp.sockmapState = st
 				dp.sockmapState.PopulateCallbacks(callbacks)
 
 				if err := dp.sockmapState.SetupSockmapAcceleration(); err != nil {
 					dp.sockmapState = nil
-					log.WithError(err).Warn("Failed to set up Sockmap acceleration")
+					logrus.WithError(err).Warn("Failed to set up Sockmap acceleration")
 				} else {
-					log.Info("Sockmap acceleration enabled.")
+					logrus.Info("Sockmap acceleration enabled.")
 				}
 			}
 		}
@@ -1125,7 +1123,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	defaultRPFilter, err := os.ReadFile("/proc/sys/net/ipv4/conf/default/rp_filter")
 	if err != nil {
-		log.Warn("could not determine default rp_filter setting, defaulting to strict")
+		logrus.Warn("could not determine default rp_filter setting, defaulting to strict")
 		defaultRPFilter = []byte{'1'}
 	}
 
@@ -1136,7 +1134,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	bpfMapSizeConntrackResizeSize, _ := conntrackMapSizeFromFile()
 	if bpfMapSizeConntrackResizeSize > bpfMapSizeConntrack {
-		log.Infof("Overriding bpfMapSizeConntrack (%d) with map size growth (%d)",
+		logrus.Infof("Overriding bpfMapSizeConntrack (%d) with map size growth (%d)",
 			bpfMapSizeConntrack, bpfMapSizeConntrackResizeSize)
 		bpfMapSizeConntrack = bpfMapSizeConntrackResizeSize
 	}
@@ -1170,7 +1168,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ringSize := config.BPFExportBufferSizeMB * 1024 * 1024
 		bpfEvnt, err = events.New(events.SourcePerfEvents, ringSize)
 		if err != nil {
-			log.WithError(err).Error("Failed to create perf event")
+			logrus.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false
 			config.FlowLogsCollectTcpStats = false
 			config.FlowLogsCollectProcessPath = false
@@ -1180,7 +1178,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			// Register BPF event handling for DNS events.
 			bpfEventPoller.Register(events.TypeDNSEvent,
 				func(e events.Event) {
-					log.Debugf("DNS packet from BPF: %v", e)
+					logrus.Debugf("DNS packet from BPF: %v", e)
 					// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
 					// packet data begins after that.
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
@@ -1194,12 +1192,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 						Timestamp: timestampNS,
 					}
 				})
-			log.Info("BPF: Registered events sink for TypeDNSEvent")
+			logrus.Info("BPF: Registered events sink for TypeDNSEvent")
 
 			// Register BPF event handling for DNS events from L3 devices.
 			bpfEventPoller.Register(events.TypeDNSEventL3,
 				func(e events.Event) {
-					log.Debugf("DNS L3 packet from BPF: %v", e)
+					logrus.Debugf("DNS L3 packet from BPF: %v", e)
 					// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
 					// packet data begins after that.
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
@@ -1211,7 +1209,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 						Timestamp: timestampNS,
 					}
 				})
-			log.Info("BPF: Registered events sink for TypeDNSEventL3")
+			logrus.Info("BPF: Registered events sink for TypeDNSEventL3")
 		}
 	}
 	if config.FlowLogsCollectProcessInfo {
@@ -1221,7 +1219,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				if config.FlowLogsCollectProcessPath {
 					err = kp.AttachSyscall()
 					if err != nil {
-						log.WithError(err).Error("error installing process path kprobes. skipping it")
+						logrus.WithError(err).Error("error installing process path kprobes. skipping it")
 						config.FlowLogsCollectProcessPath = false
 					}
 				}
@@ -1235,15 +1233,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					return fmt.Errorf("failed to install UDP v4 kprobes: %v", err)
 				}
 			} else {
-				return fmt.Errorf("error creating new kprobe object.")
+				return fmt.Errorf("error creating new kprobe object")
 			}
 			return nil
 		}
 		if err := installKprobes(); err != nil {
-			log.WithError(err).Error("error installing kprobes. skipping it")
+			logrus.WithError(err).Error("error installing kprobes. skipping it")
 			config.FlowLogsCollectProcessInfo = false
 		} else {
-			log.Info("BPF: Registered events sink for TypeProtoStats")
+			logrus.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
 			bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
 			if config.FlowLogsCollectProcessPath {
@@ -1259,7 +1257,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		socketStatsMap := stats.SocketStatsMap()
 		err := socketStatsMap.EnsureExists()
 		if err != nil {
-			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
+			logrus.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
 			config.FlowLogsCollectTcpStats = false
 		}
 	} else {
@@ -1286,11 +1284,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	var bpfIPSetsV4 egressIPSets
 	if config.BPFEnabled {
-		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
+		logrus.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 
 		bpfMaps, err := bpfmap.CreateBPFMaps(config.BPFIpv6Enabled)
 		if err != nil {
-			log.WithError(err).Panic("error creating bpf maps")
+			logrus.WithError(err).Panic("error creating bpf maps")
 		}
 
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
@@ -1315,7 +1313,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBDisabled) &&
 			config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATDisabled) {
-			log.Warn("Host-networked access to services from host networked process won't work properly " +
+			logrus.Warn("Host-networked access to services from host networked process won't work properly " +
 				"- BPFHostNetworkedNAT is disabled.")
 		}
 
@@ -1349,7 +1347,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			podMTU,
 		)
 		if err != nil {
-			log.WithError(err).Panic("Failed to create BPF endpoint manager.")
+			logrus.WithError(err).Panic("Failed to create BPF endpoint manager.")
 		}
 
 		dp.RegisterManager(bpfEndpointManager)
@@ -1359,7 +1357,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// The above cases are invalid configuration. Revert to CTLB enabled.
 		if config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATEnabled) {
 			if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBEnabled) {
-				log.Warn("Both BPFConnectTimeLoadBalancing and BPFHostNetworkedNATWithoutCTLB are enabled. " +
+				logrus.Warn("Both BPFConnectTimeLoadBalancing and BPFHostNetworkedNATWithoutCTLB are enabled. " +
 					"Disabling BPFHostNetworkedNATWithoutCTLB. " +
 					"Set BPFConnectTimeLoadBalancing=TCP if you want disable it for other protocols.")
 				config.BPFHostNetworkedNAT = string(apiv3.BPFHostNetworkedNATDisabled)
@@ -1367,7 +1365,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		} else {
 			if config.BPFConnTimeLB != string(apiv3.BPFConnectTimeLBEnabled) {
 				if config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATDisabled) {
-					log.Warnf("Access to (some) services from host may not work properly because "+
+					logrus.Warnf("Access to (some) services from host may not work properly because "+
 						"BPFConnectTimeLoadBalancing is %s and BPFHostNetworkedNATWithoutCTLB is disabled",
 						config.BPFConnTimeLB)
 				}
@@ -1390,14 +1388,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			err = bpfnat.InstallConnectTimeLoadBalancer(true, config.BPFIpv6Enabled,
 				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMap)
 			if err != nil {
-				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
+				logrus.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
-			log.Infof("Connect time load balancer enabled: %s", config.BPFConnTimeLB)
+			logrus.Infof("Connect time load balancer enabled: %s", config.BPFConnTimeLB)
 		} else {
 			// Deactivate the connect-time load balancer.
 			err = bpfnat.RemoveConnectTimeLoadBalancer(true, config.BPFCgroupV2)
 			if err != nil {
-				log.WithError(err).Warn("Failed to detach connect-time load balancer. Ignoring.")
+				logrus.WithError(err).Warn("Failed to detach connect-time load balancer. Ignoring.")
 			}
 		}
 
@@ -1407,7 +1405,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			if config.BPFIpv6Enabled {
 				bpfEventPoller.Register(events.TypePolicyVerdictV6, policyEventListener.EventHandler)
 			}
-			log.Info("BPF: Registered events sink for TypePolicyVerdict")
+			logrus.Info("BPF: Registered events sink for TypePolicyVerdict")
 
 			collectorPacketInfoReader = policyEventListener
 
@@ -1434,7 +1432,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				conntrackScannerV6.AddFirstUnlocked(conntrackInfoReaderV6)
 			}
 
-			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
+			logrus.Info("BPF: ConntrackInfoReader added to conntrackScanner")
 			collectorConntrackInfoReader = collectorCtInfoReader
 		}
 
@@ -1445,9 +1443,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			conntrackScannerV6.Start()
 		}
 
-		log.Info("conntrackScanner started")
+		logrus.Info("conntrackScanner started")
 	} else if config.RulesConfig.IsDNSPolicyModeInline() {
-		log.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
+		logrus.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
 		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, ruleRenderer, dp, bpfIPSetsMap, dnsMpx, dnsSets)
 		if config.IPv6Enabled {
 			setupIPSetsAndDomainTracker(proto.IPVersion_IPV6, config, ipsetsManagerV6, ruleRenderer, dp, bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6)
@@ -1457,7 +1455,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.EgressIPEnabled {
 		// Allocate all remaining tables to the egress manager.
 		// This assumes no remaining modules need to reserve table indices.
-		log.Info("Egress IP support enabled, creating egress IP manager")
+		logrus.Info("Egress IP support enabled, creating egress IP manager")
 		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
 
 		egressStatusCallback := func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
@@ -1490,11 +1488,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.egressIPManager)
 	} else {
 		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
-		log.Info("Checking if we need to clean up the egress VXLAN device")
+		logrus.Info("Checking if we need to clean up the egress VXLAN device")
 		if link, err := netlink.LinkByName("egress.calico"); err != nil && err != syscall.ENODEV {
-			log.WithError(err).Warnf("Failed to query egress VXLAN device")
+			logrus.WithError(err).Warnf("Failed to query egress VXLAN device")
 		} else if err = netlink.LinkDel(link); err != nil {
-			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
+			logrus.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
 		}
 	}
 
@@ -1561,7 +1559,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.RulesConfig.IPIPEnabled {
-		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
+		logrus.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
 		// Add a manager to keep the all-hosts IP set up to date.
 		dp.ipipManager = newIPIPManager(
 			routeTableV4,
@@ -1609,7 +1607,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	activeCaptures, err := capture.NewActiveCaptures(config.PacketCapture, dp.fromDataplane)
 	if err != nil {
-		log.WithError(err).Panicf("Failed create dir %s required to start packet capture", config.PacketCapture.Directory)
+		logrus.WithError(err).Panicf("Failed create dir %s required to start packet capture", config.PacketCapture.Directory)
 	}
 	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
@@ -1852,7 +1850,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		charonConfig.SetLogLevel(config.IPSecLogLevel)
 		charonConfig.SetBooleanOption(ipsec.CharonFollowRedirects, false)
 		charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
-		log.Infof("Initialising charon config %+v", charonConfig)
+		logrus.Infof("Initialising charon config %+v", charonConfig)
 		charonConfig.RenderToFile()
 		ikeDaemon := ipsec.NewCharonIKEDaemon(
 			config.IPSecESPProposal,
@@ -1863,7 +1861,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		var charonWG sync.WaitGroup
 		err := ikeDaemon.Start(context.Background(), &charonWG)
 		if err != nil {
-			log.WithError(err).Panic("error starting Charon.")
+			logrus.WithError(err).Panic("error starting Charon.")
 		}
 
 		dp.ipSecDataplane = ipsec.NewDataplane(
@@ -1880,17 +1878,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {
-		log.Info("Registering to report health.")
+		logrus.Info("Registering to report health.")
 		timeout := config.WatchdogTimeout
 		if config.HealthAggregator.SystemdWatchDogEnabled() {
 			// Systemd timeout value has the higher priority.
 			timeout = config.HealthAggregator.GetSystemdWatchDogTimeout()
 			if timeout < healthInterval*2 {
-				log.Panicf("Systemd watchdog timeout (%v) too low, it should be longer than %v", timeout, healthInterval*2)
+				logrus.Panicf("Systemd watchdog timeout (%v) too low, it should be longer than %v", timeout, healthInterval*2)
 			}
 		} else {
 			if timeout < healthInterval*2 {
-				log.Warnf("Dataplane watchdog timeout (%v) too low, defaulting to %v", timeout, healthInterval*2)
+				logrus.Warnf("Dataplane watchdog timeout (%v) too low, defaulting to %v", timeout, healthInterval*2)
 				timeout = healthInterval * 2
 			}
 		}
@@ -1902,7 +1900,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.DebugSimulateDataplaneHangAfter != 0 {
-		log.WithField("delay", config.DebugSimulateDataplaneHangAfter).Warn(
+		logrus.WithField("delay", config.DebugSimulateDataplaneHangAfter).Warn(
 			"Simulating a dataplane hang.")
 		dp.debugHangC = time.After(config.DebugSimulateDataplaneHangAfter)
 	}
@@ -1910,17 +1908,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	// If required, subscribe to NFLog collection.
 	if config.Collector != nil {
 		if !config.BPFEnabled {
-			log.Debug("Stats collection is required, create nflog reader")
+			logrus.Debug("Stats collection is required, create nflog reader")
 			nflogrd := collector.NewNFLogReader(config.LookupsCache, 1, 2,
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
-			log.Debug("Stats collection is required, create conntrack reader")
+			logrus.Debug("Stats collection is required, create conntrack reader")
 			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.MarkProxy)
 			collectorConntrackInfoReader = ctrd
 		}
 
 		if config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
-			log.Debug("Process/TCP stats collection is required, create process info cache")
+			logrus.Debug("Process/TCP stats collection is required, create process info cache")
 			infoEntryTTL := 10 * time.Second
 			infoGCInterval := infoEntryTTL / 5
 			procEntryTTL := 30 * time.Second
@@ -1944,26 +1942,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		config.Collector.SetPacketInfoReader(collectorPacketInfoReader)
-		log.Info("PacketInfoReader added to collector")
+		logrus.Info("PacketInfoReader added to collector")
 		config.Collector.SetConntrackInfoReader(collectorConntrackInfoReader)
-		log.Info("ConntrackInfoReader added to collector")
+		logrus.Info("ConntrackInfoReader added to collector")
 		config.Collector.SetProcessInfoCache(processInfoCache)
-		log.Info("ProcessInfoCache added to collector")
+		logrus.Info("ProcessInfoCache added to collector")
 		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV4, ipsetsManager)
-		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv4")
+		logrus.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv4")
 		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV6, ipsetsManagerV6)
-		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv6")
+		logrus.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv6")
 		netlink, err := netlinkshim.NewRealNetlink()
 		if err == nil {
 			config.Collector.SetNetlinkHandle(netlink)
-			log.Info("Netlink handle added to collector")
+			logrus.Info("Netlink handle added to collector")
 		}
 	}
 
 	if bpfEventPoller != nil {
-		log.Info("Starting BPF event poller")
+		logrus.Info("Starting BPF event poller")
 		if err := bpfEventPoller.Start(); err != nil {
-			log.WithError(err).Info("Stopping bpf event poller")
+			logrus.WithError(err).Info("Stopping bpf event poller")
 			bpfEvnt.Close()
 		}
 	}
@@ -1987,14 +1985,14 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 
 	nlHandle, err := netlinkshim.NewRealNetlink()
 	if err != nil {
-		log.WithError(err).Error("Failed to create netlink handle. Unable to auto-detect MTU.")
+		logrus.WithError(err).Error("Failed to create netlink handle. Unable to auto-detect MTU.")
 		return 0, err
 	}
 
 	defer nlHandle.Close()
 	links, err := nlHandle.LinkList()
 	if err != nil {
-		log.WithError(err).Error("Failed to list interfaces. Unable to auto-detect MTU.")
+		logrus.WithError(err).Error("Failed to list interfaces. Unable to auto-detect MTU.")
 		return 0, err
 	}
 
@@ -2002,22 +2000,22 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 	smallest := 0
 	for _, l := range links {
 		// Skip links that we know are not external interfaces.
-		fields := log.Fields{"mtu": l.Attrs().MTU, "name": l.Attrs().Name}
+		fields := logrus.Fields{"mtu": l.Attrs().MTU, "name": l.Attrs().Name}
 		if matchRegex == nil || !matchRegex.MatchString(l.Attrs().Name) {
-			log.WithFields(fields).Debug("Skipping interface for MTU detection (name is excluded by regex)")
+			logrus.WithFields(fields).Debug("Skipping interface for MTU detection (name is excluded by regex)")
 			continue
 		}
 		// Skip links that are down.  In particular, we want to ignore newly-added AWS secondary ENIs until
 		// the AWS IP manager has had a chance to configure them.
 		if l.Attrs().OperState != netlink.OperUp {
-			log.WithFields(fields).Debug("Skipping interface for MTU detection (link is down)")
+			logrus.WithFields(fields).Debug("Skipping interface for MTU detection (link is down)")
 			continue
 		}
 		if !ifacemonitor.LinkIsOperUp(l) {
-			log.WithFields(fields).Debug("Skipping down interface for MTU detection")
+			logrus.WithFields(fields).Debug("Skipping down interface for MTU detection")
 			continue
 		}
-		log.WithFields(fields).Debug("Examining link for MTU calculation")
+		logrus.WithFields(fields).Debug("Examining link for MTU calculation")
 		if l.Attrs().MTU < smallest || smallest == 0 {
 			smallest = l.Attrs().MTU
 		}
@@ -2026,7 +2024,7 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 	if smallest == 0 {
 		// We failed to find a usable interface. Default the MTU of the host
 		// to 1460 - the smallest among common cloud providers.
-		log.Warn("Failed to auto-detect host MTU - no interfaces matched the MTU interface pattern. To use auto-MTU, set mtuIfacePattern to match your host's interfaces")
+		logrus.Warn("Failed to auto-detect host MTU - no interfaces matched the MTU interface pattern. To use auto-MTU, set mtuIfacePattern to match your host's interfaces")
 		return 1460, nil
 	}
 	return smallest, nil
@@ -2042,9 +2040,9 @@ func writeMTUFile(mtu int) error {
 
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
-	log.Debugf("Writing %d to "+filename, mtu)
+	logrus.Debugf("Writing %d to "+filename, mtu)
 	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
-		log.WithError(err).Error("Unable to write to " + filename)
+		logrus.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}
 	return nil
@@ -2076,10 +2074,10 @@ func determinePodMTU(config Config) int {
 		// No enabled encapsulation. Just use the host MTU.
 		mtu = config.hostMTU
 	} else if mtu > config.hostMTU {
-		fields := log.Fields{"mtu": mtu, "hostMTU": config.hostMTU}
-		log.WithFields(fields).Warn("Configured MTU is larger than detected host interface MTU")
+		fields := logrus.Fields{"mtu": mtu, "hostMTU": config.hostMTU}
+		logrus.WithFields(fields).Warn("Configured MTU is larger than detected host interface MTU")
 	}
-	log.WithField("mtu", mtu).Info("Determined pod MTU")
+	logrus.WithField("mtu", mtu).Info("Determined pod MTU")
 	return mtu
 }
 
@@ -2089,15 +2087,15 @@ func determinePodMTU(config Config) int {
 func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 	c.hostMTU = hostMTU
 	if c.IPIPMTU == 0 {
-		log.Debug("Defaulting IPIP MTU based on host")
+		logrus.Debug("Defaulting IPIP MTU based on host")
 		c.IPIPMTU = hostMTU - ipipMTUOverhead
 	}
 	if c.VXLANMTU == 0 {
-		log.Debug("Defaulting IPv4 VXLAN MTU based on host")
+		logrus.Debug("Defaulting IPv4 VXLAN MTU based on host")
 		c.VXLANMTU = hostMTU - vxlanMTUOverhead
 	}
 	if c.VXLANMTUV6 == 0 {
-		log.Debug("Defaulting IPv6 VXLAN MTU based on host")
+		logrus.Debug("Defaulting IPv6 VXLAN MTU based on host")
 		c.VXLANMTUV6 = hostMTU - vxlanV6MTUOverhead
 	}
 	if c.Wireguard.MTU == 0 {
@@ -2108,10 +2106,10 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 			// Additionally, Wireguard sets the DF bit on its packets, and so if the MTU is set too high large packets
 			// will be dropped. Therefore it is necessary to allow for the difference between the MTU of the host and
 			// the underlying network.
-			log.Debug("Defaulting IPv4 Wireguard MTU based on host and AKS with WorkloadIPs")
+			logrus.Debug("Defaulting IPv4 Wireguard MTU based on host and AKS with WorkloadIPs")
 			c.Wireguard.MTU = hostMTU - aksMTUOverhead - wireguardMTUOverhead
 		} else {
-			log.Debug("Defaulting IPv4 Wireguard MTU based on host")
+			logrus.Debug("Defaulting IPv4 Wireguard MTU based on host")
 			c.Wireguard.MTU = hostMTU - wireguardMTUOverhead
 		}
 	}
@@ -2123,10 +2121,10 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 			// Additionally, Wireguard sets the DF bit on its packets, and so if the MTU is set too high large packets
 			// will be dropped. Therefore it is necessary to allow for the difference between the MTU of the host and
 			// the underlying network.
-			log.Debug("Defaulting IPv6 Wireguard MTU based on host and AKS with WorkloadIPs")
+			logrus.Debug("Defaulting IPv6 Wireguard MTU based on host and AKS with WorkloadIPs")
 			c.Wireguard.MTUV6 = hostMTU - aksMTUOverhead - wireguardV6MTUOverhead
 		} else {
-			log.Debug("Defaulting IPv6 Wireguard MTU based on host")
+			logrus.Debug("Defaulting IPv6 Wireguard MTU based on host")
 			c.Wireguard.MTUV6 = hostMTU - wireguardV6MTUOverhead
 		}
 	}
@@ -2134,7 +2132,7 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 
 func cleanUpIPIPAddrs() {
 	// If IPIP is not enabled, check to see if there is are addresses in the IPIP device and delete them if there are.
-	log.Debug("Checking if we need to clean up the IPIP device")
+	logrus.Debug("Checking if we need to clean up the IPIP device")
 
 	var errFound bool
 
@@ -2142,15 +2140,15 @@ cleanupRetry:
 	for i := 0; i <= maxCleanupRetries; i++ {
 		errFound = false
 		if i > 0 {
-			log.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
+			logrus.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
 		}
 		link, err := netlink.LinkByName(dataplanedefs.IPIPIfaceName)
 		if err != nil {
 			if _, ok := err.(netlink.LinkNotFoundError); ok {
-				log.Debug("IPIP disabled and no IPIP device found")
+				logrus.Debug("IPIP disabled and no IPIP device found")
 				return
 			}
-			log.WithError(err).Warn("IPIP disabled and failed to query IPIP device.")
+			logrus.WithError(err).Warn("IPIP disabled and failed to query IPIP device.")
 			errFound = true
 
 			// Sleep for 1 second before retrying
@@ -2159,7 +2157,7 @@ cleanupRetry:
 		}
 		addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
 		if err != nil {
-			log.WithError(err).Warn("IPIP disabled and failed to list addresses, will be unable to remove any old addresses from the device should they exist.")
+			logrus.WithError(err).Warn("IPIP disabled and failed to list addresses, will be unable to remove any old addresses from the device should they exist.")
 			errFound = true
 
 			// Sleep for 1 second before retrying
@@ -2169,7 +2167,7 @@ cleanupRetry:
 
 		for _, oldAddr := range addrs {
 			if err := netlink.AddrDel(link, &oldAddr); err != nil {
-				log.WithError(err).Errorf("IPIP disabled and failed to delete unwanted IPIP address %s.", oldAddr.IPNet)
+				logrus.WithError(err).Errorf("IPIP disabled and failed to delete unwanted IPIP address %s.", oldAddr.IPNet)
 				errFound = true
 
 				// Sleep for 1 second before retrying
@@ -2179,27 +2177,27 @@ cleanupRetry:
 		}
 	}
 	if errFound {
-		log.Warnf("Giving up trying to clean up IPIP addresses after retrying %v times", maxCleanupRetries)
+		logrus.Warnf("Giving up trying to clean up IPIP addresses after retrying %v times", maxCleanupRetries)
 	}
 }
 
 func cleanUpVXLANDevice(deviceName string) {
 	// If VXLAN is not enabled, check to see if there is a VXLAN device and delete it if there is.
-	log.Debug("Checking if we need to clean up the VXLAN device")
+	logrus.Debug("Checking if we need to clean up the VXLAN device")
 
 	var errFound bool
 	for i := 0; i <= maxCleanupRetries; i++ {
 		errFound = false
 		if i > 0 {
-			log.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
+			logrus.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
 		}
 		link, err := netlink.LinkByName(deviceName)
 		if err != nil {
 			if _, ok := err.(netlink.LinkNotFoundError); ok {
-				log.Debug("VXLAN disabled and no VXLAN device found")
+				logrus.Debug("VXLAN disabled and no VXLAN device found")
 				return
 			}
-			log.WithError(err).Warn("VXLAN disabled and failed to query VXLAN device.")
+			logrus.WithError(err).Warn("VXLAN disabled and failed to query VXLAN device.")
 			errFound = true
 
 			// Sleep for 1 second before retrying
@@ -2207,7 +2205,7 @@ func cleanUpVXLANDevice(deviceName string) {
 			continue
 		}
 		if err = netlink.LinkDel(link); err != nil {
-			log.WithError(err).Error("VXLAN disabled and failed to delete unwanted VXLAN device.")
+			logrus.WithError(err).Error("VXLAN disabled and failed to delete unwanted VXLAN device.")
 			errFound = true
 
 			// Sleep for 1 second before retrying
@@ -2216,7 +2214,7 @@ func cleanUpVXLANDevice(deviceName string) {
 		}
 	}
 	if errFound {
-		log.Warnf("Giving up trying to clean up VXLAN device after retrying %v times", maxCleanupRetries)
+		logrus.Warnf("Giving up trying to clean up VXLAN device after retrying %v times", maxCleanupRetries)
 	}
 }
 
@@ -2272,13 +2270,13 @@ func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	if ok {
 		// Used to log the whole manager out here but if we do that then we cause races if the manager has
 		// other threads or locks.
-		log.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteTables")
+		logrus.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteTables")
 		d.managersWithRouteTables = append(d.managersWithRouteTables, tableMgr)
 	}
 
 	rulesMgr, ok := mgr.(ManagerWithRouteRules)
 	if ok {
-		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
+		logrus.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
 		d.managersWithRouteRules = append(d.managersWithRouteRules, rulesMgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)
@@ -2323,7 +2321,7 @@ func (d *InternalDataplane) Start() {
 				}
 			},
 			stopChannel); err != nil {
-			log.WithError(err).Error("failed to subscribe DNS")
+			logrus.WithError(err).Error("failed to subscribe DNS")
 		}
 	}
 
@@ -2357,7 +2355,7 @@ type ifaceInSync struct{}
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
 func (d *InternalDataplane) onIfaceStateChange(ifaceName string, state ifacemonitor.State, ifIndex int) {
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"ifaceName": ifaceName,
 		"ifIndex":   ifIndex,
 		"state":     state,
@@ -2391,7 +2389,7 @@ func (d *InternalDataplane) checkIPVSConfigOnStateUpdate(state ifacemonitor.Stat
 	ipvsIfacePresent := state != ifacemonitor.StateNotPresent
 	ipvsSupportEnabled := d.config.RulesConfig.KubeIPVSSupportEnabled
 	if ipvsSupportEnabled != ipvsIfacePresent {
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"ipvsIfaceState": state,
 			"ipvsSupport":    ipvsSupportEnabled,
 		}).Info("kube-proxy mode changed. Restart felix.")
@@ -2402,7 +2400,7 @@ func (d *InternalDataplane) checkIPVSConfigOnStateUpdate(state ifacemonitor.Stat
 // onIfaceAddrsChange is our interface address monitor callback.  It gets called
 // from the monitor's thread.
 func (d *InternalDataplane) onIfaceAddrsChange(ifaceName string, addrs set.Set[string]) {
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"ifaceName": ifaceName,
 		"addrs":     addrs,
 	}).Info("Linux interface addrs changed.")
@@ -2437,11 +2435,11 @@ func (d *InternalDataplane) monitorHostMTU() {
 	for {
 		mtu, err := findHostMTU(d.config.MTUIfacePattern)
 		if err != nil {
-			log.WithError(err).Error("Error detecting host MTU")
+			logrus.WithError(err).Error("Error detecting host MTU")
 		} else if d.config.hostMTU != mtu {
 			// Since log writing is done a background thread, we set the force-flush flag on this log to ensure that
 			// all the in-flight logs get written before we exit.
-			log.WithFields(log.Fields{lclogutils.FieldForceFlush: true}).Info("Host MTU changed")
+			logrus.WithFields(logrus.Fields{lclogutils.FieldForceFlush: true}).Info("Host MTU changed")
 			d.config.ConfigChangedRestartCallback()
 		}
 		time.Sleep(30 * time.Second)
@@ -2668,23 +2666,23 @@ func (d *InternalDataplane) setUpIptablesBPFEarly() {
 		// disrupting.
 		if present := t.CheckRulesPresent("FORWARD", rules); present != nil {
 			if len(present) != len(rules) {
-				log.WithField("presentRules", present).
+				logrus.WithField("presentRules", present).
 					Warn("Some early rules on filter FORWARD, skipping adding other, full resync will resolve it.")
 			}
 		} else {
 			if err := t.InsertRulesNow("FORWARD", rules); err != nil {
-				log.WithError(err).
+				logrus.WithError(err).
 					Warn("Failed inserting some early rules to filter FORWARD, some flows may get temporarily disrupted.")
 			}
 		}
 		if present := t.CheckRulesPresent("OUTPUT", rules); present != nil {
 			if len(present) != len(rules) {
-				log.WithField("presentRules", present).
+				logrus.WithField("presentRules", present).
 					Warn("Some early rules on filter OUTPUT, skipping adding other, full resync will resolve it.")
 			}
 		} else {
 			if err := t.InsertRulesNow("OUTPUT", rules); err != nil {
-				log.WithError(err).
+				logrus.WithError(err).
 					Warn("Failed inserting some early rules to filter OUTPUT, some flows may get temporarily disrupted.")
 			}
 		}
@@ -2802,9 +2800,9 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
-			log.Warnf("failed to set XDP failsafe ports, disabling XDP: %v", err)
+			logrus.Warnf("failed to set XDP failsafe ports, disabling XDP: %v", err)
 			if err := d.shutdownXDPCompletely(); err != nil {
-				log.Warnf("failed to disable XDP: %v, will proceed anyway.", err)
+				logrus.Warnf("failed to disable XDP: %v, will proceed anyway.", err)
 			}
 		}
 	}
@@ -2840,7 +2838,7 @@ func (d *InternalDataplane) setXDPFailsafePorts() error {
 		}
 	}
 
-	log.Infof("Set XDP failsafe ports: %+v", inboundPorts)
+	logrus.Infof("Set XDP failsafe ports: %+v", inboundPorts)
 	return nil
 }
 
@@ -2862,14 +2860,14 @@ func (d *InternalDataplane) shutdownXDPCompletely() error {
 			d.xdpState = nil
 			return nil
 		}
-		log.WithError(err).WithField("try", i).Warn("failed to wipe the XDP state")
+		logrus.WithError(err).WithField("try", i).Warn("failed to wipe the XDP state")
 		time.Sleep(waitInterval)
 	}
 	return fmt.Errorf("failed to wipe the XDP state after %v tries over %v seconds: Error %v", maxTries, waitInterval, err)
 }
 
 func (d *InternalDataplane) loopUpdatingDataplane() {
-	log.Info("Started internal iptables dataplane driver loop")
+	logrus.Info("Started internal iptables dataplane driver loop")
 	healthTicks := time.NewTicker(healthInterval).C
 	d.reportHealth()
 
@@ -2920,21 +2918,21 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		case <-d.egressVXLANUpdatedC:
 			d.egressIPManager.OnVXLANDeviceUpdate()
 		case <-ipSetsRefreshC:
-			log.Debug("Refreshing IP sets state")
+			logrus.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
 			d.dataplaneNeedsSync = true
 		case <-routeRefreshC:
-			log.Debug("Refreshing routes")
+			logrus.Debug("Refreshing routes")
 			d.forceRouteRefresh = true
 			d.dataplaneNeedsSync = true
 		case <-xdpRefreshC:
-			log.Debug("Refreshing XDP")
+			logrus.Debug("Refreshing XDP")
 			d.forceXDPRefresh = true
 			d.dataplaneNeedsSync = true
 		case <-ipSecRefreshC:
 			d.ipSecPolTable.QueueResync()
 		case <-d.reschedC:
-			log.Debug("Reschedule kick received")
+			logrus.Debug("Reschedule kick received")
 			d.dataplaneNeedsSync = true
 			// nil out the channel to record that the timer is now inactive.
 			d.reschedC = nil
@@ -2944,14 +2942,14 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.reportHealth()
 		case <-retryTicker.C:
 		case <-d.debugHangC:
-			log.Warning("Debug hang simulation timer popped, hanging the dataplane!!")
+			logrus.Warning("Debug hang simulation timer popped, hanging the dataplane!!")
 			time.Sleep(1 * time.Hour)
-			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
+			logrus.Panic("Woke up after 1 hour, something's probably wrong with the test.")
 		case stopWG := <-d.stopChan:
 			func() { // Avoid linter warnings on the "defer".
 				defer stopWG.Done()
 				if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
-					log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
+					logrus.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
 				}
 			}()
 			return
@@ -2961,14 +2959,14 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			// Dataplane is out-of-sync, check if we're throttled.
 			if d.applyThrottle.Admit() {
 				if beingThrottled && d.applyThrottle.WouldAdmit() {
-					log.Info("Dataplane updates no longer throttled")
+					logrus.Info("Dataplane updates no longer throttled")
 					beingThrottled = false
 				}
-				log.Debug("Applying dataplane updates")
+				logrus.Debug("Applying dataplane updates")
 				applyStart := time.Now()
 
 				if d.config.DebugSimulateDataplaneApplyDelay > 0 {
-					log.WithField("delay", d.config.DebugSimulateDataplaneApplyDelay).Debug("Simulating a dataplane-apply delay")
+					logrus.WithField("delay", d.config.DebugSimulateDataplaneApplyDelay).Debug("Simulating a dataplane-apply delay")
 					time.Sleep(d.config.DebugSimulateDataplaneApplyDelay)
 				}
 				// Actually apply the changes to the dataplane.
@@ -2987,7 +2985,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 				d.loopSummarizer.EndOfIteration(applyTime)
 
 				if !d.doneFirstApply {
-					log.WithField(
+					logrus.WithField(
 						"secsSinceStart", time.Since(processStartTime).Seconds(),
 					).Info("Completed first update to dataplane.")
 					d.loopSummarizer.RecordOperation("first-update")
@@ -3005,7 +3003,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 				d.reportHealth()
 			} else {
 				if !beingThrottled {
-					log.Info("Dataplane updates throttled")
+					logrus.Info("Dataplane updates throttled")
 					beingThrottled = true
 				}
 			}
@@ -3015,10 +3013,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 
 func newRefreshTicker(name string, interval time.Duration) <-chan time.Time {
 	if interval <= 0 {
-		log.Infof("Refresh of %s on timer disabled", name)
+		logrus.Infof("Refresh of %s on timer disabled", name)
 		return nil
 	}
-	log.WithField("interval", interval).Infof("Will refresh %s on timer", name)
+	logrus.WithField("interval", interval).Infof("Will refresh %s on timer", name)
 	refreshTicker := jitter.NewTicker(interval, interval/10)
 	return refreshTicker.Channel()
 }
@@ -3038,8 +3036,8 @@ func (d *InternalDataplane) onDatastoreMessage(msg interface{}) {
 }
 
 func (d *InternalDataplane) processMsgFromCalcGraph(msg interface{}) {
-	if log.IsLevelEnabled(log.InfoLevel) {
-		log.Infof("Received %T update from calculation graph. msg=%s", msg, proto.MsgStringer{Msg: msg}.String())
+	if logrus.IsLevelEnabled(logrus.InfoLevel) {
+		logrus.Infof("Received %T update from calculation graph. msg=%s", msg, proto.MsgStringer{Msg: msg}.String())
 	}
 	d.datastoreBatchSize++
 	d.dataplaneNeedsSync = true
@@ -3049,7 +3047,7 @@ func (d *InternalDataplane) processMsgFromCalcGraph(msg interface{}) {
 	}
 	switch msg.(type) {
 	case *proto.InSync:
-		log.WithField("timeSinceStart", time.Since(processStartTime)).Info(
+		logrus.WithField("timeSinceStart", time.Since(processStartTime)).Info(
 			"Datastore in sync, flushing the dataplane for the first time...")
 		d.datastoreInSync = true
 	}
@@ -3091,13 +3089,13 @@ func (d *InternalDataplane) processIfaceInSync() {
 	if d.ifaceMonitorInSync {
 		return
 	}
-	log.Info("Interface monitor now in sync.")
+	logrus.Info("Interface monitor now in sync.")
 	d.ifaceMonitorInSync = true
 	d.dataplaneNeedsSync = true
 }
 
 func (d *InternalDataplane) processIfaceStateUpdate(ifaceUpdate *ifaceStateUpdate) {
-	log.WithField("msg", ifaceUpdate).Info("Received interface update")
+	logrus.WithField("msg", ifaceUpdate).Info("Received interface update")
 	d.dataplaneNeedsSync = true
 	d.linkUpdateBatchSize++
 	if ifaceUpdate.Name == KubeIPVSInterface {
@@ -3124,7 +3122,7 @@ func (d *InternalDataplane) processIfaceStateUpdate(ifaceUpdate *ifaceStateUpdat
 }
 
 func (d *InternalDataplane) processIfaceAddrsUpdate(ifaceAddrsUpdate *ifaceAddrsUpdate) {
-	log.WithField("msg", ifaceAddrsUpdate).Info("Received interface addresses update")
+	logrus.WithField("msg", ifaceAddrsUpdate).Info("Received interface addresses update")
 	d.dataplaneNeedsSync = true
 	d.addrsUpdateBatchSize++
 	for _, mgr := range d.allManagers {
@@ -3153,44 +3151,44 @@ func (d *InternalDataplane) configureKernel() {
 	// failed modprobe calls.
 	mp := newModProbe(moduleConntrackSCTP, newRealCmd)
 	out, err := mp.Exec()
-	log.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleConntrackSCTP)
+	logrus.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleConntrackSCTP)
 
 	if d.config.IPForwarding == "Enabled" {
-		log.Info("Making sure IPv4 forwarding is enabled.")
+		logrus.Info("Making sure IPv4 forwarding is enabled.")
 		err = writeProcSys("/proc/sys/net/ipv4/ip_forward", "1")
 		if err != nil {
-			log.WithError(err).Error("Failed to set IPv4 forwarding sysctl")
+			logrus.WithError(err).Error("Failed to set IPv4 forwarding sysctl")
 		}
 
 		if d.config.IPv6Enabled {
-			log.Info("Making sure IPv6 forwarding is enabled.")
+			logrus.Info("Making sure IPv6 forwarding is enabled.")
 			err = writeProcSys("/proc/sys/net/ipv6/conf/all/forwarding", "1")
 			if err != nil {
-				log.WithError(err).Error("Failed to set IPv6 forwarding sysctl")
+				logrus.WithError(err).Error("Failed to set IPv6 forwarding sysctl")
 			}
 		}
 	} else {
-		log.Info("IPv4 forwarding disabled by config, leaving sysctls untouched.")
+		logrus.Info("IPv4 forwarding disabled by config, leaving sysctls untouched.")
 	}
 
 	// Enable conntrack packet and byte accounting.
 	err = writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
 	if err != nil {
-		log.Warnf("failed to set enable conntrack packet and byte accounting: %v\n", err)
+		logrus.Warnf("failed to set enable conntrack packet and byte accounting: %v\n", err)
 	}
 
 	if d.config.BPFEnabled && d.config.BPFDisableUnprivileged {
-		log.Info("BPF enabled, disabling unprivileged BPF usage.")
+		logrus.Info("BPF enabled, disabling unprivileged BPF usage.")
 		err := writeProcSys("/proc/sys/kernel/unprivileged_bpf_disabled", "1")
 		if err != nil {
-			log.WithError(err).Error("Failed to set unprivileged_bpf_disabled sysctl")
+			logrus.WithError(err).Error("Failed to set unprivileged_bpf_disabled sysctl")
 		}
 	}
 	if d.config.Wireguard.Enabled || d.config.Wireguard.EnabledV6 {
 		// wireguard module is available in linux kernel >= 5.6
 		mpwg := newModProbe(moduleWireguard, newRealCmd)
 		out, err = mpwg.Exec()
-		log.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleWireguard)
+		logrus.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleWireguard)
 	}
 }
 
@@ -3215,7 +3213,7 @@ func (d *InternalDataplane) apply() {
 		if handler, ok := mgr.(UpdateBatchResolver); ok {
 			err := handler.ResolveUpdateBatch()
 			if err != nil {
-				log.WithField("manager", reflect.TypeOf(mgr).Name()).WithError(err).Debug(
+				logrus.WithField("manager", reflect.TypeOf(mgr).Name()).WithError(err).Debug(
 					"couldn't resolve update batch for manager, will try again later")
 				d.dataplaneNeedsSync = true
 			}
@@ -3227,7 +3225,7 @@ func (d *InternalDataplane) apply() {
 	for _, mgr := range d.allManagers {
 		err := mgr.CompleteDeferredWork()
 		if err != nil {
-			log.WithField("manager", reflect.TypeOf(mgr).Name()).WithError(err).Debug(
+			logrus.WithField("manager", reflect.TypeOf(mgr).Name()).WithError(err).Debug(
 				"couldn't complete deferred work for manager, will try again later")
 			d.dataplaneNeedsSync = true
 		}
@@ -3249,7 +3247,7 @@ func (d *InternalDataplane) apply() {
 			err := d.xdpState.ProcessMemberUpdates()
 			d.xdpState.DropPendingDiffState()
 			if err != nil {
-				log.WithError(err).Warning("Failed to process XDP member updates, will resync later...")
+				logrus.WithError(err).Warning("Failed to process XDP member updates, will resync later...")
 				if err := d.applyXDPActions(); err != nil {
 					applyXDPError = err
 				}
@@ -3257,9 +3255,9 @@ func (d *InternalDataplane) apply() {
 			d.xdpState.UpdateState()
 		}
 		if applyXDPError != nil {
-			log.WithError(applyXDPError).Info("Applying XDP actions did not succeed, disabling XDP")
+			logrus.WithError(applyXDPError).Info("Applying XDP actions did not succeed, disabling XDP")
 			if err := d.shutdownXDPCompletely(); err != nil {
-				log.Warnf("failed to disable XDP: %v, will proceed anyway.", err)
+				logrus.Warnf("failed to disable XDP: %v, will proceed anyway.", err)
 			}
 		}
 	}
@@ -3306,9 +3304,9 @@ func (d *InternalDataplane) apply() {
 		if err != nil {
 			var lnf netlink.LinkNotFoundError
 			if errors.As(err, &lnf) || errors.Is(err, vxlanfdb.ErrLinkDown) {
-				log.Debug("VXLAN interface not ready yet, can't sync FDB entries.")
+				logrus.Debug("VXLAN interface not ready yet, can't sync FDB entries.")
 			} else {
-				log.WithError(err).Warn("Failed to synchronize VXLAN FDB entries, will retry...")
+				logrus.WithError(err).Warn("Failed to synchronize VXLAN FDB entries, will retry...")
 				d.dataplaneNeedsSync = true
 			}
 		}
@@ -3318,7 +3316,7 @@ func (d *InternalDataplane) apply() {
 	for _, la := range d.linkAddrsManagers {
 		err := la.Apply()
 		if err != nil {
-			log.WithError(err).Warn("Failed to synchronize link addr entries, will retry...")
+			logrus.WithError(err).Warn("Failed to synchronize link addr entries, will retry...")
 			d.dataplaneNeedsSync = true
 		}
 	}
@@ -3332,7 +3330,7 @@ func (d *InternalDataplane) apply() {
 		go func(r routetable.SyncerInterface) {
 			err := r.Apply()
 			if err != nil {
-				log.Warn("Failed to synchronize routing table, will retry...")
+				logrus.Warn("Failed to synchronize routing table, will retry...")
 				numBackgroundProblems.Add(1)
 			}
 			d.reportHealth()
@@ -3348,7 +3346,7 @@ func (d *InternalDataplane) apply() {
 		go func(r routeRules) {
 			err := r.Apply()
 			if err != nil {
-				log.Warn("Failed to synchronize routing rules, will retry...")
+				logrus.Warn("Failed to synchronize routing rules, will retry...")
 				numBackgroundProblems.Add(1)
 			}
 			d.reportHealth()
@@ -3439,7 +3437,7 @@ func (d *InternalDataplane) apply() {
 	}
 	if reschedDelay != 0 {
 		// We need to reschedule.
-		log.WithField("delay", reschedDelay).Debug("Asked to reschedule.")
+		logrus.WithField("delay", reschedDelay).Debug("Asked to reschedule.")
 		if d.reschedTimer == nil {
 			// First time, create the timer.
 			d.reschedTimer = time.NewTimer(reschedDelay)
@@ -3504,16 +3502,16 @@ func (d *InternalDataplane) applyXDPActions() error {
 		if err = d.xdpState.ApplyBPFActions(d.ipsetsSourceV4); err == nil {
 			return nil
 		} else {
-			log.WithError(err).Info("Applying XDP BPF actions did not succeed, will retry with resync...")
+			logrus.WithError(err).Info("Applying XDP BPF actions did not succeed, will retry with resync...")
 		}
 	}
 	return err
 }
 
 func (d *InternalDataplane) loopReportingStatus() {
-	log.Info("Started internal status report thread")
+	logrus.Info("Started internal status report thread")
 	if d.config.StatusReportingInterval <= 0 {
-		log.Info("Process status reports disabled")
+		logrus.Info("Process status reports disabled")
 		return
 	}
 	// Wait before first report so that we don't check in if we're in a tight cyclic restart.
@@ -3581,7 +3579,7 @@ func startBPFDataplaneComponents(
 			for {
 				err := config.bpfProxyHealthzServer.Run(context.Background()) // context is mosstly ignored inside
 				if err != nil {
-					log.WithError(err).Error("BPF Proxy Healthz server failed, restarting in 1s")
+					logrus.WithError(err).Error("BPF Proxy Healthz server failed, restarting in 1s")
 					time.Sleep(time.Second)
 				}
 			}
@@ -3595,7 +3593,7 @@ func startBPFDataplaneComponents(
 	if config.bpfProxyHealthzServer != nil {
 		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithHealthzServer(config.bpfProxyHealthzServer))
 	} else {
-		log.Info("No healthz server configured for BPF kube-proxy.")
+		logrus.Info("No healthz server configured for BPF kube-proxy.")
 	}
 
 	if config.BPFNodePortDSREnabled {
@@ -3632,7 +3630,7 @@ func startBPFDataplaneComponents(
 			return ipSets.IDStringToUint64(id)
 		})
 		if err != nil {
-			log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+			logrus.WithError(err).Fatal("Failed to create BPF domain tracker.")
 		}
 		ipSetsMgr.AddDomainTracker(tracker)
 	}
@@ -3672,7 +3670,7 @@ func startBPFDataplaneComponents(
 
 	bpfCleaner, err := bpfconntrack.NewBPFProgCleaner(int(ipFamily), config.BPFConntrackTimeouts, ctLogLevel)
 	if err != nil {
-		log.Errorf("error creating the bpf cleaner %v", err)
+		logrus.Errorf("error creating the bpf cleaner %v", err)
 	}
 
 	conntrackScanner := bpfconntrack.NewScanner(maps.CtMap, ctKey, ctVal,
@@ -3695,14 +3693,14 @@ func startBPFDataplaneComponents(
 			bpfproxyOpts...,
 		)
 		if err != nil {
-			log.WithError(err).Panic("Failed to start kube-proxy.")
+			logrus.WithError(err).Panic("Failed to start kube-proxy.")
 		}
 
 		bpfRTMgr.setHostIPUpdatesCallBack(kp.OnHostIPsUpdate)
 		bpfRTMgr.setRoutesCallBacks(kp.OnRouteUpdate, kp.OnRouteDelete)
 		conntrackScanner.AddUnlocked(bpfconntrack.NewStaleNATScanner(kp))
 	} else {
-		log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
+		logrus.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 	}
 	return conntrackScanner, ipSets
 }
@@ -3712,7 +3710,7 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 	ipSetsMgr *dpsets.IPSetsManager,
 	ruleRenderer rules.RuleRenderer,
 	dp *InternalDataplane,
-	ipsetsMap, dnsMpx, dnsSets maps.Map,
+	ipsetsMap, dnsMpx, dnsSets bpfmaps.Map,
 ) {
 	ipSetIDAllocator := idalloc.New()
 	ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
@@ -3738,20 +3736,20 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 		return ipSets.IDStringToUint64(id)
 	}, dnsMpx, dnsSets)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+		logrus.WithError(err).Fatal("Failed to create BPF domain tracker.")
 	}
 	ipSetsMgr.AddDomainTracker(tracker)
 }
 
-func createDNSBpfMaps(ipFamily proto.IPVersion) (maps.Map, maps.Map, maps.Map) {
+func createDNSBpfMaps(ipFamily proto.IPVersion) (bpfmaps.Map, bpfmaps.Map, bpfmaps.Map) {
 	ipsetsMap, err := bpfmap.CreateBPFIPSetsMap(ipFamily)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create BPF IPSets map.")
+		logrus.WithError(err).Fatal("Failed to create BPF IPSets map.")
 	}
 
 	dnsMpx, dnsSets, err := dnsresolver.CreateBPFMapsForDNS(int(ipFamily))
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create BPF DNS maps.")
+		logrus.WithError(err).Fatal("Failed to create BPF DNS maps.")
 	}
 
 	return ipsetsMap, dnsMpx, dnsSets
@@ -3761,7 +3759,7 @@ func cleanupBPFState(config Config) {
 	// Clean up any leftover BPF state.
 	err := bpfnat.RemoveConnectTimeLoadBalancer(true, "")
 	if err != nil {
-		log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
+		logrus.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 	}
 	bpfutils.RemoveBPFSpecialDevices()
 	if !config.RulesConfig.IsDNSPolicyModeInline() {
@@ -3776,7 +3774,7 @@ func cleanupBPFState(config Config) {
 		// and the pins will get recreated when we resync the dataplane after starting up.
 		err := bpfiptables.CleanupOld(config.BPFLogLevel)
 		if err != nil && !os.IsNotExist(err) {
-			log.WithError(err).Info("Failed to remove BPF IPset matcher pins, ignoring.")
+			logrus.WithError(err).Info("Failed to remove BPF IPset matcher pins, ignoring.")
 		}
 	}
 }
@@ -3787,10 +3785,10 @@ func conntrackMapSizeFromFile() (int, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, return zero.
-			log.Infof("File %s does not exist", filename)
+			logrus.Infof("File %s does not exist", filename)
 			return 0, nil
 		}
-		log.WithError(err).Errorf("Failed to read %s", filename)
+		logrus.WithError(err).Errorf("Failed to read %s", filename)
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(string(data)))

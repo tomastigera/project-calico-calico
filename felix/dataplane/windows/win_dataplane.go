@@ -24,7 +24,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
-	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/dns"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
@@ -72,7 +71,7 @@ type Config struct {
 	DNSCacheEpoch             int
 	DNSExtraTTL               time.Duration
 	DNSLogsLatency            bool
-	DNSTrustedServers         []config.ServerPort
+	DNSTrustedServers         []felixconfig.ServerPort
 	EnableDestDomainsByClient bool
 	PktMonStartArgs           string
 

@@ -95,7 +95,7 @@ func IncludeByDestPort(port int) IncludeFilter {
 
 func IncludeByReporter(reporter flowlog.ReporterType) IncludeFilter {
 	return func(f flowlog.FlowLog) bool {
-		return f.FlowMeta.Reporter == reporter
+		return f.Reporter == reporter
 	}
 }
 
@@ -200,7 +200,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
 		if fl.PacketsOut+fl.PacketsIn == 0 &&
-			fl.FlowProcessReportedStats.TransitPacketsOut+fl.FlowProcessReportedStats.TransitPacketsIn == 0 {
+			fl.TransitPacketsOut+fl.TransitPacketsIn == 0 {
 			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}

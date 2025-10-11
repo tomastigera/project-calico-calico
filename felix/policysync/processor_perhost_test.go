@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	googleproto "google.golang.org/protobuf/proto"
 
@@ -97,7 +96,7 @@ func wepUpdate(name string) *proto.WorkloadEndpointUpdate {
 }
 
 func profileUpdate(name string) *proto.ActiveProfileUpdate {
-	log.Debug("sending profile update: ", name)
+	logrus.Debug("sending profile update: ", name)
 	id := proto.ProfileID{Name: name}
 	return &proto.ActiveProfileUpdate{
 		Id: &id,
@@ -131,7 +130,7 @@ func TestProcessorWithHostmodeClients(t *testing.T) {
 	wepNames := []string{"a", "b", "c"}
 	profileNames := []string{"j", "k", "l"}
 	for _, wepName := range wepNames {
-		log.Info("send wep", wepName)
+		logrus.Info("send wep", wepName)
 		updates <- wepUpdate(wepName)
 	}
 	for _, profileName := range profileNames {

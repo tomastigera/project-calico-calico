@@ -433,5 +433,5 @@ func (m *IPSetsManager) OnDomainChange(domain string) (dataplaneSyncNeeded bool)
 
 type IPSetsDomainStoreVoid struct{}
 
-func (_ *IPSetsDomainStoreVoid) RegisterHandler(common.DomainInfoChangeHandler) {}
-func (_ *IPSetsDomainStoreVoid) GetDomainIPs(domain string) []string            { return nil }
+func (*IPSetsDomainStoreVoid) RegisterHandler(common.DomainInfoChangeHandler) {}
+func (*IPSetsDomainStoreVoid) GetDomainIPs(domain string) []string            { return nil }

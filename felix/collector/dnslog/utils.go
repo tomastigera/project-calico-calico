@@ -18,18 +18,18 @@ import (
 
 func newMetaSpecFromUpdate(update Update, kind AggregationKind) (DNSMeta, DNSSpec, error) {
 	if len(update.DNS.Questions) == 0 {
-		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
+		return DNSMeta{}, DNSSpec{}, errors.New("no questions in DNS packet")
 	}
 
 	clientEM, err := endpoint.GetMetadata(update.ClientEP, utils.IpTo16Byte(update.ClientIP))
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v: %v", update.ClientEP, err)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("could not extract metadata for client %v: %v", update.ClientEP, err)
 	}
 	clientLabels := endpoint.GetLabels(update.ClientEP)
 
 	serverEM, err := endpoint.GetMetadata(update.ServerEP, utils.IpTo16Byte(update.ServerIP))
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v: %v", update.ServerEP, err)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("could not extract metadata for server %v: %v", update.ServerEP, err)
 	}
 	serverLabels := endpoint.GetLabels(update.ServerEP)
 

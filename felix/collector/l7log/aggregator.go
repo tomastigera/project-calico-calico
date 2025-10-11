@@ -245,7 +245,7 @@ func translateAggregationKind(aggStr string) (int, error) {
 	val, ok := aggregationKindTypeMap[aggStr]
 	if !ok {
 		// Unrecognized aggregation level string provided.
-		return val, fmt.Errorf("Invalid aggregation kind provided: %s", aggStr)
+		return val, fmt.Errorf("invalid aggregation kind provided: %s", aggStr)
 	}
 	return val, nil
 }

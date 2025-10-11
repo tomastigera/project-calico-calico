@@ -213,10 +213,10 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 			FlowProcessReportedStats: stat,
 			FlowDestDomains:          f.FlowDestDomains,
 		}
-		if f.flowExtrasRef.originalSourceIPs != nil {
+		if f.originalSourceIPs != nil {
 			fe := FlowExtras{
-				OriginalSourceIPs:    f.flowExtrasRef.originalSourceIPs.ToIPSlice(),
-				NumOriginalSourceIPs: f.flowExtrasRef.originalSourceIPs.TotalCount(),
+				OriginalSourceIPs:    f.originalSourceIPs.ToIPSlice(),
+				NumOriginalSourceIPs: f.originalSourceIPs.TotalCount(),
 			}
 			fl.FlowExtras = fe
 		}
@@ -705,14 +705,14 @@ func NewFlowStats(mu metric.Update) FlowStats {
 	// it is indicated by one of sendCongestionWnd, smoothRtt, minRtt, Mss
 	// being nil. Hence it is enough if we compare one of the above with nil
 	if mu.SendCongestionWnd != nil {
-		flowStats.FlowReportedTCPStats.SendCongestionWnd = TCPWnd{Mean: *mu.SendCongestionWnd, Min: *mu.SendCongestionWnd}
-		flowStats.FlowReportedTCPStats.SmoothRtt = TCPRtt{Mean: *mu.SmoothRtt, Max: *mu.SmoothRtt}
-		flowStats.FlowReportedTCPStats.MinRtt = TCPRtt{Mean: *mu.MinRtt, Max: *mu.MinRtt}
-		flowStats.FlowReportedTCPStats.Mss = TCPMss{Mean: *mu.Mss, Min: *mu.Mss}
-		flowStats.FlowReportedTCPStats.TotalRetrans = mu.TcpMetric.DeltaTotalRetrans
-		flowStats.FlowReportedTCPStats.LostOut = mu.TcpMetric.DeltaLostOut
-		flowStats.FlowReportedTCPStats.UnrecoveredRTO = mu.TcpMetric.DeltaUnRecoveredRTO
-		flowStats.FlowReportedTCPStats.Count = 1
+		flowStats.SendCongestionWnd = TCPWnd{Mean: *mu.SendCongestionWnd, Min: *mu.SendCongestionWnd}
+		flowStats.SmoothRtt = TCPRtt{Mean: *mu.SmoothRtt, Max: *mu.SmoothRtt}
+		flowStats.MinRtt = TCPRtt{Mean: *mu.MinRtt, Max: *mu.MinRtt}
+		flowStats.Mss = TCPMss{Mean: *mu.Mss, Min: *mu.Mss}
+		flowStats.TotalRetrans = mu.TcpMetric.DeltaTotalRetrans
+		flowStats.LostOut = mu.TcpMetric.DeltaLostOut
+		flowStats.UnrecoveredRTO = mu.TcpMetric.DeltaUnRecoveredRTO
+		flowStats.Count = 1
 	}
 	return flowStats
 }
@@ -1023,15 +1023,16 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 		// set to the number of PIDs for this process name.
 		numPids = stats.processIDs.Len()
 		var pid string
-		if numPids == 0 {
+		switch numPids {
+		case 0:
 			pid = FieldNotIncluded
-		} else if numPids == 1 {
+		case 1:
 			// Get the first and only PID.
 			stats.processIDs.Iter(func(p string) error {
 				pid = p
 				return set.StopIteration
 			})
-		} else {
+		default:
 			pid = fieldAggregated
 		}
 
@@ -1305,7 +1306,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		f.FlowExtras = FlowExtras{
 			OriginalSourceIPs: ips,
 		}
-		f.FlowExtras.NumOriginalSourceIPs, _ = strconv.Atoi(parts[28])
+		f.NumOriginalSourceIPs, _ = strconv.Atoi(parts[28])
 	}
 
 	svcPortNum, err := strconv.Atoi(parts[32])

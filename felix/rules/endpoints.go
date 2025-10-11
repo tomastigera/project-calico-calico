@@ -652,7 +652,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				generictables.Rule{
 					Match: baseMatch(ProtoUDP).
 						DestPorts(
-							uint16(r.Config.EgressIPVXLANPort), // egress.calico
+							uint16(r.EgressIPVXLANPort), // egress.calico
 						),
 					Action:  r.Allow(),
 					Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
@@ -904,7 +904,7 @@ func (r *DefaultRuleRenderer) appendConntrackRules(rules []generictables.Rule, a
 			Action: allowAction,
 		},
 	)
-	if !r.Config.DisableConntrackInvalid && !allowInvalid {
+	if !r.DisableConntrackInvalid && !allowInvalid {
 		// Drop packets that aren't either a valid handshake or part of an established
 		// connection.
 		rules = append(rules, generictables.Rule{

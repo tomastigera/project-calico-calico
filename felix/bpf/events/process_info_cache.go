@@ -10,13 +10,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/types"
-	collector "github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 )
 
 type ProcessEntry struct {
-	collector.ProcessInfo
+	types.ProcessInfo
 	expiresAt time.Time
 }
 
@@ -104,7 +103,7 @@ func (r *BPFProcessInfoCache) Stop() {
 	r.wg.Wait()
 }
 
-func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficDirection) (collector.ProcessInfo, bool) {
+func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficDirection) (types.ProcessInfo, bool) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
@@ -119,7 +118,7 @@ func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficD
 		return entry.ProcessInfo, true
 	}
 	log.Debugf("Process info not found for tuple %+v in direction %v", tuple, direction)
-	return collector.ProcessInfo{}, false
+	return types.ProcessInfo{}, false
 }
 
 func (r *BPFProcessInfoCache) Update(tuple tuple.Tuple, dirty bool) {
@@ -131,20 +130,20 @@ func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple tuple.Tuple, di
 	log.Debugf("Setting the dirty flag for TCPStats to %+v", dirty)
 	entry, ok := r.cache[tuple]
 	if ok {
-		entry.TcpStatsData.IsDirty = dirty
+		entry.IsDirty = dirty
 		r.cache[tuple] = entry
 	}
 	// May be entry has expired
 }
 
-func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessInfo) {
+func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info types.ProcessInfo) {
 	log.Debugf("Updating process info %+v", info)
 	t := info.Tuple
 	if r.processPathCache != nil {
-		pathInfo, ok := r.processPathCache.Lookup(info.ProcessData.Pid)
+		pathInfo, ok := r.processPathCache.Lookup(info.Pid)
 		if ok {
-			info.ProcessData.Name = pathInfo.Path
-			info.ProcessData.Arguments = pathInfo.Args
+			info.Name = pathInfo.Path
+			info.Arguments = pathInfo.Args
 		}
 	}
 
@@ -165,7 +164,7 @@ func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessI
 	}
 }
 
-func (r *BPFProcessInfoCache) updateCacheWithStats(info collector.ProcessInfo) {
+func (r *BPFProcessInfoCache) updateCacheWithStats(info types.ProcessInfo) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Updating process info with stats %+v", info)
@@ -198,31 +197,31 @@ func (r *BPFProcessInfoCache) expireCacheEntries() {
 	}
 }
 
-func convertProtoEventToProcessInfo(event EventProtoStats) collector.ProcessInfo {
+func convertProtoEventToProcessInfo(event EventProtoStats) types.ProcessInfo {
 	srcIP := event.Saddr
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := tuple.Make(srcIP, dstIP, int(event.Proto), sport, dport)
 	pname := bytes.Trim(event.ProcessName[:], "\x00")
-	return collector.ProcessInfo{
+	return types.ProcessInfo{
 		Tuple: tuple,
-		ProcessData: collector.ProcessData{
+		ProcessData: types.ProcessData{
 			Name: string(pname),
 			Pid:  int(event.Pid),
 		},
 	}
 }
 
-func convertTcpStatsEventToProcessInfo(event EventTcpStats) collector.ProcessInfo {
+func convertTcpStatsEventToProcessInfo(event EventTcpStats) types.ProcessInfo {
 	srcIP := event.Saddr
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := tuple.Make(srcIP, dstIP, 6, sport, dport)
-	return collector.ProcessInfo{
+	return types.ProcessInfo{
 		Tuple: tuple,
-		TcpStatsData: collector.TcpStatsData{
+		TcpStatsData: types.TcpStatsData{
 			SendCongestionWnd: event.SendCongestionWnd,
 			SmoothRtt:         event.SmoothRtt,
 			MinRtt:            event.MinRtt,

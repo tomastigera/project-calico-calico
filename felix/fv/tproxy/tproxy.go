@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -64,10 +64,10 @@ func (t *TProxy) Start() {
 
 	var err error
 	t.out, err = t.cmd.StdoutPipe()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.err, err = t.cmd.StderrPipe()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	go t.readStdout()
 	go t.readStderr()
@@ -80,7 +80,7 @@ func (t *TProxy) Start() {
 		ginkgo.Fail("Failed to start tproxy: it never reported that it was listening")
 	}
 
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func (t *TProxy) Stop() {
@@ -115,7 +115,7 @@ func (t *TProxy) readStderr() {
 	listening := false
 
 	defer func() {
-		Expect(listening).To(BeTrue(), "Proxy did not start to listen")
+		gomega.Expect(listening).To(gomega.BeTrue(), "Proxy did not start to listen")
 		safeClose()
 	}()
 

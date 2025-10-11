@@ -52,7 +52,7 @@ func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
 	} else if strings.Contains(strings.ToLower(networkType), "overlay") {
 		backend = CalicoBackendVXLAN
 	} else {
-		return nil, fmt.Errorf("Wrong Windows network type")
+		return nil, fmt.Errorf("wrong Windows network type")
 	}
 
 	return &WinFV{
@@ -155,7 +155,7 @@ func (f *WinFV) ReadDnsCacheFile() ([]JsonMappingV1, error) {
 		err = json.Unmarshal(s.Bytes(), &m)
 		if err != nil {
 			all, _ := os.ReadFile(f.dnsCacheFile)
-			return result, fmt.Errorf("Error unmarshaling dns log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
+			return result, fmt.Errorf("error unmarshaling dns log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
 		}
 		result = append(result, m)
 	}
