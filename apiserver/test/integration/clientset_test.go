@@ -1392,7 +1392,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 
 	// Check for Certificate Expiry date exists.  Since hte cert is provided to us as configuration, we can't check
 	// the exact date.
-	if !lic.Status.Expiry.Time.After(time.Now()) {
+	if !lic.Status.Expiry.After(time.Now()) {
 		fmt.Printf("Valid License's Expiry date missing/in past:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
@@ -3460,7 +3460,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 			"%s \n%+v", "managed-cluster.key", managedCluster.Name, managedClusterServer)
 	}
 
-	fingerprint := managedClusterServer.ObjectMeta.Annotations["certs.tigera.io/active-fingerprint"]
+	fingerprint := managedClusterServer.Annotations["certs.tigera.io/active-fingerprint"]
 	if len(fingerprint) == 0 {
 		return fmt.Errorf("expected fingerprint when creating %s instead of \n%+v",
 			managedCluster.Name, managedClusterServer)

@@ -68,7 +68,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object is not a RemoteClusterConfiguration")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), RemoteClusterConfigurationToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), RemoteClusterConfigurationToSelectableFields(apiserver), nil
 }
 
 // MatchRemoteClusterConfiguration is the filter used by the generic etcd backend to watch events

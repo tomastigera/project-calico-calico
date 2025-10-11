@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
@@ -19,7 +18,7 @@ import (
 
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
-	*genericregistry.Store
+	*registry.Store
 }
 
 // EmptyObject returns an empty instance
@@ -34,7 +33,7 @@ func NewList() runtime.Object {
 
 // StatusREST implements the REST endpoint for changing the status of a deployment
 type StatusREST struct {
-	store *genericregistry.Store
+	store *registry.Store
 }
 
 func (r *StatusREST) New() runtime.Object {
@@ -87,7 +86,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 	if err != nil {
 		return nil, nil, err
 	}
-	store := &genericregistry.Store{
+	store := &registry.Store{
 		NewFunc:     func() runtime.Object { return &calico.AlertException{} },
 		NewListFunc: func() runtime.Object { return &calico.AlertExceptionList{} },
 		KeyRootFunc: opts.KeyRootFunc(false),

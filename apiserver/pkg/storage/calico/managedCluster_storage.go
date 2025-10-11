@@ -43,7 +43,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 				ErroredFields: []cerrors.ErroredField{{
 					Name:   "Metadata.Name",
 					Reason: "ManagementCluster must be configured before adding ManagedClusters",
-					Value:  res.ObjectMeta.Name,
+					Value:  res.Name,
 				}},
 			}
 		}
@@ -94,14 +94,14 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		logrus.Debugf("Using CA certificate with CN=%s", caCert.Subject.CommonName)
 
 		// Generate x509 certificate and private key for the managed cluster
-		certificate, privKey, err := helpers.Generate(caCert, caKey, res.ObjectMeta.Name)
+		certificate, privKey, err := helpers.Generate(caCert, caKey, res.Name)
 		if err != nil {
 			logrus.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
 			return nil, cerrors.ErrorValidation{
 				ErroredFields: []cerrors.ErroredField{{
 					Name:   "Metadata.Name",
 					Reason: "Failed to generate client credentials",
-					Value:  res.ObjectMeta.Name,
+					Value:  res.Name,
 				}},
 			}
 		}

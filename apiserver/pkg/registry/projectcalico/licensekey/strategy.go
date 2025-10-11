@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -51,8 +50,8 @@ func (apiServerStrategy) NamespaceScoped() bool {
 
 func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	lcgLicenseKey := convertToLibcalico(obj)
-	lcgLicenseKey.TypeMeta.APIVersion = libcalicoapi.GroupVersionCurrent
-	lcgLicenseKey.TypeMeta.Kind = libcalicoapi.KindLicenseKey
+	lcgLicenseKey.APIVersion = calico.GroupVersionCurrent
+	lcgLicenseKey.Kind = calico.KindLicenseKey
 
 	licClaims, err := licClient.Decode(*lcgLicenseKey)
 	if err != nil {
@@ -61,7 +60,7 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 
 	aapiLicenseKey := obj.(*calico.LicenseKey)
 	if licClaims.Validate() == licClient.Valid {
-		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+		aapiLicenseKey.Status = calico.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(licClaims.Features),
 		}
@@ -77,7 +76,7 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 
 	newLicenseKey := obj.(*calico.LicenseKey)
 	if licClaims.Validate() == licClient.Valid {
-		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+		newLicenseKey.Status = calico.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes,
 			Package:  helpers.ConvertToPackageType(licClaims.Features),
@@ -128,7 +127,7 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 		return
 	}
 	newLicenseKey := obj.(*calico.LicenseKey)
-	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+	newLicenseKey.Status = calico.LicenseKeyStatus{
 		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 		MaxNodes: *licClaims.Nodes,
 		Package:  helpers.ConvertToPackageType(licClaims.Features),
@@ -146,7 +145,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object is not a License Key")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), LicenseKeyToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), LicenseKeyToSelectableFields(apiserver), nil
 }
 
 // MatchLicenseKey is the filter used by the generic etcd backend to watch events
@@ -165,9 +164,9 @@ func LicenseKeyToSelectableFields(obj *calico.LicenseKey) fields.Set {
 }
 
 // Convert from aggregated api server runtime object to libcalico-go's licensekey structure
-func convertToLibcalico(aapiObj runtime.Object) *libcalicoapi.LicenseKey {
+func convertToLibcalico(aapiObj runtime.Object) *calico.LicenseKey {
 	aapiLicenseKey := aapiObj.(*calico.LicenseKey)
-	lcgLicenseKey := &libcalicoapi.LicenseKey{}
+	lcgLicenseKey := &calico.LicenseKey{}
 	lcgLicenseKey.TypeMeta = aapiLicenseKey.TypeMeta
 	lcgLicenseKey.ObjectMeta = aapiLicenseKey.ObjectMeta
 	lcgLicenseKey.Spec = aapiLicenseKey.Spec

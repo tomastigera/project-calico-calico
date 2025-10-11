@@ -67,7 +67,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object is not a UISettings")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), UISettingsToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), UISettingsToSelectableFields(apiserver), nil
 }
 
 // MatchUISettings is the filter used by the generic etcd backend to watch events

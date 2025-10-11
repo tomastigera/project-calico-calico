@@ -6,7 +6,6 @@ import (
 	"context"
 	"reflect"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -55,8 +54,8 @@ func NewExternalNetworkStorage(opts Options) (registry.DryRunnableStorage, facto
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.ExternalNetwork{}),
-		aapiListType:      reflect.TypeOf(aapi.ExternalNetworkList{}),
+		aapiType:          reflect.TypeOf(api.ExternalNetwork{}),
+		aapiListType:      reflect.TypeOf(api.ExternalNetworkList{}),
 		libCalicoType:     reflect.TypeOf(api.ExternalNetwork{}),
 		libCalicoListType: reflect.TypeOf(api.ExternalNetworkList{}),
 		isNamespaced:      false,
@@ -77,7 +76,7 @@ type ExternalNetworkConverter struct {
 }
 
 func (gc ExternalNetworkConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiExternalNetwork := aapiObj.(*aapi.ExternalNetwork)
+	aapiExternalNetwork := aapiObj.(*api.ExternalNetwork)
 	lcgExternalNetwork := &api.ExternalNetwork{}
 	lcgExternalNetwork.TypeMeta = aapiExternalNetwork.TypeMeta
 	lcgExternalNetwork.ObjectMeta = aapiExternalNetwork.ObjectMeta
@@ -89,7 +88,7 @@ func (gc ExternalNetworkConverter) convertToLibcalico(aapiObj runtime.Object) re
 
 func (gc ExternalNetworkConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
 	lcgExternalNetwork := libcalicoObject.(*api.ExternalNetwork)
-	aapiExternalNetwork := aapiObj.(*aapi.ExternalNetwork)
+	aapiExternalNetwork := aapiObj.(*api.ExternalNetwork)
 	aapiExternalNetwork.Spec = lcgExternalNetwork.Spec
 	aapiExternalNetwork.TypeMeta = lcgExternalNetwork.TypeMeta
 	aapiExternalNetwork.ObjectMeta = lcgExternalNetwork.ObjectMeta
@@ -97,15 +96,15 @@ func (gc ExternalNetworkConverter) convertToAAPI(libcalicoObject resourceObject,
 
 func (gc ExternalNetworkConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgExternalNetworkList := libcalicoListObject.(*api.ExternalNetworkList)
-	aapiExternalNetworkList := aapiListObj.(*aapi.ExternalNetworkList)
+	aapiExternalNetworkList := aapiListObj.(*api.ExternalNetworkList)
 	if libcalicoListObject == nil {
-		aapiExternalNetworkList.Items = []aapi.ExternalNetwork{}
+		aapiExternalNetworkList.Items = []api.ExternalNetwork{}
 		return
 	}
 	aapiExternalNetworkList.TypeMeta = lcgExternalNetworkList.TypeMeta
 	aapiExternalNetworkList.ListMeta = lcgExternalNetworkList.ListMeta
 	for _, item := range lcgExternalNetworkList.Items {
-		aapiExternalNetwork := aapi.ExternalNetwork{}
+		aapiExternalNetwork := api.ExternalNetwork{}
 		gc.convertToAAPI(&item, &aapiExternalNetwork)
 		if matched, err := pred.Matches(&aapiExternalNetwork); err == nil && matched {
 			aapiExternalNetworkList.Items = append(aapiExternalNetworkList.Items, aapiExternalNetwork)

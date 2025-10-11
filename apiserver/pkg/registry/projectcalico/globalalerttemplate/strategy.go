@@ -84,7 +84,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Global Alert", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), AlertToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), AlertToSelectableFields(apiserver), nil
 }
 
 // MatchAlert is the filter used by the generic etcd backend to watch events
