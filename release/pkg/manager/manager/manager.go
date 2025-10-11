@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -63,7 +64,7 @@ func NewManager(opts ...Option) (*Manager, error) {
 		}
 	}
 	if m.dir == "" {
-		return nil, fmt.Errorf("No repository root dir specified")
+		return nil, errors.New("no repository root dir specified")
 	}
 	return m, nil
 }
@@ -105,7 +106,7 @@ func (m *Manager) publishReleaseImages() error {
 				continue
 			}
 			logrus.Error(out)
-			return fmt.Errorf("Failed to publish %s: %s", DefaultImage, err)
+			return fmt.Errorf("failed to publish %s: %s", DefaultImage, err)
 		}
 		// Success - move on to the next directory.
 		logrus.Info(out)
@@ -122,7 +123,7 @@ func (m *Manager) publishReleaseImages() error {
 				continue
 			}
 			logrus.Error(out)
-			return fmt.Errorf("Failed to publish %s for Cloud: %s", DefaultImage, err)
+			return fmt.Errorf("failed to publish %s for Cloud: %s", DefaultImage, err)
 		}
 		// Success - move on to the next directory.
 		logrus.Info(out)

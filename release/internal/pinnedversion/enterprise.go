@@ -198,7 +198,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer pinnedVersionFile.Close()
+	defer func() { _ = pinnedVersionFile.Close() }()
 	if err := tmpl.Execute(pinnedVersionFile, tmplData); err != nil {
 		return nil, err
 	}
@@ -270,11 +270,11 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 	if err != nil {
 		return op, "", err
 	}
-	defer operatorComponentsFile.Close()
+	defer func() { _ = operatorComponentsFile.Close() }()
 
 	enc := yaml.NewEncoder(operatorComponentsFile)
 	enc.SetIndent(2)
-	defer enc.Close()
+	defer func() { _ = enc.Close() }()
 
 	if err = enc.Encode(pinnedVersion); err != nil {
 		return op, "", err
@@ -339,12 +339,12 @@ func LoadEnterpriseHashreleaseFromRemote(hashreleaseName, outputDir, repoRootDir
 	if err != nil {
 		return nil, fmt.Errorf("failed to create %s: %w", pinnedVersionPath, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	resp, err := http.Get(hashreleaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s pinned_versions.yml from %s: %w", hashreleaseName, hashreleaseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get %s pinned_versions.yml: %s", hashreleaseName, resp.Status)
 	}
