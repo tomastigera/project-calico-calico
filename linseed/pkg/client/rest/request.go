@@ -160,7 +160,7 @@ func (r *request) Do(ctx context.Context) *Result {
 			err: fmt.Errorf("error connecting linseed API: %s", err),
 		}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	// Build the response.
 	responseByte, err := io.ReadAll(response.Body)

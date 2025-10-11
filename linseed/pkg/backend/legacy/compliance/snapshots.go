@@ -14,7 +14,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -56,7 +55,7 @@ type snapshotsBackend struct {
 	deepPaginationCutOff int64
 	queryHelper          lmaindex.Helper
 	singleIndex          bool
-	index                api.Index
+	index                bapi.Index
 
 	// Migration knobs
 	migrationMode bool
@@ -75,7 +74,7 @@ func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.Timestamp
 			return nil, err
 		}
 		buf := bytes.NewBuffer(bytes.TrimSuffix(b, []byte("}")))
-		buf.WriteString(fmt.Sprintf(`,"tenant":"%s"}`, i.Tenant))
+		fmt.Fprintf(buf, `,"tenant":"%s"}`, i.Tenant)
 		return buf.String(), nil
 	}
 	return l, nil
@@ -244,7 +243,7 @@ func (b *snapshotsBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, op
 	return query, startFrom, nil
 }
 
-func (b *snapshotsBackend) buildQuery(i api.ClusterInfo, p *v1.SnapshotParams) elastic.Query {
+func (b *snapshotsBackend) buildQuery(i bapi.ClusterInfo, p *v1.SnapshotParams) elastic.Query {
 	query, err := b.queryHelper.BaseQuery(i, p)
 	if err != nil {
 		return nil

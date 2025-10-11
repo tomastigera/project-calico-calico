@@ -19,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -91,7 +90,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	// Function contains teardown logic.
 	return func() {
 		for _, cluster := range []string{cluster1, cluster2, cluster3} {
-			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		}
 		require.NoError(t, err)
 
@@ -104,7 +103,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 // TestCreateBGPLog tests running a real elasticsearch query to create a kube bgp log.
 func TestCreateBGPLog(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateBGPLog (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
@@ -149,8 +148,8 @@ func TestCreateBGPLog(t *testing.T) {
 				results, err := b.List(ctx, clusterInfo, params)
 				require.NoError(t, err)
 				require.Equal(t, 1, len(results.Items))
-				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-				backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
+				testutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
 				// List again with a bogus tenant ID.
@@ -167,9 +166,9 @@ func TestCreateBGPLog(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 2, len(results.Items))
 
-				require.Falsef(t, backendutils.MatchIn(results.Items, backendutils.BGPLogClusterEquals(cluster1)), "cluster1 should not be in the results")
+				require.Falsef(t, testutils.MatchIn(results.Items, testutils.BGPLogClusterEquals(cluster1)), "cluster1 should not be in the results")
 				for _, cluster := range selectedClusters {
-					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.BGPLogClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+					require.Truef(t, testutils.MatchIn(results.Items, testutils.BGPLogClusterEquals(cluster)), "cluster %s should be in the results", cluster)
 				}
 			})
 
@@ -178,7 +177,7 @@ func TestCreateBGPLog(t *testing.T) {
 				results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
 				require.NoError(t, err)
 				for _, cluster := range []string{cluster1, cluster2, cluster3} {
-					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.BGPLogClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+					require.Truef(t, testutils.MatchIn(results.Items, testutils.BGPLogClusterEquals(cluster)), "cluster %s should be in the results", cluster)
 				}
 			})
 		})
@@ -214,7 +213,7 @@ func TestCreateBGPLog(t *testing.T) {
 
 func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestRetrieveMostRecentBGPLogs (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
@@ -263,8 +262,8 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
-				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -300,8 +299,8 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 			require.Len(t, r.Items, 1)
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
-				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -312,7 +311,7 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 
 func TestPreserveIDs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
@@ -337,7 +336,7 @@ func TestPreserveIDs(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and make sure generated time values are what we expect.
@@ -363,17 +362,17 @@ func TestPreserveIDs(t *testing.T) {
 
 			for _, log := range first.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
 			}
 			for _, log := range second.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
 			}
 
 			require.Equal(t, first.Items, second.Items)
 
 			// Refresh before cleaning up data
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 		})

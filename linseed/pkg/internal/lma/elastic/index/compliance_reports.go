@@ -50,9 +50,9 @@ func (h complianceReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elas
 				elastic.NewRangeQuery("startTime").From(r.From).To(r.To),
 				elastic.NewRangeQuery("endTime").From(r.From).To(r.To),
 			)
-		} else if r.From != unset && r.To == unset {
+		} else if r.From != unset && r.To.Equal(unset) {
 			return elastic.NewRangeQuery("endTime").From(r.From)
-		} else if r.From == unset && r.To != unset {
+		} else if r.From.Equal(unset) && r.To != unset {
 			return elastic.NewRangeQuery("startTime").To(r.To)
 		}
 	}

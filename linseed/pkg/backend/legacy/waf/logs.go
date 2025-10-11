@@ -12,7 +12,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -142,7 +141,7 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 // List lists logs that match the given parameters.
-func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
+func (b *wafLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
 	log := bapi.ContextLogger(i)
 
 	// Get the base query.
@@ -201,7 +200,7 @@ func (b *wafLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *
 	return afterKey, nil
 }
 
-func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
+func (b *wafLogBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
 	if b.migrationMode {
 		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
 	}

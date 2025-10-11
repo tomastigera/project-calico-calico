@@ -23,7 +23,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -110,7 +109,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 // TestListProcesses tests running a real elasticsearch query to list processes.
 func TestListProcesses(t *testing.T) {
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListProcesses (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
@@ -204,7 +203,7 @@ func TestListProcesses(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, r.Items, 2)
 				for _, cluster := range selectedClusters {
-					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+					require.Truef(t, testutils.MatchIn(r.Items, testutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
 				}
 			})
 
@@ -213,7 +212,7 @@ func TestListProcesses(t *testing.T) {
 				r, err := pb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
 				require.NoError(t, err)
 				for _, cluster := range []string{cluster1, cluster2, cluster3} {
-					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+					require.Truef(t, testutils.MatchIn(r.Items, testutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
 				}
 			})
 		})

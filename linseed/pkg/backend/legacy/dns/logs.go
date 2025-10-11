@@ -12,7 +12,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -147,7 +146,7 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 	}, nil
 }
 
-func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.DNSAggregationParams) (*elastic.Aggregations, error) {
+func (b *dnsLogBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSAggregationParams) (*elastic.Aggregations, error) {
 	if b.migrationMode {
 		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
 	}
@@ -186,7 +185,7 @@ func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 }
 
 // List lists logs that match the given parameters.
-func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
+func (b *dnsLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
 	log := bapi.ContextLogger(i)
 
 	query, startFrom, err := b.getSearch(ctx, i, opts)

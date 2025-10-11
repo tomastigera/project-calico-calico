@@ -19,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -184,7 +183,7 @@ func TestCreateRuntimeReport(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 2, len(results.Items))
 			for _, cluster := range selectedClusters {
-				require.Truef(t, testutils.MatchIn(results.Items, backendutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
+				require.Truef(t, testutils.MatchIn(results.Items, testutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
 			}
 		})
 
@@ -193,7 +192,7 @@ func TestCreateRuntimeReport(t *testing.T) {
 			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, opts)
 			require.NoError(t, err)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
-				require.Truef(t, testutils.MatchIn(results.Items, backendutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
+				require.Truef(t, testutils.MatchIn(results.Items, testutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
 			}
 		})
 	})
@@ -380,7 +379,7 @@ func TestRuntimeSelection(t *testing.T) {
 		require.Equal(t, len(reports), resp.Succeeded)
 
 		// Refresh the index.
-		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		r, e := b.List(ctx, clusterInfo, &v1.RuntimeReportParams{
@@ -390,7 +389,7 @@ func TestRuntimeSelection(t *testing.T) {
 		require.Equal(t, len(expectedReports), len(r.Items))
 		for i := range expectedReports {
 			item := r.Items[i]
-			backendutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster1, &item)
+			testutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster1, &item)
 			require.Equal(t, expectedReports[i], item.Report)
 		}
 	}
@@ -428,7 +427,7 @@ func TestRuntimeSelection(t *testing.T) {
 
 func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestRetrieveMostRecentRuntimeReports (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
@@ -452,7 +451,7 @@ func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 			_, err := migration.Create(ctx, clusterInfo, []v1.Report{l1, l2})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query for logs
@@ -475,7 +474,7 @@ func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, r.Items, 2)
 			lastGeneratedTime := r.Items[1].Report.GeneratedTime
-			backendutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster1, r)
+			testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster1, r)
 
 			// Assert that the logs are returned in the correct order.
 			require.Equal(t, l1, r.Items[0].Report)
@@ -488,7 +487,7 @@ func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 			_, err = migration.Create(ctx, clusterInfo, []v1.Report{l3})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query the last ingested log
@@ -502,7 +501,7 @@ func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 			r, err = migration.List(ctx, clusterInfo, &params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, 1)
-			backendutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster1, r)
+			testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster1, r)
 
 			// Assert that the logs are returned in the correct order.
 			require.Equal(t, l3, r.Items[0].Report)
@@ -512,7 +511,7 @@ func TestRetrieveMostRecentRuntimeReports(t *testing.T) {
 
 func TestPreserveIDs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
@@ -538,7 +537,7 @@ func TestPreserveIDs(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and make sure generated time values are what we expect.
@@ -564,16 +563,16 @@ func TestPreserveIDs(t *testing.T) {
 			require.Len(t, second.Items, numLogs)
 
 			for _, log := range first.Items {
-				backendutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
+				testutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
 			}
 			for _, log := range second.Items {
-				backendutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
+				testutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
 			}
 
 			require.Equal(t, first.Items, second.Items)
 
 			// Refresh before cleaning up data
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 		})

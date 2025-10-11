@@ -58,7 +58,7 @@ func (t *KubernetesAuthzTracker) Attributes(v, u, clusterID string) (*authzv1.Re
 	r := reqdata{Verb: v, BaseURL: u}
 	attrs, ok := t.authMap[r]
 	if !ok {
-		return nil, true, fmt.Errorf("No matching authz options for %s %s", v, u)
+		return nil, true, fmt.Errorf("no matching authz options for %s %s", v, u)
 	}
 
 	if attrs != nil && v1.IsQueryMultipleClusters(clusterID) {
