@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -50,18 +49,18 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"backend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress},
-				Ingress: []v3.Rule{
-					v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Ingress: []apiv3.Rule{
+					apiv3.Rule{
 						Protocol: &protoTCP,
-						Action:   v3.Deny,
-						Source: v3.EntityRule{
+						Action:   apiv3.Deny,
+						Source: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"frontend\"",
 						},
-						Destination: v3.EntityRule{
+						Destination: apiv3.EntityRule{
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(80),
 								numorstring.SinglePort(443),
@@ -80,10 +79,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"backend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 		apiv3.GlobalNetworkPolicy{
@@ -95,15 +94,15 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"frontend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeEgress},
-				Egress: []v3.Rule{
-					v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeEgress},
+				Egress: []apiv3.Rule{
+					apiv3.Rule{
 						Protocol: &protoTCP,
-						Action:   v3.Deny,
-						Destination: v3.EntityRule{
+						Action:   apiv3.Deny,
+						Destination: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"backend\"",
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(80),
@@ -123,10 +122,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"frontend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 	}
@@ -151,31 +150,31 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"backend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress},
-				Ingress: []v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Ingress: []apiv3.Rule{
 					// FortiManager defines DNS in both TCP and UDP protocols
-					v3.Rule{
+					apiv3.Rule{
 						Protocol: &protoTCP,
-						Action:   v3.Allow,
-						Source: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Source: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"frontend\"",
 						},
-						Destination: v3.EntityRule{
+						Destination: apiv3.EntityRule{
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(53),
 							},
 						},
 					},
-					v3.Rule{
+					apiv3.Rule{
 						Protocol: &protoUDP,
-						Action:   v3.Allow,
-						Source: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Source: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"frontend\"",
 						},
-						Destination: v3.EntityRule{
+						Destination: apiv3.EntityRule{
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(53),
 							},
@@ -193,10 +192,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"backend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 		apiv3.GlobalNetworkPolicy{
@@ -208,25 +207,25 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"frontend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeEgress},
-				Egress: []v3.Rule{
-					v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeEgress},
+				Egress: []apiv3.Rule{
+					apiv3.Rule{
 						Protocol: &protoTCP,
-						Action:   v3.Allow,
-						Destination: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Destination: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"backend\"",
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(53),
 							},
 						},
 					},
-					v3.Rule{
+					apiv3.Rule{
 						Protocol: &protoUDP,
-						Action:   v3.Allow,
-						Destination: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Destination: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"backend\"",
 							Ports: []numorstring.Port{
 								numorstring.SinglePort(53),
@@ -245,10 +244,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"frontend\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 	}
@@ -273,15 +272,15 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"svc2\" && tigera.io/address-group == \"pinger\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress},
-				Ingress: []v3.Rule{
-					v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Ingress: []apiv3.Rule{
+					apiv3.Rule{
 						Protocol: &protoICMP,
-						Action:   v3.Allow,
-						Source: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Source: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"svc1\" && tigera.io/address-group == \"pinger\"",
 						},
 					},
@@ -297,10 +296,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"svc2\" && tigera.io/address-group == \"pinger\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 		apiv3.GlobalNetworkPolicy{
@@ -312,15 +311,15 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"svc1\" && tigera.io/address-group == \"pinger\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeEgress},
-				Egress: []v3.Rule{
-					v3.Rule{
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeEgress},
+				Egress: []apiv3.Rule{
+					apiv3.Rule{
 						Protocol: &protoICMP,
-						Action:   v3.Allow,
-						Destination: v3.EntityRule{
+						Action:   apiv3.Allow,
+						Destination: apiv3.EntityRule{
 							Selector: "tigera.io/address-group == \"svc2\" && tigera.io/address-group == \"pinger\"",
 						},
 					},
@@ -336,10 +335,10 @@ var (
 					"Comments":                "",
 				},
 			},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     testTierName,
 				Selector: "tigera.io/address-group == \"svc1\" && tigera.io/address-group == \"pinger\"",
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		},
 	}
@@ -424,7 +423,7 @@ func matchSelector(actual, expected string) bool {
 	return true
 }
 
-func matchRules(actual, expected []v3.Rule) bool {
+func matchRules(actual, expected []apiv3.Rule) bool {
 	// TODO(doublek): Make sure there aren't any extra rules left over in either params.
 NEXTRULE:
 	for _, actualRule := range actual {
@@ -444,13 +443,13 @@ NEXTRULE:
 	return true
 }
 
-func matchSingleRule(actual, expected v3.Rule) bool {
+func matchSingleRule(actual, expected apiv3.Rule) bool {
 	return matchEntityRule(actual.Source, expected.Source) &&
 		matchEntityRule(actual.Destination, expected.Destination) &&
 		actual.Protocol.String() == expected.Protocol.String()
 }
 
-func matchEntityRule(actual, expected v3.EntityRule) bool {
+func matchEntityRule(actual, expected apiv3.EntityRule) bool {
 	match := set.FromArray(actual.Nets).ContainsAll(set.FromArray(expected.Nets)) &&
 		set.FromArray(actual.Ports).ContainsAll(set.FromArray(expected.Ports)) &&
 		matchSelector(actual.Selector, expected.Selector) &&

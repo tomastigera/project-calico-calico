@@ -30,7 +30,7 @@ func GetAllZonesFromK8s(cs datastore.ClientSet) ([]string, error) {
 	}
 
 	for idx := range resources.Items {
-		log.Debugf("resource-name: %s", resources.Items[idx].ObjectMeta.Name)
+		log.Debugf("resource-name: %s", resources.Items[idx].Name)
 		for key, val := range resources.Items[idx].Labels {
 			log.Debugf("%s: %s", key, val)
 			if key == ZoneLabelKey {
@@ -53,8 +53,8 @@ func GetAllPoliciesFromFwTier(cs datastore.ClientSet, tierName string) ([]string
 	}
 
 	for _, gnp := range gnps.Items {
-		log.Debugf("network-policy-name: %s", gnp.ObjectMeta.Name)
-		availableFWNetworkPolicies = append(availableFWNetworkPolicies, gnp.ObjectMeta.Name)
+		log.Debugf("network-policy-name: %s", gnp.Name)
+		availableFWNetworkPolicies = append(availableFWNetworkPolicies, gnp.Name)
 	}
 	return availableFWNetworkPolicies, nil
 }

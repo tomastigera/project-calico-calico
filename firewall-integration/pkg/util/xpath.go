@@ -46,7 +46,7 @@ func GetPredefinedDefaultSecurityRules(p *panw.Panorama, testDg string) (map[str
 	var response PredefinedSecurityRulesResponse
 	preDefRuleMap := make(map[string]string)
 
-	if _, err := p.Client.Get("/config/predefined/default-security-rules", nil, &response); err != nil {
+	if _, err := p.Get("/config/predefined/default-security-rules", nil, &response); err != nil {
 		log.WithError(err).Error("error reading pre-defined default rules.")
 		return preDefRuleMap, err
 	}
@@ -56,7 +56,7 @@ func GetPredefinedDefaultSecurityRules(p *panw.Panorama, testDg string) (map[str
 	}
 
 	xp := fmt.Sprintf("/config/devices/entry[@name='localhost.localdomain']/device-group/entry[@name='%s']/post-rulebase/default-security-rules", testDg)
-	if _, err := p.Client.Get(xp, nil, &response); err != nil {
+	if _, err := p.Get(xp, nil, &response); err != nil {
 		log.Infof("No device-group pre-defined security rules.")
 		// No error needed, move to the next step.
 	} else {
@@ -66,7 +66,7 @@ func GetPredefinedDefaultSecurityRules(p *panw.Panorama, testDg string) (map[str
 		preDefRuleMap[r.Name] = r.Action
 	}
 
-	if _, err := p.Client.Get("/config/shared/post-rulebase/default-security-rules", nil, &response); err != nil {
+	if _, err := p.Get("/config/shared/post-rulebase/default-security-rules", nil, &response); err != nil {
 		log.Infof("No shared pre-defined security rules.")
 	} else {
 		log.Infof("shared overridden default rules(response): %v", response)
@@ -89,7 +89,7 @@ func GetLatestConfigTimestamp(p *panw.Panorama) (int64, error) {
 		response  AuditConfigResponse
 	)
 
-	if _, err := p.Client.Op(request, "", nil, &response); err != nil {
+	if _, err := p.Op(request, "", nil, &response); err != nil {
 		return timestamp, err
 	}
 

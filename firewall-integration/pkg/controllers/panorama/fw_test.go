@@ -4,7 +4,6 @@ package panorama
 
 import (
 	"context"
-	mtContext "context"
 	"errors"
 	"strconv"
 
@@ -76,15 +75,15 @@ var _ = Describe("Tests fwIntegrate", func() {
 			var tierOrder *float64
 			var tierName string
 
-			getTier = func(ctx mtContext.Context, name string, opts v1.GetOptions) (*v3.Tier, error) {
+			getTier = func(ctx context.Context, name string, opts v1.GetOptions) (*v3.Tier, error) {
 				existingTier := &v3.Tier{}
-				existingTier.ObjectMeta.Name = name
+				existingTier.Name = name
 
 				return existingTier, nil
 			}
 
-			updateTier = func(ctx mtContext.Context, tier *v3.Tier, opts v1.UpdateOptions) (*v3.Tier, error) {
-				tierLabelResult = tier.ObjectMeta.Labels
+			updateTier = func(ctx context.Context, tier *v3.Tier, opts v1.UpdateOptions) (*v3.Tier, error) {
+				tierLabelResult = tier.Labels
 				tierOrder = tier.Spec.Order
 				tierName = tier.Name
 
@@ -108,12 +107,12 @@ var _ = Describe("Tests fwIntegrate", func() {
 			var tierOrder *float64
 			var tierName string
 
-			getTier = func(ctx mtContext.Context, name string, opts v1.GetOptions) (*v3.Tier, error) {
+			getTier = func(ctx context.Context, name string, opts v1.GetOptions) (*v3.Tier, error) {
 				return nil, errors.New(name + "notfound")
 			}
 
-			createTier = func(ctx mtContext.Context, tier *v3.Tier, opts v1.CreateOptions) (*v3.Tier, error) {
-				tierLabelResult = tier.ObjectMeta.Labels
+			createTier = func(ctx context.Context, tier *v3.Tier, opts v1.CreateOptions) (*v3.Tier, error) {
+				tierLabelResult = tier.Labels
 				tierOrder = tier.Spec.Order
 				tierName = tier.Name
 

@@ -90,7 +90,7 @@ func createUpdateTierForFortimanager(cl clientv3.ProjectcalicoV3Interface, tierN
 
 	// The policy already exists, update it and write it back to the datastore.
 	if tier != nil && err == nil {
-		tier.ObjectMeta.Labels = projectcalicoSystemTier
+		tier.Labels = projectcalicoSystemTier
 		_, err = cl.Tiers().Update(context.Background(), tier, metav1.UpdateOptions{})
 		if err != nil {
 			log.WithError(err).Warning("Failed to update tier")
@@ -114,8 +114,8 @@ func getAllGlobalNetworkPoliciesFromTier(tierName string, calicoClient clientv3.
 
 	// Iterate all GNP, update map with key as: GNP-name and value: GNP
 	for _, gnp := range gnps.Items {
-		log.Debugf("GNP-name: %s, %#v", gnp.ObjectMeta.Name, gnp)
-		fwGNPs[gnp.ObjectMeta.Name] = gnp
+		log.Debugf("GNP-name: %s, %#v", gnp.Name, gnp)
+		fwGNPs[gnp.Name] = gnp
 	}
 	return fwGNPs, nil
 }
@@ -171,8 +171,8 @@ func (ew *EastWestController) readFwRulesAndUpdateCache() {
 			}
 			// Set Cache with GNP and keep track of all GNPs cached.
 			for _, gnp := range gnps {
-				ew.resourceCache.Set(gnp.ObjectMeta.Name, gnp)
-				gnpList[gnp.ObjectMeta.Name] = true
+				ew.resourceCache.Set(gnp.Name, gnp)
+				gnpList[gnp.Name] = true
 			}
 		}
 

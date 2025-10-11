@@ -183,10 +183,7 @@ func NewSelectorsController(
 	// Create cache clients for all Forti devices
 	devToRcacheAddr := getResourceCacheAddress(fcs)
 	devToRcacheAddrGrp := getResourceCacheAddressGrps(fcs)
-	routablePod := true
-	if cfg.FwAddressSelection == fwRoutableNode {
-		routablePod = false
-	}
+	routablePod := cfg.FwAddressSelection != fwRoutableNode
 
 	log.Infof("Firewall Controller is configured with routablePod:%+v", routablePod)
 	log.Debugf("Device to RCacheAddr:%#v", devToRcacheAddr)
@@ -231,7 +228,7 @@ func getPolicySelectorLabel(policySelector string) string {
 	// Remove single quotes from selector expression.
 	// Single quotes in selector expression isn't processed by kubernetes api's
 	// especially by option selector.
-	return strings.Replace(policySelector, "'", "", -1)
+	return strings.ReplaceAll(policySelector, "'", "")
 }
 
 // Create ListWatcher & Informer for Global Network Policies
