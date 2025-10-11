@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +59,7 @@ var (
 
 // The user authentication review mock struct implementing the authentication review interface.
 type userAuthorizationReviewMock struct {
-	verbs []libcalicov3.AuthorizedResourceVerbs
+	verbs []v3.AuthorizedResourceVerbs
 	err   error
 }
 
@@ -68,7 +67,7 @@ type userAuthorizationReviewMock struct {
 // PerformReviewForElasticLogs.
 func (a userAuthorizationReviewMock) PerformReview(
 	ctx context.Context, cluster string,
-) ([]libcalicov3.AuthorizedResourceVerbs, error) {
+) ([]v3.AuthorizedResourceVerbs, error) {
 	return a.verbs, a.err
 }
 
@@ -221,14 +220,14 @@ var _ = Describe("SearchElasticHits", func() {
 
 		mockDoer = new(thirdpartymock.MockDoer)
 		userAuthReview = userAuthorizationReviewMock{
-			verbs: []libcalicov3.AuthorizedResourceVerbs{
+			verbs: []v3.AuthorizedResourceVerbs{
 				{
 					APIGroup: "APIGroupVal1",
 					Resource: "hostendpoints",
-					Verbs: []libcalicov3.AuthorizedResourceVerb{
+					Verbs: []v3.AuthorizedResourceVerb{
 						{
 							Verb: "list",
-							ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+							ResourceGroups: []v3.AuthorizedResourceGroup{
 								{
 									Tier:      "tierVal1",
 									Namespace: "namespaceVal1",
@@ -241,7 +240,7 @@ var _ = Describe("SearchElasticHits", func() {
 						},
 						{
 							Verb: "list",
-							ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+							ResourceGroups: []v3.AuthorizedResourceGroup{
 								{
 									Tier:      "tierVal1",
 									Namespace: "namespaceVal1",
@@ -309,14 +308,14 @@ var _ = Describe("SearchElasticHits", func() {
 			},
 			LogSelectionParams: lapi.LogSelectionParams{
 				Selector: "",
-				Permissions: []libcalicov3.AuthorizedResourceVerbs{
+				Permissions: []v3.AuthorizedResourceVerbs{
 					{
 						APIGroup: "APIGroupVal1",
 						Resource: "hostendpoints",
-						Verbs: []libcalicov3.AuthorizedResourceVerb{
+						Verbs: []v3.AuthorizedResourceVerb{
 							{
 								Verb: "list",
-								ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+								ResourceGroups: []v3.AuthorizedResourceGroup{
 									{
 										Tier:      "tierVal1",
 										Namespace: "namespaceVal1",
@@ -329,7 +328,7 @@ var _ = Describe("SearchElasticHits", func() {
 							},
 							{
 								Verb: "list",
-								ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+								ResourceGroups: []v3.AuthorizedResourceGroup{
 									{
 										Tier:      "tierVal1",
 										Namespace: "namespaceVal1",
@@ -437,14 +436,14 @@ var _ = Describe("SearchElasticHits", func() {
 
 					LogSelectionParams: lapi.LogSelectionParams{
 						Selector: "",
-						Permissions: []libcalicov3.AuthorizedResourceVerbs{
+						Permissions: []v3.AuthorizedResourceVerbs{
 							{
 								APIGroup: "APIGroupVal1",
 								Resource: "hostendpoints",
-								Verbs: []libcalicov3.AuthorizedResourceVerb{
+								Verbs: []v3.AuthorizedResourceVerb{
 									{
 										Verb: "list",
-										ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+										ResourceGroups: []v3.AuthorizedResourceGroup{
 											{
 												Tier:      "tierVal1",
 												Namespace: "namespaceVal1",
@@ -457,7 +456,7 @@ var _ = Describe("SearchElasticHits", func() {
 									},
 									{
 										Verb: "list",
-										ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+										ResourceGroups: []v3.AuthorizedResourceGroup{
 											{
 												Tier:      "tierVal1",
 												Namespace: "namespaceVal1",

@@ -281,7 +281,7 @@ func getAlertException(eventException *v1.EventException) (*v3.AlertException, e
 	}
 
 	a := v3.NewAlertException()
-	a.ObjectMeta.Name = name
+	a.Name = name
 	a.Spec = v3.AlertExceptionSpec{
 		Description: description,
 		Selector:    selector,

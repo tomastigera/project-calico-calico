@@ -209,7 +209,7 @@ func (l GraphL7PacketStats) Combine(l2 GraphL7PacketStats) GraphL7PacketStats {
 		return l
 	}
 
-	l.GraphByteStats = l.GraphByteStats.Add(l2.GraphByteStats)
+	l.GraphByteStats = l.Add(l2.GraphByteStats)
 	l.MinDuration = math.Min(l.MinDuration, l2.MinDuration)
 	l.MaxDuration = math.Max(l.MaxDuration, l2.MaxDuration)
 	totalCount := l.Count + l2.Count

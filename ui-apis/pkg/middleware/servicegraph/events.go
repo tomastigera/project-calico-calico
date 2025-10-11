@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -98,11 +97,11 @@ func getTigeraEvents(ctx context.Context, lsClient client.Client, cluster string
 	defer cancel()
 
 	// Set up for performing paged list queries for events.
-	params := lapi.EventParams{
+	params := lsv1.EventParams{
 		QueryParams:        lsv1.QueryParams{TimeRange: &tr},
 		LogSelectionParams: lsv1.LogSelectionParams{Selector: securityEventsSelector},
 	}
-	pager := client.NewListPager[lapi.Event](&params)
+	pager := client.NewListPager[lsv1.Event](&params)
 	pages, errors := pager.Stream(ctx, lsClient.Events(cluster).List)
 
 	for page := range pages {
@@ -115,7 +114,7 @@ func getTigeraEvents(ctx context.Context, lsClient client.Client, cluster string
 
 				// Track the number of aggregated logs. Bail if we hit the absolute maximum number of aggregated events.
 				if len(results) > cfg.ServiceGraphCacheMaxAggregatedRecords {
-					return results, DataTruncatedError
+					return results, errDataTruncatedError
 				}
 			}
 		}
@@ -212,7 +211,7 @@ func parseKubernetesEvent(rawEvent corev1.Event, tr lmav1.TimeRange) *Event {
 
 // parseTigeraEvent parses the raw JSON event and converts it to an Event.  Returns nil if the format was not recognized or
 // if the event could not be attributed a graph node.
-func parseTigeraEvent(item lapi.Event) *Event {
+func parseTigeraEvent(item lsv1.Event) *Event {
 	log.Debugf("Processing event with ID: %+v", item)
 
 	id := item.ID
@@ -256,7 +255,7 @@ func parseTigeraEvent(item lapi.Event) *Event {
 	}
 
 	if item.Record != nil {
-		record := lapi.EventRecord{}
+		record := lsv1.EventRecord{}
 		err := item.GetRecord(&record)
 		if err != nil {
 			return nil

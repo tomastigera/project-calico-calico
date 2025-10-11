@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -62,7 +61,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// - has a mixture of allow/deny flows recorded in Linseed - the policy calculator will recalculate the *before*
 		//   flow so will readjust the actual flow data.
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: deny/na       after: allow/allow
 			// flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)), <- denied at source
 			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)),
@@ -178,13 +177,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -370,7 +369,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//
 		// Create a client which has all of the flows that:
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
 			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:ingress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
@@ -413,13 +412,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -511,7 +510,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//
 		// Create a client which has all of the flows that:
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
 			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:egress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
@@ -554,13 +553,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -639,7 +638,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//
 		// Create a client which has all of the flows that:
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
 			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
@@ -709,13 +708,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -824,7 +823,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//
 		// Create a client which has all of the flows that:
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
 			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
@@ -894,13 +893,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -976,7 +975,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//
 		// Create a client which has all of the flows that:
 		By("Creating a client with a mocked out search results with all allow actions")
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// before: allow/allow    after: allow/allow
 			flow("dst", "allow", "tcp", wepd("destination", "destinationNamespace", 1), wepd("source", "sourceNamespace", 3), "0|allow-flow|sourceNamespace/allow-flow.cidr-match|allow|0"),
 		}
@@ -1089,13 +1088,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		)
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")

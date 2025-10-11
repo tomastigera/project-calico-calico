@@ -26,13 +26,13 @@ const (
 )
 
 var (
-	errInvalidAction            = errors.New("Invalid action specified")
-	errInvalidFlowType          = errors.New("Invalid flow type specified")
-	errInvalidLabelSelector     = errors.New("Invalid label selector specified")
-	errGeneric                  = errors.New("Something went wrong")
-	errInvalidPolicyPreview     = errors.New("Invalid policy preview specified")
-	errPreviewResourceExtraData = errors.New("Invalid policy preview specified - resource has unexpected data")
-	errInvalidActionUnprotected = errors.New("Action deny and unprotected true is an invalid combination")
+	errInvalidAction            = errors.New("invalid action specified")
+	errInvalidFlowType          = errors.New("invalid flow type specified")
+	errInvalidLabelSelector     = errors.New("invalid label selector specified")
+	errGeneric                  = errors.New("something went wrong")
+	errInvalidPolicyPreview     = errors.New("invalid policy preview specified")
+	errPreviewResourceExtraData = errors.New("invalid policy preview specified - resource has unexpected data")
+	errInvalidActionUnprotected = errors.New("action deny and unprotected true is an invalid combination")
 )
 
 func extractLimitParam(url url.Values) (int32, error) {
@@ -172,17 +172,18 @@ func validatePolicyPreviews(policyPreviews []PolicyPreview) bool {
 		return true
 	}
 
+loop:
 	for _, policyPreview := range policyPreviews {
 		if policyPreview.Verb == "" || policyPreview.NetworkPolicy == nil {
 			return false
 		}
 		switch policyPreview.Verb {
 		case policyPreviewVerbCreate:
-			break
+			break loop
 		case policyPreviewVerbUpdate:
-			break
+			break loop
 		case policyPreviewVerbDelete:
-			break
+			break loop
 		default:
 			return false
 		}

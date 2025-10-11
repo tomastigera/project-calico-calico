@@ -260,7 +260,7 @@ func GetL3FlowData(
 
 			// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
 			if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
-				return fs, DataTruncatedError
+				return fs, errDataTruncatedError
 			}
 		}
 	}

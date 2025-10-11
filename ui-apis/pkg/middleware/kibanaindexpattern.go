@@ -60,12 +60,12 @@ func getResourceNameFromKibanaIndexPattern(req *http.Request) (string, error) {
 
 	titleMatch := re.FindStringSubmatch(title)
 	if len(titleMatch) != 2 {
-		return "", fmt.Errorf("Invalid index pattern in title, '%s' had %d matches", title, len(titleMatch))
+		return "", fmt.Errorf("invalid index pattern in title, '%s' had %d matches", title, len(titleMatch))
 	}
 
 	resource, ok := queryToResource(titleMatch[0])
 	if !ok {
-		return "", fmt.Errorf("Invalid resource '%s' in kibana index-pattern", title)
+		return "", fmt.Errorf("invalid resource '%s' in kibana index-pattern", title)
 	}
 	log.WithField("title", title).WithField("resource", resource).Info("kibana index-pattern")
 	return resource, nil

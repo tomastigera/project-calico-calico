@@ -364,7 +364,7 @@ func IsResourceModifiedForPIP(r1, r2 resources.Resource) (bool, error) {
 		// Resource types do not match.  This indicates a bug rather than an abuse of the API, but return an error
 		// up the stack for debugging purposes.
 		log.Errorf("Resource types do not match: %v != %v", reflect.TypeOf(r1), reflect.TypeOf(r2))
-		return false, fmt.Errorf("Resource type before and after do not match: %v != %v", reflect.TypeOf(r1), reflect.TypeOf(r2))
+		return false, fmt.Errorf("resource type before and after do not match: %v != %v", reflect.TypeOf(r1), reflect.TypeOf(r2))
 	}
 
 	// Copy the resources since we modify them to do the comparison.
