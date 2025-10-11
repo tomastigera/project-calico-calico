@@ -114,7 +114,7 @@ func NewFakeConsumer(t *testing.T) *FakeConsumer {
 		if fc.ShouldFail {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		fmt.Fprintln(w, "Does anyone read this?")
+		_, _ = fmt.Fprintln(w, "Does anyone read this?")
 		request := HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
