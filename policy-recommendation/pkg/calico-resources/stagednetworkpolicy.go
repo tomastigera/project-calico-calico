@@ -99,7 +99,7 @@ func NewStagedNetworkPolicy(name, namespace, tier string, uid ktypes.UID) *v3.St
 	}
 
 	if uid != "" {
-		snp.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+		snp.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion:         v3.GroupVersionCurrent,
 				Kind:               policyRecommendationScopeKind,
@@ -417,9 +417,10 @@ func GetPublicNetworkV3Rule(data types.FlowLogData, direction DirectionType) *v3
 // getEntityRuleReference returns the entity rule pointer, given the traffic direction.
 func getEntityRuleReference(direction DirectionType, rule *v3.Rule) *v3.EntityRule {
 	var entityRule *v3.EntityRule
-	if direction == EgressTraffic {
+	switch direction {
+	case EgressTraffic:
 		entityRule = &rule.Destination
-	} else if direction == IngressTraffic {
+	case IngressTraffic:
 		entityRule = &rule.Source
 	}
 

@@ -27,7 +27,7 @@ func LoadData(fileName string, data any) error {
 		return err
 	}
 	// Defer the closing of our jsonFile so that it can be parsed later on.
-	defer jsonFile.Close()
+	defer func() { _ = jsonFile.Close() }()
 
 	return nil
 }
