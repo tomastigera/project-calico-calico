@@ -18,7 +18,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -107,7 +106,7 @@ var _ = Describe("Event forwarder", func() {
 
 		params := lsv1.EventParams{}
 		params.SetTimeRange(&lmav1.TimeRange{From: startTime, To: endTime})
-		pager := client.NewMockListPager(&params, lsc.Events("").List)
+		pager := lsclient.NewMockListPager(&params, lsc.Events("").List)
 		err := eventFwdr.retrieveAndForward(pager, startTime, endTime, 1, 30*time.Second)
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return dispatchCount }).Should(Equal(totalDocs))

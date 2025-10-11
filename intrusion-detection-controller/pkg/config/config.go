@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -34,7 +34,7 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 	if cfg.TenantNamespace != "" && cfg.TenantID == "" {
-		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
+		return nil, errors.New("tenant namespace was provided but TenantID was not")
 	}
 	return cfg, nil
 }

@@ -76,7 +76,7 @@ var _ = Describe("WAF Controller", func() {
 			err = wac.ProcessWafLogs(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
-			params.QueryParams.TimeRange.To = time.Now()
+			params.TimeRange.To = time.Now()
 
 			logs2, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
@@ -118,7 +118,7 @@ var _ = Describe("WAF Controller", func() {
 			err = wafAlertCtr.ProcessWafLogs(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
-			params.QueryParams.TimeRange.To = time.Now()
+			params.TimeRange.To = time.Now()
 
 			logs2, err := wafAlertCtr.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
