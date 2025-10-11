@@ -43,8 +43,8 @@ func TestHealthCheckService(t *testing.T) {
 				<-time.After(100 * time.Millisecond) // Wait before retrying
 				continue                             // If connection fails, retry
 			}
-			conn.Close()   // Close the connection if successful
-			close(readyCh) // Signal that the WAF HTTP filter is ready
+			_ = conn.Close() // Close the connection if successful
+			close(readyCh)   // Signal that the WAF HTTP filter is ready
 			return
 		}
 	}()
@@ -61,7 +61,7 @@ func TestHealthCheckService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to perform health check: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected HTTP status 200 OK, got %d", resp.StatusCode)
 	}
