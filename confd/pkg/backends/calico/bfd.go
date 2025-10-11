@@ -8,7 +8,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -22,14 +21,14 @@ func newBFDResolver(node string, nlm *nodeLabelManager) *bfdResolver {
 	return &bfdResolver{
 		node:             node,
 		nodeLabelManager: nlm,
-		configs:          map[string]*v3.BFDConfiguration{},
+		configs:          map[string]*apiv3.BFDConfiguration{},
 	}
 }
 
 type bfdResolver struct {
 	node             string
 	nodeLabelManager *nodeLabelManager
-	configs          map[string]*v3.BFDConfiguration
+	configs          map[string]*apiv3.BFDConfiguration
 }
 
 // OnUpdate handles updates to BFDConfiguration and Node resources. It returns true if the update
@@ -55,8 +54,8 @@ func (r *bfdResolver) OnUpdate(u api.Update) bool {
 			delete(r.configs, u.Key.String())
 		} else {
 			// The BFDConfiguration is being created or updated.
-			r.configs[u.Key.String()] = u.Value.(*v3.BFDConfiguration)
-			newRelevant = r.nodeLabelManager.selectorMatchesNode(r.node, u.Value.(*v3.BFDConfiguration).Spec.NodeSelector)
+			r.configs[u.Key.String()] = u.Value.(*apiv3.BFDConfiguration)
+			newRelevant = r.nodeLabelManager.selectorMatchesNode(r.node, u.Value.(*apiv3.BFDConfiguration).Spec.NodeSelector)
 		}
 		return oldRelevant || newRelevant
 	case libapiv3.KindNode:
@@ -72,9 +71,9 @@ func (r *bfdResolver) OnUpdate(u api.Update) bool {
 // Resolve uses the current aggregate state of BFDConfiguration in the system to generate
 // the correct config for this node. This should be called whenever BFDConfiguration changes, or
 // when local node labels change.
-func (r *bfdResolver) Resolve() (*v3.BFDConfiguration, error) {
+func (r *bfdResolver) Resolve() (*apiv3.BFDConfiguration, error) {
 	// Find the BFD configuration objects that select this node.
-	var localConfigs []*v3.BFDConfiguration
+	var localConfigs []*apiv3.BFDConfiguration
 	for _, config := range r.configs {
 		// Check if the selector matches the local node.
 		if r.nodeLabelManager.selectorMatchesNode(r.node, config.Spec.NodeSelector) {
