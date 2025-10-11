@@ -81,13 +81,13 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 // Otherwise, we return nil.
 // http://www.elastic.co/guide/en/elasticsearch/reference/master/cluster-health.html
 func (es *client) GetClusterHealth() error {
-	health := es.API.Cluster.Health
+	health := es.Cluster.Health
 
 	res, err := health(health.WithTimeout(httpCommon.HealthCheckTimeout))
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusOK {
 		return errors.New(res.String())

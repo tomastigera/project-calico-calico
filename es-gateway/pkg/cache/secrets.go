@@ -50,7 +50,7 @@ func NewSecretCache(ctx context.Context, k8sClient kubernetes.Client) (SecretsCa
 		return nil, err
 	}
 	for _, i := range list.Items {
-		secretName := i.ObjectMeta.Name
+		secretName := i.Name
 		sanityChecklist = append(sanityChecklist, secretName)
 
 		// Add secret to the store, using the resource name as the key.
@@ -120,7 +120,7 @@ LOOP:
 				time.Sleep(retryWatchInterval)
 				continue LOOP
 			}
-			key := secret.ObjectMeta.Name
+			key := secret.Name
 
 			switch e.Type {
 			case watch.Error:

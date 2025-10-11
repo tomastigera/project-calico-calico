@@ -124,7 +124,7 @@ func TestIsAllowed(t *testing.T) {
 			url:       "/_bulk",
 			body:      ptrString(fmt.Sprintf(`{}%s{}%s`, "\n", "\n")),
 			wantAllow: false,
-			wantError: middlewares.NoIndexError,
+			wantError: middlewares.ErrNoIndex,
 		},
 		{
 			name:      "Should not process a malformed bulk request",
@@ -458,7 +458,7 @@ func TestIsAllowed(t *testing.T) {
 			url:       "/_mget",
 			body:      ptrString(`{"docs":[]}`),
 			wantAllow: false,
-			wantError: middlewares.NoIndexError,
+			wantError: middlewares.ErrNoIndex,
 		},
 		{
 			name:      "Should not process mget request with no index on a doc",
@@ -466,7 +466,7 @@ func TestIsAllowed(t *testing.T) {
 			url:       "/_mget",
 			body:      ptrString(`{"docs":[{"_index": ""}]}`),
 			wantAllow: false,
-			wantError: middlewares.NoIndexError,
+			wantError: middlewares.ErrNoIndex,
 		},
 		{
 			name:      "Should not process a malformed mget request",

@@ -90,7 +90,7 @@ func (c *client) GetSecretWatcher(ctx context.Context, namespace string, labels 
 	if err != nil {
 		return nil, err
 	}
-	resourceVersion := secrets.ListMeta.ResourceVersion
+	resourceVersion := secrets.ResourceVersion
 
 	// Determine whether we need to attach any label selector(s).
 	listOptions := metav1.ListOptions{ResourceVersion: resourceVersion}
