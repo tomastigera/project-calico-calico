@@ -147,7 +147,7 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		}
 
 		if s.multiClusterForwardingCA != "" {
-			k8sRestConfig.TLSClientConfig.CAFile = s.multiClusterForwardingCA
+			k8sRestConfig.CAFile = s.multiClusterForwardingCA
 		}
 	default:
 		return nil, fmt.Errorf("unsupported product mode: %s", s.productMode)

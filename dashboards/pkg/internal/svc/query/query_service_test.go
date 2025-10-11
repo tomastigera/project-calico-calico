@@ -268,12 +268,12 @@ func TestQueryService(t *testing.T) {
 							require.IsType(t, &lsv1.FlowLogParams{}, requests[0].GetParams())
 
 							flowLogParams := requests[0].GetParams().(*lsv1.FlowLogParams)
-							require.Equal(t, tc.expectedClusters, flowLogParams.QueryParams.GetClusters(), tc.message)
+							require.Equal(t, tc.expectedClusters, flowLogParams.GetClusters(), tc.message)
 
 							if len(tc.expectedClusters) == 0 {
-								require.True(t, flowLogParams.QueryParams.AllClusters, tc.message)
+								require.True(t, flowLogParams.AllClusters, tc.message)
 							} else {
-								require.False(t, flowLogParams.QueryParams.AllClusters, tc.message)
+								require.False(t, flowLogParams.AllClusters, tc.message)
 							}
 						}
 					})
@@ -1256,14 +1256,14 @@ func TestQueryService(t *testing.T) {
 						params := queryWithFilter(t, client.QueryRequestFilter{
 							Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"},
 						})
-						require.Equal(t, lmav1.FieldStartTime, params.QueryParams.TimeRange.Field)
+						require.Equal(t, lmav1.FieldStartTime, params.TimeRange.Field)
 					})
 
 					t.Run("dateRange", func(t *testing.T) {
 						params := queryWithFilter(t, client.QueryRequestFilter{
 							Criterion: client.QueryRequestFilterCriterion{Type: "dateRange", GTE: "2020-01-01T00:00:00Z", LTE: "2020-01-02T00:00:00Z", Field: "end_time"},
 						})
-						require.Empty(t, params.QueryParams.TimeRange.Field)
+						require.Empty(t, params.TimeRange.Field)
 					})
 				})
 

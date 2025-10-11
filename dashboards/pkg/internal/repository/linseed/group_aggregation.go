@@ -76,7 +76,7 @@ func (g *groupAggregation) setElasticDateHistogramAggregation(
 ) error {
 	var interval time.Duration
 
-	fixedInterval := strings.ToLower(strings.Replace(queryGroup.Interval(), "PT", "", -1))
+	fixedInterval := strings.ToLower(strings.ReplaceAll(queryGroup.Interval(), "PT", ""))
 	if fixedInterval != "" {
 		var err error
 		interval, err = time.ParseDuration(fixedInterval)
