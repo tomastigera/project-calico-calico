@@ -88,9 +88,12 @@ func (l *TimestampedResourceList) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		if generatedTime != nil {
-			fmt.Fprintf(buf, `,"generated_time":%s`, generatedTime)
+			_, err = fmt.Fprintf(buf, `,"generated_time":%s`, generatedTime)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	fmt.Fprintf(buf, `,"requestStartedTimestamp":%s,"requestCompletedTimestamp":%s, "cluster":"%s"}`, rst, rct, l.Cluster)
-	return buf.Bytes(), nil
+	_, err = fmt.Fprintf(buf, `,"requestStartedTimestamp":%s,"requestCompletedTimestamp":%s, "cluster":"%s"}`, rst, rct, l.Cluster)
+	return buf.Bytes(), err
 }

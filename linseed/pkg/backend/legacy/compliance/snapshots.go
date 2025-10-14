@@ -74,8 +74,8 @@ func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.Timestamp
 			return nil, err
 		}
 		buf := bytes.NewBuffer(bytes.TrimSuffix(b, []byte("}")))
-		fmt.Fprintf(buf, `,"tenant":"%s"}`, i.Tenant)
-		return buf.String(), nil
+		_, err = fmt.Fprintf(buf, `,"tenant":"%s"}`, i.Tenant)
+		return buf.String(), err
 	}
 	return l, nil
 }

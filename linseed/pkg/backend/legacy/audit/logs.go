@@ -88,8 +88,8 @@ func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType,
 		// as the log type (EE or Kube)
 		// AuditLogs have a custom JSON marshaler so we need to add this to the JSON directly.
 		buf := bytes.NewBuffer(bytes.TrimSuffix(bs, []byte("}")))
-		fmt.Fprintf(buf, `,"tenant":"%s","audit_type":"%s"}`, i.Tenant, k)
-		return buf.String(), nil
+		_, err := fmt.Fprintf(buf, `,"tenant":"%s","audit_type":"%s"}`, i.Tenant, k)
+		return buf.String(), err
 	}
 
 	return string(bs), nil

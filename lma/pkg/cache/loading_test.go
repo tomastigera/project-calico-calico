@@ -201,7 +201,8 @@ var _ = Describe("Test Loading", func() {
 				return expensiveOp.execute(key)
 			})
 			if result != strings.ToUpper(key) {
-				_, _ = fmt.Fprintf(GinkgoWriter, "unexpected result for key %s: %s\n", key, result)
+				_, err := fmt.Fprintf(GinkgoWriter, "unexpected result for key %s: %s\n", key, result)
+				Expect(err).ToNot(HaveOccurred())
 				unexpectedResultCount.Add(1)
 			}
 		}

@@ -178,11 +178,7 @@ loop:
 			return false
 		}
 		switch policyPreview.Verb {
-		case policyPreviewVerbCreate:
-			break loop
-		case policyPreviewVerbUpdate:
-			break loop
-		case policyPreviewVerbDelete:
+		case policyPreviewVerbCreate, policyPreviewVerbUpdate, policyPreviewVerbDelete:
 			break loop
 		default:
 			return false
