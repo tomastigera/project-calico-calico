@@ -140,13 +140,17 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 	case config.ProductModeCloud:
 		// In Cloud mode, talk to voltron via the multi-cluster forwarding endpoint and CA so that voltron performs
 		// impersonation on our behalf.
-		if s.multiClusterForwardingEndpoint != "" {
-			k8sRestConfig.Host = s.multiClusterForwardingEndpoint
+		// Create a new user auth k8s rest config to ensure authorisation against the user's bearer token.
+		k8sRestConfig = &rest.Config{
+			Host:        s.multiClusterForwardingEndpoint,
+			BearerToken: strings.TrimPrefix(authHeader, "Bearer "),
 		}
+
 		if s.multiClusterForwardingCA != "" {
 			k8sRestConfig.TLSClientConfig.CAFile = s.multiClusterForwardingCA
 		}
-		k8sRestConfig.BearerToken = strings.TrimPrefix(authHeader, "Bearer ")
+	default:
+		return nil, fmt.Errorf("unsupported product mode: %s", s.productMode)
 	}
 
 	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
