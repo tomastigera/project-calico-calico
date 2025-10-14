@@ -2,15 +2,15 @@ package scaleloader
 
 import (
 	"bytes"
+	json "encoding/json"
 	"fmt"
 	"os"
 	"reflect"
 	"text/template"
 
-	json "github.com/projectcalico/go-json/json"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	logrus "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )

@@ -4,11 +4,11 @@ package threatfeeds
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/projectcalico/go-json/json"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	yaml "sigs.k8s.io/yaml"
 )
 
 func WriteYAML(license api.LicenseKey, filePrefix string) error {

@@ -97,8 +97,6 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 github.com/pquerna/cachecontrol v0.1.0
 github.com/projectcalico/calico
 github.com/projectcalico/calico/lib/std v0.0.0-20250707144925-14b463922dd9
-github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
-github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 github.com/prometheus/client_golang v1.23.0
 github.com/prometheus/client_model v0.6.2
 github.com/prometheus/common v0.65.0

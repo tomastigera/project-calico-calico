@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/projectcalico/go-yaml-wrapper"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"sigs.k8s.io/yaml"
 )
 
 func loadTestLicense(name string) (filePath string, lic *api.LicenseKey) {

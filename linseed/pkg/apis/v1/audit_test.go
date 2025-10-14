@@ -4,11 +4,11 @@ package v1
 
 import (
 	"bytes"
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/projectcalico/go-json/json"
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"

@@ -21,9 +21,9 @@ import (
 	"path/filepath"
 
 	"github.com/kelseyhightower/envconfig"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"sigs.k8s.io/yaml"
 )
 
 // LoadClientConfig loads the ClientConfig from the specified file (if specified)

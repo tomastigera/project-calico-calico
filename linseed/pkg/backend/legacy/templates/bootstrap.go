@@ -4,13 +4,13 @@ package templates
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/projectcalico/go-json/json"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"

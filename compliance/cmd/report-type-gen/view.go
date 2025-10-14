@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	yaml "sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 )

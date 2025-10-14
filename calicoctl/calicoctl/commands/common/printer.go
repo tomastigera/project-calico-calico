@@ -17,7 +17,9 @@ package common
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"sort"
@@ -26,11 +28,10 @@ import (
 
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/safetext/yamltemplate"
-	"github.com/projectcalico/go-json/json"
-	"github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -48,6 +49,10 @@ type ResourcePrinter interface {
 type ResourcePrinterJSON struct{}
 
 func (r ResourcePrinterJSON) Print(client client.Interface, resources []runtime.Object) error {
+	return r.FPrint(os.Stdout, client, resources)
+}
+
+func (r ResourcePrinterJSON) FPrint(w io.Writer, client client.Interface, resources []runtime.Object) error {
 	// If the results contain a single entry then extract the only value.
 	var rs interface{}
 	if len(resources) == 1 {
@@ -58,9 +63,9 @@ func (r ResourcePrinterJSON) Print(client client.Interface, resources []runtime.
 	if output, err := json.MarshalIndent(rs, "", "  "); err != nil {
 		return err
 	} else {
-		fmt.Printf("%s\n", string(output))
+		_, err := w.Write(output)
+		return err
 	}
-	return nil
 }
 
 // ResourcePrinterYAML implements the ResourcePrinter interface and is used to display
@@ -68,6 +73,10 @@ func (r ResourcePrinterJSON) Print(client client.Interface, resources []runtime.
 type ResourcePrinterYAML struct{}
 
 func (r ResourcePrinterYAML) Print(client client.Interface, resources []runtime.Object) error {
+	return r.FPrint(os.Stdout, client, resources)
+}
+
+func (r ResourcePrinterYAML) FPrint(w io.Writer, client client.Interface, resources []runtime.Object) error {
 	// If the results contain a single entry then extract the only value.
 	var rs interface{}
 	if len(resources) == 1 {
@@ -78,9 +87,9 @@ func (r ResourcePrinterYAML) Print(client client.Interface, resources []runtime.
 	if output, err := yaml.Marshal(rs); err != nil {
 		return err
 	} else {
-		fmt.Printf("%s", string(output))
+		_, err := w.Write(output)
+		return err
 	}
-	return nil
 }
 
 // ResourcePrinterTable implements the ResourcePrinter interface and is used to display
