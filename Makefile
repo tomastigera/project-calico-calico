@@ -200,12 +200,15 @@ MULTI_TENANCY_CRDS_FILE_CHANGES = "operator.tigera.io_managers.yaml" \
 																	"operator.tigera.io_intrusiondetections.yaml" \
 																	"calico/crd.projectcalico.org_managedclusters.yaml"
 # Get operator CRDs from the operator repo, OPERATOR_BRANCH must be set
-get-operator-crds: var-require-all-OPERATOR_BRANCH
+get-operator-crds: var-require-all-OPERATOR_ORGANIZATION-OPERATOR_GIT_REPO-OPERATOR_BRANCH
+	@echo ==============================================================================================================
+	@echo === Pulling new operator CRDs from $(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO) branch $(OPERATOR_BRANCH) ===
+	@echo ==============================================================================================================
 	cd ./charts/tigera-operator/crds/ && \
-	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
 	cp -vLR ./charts/tigera-operator/crds/ ./charts/multi-tenant-crds/. && \
 	cd ./charts/multi-tenant-crds/crds && \
-	curl -fsSOL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
+	curl -fsSOL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
 	for file in $(MULTI_TENANCY_CRDS_FILE_CHANGES); do \
 		echo "Update CRD $$file to be Namespaced"; \
 		sed -i 's/scope: Cluster/scope: Namespaced/g' $$file; \
