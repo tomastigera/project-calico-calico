@@ -22,7 +22,7 @@ func validateURL(t testing.TB, url, desc string) {
 	if err != nil {
 		t.Fatalf("failed to check for %s: %v", desc, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("could not access %s via %s: %v", desc, url, err)
 	}

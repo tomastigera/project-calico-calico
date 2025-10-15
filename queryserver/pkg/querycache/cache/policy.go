@@ -746,7 +746,7 @@ func (d *policyData) IsKubernetesType() (bool, error) {
 	// calico policy names cannot include a '.', thus the format should either be <tier>.<name> or <name>
 	nameParts := strings.Split(name, ".")
 	if len(nameParts) > 2 {
-		return false, fmt.Errorf("Policy name structure is unknown: %s", name)
+		return false, fmt.Errorf("policy name structure is unknown: %s", name)
 	}
 
 	return false, nil

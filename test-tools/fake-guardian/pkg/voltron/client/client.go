@@ -181,7 +181,7 @@ func (c *Client) ServeTunnelHTTP() error {
 
 // AcceptAndProxy accepts connections on the given listener and sends them down the tunnel
 func (c *Client) AcceptAndProxy(listener net.Listener) error {
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	for {
 		srcConn, err := listener.Accept()

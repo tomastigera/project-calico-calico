@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 )
@@ -109,7 +108,7 @@ func (p *proxy) acceptConnections(listener net.Listener, tokenPool chan struct{}
 				// includes them.
 				err := p.server.ServeTLS(p.innerListener, "", "")
 				if err != nil {
-					log.WithError(err).Errorf("Error handling a local connection")
+					logrus.WithError(err).Errorf("Error handling a local connection")
 				}
 
 				// Avoid tight-looping by sleeping.
@@ -132,10 +131,10 @@ func (p *proxy) acceptConnections(listener net.Listener, tokenPool chan struct{}
 			defer func() { tokenPool <- token }()
 
 			if err := p.proxyConnectionWithConfirmedShutdown(conn, shutDown); err != nil {
-				log.WithError(err).Error("failed to proxy the connection")
+				logrus.WithError(err).Error("failed to proxy the connection")
 				// If an error was returned, then the source connection wasn't closed, so close it
 				if err := conn.Close(); err != nil {
-					log.WithError(err).Debug("failed to close source connection")
+					logrus.WithError(err).Debug("failed to close source connection")
 				}
 			}
 		}(srcConn, token)
@@ -151,7 +150,7 @@ func (p *proxy) proxyConnectionWithConfirmedShutdown(srcConn net.Conn, shutDown 
 		select {
 		case <-shutDown:
 			if err := srcConn.Close(); err != nil {
-				log.WithError(err).Error("failed to close connection after shutdown")
+				logrus.WithError(err).Error("failed to close connection after shutdown")
 			}
 		case <-done:
 		}
@@ -182,7 +181,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	if p.proxyOnSNI {
 		if serverName != "" {
 			if serverNameURL, ok := p.sniServiceMap[serverName]; ok {
-				log.Debugf("Extracted SNI '%s' from client hello", serverName)
+				logrus.Debugf("Extracted SNI '%s' from client hello", serverName)
 				url = serverNameURL
 			}
 		}
@@ -203,9 +202,9 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 
 	dstConn, err := p.dial(url)
 	if err != nil {
-		log.WithError(err).Errorf("failed to open a connection to %s", url)
+		logrus.WithError(err).Errorf("failed to open a connection to %s", url)
 		if err := srcConn.Close(); err != nil {
-			log.WithError(err).Error("failed to close source connection")
+			logrus.WithError(err).Error("failed to close source connection")
 		}
 		return nil
 	}
@@ -213,7 +212,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	if len(bytesRead) > 0 {
 		if err := writeBytesToConn(bytesRead, dstConn); err != nil {
 			if err := dstConn.Close(); err != nil {
-				log.WithError(err).Debug("failed to close destination connection")
+				logrus.WithError(err).Debug("failed to close destination connection")
 			}
 
 			return err
@@ -264,7 +263,7 @@ func (p *proxy) dial(url string) (net.Conn, error) {
 			return dstConn, nil
 		}
 
-		log.WithError(err).Errorf("failed to open a connection to %s, will retry in %d seconds (attempt %d of %d)", url, p.retryInterval, i, p.retryAttempts+1)
+		logrus.WithError(err).Errorf("failed to open a connection to %s, will retry in %d seconds (attempt %d of %d)", url, p.retryInterval, i, p.retryAttempts+1)
 		time.Sleep(p.retryInterval)
 	}
 

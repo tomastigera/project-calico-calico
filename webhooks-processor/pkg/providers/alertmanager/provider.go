@@ -154,7 +154,7 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 		if err != nil {
 			return // retry if failed
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 
 		// read the response:
 		responseBytes, err := io.ReadAll(response.Body)

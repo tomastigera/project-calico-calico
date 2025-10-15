@@ -195,7 +195,7 @@ func (tw *Transaction) ProcessResponseHeaders(responseHeadersMap map[string]stri
 }
 
 // OnResponseBodyChunk processes a chunk of the response body. (PHASE 2)
-func (tw *Transaction) OnRequestBodyChunk(requestBodyChunk []byte, endOfStream bool) (it *corazatypes.Interruption, written int, err error, status envoy_type_v3.StatusCode, msg string) {
+func (tw *Transaction) OnRequestBodyChunk(requestBodyChunk []byte, endOfStream bool) (it *corazatypes.Interruption, written int, status envoy_type_v3.StatusCode, msg string, err error) {
 	if tw.tx == nil || !tw.tx.IsRequestBodyAccessible() {
 		return
 	}
@@ -204,7 +204,7 @@ func (tw *Transaction) OnRequestBodyChunk(requestBodyChunk []byte, endOfStream b
 	it, written, err = tw.tx.WriteRequestBody(requestBodyChunk)
 	if err != nil {
 		log.Errorf("Error writing request body: %v", err)
-		return nil, 0, err, envoy_type_v3.StatusCode_InternalServerError, "Error writing request body"
+		return nil, 0, envoy_type_v3.StatusCode_InternalServerError, "Error writing request body", err
 	}
 	if endOfStream {
 		// interruptions are usually returned right before the end of the stream in a complete stream.
@@ -216,17 +216,17 @@ func (tw *Transaction) OnRequestBodyChunk(requestBodyChunk []byte, endOfStream b
 		switch {
 		case it != nil:
 			status, msg = codeAndMessageFromInterruption(it)
-			return it, 0, nil, status, msg
+			return it, 0, status, msg, nil
 		case err != nil:
 			log.Errorf("Error processing request body: %v", err)
-			return nil, 0, err, envoy_type_v3.StatusCode_InternalServerError, "Error processing request body"
+			return nil, 0, envoy_type_v3.StatusCode_InternalServerError, "Error processing request body", err
 		}
 	}
 	return
 }
 
 // OnResponseBodyChunk processes a chunk of the response body. (PHASE 4)
-func (tw *Transaction) OnResponseBodyChunk(responseBodyChunk []byte, endOfStream bool) (it *corazatypes.Interruption, written int, err error, status envoy_type_v3.StatusCode, msg string) {
+func (tw *Transaction) OnResponseBodyChunk(responseBodyChunk []byte, endOfStream bool) (it *corazatypes.Interruption, written int, status envoy_type_v3.StatusCode, msg string, err error) {
 	if tw.tx == nil {
 		log.Warn("OnResponseBodyChunk called on a nil transaction wrapper. Doing nothing.")
 		return
@@ -243,7 +243,7 @@ func (tw *Transaction) OnResponseBodyChunk(responseBodyChunk []byte, endOfStream
 	it, written, err = tw.tx.WriteResponseBody(responseBodyChunk)
 	if err != nil {
 		log.Errorf("Error writing response body: %v", err)
-		return nil, 0, err, envoy_type_v3.StatusCode_InternalServerError, "Error writing response body"
+		return nil, 0, envoy_type_v3.StatusCode_InternalServerError, "Error writing response body", err
 	}
 
 	if endOfStream {
@@ -252,10 +252,10 @@ func (tw *Transaction) OnResponseBodyChunk(responseBodyChunk []byte, endOfStream
 		case it != nil:
 			status, msg = codeAndMessageFromInterruption(it)
 			log.Tracef("Transaction %s processed RESPONSE BODY with interruption: %s, status: %d, message: %s", tw.ID, it.Action, status, msg)
-			return it, 0, nil, status, msg
+			return it, 0, status, msg, nil
 		case err != nil:
 			log.Errorf("Error processing response body: %v", err)
-			return nil, 0, err, envoy_type_v3.StatusCode_InternalServerError, "Error processing response body"
+			return nil, 0, envoy_type_v3.StatusCode_InternalServerError, "Error processing response body", err
 		}
 	}
 	return
@@ -267,7 +267,7 @@ func (tw *Transaction) Close() {
 	}
 
 	// Close the transaction to finalize it.
-	tw.tx.Close()
+	_ = tw.tx.Close()
 }
 
 func (tw *Transaction) ProcessLogging() {

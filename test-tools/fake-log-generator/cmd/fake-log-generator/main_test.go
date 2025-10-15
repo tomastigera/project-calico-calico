@@ -46,7 +46,7 @@ func CreateConfig(directoutput bool) Config {
 
 func TestFlowLogFile(t *testing.T) {
 	cfg := CreateConfig(false)
-	os.Remove(cfg.loaded.FlowFile)
+	_ = os.Remove(cfg.loaded.FlowFile)
 	startTime := time.Now()
 	endTime := flowLogIteration(startTime, cfg, nil)
 
@@ -57,7 +57,7 @@ func TestFlowLogFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf(`Unable to open flow file: %v`, cfg.loaded.FlowFile)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		outline := scanner.Text()
@@ -65,7 +65,7 @@ func TestFlowLogFile(t *testing.T) {
 			t.Fatalf(`output file didn't contain the correct log.  Got:\n %v`, outline)
 		}
 	}
-	os.Remove(cfg.loaded.FlowFile)
+	_ = os.Remove(cfg.loaded.FlowFile)
 }
 
 func TestFlowLogSend(t *testing.T) {

@@ -32,7 +32,7 @@ func GenerateTruncatedHash(obj interface{}, length int) (string, error) {
 		length = 64
 	}
 	h := sha256.New()
-	_, err := h.Write([]byte(fmt.Sprintf("%q", obj)))
+	_, err := fmt.Fprintf(h, "%q", obj)
 	if err != nil {
 		return "", err
 	}

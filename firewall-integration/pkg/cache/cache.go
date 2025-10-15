@@ -49,11 +49,11 @@ func (c *GnpCache) entriesFromDatastore() (map[string]gnpCacheEntry, error) {
 	for _, gnp := range gnps.Items {
 		// Overwrite meta information for appropriate comparison.
 		gnp.TypeMeta = metav1.TypeMeta{}
-		gnp.ObjectMeta = metav1.ObjectMeta{Name: gnp.ObjectMeta.Name}
+		gnp.ObjectMeta = metav1.ObjectMeta{Name: gnp.Name}
 		e := gnpCacheEntry{
 			value: gnp,
 		}
-		entries[gnp.ObjectMeta.Name] = e
+		entries[gnp.Name] = e
 	}
 
 	return entries, nil

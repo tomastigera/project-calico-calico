@@ -364,7 +364,7 @@ func (h *healthHandler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	}
 
 	writer.WriteHeader(s)
-	_, err = writer.Write([]byte(fmt.Sprintf("Response from test harness: %d", s)))
+	_, err = fmt.Fprintf(writer, "Response from test harness: %d", s)
 	if err != nil {
 		logCtx.WithError(err).Info("Error writing to client.")
 	}

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -268,27 +267,27 @@ func NewFlowHandler(client client.Client, k8sClientFactory datastore.ClusterCtxK
 }
 
 func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Request) {
-	log.Debug("GET Flow request received.")
+	logrus.Debug("GET Flow request received.")
 
 	req, err := parseAndValidateFlowRequest(rawRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	log.WithField("Request", req).Debug("Request validated.")
+	logrus.WithField("Request", req).Debug("Request validated.")
 
-	log.Debug("Retrieving user from context.")
+	logrus.Debug("Retrieving user from context.")
 	user, ok := k8srequest.UserFrom(rawRequest.Context())
 	if !ok {
-		log.WithError(err).Error("user not found in context")
+		logrus.WithError(err).Error("user not found in context")
 		http.Error(w, HttpErrUnauthorizedFlowAccess, http.StatusUnauthorized)
 		return
 	}
-	log.WithField("user", user).Debug("User retrieved from context.")
+	logrus.WithField("user", user).Debug("User retrieved from context.")
 
 	authorizer, err := handler.k8sCliFactory.RBACAuthorizerForCluster(req.clusterName)
 	if err != nil {
-		log.WithError(err).Errorf("failed to get k8s client for cluster %s", req.clusterName)
+		logrus.WithError(err).Errorf("failed to get k8s client for cluster %s", req.clusterName)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -297,7 +296,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 
 	srcAuthorized, err := flowHelper.CanListEndpoint(req.srcType, req.srcNamespace)
 	if err != nil {
-		log.WithError(err).Error("Failed to check authorization status of flow log")
+		logrus.WithError(err).Error("Failed to check authorization status of flow log")
 
 		switch err.(type) {
 		case *rbac.ErrUnknownEndpointType:
@@ -308,11 +307,11 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 
 		return
 	}
-	log.Debugf("User has source endpoint authorization: %t", srcAuthorized)
+	logrus.Debugf("User has source endpoint authorization: %t", srcAuthorized)
 
 	dstAuthorized, err := flowHelper.CanListEndpoint(req.dstType, req.dstNamespace)
 	if err != nil {
-		log.WithError(err).Error("Failed to check authorization status of flow log")
+		logrus.WithError(err).Error("Failed to check authorization status of flow log")
 
 		switch err.(type) {
 		case *rbac.ErrUnknownEndpointType:
@@ -323,7 +322,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 
 		return
 	}
-	log.Debugf("User has destination endpoint authorization: %t", srcAuthorized)
+	logrus.Debugf("User has destination endpoint authorization: %t", srcAuthorized)
 
 	// If the user is not authorized to access the source or destination endpoints then they are not authorized to access
 	// the flow.
@@ -331,7 +330,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		http.Error(w, HttpErrUnauthorizedFlowAccess, http.StatusUnauthorized)
 		return
 	}
-	log.Debug("User is authorised to view flow.")
+	logrus.Debug("User is authorised to view flow.")
 
 	// Build the query to send.
 	params := v1.L3FlowParams{
@@ -384,29 +383,29 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	}
 
 	if req.startDateTime != nil || req.endDateTime != nil {
-		if params.QueryParams.TimeRange == nil {
-			params.QueryParams.TimeRange = &lmav1.TimeRange{}
+		if params.TimeRange == nil {
+			params.TimeRange = &lmav1.TimeRange{}
 		}
 
 		if req.startDateTime != nil {
-			params.QueryParams.TimeRange.From = *req.startDateTime
+			params.TimeRange.From = *req.startDateTime
 		}
 		if req.endDateTime != nil {
-			params.QueryParams.TimeRange.To = *req.endDateTime
+			params.TimeRange.To = *req.endDateTime
 		}
 	}
 
-	log.Debug("Querying Linseed for flow(s).")
+	logrus.Debug("Querying Linseed for flow(s).")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	flows, err := handler.client.L3Flows(req.clusterName).List(ctx, &params)
 	if err != nil {
-		log.WithError(err).Error("failed to get flows")
+		logrus.WithError(err).Error("failed to get flows")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("Total matching flow logs for flow: %d", len(flows.Items))
+	logrus.Debugf("Total matching flow logs for flow: %d", len(flows.Items))
 	if len(flows.Items) == 0 {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
@@ -434,31 +433,33 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		// Build up a policy report.
 		policyReport, err := newPolicyReportFromFlow(item, flowHelper)
 		if err != nil {
-			log.WithError(err).Error("failed to read policy report for flow")
+			logrus.WithError(err).Error("failed to read policy report for flow")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		log.WithField("policies", policyReport).Debug("Policies parsed.")
+		logrus.WithField("policies", policyReport).Debug("Policies parsed.")
 
 		if policyReport != nil {
 			if item.Key.Reporter == "src" {
-				log.Debugf("Setting source policy report")
+				logrus.Debugf("Setting source policy report")
 				if response.SrcPolicyReport == nil {
 					response.SrcPolicyReport = &PolicyReport{}
 				}
-				if item.Key.Action == "allow" {
+				switch item.Key.Action {
+				case "allow":
 					response.SrcPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
-				} else if item.Key.Action == "deny" {
+				case "deny":
 					response.SrcPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
 				}
 			} else {
-				log.Debugf("Setting destination policy report")
+				logrus.Debugf("Setting destination policy report")
 				if response.DstPolicyReport == nil {
 					response.DstPolicyReport = &PolicyReport{}
 				}
-				if item.Key.Action == "allow" {
+				switch item.Key.Action {
+				case "allow":
 					response.DstPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
-				} else if item.Key.Action == "deny" {
+				case "deny":
 					response.DstPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
 				}
 			}
@@ -470,7 +471,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	// Send the response back to the client.
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.WithError(err).Error("failed to json encode response")
+		logrus.WithError(err).Error("failed to json encode response")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -484,9 +485,10 @@ func newPolicyReportFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) (*Polic
 		return nil, err
 	}
 
-	if flow.Key.Action == "allow" {
+	switch flow.Key.Action {
+	case "allow":
 		policyReport.AllowedFlowPolicies = allPolicies
-	} else if flow.Key.Action == "deny" {
+	case "deny":
 		policyReport.DeniedFlowPolicies = allPolicies
 	}
 

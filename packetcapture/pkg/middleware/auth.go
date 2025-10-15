@@ -58,7 +58,7 @@ func (authz *AuthZ) Authorize(handlerFunc http.HandlerFunc) http.HandlerFunc {
 			Namespace:   NamespaceFromContext(req.Context()),
 		}
 
-		var err, status = authz.authorize(req, resAtr)
+		status, err := authz.authorize(req, resAtr)
 		if err != nil {
 			http.Error(w, err.Error(), status)
 			return
@@ -68,24 +68,24 @@ func (authz *AuthZ) Authorize(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (authz *AuthZ) authorize(req *http.Request, resAtr *authzv1.ResourceAttributes) (error, int) {
+func (authz *AuthZ) authorize(req *http.Request, resAtr *authzv1.ResourceAttributes) (int, error) {
 	var clusterID = ClusterIDFromContext(req.Context())
 	var authorizer, err = authz.cache.GetAuthorizer(clusterID)
 	if err != nil {
 		log.WithError(err).Error("Failed to create authorizer")
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 	usr, ok := request.UserFrom(req.Context())
 	if !ok {
 		var err = fmt.Errorf("missing user from request")
 		log.WithError(err).Error("no user found in request context")
-		return err, http.StatusBadRequest
+		return http.StatusBadRequest, err
 	}
 
 	isAuthorized, err := authorizer.Authorize(usr, resAtr, nil)
 	if err != nil {
 		log.WithError(err).Error("Kubernetes authorization failure")
-		return err, http.StatusUnauthorized
+		return http.StatusUnauthorized, err
 	}
 
 	if !isAuthorized {
@@ -96,8 +96,8 @@ func (authz *AuthZ) authorize(req *http.Request, resAtr *authzv1.ResourceAttribu
 			err = fmt.Errorf("%s is not authorized to %s for %s/%s", usr.GetName(), resAtr.Verb, resAtr.Resource, resAtr.Subresource)
 		}
 		log.WithError(err).Error("User is not authorized")
-		return err, http.StatusUnauthorized
+		return http.StatusUnauthorized, err
 	}
 
-	return nil, 0
+	return 0, nil
 }

@@ -16,13 +16,12 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func TestL7Logs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateL7Log (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo1 := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
@@ -61,8 +60,8 @@ func TestL7Logs(t *testing.T) {
 				results, err := lb.List(ctx, clusterInfo, params)
 				require.NoError(t, err)
 				require.Len(t, results.Items, 1)
-				backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-				backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
+				testutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 			})
 
@@ -79,7 +78,7 @@ func TestL7Logs(t *testing.T) {
 				results, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
 				require.NoError(t, err)
 				for _, cluster := range []string{cluster1, cluster2, cluster3} {
-					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.L7LogClusterEquals(cluster)), "Cluster %s not found", cluster)
+					require.Truef(t, testutils.MatchIn(results.Items, testutils.L7LogClusterEquals(cluster)), "Cluster %s not found", cluster)
 				}
 			})
 		})
@@ -264,7 +263,7 @@ func TestAggregations(t *testing.T) {
 
 func TestRetrieveMostRecentL7Logs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestRetrieveMostRecentL7Logs (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
@@ -304,7 +303,7 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{l1, l2})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query for logs
@@ -329,8 +328,8 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
-				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -352,7 +351,7 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			_, err = lb.Create(ctx, clusterInfo, []v1.L7Log{l3})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query the last ingested log
@@ -368,8 +367,8 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			require.Len(t, r.Items, 1)
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
-				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -380,7 +379,7 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 
 func TestPreserveIDs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
@@ -406,7 +405,7 @@ func TestPreserveIDs(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and make sure generated time values are what we expect.
@@ -432,17 +431,17 @@ func TestPreserveIDs(t *testing.T) {
 
 			for _, log := range first.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.L7Log](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.L7Log](t, &log)
 			}
 			for _, log := range second.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.L7Log](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.L7Log](t, &log)
 			}
 
 			require.Equal(t, first.Items, second.Items)
 
 			// Refresh before cleaning up data
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 		})

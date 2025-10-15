@@ -59,21 +59,13 @@ func getZonesFromFirewall(rules *Rules) []string {
 	zones := make([]string, 0)
 
 	for i := range rules.PreRules {
-		for _, z := range rules.PreRules[i].SrcZones { // nolint: gosimple
-			zones = append(zones, z)
-		}
-		for _, z := range rules.PreRules[i].DstZones { // nolint: gosimple
-			zones = append(zones, z)
-		}
+		zones = append(zones, rules.PreRules[i].SrcZones...)
+		zones = append(zones, rules.PreRules[i].DstZones...)
 	}
 
 	for i := range rules.PostRules {
-		for _, z := range rules.PostRules[i].SrcZones { // nolint: gosimple
-			zones = append(zones, z)
-		}
-		for _, z := range rules.PostRules[i].DstZones { // nolint: gosimple
-			zones = append(zones, z)
-		}
+		zones = append(zones, rules.PostRules[i].SrcZones...)
+		zones = append(zones, rules.PostRules[i].DstZones...)
 	}
 
 	return zones

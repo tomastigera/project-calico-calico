@@ -95,7 +95,7 @@ func createCertificate(cn, keyFilePath, certFilePath, rootKeyFilePath, rootCertF
 		fmt.Println("Error creating certificate file:", err)
 		return
 	}
-	defer certFile.Close()
+	defer func() { _ = certFile.Close() }()
 
 	err = pem.Encode(certFile, &pem.Block{
 		Type:  "CERTIFICATE",
@@ -112,7 +112,7 @@ func createCertificate(cn, keyFilePath, certFilePath, rootKeyFilePath, rootCertF
 		fmt.Println("Error creating private key file:", err)
 		return
 	}
-	defer keyFile.Close()
+	defer func() { _ = keyFile.Close() }()
 
 	privKeyBytes := x509.MarshalPKCS1PrivateKey(caPrivateKey)
 	err = pem.Encode(keyFile, &pem.Block{

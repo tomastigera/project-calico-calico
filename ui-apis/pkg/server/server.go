@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -69,16 +68,16 @@ func Start(cfg *Config) error {
 	var authn lmaauth.JWTAuth
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatal("Unable to create client config", err)
+		logrus.Fatal("Unable to create client config", err)
 	}
 	k8sCli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		log.Fatal("Unable to create kubernetes interface", err)
+		logrus.Fatal("Unable to create kubernetes interface", err)
 	}
 
 	var options []lmaauth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
-		log.Debug("Configuring Dex for authentication")
+		logrus.Debug("Configuring Dex for authentication")
 		opts := []lmaauth.DexOption{
 			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
 			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
@@ -91,7 +90,7 @@ func Start(cfg *Config) error {
 			cfg.OIDCAuthUsernameClaim,
 			opts...)
 		if err != nil {
-			log.Fatal("Unable to add an issuer to the authenticator", err)
+			logrus.Fatal("Unable to add an issuer to the authenticator", err)
 		}
 		options = append(options, lmaauth.WithAuthenticator(cfg.OIDCAuthIssuer, dex))
 	}
@@ -99,7 +98,7 @@ func Start(cfg *Config) error {
 	// Create authenticator and authorizer.
 	authn, err = lmaauth.NewJWTAuth(restConfig, k8sCli, options...)
 	if err != nil {
-		log.Fatal("Unable to create authenticator", err)
+		logrus.Fatal("Unable to create authenticator", err)
 	}
 
 	// Create an authorizer to use for lma.tigera.io resources. If a tenant namespace is configured, the authorizer
@@ -114,11 +113,11 @@ func Start(cfg *Config) error {
 	// multi-tenant environments where the ManagedCluster CRD may be namespaced.
 	scheme := runtime.NewScheme()
 	if err = v3.AddToScheme(scheme); err != nil {
-		log.WithError(err).Fatal("Failed to configure controller runtime client")
+		logrus.WithError(err).Fatal("Failed to configure controller runtime client")
 	}
 	client, err := ctrlclient.NewWithWatch(restConfig, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
-		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
+		logrus.WithError(err).Fatal("Failed to configure controller runtime client with watch")
 	}
 
 	// Create linseed Client.
@@ -131,7 +130,7 @@ func Start(cfg *Config) error {
 
 	linseed, err := lsclient.NewClient(cfg.TenantID, config, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
-		log.WithError(err).Error("failed to create linseed client")
+		logrus.WithError(err).Error("failed to create linseed client")
 		return err
 	}
 
@@ -435,10 +434,10 @@ func Start(cfg *Config) error {
 	}
 	wg.Add(1)
 	go func() {
-		log.Infof("Starting server on %v", cfg.ListenAddr)
+		logrus.Infof("Starting server on %v", cfg.ListenAddr)
 		err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 		if err != nil {
-			log.WithError(err).Error("Error when starting server")
+			logrus.WithError(err).Error("Error when starting server")
 		}
 		wg.Done()
 	}()
@@ -452,7 +451,7 @@ func Wait() {
 
 func Stop() {
 	if err := server.Shutdown(context.Background()); err != nil {
-		log.WithError(err).Error("Error when stopping server")
+		logrus.WithError(err).Error("Error when stopping server")
 	}
 }
 

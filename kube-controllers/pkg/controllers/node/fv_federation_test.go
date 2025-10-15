@@ -372,8 +372,8 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localEtcd.Stop()
 		remoteApiserver.Stop()
 		remoteEtcd.Stop()
-		os.Remove(remoteKubeconfig)
-		os.Remove(localKubeconfig)
+		_ = os.Remove(remoteKubeconfig)
+		_ = os.Remove(localKubeconfig)
 	})
 
 	DescribeTable("Test with specific local Calico datastore type", func(isCalicoEtcdDatastore bool) {

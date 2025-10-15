@@ -129,7 +129,7 @@ func (f *mockRestClient) FortiGateRestGet(url string) ([]uint8, error) {
 		return nil, err
 	}
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != fn.FortiGateReturnSuccess {
 			return nil, fmt.Errorf("Error from FortiGate, GET Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 		}
@@ -146,7 +146,7 @@ func (f *mockRestClient) FortiGateRestPut(url string, payload []uint8) ([]uint8,
 		return nil, err
 	}
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != fn.FortiGateReturnSuccess {
 			return nil, fmt.Errorf("Error from FortiGate, PUT Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 		}

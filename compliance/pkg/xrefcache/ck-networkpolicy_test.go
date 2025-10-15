@@ -700,7 +700,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
 		By("calling GetOrderedTiers and checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tier2))
@@ -714,7 +714,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle querying GetOrderedTiers reordering tiers and then requerying", func() {
 		By("calling GetOrderedTiers and checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tier2))
@@ -724,7 +724,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetTier(Name1, Order10000)
 
 		By("calling GetOrderedTiers and checking tier order and sorted policies in the tiers")
-		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers = tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier2))
 		Expect(tiers[1].Tier).To(Equal(tier1))
@@ -736,7 +736,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle querying GetOrderedPolicies reordering policies and then requerying", func() {
 		By("calling GetOrderedTiers to perform initial ordering")
-		tester.XrefCache.GetOrderedTiersAndPolicies()
+		tester.GetOrderedTiersAndPolicies()
 
 		By("reordering default tier policies")
 		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
@@ -755,7 +755,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		)
 
 		By("Getting ordered tiers and policies and checking default policies are re-ordered")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[2].Tier).To(Equal(tierDefault))
 		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Default, np1Default, knp1Default}))
@@ -763,7 +763,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
 		By("calling GetOrderedTiers and checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tier2))
@@ -785,7 +785,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		)
 
 		By("calling GetOrderedTiers and checking tier order")
-		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers = tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier2))
 		Expect(tiers[1].Tier).To(Equal(tier1))
@@ -799,7 +799,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle reordering of policies when deleting a policy", func() {
 		By("calling GetOrderedTiers to perform initial ordering")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tier2))
@@ -816,7 +816,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.DeleteK8sNetworkPolicy(Name1, Namespace1)
 
 		By("calling GetOrderedTiers to perform reordering")
-		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers = tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 
 		By("checking sorted policies in each tier")
@@ -827,7 +827,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle reordering of tiers when deleting a tier", func() {
 		By("checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers := tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(3))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tier2))
@@ -837,7 +837,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.DeleteTier(Tier2)
 
 		By("checking tier order")
-		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		tiers = tester.GetOrderedTiersAndPolicies()
 		Expect(tiers).To(HaveLen(2))
 		Expect(tiers[0].Tier).To(Equal(tier1))
 		Expect(tiers[1].Tier).To(Equal(tierDefault))
@@ -846,7 +846,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 	It("should filter policies and tiers based on endpoint applied policies", func() {
 		By("creating a pod and hack the applied policies to contain some in tier1 and default tier")
 		res := tester.SetPod(Name1, Namespace1, NoLabels, IP1, Name1, 0)
-		ep := tester.XrefCache.Get(resources.GetResourceID(res)).(*xrefcache.CacheEntryEndpoint)
+		ep := tester.Get(resources.GetResourceID(res)).(*xrefcache.CacheEntryEndpoint)
 		ep.AppliedPolicies = resources.NewSet()
 		ep.AppliedPolicies.Add(resources.GetResourceID(gnp1Tier1))
 		ep.AppliedPolicies.Add(resources.GetResourceID(knp1Default))

@@ -96,7 +96,7 @@ var _ = Describe("Tests address groups controller", func() {
 		AfterEach(func() {
 			By("Cleaning up after the test is complete")
 			apiserver.Stop()
-			os.Remove(kubeconfig)
+			_ = os.Remove(kubeconfig)
 			// Release wait group resources for the running go function.
 			wg.Done()
 		})
@@ -158,7 +158,7 @@ var _ = Describe("Tests address groups controller", func() {
 
 				for _, gns := range gnsList.Items {
 					Expect(gns.Annotations["firewall.tigera.io/device-groups"]).To(Equal(deviceGroup))
-					key := gns.ObjectMeta.Name
+					key := gns.Name
 					Expect(gns.ObjectMeta.Name).To(Equal(expectedGnsMap[key].Name))
 					Expect(gns.ObjectMeta.Annotations).To(Equal(expectedGnsMap[key].Annotations))
 					Expect(gns.ObjectMeta.Labels).To(Equal(expectedGnsMap[key].Labels))
@@ -284,7 +284,7 @@ var _ = Describe("Tests address groups controller", func() {
 				Expect(len(gnsList.Items)).To(Equal(len(expectedGNSMap)))
 				for _, gns := range gnsList.Items {
 					Expect(gns.Annotations["firewall.tigera.io/device-groups"]).To(Equal("shared"))
-					key := gns.ObjectMeta.Name
+					key := gns.Name
 					Expect(gns.ObjectMeta.Name).To(Equal(expectedGNSMap[key].Name))
 					Expect(gns.ObjectMeta.Annotations).To(Equal(expectedGNSMap[key].Annotations))
 					Expect(gns.ObjectMeta.Labels).To(Equal(expectedGNSMap[key].Labels))

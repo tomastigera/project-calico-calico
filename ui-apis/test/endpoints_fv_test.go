@@ -72,7 +72,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 		// Create mock client certificate
 		CA_file, err := os.Create(CAFilePath)
 		Expect(err).ShouldNot(HaveOccurred())
-		defer CA_file.Close()
+		defer func() { _ = CA_file.Close() }()
 	})
 
 	AfterEach(func() {

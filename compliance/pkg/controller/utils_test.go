@@ -128,7 +128,7 @@ func TestGetParentUIDFromJob(t *testing.T) {
 	}
 	{
 		// Case 2: Has ControllerRef
-		j.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{
+		j.SetOwnerReferences([]metav1.OwnerReference{
 			{
 				Kind:       "GlobalReport",
 				UID:        types.UID("5ef034e0-1890-11e6-8935-42010af0003e"),

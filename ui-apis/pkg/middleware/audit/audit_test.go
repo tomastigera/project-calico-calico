@@ -98,7 +98,7 @@ func TestNewHandler(t *testing.T) {
 			method:              "PUT",
 			input:               auditRequest,
 			expectedStatus:      http.StatusMethodNotAllowed,
-			expectedBody:        "Invalid http method",
+			expectedBody:        "invalid http method",
 			expectedContentType: "text/plain; charset=utf-8",
 		},
 		{

@@ -297,7 +297,7 @@ func NewMockSearchClient(results []interface{}) Client {
 
 	doFunc := func(_ context.Context, _ *elastic.SearchService) (*elastic.SearchResult, error) {
 		if idx >= len(results) {
-			return nil, errors.New("Enumerated past end of results")
+			return nil, errors.New("enumerated past end of results")
 		}
 		result := results[idx]
 		idx++
@@ -316,7 +316,7 @@ func NewMockSearchClient(results []interface{}) Client {
 			return result, err
 		}
 
-		return nil, errors.New("Unexpected result type")
+		return nil, errors.New("unexpected result type")
 	}
 
 	return NewMockComplianceClient(doFunc)

@@ -52,7 +52,7 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 		// When remote clusters are enabled we'll get RemoteClusterStatus types that we don't need to pass on to
 		// Felix.
 		if _, ok := update.Key.(model.RemoteClusterStatusKey); ok {
-			if v, ok := update.KVPair.Value.(*model.RemoteClusterStatus); !ok || v.Status != model.RemoteClusterConfigChangeRestartRequired {
+			if v, ok := update.Value.(*model.RemoteClusterStatus); !ok || v.Status != model.RemoteClusterConfigChangeRestartRequired {
 				logCxt.Debug("Skipping RemoteClusterStatusKey")
 				continue
 			}

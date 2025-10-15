@@ -4,7 +4,6 @@ package intdataplane
 
 import (
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/felix/ip"
@@ -97,19 +96,19 @@ func newExternalNetworkManagerWithShims(
 func (m *externalNetworkManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.WorkloadEndpointUpdate:
-		log.WithField("msg", msg).Debug("workload endpoint update")
+		logrus.WithField("msg", msg).Debug("workload endpoint update")
 		id := types.ProtoToWorkloadEndpointID(msg.GetId())
 		m.pendingWorkloadUpdates[id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
-		log.WithField("msg", msg).Debug("workload endpoint remove")
+		logrus.WithField("msg", msg).Debug("workload endpoint remove")
 		id := types.ProtoToWorkloadEndpointID(msg.GetId())
 		m.pendingWorkloadUpdates[id] = nil
 	case *proto.ExternalNetworkUpdate:
-		log.WithField("msg", msg).Debug("external network update")
+		logrus.WithField("msg", msg).Debug("external network update")
 		id := types.ProtoToExternalNetworkID(msg.GetId())
 		m.pendingExternalNetworkUpdates[id] = msg.Network
 	case *proto.ExternalNetworkRemove:
-		log.WithField("msg", msg).Debug("external network remove")
+		logrus.WithField("msg", msg).Debug("external network remove")
 		id := types.ProtoToExternalNetworkID(msg.GetId())
 		m.pendingExternalNetworkUpdates[id] = nil
 	}
@@ -117,7 +116,7 @@ func (m *externalNetworkManager) OnUpdate(msg interface{}) {
 
 func (m *externalNetworkManager) CompleteDeferredWork() error {
 	if len(m.pendingWorkloadUpdates) == 0 && len(m.pendingExternalNetworkUpdates) == 0 {
-		log.Debug("No change since last application, nothing to do")
+		logrus.Debug("No change since last application, nothing to do")
 		return nil
 	}
 

@@ -102,7 +102,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Managed Cluster", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), ManagedClusterToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), ManagedClusterToSelectableFields(apiserver), nil
 }
 
 // MatchManagedCluster is the filter used by the generic etcd backend to watch events

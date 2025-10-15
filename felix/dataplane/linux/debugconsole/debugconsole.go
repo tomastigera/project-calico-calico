@@ -114,7 +114,7 @@ func (console *debugConsole) handleConnection(c net.Conn) {
 		}
 	default:
 		msg := fmt.Sprintf("unknown command %s", args[0])
-		if _, err := c.Write([]byte(fmt.Sprintf("fail: %s", msg))); err != nil {
+		if _, err := fmt.Fprintf(c, "fail: %s", msg); err != nil {
 			log.WithError(err).Error("failed to write response")
 		}
 	}

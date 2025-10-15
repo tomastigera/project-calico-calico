@@ -19,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -111,7 +110,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 // TestL7FlowsMainline tests running a real elasticsearch query to list L7 flows.
 func TestL7FlowsMainline(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListL7Flows (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
@@ -147,7 +146,7 @@ func TestL7FlowsMainline(t *testing.T) {
 				require.Len(t, r.Items, 2)
 
 				for _, cluster := range selectedClusters {
-					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+					require.Truef(t, testutils.MatchIn(r.Items, testutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
 				}
 			})
 
@@ -156,7 +155,7 @@ func TestL7FlowsMainline(t *testing.T) {
 				r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
 				require.NoError(t, err)
 				for _, cluster := range []string{cluster1, cluster2, cluster3} {
-					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+					require.Truef(t, testutils.MatchIn(r.Items, testutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
 				}
 			})
 

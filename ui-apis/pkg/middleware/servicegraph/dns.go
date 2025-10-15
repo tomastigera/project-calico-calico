@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -40,10 +39,10 @@ func GetDNSClientData(ctx context.Context, lsClient client.Client, cluster strin
 	defer cancel()
 
 	// Set up for performing paged list queries for DNS flows.
-	params := lapi.DNSFlowParams{
+	params := lsv1.DNSFlowParams{
 		QueryParams: lsv1.QueryParams{TimeRange: &tr},
 	}
-	pager := client.NewListPager[lapi.DNSFlow](&params)
+	pager := client.NewListPager[lsv1.DNSFlow](&params)
 	results, errors := pager.Stream(ctx, lsClient.DNSFlows(cluster).List)
 
 	var foundLog bool
@@ -93,7 +92,7 @@ func GetDNSClientData(ctx context.Context, lsClient client.Client, cluster strin
 
 			// Track the number of aggregated logs. Bail if we hit the absolute maximum number of aggregated logs.
 			if len(logs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
-				return logs, DataTruncatedError
+				return logs, errDataTruncatedError
 			}
 		}
 	}

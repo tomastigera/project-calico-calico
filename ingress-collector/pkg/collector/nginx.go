@@ -5,6 +5,7 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -169,7 +170,7 @@ func (nc *nginxCollector) ParseRawLogs(text string) (IngressLog, error) {
 	// Skip lines of the log that do not include the logging
 	// information we are looking for.
 	if ingressText == "" {
-		return IngressLog{}, fmt.Errorf("Log information not properly formatted in this log line")
+		return IngressLog{}, errors.New("log information not properly formatted in this log line")
 	}
 
 	// TODO: Add something that will properly quote IPs for the users.

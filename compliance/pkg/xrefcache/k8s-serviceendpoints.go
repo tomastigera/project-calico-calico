@@ -72,7 +72,7 @@ func (v *versionedK8sServiceEndpoints) GetCalicoV1() interface{} {
 func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set[string], error) {
 	var lastErr error
 	s := set.New[string]()
-	for ssIdx := range v.Endpoints.Subsets {
+	for ssIdx := range v.Subsets {
 		for addrIdx := range v.Endpoints.Subsets[ssIdx].Addresses {
 			if target := v.Endpoints.Subsets[ssIdx].Addresses[addrIdx].TargetRef; target != nil && target.Kind == "Pod" {
 				pod := apiv3.ResourceID{

@@ -345,7 +345,7 @@ func (m *EnterpriseManager) PreReleaseValidate() error {
 		createrepo := "createrepo_c"
 		if path, err := exec.LookPath(createrepo); err != nil {
 			logrus.WithError(err).Errorf("Error trying to find %s in PATH", createrepo)
-			return fmt.Errorf("Unable to find %s in PATH", createrepo)
+			return fmt.Errorf("unable to find %s in PATH", createrepo)
 		} else if path == "" {
 			logrus.Errorf("%s not found in PATH", createrepo)
 			return fmt.Errorf("%s not found in PATH", createrepo)
@@ -562,7 +562,7 @@ func (m *EnterpriseManager) buildBinaries() error {
 		out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "release-build-binaries", env...)
 		if err != nil {
 			logrus.Error(out)
-			return fmt.Errorf("Failed to build %s: %s", dir, err)
+			return fmt.Errorf("failed to build %s: %s", dir, err)
 		}
 		logrus.Info(out)
 	}
@@ -594,9 +594,9 @@ func createRPMPackageList(dir, out string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	for _, rpmFileName := range rpmFiles {
-		if _, err := file.WriteString(fmt.Sprintf("%s\n", rpmFileName)); err != nil {
+		if _, err := fmt.Fprintf(file, "%s\n", rpmFileName); err != nil {
 			return err
 		}
 	}
@@ -698,7 +698,7 @@ func (m *EnterpriseManager) assembleRPMs() error {
 		if err != nil {
 			return fmt.Errorf("failed to create yum repo config file: %s", err)
 		}
-		defer repoFile.Close()
+		defer func() { _ = repoFile.Close() }()
 		data := &rpmRepoData{
 			BaseURL: rpmURLBase,
 			Version: version,
@@ -716,7 +716,7 @@ func (m *EnterpriseManager) assembleRPMs() error {
 	if err != nil {
 		return fmt.Errorf("failed to create combined yum repo config file: %s", err)
 	}
-	defer combinedRepoFile.Close()
+	defer func() { _ = combinedRepoFile.Close() }()
 	data := &rpmRepoData{
 		BaseURL: rpmURLBase,
 	}
@@ -856,12 +856,12 @@ func (m *EnterpriseManager) fetchEnterpriseScripts() error {
 	if err != nil {
 		return err
 	}
-	defer switchActiveOperatorFile.Close()
+	defer func() { _ = switchActiveOperatorFile.Close() }()
 	resp, err := http.Get(fmt.Sprintf("%s/%s/next/scripts/%s", docsURL, strings.ReplaceAll(utils.CalicoEnterprise, " ", "-"), switchActiveOperatorFilename))
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return err
 	}
@@ -991,7 +991,7 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 			// Log the output and return a formatted error
 			logrus.WithField("directory", dir).Error(out)
 			logrus.WithField("directory", dir).WithError(err).Error("Publishing failed")
-			return fmt.Errorf("Failed to publish %s images: %w", dir, err)
+			return fmt.Errorf("failed to publish %s images: %w", dir, err)
 		}
 		// Success - move on
 		logrus.WithField("directory", dir).Info(out)

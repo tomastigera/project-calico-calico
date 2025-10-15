@@ -3,6 +3,7 @@
 package fortimanager
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -149,7 +150,7 @@ type AddressGroup struct {
 func ConvertK8sNodeToFortinetFirewallAddress(node *v1.Node) (fortilib.RespFortiGateFWAddressData, error) {
 	ip := getNodeInternalIP(node.Status.Addresses)
 	if ip == nil {
-		return fortilib.RespFortiGateFWAddressData{}, fmt.Errorf("Could not get IP address for node")
+		return fortilib.RespFortiGateFWAddressData{}, errors.New("could not get IP address for node")
 	}
 	faddr := fortilib.RespFortiGateFWAddressData{
 		Name:    node.GetObjectMeta().GetName(),
@@ -178,7 +179,7 @@ func getNodeInternalIP(addresses []v1.NodeAddress) *net.IP {
 func ConvertK8sPodToFortinetFirewallAddress(pod *v1.Pod) (fortilib.RespFortiGateFWAddressData, error) {
 	ip := getPodInternalIP(pod)
 	if ip == nil {
-		return fortilib.RespFortiGateFWAddressData{}, fmt.Errorf("Could not get IP address for pod")
+		return fortilib.RespFortiGateFWAddressData{}, errors.New("could not get IP address for pod")
 	}
 	faddr := fortilib.RespFortiGateFWAddressData{
 		Name:    pod.GetObjectMeta().GetNamespace() + "-" + pod.GetObjectMeta().GetName(),

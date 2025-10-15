@@ -282,7 +282,7 @@ func parsePeerSummary(line, ipSeparator string, peer *Peer) bool {
 		return false
 	}
 	var ok bool
-	peer.PeerIP = strings.Replace(sm[2], "_", ipSeparator, -1)
+	peer.PeerIP = strings.ReplaceAll(sm[2], "_", ipSeparator)
 	if peer.PeerType, ok = bgpTypeMap[sm[1]]; !ok {
 		return false
 	}

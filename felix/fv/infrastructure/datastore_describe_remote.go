@@ -16,7 +16,7 @@ package infrastructure
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 )
 
 type LocalRemoteInfraFactories struct {
@@ -39,7 +39,7 @@ func (r *LocalRemoteInfraFactories) AllFactories() []InfraFactory {
 // DatastoreDescribeRemoteOnly invokes Describe, providing a factory that provides remote and local datastores. It creates just
 // one Describe invocation - use DatastoreDescribeWithRemote to get both local and local/remote describes.
 func DatastoreDescribeRemoteOnly(description string, body func(factories LocalRemoteInfraFactories)) bool {
-	Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
+	ginkgo.Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
 		func() {
 			body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
 		})

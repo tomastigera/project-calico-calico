@@ -424,7 +424,7 @@ func (c *dynamicAddressGroupsController) convertAddressGroupToGlobalNetworkSet(
 	gns := v3.GlobalNetworkSet{}
 	// Set the GNS name to a valid Kubernetes (RFC1123) version of the address group's name, with the
 	// "pan." prefix.
-	gns.ObjectMeta.Name = panutils.GetRFC1123Name(PanoramaNamePrefix + addressGroup.Entry.Name)
+	gns.Name = panutils.GetRFC1123Name(PanoramaNamePrefix + addressGroup.Entry.Name)
 	// Copy address group addresses only when populated.
 	if len(addressGroup.Addresses.IpNetmasks) > 0 {
 		gns.Spec.Nets = addressGroup.Addresses.IpNetmasks
@@ -482,14 +482,14 @@ func (c *dynamicAddressGroupsController) copyGlobalNetworkSet(
 	// Copy Spec context, nets and allowedEgressDomains.
 	gnsSrc.Spec.DeepCopyInto(&gnsDest.Spec)
 	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation.
-	gnsDest.ObjectMeta.Name = gnsSrc.GetObjectMeta().GetName()
-	gnsDest.ObjectMeta.Labels = make(map[string]string)
+	gnsDest.Name = gnsSrc.GetObjectMeta().GetName()
+	gnsDest.Labels = make(map[string]string)
 	for key, label := range gnsSrc.GetObjectMeta().GetLabels() {
-		gnsDest.ObjectMeta.Labels[key] = label
+		gnsDest.Labels[key] = label
 	}
-	gnsDest.ObjectMeta.Annotations = make(map[string]string)
+	gnsDest.Annotations = make(map[string]string)
 	for key, annotation := range gnsSrc.GetObjectMeta().GetAnnotations() {
-		gnsDest.ObjectMeta.Annotations[key] = annotation
+		gnsDest.Annotations[key] = annotation
 	}
 }
 

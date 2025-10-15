@@ -5,6 +5,7 @@ package audit
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -88,8 +88,8 @@ func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType,
 		// as the log type (EE or Kube)
 		// AuditLogs have a custom JSON marshaler so we need to add this to the JSON directly.
 		buf := bytes.NewBuffer(bytes.TrimSuffix(bs, []byte("}")))
-		buf.WriteString(fmt.Sprintf(`,"tenant":"%s","audit_type":"%s"}`, i.Tenant, k))
-		return buf.String(), nil
+		_, err := fmt.Fprintf(buf, `,"tenant":"%s","audit_type":"%s"}`, i.Tenant, k)
+		return buf.String(), err
 	}
 
 	return string(bs), nil
@@ -178,7 +178,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 }
 
 // List lists logs that match the given parameters.
-func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
+func (b *auditLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
 	query, startFrom, err := b.getSearch(ctx, i, opts)
@@ -236,7 +236,7 @@ func (b *auditLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts
 	return afterKey, nil
 }
 
-func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogAggregationParams) (*elastic.Aggregations, error) {
+func (b *auditLogBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogAggregationParams) (*elastic.Aggregations, error) {
 	if b.migrationMode {
 		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
 	}
@@ -426,7 +426,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		// We only support a single stage at the moment.
 		// Stage is defined as a text field, which means terms queries
 		// don't work.
-		return nil, fmt.Errorf("At most one stage may be present on audit log query")
+		return nil, errors.New("at most one stage may be present on audit log query")
 	}
 
 	if len(opts.Levels) > 0 {

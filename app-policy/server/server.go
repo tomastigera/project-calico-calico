@@ -143,7 +143,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 		log.Fatal("could not start listener: ", err)
 		return
 	}
-	defer lis.Close()
+	defer func() { _ = lis.Close() }()
 
 	if s.listenNetwork == "unix" {
 		if err := ensureSocketFileAccessible(s.listenAddress); err != nil {

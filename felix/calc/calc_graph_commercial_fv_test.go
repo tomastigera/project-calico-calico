@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -960,18 +959,18 @@ var (
 	egwpSelector2 = "egress-provider == 'not-sure'"
 	egwpSelector3 = "egress-provider in {'true', 'not-sure'}"
 
-	egressProfileSelector = calc.PreprocessEgressSelector(&v3.EgressSpec{
+	egressProfileSelector = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
 		Selector: egressSelector,
 	}, "egress")
-	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
 		Selector:          egwpSelector1,
 		NamespaceSelector: namespaceSelector,
 	}, "")
-	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
 		Selector:          egwpSelector2,
 		NamespaceSelector: namespaceSelector,
 	}, "")
-	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
 		Selector:          egwpSelector3,
 		NamespaceSelector: namespaceSelector,
 	}, "")
@@ -1061,7 +1060,7 @@ var (
 	}
 	egressGatewayPolicy1    = "egw-policy1"
 	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: apiv3.KindEgressGatewayPolicy}
-	preferenceNone          = v3.GatewayPreferenceNone
+	preferenceNone          = apiv3.GatewayPreferenceNone
 	egressGatewayPolicyVal1 = &apiv3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
@@ -2344,13 +2343,13 @@ func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint1
 	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, startStr, finishStr, port, hostname)
 }
 
-func namespaceToProfile(ns *kapiv1.Namespace) *v3.Profile {
+func namespaceToProfile(ns *kapiv1.Namespace) *apiv3.Profile {
 	c := conversion.NewConverter()
 	kv, err := c.NamespaceToProfile(ns)
 	if err != nil {
 		panic(err)
 	}
-	profile, ok := kv.Value.(*v3.Profile)
+	profile, ok := kv.Value.(*apiv3.Profile)
 	if !ok {
 		panic(fmt.Errorf("Failed to convert namespace to profile.\nns: %v", ns))
 	}

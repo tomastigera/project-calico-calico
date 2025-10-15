@@ -3,11 +3,12 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -116,7 +117,7 @@ func getAuthorizedTiers(ctx context.Context, authorizer authorizer.TierAuthorize
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors.NewForbidden(v3.Resource(attributes.GetResource()), "", fmt.Errorf("operation on Calico tiered policy is forbidden"))
+		return nil, k8serrors.NewForbidden(v3.Resource(attributes.GetResource()), "", fmt.Errorf("operation on Calico tiered policy is forbidden"))
 	}
 
 	return allowedTiers, nil
@@ -161,7 +162,7 @@ func GetUISettingsGroupNameFromSelector(options *metainternalversion.ListOptions
 					requirement.Operator == selection.DoubleEquals {
 					return requirement.Value, nil
 				}
-				return "", fmt.Errorf("Non equal selector operator not supported for field spec.group")
+				return "", errors.New("non equal selector operator not supported for field spec.group")
 			}
 		}
 	}
@@ -169,14 +170,14 @@ func GetUISettingsGroupNameFromSelector(options *metainternalversion.ListOptions
 	// No group selector. Return "*" as the name - this will be used to check authorization. If authorized to allow
 	// a settings called "*" it is assumed it is authorized to access all settings. Strictly, a RBAC role could be
 	// set up matching on a name of "*" but I think this is a live with.
-	return "*", fmt.Errorf("Require UISettingsGroup to be specified")
+	return "*", errors.New("require UISettingsGroup to be specified")
 }
 
 // GetUISettingsGroupFromUISettingsName extracts the UISettingsGroup name from the UISettings name.
 func GetUISettingsGroupFromUISettingsName(uiSettingsName string) (string, error) {
 	parts := strings.Split(uiSettingsName, uiSettingsDelim)
 	if len(parts) < 2 {
-		return "", fmt.Errorf("UISettings name format is incorrect - should be prefixed by the UISettingsGroup")
+		return "", errors.New("UISettings name format is incorrect - should be prefixed by the UISettingsGroup")
 	}
 	return parts[0], nil
 }

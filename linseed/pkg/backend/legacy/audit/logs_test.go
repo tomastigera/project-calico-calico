@@ -620,7 +620,7 @@ func TestAuditLogFiltering(t *testing.T) {
 				tr := &lmav1.TimeRange{}
 				tr.From = logTime.Add(-1 * time.Millisecond)
 				tr.To = logTime.Add(1 * time.Millisecond)
-				testcase.Params.QueryParams.TimeRange = tr
+				testcase.Params.TimeRange = tr
 
 				// The object that audit log is for.
 				obj := v3.NetworkPolicy{

@@ -64,14 +64,14 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 			Expect(ns.(api.NetworkSet).Namespace).To(Equal("default"))
 		})
 
-		annotations := ns.(api.NetworkSet).ObjectMeta.Annotations
+		annotations := ns.(api.NetworkSet).Annotations
 		By("returning a networkset with correct annotations", func() {
 			Expect(annotations[converter.NsServiceNameAnnotation]).To(Equal("testPolicy"))
 			Expect(annotations[converter.NsPortsAnnotation]).To(Equal("80"))
 			Expect(annotations[converter.NsProtocolsAnnotation]).To(Equal("TCP"))
 		})
 
-		labels := ns.(api.NetworkSet).ObjectMeta.Labels
+		labels := ns.(api.NetworkSet).Labels
 		By("returning a networkset with the correct labels", func() {
 			Expect(labels["foo.org/bar"]).To(Equal("baz"))
 			Expect(labels["champions"]).To(Equal("juventus"))
@@ -110,14 +110,14 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 			Expect(ns.(api.NetworkSet).Namespace).To(Equal("default"))
 		})
 
-		annotations := ns.(api.NetworkSet).ObjectMeta.Annotations
+		annotations := ns.(api.NetworkSet).Annotations
 		By("returning a networkset with correct annotations", func() {
 			Expect(annotations[converter.NsServiceNameAnnotation]).To(Equal("testPolicy"))
 			Expect(annotations[converter.NsPortsAnnotation]).To(Equal("80,123,443,9000"))
 			Expect(annotations[converter.NsProtocolsAnnotation]).To(Equal("TCP,UDP"))
 		})
 
-		labels := ns.(api.NetworkSet).ObjectMeta.Labels
+		labels := ns.(api.NetworkSet).Labels
 		By("returning a networkset with empty labels", func() {
 			Expect(len(labels)).To(Equal(1))
 			Expect(labels[converter.NsServiceNameLabel]).To(Equal("testPolicy"))
@@ -147,14 +147,14 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 			Expect(ns.(api.NetworkSet).Namespace).To(Equal("default"))
 		})
 
-		annotations := ns.(api.NetworkSet).ObjectMeta.Annotations
+		annotations := ns.(api.NetworkSet).Annotations
 		By("returning a networkset with correct annotations", func() {
 			Expect(annotations[converter.NsServiceNameAnnotation]).To(Equal("testPolicy"))
 			Expect(annotations[converter.NsPortsAnnotation]).To(BeZero())
 			Expect(annotations[converter.NsProtocolsAnnotation]).To(BeZero())
 		})
 
-		labels := ns.(api.NetworkSet).ObjectMeta.Labels
+		labels := ns.(api.NetworkSet).Labels
 		By("returning a networkset with empty labels", func() {
 			Expect(len(labels)).To(Equal(1))
 			Expect(labels[converter.NsServiceNameLabel]).To(Equal("testPolicy"))

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -91,7 +90,7 @@ func SearchFlows(ctx context.Context, listFn client.ListFunc[lapi.L3Flow], pager
 	}
 
 	if err, ok := <-errors; ok {
-		log.WithError(err).Warning("Hit error processing flow logs")
+		logrus.WithError(err).Warning("Hit error processing flow logs")
 		return flows, err
 	}
 

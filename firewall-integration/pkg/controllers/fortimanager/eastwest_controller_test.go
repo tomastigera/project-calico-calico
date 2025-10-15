@@ -57,13 +57,13 @@ var _ = Describe("Tests East West Controller", func() {
 
 			getTier = func(ctx context.Context, name string, opts v1.GetOptions) (*v3.Tier, error) {
 				existingTier := &v3.Tier{}
-				existingTier.ObjectMeta.Name = name
+				existingTier.Name = name
 
 				return existingTier, nil
 			}
 
 			updateTier = func(ctx context.Context, tier *v3.Tier, opts v1.UpdateOptions) (*v3.Tier, error) {
-				tierLabelResult = tier.ObjectMeta.Labels
+				tierLabelResult = tier.Labels
 
 				return tier, nil
 			}

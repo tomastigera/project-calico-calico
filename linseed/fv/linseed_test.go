@@ -68,19 +68,19 @@ func TestFV_Linseed(t *testing.T) {
 		},
 		{
 			name: "should return 404 for /",
-			path: "/", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /"}`,
+			path: "/", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"no matching authz options for GET /"}`,
 		},
 		{
 			name: "should return 404 for /foo",
-			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /foo"}`,
+			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"no matching authz options for GET /foo"}`,
 		},
 		{
 			name: "should return 404 for /api/v1/flows/foo",
-			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /api/v1/flows/foo"}`,
+			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"no matching authz options for GET /api/v1/flows/foo"}`,
 		},
 		{
 			name: "should return 404 for DELETE /version",
-			path: "/version", method: "DELETE", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for DELETE /version"}`,
+			path: "/version", method: "DELETE", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"no matching authz options for DELETE /version"}`,
 		},
 		{
 			name: "should return 415 unsupported content type for /api/v1/flows",
@@ -211,7 +211,7 @@ func TestFV_Linseed(t *testing.T) {
 				_, err := cli.AuditLogs(cluster1).List(ctx, &v1.AuditLogParams{
 					Type: v1.AuditLogType(v1.AuditLogTypeEE),
 				})
-				require.ErrorContains(t, err, `{"Status":404,"Msg":"No matching authz options for POST /api/v1/audit/logs"}`)
+				require.ErrorContains(t, err, `{"Status":404,"Msg":"no matching authz options for POST /api/v1/audit/logs"}`)
 			})
 		})
 	})

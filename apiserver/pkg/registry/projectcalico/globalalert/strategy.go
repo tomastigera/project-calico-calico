@@ -22,7 +22,6 @@ import (
 	"reflect"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,7 +49,7 @@ func (apiServerStrategy) NamespaceScoped() bool {
 // PrepareForCreate clears the Status
 func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	globalAlert := obj.(*calico.GlobalAlert)
-	globalAlert.Status = v3.GlobalAlertStatus{}
+	globalAlert.Status = calico.GlobalAlertStatus{}
 }
 
 // PrepareForUpdate copies the Status from old to obj
@@ -112,7 +111,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Global Alert", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), AlertToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), AlertToSelectableFields(apiserver), nil
 }
 
 // MatchAlert is the filter used by the generic etcd backend to watch events

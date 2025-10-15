@@ -374,7 +374,7 @@ func configureBGPLayout(node *libapi.Node) (bool, error) {
 	}
 	cfg, err := earlynetworking.GetEarlyNetworkConfig(yamlFileName)
 	if err != nil {
-		return false, fmt.Errorf("Failed to read EarlyNetworkConfiguration: %v", err)
+		return false, fmt.Errorf("failed to read EarlyNetworkConfiguration: %v", err)
 	}
 
 	// Find the EarlyNetworkConfiguration entry for this node.
@@ -394,7 +394,7 @@ nodeLoop:
 		}
 	}
 	if thisNode == nil {
-		return false, fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
+		return false, fmt.Errorf("failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
 	}
 	log.WithField("cfg", *thisNode).Info("Found EarlyNetworkConfiguration entry for this node")
 

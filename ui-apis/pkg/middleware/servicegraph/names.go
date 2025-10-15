@@ -182,7 +182,8 @@ func (ah *nameHelper) ConvertEvent(e Event) Event {
 	eps := e.Endpoints
 	e.Endpoints = make([]FlowEndpoint, len(eps))
 	for i, ep := range eps {
-		if ep.Type == v1.GraphNodeTypeClusterNode || ep.Type == v1.GraphNodeTypeHost {
+		switch ep.Type {
+		case v1.GraphNodeTypeClusterNode, v1.GraphNodeTypeHost:
 			ep.Name = ep.NameAggr
 			if nameAggr := ah.hostNameToAggrName[ep.NameAggr]; nameAggr != "" {
 				ep.NameAggr = nameAggr
@@ -191,7 +192,7 @@ func (ah *nameHelper) ConvertEvent(e Event) Event {
 				ep.NameAggr = "*"
 				ah.addAdditionalWildcardAggregatedNode(e.Endpoints[i].Name)
 			}
-		} else if ep.Type == v1.GraphNodeTypeHostEndpoint {
+		case v1.GraphNodeTypeHostEndpoint:
 			// We don't expose host endpoints - just hosts - so adjust the event endpoint and include the appropriate
 			// aggregated name.
 			ep.Type = v1.GraphNodeTypeHost

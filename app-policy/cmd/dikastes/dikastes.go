@@ -30,7 +30,7 @@ func main() {
 	switch config.Command {
 	case "init-sidecar":
 		// At least one of them should be enabled
-		if !(config.SidecarALPEnabled || config.SidecarWAFEnabled || config.SidecarLogsEnabled) {
+		if !config.SidecarALPEnabled && !config.SidecarWAFEnabled && !config.SidecarLogsEnabled {
 			log.Fatal("At least one of the main features ALP, WAF and Logs should be enabled")
 		}
 

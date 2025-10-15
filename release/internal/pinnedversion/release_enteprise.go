@@ -57,12 +57,12 @@ func (e *EnterpriseReleaseVersions) getHashreleasePinnedVersions() error {
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", pinnedVersionPath, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	resp, err := http.Get(hashreleaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to get %s pinned_versions.yml from %s: %w", e.Hashrelease, hashreleaseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to get %s pinned_versions.yml: %s", e.Hashrelease, resp.Status)
 	}
@@ -141,7 +141,7 @@ func (e *EnterpriseReleaseVersions) updateVersionsFile() error {
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", versionsFilePath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString("# !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.\n"); err != nil {
 		return fmt.Errorf("failed to add warning to %s: %w", versionsFilePath, err)
@@ -149,7 +149,7 @@ func (e *EnterpriseReleaseVersions) updateVersionsFile() error {
 
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
-	defer enc.Close()
+	defer func() { _ = enc.Close() }()
 
 	if err := enc.Encode(upd); err != nil {
 		return fmt.Errorf("failed to encode %s: %w", versionsFilePath, err)

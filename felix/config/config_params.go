@@ -441,7 +441,7 @@ type Config struct {
 	SyslogReporterEnabled       bool          `config:"bool;false"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
-	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
+	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"` //nolint:staticcheck // Ignore ST1011 don't use unit-specific suffix
 
 	FlowLogsEnableHostEndpoint     bool          `config:"bool;false"`
 	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`

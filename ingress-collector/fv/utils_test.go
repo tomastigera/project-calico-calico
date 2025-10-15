@@ -46,7 +46,7 @@ func NewCollectorTestHandler() *CollectorTestHandler {
 
 	// Create the tmp log file to collect from
 	f, _ := os.Create(cfg.IngressLogPath)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	statsChan := make(chan *proto.DataplaneStats, 20)
 	grpcServer := grpc.NewServer()
@@ -128,7 +128,7 @@ func (cth *CollectorTestHandler) WriteToLog(logline string) {
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = f.WriteString(logline)
 	if err != nil {

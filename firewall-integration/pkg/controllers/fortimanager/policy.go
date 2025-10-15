@@ -2,12 +2,12 @@
 package fortimanager
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,16 +22,16 @@ const (
 
 // FortiManager Firewall rule `action` field returns 0 = Deny and 1 = Allow.
 // Covert this to V3 action objects.
-var actions = []v3.Action{v3.Deny, v3.Allow}
+var actions = []apiv3.Action{apiv3.Deny, apiv3.Allow}
 
-func createRule(fwRule fortilib.FortiFWPolicy, ingress bool, selector, protocol string, ports []numorstring.Port) v3.Rule {
-	var policyRule v3.Rule
+func createRule(fwRule fortilib.FortiFWPolicy, ingress bool, selector, protocol string, ports []numorstring.Port) apiv3.Rule {
+	var policyRule apiv3.Rule
 
 	proto := numorstring.ProtocolFromString(protocol)
 	policyRule.Protocol = &proto
 	policyRule.Action = actions[fwRule.Action]
 	if len(ports) > 0 {
-		policyRule.Destination = v3.EntityRule{
+		policyRule.Destination = apiv3.EntityRule{
 			Ports: ports,
 		}
 	}
@@ -43,10 +43,10 @@ func createRule(fwRule fortilib.FortiFWPolicy, ingress bool, selector, protocol 
 	return policyRule
 }
 
-func createNwPolicyRules(fwRule fortilib.FortiFWPolicy, ingress bool, selector string) []v3.Rule {
+func createNwPolicyRules(fwRule fortilib.FortiFWPolicy, ingress bool, selector string) []apiv3.Rule {
 
 	log.Debugf("Calculating rule for policy rules for FWpolicy %+v ingress %v selector %v", fwRule, ingress, selector)
-	var rules []v3.Rule
+	var rules []apiv3.Rule
 	// Find the TCP ports for Entity rule
 	var portsTCP []numorstring.Port
 	for _, svc := range fwRule.Service {
@@ -97,23 +97,23 @@ func CheckFWRuleParams(fwRule fortilib.FortiFWPolicy) error {
 	// If Firewall rule don't have name, fail to convert GNP's
 	if fwRule.Name == "" {
 		log.Errorf("FortiManager's firewall rule should have name, rule: %#v", fwRule)
-		return fmt.Errorf("Missing rule Name in FortiManager's FW rule")
+		return errors.New("missing rule Name in FortiManager's FW rule")
 	}
 
 	if len(fwRule.SrcAddr) == 0 || len(fwRule.DstAddr) == 0 || len(fwRule.Service) == 0 {
 		if len(fwRule.SrcAddr) == 0 {
 			log.Errorf("FortiManager's firewall rule should have valid label in Src Address, rule: %#v", fwRule)
-			return fmt.Errorf("Missing Src Addresses in FortiManager FW rule")
+			return errors.New("missing Src Addresses in FortiManager FW rule")
 		}
 
 		if len(fwRule.DstAddr) == 0 {
 			log.Errorf("FortiManager's firewall rule should have valid label in Dst Address, rule: %#v", fwRule)
-			return fmt.Errorf("Missing Src Addresses in FortiManager FW rule")
+			return errors.New("missing Dst Addresses in FortiManager FW rule")
 		}
 
 		if len(fwRule.Service) == 0 {
 			log.Errorf("FortiManager's firewall rule should have valid services, rule: %#v", fwRule)
-			return fmt.Errorf("Missing Service in FortiManager FW rule")
+			return errors.New("missing Service in FortiManager FW rule")
 		}
 	}
 	return nil
@@ -152,10 +152,10 @@ func ConvertFWRuleToGNPs(tier, pkgName string, fwRule fortilib.FortiFWPolicy) ([
 	var gnps []apiv3.GlobalNetworkPolicy
 	gnpIng := apiv3.GlobalNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: policyNameIng, Annotations: annotationGNP},
-		Spec: v3.GlobalNetworkPolicySpec{
+		Spec: apiv3.GlobalNetworkPolicySpec{
 			Tier:     tier,
 			Selector: selectorNameIngress,
-			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress},
 			Ingress:  createNwPolicyRules(fwRule, true, selectorNameEgress),
 		},
 	}
@@ -164,20 +164,20 @@ func ConvertFWRuleToGNPs(tier, pkgName string, fwRule fortilib.FortiFWPolicy) ([
 	policyNameIngDeny := fmt.Sprintf("%s.%s-%s-%s", tier, fwRule.Name, "ing", "deny")
 	gnpIngDeny := apiv3.GlobalNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: policyNameIngDeny, Annotations: annotationGNP},
-		Spec: v3.GlobalNetworkPolicySpec{
+		Spec: apiv3.GlobalNetworkPolicySpec{
 			Tier:     tier,
 			Selector: selectorNameIngress,
-			Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+			Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 		},
 	}
 	gnps = append(gnps, gnpIngDeny)
 
 	gnpEgr := apiv3.GlobalNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: policyNameEgr, Annotations: annotationGNP},
-		Spec: v3.GlobalNetworkPolicySpec{
+		Spec: apiv3.GlobalNetworkPolicySpec{
 			Tier:     tier,
 			Selector: selectorNameEgress,
-			Types:    []v3.PolicyType{v3.PolicyTypeEgress},
+			Types:    []apiv3.PolicyType{apiv3.PolicyTypeEgress},
 			Egress:   createNwPolicyRules(fwRule, false, selectorNameIngress),
 		},
 	}
@@ -187,10 +187,10 @@ func ConvertFWRuleToGNPs(tier, pkgName string, fwRule fortilib.FortiFWPolicy) ([
 		policyNameEgrDeny := fmt.Sprintf("%s.%s-%s-%s", tier, fwRule.Name, "egr", "deny")
 		gnpEgrDeny := apiv3.GlobalNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: policyNameEgrDeny, Annotations: annotationGNP},
-			Spec: v3.GlobalNetworkPolicySpec{
+			Spec: apiv3.GlobalNetworkPolicySpec{
 				Tier:     tier,
 				Selector: selectorNameEgress,
-				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			},
 		}
 		gnps = append(gnps, gnpEgrDeny)

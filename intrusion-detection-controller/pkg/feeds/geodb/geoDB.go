@@ -29,14 +29,14 @@ type GeoDB struct {
 func NewGeoDB() (*GeoDB, error) {
 	cdb, err := geoip2.Open(cityDatabaseFilepath)
 	if err != nil {
-		cdb.Close()
+		_ = cdb.Close()
 		return &GeoDB{}, err
 	}
 
 	adb, err := geoip2.Open(asnDatabaseFilepath)
 	if err != nil {
-		cdb.Close()
-		adb.Close()
+		_ = cdb.Close()
+		_ = adb.Close()
 		return &GeoDB{}, err
 	}
 
@@ -71,6 +71,6 @@ func (g *GeoDB) ASN(ip net.IP) (string, error) {
 }
 
 func (g *GeoDB) Close() {
-	g.asnDB.Close()
-	g.cityDB.Close()
+	_ = g.asnDB.Close()
+	_ = g.cityDB.Close()
 }

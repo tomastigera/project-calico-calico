@@ -536,7 +536,7 @@ func ensureRoute(route *netlink.Route, append bool) {
 func enumerateAllIPs(nl *netlink.Handle) (ips []string, err error) {
 	links, err := netlinkutils.LinkListRetryEINTR(nl)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to list links: %w", err)
+		return nil, fmt.Errorf("failed to list links: %w", err)
 	}
 
 	for _, l := range links {
@@ -582,7 +582,7 @@ func tcpListenOn(addrPort, description string) bool {
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to open /proc/net/tcp")
 	}
-	defer connFile.Close()
+	defer func() { _ = connFile.Close() }()
 
 	scanner := bufio.NewScanner(connFile)
 	for scanner.Scan() {

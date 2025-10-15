@@ -522,12 +522,12 @@ func copyGlobalNetworkPolicy(dst *v3.GlobalNetworkPolicy, src v3.GlobalNetworkPo
 	log.Debug("Copy source to destination policy")
 
 	// Copy the type metadata.
-	dst.TypeMeta.APIVersion = src.TypeMeta.APIVersion
-	dst.TypeMeta.Kind = src.TypeMeta.Kind
+	dst.APIVersion = src.APIVersion
+	dst.Kind = src.Kind
 	// Copy Spec context, nets and allowedEgressDomains.
 	src.Spec.DeepCopyInto(&dst.Spec)
 	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation.
-	dst.ObjectMeta.Name = src.Name
+	dst.Name = src.Name
 	// Copy labels, except for 'tier'. Destination labels will be nil if source only contains the 'tier' key.
 	filteredLabels := make(map[string]string)
 	for key, label := range src.Labels {
@@ -536,13 +536,13 @@ func copyGlobalNetworkPolicy(dst *v3.GlobalNetworkPolicy, src v3.GlobalNetworkPo
 		}
 	}
 	if len(filteredLabels) > 0 {
-		dst.ObjectMeta.Labels = filteredLabels
+		dst.Labels = filteredLabels
 	}
 	// Copy annotations. Destination annotations will be nil if source is empty.
 	if len(src.Annotations) > 0 {
-		dst.ObjectMeta.Annotations = make(map[string]string)
+		dst.Annotations = make(map[string]string)
 		for key, annotation := range src.Annotations {
-			dst.ObjectMeta.Annotations[key] = annotation
+			dst.Annotations[key] = annotation
 		}
 	}
 }
@@ -743,7 +743,7 @@ func (c *firewallPolicyIntegrationController) createUpdateTierForPanorama(name s
 
 	// The policy already exists, update it and write it back to the datastore.
 	t.Spec.Order = order
-	t.ObjectMeta.Labels = tierLabels
+	t.Labels = tierLabels
 	_, err = c.calicoClient.Tiers().Update(context.Background(), t, metav1.UpdateOptions{})
 	if err != nil {
 		log.WithError(err).Warning("failed to update tier")

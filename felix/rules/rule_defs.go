@@ -408,11 +408,12 @@ func (r *DefaultRuleRenderer) IptablesFilterDenyAction() generictables.Action {
 }
 
 func (r *DefaultRuleRenderer) SetIPSetIDGetter(idGetter IPSetIDGetter, ipVersion uint8) {
-	if ipVersion == 4 {
+	switch ipVersion {
+	case 4:
 		r.IPSetIDGetterV4 = idGetter
-	} else if ipVersion == 6 {
+	case 6:
 		r.IPSetIDGetterV6 = idGetter
-	} else {
+	default:
 		log.WithField("version", ipVersion).Panic("Unknown IP version")
 	}
 }

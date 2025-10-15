@@ -70,7 +70,7 @@ func waitForConfigChange(t require.TestingT, tests func(tt require.TestingT, bod
 		resp, err := client.Do(req)
 		require.NoError(c, err)
 
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(c, err)
@@ -143,7 +143,7 @@ func testRequest(t *testing.T, client *http.Client, verb string, url string, hea
 		resp, err := client.Do(req)
 		require.NoError(t, err)
 
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
@@ -165,7 +165,7 @@ func testRequestEventually(t *testing.T, client *http.Client, verb string, url s
 			resp, err := client.Do(req)
 			require.NoError(c, err)
 
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(c, err)

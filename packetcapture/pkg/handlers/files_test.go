@@ -48,7 +48,7 @@ var _ = Describe("FilesDownload", func() {
 
 		// Create dummy files and add them to a tar archive
 		var tarFile = createTarArchive(tempDir, filesOnNode1, pcapHeader())
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader, err := os.Open(tarFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -92,7 +92,7 @@ var _ = Describe("FilesDownload", func() {
 
 		// Create dummy files and add them to a tar archive
 		var tarFile = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader, err := os.Open(tarFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -136,7 +136,7 @@ var _ = Describe("FilesDownload", func() {
 
 		// Create dummy files and add them to a tar archive
 		var tarFile = createTarArchive(tempDir, noFiles, []byte("node1"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader, err := os.Open(tarFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -175,7 +175,7 @@ var _ = Describe("FilesDownload", func() {
 		var tarFileNode1 = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
 		var tarFileNode2 = createTarArchive(tempDir, filesOnNode2, []byte("node2"))
 		var tarFileNode3 = createTarArchive(tempDir, filesOnNode3, []byte("node3"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader1, err := os.Open(tarFileNode1.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -243,7 +243,7 @@ var _ = Describe("FilesDownload", func() {
 		// Create dummy files and add them to a tar archive
 		var tarFileNode1 = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
 		var tarFileNode3 = createTarArchive(tempDir, filesOnNode3, []byte("node3"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader1, err := os.Open(tarFileNode1.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -375,7 +375,7 @@ var _ = Describe("FilesDownload", func() {
 
 		// Create dummy files and add them to a tar archive
 		var tarFile = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader, err := os.Open(tarFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -423,7 +423,7 @@ var _ = Describe("FilesDownload", func() {
 
 		// Create dummy files and add them to a tar archive
 		var tarFile = createTarArchive(tempDir, noFiles, []byte("node1"))
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		tarFileReader, err := os.Open(tarFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -758,7 +758,7 @@ func validateArchive(archive *os.File, files []string, expectedData ...[]byte) {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(content.String()).To(Equal(string(expectedData[idx])))
-		file.Close()
+		_ = file.Close()
 	}
 }
 
@@ -778,7 +778,7 @@ func createTarArchive(dir string, files []string, data []byte) *os.File {
 		Expect(err).NotTo(HaveOccurred())
 		_, err = file.Write(data)
 		Expect(err).NotTo(HaveOccurred())
-		file.Close()
+		_ = file.Close()
 
 		// Open a reader for the file
 		fileReader, err := os.Open(file.Name())
@@ -797,11 +797,11 @@ func createTarArchive(dir string, files []string, data []byte) *os.File {
 		_, err = io.Copy(tarWriter, fileReader)
 		Expect(err).NotTo(HaveOccurred())
 
-		fileReader.Close()
+		_ = fileReader.Close()
 	}
 
-	tarWriter.Flush()
-	tarWriter.Close()
+	_ = tarWriter.Flush()
+	_ = tarWriter.Close()
 
 	return tarFile
 }

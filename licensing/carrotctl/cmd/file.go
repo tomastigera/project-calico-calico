@@ -22,7 +22,7 @@ func WriteYAML(license api.LicenseKey, filePrefix string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = f.Write(output)
 	if err != nil {

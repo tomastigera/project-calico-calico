@@ -213,7 +213,7 @@ var _ = Describe("Service graph data tests", func() {
 			err = os.WriteFile(actualDataFilename, formatted, 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = GinkgoWriter.Write([]byte(fmt.Sprintf(`
+			_, err = fmt.Fprintf(GinkgoWriter, `
 **********************************************************************************
   Comparison failed comparing service graph response to expected response data.
 
@@ -224,7 +224,7 @@ var _ = Describe("Service graph data tests", func() {
   check the difference in the files and once verified as correct the file may be
   renamed so that the test no long errors.
 **********************************************************************************
-`, expectDataFilename, actualDataFilename)))
+`, expectDataFilename, actualDataFilename)
 			Expect(err).NotTo(HaveOccurred())
 		}
 

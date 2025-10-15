@@ -501,7 +501,7 @@ func TestDNSLogFiltering(t *testing.T) {
 				tr.From = time.Now().Add(-5 * time.Minute)
 				tr.To = time.Now().Add(5 * time.Minute)
 				params := testcase.Params
-				params.QueryParams.TimeRange = tr
+				params.TimeRange = tr
 
 				logs := []v1.DNSLog{
 					{

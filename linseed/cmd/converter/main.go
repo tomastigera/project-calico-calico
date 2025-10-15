@@ -31,7 +31,7 @@ func main() {
 	// Load the json file.
 	f, err := os.ReadFile(inputPath)
 	if err != nil {
-		panic(fmt.Errorf("Error opening file %s: %s", inputPath, err))
+		panic(fmt.Errorf("error opening file %s: %s", inputPath, err))
 	}
 
 	// Use the flow backend to convert it.

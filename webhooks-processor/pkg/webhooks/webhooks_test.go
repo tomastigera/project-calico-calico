@@ -416,7 +416,7 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 func TestGenericProvider(t *testing.T) {
 	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Does anyone read this?")
+		_, _ = fmt.Fprintln(w, "Does anyone read this?")
 		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
@@ -479,7 +479,7 @@ this line will be ignored
 func TestGenericProviderWithTemplate(t *testing.T) {
 	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Does anyone read this?")
+		_, _ = fmt.Fprintln(w, "Does anyone read this?")
 		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
@@ -545,7 +545,7 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 		if len(requests) < retryTimes {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		fmt.Fprintln(w, "Does anyone read this?")
+		_, _ = fmt.Fprintln(w, "Does anyone read this?")
 		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),

@@ -85,7 +85,7 @@ func (t *tester) list(expStatus int, exp []server.Report) {
 	listUrl := "http://" + t.addr + "/compliance/reports"
 	r, err := t.client.Get(listUrl)
 	Expect(err).NotTo(HaveOccurred())
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -117,7 +117,7 @@ func (t *tester) downloadSingle(id string, expStatus int, forecast forecastFile)
 	Expect(condisp).Should(HaveSuffix(forecast.Format))
 
 	// inspect the content
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -149,7 +149,7 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 	Expect(condisp).Should(HaveSuffix(".zip"))
 
 	// inspect the content
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -162,7 +162,7 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 	files := make(map[string][]byte)
 	for _, f := range zr.File {
 		// expect the file modified hour to be with in last one minute threshold
-		Expect(time.Now()).Should(BeTemporally("~", f.FileHeader.Modified, time.Minute))
+		Expect(time.Now()).Should(BeTemporally("~", f.Modified, time.Minute))
 		freader, err := f.Open()
 		Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer

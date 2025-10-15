@@ -165,7 +165,7 @@ func (h *requestHandler) handleRequestBody(reqBody *envoy_service_proc_v3.Proces
 	chunk := reqBody.RequestBody.GetBody()
 	endOfStream := reqBody.RequestBody.GetEndOfStream()
 
-	it, written, err, status, msg := h.transaction.OnRequestBodyChunk(chunk, endOfStream)
+	it, written, status, msg, err := h.transaction.OnRequestBodyChunk(chunk, endOfStream)
 	log.WithFields(log.Fields{
 		"chunk":         chunk,
 		"written_bytes": written,
@@ -232,7 +232,7 @@ func (h *requestHandler) handleResponseBody(resBody *envoy_service_proc_v3.Proce
 	chunk := resBody.ResponseBody.GetBody()
 	endOfStream := resBody.ResponseBody.GetEndOfStream()
 
-	it, written, err, status, msg := h.transaction.OnResponseBodyChunk(chunk, endOfStream)
+	it, written, status, msg, err := h.transaction.OnResponseBodyChunk(chunk, endOfStream)
 	log.WithFields(log.Fields{
 		"chunk":         chunk,
 		"written_bytes": written,

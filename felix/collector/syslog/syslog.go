@@ -7,6 +7,7 @@ package syslog
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/syslog"
 	"net"
@@ -93,7 +94,7 @@ func (s *Syslog) Report(u any) error {
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
-		return fmt.Errorf("Invalid metric update")
+		return errors.New("invalid metric update")
 	}
 	f := log.Fields{
 		"proto":      strconv.Itoa(mu.Tuple.Proto),
@@ -124,7 +125,7 @@ type DataOnlyJSONFormatter struct{}
 func (f *DataOnlyJSONFormatter) Format(entry *log.Entry) ([]byte, error) {
 	serialized, err := json.Marshal(entry.Data)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to marshal data to JSON %v", err)
+		return nil, fmt.Errorf("failed to marshal data to JSON %v", err)
 	}
 	return append(serialized, '\n'), nil
 }

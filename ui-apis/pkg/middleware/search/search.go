@@ -171,7 +171,7 @@ func commonTypeSearchHandler(
 	case SearchTypeEvents:
 		return searchEvents(ctx, lsclient, searchRequest, authReview, k8sClient)
 	}
-	return nil, fmt.Errorf("Unhandled search type")
+	return nil, errors.New("unhandled search type")
 }
 
 // defaultAndValidateCommonRequest validates CommonSearchRequest fields and defaults them where needed.
@@ -256,7 +256,7 @@ func validateSelector(selector string, t SearchType) error {
 	case SearchTypeFlows:
 		validator = query.IsValidFlowsAtom
 	default:
-		return fmt.Errorf("Invalid search type: %v", t)
+		return fmt.Errorf("invalid search type: %v", t)
 	}
 
 	if err := query.Validate(q, validator); err != nil {

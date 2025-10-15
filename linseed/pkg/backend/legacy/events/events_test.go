@@ -249,7 +249,7 @@ func TestCreateEvent(t *testing.T) {
 			},
 		})
 		require.Error(t, err)
-		require.Equal(t, "Could not parse startFrom (badvalue) as an integer", err.Error())
+		require.Equal(t, "could not parse startFrom (badvalue) as an integer", err.Error())
 		require.Nil(t, results)
 	})
 

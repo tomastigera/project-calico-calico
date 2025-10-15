@@ -104,12 +104,12 @@ func TestReadCredentials(t *testing.T) {
 
 	// Create a temporary file for cert
 	certFile, err = createTemp("cert.*", "cert")
-	defer os.Remove(certFile.Name())
+	defer func() { _ = os.Remove(certFile.Name()) }()
 	g.Expect(err).NotTo(HaveOccurred())
 
 	// Create a temporary file for key
 	keyFile, err = createTemp("key.*", "key")
-	defer os.Remove(keyFile.Name())
+	defer func() { _ = os.Remove(keyFile.Name()) }()
 	g.Expect(err).NotTo(HaveOccurred())
 
 	type testFile struct {

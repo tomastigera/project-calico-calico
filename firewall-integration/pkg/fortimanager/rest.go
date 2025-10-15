@@ -43,7 +43,7 @@ func (f *FortiManagerRestClient) Post(payload []uint8) ([]uint8, error) {
 		log.Error(err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).WithField("payload", string(payload)).Error("Received error from Fortimanager")
@@ -83,7 +83,7 @@ func (f *FortiGateRestClient) FortiGateRestGet(url string) ([]uint8, error) {
 		return nil, fmt.Errorf("Error from FortiGate, GET Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -113,7 +113,7 @@ func (f *FortiGateRestClient) FortiGateRestPut(url string, payload []uint8) ([]u
 		return nil, fmt.Errorf("Error from FortiGate, PUT Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for PUT request")
@@ -139,7 +139,7 @@ func (f *FortiGateRestClient) FortiGateRestPost(url string, payload []uint8) ([]
 		return nil, fmt.Errorf("Error from FortiGate, POST Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for POST request")
@@ -171,7 +171,7 @@ func (f *FortiGateRestClient) FortiGateRestDelete(url string) ([]uint8, error) {
 		return nil, fmt.Errorf("Error from FortiGate, DELETE Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for DELETE request")

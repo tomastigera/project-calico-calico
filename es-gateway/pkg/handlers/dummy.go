@@ -13,6 +13,6 @@ func GetIgnoreHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "All good")
+		_, _ = fmt.Fprintln(w, "All good")
 	}
 }

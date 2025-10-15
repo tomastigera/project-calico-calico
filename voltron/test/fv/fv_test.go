@@ -174,7 +174,7 @@ type testServer struct {
 
 func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 	s.authHeader = r.Header.Get(authentication.AuthorizationHeader)
-	fmt.Fprint(w, s.msg)
+	_, _ = fmt.Fprint(w, s.msg)
 }
 
 func describe(name string, testFn func(string, proxyMode)) bool {

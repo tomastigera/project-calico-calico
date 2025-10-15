@@ -1330,7 +1330,7 @@ func TestFlowFiltering(t *testing.T) {
 			tr := &lmav1.TimeRange{}
 			tr.From = time.Now().Add(-5 * time.Minute)
 			tr.To = time.Now().Add(5 * time.Minute)
-			testcase.Params.QueryParams.TimeRange = tr
+			testcase.Params.TimeRange = tr
 
 			numLogs := testcase.NumLogs
 			if numLogs == 0 {

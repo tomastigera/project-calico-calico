@@ -69,7 +69,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Cluster Information", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), ExternalNetworkToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), ExternalNetworkToSelectableFields(apiserver), nil
 }
 
 // MatchExternalNetwork is the event filter used by clients of the apiserver only interested in

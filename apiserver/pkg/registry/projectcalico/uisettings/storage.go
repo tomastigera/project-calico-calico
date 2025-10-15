@@ -4,11 +4,12 @@ package uisettings
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
@@ -30,7 +30,7 @@ import (
 
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
-	*genericregistry.Store
+	*registry.Store
 	authorizer authorizer.UISettingsAuthorizer
 	shortNames []string
 	client     clientv3.Interface
@@ -87,7 +87,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	if err != nil {
 		return nil, err
 	}
-	store := &genericregistry.Store{
+	store := &registry.Store{
 		NewFunc:     func() runtime.Object { return &v3.UISettings{} },
 		NewListFunc: func() runtime.Object { return &v3.UISettingsList{} },
 		KeyRootFunc: opts.KeyRootFunc(false),
@@ -162,19 +162,19 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
 		oldUISettings := old.(*v3.UISettings)
 		newUISettings := obj.(*v3.UISettings)
 		if !reflect.DeepEqual(oldUISettings.OwnerReferences, newUISettings.OwnerReferences) {
-			return fmt.Errorf("Not permitted to change UISettingsGroup owner reference")
+			return errors.New("not permitted to change UISettingsGroup owner reference")
 		}
 
 		oldGroup := oldUISettings.Spec.Group
 		newGroup := newUISettings.Spec.Group
 		if oldGroup != newGroup {
-			return fmt.Errorf("Not permitted to change Spec.Group")
+			return errors.New("not permitted to change Spec.Group")
 		}
 
 		oldUser := oldUISettings.Spec.User
 		newUser := newUISettings.Spec.User
 		if oldUser != newUser {
-			return fmt.Errorf("Not permitted to change Spec.User")
+			return errors.New("not permitted to change Spec.User")
 		}
 
 		return updateValidation(ctx, obj, old)
@@ -214,7 +214,7 @@ func (r *REST) List(ctx context.Context, opts *metainternalversion.ListOptions) 
 	// settings for all groups. If not then return the selector error.
 	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
 	if err != nil {
-		if errors.IsForbidden(err) && serr != nil {
+		if k8serrors.IsForbidden(err) && serr != nil {
 			// If not authorized and no group selector was specified, use the selector error message as this is the
 			// primary cause of the error.
 			return nil, serr
@@ -246,7 +246,7 @@ func (r *REST) Watch(ctx context.Context, opts *metainternalversion.ListOptions)
 	// settings for all groups. If not then return the selector error.
 	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
 	if err != nil {
-		if errors.IsForbidden(err) && serr != nil {
+		if k8serrors.IsForbidden(err) && serr != nil {
 			// If not authorized and no group selector was specified, use the selector error message as this is the
 			// primary cause of the error.
 			return nil, serr

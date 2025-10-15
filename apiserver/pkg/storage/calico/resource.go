@@ -5,6 +5,7 @@ package calico
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -26,7 +27,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	calicoerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
@@ -86,7 +87,7 @@ type resourceStore struct {
 
 func (rs *resourceStore) GetCurrentResourceVersion(ctx context.Context) (uint64, error) {
 	logrus.Error("STUB: GetCurrentResourceVersion() not supported by Calico client.")
-	return 0, fmt.Errorf("GetCurrentResourceVersion() not supported by Calico client")
+	return 0, errors.New("GetCurrentResourceVersion() not supported by Calico client")
 }
 
 func (rs *resourceStore) RequestWatchProgress(ctx context.Context) error {
@@ -139,7 +140,7 @@ func (rs *resourceStore) Versioner() storage.Versioner {
 
 func validationError(err error, qualifiedKind schema.GroupKind, name string) *aapierrors.StatusError {
 	errs := field.ErrorList{}
-	calErrors := err.(errors.ErrorValidation)
+	calErrors := err.(calicoerrors.ErrorValidation)
 	for _, calErr := range calErrors.ErroredFields {
 		err := &field.Error{
 			Type:     field.ErrorTypeInvalid,
@@ -160,14 +161,14 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	lcObj := rs.converter.convertToLibcalico(obj)
 
 	if rs.hasRestrictions == nil {
-		return fmt.Errorf("BUG: resourceStore is missing license restriction check function")
+		return errors.New("BUG: resourceStore is missing license restriction check function")
 	}
 
 	if rs.hasRestrictions(lcObj) {
 		return aapierrors.NewForbidden(
 			schema.GroupResource{Group: v3.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
 			key,
-			fmt.Errorf("License does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+			errors.New("license does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
 		)
 	}
 
@@ -176,7 +177,7 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	if err != nil {
 		logrus.Errorf("Error creating resource %v key %v error %v\n", rs.resourceName, key, err)
 		switch err.(type) {
-		case errors.ErrorValidation:
+		case calicoerrors.ErrorValidation:
 			rObj := obj.(resourceObject)
 			return validationError(err, rObj.GetObjectKind().GroupVersionKind().GroupKind(), rObj.GetObjectMeta().GetName())
 		default:
@@ -496,14 +497,14 @@ func (rs *resourceStore) GuaranteedUpdate(
 		libcalicoObj := rs.converter.convertToLibcalico(updatedRes)
 
 		if rs.hasRestrictions == nil {
-			return fmt.Errorf("BUG: resourceStore is missing license restriction check function")
+			return errors.New("BUG: resourceStore is missing license restriction check function")
 		}
 
 		if rs.hasRestrictions(libcalicoObj) {
 			return aapierrors.NewForbidden(
 				schema.GroupResource{Group: v3.GroupName, Resource: libcalicoObj.GetObjectKind().GroupVersionKind().Kind},
 				key,
-				fmt.Errorf("License does not support updating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+				errors.New("license does not support updating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
 			)
 		}
 
@@ -525,7 +526,7 @@ func (rs *resourceStore) GuaranteedUpdate(
 		createdLibcalicoObj, err := rs.update(ctx, rs.client, libcalicoObj, opts)
 		if err != nil {
 			switch err.(type) {
-			case errors.ErrorValidation:
+			case calicoerrors.ErrorValidation:
 				return validationError(err, updatedRes.GetObjectKind().GroupVersionKind().GroupKind(), updatedRes.GetObjectMeta().GetName())
 			default:
 				e := aapiError(err, key)

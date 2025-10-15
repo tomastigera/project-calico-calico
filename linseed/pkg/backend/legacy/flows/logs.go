@@ -12,7 +12,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -150,7 +149,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 }
 
 // List lists logs that match the given parameters.
-func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
+func (b *flowLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if err := i.Valid(); err != nil {
@@ -209,7 +208,7 @@ func (b *flowLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts 
 	return afterKey, nil
 }
 
-func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogAggregationParams) (*elastic.Aggregations, error) {
+func (b *flowLogBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogAggregationParams) (*elastic.Aggregations, error) {
 	if b.migrationMode {
 		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
 	}

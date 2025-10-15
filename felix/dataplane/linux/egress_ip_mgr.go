@@ -716,12 +716,12 @@ func (m *egressIPManager) processGatewayUpdates() error {
 			workload := m.activeWorkloads[workloadID]
 			index, exists := m.workloadToTableIndex[workloadID]
 			if !exists {
-				lastErr = fmt.Errorf("table index not found for workload with id %s.", workloadID)
+				lastErr = fmt.Errorf("table index not found for workload with id %s", workloadID)
 				continue
 			}
 			table, exists := m.tableIndexToEgressTable[index]
 			if !exists {
-				lastErr = fmt.Errorf("Table not found with index %d", index)
+				lastErr = fmt.Errorf("table not found with index %d", index)
 				continue
 			}
 
@@ -729,7 +729,7 @@ func (m *egressIPManager) processGatewayUpdates() error {
 			for _, r := range workload.EgressGatewayRules {
 				route, exists := table.routes[normaliseDestination(r.Destination)]
 				if !exists {
-					lastErr = fmt.Errorf("Route not found for destination %s", r.Destination)
+					lastErr = fmt.Errorf("route not found for destination %s", r.Destination)
 					continue
 				}
 				if route.throwToMain {
@@ -990,7 +990,7 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 	for id, workload := range m.activeWorkloads {
 		index, exists := m.workloadToTableIndex[id]
 		if !exists {
-			return fmt.Errorf("cannot find table for workload with id %s.", id)
+			return fmt.Errorf("cannot find table for workload with id %s", id)
 		}
 		table, exists := m.tableIndexToEgressTable[index]
 		if !exists {
@@ -1478,7 +1478,7 @@ func (m *egressIPManager) getParentInterface(nodeIP net.IP) (netlink.Link, error
 			return nil, err
 		}
 		for _, addr := range addrs {
-			if addr.IPNet.IP.Equal(nodeIP) {
+			if addr.IP.Equal(nodeIP) {
 				log.Debugf("Found parent interface: %#v", link)
 				return link, nil
 			}

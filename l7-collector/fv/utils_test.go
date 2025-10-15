@@ -47,7 +47,7 @@ func NewCollectorTestHandler() *CollectorTestHandler {
 
 	// Create the tmp log file to collect from
 	f, _ := os.Create(cfg.EnvoyLogPath)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	statsChan := make(chan *proto.DataplaneStats, 20)
 	grpcServer := grpc.NewServer()
@@ -129,7 +129,7 @@ func (cth *CollectorTestHandler) WriteToLog(logline string) {
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = f.WriteString(logline)
 	if err != nil {
@@ -176,12 +176,12 @@ func newTestPolicySyncServer(stats chan *proto.DataplaneStats) *testPolicySyncSe
 	}
 }
 
-func (_ *testPolicySyncServer) Sync(*proto.SyncRequest, proto.PolicySync_SyncServer) error {
+func (*testPolicySyncServer) Sync(*proto.SyncRequest, proto.PolicySync_SyncServer) error {
 	// Don't do anything with this since our test server will not handle any syncs
 	return nil
 }
 
-func (_ *testPolicySyncServer) ReportWAF(proto.PolicySync_ReportWAFServer) error {
+func (*testPolicySyncServer) ReportWAF(proto.PolicySync_ReportWAFServer) error {
 	// Don't do anything with this since our test server will not handle any WAF Report
 	return nil
 }

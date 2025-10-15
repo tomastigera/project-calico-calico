@@ -81,7 +81,7 @@ func SaveCertToFile(derBytes []byte, filePath string) error {
 		return err
 	}
 
-	defer certCerFile.Close()
+	defer func() { _ = certCerFile.Close() }()
 
 	if _, err = certCerFile.Write(derBytes); err != nil {
 		return err
@@ -94,7 +94,7 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer certPEMFile.Close()
+	defer func() { _ = certPEMFile.Close() }()
 
 	if err := pem.Encode(certPEMFile,
 		&pem.Block{

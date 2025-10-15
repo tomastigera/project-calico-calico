@@ -267,7 +267,7 @@ func (cfg *sidecarCfg) envoyOptionalAttributes() (map[string]interface{}, error)
 }
 
 func (cfg *sidecarCfg) patchBytes(additionalPatches ...patchOp) ([]byte, error) {
-	if !(cfg.logging || cfg.policy || cfg.waf) {
+	if !cfg.logging && !cfg.policy && !cfg.waf {
 		return nil, nil
 	}
 
@@ -333,10 +333,10 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 		dikastesImg:    s.cfg.DikastesImg,
 		envoyImg:       s.cfg.EnvoyImg,
 		dataplane:      s.cfg.Dataplane,
-		logging:        (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled"),
-		policy:         (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled"),
-		waf:            (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled"),
-		envoyResources: pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/sidecarResources"],
+		logging:        pod.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled",
+		policy:         pod.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled",
+		waf:            pod.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled",
+		envoyResources: pod.Annotations["applicationlayer.projectcalico.org/sidecarResources"],
 	}
 
 	pt := admissionv1.PatchTypeJSONPatch

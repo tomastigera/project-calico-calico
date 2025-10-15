@@ -210,7 +210,7 @@ func (a *authorizer) AuthorizeUISettingsOperation(
 
 		logrus.Trace("Checking authorization using UISettingsGroup resource type (user can get UISettingsGroup)")
 		logAuthorizerAttributes(attrs)
-		decisionGetUISettingsGroup, _, _ = a.Authorizer.Authorize(context.TODO(), attrs)
+		decisionGetUISettingsGroup, _, _ = a.Authorize(context.TODO(), attrs)
 	}()
 
 	// Query required access to the UISettingsGroup data subresource.
@@ -232,7 +232,7 @@ func (a *authorizer) AuthorizeUISettingsOperation(
 
 		logrus.Trace("Checking authorization using UISettings scoped resource type (policy name match)")
 		logAuthorizerAttributes(attrs)
-		decisionUISettings, _, _ = a.Authorizer.Authorize(context.TODO(), attrs)
+		decisionUISettings, _, _ = a.Authorize(context.TODO(), attrs)
 	}()
 
 	// Wait for the requests to complete.

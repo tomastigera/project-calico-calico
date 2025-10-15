@@ -23,8 +23,8 @@ const (
 )
 
 var (
-	ErrInvalidMethod = errors.New("Invalid http method")
-	ErrParseRequest  = errors.New("Error parsing request parameters")
+	ErrInvalidMethod = errors.New("invalid http method")
+	ErrParseRequest  = errors.New("error parsing request parameters")
 )
 
 func createAndReturnError(err error, errorStr string, code int, featureID lmaerror.FeatureID, w http.ResponseWriter) {

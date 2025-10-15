@@ -175,7 +175,7 @@ func (p *packetProcessor) DebugNumPackets(num int) error {
 	defer p.handler.lock.Unlock()
 	// Should be correct number of entries in ID map.
 	if len(p.handler.idToPacket) != num {
-		return fmt.Errorf("Wrong number of packet IDs stored, expecting %d: %#v", num, p.handler.idToPacket)
+		return fmt.Errorf("wrong number of packet IDs stored, expecting %d: %#v", num, p.handler.idToPacket)
 	}
 	// Also the total in the IPs map should be the same.
 	tot := 0
@@ -183,7 +183,7 @@ func (p *packetProcessor) DebugNumPackets(num int) error {
 		tot += len(packets)
 	}
 	if tot != num {
-		return fmt.Errorf("Wrong number of packet stored by IP, expecting %d: %#v", num, p.handler.dstIPToPackets)
+		return fmt.Errorf("wrong number of packet stored by IP, expecting %d: %#v", num, p.handler.dstIPToPackets)
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func (p *packetProcessor) DebugNumIPs(num int) error {
 	defer p.handler.lock.Unlock()
 	// Should be correct number of entries in ID map.
 	if len(p.handler.dstIPToPackets) != num {
-		return fmt.Errorf("Wrong number of packet IPs stored, expecting %d: %#v", num, p.handler.dstIPToPackets)
+		return fmt.Errorf("wrong number of packet IPs stored, expecting %d: %#v", num, p.handler.dstIPToPackets)
 	}
 	return nil
 }

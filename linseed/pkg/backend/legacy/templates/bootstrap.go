@@ -5,6 +5,7 @@ package templates
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -169,18 +170,18 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error {
 	indexSettings, ok := settings["index"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("Index settings not found")
+		return errors.New("index settings not found")
 	}
 
 	// Extract properties from settings
 	shards, err := extractPropertyFromSettings(indexSettings, "number_of_shards")
 	if err != nil {
-		return fmt.Errorf("Failed to extract shards property: %v", err)
+		return fmt.Errorf("failed to extract shards property: %v", err)
 	}
 
 	replicas, err := extractPropertyFromSettings(indexSettings, "number_of_replicas")
 	if err != nil {
-		return fmt.Errorf("Failed to extract replicas property: %v", err)
+		return fmt.Errorf("failed to extract replicas property: %v", err)
 	}
 
 	// ILM policy will be part of lifecycle map
@@ -189,7 +190,7 @@ func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error 
 	if ok {
 		ilmPolicy, err := extractPropertyFromSettings(indexSettings, "name")
 		if err != nil {
-			return fmt.Errorf("Failed to extract ilm_policy property: %v", err)
+			return fmt.Errorf("failed to extract ilm_policy property: %v", err)
 		}
 		index.ILMPolicy = ilmPolicy
 	}
@@ -197,12 +198,12 @@ func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error 
 	// Set values in the IndexInfo struct
 	index.Shards, err = strconv.Atoi(shards)
 	if err != nil {
-		return fmt.Errorf("Failed to convert shards to integer: %v", err)
+		return fmt.Errorf("failed to convert shards to integer: %v", err)
 	}
 
 	index.Replicas, err = strconv.Atoi(replicas)
 	if err != nil {
-		return fmt.Errorf("Failed to convert replicas to integer: %v", err)
+		return fmt.Errorf("failed to convert replicas to integer: %v", err)
 	}
 
 	return nil

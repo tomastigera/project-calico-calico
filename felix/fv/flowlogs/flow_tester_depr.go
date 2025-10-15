@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
@@ -75,25 +75,25 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs() error {
 			// there.
 			labelsExpected := t.expectLabels
 			if labelsExpected {
-				if fl.FlowLabels.SrcLabels.IsNil() {
+				if fl.SrcLabels.IsNil() {
 					return fmt.Errorf("missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta)
 				}
-				if fl.FlowLabels.DstLabels.IsNil() {
+				if fl.DstLabels.IsNil() {
 					return fmt.Errorf("missing dst Labels in %v", fl.FlowLabels)
 				}
 			} else {
-				if !fl.FlowLabels.SrcLabels.IsNil() {
+				if !fl.SrcLabels.IsNil() {
 					return fmt.Errorf("unexpected src Labels in %v", fl.FlowLabels)
 				}
-				if !fl.FlowLabels.DstLabels.IsNil() {
+				if !fl.DstLabels.IsNil() {
 					return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 				}
 			}
 
 			// Now discard Labels so that our expectation code
 			// below doesn't ever have to specify them.
-			fl.FlowLabels.SrcLabels = uniquelabels.Nil
-			fl.FlowLabels.DstLabels = uniquelabels.Nil
+			fl.SrcLabels = uniquelabels.Nil
+			fl.DstLabels = uniquelabels.Nil
 
 			if t.expectPolicies {
 				if len(fl.FlowAllPolicySet) == 0 {
@@ -147,7 +147,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 	var errs []string
 
 	// Validate input.
-	Expect(actionsPolicies).To(HaveLen(len(t.readers)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTesterDeprecated")
+	gomega.Expect(actionsPolicies).To(gomega.HaveLen(len(t.readers)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTesterDeprecated")
 
 	// Host loop.
 	for ii, handling := range actionsPolicies {
@@ -173,11 +173,11 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 		}
 		fl := &flowlog.FlowLog{}
 		err := fl.Deserialize(template)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 		log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
 		if t.expectPolicies {
 			for meta, actualPolicies := range t.policies[ii] {
-				fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
+				fl.Tuple = fl.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
 				if meta != fl.FlowMeta {
 					continue
 				}
@@ -193,12 +193,12 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 				// Record that we've ticked off this flow.
 				t.policies[ii][meta] = []string{}
 			}
-			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(0)
+			fl.Tuple = fl.Tuple.WithSourcePort(0)
 		}
 
 		matchingMetas := 0
 		for meta := range t.flowsCompleted[ii] {
-			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
+			fl.Tuple = fl.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
 			if meta == fl.FlowMeta {
 				// This flow log matches what
 				// we're looking for.
@@ -207,7 +207,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 				t.flowsCompleted[ii][meta] = 0
 			}
 		}
-		fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(0)
+		fl.Tuple = fl.Tuple.WithSourcePort(0)
 		if matchingMetas != numMatchingMetas {
 			errs = append(errs, fmt.Sprintf("Wrong log count (%d != %d) for %v", matchingMetas, numMatchingMetas, fl.FlowMeta))
 		}

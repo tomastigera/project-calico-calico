@@ -11,7 +11,7 @@ import (
 )
 
 // Error returned when linseed enumeration truncates data.
-var DataTruncatedError = errors.New("the service graph data is truncated")
+var errDataTruncatedError = errors.New("the service graph data is truncated")
 
 func NewCacheTimeoutError(duration time.Duration) error {
 	err := errors.New("background query is taking a long time")

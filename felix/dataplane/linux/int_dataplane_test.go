@@ -46,40 +46,40 @@ import (
 
 type mockCollector struct{}
 
-func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return nil }
+func (*mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return nil }
 
-func (_ *mockCollector) Start() error { return nil }
+func (*mockCollector) Start() error { return nil }
 
-func (_ *mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
+func (*mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
 
-func (_ *mockCollector) SetDNSLogReporter(types.Reporter) {}
+func (*mockCollector) SetDNSLogReporter(types.Reporter) {}
 
-func (_ *mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {}
+func (*mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {}
 
-func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
+func (*mockCollector) SetL7LogReporter(types.Reporter) {}
 
-func (_ *mockCollector) RegisterMetricsReporter(types.Reporter) {}
+func (*mockCollector) RegisterMetricsReporter(types.Reporter) {}
 
-func (_ *mockCollector) SetDataplaneInfoReader(types.DataplaneInfoReader) {}
+func (*mockCollector) SetDataplaneInfoReader(types.DataplaneInfoReader) {}
 
-func (_ *mockCollector) SetPacketInfoReader(types.PacketInfoReader) {}
+func (*mockCollector) SetPacketInfoReader(types.PacketInfoReader) {}
 
-func (_ *mockCollector) SetConntrackInfoReader(types.ConntrackInfoReader) {}
+func (*mockCollector) SetConntrackInfoReader(types.ConntrackInfoReader) {}
 
-func (_ *mockCollector) SetProcessInfoCache(types.ProcessInfoCache) {}
+func (*mockCollector) SetProcessInfoCache(types.ProcessInfoCache) {}
 
-func (_ *mockCollector) SetDomainLookup(types.EgressDomainCache) {}
+func (*mockCollector) SetDomainLookup(types.EgressDomainCache) {}
 
-func (_ *mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
+func (*mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
 }
 
-func (_ *mockCollector) SetNetlinkHandle(netlinkshim.Interface) {}
+func (*mockCollector) SetNetlinkHandle(netlinkshim.Interface) {}
 
-func (_ *mockCollector) WAFReportingHandler() func(*proto.WAFEvent) { return nil }
+func (*mockCollector) WAFReportingHandler() func(*proto.WAFEvent) { return nil }
 
-func (_ *mockCollector) LogWAFEvents([]*proto.WAFEvent) {}
+func (*mockCollector) LogWAFEvents([]*proto.WAFEvent) {}
 
-func (_ *mockCollector) SetWAFEventsReporter(types.Reporter) {}
+func (*mockCollector) SetWAFEventsReporter(types.Reporter) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

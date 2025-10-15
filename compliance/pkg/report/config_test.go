@@ -26,9 +26,9 @@ var (
 var _ = Describe("Load config from environments", func() {
 	It("should parse valid configuration", func() {
 		By("parsing with valid config")
-		os.Setenv(reportNameEnv, reportName)
-		os.Setenv(reportStartEnv, start)
-		os.Setenv(reportEndEnv, end)
+		_ = os.Setenv(reportNameEnv, reportName)
+		_ = os.Setenv(reportStartEnv, start)
+		_ = os.Setenv(reportEndEnv, end)
 
 		By("validating the environments parsed correct")
 		cfg := mustReadReportConfigFromEnv()
@@ -40,7 +40,7 @@ var _ = Describe("Load config from environments", func() {
 
 	It("should error with missing configuration", func() {
 		By("parsing with no config")
-		os.Unsetenv(reportNameEnv)
+		_ = os.Unsetenv(reportNameEnv)
 		Expect(func() { _ = mustReadReportConfigFromEnv() }).To(Panic())
 	})
 })

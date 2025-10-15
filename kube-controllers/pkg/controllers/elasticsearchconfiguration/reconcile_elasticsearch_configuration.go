@@ -120,19 +120,19 @@ func (c *reconciler) reconcileCASecrets() error {
 		return err
 	}
 
-	secret.ObjectMeta.Namespace = c.managedOperatorNamespace
+	secret.Namespace = c.managedOperatorNamespace
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
 
 	// To support older Managed clusters we need to also create the tigera-secure-es-http-certs-public and tigera-secure-kb-http-certs-public secrets
 	// containing the same cert so that components configured to mount the old secrets can still reach Elasticsearch and Kibana in the Management cluster.
-	secret.ObjectMeta.Name = resource.ElasticsearchCertSecret
+	secret.Name = resource.ElasticsearchCertSecret
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
 
-	secret.ObjectMeta.Name = resource.KibanaCertSecret
+	secret.Name = resource.KibanaCertSecret
 	if err = resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (c *reconciler) reconcileCASecrets() error {
 	if err != nil {
 		return err
 	}
-	secret.ObjectMeta.Namespace = c.managedOperatorNamespace
+	secret.Namespace = c.managedOperatorNamespace
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}

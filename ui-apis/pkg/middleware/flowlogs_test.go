@@ -170,7 +170,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err.Error()).To(Equal("Error parsing request parameters"))
+			Expect(err.Error()).To(Equal("error parsing request parameters"))
 			Expect(params).To(BeNil())
 		})
 

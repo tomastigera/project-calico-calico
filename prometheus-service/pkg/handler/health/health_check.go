@@ -9,6 +9,6 @@ import (
 // HealthCheck
 func HealthCheck() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "UP")
+		_, _ = fmt.Fprintf(w, "UP")
 	}
 }

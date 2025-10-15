@@ -22,13 +22,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
-	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 )
@@ -57,7 +55,7 @@ func describe(name string, testFn func(string)) bool {
 
 var updateError = false
 
-func InterceptUpdate(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+func InterceptUpdate(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.Object, opts ...runtimeClient.UpdateOption) error {
 	if updateError {
 		return fmt.Errorf("update errors for testing purposes")
 	}
@@ -75,7 +73,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 	var statusUpdater *RequestRecordingStatusUpdater
 	//var mockFactory *MockManagedClusterQuerierFactory
 
-	voltronConfig := config.Config{
+	voltronConfig := vcfg.Config{
 		TenantNamespace: clusterNamespace,
 		TenantClaim:     "tenant_claim",
 	}

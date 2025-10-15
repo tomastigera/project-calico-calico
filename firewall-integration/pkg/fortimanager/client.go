@@ -125,7 +125,7 @@ func (f *FortiGateClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 			tempStr := fmt.Sprintf("FwAddress :%s in Fortigate(%s)", fwAddrObj.Name, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 
@@ -174,7 +174,7 @@ func (f *FortiGateClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 			tempStr := fmt.Sprintf("FwAddress :%s in Fortigate(%s)", fortiFWAddr.Name, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", res.HttpStatus, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", res.HttpStatus, res.Status)
 		}
 	}
 
@@ -208,7 +208,7 @@ func (f *FortiGateClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) erro
 			tempStr := fmt.Sprintf("FwAddress :%s in Fortigate(%s)", fortiFWAddr.Name, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", res.HttpStatus, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", res.HttpStatus, res.Status)
 		}
 	}
 

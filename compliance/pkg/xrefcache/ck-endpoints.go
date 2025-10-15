@@ -173,7 +173,7 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
 
 	// Check annotations.
 	if engine.podIstioSidecarAnnotation != "" {
-		if _, ok := v.Pod.Annotations[engine.podIstioSidecarAnnotation]; !ok {
+		if _, ok := v.Annotations[engine.podIstioSidecarAnnotation]; !ok {
 			log.Debugf("Pod annotation does not incude %s", engine.podIstioSidecarAnnotation)
 			return false
 		}
@@ -182,7 +182,7 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
 	// Check init containers.
 	if engine.podIstioInitContainerRegex != nil {
 		var found bool
-		for idx := range v.Pod.Spec.InitContainers {
+		for idx := range v.Spec.InitContainers {
 			if engine.podIstioInitContainerRegex.MatchString(v.Pod.Spec.InitContainers[idx].Image) {
 				found = true
 				break
@@ -197,7 +197,7 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
 	// Check containers.
 	if engine.podIstioContainerRegex != nil {
 		var found bool
-		for idx := range v.Pod.Spec.Containers {
+		for idx := range v.Spec.Containers {
 			if engine.podIstioContainerRegex.MatchString(v.Pod.Spec.Containers[idx].Image) {
 				found = true
 				break
@@ -214,13 +214,13 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
 }
 
 func (v *versionedK8sPod) getServiceAccount() *apiv3.ResourceID {
-	if v.Pod.Spec.ServiceAccountName == "" {
+	if v.Spec.ServiceAccountName == "" {
 		return nil
 	}
 	return &apiv3.ResourceID{
 		TypeMeta:  resources.TypeK8sServiceAccounts,
-		Name:      v.Pod.Spec.ServiceAccountName,
-		Namespace: v.Pod.Namespace,
+		Name:      v.Spec.ServiceAccountName,
+		Namespace: v.Namespace,
 	}
 }
 
@@ -378,7 +378,7 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 			log.Debugf("Pod status indicates finished: %s is %s", id, in.Status.Phase)
 			return nil, cerrors.ErrorResourceDoesNotExist{
 				Identifier: id,
-				Err:        errors.New("Pod status indicates finsihed"),
+				Err:        errors.New("pod status indicates finished"),
 			}
 		}
 

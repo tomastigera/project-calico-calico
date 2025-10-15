@@ -233,7 +233,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16, tcxSupported
 	if !tcxSupported {
 		return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
 	}
-	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.Replace(ifaceName, ".", "", -1), "tcp"))
+	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.ReplaceAll(ifaceName, ".", ""), "tcp"))
 	if _, err := os.Stat(progPinPath); err == nil {
 		link, err := libbpf.OpenLink(progPinPath)
 		if err != nil {

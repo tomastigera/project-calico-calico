@@ -23,7 +23,7 @@ func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	licenses := make([]*LicenseInfo, 0)
 	for rows.Next() {

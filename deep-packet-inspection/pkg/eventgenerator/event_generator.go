@@ -134,7 +134,7 @@ func (r *eventGenerator) readRotatedFiles(wepKey model.WorkloadEndpointKey) {
 		for {
 			line, _, err := reader.ReadLine()
 			if err == io.EOF {
-				f.Close()
+				_ = f.Close()
 				if err := os.Remove(f.Name()); err != nil {
 					log.WithError(err).Errorf("Failed to delete older alert files from %s", fPath)
 					r.dpiUpdater.UpdateStatusWithError(context.Background(), r.dpiKey, true,

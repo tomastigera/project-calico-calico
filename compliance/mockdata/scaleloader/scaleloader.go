@@ -88,7 +88,7 @@ func NewScaleLoader(base string, playbookCfg []PlaybookCfg) (*scaleloader, error
 	for _, pc := range playbookCfg {
 		pbs, err := NewPlaybooks(base, pc)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to load playbook from config %s", pc.String())
+			return nil, fmt.Errorf("failed to load playbook from config %s", pc.String())
 		}
 		sl.playbooks = append(sl.playbooks, pbs...)
 	}

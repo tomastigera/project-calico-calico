@@ -73,13 +73,14 @@ type saItem struct {
 
 func CreateBPFMapsForDNS(family int) (maps.Map, maps.Map, error) {
 	var mPfx, mSets maps.Map
-	if family == 4 {
+	switch family {
+	case 4:
 		mPfx = DNSPrefixMap()
 		mSets = DNSSetMap()
-	} else if family == 6 {
+	case 6:
 		mPfx = DNSPrefixMapV6()
 		mSets = DNSSetMapV6()
-	} else {
+	default:
 		return nil, nil, fmt.Errorf("unknown ip family %d", family)
 	}
 

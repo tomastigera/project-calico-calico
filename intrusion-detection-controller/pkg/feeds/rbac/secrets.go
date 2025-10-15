@@ -32,7 +32,7 @@ var (
 		"webhook-server-secret": nil,
 	}
 
-	UnsupportedOperation = errors.New("unsupported operation")
+	errUnsupportedOperation = errors.New("unsupported operation")
 )
 
 func secretAccessDenied(name string) error {
@@ -44,7 +44,7 @@ type RestrictedSecretsClient struct {
 }
 
 func (r RestrictedSecretsClient) Apply(ctx context.Context, secret *corev1appconfig.SecretApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Secret, err error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) isPermitted(name string) bool {
@@ -67,31 +67,31 @@ func (r RestrictedSecretsClient) Get(ctx context.Context, name string, options m
 }
 
 func (r RestrictedSecretsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.SecretList, error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) Create(ctx context.Context, secret *v1.Secret, options metav1.CreateOptions) (*v1.Secret, error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) Update(ctx context.Context, secret *v1.Secret, options metav1.UpdateOptions) (*v1.Secret, error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) Delete(ctx context.Context, name string, options metav1.DeleteOptions) error {
-	return UnsupportedOperation
+	return errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error {
-	return UnsupportedOperation
+	return errUnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (result *v1.Secret, err error) {
-	return nil, UnsupportedOperation
+	return nil, errUnsupportedOperation
 }
 
 var _ core.SecretInterface = RestrictedSecretsClient{}

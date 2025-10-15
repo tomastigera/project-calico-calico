@@ -112,7 +112,7 @@ func uploadDashboardNDJSON(client *http.Client, url, username, password, dashboa
 			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
 		}
 		_, err = io.Copy(part, file)
-		writer.Close()
+		_ = writer.Close()
 		if err != nil {
 			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
 		}

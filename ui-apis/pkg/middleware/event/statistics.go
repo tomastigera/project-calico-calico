@@ -143,7 +143,7 @@ func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Clien
 						SourceNamespaceValues: esParams.FieldValues.NamespaceValues,
 					},
 				}
-				srcQueryParams.LogSelectionParams.Selector = fmt.Sprintf("(%s) AND NOT %s", srcQueryParams.LogSelectionParams.Selector, destInfoSelector)
+				srcQueryParams.Selector = fmt.Sprintf("(%s) AND NOT %s", srcQueryParams.Selector, destInfoSelector)
 
 				srcResp, err := lsclient.Events(clusterName).Statistics(ctx, srcQueryParams)
 
@@ -167,7 +167,7 @@ func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Clien
 						DestNamespaceValues: esParams.FieldValues.NamespaceValues,
 					},
 				}
-				destQueryParams.LogSelectionParams.Selector = fmt.Sprintf("(%s) AND %s", destQueryParams.LogSelectionParams.Selector, destInfoSelector)
+				destQueryParams.Selector = fmt.Sprintf("(%s) AND %s", destQueryParams.Selector, destInfoSelector)
 
 				destResp, err := lsclient.Events(clusterName).Statistics(ctx, destQueryParams)
 

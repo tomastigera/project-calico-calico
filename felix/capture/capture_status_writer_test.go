@@ -10,8 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/capture"
@@ -28,10 +27,10 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 	const name = "capture"
 	const anotherName = "anotherCapture"
 	const namespace = "ns"
-	var capturing = v3.PacketCaptureStateCapturing
-	var finished = v3.PacketCaptureStateFinished
+	var capturing = apiv3.PacketCaptureStateCapturing
+	var finished = apiv3.PacketCaptureStateFinished
 
-	var packetCaptureNoStatus = v3.PacketCapture{
+	var packetCaptureNoStatus = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -40,9 +39,9 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{},
+		Status: apiv3.PacketCaptureStatus{},
 	}
-	var anotherPacketCaptureNoStatus = v3.PacketCapture{
+	var anotherPacketCaptureNoStatus = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -51,9 +50,9 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      anotherName,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{},
+		Status: apiv3.PacketCaptureStatus{},
 	}
-	var packetCaptureWithStatus = v3.PacketCapture{
+	var packetCaptureWithStatus = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -62,8 +61,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
@@ -73,7 +72,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var updatedPacketCapture = v3.PacketCapture{
+	var updatedPacketCapture = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -82,8 +81,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
@@ -93,7 +92,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var anotherUpdatedPacketCapture = v3.PacketCapture{
+	var anotherUpdatedPacketCapture = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -102,8 +101,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      anotherName,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
@@ -113,7 +112,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var overrideUpdatedPacketCapture = v3.PacketCapture{
+	var overrideUpdatedPacketCapture = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -122,8 +121,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
@@ -133,7 +132,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var otherNodesPacketCapture = v3.PacketCapture{
+	var otherNodesPacketCapture = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -142,8 +141,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      anotherHostname,
 					Directory: captureDir,
@@ -153,7 +152,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var otherNodesUpdatedPacketCapture = v3.PacketCapture{
+	var otherNodesUpdatedPacketCapture = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -162,8 +161,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      anotherHostname,
 					Directory: captureDir,
@@ -179,7 +178,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			},
 		},
 	}
-	var updatedPacketCaptureNoFiles = v3.PacketCapture{
+	var updatedPacketCaptureNoFiles = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -188,18 +187,18 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
-					State:     (*v3.PacketCaptureState)(&finished),
+					State:     (*apiv3.PacketCaptureState)(&finished),
 				},
 			},
 		},
 	}
 
-	var updatedPacketCaptureWithInactiveState = v3.PacketCapture{
+	var updatedPacketCaptureWithInactiveState = apiv3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "",
 			APIVersion: "",
@@ -208,13 +207,13 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
+		Status: apiv3.PacketCaptureStatus{
+			Files: []apiv3.PacketCaptureFile{
 				{
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
-					State:     (*v3.PacketCaptureState)(&finished),
+					State:     (*apiv3.PacketCaptureState)(&finished),
 				},
 			},
 		},
@@ -579,28 +578,28 @@ type mockedCalicoClient struct {
 	mock mock.Mock
 }
 
-func (m *mockedCalicoClient) Create(ctx context.Context, res *api.PacketCapture, opts options.SetOptions) (*api.PacketCapture, error) {
+func (m *mockedCalicoClient) Create(ctx context.Context, res *apiv3.PacketCapture, opts options.SetOptions) (*apiv3.PacketCapture, error) {
 	panic("implement me")
 }
 
-func (m *mockedCalicoClient) Update(ctx context.Context, res *api.PacketCapture, opts options.SetOptions) (*api.PacketCapture, error) {
+func (m *mockedCalicoClient) Update(ctx context.Context, res *apiv3.PacketCapture, opts options.SetOptions) (*apiv3.PacketCapture, error) {
 	args := m.mock.Called(ctx, res, opts)
-	return args.Get(0).(*api.PacketCapture), args.Error(1)
+	return args.Get(0).(*apiv3.PacketCapture), args.Error(1)
 }
 
-func (m *mockedCalicoClient) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*api.PacketCapture, error) {
+func (m *mockedCalicoClient) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.PacketCapture, error) {
 	panic("implement me")
 }
 
-func (m *mockedCalicoClient) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*api.PacketCapture, error) {
+func (m *mockedCalicoClient) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.PacketCapture, error) {
 	args := m.mock.Called(ctx, namespace, name, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*api.PacketCapture), args.Error(1)
+	return args.Get(0).(*apiv3.PacketCapture), args.Error(1)
 }
 
-func (m *mockedCalicoClient) List(ctx context.Context, opts options.ListOptions) (*api.PacketCaptureList, error) {
+func (m *mockedCalicoClient) List(ctx context.Context, opts options.ListOptions) (*apiv3.PacketCaptureList, error) {
 	panic("implement me")
 }
 
