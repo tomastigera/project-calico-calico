@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
-	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -32,10 +31,10 @@ var (
 )
 
 var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
-	var ec *EndpointLookupsCache
+	var ec *calc.EndpointLookupsCache
 
 	BeforeEach(func() {
-		ec = NewEndpointLookupsCache(WithDeletionDelay(testDeletionDelay))
+		ec = calc.NewEndpointLookupsCache(calc.WithDeletionDelay(testDeletionDelay))
 	})
 
 	DescribeTable(
@@ -373,7 +372,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			Types:        []string{"ingress"},
 			InboundRules: []model.Rule{{Action: "next-tier"}, {Action: "allow"}, {Action: "deny"}},
 		}
-		p1id := PolicyID{Name: "pol1", Tier: "tier1"}
+		p1id := calc.PolicyID{Name: "pol1", Tier: "tier1"}
 
 		p2k := model.PolicyKey{Name: "ns1/default.pol2"}
 		p2 := &model.Policy{
@@ -381,7 +380,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			Order:     &float1_0,
 			Types:     []string{"egress"},
 		}
-		p2id := PolicyID{Name: "pol2", Tier: "default", Namespace: "ns1"}
+		p2id := calc.PolicyID{Name: "pol2", Tier: "default", Namespace: "ns1"}
 
 		p3k := model.PolicyKey{Name: "ns1/default.pol3"}
 		p3 := &model.Policy{
@@ -389,17 +388,17 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			Order:     &float2_0,
 			Types:     []string{"egress"},
 		}
-		p3id := PolicyID{Name: "pol3", Tier: "default", Namespace: "ns1"}
+		p3id := calc.PolicyID{Name: "pol3", Tier: "default", Namespace: "ns1"}
 
-		t1 := NewTierInfo("tier1")
+		t1 := calc.NewTierInfo("tier1")
 		t1.Order = &float1_0
 		t1.Valid = true
-		t1.OrderedPolicies = []PolKV{{Key: p1k, Value: policyMetadata(p1)}}
+		t1.OrderedPolicies = []calc.PolKV{{Key: p1k, Value: policyMetadata(p1)}}
 
-		td := NewTierInfo("default")
+		td := calc.NewTierInfo("default")
 		td.Order = &float2_0
 		td.Valid = true
-		td.OrderedPolicies = []PolKV{
+		td.OrderedPolicies = []calc.PolKV{
 			{Key: p2k, Value: policyMetadata(p2)},
 			{Key: p3k, Value: policyMetadata(p3)},
 		}
@@ -407,7 +406,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		ts := newTierInfoSlice()
 		ts = append(ts, *t1, *td)
 
-		var ed EndpointData = ec.CreateLocalEndpointData(hostEpWithNameKey, &hostEpWithName, ts)
+		var ed calc.EndpointData = ec.CreateLocalEndpointData(hostEpWithNameKey, &hostEpWithName, ts)
 
 		By("checking endpoint data")
 		Expect(ed.Key()).To(Equal(hostEpWithNameKey))
@@ -427,7 +426,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		Expect(ed.IngressMatchData().TierData).To(HaveKey("tier1"))
 		Expect(ed.IngressMatchData().TierData["tier1"]).ToNot(BeNil())
 		Expect(ed.IngressMatchData().TierData["tier1"].TierDefaultActionRuleID).To(Equal(
-			NewRuleID("tier1", "pol1", "", RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny)))
+			calc.NewRuleID("tier1", "pol1", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny)))
 		Expect(ed.IngressMatchData().TierData["tier1"].EndOfTierMatchIndex).To(Equal(0))
 
 		By("checking compiled egress data")
@@ -442,7 +441,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		Expect(ed.EgressMatchData().TierData).To(HaveKey("default"))
 		Expect(ed.EgressMatchData().TierData["default"]).ToNot(BeNil())
 		Expect(ed.EgressMatchData().TierData["default"].TierDefaultActionRuleID).To(Equal(
-			NewRuleID("default", "pol3", "ns1", RuleIndexTierDefaultAction, rules.RuleDirEgress, rules.RuleActionDeny)))
+			calc.NewRuleID("default", "pol3", "ns1", calc.RuleIndexTierDefaultAction, rules.RuleDirEgress, rules.RuleActionDeny)))
 		Expect(ed.EgressMatchData().TierData["default"].EndOfTierMatchIndex).To(Equal(0))
 	})
 
@@ -462,14 +461,14 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			sp1id := PolicyID{Name: "staged:pol1", Tier: "tier1"}
+			sp1id := calc.PolicyID{Name: "staged:pol1", Tier: "tier1"}
 
 			p1k := model.PolicyKey{Name: "tier1.pol1"}
 			p1 := &model.Policy{
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			p1id := PolicyID{Name: "pol1", Tier: "tier1"}
+			p1id := calc.PolicyID{Name: "pol1", Tier: "tier1"}
 
 			sp2k := model.PolicyKey{Name: "ns1/staged:tier1.pol2"}
 			sp2 := &model.Policy{
@@ -477,7 +476,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 				Order:     &float2_0,
 				Types:     []string{dir},
 			}
-			sp2id := PolicyID{Name: "staged:pol2", Tier: "tier1", Namespace: "ns1"}
+			sp2id := calc.PolicyID{Name: "staged:pol2", Tier: "tier1", Namespace: "ns1"}
 
 			p2k := model.PolicyKey{Name: "ns1/tier1.pol2"}
 			p2 := &model.Policy{
@@ -485,12 +484,12 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 				Order:     &float2_0,
 				Types:     []string{dir},
 			}
-			p2id := PolicyID{Name: "pol2", Tier: "tier1", Namespace: "ns1"}
+			p2id := calc.PolicyID{Name: "pol2", Tier: "tier1", Namespace: "ns1"}
 
-			t1 := NewTierInfo("tier1")
+			t1 := calc.NewTierInfo("tier1")
 			t1.Order = &float1_0
 			t1.Valid = true
-			t1.OrderedPolicies = []PolKV{
+			t1.OrderedPolicies = []calc.PolKV{
 				{Key: sp1k, Value: policyMetadata(sp1)},
 				{Key: p1k, Value: policyMetadata(p1)},
 				{Key: sp2k, Value: policyMetadata(sp2)},
@@ -503,18 +502,18 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			sp3id := PolicyID{Name: "staged:knp.default.pol3", Tier: "default", Namespace: "ns2"}
+			sp3id := calc.PolicyID{Name: "staged:knp.default.pol3", Tier: "default", Namespace: "ns2"}
 
 			sp4k := model.PolicyKey{Name: "staged:default.pol4"}
 			sp4 := &model.Policy{
 				Order: &float2_0,
 				Types: []string{dir},
 			}
-			sp4id := PolicyID{Name: "staged:pol4", Tier: "default"}
+			sp4id := calc.PolicyID{Name: "staged:pol4", Tier: "default"}
 
-			td := NewTierInfo("default")
+			td := calc.NewTierInfo("default")
 			td.Valid = true
-			td.OrderedPolicies = []PolKV{
+			td.OrderedPolicies = []calc.PolKV{
 				{Key: sp3k, Value: policyMetadata(sp3)},
 				{Key: sp4k, Value: policyMetadata(sp4)},
 			}
@@ -523,7 +522,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			ts := newTierInfoSlice()
 			ts = append(ts, *t1, *td)
 
-			var ed EndpointData = ec.CreateLocalEndpointData(localWlEpKey1, &localWlEp1, ts)
+			var ed calc.EndpointData = ec.CreateLocalEndpointData(localWlEpKey1, &localWlEp1, ts)
 
 			By("checking endpoint data")
 			Expect(ed.Key()).To(Equal(localWlEpKey1))
@@ -533,7 +532,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			Expect(ed.IsHostEndpoint()).To(BeFalse())
 
 			By("checking compiled data size for both tiers")
-			var data, other *MatchData
+			var data, other *calc.MatchData
 			var ruleDir rules.RuleDir
 			if ingress {
 				data = ed.IngressMatchData()
@@ -573,7 +572,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			// Tier contains enforced policy, so has a real implicit drop rule ID.
 			Expect(data.TierData["tier1"].EndOfTierMatchIndex).To(Equal(2))
 			Expect(data.TierData["tier1"].TierDefaultActionRuleID).To(Equal(
-				NewRuleID("tier1", "pol2", "ns1", RuleIndexTierDefaultAction, ruleDir, rules.RuleActionDeny)))
+				calc.NewRuleID("tier1", "pol2", "ns1", calc.RuleIndexTierDefaultAction, ruleDir, rules.RuleActionDeny)))
 
 			By("checking compiled match data for default tier")
 			// Staged policy increments the next index.
@@ -598,20 +597,20 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 })
 
 var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
-	var elc *EndpointLookupsCache
+	var elc *calc.EndpointLookupsCache
 	var updates []api.Update
 	// localIP, _ := IPStringToArray("127.0.0.1")
 	nodeIPStr := "100.0.0.0/26"
-	nodeIP, _ := IPStringToArray(nodeIPStr)
+	nodeIP, _ := calc.IPStringToArray(nodeIPStr)
 	nodeIP2Str := "100.0.0.2/26"
-	nodeIP2, _ := IPStringToArray(nodeIP2Str)
+	nodeIP2, _ := calc.IPStringToArray(nodeIP2Str)
 	nodeIP3Str := "100.0.0.3/26"
-	nodeIP3, _ := IPStringToArray(nodeIP3Str)
+	nodeIP3, _ := calc.IPStringToArray(nodeIP3Str)
 	nodeIP4Str := "100.0.0.4/26"
-	nodeIP4, _ := IPStringToArray(nodeIP4Str)
+	nodeIP4, _ := calc.IPStringToArray(nodeIP4Str)
 
 	BeforeEach(func() {
-		elc = NewEndpointLookupsCache()
+		elc = calc.NewEndpointLookupsCache()
 
 		By("adding a node and a service")
 		updates = []api.Update{{
@@ -844,7 +843,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should delegate to GetEndpoint", func() {
 			// Setup - add a single endpoint
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
@@ -861,7 +860,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return endpoint with matching interface name", func() {
 			// Setup - add an endpoint with a specific interface name
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
@@ -878,7 +877,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return endpoint with matching IP regardless of interface name", func() {
 			// Setup - add an endpoint with a specific interface name
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "*", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
 
 			// Test with wildcard interface name
 			addr := ipToAddr("192.168.1.1")
@@ -897,8 +896,8 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			hepKey1, hep1 := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
 			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*hepKey1, hep1, EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey2, hep2, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, calc.EndpointEgressData{}, nil, nil)
 
 			// Test for exact match on eth1
 			addr := ipToAddr("192.168.1.1")
@@ -918,9 +917,9 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
 			hepNoInterface, hep3 := createHostEndpoint("test-host", "k8s", "", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*hepKey1, hep1, EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey2, hep2, EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepNoInterface, hep3, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepNoInterface, hep3, calc.EndpointEgressData{}, nil, nil)
 
 			// Test with non-matching interface name
 			addr := ipToAddr("192.168.1.1")
@@ -937,7 +936,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return nil and false", func() {
 			// Setup - add endpoint with different IP
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
 
 			// Test with IP that doesn't match any endpoint
 			addr := ipToAddr("192.168.1.2")
@@ -955,8 +954,8 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			wepKey, wep := createWorkloadEndpoint("test-host", "k8s", "pod-1", "wep-eth0", "wep-eth0", "192.168.1.1")
 			hepKey, hep := createHostEndpoint("test-host", "host-ep", "host-eth0", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*wepKey, wep, EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey, hep, EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*wepKey, wep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
 
 			// Test looking for host endpoint
 			addr := ipToAddr("192.168.1.1")
@@ -970,11 +969,11 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 	})
 })
 
-func newTierInfoSlice() []TierInfo {
+func newTierInfoSlice() []calc.TierInfo {
 	return nil
 }
 
-func policyMetadata(policy *model.Policy) *PolicyMetadata {
-	pm := ExtractPolicyMetadata(policy)
+func policyMetadata(policy *model.Policy) *calc.PolicyMetadata {
+	pm := calc.ExtractPolicyMetadata(policy)
 	return &pm
 }

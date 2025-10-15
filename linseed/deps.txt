@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.24.6
+go 1.25.2
 github.com/Masterminds/goutils v1.1.1
 github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/sprig v2.22.0+incompatible
@@ -20,7 +20,7 @@ github.com/coreos/go-systemd/v22 v22.5.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/distribution/reference v0.6.0
 github.com/emicklei/go-restful/v3 v3.12.2
-github.com/evanphx/json-patch v5.9.0+incompatible
+github.com/evanphx/json-patch v5.9.11+incompatible
 github.com/evanphx/json-patch/v5 v5.9.11
 github.com/felixge/httpsnoop v1.0.4
 github.com/fxamacker/cbor/v2 v2.7.0
@@ -69,8 +69,6 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 github.com/pquerna/cachecontrol v0.1.0
 github.com/projectcalico/calico
 github.com/projectcalico/calico/lib/std v0.0.0-20250707144925-14b463922dd9
-github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
-github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 github.com/prometheus/client_golang v1.23.0
 github.com/prometheus/client_model v0.6.2
 github.com/prometheus/common v0.65.0
@@ -121,7 +119,6 @@ gopkg.in/evanphx/json-patch.v4 v4.12.0
 gopkg.in/go-jose/go-jose.v2 v2.6.3
 gopkg.in/go-playground/validator.v9 v9.30.2
 gopkg.in/inf.v0 v0.9.1
-gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v3 v3.0.1
 k8s.io/api v0.33.5
 k8s.io/apiextensions-apiserver v0.33.5

@@ -32,12 +32,12 @@ const (
 )
 
 var (
-	GetFailed     = errors.New("netlink get operation failed")
-	ConnectFailed = errors.New("connect to netlink failed")
-	ListFailed    = errors.New("netlink list operation failed")
-	UpdateFailed  = errors.New("netlink update operation failed")
+	ErrGetFailed     = errors.New("netlink get operation failed")
+	ErrConnectFailed = errors.New("connect to netlink failed")
+	ErrListFailed    = errors.New("netlink list operation failed")
+	ErrUpdateFailed  = errors.New("netlink update operation failed")
 
-	TableIndexFailed = errors.New("no table index specified")
+	ErrTableIndexFailed = errors.New("no table index specified")
 )
 
 // RouteRules represents set of routing rules with same ip family.
@@ -106,7 +106,7 @@ func New(
 	// Validate tableIndexSet if we are running in an exclusive mode (cleanup filter function is nil).
 	if cleanupFunc == nil {
 		if tableIndexSet.Len() == 0 {
-			return nil, TableIndexFailed
+			return nil, ErrTableIndexFailed
 		}
 	}
 
@@ -124,7 +124,7 @@ func New(
 	})
 
 	if !indexOK {
-		return nil, TableIndexFailed
+		return nil, ErrTableIndexFailed
 	}
 
 	return &RouteRules{
@@ -302,14 +302,14 @@ func (r *RouteRules) Apply() error {
 	nl, err := r.getNetlinkHandle()
 	if err != nil {
 		r.logCxt.WithError(err).Error("Failed to connect to netlink, retrying...")
-		return ConnectFailed
+		return ErrConnectFailed
 	}
 
 	nlRules, err := nl.RuleList(r.netlinkFamily)
 	if err != nil {
 		r.logCxt.WithError(err).Error("Failed to list routing rules, retrying...")
 		r.closeNetlinkHandle() // Defensive: force a netlink reconnection next time.
-		return ListFailed
+		return ErrListFailed
 	}
 
 	// Set the Family onto the rules, the netlink lib does not populate this field.
@@ -365,7 +365,7 @@ func (r *RouteRules) Apply() error {
 
 	if updatesFailed {
 		r.closeNetlinkHandle() // Defensive: force a netlink reconnection next time.
-		return UpdateFailed
+		return ErrUpdateFailed
 	}
 
 	r.inSync = true

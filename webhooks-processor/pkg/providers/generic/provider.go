@@ -104,7 +104,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		if err != nil {
 			return
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 
 		responseBytes, err := io.ReadAll(response.Body)
 		if err != nil {

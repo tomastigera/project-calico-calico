@@ -165,7 +165,7 @@ func readFlowLogs(exampleFlowFile string) []v1.FlowLog {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var flows []v1.FlowLog
 	scanner := bufio.NewScanner(file)
@@ -191,7 +191,7 @@ func writeFlowLogs(FlowFile string, logs []v1.FlowLog) {
 	if err != nil {
 		log.WithError(err).Fatal("Error opening file to write logs to")
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	for _, mylog := range logs {
 		flowlog, err := json.Marshal(mylog)
 		if err != nil {

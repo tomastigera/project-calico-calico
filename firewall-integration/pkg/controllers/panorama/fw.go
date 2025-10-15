@@ -11,7 +11,6 @@ import (
 	panw "github.com/PaloAltoNetworks/pango"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -162,9 +161,9 @@ func createUpdateTierForPanorama(cl datastore.ClientSet, cfg *config.Config) err
 
 	if err != nil {
 		// Doesn't exist - create it.
-		tier := v3.Tier{}
+		tier := apiv3.Tier{}
 		tier.Name = cfg.TSTierPrefix
-		tier.ObjectMeta.Labels = tierLabels
+		tier.Labels = tierLabels
 		tier.Spec.Order = &order
 
 		_, err := cl.Tiers().Create(context.Background(), &tier, metav1.CreateOptions{})
@@ -178,7 +177,7 @@ func createUpdateTierForPanorama(cl datastore.ClientSet, cfg *config.Config) err
 
 	// The policy already exists, update it and write it back to the datastore.
 	t.Spec.Order = &order
-	t.ObjectMeta.Labels = tierLabels
+	t.Labels = tierLabels
 	_, err = cl.Tiers().Update(context.Background(), t, metav1.UpdateOptions{})
 	if err != nil {
 		log.WithError(err).Warning("Failed to update tier")
@@ -192,7 +191,7 @@ func createUpdateTierForPanorama(cl datastore.ClientSet, cfg *config.Config) err
 // Check if a tier already exists. If not, create else update.
 func createUpdateNetworkPolicy(cfg *config.Config, cl datastore.ClientSet, zoneName string, zonePol zonePol, order float64, netPols map[string]bool, gnpc *cache.GnpCache) error {
 	// Poupulate GlobalNetworkPolicy definition.
-	gnp := v3.GlobalNetworkPolicy{}
+	gnp := apiv3.GlobalNetworkPolicy{}
 	gnp.Name = fmt.Sprintf("%s.%s-zone-%s", cfg.TSTierPrefix, cfg.TSNetworkPrefix, strings.Replace(strings.ToLower(zoneName), " ", "-", len(zoneName)-1))
 	gnp.Spec.Tier = cfg.TSTierPrefix
 	gnp.Spec.PreDNAT = false
@@ -243,7 +242,7 @@ func addPassToNextTier(cfg *config.Config, cl datastore.ClientSet, order float64
 	policyName := fmt.Sprintf("%s.%s-%s", cfg.TSTierPrefix, cfg.TSNetworkPrefix, PassToNextTierPolicy)
 	rule := apiv3.EntityRule{Selector: "has(zone)"}
 
-	gnp := v3.GlobalNetworkPolicy{
+	gnp := apiv3.GlobalNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: policyName},
 		Spec: apiv3.GlobalNetworkPolicySpec{
 			Tier:           cfg.TSTierPrefix,

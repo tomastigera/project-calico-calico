@@ -29,7 +29,7 @@ var _ = Describe("client", func() {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer GinkgoRecover()
 				defer wg.Done()
-				defer r.Body.Close()
+				defer func() { _ = r.Body.Close() }()
 
 				body, err := io.ReadAll(r.Body)
 				Expect(err).ShouldNot(HaveOccurred())

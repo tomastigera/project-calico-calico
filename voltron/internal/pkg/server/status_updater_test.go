@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -33,7 +32,7 @@ import (
 
 var updateErrorPerManagedCluster = map[string]v3.ManagedClusterStatusValue{}
 
-func InterceptStatusUpdate(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+func InterceptStatusUpdate(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.Object, opts ...runtimeClient.UpdateOption) error {
 	if x, ok := updateErrorPerManagedCluster[obj.GetName()]; ok {
 		switch obj := obj.(type) {
 		case *v3.ManagedCluster:

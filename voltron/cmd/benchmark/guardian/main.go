@@ -24,7 +24,7 @@ type config struct {
 
 func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("Recv Request")
-	fmt.Fprintf(w, "Received on path: %s", r.URL.Path)
+	_, _ = fmt.Fprintf(w, "Received on path: %s", r.URL.Path)
 }
 
 func main() {

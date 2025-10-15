@@ -177,6 +177,7 @@ var collectionFlows = Collection{
 		groupBy{
 			field: "source_namespace",
 			nested: []GroupBy{
+				groupBy{field: "dest_namespace"},
 				groupBy{
 					field: "source_name_aggr",
 					nested: []GroupBy{
@@ -258,7 +259,12 @@ var collectionFlows = Collection{
 				},
 			},
 		},
-		groupBy{field: "dest_namespace"},
+		groupBy{
+			field: "dest_namespace",
+			nested: []GroupBy{
+				groupBy{field: "source_namespace"},
+			},
+		},
 		groupBy{field: "dest_domains"},
 		groupBy{field: "dest_port"},
 		groupBy{field: "source_ip"},

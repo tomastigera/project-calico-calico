@@ -97,7 +97,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Policy Recommndation Scope", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), PolicyRecommndationScopeToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), PolicyRecommndationScopeToSelectableFields(apiserver), nil
 }
 
 // MatchPolicyRecommendationScope is the filter used by the generic etcd backend to watch events

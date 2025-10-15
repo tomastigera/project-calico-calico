@@ -207,9 +207,9 @@ func (s *routeStore) SyncForever(ctx context.Context) {
 // write allows for thread-safe writes to the store via a write-callback
 func (s *routeStore) write(writeFn func(*routeStore)) {
 	log.Debug("Acquiring write lock for egress-gateway store")
-	s.RWMutex.Lock()
+	s.Lock()
 	defer func() {
-		s.RWMutex.Unlock()
+		s.Unlock()
 		log.Debug("Released write lock for egress-gateway store")
 	}()
 	log.Debug("Acquired write lock for egress-gateway store")
@@ -219,9 +219,9 @@ func (s *routeStore) write(writeFn func(*routeStore)) {
 // read allows for thread-safe reads from the store via a read-callback
 func (s *routeStore) read(readFn func(*routeStore)) {
 	log.Debug("Acquiring read lock for the datastore")
-	s.RWMutex.RLock()
+	s.RLock()
 	defer func() {
-		s.RWMutex.RUnlock()
+		s.RUnlock()
 		log.Debug("Released read lock for the datastore")
 	}()
 	log.Debug("Acquired read lock for the datastore")

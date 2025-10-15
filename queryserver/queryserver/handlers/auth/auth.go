@@ -124,7 +124,7 @@ func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 		if !authorized {
 			// Respond with 403.
 			w.WriteHeader(http.StatusForbidden)
-			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)))
+			_, err := fmt.Fprintf(w, "user %v is not authorized to perform %v https:calico-api:8080", usr, req.Method)
 			if err != nil {
 				log.Errorf("error when writing body to response: %v", err)
 			}

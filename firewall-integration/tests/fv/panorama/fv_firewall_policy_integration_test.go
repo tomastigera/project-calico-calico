@@ -101,7 +101,7 @@ var _ = Describe("Tests policy integration controller", func() {
 		AfterEach(func() {
 			By("Cleaning up after the test is complete")
 			apiserver.Stop()
-			os.Remove(kubeconfig)
+			_ = os.Remove(kubeconfig)
 		})
 
 		table.DescribeTable("test Panorama device group values",
@@ -183,7 +183,7 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Annotations["firewall.tigera.io/object-type"]).To(Equal("Zone"))
 					Expect(gns.Annotations["firewall.tigera.io/type"]).To(Equal("Panorama"))
 
-					key := gns.ObjectMeta.Name
+					key := gns.Name
 					Expect(gns.ObjectMeta.Name).To(Equal(expectedGnpMap[key].Name))
 					Expect(gns.ObjectMeta.Labels).To(Equal(expectedGnpMap[key].Labels))
 					Expect(gns.Spec.Egress).To(Equal(expectedGnpMap[key].Spec.Egress))
@@ -331,7 +331,7 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Annotations["firewall.tigera.io/object-type"]).To(Equal("Zone"))
 					Expect(gns.Annotations["firewall.tigera.io/type"]).To(Equal("Panorama"))
 
-					key := gns.ObjectMeta.Name
+					key := gns.Name
 					Expect(gns.ObjectMeta.Name).To(Equal(expectedGnpMap[key].Name))
 					Expect(gns.ObjectMeta.Labels).To(Equal(expectedGnpMap[key].Labels))
 					Expect(gns.Spec.Egress).To(Equal(expectedGnpMap[key].Spec.Egress))
@@ -418,7 +418,7 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Annotations["firewall.tigera.io/object-type"]).To(Equal("Zone"))
 					Expect(gns.Annotations["firewall.tigera.io/type"]).To(Equal("Panorama"))
 
-					key := gns.ObjectMeta.Name
+					key := gns.Name
 					Expect(gns.ObjectMeta.Name).To(Equal(expectedGnpMap[key].Name))
 					Expect(gns.ObjectMeta.Labels).To(Equal(expectedGnpMap[key].Labels))
 					Expect(gns.Spec.Egress).To(Equal(expectedGnpMap[key].Spec.Egress))

@@ -69,7 +69,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Security Event Webhook", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), generic.ObjectMetaFieldsSet(&apiserver.ObjectMeta, false), nil
+	return labels.Set(apiserver.Labels), generic.ObjectMetaFieldsSet(&apiserver.ObjectMeta, false), nil
 }
 
 // MatchSecurityEventWebhookConfiguration is the event filter used by clients of the apiserver only interested in specific labels/fields.

@@ -1530,12 +1530,12 @@ var _ = Describe("BGP layout tests", func() {
 			encDir, err = os.MkdirTemp("", "enc.XXXX")
 			Expect(err).NotTo(HaveOccurred())
 			encFileName = filepath.Join(encDir, "enc.yml")
-			os.Setenv("CALICO_EARLY_NETWORKING", encFileName)
+			_ = os.Setenv("CALICO_EARLY_NETWORKING", encFileName)
 		})
 
 		AfterEach(func() {
-			os.Unsetenv("CALICO_EARLY_NETWORKING")
-			os.RemoveAll(encDir)
+			_ = os.Unsetenv("CALICO_EARLY_NETWORKING")
+			_ = os.RemoveAll(encDir)
 		})
 
 		It("reports error if CALICO_EARLY_NETWORKING set but does not exist", func() {
@@ -1553,7 +1553,7 @@ var _ = Describe("BGP layout tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				_, err = file.WriteString(enc)
 				Expect(err).NotTo(HaveOccurred())
-				file.Close()
+				_ = file.Close()
 
 				// Call configuration function.
 				changed, err := configureBGPLayout(node)

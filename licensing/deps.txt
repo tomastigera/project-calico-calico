@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.24.6
+go 1.25.2
 filippo.io/edwards25519 v1.1.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/emicklei/go-restful/v3 v3.12.2
@@ -25,8 +25,6 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/reflect2 v1.0.2
 github.com/projectcalico/calico
 github.com/projectcalico/calico/lib/std v0.0.0-20250707144925-14b463922dd9
-github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
-github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 github.com/sirupsen/logrus v1.9.3
 github.com/spf13/cobra v1.9.1
 github.com/spf13/pflag v1.0.7
@@ -39,7 +37,6 @@ golang.org/x/sys v0.35.0
 golang.org/x/text v0.28.0
 google.golang.org/protobuf v1.36.7
 gopkg.in/inf.v0 v0.9.1
-gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v3 v3.0.1
 k8s.io/api v0.33.5
 k8s.io/apimachinery v0.33.5

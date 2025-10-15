@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -95,10 +95,10 @@ func (t *TCPDump) Start() {
 	t.cmd = utils.Command("docker", args...)
 	var err error
 	t.out, err = t.cmd.StdoutPipe()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.err, err = t.cmd.StderrPipe()
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	go t.readStdout()
 	go t.readStderr()
@@ -111,7 +111,7 @@ func (t *TCPDump) Start() {
 		ginkgo.Fail("Failed to start tcpdump: it never reported that it was listening")
 	}
 
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func (t *TCPDump) Stop() {

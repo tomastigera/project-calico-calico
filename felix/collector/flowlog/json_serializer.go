@@ -153,8 +153,8 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	}
 
 	out.NatOutgoingPorts = out.NatOutgoingPorts[:0]
-	if len(l.FlowProcessReportedStats.NatOutgoingPorts) > 0 {
-		out.NatOutgoingPorts = append(out.NatOutgoingPorts, l.FlowProcessReportedStats.NatOutgoingPorts...)
+	if len(l.NatOutgoingPorts) > 0 {
+		out.NatOutgoingPorts = append(out.NatOutgoingPorts, l.NatOutgoingPorts...)
 		sort.Ints(out.NatOutgoingPorts)
 	}
 
@@ -194,11 +194,11 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	} else {
 		out.DestServicePortNum = nil
 	}
-	if len(l.FlowDestDomains.Domains) == 0 {
+	if len(l.Domains) == 0 {
 		out.DestDomains = nil
 	} else {
-		domains := make([]string, 0, len(l.FlowDestDomains.Domains))
-		for pol := range l.FlowDestDomains.Domains {
+		domains := make([]string, 0, len(l.Domains))
+		for pol := range l.Domains {
 			domains = append(domains, pol)
 		}
 		out.DestDomains = domains
@@ -235,15 +235,15 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 		}
 	}
 
-	if l.FlowExtras.OriginalSourceIPs == nil {
+	if l.OriginalSourceIPs == nil {
 		out.OrigSourceIPs = nil
 		out.NumOrigSourceIPs = 0
 	} else {
-		out.NumOrigSourceIPs = int64(l.FlowExtras.NumOriginalSourceIPs)
-		if len(l.FlowExtras.OriginalSourceIPs) == 0 {
+		out.NumOrigSourceIPs = int64(l.NumOriginalSourceIPs)
+		if len(l.OriginalSourceIPs) == 0 {
 			out.OrigSourceIPs = nil
 		} else {
-			out.OrigSourceIPs = l.FlowExtras.OriginalSourceIPs
+			out.OrigSourceIPs = l.OriginalSourceIPs
 		}
 	}
 
@@ -378,11 +378,11 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	}
 
 	if len(o.DestDomains) == 0 {
-		fl.FlowDestDomains.Domains = nil
+		fl.Domains = nil
 	} else {
-		fl.FlowDestDomains.Domains = make(map[string]empty)
+		fl.Domains = make(map[string]empty)
 		for _, domain := range o.DestDomains {
-			fl.FlowDestDomains.Domains[domain] = emptyValue
+			fl.Domains[domain] = emptyValue
 		}
 	}
 
@@ -448,7 +448,7 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 			OriginalSourceIPs: o.OrigSourceIPs,
 		}
 	}
-	fl.FlowExtras.NumOriginalSourceIPs = int(o.NumOrigSourceIPs)
+	fl.NumOriginalSourceIPs = int(o.NumOrigSourceIPs)
 	fl.NatOutgoingPorts = o.NatOutgoingPorts
 	return fl, nil
 }

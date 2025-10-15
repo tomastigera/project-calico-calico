@@ -702,7 +702,7 @@ func (buf *EventSequencer) flushHostIPUpdates() {
 	for hostname, hostIP := range buf.pendingHostIPUpdates {
 		hostAddr := ""
 		if hostIP != nil {
-			hostAddr = hostIP.IP.String()
+			hostAddr = hostIP.String()
 		}
 		buf.Callback(&proto.HostMetadataUpdate{
 			Hostname: hostname,
@@ -744,7 +744,7 @@ func (buf *EventSequencer) flushHostIPv6Updates() {
 	for hostname, hostIP := range buf.pendingHostIPv6Updates {
 		hostIPv6Addr := ""
 		if hostIP != nil {
-			hostIPv6Addr = hostIP.IP.String()
+			hostIPv6Addr = hostIP.String()
 		}
 		buf.Callback(&proto.HostMetadataV6Update{
 			Hostname: hostname,

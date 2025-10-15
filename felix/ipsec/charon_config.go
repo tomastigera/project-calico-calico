@@ -73,7 +73,7 @@ func (t *ConfigTree) AddOneKV(key, value string) error {
 	length := len(slice)
 	if length < 2 {
 		// No dot in key name
-		return fmt.Errorf("No dot in key for configTree. Len %d, slice %v", length, slice)
+		return fmt.Errorf("no dot in key for configTree. Len %d, slice %v", length, slice)
 	}
 	realKey := slice[length-1]
 	sections := slice[:length-1]
@@ -224,7 +224,7 @@ func (c *CharonConfig) SetLogLevel(felixLevel string) {
 
 func writeStringToFile(path, text string) error {
 	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
-		return fmt.Errorf("Failed to write file %s", path)
+		return fmt.Errorf("failed to write file %s", path)
 	}
 	return nil
 }

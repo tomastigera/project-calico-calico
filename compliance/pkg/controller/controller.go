@@ -317,7 +317,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 			continue
 		}
 		finished, status := getFinishedStatus(&j)
-		inActiveList := inActiveList(*rep, j.ObjectMeta.UID)
+		inActiveList := inActiveList(*rep, j.UID)
 
 		job := v3.ReportJob{
 			Start: *start,
@@ -594,7 +594,7 @@ func (cc *ComplianceController) getRecentUnmetScheduleTimes(rep v3.GlobalReport,
 		// have arbitrary delays).  In any case, use the creation time of the
 		// GlobalReport as last known rep end time.  If we need to schedule a rep
 		// generation then first check the archived rep store to see if it's already created.
-		latestEndTime = rep.ObjectMeta.CreationTimestamp.Time
+		latestEndTime = rep.CreationTimestamp.Time
 		log.Debugf("Using creation time of %s: %v", rep.Name, latestEndTime)
 	}
 

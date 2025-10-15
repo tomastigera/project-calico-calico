@@ -95,7 +95,7 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 	})
 
 	It("should return an error if HostEndpoint list fails", func() {
-		fakeCalicoClient.Fake.PrependReactor("list", "hostendpoints", func(action testing.Action) (handled bool, ret k8sruntime.Object, err error) {
+		fakeCalicoClient.PrependReactor("list", "hostendpoints", func(action testing.Action) (handled bool, ret k8sruntime.Object, err error) {
 			return true, nil, fmt.Errorf("hostendpoint list error")
 		})
 		lu := &LabelUpdater{
@@ -108,7 +108,7 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 	})
 
 	It("should return an error if KUBECONFIG is invalid", func() {
-		os.Unsetenv("KUBECONFIG")
+		_ = os.Unsetenv("KUBECONFIG")
 		lu, err := NewLabelUpdater(ctx)
 		Expect(err).To(HaveOccurred())
 		Expect(lu).To(BeNil())

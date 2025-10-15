@@ -314,7 +314,7 @@ func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 		return nil
 	}
 
-	err, files := capture.listFiles(true)
+	files, err := capture.listFiles(true)
 
 	if err != nil {
 		log.WithField("CAPTURE", capture.loggingID).WithError(err).Errorf("Failed to list directory %s", capture.directory)
@@ -343,7 +343,7 @@ func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 	return files[cutOffIndex:]
 }
 
-func (capture *rotatingPcapFile) listFiles(filterCurrent bool) (error, []os.FileInfo) {
+func (capture *rotatingPcapFile) listFiles(filterCurrent bool) ([]os.FileInfo, error) {
 	var files []os.FileInfo
 
 	err := filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
@@ -354,7 +354,7 @@ func (capture *rotatingPcapFile) listFiles(filterCurrent bool) (error, []os.File
 		}
 		return nil
 	})
-	return err, files
+	return files, err
 }
 
 func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
@@ -363,7 +363,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	}
 	defer capture.doDone()
 
-	var err, files = capture.listFiles(false)
+	var files, err = capture.listFiles(false)
 	if err != nil {
 		return err
 	}
@@ -387,7 +387,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 				if err = capture.open(); err != nil {
 					return err
 				}
-				err, files := capture.listFiles(false)
+				files, err := capture.listFiles(false)
 				if err != nil {
 					return err
 				}
@@ -416,7 +416,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 			}
 		case <-endAfter:
 			log.WithField("CAPTURE", capture.loggingID).Info("Stop writing packets to pcap files")
-			err, files := capture.listFiles(false)
+			files, err := capture.listFiles(false)
 			if err != nil {
 				return err
 			}
@@ -449,7 +449,7 @@ func (capture *rotatingPcapFile) Clean() error {
 	if !capture.isDone {
 		return fmt.Errorf("capture has not been closed")
 	}
-	var err, files = capture.listFiles(false)
+	files, err := capture.listFiles(false)
 	if err != nil {
 		return err
 	}
@@ -488,7 +488,7 @@ func (capture *rotatingPcapFile) writeHeader() error {
 }
 
 func (capture *rotatingPcapFile) Start() error {
-	var err, files = capture.listFiles(false)
+	files, err := capture.listFiles(false)
 	if err != nil {
 		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not list files")
 		return err
@@ -545,7 +545,7 @@ func (capture *rotatingPcapFile) Stop() {
 		capture.handle.Close()
 	}
 
-	var err, files = capture.listFiles(false)
+	files, err := capture.listFiles(false)
 	if err != nil {
 		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not list files")
 	}

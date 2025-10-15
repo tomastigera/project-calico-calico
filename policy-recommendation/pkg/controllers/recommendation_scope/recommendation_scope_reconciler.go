@@ -60,7 +60,7 @@ func (r *recommendationScopeReconciler) Reconcile(key types.NamespacedName) erro
 		return nil
 	}
 
-	return r.reconcilerBase.reconcile(scope)
+	return r.reconcile(scope)
 }
 
 func isTargetScope(key types.NamespacedName) bool {

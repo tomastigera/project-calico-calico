@@ -48,7 +48,7 @@ func (fc *felixClient) SendStats(ctx context.Context, collector collector.EnvoyC
 		return
 	}
 	log.Info("Successfully connected to Policy Sync server")
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	client := proto.NewPolicySyncClient(conn)
 
 	for {

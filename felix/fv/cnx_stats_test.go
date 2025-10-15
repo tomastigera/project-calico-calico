@@ -141,22 +141,22 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 		By("Sending pings from w0->w1 and w1->w0 and checking received counts")
 		// Wait a bit for policy to be programmed.
 		time.Sleep(pollingInterval)
-		err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+		stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 		Expect(err).NotTo(HaveOccurred(), stderr)
 		incCounts(1, 1, 2)
-		err, stderr = w[1].SendPacketsTo(w[0].IP, 1, 2)
+		stderr, err = w[1].SendPacketsTo(w[0].IP, 1, 2)
 		Expect(err).NotTo(HaveOccurred(), stderr)
 		incCounts(1, 1, 2)
 		expectCounts()
 
 		By("Sending pings more pings from w0->w1 and sending pings from w1->w2 and w2->w3 and checking received counts")
-		err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 1)
+		stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 1)
 		Expect(err).NotTo(HaveOccurred(), stderr)
 		incCounts(1, 1, 1)
-		err, stderr = w[1].SendPacketsTo(w[2].IP, 2, 5)
+		stderr, err = w[1].SendPacketsTo(w[2].IP, 2, 5)
 		Expect(err).NotTo(HaveOccurred(), stderr)
 		incCounts(1, 2, 5)
-		err, stderr = w[2].SendPacketsTo(w[3].IP, 3, 7)
+		stderr, err = w[2].SendPacketsTo(w[3].IP, 3, 7)
 		Expect(err).NotTo(HaveOccurred(), stderr)
 		incCounts(1, 3, 7)
 		expectCounts()
@@ -249,22 +249,22 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Sending pings from w0->w1 and w1->w0 and checking received counts")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 2, 1) // Ingress to w1, so matches on rule index 1
-			err, stderr = w[1].SendPacketsTo(w[0].IP, 1, 2)
+			stderr, err = w[1].SendPacketsTo(w[0].IP, 1, 2)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 2, 0) // Ingress to w0, so matches on rule index 0
 			expectCounts()
 
 			By("Sending pings more pings from w0->w1 and sending pings from w1->w2 and w2->w3 and checking received counts")
-			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 1)
+			stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 1)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 1, 1) // Ingress to w1, so matches on rule index 1
-			err, stderr = w[1].SendPacketsTo(w[2].IP, 2, 5)
+			stderr, err = w[1].SendPacketsTo(w[2].IP, 2, 5)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 2, 5, 2) // Ingress to w2, so matches on rule index 2
-			err, stderr = w[2].SendPacketsTo(w[3].IP, 3, 7)
+			stderr, err = w[2].SendPacketsTo(w[3].IP, 3, 7)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 3, 7, 3) // Ingress to w3, so matches on rule index 3
 			expectCounts()
@@ -355,22 +355,22 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Sending pings from w0->w1 and w1->w0 and checking received counts")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 2, 1) // Egress to w1, so matches on rule index 1
-			err, stderr = w[1].SendPacketsTo(w[0].IP, 1, 2)
+			stderr, err = w[1].SendPacketsTo(w[0].IP, 1, 2)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 2, 0) // Egress to w0, so matches on rule index 0
 			expectCounts()
 
 			By("Sending pings more pings from w0->w1 and sending pings from w1->w2 and w2->w3 and checking received counts")
-			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 1)
+			stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 1)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 1, 1, 1) // Egress to w1, so matches on rule index 1
-			err, stderr = w[1].SendPacketsTo(w[2].IP, 2, 5)
+			stderr, err = w[1].SendPacketsTo(w[2].IP, 2, 5)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 2, 5, 2) // Egress to w2, so matches on rule index 2
-			err, stderr = w[2].SendPacketsTo(w[3].IP, 3, 7)
+			stderr, err = w[2].SendPacketsTo(w[3].IP, 3, 7)
 			Expect(err).NotTo(HaveOccurred(), stderr)
 			incCounts(1, 3, 7, 3) // Egress to w3, so matches on rule index 3
 			expectCounts()
@@ -418,21 +418,21 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Sending pings from w0->w1 and checking denied counts")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
 
 			By("Sending pings more pings from w0->w1 and sending pings from w2->w1 and w3->w1 and checking denied counts")
-			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
-			err, stderr = w[2].SendPacketsTo(w[1].IP, 3, 5)
+			stderr, err = w[2].SendPacketsTo(w[1].IP, 3, 5)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(3, 5)
 			expectCounts()
-			err, stderr = w[3].SendPacketsTo(w[1].IP, 2, 3)
+			stderr, err = w[3].SendPacketsTo(w[1].IP, 2, 3)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(2, 3)
 			expectCounts()
@@ -481,7 +481,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Sending pings from w0->w1 and checking denied counts")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
@@ -489,15 +489,15 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Sending pings from w0->w1,w2&w3 and checking denied counts")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 0)
+			stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 0)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 0)
 			time.Sleep(pollingInterval)
-			err, stderr = w[0].SendPacketsTo(w[2].IP, 3, 4)
+			stderr, err = w[0].SendPacketsTo(w[2].IP, 3, 4)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(3, 4)
 			time.Sleep(pollingInterval)
-			err, stderr = w[0].SendPacketsTo(w[3].IP, 5, 6)
+			stderr, err = w[0].SendPacketsTo(w[3].IP, 5, 6)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(5, 6)
 			expectCounts()
@@ -552,13 +552,13 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Verifying that w0 cannot reach w1")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
 
 			By("Pinging again and verifying that w0 cannot reach w1")
-			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err = w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
@@ -593,7 +593,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			// Indicates we need to create the tier.
 			By("Verifying that w0 cannot reach w1")
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 3, 5)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 3, 5)
 			Expect(err).To(HaveOccurred(), stderr)
 
 			By("Ensuring the stats are accurate")
@@ -635,7 +635,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
 			Expect(err).To(HaveOccurred(), stderr)
 
 			By("Checking tier ingress-drop counts")
@@ -673,7 +673,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[1].SendPacketsTo(w[0].IP, packets, packetSize)
+			stderr, err := w[1].SendPacketsTo(w[0].IP, packets, packetSize)
 			Expect(err).To(HaveOccurred(), stderr)
 
 			By("Checking tier egress-drop counts")
@@ -704,7 +704,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
 			Expect(err).To(HaveOccurred(), stderr)
 
 			By("Checking profile ingress-drop counts")
@@ -735,7 +735,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
 			Expect(err).To(HaveOccurred(), stderr)
 
 			By("Checking profile egress-drop counts")
@@ -829,7 +829,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Verifying that w0 cannot reach w1")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			stderr, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).To(HaveOccurred(), stderr)
 			incCounts(1, 2)
 			expectCounts()
@@ -888,7 +888,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Verifying that w0 can reach w1")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, _ := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			_, err := w[0].SendPacketsTo(w[1].IP, 1, 2)
 			Expect(err).ToNot(HaveOccurred())
 			incCounts(1, 2)
 			expectCounts()
@@ -1071,7 +1071,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged po
 			By("Verifying that w0 can reach w1")
 			// Wait a bit for policy to be programmed.
 			time.Sleep(pollingInterval)
-			err, _ := ep1.SendPacketsTo(ep2.IP, 1, 2)
+			_, err := ep1.SendPacketsTo(ep2.IP, 1, 2)
 			Expect(err).ToNot(HaveOccurred())
 			incCounts(1, 2)
 			expectCounts()

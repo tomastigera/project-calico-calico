@@ -124,7 +124,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 			return ev.Err
 		}
 
-		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
+		clog := log.WithFields(log.Fields{"auditID": ev.AuditID, "verb": ev.Verb})
 
 		// Determine proper resource to update for internal cache.
 		res, err := event.ExtractResourceFromAuditEvent(ev.Event)
@@ -151,7 +151,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 		id := resources.GetResourceID(res)
 		update := syncer.Update{ResourceID: id, Resource: res}
 		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind})
-		switch v1.Verb(ev.Event.Verb) {
+		switch v1.Verb(ev.Verb) {
 		case v1.Create, v1.Update, v1.Patch:
 			clog.Debug("Set event")
 			update.Type = syncer.UpdateTypeSet

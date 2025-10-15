@@ -112,7 +112,7 @@ func (e *EndpointSliceAddrIndexer) handleEndpointSlice(
 
 		oldServiceKey = &model.ResourceKey{
 			Namespace: key.Namespace,
-			Name:      oldEndpointSlice.ObjectMeta.Labels["kubernetes.io/service-name"],
+			Name:      oldEndpointSlice.Labels["kubernetes.io/service-name"],
 			Kind:      model.KindKubernetesService,
 		}
 		endpointsSet, ok := e.endpointSlicesByService[*oldServiceKey]
@@ -131,7 +131,7 @@ func (e *EndpointSliceAddrIndexer) handleEndpointSlice(
 
 		serviceKey = &model.ResourceKey{
 			Namespace: key.Namespace,
-			Name:      endpointSlice.ObjectMeta.Labels["kubernetes.io/service-name"],
+			Name:      endpointSlice.Labels["kubernetes.io/service-name"],
 			Kind:      model.KindKubernetesService,
 		}
 		endpointsSet, ok := e.endpointSlicesByService[*serviceKey]

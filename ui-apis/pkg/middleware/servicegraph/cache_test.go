@@ -164,7 +164,7 @@ var _ = Describe("Service graph cache tests", func() {
 		})
 
 		It("handles data truncation of L3 data", func() {
-			backend.L3Err = DataTruncatedError
+			backend.L3Err = errDataTruncatedError
 
 			now1 := time.Now().UTC()
 			tr1 := &lmav1.TimeRange{
@@ -192,7 +192,7 @@ var _ = Describe("Service graph cache tests", func() {
 		})
 
 		It("handles data truncation of L7 data", func() {
-			backend.L7Err = DataTruncatedError
+			backend.L7Err = errDataTruncatedError
 
 			now1 := time.Now().UTC()
 			tr1 := &lmav1.TimeRange{
@@ -220,7 +220,7 @@ var _ = Describe("Service graph cache tests", func() {
 		})
 
 		It("handles data truncation of DNS data", func() {
-			backend.DNSErr = DataTruncatedError
+			backend.DNSErr = errDataTruncatedError
 
 			now1 := time.Now().UTC()
 			tr1 := &lmav1.TimeRange{
@@ -248,7 +248,7 @@ var _ = Describe("Service graph cache tests", func() {
 		})
 
 		It("handles data truncation of Event data", func() {
-			backend.EventsErr = DataTruncatedError
+			backend.EventsErr = errDataTruncatedError
 
 			now1 := time.Now().UTC()
 			tr1 := &lmav1.TimeRange{

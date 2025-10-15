@@ -57,13 +57,13 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 	AfterEach(func() {
 		close(stopCh)
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 	})
 
 	Context("Token tests", func() {
 		It("should fetch token when the current one is expired", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -94,7 +94,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 		It("should reuse the token when it is still valid", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -128,7 +128,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 		It("should return error when the token is invalid", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -161,7 +161,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 		It("should return error when missing serviceaccount", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())

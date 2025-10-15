@@ -83,7 +83,7 @@ func (c *L7ServiceIPSetsCalculator) isEndpointSliceFromAnnotatedService(
 		}
 		v = edp
 	}
-	serviceKey.Name = v.ObjectMeta.Labels["kubernetes.io/service-name"]
+	serviceKey.Name = v.Labels["kubernetes.io/service-name"]
 	_, ok := c.sai.services[serviceKey]
 	return ok
 }
@@ -103,7 +103,7 @@ func (c *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ bool)
 				}
 			} else {
 				service := update.Value.(*kapiv1.Service)
-				annotations := service.ObjectMeta.Annotations
+				annotations := service.Annotations
 				// process services annotated with l7 or all service when in EnabledAllServices mode
 				if hasAnnotation(annotations, l7LoggingAnnotation) || c.conf.TPROXYModeEnabledAllServices() {
 					log.Debugf("processing update for tproxy annotated service %s", k)

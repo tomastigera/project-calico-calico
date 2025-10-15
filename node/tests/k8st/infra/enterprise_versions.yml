@@ -142,6 +142,9 @@ components:
   l7-collector:
     image: tigera/l7-collector
     version: test-build
+  gateway-l7-collector:
+    image: tigera/gateway-l7-collector
+    version: test-build
   envoy:
     image: tigera/envoy
     version: test-build

@@ -2095,7 +2095,7 @@ type mockEgressPodStatusCallback struct {
 }
 
 var (
-	statusCallbackFail = errors.New("mock egress pod status callback failure")
+	errStatusCallbackFail = errors.New("mock egress pod status callback failure")
 )
 
 func (t *mockEgressPodStatusCallback) statusCallback(namespace, name string, ip ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
@@ -2107,7 +2107,7 @@ func (t *mockEgressPodStatusCallback) statusCallback(namespace, name string, ip 
 		"maintenanceFinished": maintenanceFinished,
 	}).Info("mockEgressPodStatusCallback")
 	if t.Fail {
-		return statusCallbackFail
+		return errStatusCallbackFail
 	}
 	t.state = append(t.state, statusCallbackEntry{
 		namespace:           namespace,

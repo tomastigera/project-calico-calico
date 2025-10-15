@@ -65,7 +65,7 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exp := UnixJSONTime(claims.Claims.Expiry.Time())
+	exp := UnixJSONTime(claims.Expiry.Time())
 	licResp.Expiry = &exp
 	licResp.Package = string(lic.Status.Package)
 

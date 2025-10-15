@@ -39,13 +39,13 @@ var _ = Describe("Linseed out plugin config tests", func() {
 	})
 
 	AfterEach(func() {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 	})
 
 	Context("Config tests", func() {
 		It("should create a plugin config from a valid kubeconfig", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -74,7 +74,7 @@ var _ = Describe("Linseed out plugin config tests", func() {
 
 		It("should return error when current-context is missing from kubeconfig", func() {
 			_, err := f.WriteString(kubeconfigNoCurrentContext)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -88,7 +88,7 @@ var _ = Describe("Linseed out plugin config tests", func() {
 
 		It("should return error when context is missing from kubeconfig", func() {
 			_, err := f.WriteString(kubeconfigNoContext)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())

@@ -14,7 +14,7 @@ func (db *DB) AllCompanies() ([]*Company, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	companies := make([]*Company, 0)
 	for rows.Next() {

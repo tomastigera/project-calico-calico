@@ -38,5 +38,5 @@ func copyOneWay(dst, src io.ReadWriteCloser) {
 		log.Errorf("Error Reading: %s", err.Error())
 	}
 	log.Tracef("Copied %d bytes", n)
-	dst.Close()
+	_ = dst.Close()
 }

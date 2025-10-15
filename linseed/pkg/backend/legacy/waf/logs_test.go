@@ -21,7 +21,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -105,7 +104,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 // TestWAFLogBasic tests running a real elasticsearch query to create a kube waf log.
 func TestWAFLogBasic(t *testing.T) {
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateWAFLog (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
@@ -160,7 +159,7 @@ func TestWAFLogBasic(t *testing.T) {
 				require.Equal(t, 1, resp.Succeeded)
 
 				// Refresh the index.
-				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 			}
 
@@ -182,7 +181,7 @@ func TestWAFLogBasic(t *testing.T) {
 
 				// Timestamps don't equal on read.
 				results.Items[0].Timestamp = f.Timestamp
-				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				testutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
 				testutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
@@ -199,7 +198,7 @@ func TestWAFLogBasic(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 2, len(results.Items))
 				for _, cluster := range selectedClusters {
-					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.WAFLogClusterEquals(cluster)), "cluster %s not found", cluster)
+					require.Truef(t, testutils.MatchIn(results.Items, testutils.WAFLogClusterEquals(cluster)), "cluster %s not found", cluster)
 				}
 			})
 		})
@@ -235,7 +234,7 @@ func TestWAFLogBasic(t *testing.T) {
 // TestAggregations tests running a real elasticsearch query to get aggregations.
 func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should return time-series WAF log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
@@ -296,7 +295,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.WAFLogAggregationParams{}
@@ -397,7 +396,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.WAFLogAggregationParams{}
@@ -466,7 +465,7 @@ func TestSorting(t *testing.T) {
 		require.Equal(t, []v1.BulkError(nil), response.Errors)
 		require.Equal(t, 0, response.Failed)
 
-		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for logs without sorting.
@@ -482,7 +481,7 @@ func TestSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
-			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			testutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
 			testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
@@ -502,8 +501,8 @@ func TestSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
-			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+			testutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
@@ -544,7 +543,7 @@ func TestWAFLogFiltering(t *testing.T) {
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		for _, testcase := range testcases {
 			// Each testcase creates multiple flow logs, and then uses
 			// different filtering parameters provided in the params
@@ -580,7 +579,7 @@ func TestWAFLogFiltering(t *testing.T) {
 				require.Empty(t, resp.Errors)
 
 				// Refresh.
-				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				result, err := b.List(ctx, clusterInfo, &testcase.Params)
@@ -590,7 +589,7 @@ func TestWAFLogFiltering(t *testing.T) {
 				// Reset the time as it microseconds to not match perfectly
 				require.NotEqual(t, "", result.Items[0].Timestamp)
 				result.Items[0].Timestamp = reqTime
-				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &result.Items[0])
+				testutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &result.Items[0])
 				testutils.AssertGeneratedTimeAndReset(t, &result.Items[0])
 
 				require.Equal(t, wafLogs[testcase.ExpectLogIndex], result.Items[0])
@@ -601,7 +600,7 @@ func TestWAFLogFiltering(t *testing.T) {
 
 func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestRetrieveMostRecentWAFLogs (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
@@ -635,7 +634,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			_, err := b.Create(ctx, clusterInfo, []v1.WAFLog{l1, l2})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query for logs
@@ -660,7 +659,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
-				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
 				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
@@ -680,7 +679,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			_, err = b.Create(ctx, clusterInfo, []v1.WAFLog{l3})
 			require.NoError(t, err)
 
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query the last ingested log
@@ -696,7 +695,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			require.Len(t, r.Items, 1)
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
-				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
 				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
@@ -708,7 +707,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 
 func TestPreserveIDs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
-	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+	for _, tenant := range []string{testutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
@@ -739,7 +738,7 @@ func TestPreserveIDs(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and make sure generated time values are what we expect.
@@ -765,17 +764,17 @@ func TestPreserveIDs(t *testing.T) {
 
 			for _, log := range first.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.WAFLog](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.WAFLog](t, &log)
 			}
 			for _, log := range second.Items {
 				require.NotEmpty(t, log.ID)
-				backendutils.AssertGeneratedTimeAndReset[v1.WAFLog](t, &log)
+				testutils.AssertGeneratedTimeAndReset[v1.WAFLog](t, &log)
 			}
 
 			require.Equal(t, first.Items, second.Items)
 
 			// Refresh before cleaning up data
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 		})

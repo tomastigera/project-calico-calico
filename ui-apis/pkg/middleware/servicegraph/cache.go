@@ -329,7 +329,7 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 	}
 
 	// We can still return truncated data provided we at least have L3 data.
-	if data.err != nil && (data.err != DataTruncatedError || len(data.l3) == 0) {
+	if data.err != nil && (data.err != errDataTruncatedError || len(data.l3) == 0) {
 		logCxt.Debug("Request fulfilled with error response")
 		return nil, data.err
 	}
@@ -415,7 +415,7 @@ func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
 
 		// Discard the entry if it is errored and the error is not a truncated error.  We maintain truncation errors
 		// because we don't want the client to keep triggering this query.
-		if e.data.err != nil && e.data.err != DataTruncatedError {
+		if e.data.err != nil && e.data.err != errDataTruncatedError {
 			s.removeEntry(e)
 		}
 
@@ -825,7 +825,7 @@ type cacheData struct {
 }
 
 func (d *cacheData) truncated() bool {
-	return d.err == DataTruncatedError
+	return d.err == errDataTruncatedError
 }
 
 func newCacheData(key cacheKey) *cacheData {

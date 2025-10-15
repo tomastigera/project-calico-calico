@@ -115,7 +115,7 @@ var _ = Describe("Linseed out plugin http tests", func() {
 
 	Context("http client cert pool tests", func() {
 		It("should add kubeconfig certificate-authority-data to the cert pool", func() {
-			transport, ok := client.Client.Transport.(*http.Transport)
+			transport, ok := client.Transport.(*http.Transport)
 			Expect(ok).To(BeTrue())
 			Expect(transport).NotTo(BeNil())
 			Expect(transport.TLSClientConfig).NotTo(BeNil())
@@ -149,7 +149,7 @@ var _ = Describe("Linseed out plugin http tests", func() {
 			client, f, err = newHTTPClient(fmt.Sprintf(kubeconfigCertAuthTemplate, caCertFile.Name()))
 			Expect(err).NotTo(HaveOccurred())
 
-			transport, ok := client.Client.Transport.(*http.Transport)
+			transport, ok := client.Transport.(*http.Transport)
 			Expect(ok).To(BeTrue())
 			Expect(transport).NotTo(BeNil())
 			Expect(transport.TLSClientConfig).NotTo(BeNil())

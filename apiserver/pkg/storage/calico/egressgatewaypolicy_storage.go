@@ -6,7 +6,6 @@ import (
 	"context"
 	"reflect"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -55,8 +54,8 @@ func NewEgressGatewayPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.EgressGatewayPolicy{}),
-		aapiListType:      reflect.TypeOf(aapi.EgressGatewayPolicyList{}),
+		aapiType:          reflect.TypeOf(api.EgressGatewayPolicy{}),
+		aapiListType:      reflect.TypeOf(api.EgressGatewayPolicyList{}),
 		libCalicoType:     reflect.TypeOf(api.EgressGatewayPolicy{}),
 		libCalicoListType: reflect.TypeOf(api.EgressGatewayPolicyList{}),
 		isNamespaced:      false,
@@ -77,7 +76,7 @@ type EgressPolicyConverter struct {
 }
 
 func (gc EgressPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiEgressPolicy := aapiObj.(*aapi.EgressGatewayPolicy)
+	aapiEgressPolicy := aapiObj.(*api.EgressGatewayPolicy)
 	lcgEgressPolicy := &api.EgressGatewayPolicy{}
 	lcgEgressPolicy.TypeMeta = aapiEgressPolicy.TypeMeta
 	lcgEgressPolicy.ObjectMeta = aapiEgressPolicy.ObjectMeta
@@ -89,7 +88,7 @@ func (gc EgressPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resou
 
 func (gc EgressPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
 	lcgEgressPolicy := libcalicoObject.(*api.EgressGatewayPolicy)
-	aapiEgressPolicy := aapiObj.(*aapi.EgressGatewayPolicy)
+	aapiEgressPolicy := aapiObj.(*api.EgressGatewayPolicy)
 	aapiEgressPolicy.Spec = lcgEgressPolicy.Spec
 	aapiEgressPolicy.TypeMeta = lcgEgressPolicy.TypeMeta
 	aapiEgressPolicy.ObjectMeta = lcgEgressPolicy.ObjectMeta
@@ -97,15 +96,15 @@ func (gc EgressPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aa
 
 func (gc EgressPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgEgressPolicyList := libcalicoListObject.(*api.EgressGatewayPolicyList)
-	aapiEgressPolicyList := aapiListObj.(*aapi.EgressGatewayPolicyList)
+	aapiEgressPolicyList := aapiListObj.(*api.EgressGatewayPolicyList)
 	if libcalicoListObject == nil {
-		aapiEgressPolicyList.Items = []aapi.EgressGatewayPolicy{}
+		aapiEgressPolicyList.Items = []api.EgressGatewayPolicy{}
 		return
 	}
 	aapiEgressPolicyList.TypeMeta = lcgEgressPolicyList.TypeMeta
 	aapiEgressPolicyList.ListMeta = lcgEgressPolicyList.ListMeta
 	for _, item := range lcgEgressPolicyList.Items {
-		aapiEgressPolicy := aapi.EgressGatewayPolicy{}
+		aapiEgressPolicy := api.EgressGatewayPolicy{}
 		gc.convertToAAPI(&item, &aapiEgressPolicy)
 		if matched, err := pred.Matches(&aapiEgressPolicy); err == nil && matched {
 			aapiEgressPolicyList.Items = append(aapiEgressPolicyList.Items, aapiEgressPolicy)

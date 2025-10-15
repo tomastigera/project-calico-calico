@@ -35,7 +35,7 @@ class TestEarly(TestBase):
         log_and_run("docker create --privileged --name calico-early" +
                     " -v " + CHECKOUT_DIR + ":/code" +
                     " -e CALICO_EARLY_NETWORKING=" + self.cfgpath +
-                    " --net=plane1 node:test-build")
+                    " --net=plane1 tigera/node:test-build")
         log_and_run("docker network connect plane2 calico-early")
         log_and_run("docker start calico-early")
         retry_until_success(lambda: log_and_run("docker exec calico-early /bin/calico-node -v"),

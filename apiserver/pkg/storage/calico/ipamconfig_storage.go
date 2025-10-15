@@ -118,7 +118,7 @@ func (gc IPAMConfigConverter) convertToAAPIList(libcalicoListObject resourceList
 		return
 	}
 	aapiIPAMConfigList.TypeMeta = lcgIPAMConfigList.TypeMeta
-	aapiIPAMConfigList.TypeMeta.Kind = api.KindIPAMConfigurationList
+	aapiIPAMConfigList.Kind = api.KindIPAMConfigurationList
 	aapiIPAMConfigList.ListMeta = lcgIPAMConfigList.ListMeta
 	for _, item := range lcgIPAMConfigList.Items {
 		aapiIPAMConfig := api.IPAMConfiguration{}

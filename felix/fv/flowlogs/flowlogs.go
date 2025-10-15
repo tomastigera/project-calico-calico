@@ -31,11 +31,11 @@ func ReadFlowLogsFile(flowLogDir string) ([]flowlog.FlowLog, error) {
 		err = json.Unmarshal(s.Bytes(), &fljo)
 		if err != nil {
 			all, _ := os.ReadFile(filePath)
-			return flowLogs, fmt.Errorf("Error unmarshaling flow log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
+			return flowLogs, fmt.Errorf("error unmarshaling flow log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
 		}
 		fl, err := fljo.ToFlowLog()
 		if err != nil {
-			return flowLogs, fmt.Errorf("Error converting to flow log: %v\nLog: %s", err, string(s.Bytes()))
+			return flowLogs, fmt.Errorf("error converting to flow log: %v\nLog: %s", err, string(s.Bytes()))
 		}
 		flowLogs = append(flowLogs, fl)
 	}

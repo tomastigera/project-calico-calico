@@ -4,7 +4,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -29,12 +28,12 @@ var _ = Describe("BFD resolver", func() {
 	})
 
 	Context("with a BFDConfiguration", func() {
-		var bfdConfig *v3.BFDConfiguration
+		var bfdConfig *apiv3.BFDConfiguration
 		bfdConfigKey := model.ResourceKey{Name: "test-bfd", Kind: apiv3.KindBFDConfiguration}
 		BeforeEach(func() {
-			bfdConfig = &v3.BFDConfiguration{
+			bfdConfig = &apiv3.BFDConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-bfd"},
-				Spec:       v3.BFDConfigurationSpec{NodeSelector: "all()"},
+				Spec:       apiv3.BFDConfigurationSpec{NodeSelector: "all()"},
 			}
 			kvp := model.KVPair{
 				Key:   bfdConfigKey,
@@ -63,9 +62,9 @@ var _ = Describe("BFD resolver", func() {
 		})
 
 		It("should resolve to nothing when no BFDConfiguration selects this node", func() {
-			bfdConfigNoSelect := &v3.BFDConfiguration{
+			bfdConfigNoSelect := &apiv3.BFDConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-bfd"},
-				Spec:       v3.BFDConfigurationSpec{NodeSelector: "has(label)"},
+				Spec:       apiv3.BFDConfigurationSpec{NodeSelector: "has(label)"},
 			}
 			kvp := model.KVPair{
 				Key:   bfdConfigKey,
@@ -88,9 +87,9 @@ var _ = Describe("BFD resolver", func() {
 			Expect(cfg).To(Equal(bfdConfig))
 
 			By("Adding a second configuration")
-			bfdConfig2 := &v3.BFDConfiguration{
+			bfdConfig2 := &apiv3.BFDConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-bfd-2"},
-				Spec:       v3.BFDConfigurationSpec{NodeSelector: "all()"},
+				Spec:       apiv3.BFDConfigurationSpec{NodeSelector: "all()"},
 			}
 			kvp2 := model.KVPair{
 				Key:   model.ResourceKey{Name: "test-bfd-2", Kind: apiv3.KindBFDConfiguration},

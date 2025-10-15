@@ -111,12 +111,12 @@ func (v *versionedCalicoNetworkPolicy) GetCalicoV3() resources.Resource {
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
 func (v *versionedCalicoNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
-	return v.NetworkPolicy.Spec.Ingress
+	return v.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
 func (v *versionedCalicoNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
-	return v.NetworkPolicy.Spec.Egress
+	return v.Spec.Egress
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
@@ -163,12 +163,12 @@ func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3() resources.Resource {
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
 func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
-	return v.GlobalNetworkPolicy.Spec.Ingress
+	return v.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
 func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
-	return v.GlobalNetworkPolicy.Spec.Egress
+	return v.Spec.Egress
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.

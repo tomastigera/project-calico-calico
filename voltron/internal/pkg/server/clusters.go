@@ -278,7 +278,7 @@ func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error
 		clog := logrus.WithField("cluster", c.ID)
 		clog.Info("Updating the managed cluster")
 
-		oldCert := c.ManagedCluster.Certificate
+		oldCert := c.Certificate
 		newCert := mc.Certificate
 
 		// Update the managed cluster
@@ -376,8 +376,8 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			}
 
 			mc := &jclust.ManagedCluster{
-				ID:                mcResource.ObjectMeta.Name,
-				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+				ID:                mcResource.Name,
+				ActiveFingerprint: mcResource.Annotations[AnnotationActiveCertificateFingerprint],
 				Certificate:       mcResource.Spec.Certificate,
 			}
 
@@ -428,11 +428,11 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	defer cs.Unlock()
 
 	for _, managedCluster := range list.Items {
-		id := managedCluster.ObjectMeta.Name
+		id := managedCluster.Name
 
 		mc := &jclust.ManagedCluster{
 			ID:                id,
-			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+			ActiveFingerprint: managedCluster.Annotations[AnnotationActiveCertificateFingerprint],
 			Certificate:       managedCluster.Spec.Certificate,
 		}
 
@@ -462,7 +462,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		logrus.Infof("Cluster id %q removed", id)
 	}
 
-	return list.ListMeta.ResourceVersion, nil
+	return list.ResourceVersion, nil
 }
 
 func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
@@ -606,7 +606,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 						logrus.WithError(err).Error("failed to listen over the tunnel")
 						return
 					}
-					defer listener.Close()
+					defer func() { _ = listener.Close() }()
 
 					if err := c.inboundTLSProxy.ListenAndProxy(listener); err != nil {
 						if err != tunnel.ErrTunnelClosed {

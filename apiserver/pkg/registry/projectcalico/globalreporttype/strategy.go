@@ -69,7 +69,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type: %v) is not a Global Report Type", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), GlobalReportTypeToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.Labels), GlobalReportTypeToSelectableFields(apiserver), nil
 }
 
 // MatchGlobalReportType is the filter used by the generic etcd backend to watch events

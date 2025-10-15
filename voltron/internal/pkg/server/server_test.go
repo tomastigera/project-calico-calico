@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -41,7 +40,6 @@ import (
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -263,7 +261,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		Context("Adding / removing managed clusters", func() {
 			It("should get an empty list if no managed clusters are registered", func() {
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(0))
 			})
 
@@ -291,7 +289,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})).ShouldNot(HaveOccurred())
 
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(2))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
@@ -321,7 +319,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})).ShouldNot(HaveOccurred())
 
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(2))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
@@ -339,7 +337,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})).NotTo(HaveOccurred())
 
 				list = &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 			})
@@ -367,7 +365,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					},
 				})).NotTo(HaveOccurred())
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(0))
 
 				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
@@ -382,7 +380,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})).ShouldNot(HaveOccurred())
 
 				list = &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 			})
 		})
@@ -562,7 +560,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						}),
 					}
 
-					defer serve.Close()
+					defer func() { _ = serve.Close() }()
 					go func() {
 						defer GinkgoRecover()
 						err := serve.Serve(tls.NewListener(tun, &tls.Config{
@@ -659,7 +657,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 							}),
 						}
 
-						defer serve.Close()
+						defer func() { _ = serve.Close() }()
 						go func() {
 							defer GinkgoRecover()
 							err := serve.Serve(tls.NewListener(tun, &tls.Config{
@@ -702,7 +700,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 								Name:      clusterC,
 								Namespace: clusterNS,
 							},
-							Spec: calicov3.ManagedClusterSpec{
+							Spec: v3.ManagedClusterSpec{
 								Certificate: test.CertToPemBytes(clusterCCert),
 							},
 						})).NotTo(HaveOccurred())
@@ -763,7 +761,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 							}),
 						}
 
-						defer serve.Close()
+						defer func() { _ = serve.Close() }()
 						go func() {
 							defer GinkgoRecover()
 							err := serve.Serve(tls.NewListener(tun, &tls.Config{
@@ -1213,7 +1211,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					},
 				})).NotTo(HaveOccurred())
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
@@ -1253,7 +1251,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					},
 				})).NotTo(HaveOccurred())
 				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
+				Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
@@ -1363,7 +1361,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				},
 			})).NotTo(HaveOccurred())
 			list := &v3.ManagedClusterList{}
-			Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).ShouldNot(HaveOccurred())
+			Expect(fakeClient.List(context.Background(), list, &ctrlclient.ListOptions{Namespace: clusterNS})).ShouldNot(HaveOccurred())
 			Expect(list.Items).To(HaveLen(1))
 
 			// Try to connect clusterA to the new fake voltron, should fail
@@ -1432,8 +1430,8 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				authorizerInvocations++
 				return false, nil, nil
 			}
-			fakeK8s.Fake.PrependReactor("create", "subjectaccessreviews", incrementAuthorizationCount)
-			fakeK8s.Fake.PrependReactor("create", "localsubjectaccessreviews", incrementAuthorizationCount)
+			fakeK8s.PrependReactor("create", "subjectaccessreviews", incrementAuthorizationCount)
+			fakeK8s.PrependReactor("create", "localsubjectaccessreviews", incrementAuthorizationCount)
 
 			// Set up the proxy.
 			defaultServer = httptest.NewServer(
@@ -1602,14 +1600,14 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.With
 }
 
 func WaitForClusterToConnect(fakeClient ctrlclient.WithWatch, clusterName, clusterNS string) {
-	Eventually(func() calicov3.ManagedClusterStatus {
+	Eventually(func() v3.ManagedClusterStatus {
 		managedCluster := &v3.ManagedCluster{}
 		err := fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterName, Namespace: clusterNS}, managedCluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		return managedCluster.Status
-	}, 5*time.Second, 100*time.Millisecond).Should(Equal(calicov3.ManagedClusterStatus{
-		Conditions: []calicov3.ManagedClusterStatusCondition{
-			{Status: calicov3.ManagedClusterStatusValueTrue, Type: calicov3.ManagedClusterStatusTypeConnected},
+	}, 5*time.Second, 100*time.Millisecond).Should(Equal(v3.ManagedClusterStatus{
+		Conditions: []v3.ManagedClusterStatusCondition{
+			{Status: v3.ManagedClusterStatusValueTrue, Type: v3.ManagedClusterStatusTypeConnected},
 		},
 	}))
 }

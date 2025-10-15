@@ -14,7 +14,7 @@ var _ = Describe("Test extracting resource from kibana request", func() {
 	DescribeTable("successful extraction",
 		func(indexPattern string, expectSuccess bool, expectedFlow string) {
 
-			body := strings.Replace(kibanaReqBody, "{{.IndexPatternTitle}}", indexPattern, -1)
+			body := strings.ReplaceAll(kibanaReqBody, "{{.IndexPatternTitle}}", indexPattern)
 			bodyReader := strings.NewReader(body)
 			req, err := http.NewRequest("POST", ".kibana/_search", bodyReader)
 			Expect(err).NotTo(HaveOccurred())

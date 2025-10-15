@@ -233,7 +233,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16, tcxSupported
 	if !tcxSupported {
 		return obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0, 0)
 	}
-	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.Replace(ifaceName, ".", "", -1), "tcp"))
+	progPinPath := path.Join(bpfdefs.TcxPinDirTcp, fmt.Sprintf("%s_%s", strings.ReplaceAll(ifaceName, ".", ""), "tcp"))
 	if _, err := os.Stat(progPinPath); err == nil {
 		link, err := libbpf.OpenLink(progPinPath)
 		if err != nil {
@@ -272,7 +272,7 @@ func DetachTcpStatsProgram(ifaceName string, tcxSupported bool) error {
 }
 
 func (ap *AttachPoint) ProgPinPath() string {
-	return path.Join(bpfdefs.TcxPinDir, fmt.Sprintf("%s_%s", strings.Replace(ap.Iface, ".", "", -1), ap.Hook))
+	return path.Join(bpfdefs.TcxPinDir, fmt.Sprintf("%s_%s", strings.ReplaceAll(ap.Iface, ".", ""), ap.Hook))
 }
 
 func (ap *AttachPoint) detachTcxProgram() error {
@@ -446,12 +446,12 @@ func EnsureQdisc(ifaceName string) (bool, error) {
 func HasQdisc(ifaceName string) (bool, error) {
 	link, err := netlink.LinkByName(ifaceName)
 	if err != nil {
-		return false, fmt.Errorf("Failed to get link for interface '%s': %w", ifaceName, err)
+		return false, fmt.Errorf("failed to get link for interface '%s': %w", ifaceName, err)
 	}
 
 	qdiscs, err := netlink.QdiscList(link)
 	if err != nil {
-		return false, fmt.Errorf("Failed to list qdiscs for interface '%s': %w", ifaceName, err)
+		return false, fmt.Errorf("failed to list qdiscs for interface '%s': %w", ifaceName, err)
 	}
 
 	for _, qdisc := range qdiscs {

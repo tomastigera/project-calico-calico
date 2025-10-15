@@ -58,7 +58,7 @@ func (r *tierReconciler) Reconcile(key types.NamespacedName) error {
 	}
 
 	scope := newDefaultRecommendationScope()
-	return r.reconcilerBase.reconcile(scope)
+	return r.reconcile(scope)
 }
 
 func isTargetTier(key types.NamespacedName) bool {

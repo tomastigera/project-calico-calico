@@ -936,7 +936,7 @@ var _ = Describe("Policy Recommendation", func() {
 			recResponse, err := io.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 
-			if len(expectedResponse.Recommendation.NetworkPolicies) == 0 && len(expectedResponse.Recommendation.GlobalNetworkPolicies) == 0 {
+			if len(expectedResponse.NetworkPolicies) == 0 && len(expectedResponse.GlobalNetworkPolicies) == 0 {
 				Expect(len(recResponse)).To(Equal(0))
 			} else {
 				actualRec := &PolicyRecommendationResponse{}

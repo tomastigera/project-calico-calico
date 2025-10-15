@@ -58,14 +58,14 @@ type ConfigPeering struct {
 func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, error) {
 	yamlFile, err := os.Open(yamlFileName)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open YAML file at %v: %v", yamlFileName, err)
+		return nil, fmt.Errorf("failed to open YAML file at %v: %v", yamlFileName, err)
 	}
-	defer yamlFile.Close()
+	defer func() { _ = yamlFile.Close() }()
 
 	var cfg EarlyNetworkConfiguration
 	err = yaml.NewDecoder(yamlFile).Decode(&cfg)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to decode YAML file at %v: %v", yamlFileName, err)
+		return nil, fmt.Errorf("failed to decode YAML file at %v: %v", yamlFileName, err)
 	}
 	logrus.WithField("cfg", cfg).Infof("Read YAML file at %v", yamlFileName)
 

@@ -12,7 +12,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -145,7 +144,7 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 // List lists logs that match the given parameters.
-func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
+func (b *bgpLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -253,7 +252,7 @@ func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) (e
 
 	// Add the time range to the query.
 	query.Filter(b.queryHelper.NewTimeRangeQuery(
-		logtools.WithDefaultLast5Minutes(opts.QueryParams.TimeRange),
+		logtools.WithDefaultLast5Minutes(opts.TimeRange),
 	))
 
 	return query, nil

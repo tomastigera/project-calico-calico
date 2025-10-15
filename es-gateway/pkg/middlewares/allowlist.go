@@ -284,7 +284,7 @@ func (r BulkAction) GetIndexMetadata() *IndexMetadata {
 	return nil
 }
 
-var NoIndexError = fmt.Errorf("no index referenced on the request")
+var ErrNoIndex = fmt.Errorf("no index referenced on the request")
 
 // isBulkRequestAllowed will determine if a bulk request is allowed or not
 // Bulk requests have the following format:
@@ -322,7 +322,7 @@ func isBulkRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) 
 
 		indexMetadata := bulkRequest.GetIndexMetadata()
 		if indexMetadata == nil {
-			return false, NoIndexError
+			return false, ErrNoIndex
 		}
 
 		if !isAKibanaIndex(indexMetadata.Index) {
@@ -462,12 +462,12 @@ func isMGETRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) 
 	}
 
 	if len(mGetRequest.Docs) == 0 {
-		return false, NoIndexError
+		return false, ErrNoIndex
 	}
 
 	for _, doc := range mGetRequest.Docs {
 		if doc.Index == "" {
-			return false, NoIndexError
+			return false, ErrNoIndex
 		}
 		if !isAKibanaIndex(doc.Index) {
 			return false, nil

@@ -512,16 +512,16 @@ func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
 
 	rrSets := DNSRRSets(make(map[DNSName]DNSRDatas))
 	for _, dnsRRSet := range dnsRRSetsEncoded {
-		dnsClass, error := convertToDNSClass(dnsRRSet.dnsNameEncoded.Class)
+		dnsClass, error := convertToDNSClass(dnsRRSet.Class)
 		if error != nil {
 			return fmt.Errorf("failed to convert %v to string", dnsRRSet.Class)
 		}
-		dnsType, ok := dnsRRSet.dnsNameEncoded.Type.(string)
+		dnsType, ok := dnsRRSet.Type.(string)
 		if !ok {
 			return fmt.Errorf("failed to convert %v to DNSType", dnsRRSet.Type)
 		}
 
-		dnsName := DNSName{Name: dnsRRSet.dnsNameEncoded.Name, Class: dnsClass, Type: toDNSType(dnsType)}
+		dnsName := DNSName{Name: dnsRRSet.Name, Class: dnsClass, Type: toDNSType(dnsType)}
 		for _, rdata := range dnsRRSet.RData {
 			rrSets.Add(dnsName, rdata)
 		}

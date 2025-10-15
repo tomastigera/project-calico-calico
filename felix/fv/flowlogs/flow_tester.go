@@ -89,13 +89,13 @@ type IncludeFilter func(flowlog.FlowLog) bool
 
 func IncludeByDestPort(port int) IncludeFilter {
 	return func(f flowlog.FlowLog) bool {
-		return f.FlowMeta.Tuple.GetDestPort() == port
+		return f.Tuple.GetDestPort() == port
 	}
 }
 
 func IncludeByReporter(reporter flowlog.ReporterType) IncludeFilter {
 	return func(f flowlog.FlowLog) bool {
-		return f.FlowMeta.Reporter == reporter
+		return f.Reporter == reporter
 	}
 }
 
@@ -133,17 +133,17 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 		// Check if labels or policies are expected.
 		labelsExpected := t.options.ExpectLabels
 		if labelsExpected {
-			if fl.FlowLabels.SrcLabels.IsNil() {
+			if fl.SrcLabels.IsNil() {
 				return fmt.Errorf("missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta)
 			}
-			if fl.FlowLabels.DstLabels.IsNil() {
+			if fl.DstLabels.IsNil() {
 				return fmt.Errorf("missing dst Labels in %v", fl.FlowLabels)
 			}
 		} else {
-			if !fl.FlowLabels.SrcLabels.IsNil() {
+			if !fl.SrcLabels.IsNil() {
 				return fmt.Errorf("unexpected src Labels in %v", fl.FlowLabels)
 			}
-			if !fl.FlowLabels.DstLabels.IsNil() {
+			if !fl.DstLabels.IsNil() {
 				return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 			}
 		}
@@ -175,8 +175,8 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 
 		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port
 		// is 0 then leave as 0 (since it is aggregated out), otherwise set to -1.
-		if fl.FlowMeta.Tuple.GetSourcePort() != SourcePortIsNotIncluded {
-			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(SourcePortIsIncluded)
+		if fl.Tuple.GetSourcePort() != SourcePortIsNotIncluded {
+			fl.Tuple = fl.Tuple.WithSourcePort(SourcePortIsIncluded)
 		}
 
 		fm := t.flowMetaFromFlowLog(fl)
@@ -199,8 +199,8 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
-		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 &&
-			fl.FlowProcessReportedStats.TransitPacketsOut+fl.FlowProcessReportedStats.TransitPacketsIn == 0 {
+		if fl.PacketsOut+fl.PacketsIn == 0 &&
+			fl.TransitPacketsOut+fl.TransitPacketsIn == 0 {
 			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}
@@ -286,10 +286,10 @@ func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 	}
 	if t.options.MatchLabels {
 		var srcLabels, dstLabels []string
-		for k, v := range fl.FlowLabels.SrcLabels.AllStrings() {
+		for k, v := range fl.SrcLabels.AllStrings() {
 			srcLabels = append(srcLabels, k+"="+v)
 		}
-		for k, v := range fl.FlowLabels.DstLabels.AllStrings() {
+		for k, v := range fl.DstLabels.AllStrings() {
 			dstLabels = append(dstLabels, k+"="+v)
 		}
 		sort.Strings(srcLabels)

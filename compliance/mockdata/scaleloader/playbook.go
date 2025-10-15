@@ -40,7 +40,7 @@ func NewPlaybooks(base string, pc PlaybookCfg) ([]*Playbook, error) {
 		pc.instance = i
 		pb, err := generatePlaybookInstance(playbookPath, pc)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to load playbook from config %s", pc.String())
+			return nil, fmt.Errorf("failed to load playbook from config %s", pc.String())
 		}
 		playbooks = append(playbooks, pb)
 	}
@@ -71,7 +71,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 	if _, err := os.Stat(scaledPath); err == nil {
 		items, err := os.ReadDir(scaledPath)
 		if err != nil {
-			return nil, fmt.Errorf("Failed reading scaled path %s", scaledPath)
+			return nil, fmt.Errorf("failed reading scaled path %s", scaledPath)
 		}
 		for _, item := range items {
 			if item.IsDir() {
@@ -81,7 +81,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 				p := Play{pathSrc: pp, namespace: pb.namespace}
 				p.init, p.steps, err = readPlays(log.WithField("scaled", item.Name()), item.Name(), pp)
 				if err != nil {
-					return nil, fmt.Errorf("Failed to read plays from %s: %v", pp, err)
+					return nil, fmt.Errorf("failed to read plays from %s: %v", pp, err)
 				}
 				for i := 0; i < pc.PlayScale; i++ {
 					p.playInstance = i
@@ -96,7 +96,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 	if _, err := os.Stat(nonscaledPath); err == nil {
 		items, err := os.ReadDir(nonscaledPath)
 		if err != nil {
-			return nil, fmt.Errorf("Failed reading nonscaled path %s", nonscaledPath)
+			return nil, fmt.Errorf("failed reading nonscaled path %s", nonscaledPath)
 		}
 		for _, item := range items {
 			if item.IsDir() {
@@ -106,7 +106,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 				p := Play{pathSrc: pp, namespace: pb.namespace, playInstance: 0}
 				p.init, p.steps, err = readPlays(log.WithField("nonscaled", item.Name()), item.Name(), pp)
 				if err != nil {
-					return nil, fmt.Errorf("Failed to read plays from %s: %v", pp, err)
+					return nil, fmt.Errorf("failed to read plays from %s: %v", pp, err)
 				}
 				pb.plays = append(pb.plays, p)
 				pb.nonscaledSteps += len(p.steps)

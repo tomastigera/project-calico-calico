@@ -96,7 +96,7 @@ func TestTokenMiddleware(t *testing.T) {
 		},
 		{
 			Name:          "Valid bearer token, but no matching authz configuration",
-			Resp:          `{"Status":404,"Msg":"No matching authz options for POST /api/v1/flows"}`,
+			Resp:          `{"Status":404,"Msg":"no matching authz options for POST /api/v1/flows"}`,
 			Status:        404,
 			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},

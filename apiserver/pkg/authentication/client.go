@@ -99,7 +99,7 @@ func (a *authenticator) Authenticate(authHeader string) (user.Info, int, error) 
 		log.Error("unexpected error during authentication review", err)
 		return nil, 500, errors.New("unexpected error during authentication review")
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	byteArray, err := io.ReadAll(response.Body)
 
 	stat := response.StatusCode

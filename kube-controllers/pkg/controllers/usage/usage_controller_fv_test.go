@@ -71,7 +71,7 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 		var err error
 		kconfigfile, err = os.CreateTemp("", "ginkgo-usage-controller")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(kconfigfile.Name())
+		defer func() { _ = os.Remove(kconfigfile.Name()) }()
 		data := testutils.BuildKubeconfig(apiserver.IP)
 		_, err = kconfigfile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())

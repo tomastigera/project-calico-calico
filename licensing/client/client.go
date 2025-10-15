@@ -204,7 +204,7 @@ func (c *LicenseClaims) ValidateAtTime(t time.Time) LicenseStatus {
 		return NoLicenseLoaded
 	}
 
-	expiryTime := c.Claims.Expiry.Time()
+	expiryTime := c.Expiry.Time()
 	if expiryTime.After(t) {
 		return Valid
 	}

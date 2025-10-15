@@ -62,8 +62,8 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	egwHealthPort uint16,
 	ipVersion uint8,
 ) []*generictables.Chain {
-	allowVXLANEncapFromWorkloads := r.Config.AllowVXLANPacketsFromWorkloads
-	allowIPIPEncapFromWorkloads := r.Config.AllowIPIPPacketsFromWorkloads
+	allowVXLANEncapFromWorkloads := r.AllowVXLANPacketsFromWorkloads
+	allowIPIPEncapFromWorkloads := r.AllowIPIPPacketsFromWorkloads
 	result := []*generictables.Chain{}
 	result = append(result,
 		// Chain for traffic _to_ the endpoint.
@@ -652,7 +652,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				generictables.Rule{
 					Match: baseMatch(ProtoUDP).
 						DestPorts(
-							uint16(r.Config.EgressIPVXLANPort), // egress.calico
+							uint16(r.EgressIPVXLANPort), // egress.calico
 						),
 					Action:  r.Allow(),
 					Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
@@ -692,7 +692,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		// bypass restrictive egress policies.
 		rules = append(rules, generictables.Rule{
 			Match: r.NewMatch().ProtocolNum(ProtoUDP).
-				DestPorts(uint16(r.Config.VXLANPort)),
+				DestPorts(uint16(r.VXLANPort)),
 			Action:  r.IptablesFilterDenyAction(),
 			Comment: []string{fmt.Sprintf("%s VXLAN encapped packets originating in workloads", r.IptablesFilterDenyAction())},
 		})
@@ -904,7 +904,7 @@ func (r *DefaultRuleRenderer) appendConntrackRules(rules []generictables.Rule, a
 			Action: allowAction,
 		},
 	)
-	if !(r.Config.DisableConntrackInvalid || allowInvalid) {
+	if !r.DisableConntrackInvalid && !allowInvalid {
 		// Drop packets that aren't either a valid handshake or part of an established
 		// connection.
 		rules = append(rules, generictables.Rule{

@@ -42,24 +42,24 @@ var _ = Describe("Service Test", func() {
 	BeforeEach(func() {
 		// for vulnerability dataset
 		f := mustOpen("test_files/10_vulnerability_events_from_image_assurance_api.json")
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		events, err := io.ReadAll(f)
 		Expect(err).NotTo(HaveOccurred())
 		httpServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprint(w, string(events))
+			_, _ = fmt.Fprint(w, string(events))
 		}))
 		Expect(httpServer).NotTo(BeNil())
 
-		os.Setenv("IMAGE_ASSURANCE_ENDPOINT", httpServer.URL)
-		os.Setenv("IMAGE_ASSURANCE_ORGANIZATION_ID", "image-assurance-org-id")
-		os.Setenv("IMAGE_ASSURANCE_API_TOKEN", "token")
+		_ = os.Setenv("IMAGE_ASSURANCE_ENDPOINT", httpServer.URL)
+		_ = os.Setenv("IMAGE_ASSURANCE_ORGANIZATION_ID", "image-assurance-org-id")
+		_ = os.Setenv("IMAGE_ASSURANCE_API_TOKEN", "token")
 
 		ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 	})
 
 	AfterEach(func() {
-		os.Unsetenv("IMAGE_ASSURANCE_ENDPOINT")
-		os.Unsetenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
+		_ = os.Unsetenv("IMAGE_ASSURANCE_ENDPOINT")
+		_ = os.Unsetenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
 		cancel()
 	})
 

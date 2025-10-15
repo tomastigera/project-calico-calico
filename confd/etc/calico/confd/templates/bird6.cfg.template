@@ -268,6 +268,10 @@ template bgp bgp_template {
 # ------------- Global peers -------------
 {{if ls "/bgp/v1/global/peer_v6"}}
 {{range gets "/bgp/v1/global/peer_v6/*"}}{{$data := json .Value}}
+{{- $effective_node_as_num := $node_as_num }}
+{{- if ne $data.local_as_num "0" }}
+  {{- $effective_node_as_num = $data.local_as_num }}
+{{- end }}
 {{$nums := split $data.ip ":"}}{{$id := join $nums "_"}}
 {{- if $data.local_bgp_peer }}
 # Skipping local bgp peer ({{$data.ip}})
@@ -325,7 +329,7 @@ protocol bgp Global_{{$id}} from bgp_template {
     {{- end }}
     {{- end }}
     {{- end }}
-    calico_export_to_bgp_peers({{eq $data.as_num $node_as_num}});
+    calico_export_to_bgp_peers({{eq $data.as_num $effective_node_as_num}});
     reject;{{/* Prior to introduction of BGP Filters anything not explicitly exported through calico_export_to_bgp_peers()
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
@@ -351,14 +355,14 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- if ne $data.keepalive_time ""}}
   keepalive time {{$data.keepalive_time}};
 {{- end}}
-{{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
+{{- if and (eq $data.as_num $effective_node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if $data.password}}
   password "{{$data.password}}";
 {{- end}}
-{{- if and (ne $data.as_num $node_as_num) ($data.keep_next_hop)}}
+{{- if and (ne $data.as_num $effective_node_as_num) ($data.keep_next_hop)}}
   next hop keep;
 {{- end}}
 {{- if eq $data.next_hop_mode "Self"}}
@@ -385,6 +389,10 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{if ls "/bgp/v1/global/peer_v6"}}
 {{$first := true}}
 {{range gets "/bgp/v1/global/peer_v6/*"}}{{$data := json .Value}}
+{{- $effective_node_as_num := $node_as_num }}
+{{- if ne $data.local_as_num "0" }}
+  {{- $effective_node_as_num = $data.local_as_num }}
+{{- end }}
 {{$nums := split $data.ip ":"}}{{$id := join $nums "_"}}
 {{- if not $data.local_bgp_peer }}
 {{/* Skipping global bgp peer */}}
@@ -434,7 +442,7 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
     {{- end }}
     {{- end }}
     {{- end }}
-    calico_export_to_bgp_peers({{eq $data.as_num $node_as_num}});
+    calico_export_to_bgp_peers({{eq $data.as_num $effective_node_as_num}});
     reject;{{/* Prior to introduction of BGP Filters anything not explicitly exported through calico_export_to_bgp_peers()
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
@@ -447,14 +455,14 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
 {{- if ne $data.keepalive_time ""}}
   keepalive time {{$data.keepalive_time}};
 {{- end}}
-{{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
+{{- if and (eq $data.as_num $effective_node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if $data.password}}
   password "{{$data.password}}";
 {{- end}}
-{{- if and (ne $data.as_num $node_as_num) ($data.keep_next_hop)}}
+{{- if and (ne $data.as_num $effective_node_as_num) ($data.keep_next_hop)}}
   next hop keep;
 {{- end}}
 {{- if eq $data.next_hop_mode "Self"}}
@@ -478,6 +486,10 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
 {{$node_peers_key := printf "/bgp/v1/host/%s/peer_v6" $node_name }}
 {{if ls $node_peers_key}}
 {{range gets (printf "%s/*" $node_peers_key)}}{{$data := json .Value}}
+{{- $effective_node_as_num := $node_as_num }}
+{{- if ne $data.local_as_num "0" }}
+  {{- $effective_node_as_num = $data.local_as_num }}
+{{- end }}
 {{- if $data.local_bgp_peer }}
 # Skipping local bgp peer ({{$data.ip}})
 {{- else}}
@@ -535,7 +547,7 @@ protocol bgp Node_{{$id}} from bgp_template {
     {{- end }}
     {{- end }}
     {{- end }}
-    calico_export_to_bgp_peers({{eq $data.as_num $node_as_num}});
+    calico_export_to_bgp_peers({{eq $data.as_num $effective_node_as_num}});
     reject;{{/* Prior to introduction of BGP Filters anything not explicitly exported through calico_export_to_bgp_peers()
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
@@ -558,14 +570,14 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- if ne $data.keepalive_time ""}}
   keepalive time {{$data.keepalive_time}};
 {{- end}}
-{{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
+{{- if and (eq $data.as_num $effective_node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if $data.password}}
   password "{{$data.password}}";
 {{- end}}
-{{- if and (ne $data.as_num $node_as_num) ($data.keep_next_hop)}}
+{{- if and (ne $data.as_num $effective_node_as_num) ($data.keep_next_hop)}}
   next hop keep;
 {{- end}}
 {{- if eq $data.next_hop_mode "Self"}}
@@ -593,6 +605,10 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{if ls $node_peers_key}}
 {{$first := true}}
 {{range gets (printf "%s/*" $node_peers_key)}}{{$data := json .Value}}
+{{- $effective_node_as_num := $node_as_num }}
+{{- if ne $data.local_as_num "0" }}
+  {{- $effective_node_as_num = $data.local_as_num }}
+{{- end }}
 {{$nums := split $data.ip ":"}}{{$id := join $nums "_"}}
 {{- if not $data.local_bgp_peer }}
 {{/* Skipping non local bgp peer */}}
@@ -642,7 +658,7 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
     {{- end }}
     {{- end }}
     {{- end }}
-    calico_export_to_bgp_peers({{eq $data.as_num $node_as_num}});
+    calico_export_to_bgp_peers({{eq $data.as_num $effective_node_as_num}});
     reject;{{/* Prior to introduction of BGP Filters anything not explicitly exported through calico_export_to_bgp_peers()
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
@@ -652,14 +668,14 @@ protocol bgp Local_Workload_{{$id}} from bgp_template {
 {{- if ne $data.keepalive_time ""}}
   keepalive time {{$data.keepalive_time}};
 {{- end}}
-{{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
+{{- if and (eq $data.as_num $effective_node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if $data.password}}
   password "{{$data.password}}";
 {{- end}}
-{{- if and (ne $data.as_num $node_as_num) ($data.keep_next_hop)}}
+{{- if and (ne $data.as_num $effective_node_as_num) ($data.keep_next_hop)}}
   next hop keep;
 {{- end}}
 {{- if eq $data.next_hop_mode "Self"}}

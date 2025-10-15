@@ -18,7 +18,7 @@ func LoadData(fileName string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer jsonFile.Close()
+	defer func() { _ = jsonFile.Close() }()
 
 	// Read opened jsonFile as a byte array.
 	byteValue, _ := io.ReadAll(jsonFile)

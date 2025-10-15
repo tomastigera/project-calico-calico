@@ -109,8 +109,8 @@ func tryConnect(hostName, dnsServer string) error {
 					return err
 				}
 			}
-			return fmt.Errorf("No IPv4 addresses in %v", addrs)
+			return fmt.Errorf("no IPv4 addresses in %v", addrs)
 		}
 	}
-	return errors.New("Failed 4 DNS lookups")
+	return errors.New("failed 4 DNS lookups")
 }

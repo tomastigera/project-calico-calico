@@ -106,7 +106,11 @@ func TestAuthService(t *testing.T) {
 
 		t.Run("authenticated", func(t *testing.T) {
 			keySet := &testKeySet{}
-			subject, _, _ := newSubject(&config.Config{OIDCAuthIssuer: "fake-issuer", OIDCAuthClientID: "fake-client-id"}, lmaauth.WithKeySet(keySet))
+			subject, _, _ := newSubject(&config.Config{
+				OIDCAuthIssuer:   "fake-issuer",
+				OIDCAuthClientID: "fake-client-id",
+				ProductMode:      config.ProductModeCloud,
+			}, lmaauth.WithKeySet(keySet))
 
 			fakeJWT := lmatesting.NewFakeJWT("fake-issuer", "fake-user").
 				WithClaim(lmaauth.ClaimNameAud, "fake-client-id").

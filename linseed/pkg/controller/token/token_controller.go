@@ -717,7 +717,7 @@ func (r *retryCalculator) duration(key string) (bool, time.Duration) {
 
 func isValid(mc *v3.ManagedCluster) error {
 	if mc.Name == "" {
-		return fmt.Errorf("Empty cluster name given")
+		return errors.New("empty cluster name given")
 	}
 
 	return nil
@@ -838,7 +838,7 @@ func (c *controller) reconcileSecretsForCluster(mc *v3.ManagedCluster, secretsTo
 			continue
 		}
 
-		secret.ObjectMeta.Namespace = managedOperatorNS
+		secret.Namespace = managedOperatorNS
 		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(secret)); err != nil {
 			log.WithError(err).Error("Error writing secret to managed cluster")
 			secretErrors = append(secretErrors, err)

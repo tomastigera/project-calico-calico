@@ -1,7 +1,7 @@
 package scaleloader
 
 import (
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	yaml "sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )

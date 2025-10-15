@@ -153,6 +153,6 @@ func (h *handler) OnPacket(packet nfqueue.Packet) {
 	}
 }
 
-func (_ *handler) OnRelease(_ uint32, _ nfqueue.ReleaseReason) {
+func (*handler) OnRelease(_ uint32, _ nfqueue.ReleaseReason) {
 	// no-op
 }

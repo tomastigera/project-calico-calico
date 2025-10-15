@@ -3,7 +3,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
@@ -194,7 +194,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if config.TenantNamespace != "" && config.ExpectedTenantID == "" {
-		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
+		return nil, errors.New("tenant namespace was provided but TenantID was not")
 	}
 
 	return config, nil

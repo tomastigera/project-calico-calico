@@ -65,11 +65,11 @@ var _ = Describe("Managed Cluster Reconcile", func() {
 
 		// change the conditions of the managedcluster struct to say it's disconnected
 		for _, cluster := range Clusters {
-			if cluster.ObjectMeta.Name == clusterName || cluster.ObjectMeta.Name == wafClusterName {
+			if cluster.Name == clusterName || cluster.Name == wafClusterName {
 				*cluster = v3.ManagedCluster{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      cluster.ObjectMeta.Name,
-						Namespace: cluster.ObjectMeta.Namespace,
+						Name:      cluster.Name,
+						Namespace: cluster.Namespace,
 					},
 					Status: v3.ManagedClusterStatus{
 						Conditions: []v3.ManagedClusterStatusCondition{

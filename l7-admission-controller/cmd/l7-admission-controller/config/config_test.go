@@ -9,10 +9,10 @@ import (
 
 func TestFromEnv(t *testing.T) {
 	// Test case 1: Environment variables are set
-	os.Setenv("L7ADMCTRL_TLSCERTPATH", "/path/to/tls/cert.pem")
-	os.Setenv("L7ADMCTRL_TLSKEYPATH", "/path/to/tls/key.pem")
-	os.Setenv("L7ADMCTRL_ENVOYIMAGE", "envoy:v1.2.3")
-	os.Setenv("L7ADMCTRL_DIKASTESIMAGE", "dikastes:v4.5.6")
+	_ = os.Setenv("L7ADMCTRL_TLSCERTPATH", "/path/to/tls/cert.pem")
+	_ = os.Setenv("L7ADMCTRL_TLSKEYPATH", "/path/to/tls/key.pem")
+	_ = os.Setenv("L7ADMCTRL_ENVOYIMAGE", "envoy:v1.2.3")
+	_ = os.Setenv("L7ADMCTRL_DIKASTESIMAGE", "dikastes:v4.5.6")
 
 	config, err := FromEnv()
 	if err != nil {
@@ -34,10 +34,10 @@ func TestFromEnv(t *testing.T) {
 	}
 
 	// Test case 2: Environment variables are not set
-	os.Unsetenv("L7ADMCTRL_TLSCERTPATH")
-	os.Unsetenv("L7ADMCTRL_TLSKEYPATH")
-	os.Unsetenv("L7ADMCTRL_ENVOYIMAGE")
-	os.Unsetenv("L7ADMCTRL_DIKASTESIMAGE")
+	_ = os.Unsetenv("L7ADMCTRL_TLSCERTPATH")
+	_ = os.Unsetenv("L7ADMCTRL_TLSKEYPATH")
+	_ = os.Unsetenv("L7ADMCTRL_ENVOYIMAGE")
+	_ = os.Unsetenv("L7ADMCTRL_DIKASTESIMAGE")
 
 	_, err = FromEnv()
 	if err == nil {

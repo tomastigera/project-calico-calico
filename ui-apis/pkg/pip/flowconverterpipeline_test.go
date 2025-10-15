@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
@@ -46,24 +45,24 @@ func hepd(name string, port int) epData {
 	}
 }
 
-func flow(reporter, action, protocol string, source, dest epData, policies ...string) lapi.L3Flow {
+func flow(reporter, action, protocol string, source, dest epData, policies ...string) v1.L3Flow {
 	if len(policies) == 0 {
 		defaultPolicy := "0|allow-tigera|calico-monitoring/allow-tigera.elasticsearch-access|allow"
 		policies = []string{defaultPolicy}
 	}
 
-	flow := lapi.L3Flow{
-		Key: lapi.L3FlowKey{
-			Reporter: lapi.FlowReporter(reporter),
-			Action:   lapi.FlowAction(action),
+	flow := v1.L3Flow{
+		Key: v1.L3FlowKey{
+			Reporter: v1.FlowReporter(reporter),
+			Action:   v1.FlowAction(action),
 			Protocol: protocol,
-			Source: lapi.Endpoint{
+			Source: v1.Endpoint{
 				Type:           v1.EndpointType(source.Type),
 				Namespace:      source.Namespace,
 				AggregatedName: source.NameAggr,
 				Port:           int64(source.Port),
 			},
-			Destination: lapi.Endpoint{
+			Destination: v1.Endpoint{
 				Type:           v1.EndpointType(dest.Type),
 				Namespace:      dest.Namespace,
 				AggregatedName: dest.NameAggr,
@@ -72,7 +71,7 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 		},
 		SourceIPs:      []string{"0.0.0.0"},
 		DestinationIPs: []string{"0.0.0.0"},
-		LogStats: &lapi.LogStats{
+		LogStats: &v1.LogStats{
 			FlowLogCount: 1,
 		},
 	}
@@ -86,7 +85,7 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 		if hit.IsProfile() {
 			name = fmt.Sprintf("kns.%s", name)
 		}
-		flow.Policies = append(flow.Policies, lapi.Policy{
+		flow.Policies = append(flow.Policies, v1.Policy{
 			Tier:         hit.Tier(),
 			Namespace:    hit.Namespace(),
 			Name:         name,
@@ -125,7 +124,7 @@ func (c alwaysAllowCalculator) CalculateSource(flow *api.Flow) (bool, policycalc
 	return flow.ActionFlag != api.ActionFlagAllow, before, after
 }
 
-func (_ alwaysAllowCalculator) CalculateDest(
+func (alwaysAllowCalculator) CalculateDest(
 	flow *api.Flow, beforeSourceAction, afterSourceAction api.ActionFlag,
 ) (modified bool, before, after policycalc.EndpointResponse) {
 	if beforeSourceAction != api.ActionFlagDeny {
@@ -176,7 +175,7 @@ func (c alwaysDenyCalculator) CalculateSource(flow *api.Flow) (bool, policycalc.
 	return flow.ActionFlag != api.ActionFlagDeny, before, after
 }
 
-func (_ alwaysDenyCalculator) CalculateDest(
+func (alwaysDenyCalculator) CalculateDest(
 	flow *api.Flow, beforeSourceAction, afterSourceAction api.ActionFlag,
 ) (modified bool, before, after policycalc.EndpointResponse) {
 	if beforeSourceAction != api.ActionFlagDeny {
@@ -215,7 +214,7 @@ var _ = Describe("Test relationship between PIP and API queries", func() {
 
 var _ = Describe("Test handling of aggregated response", func() {
 	It("handles simple aggregation of results where action does not change", func() {
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// Dest api.
 			flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregate before and after
 			flow("dst", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // |
@@ -229,13 +228,13 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
@@ -338,7 +337,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 	})
 
 	It("handles source flows changing from deny to allow", func() {
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
@@ -353,13 +352,13 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
@@ -483,7 +482,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 	})
 
 	It("handles source flows changing from allow to deny", func() {
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),
@@ -495,13 +494,13 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
@@ -612,7 +611,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 	})
 
 	It("Should return only impacted flows when impactedOnly parameter is set to true", func() {
-		flows := []lapi.L3Flow{
+		flows := []v1.L3Flow{
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
@@ -627,13 +626,13 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		// listFn mocks out results from Linseed.
-		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
-			return &v1.List[lapi.L3Flow]{
+		listFn := func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {
+			return &v1.List[v1.L3Flow]{
 				Items: flows,
 			}, nil
 		}
 
-		p := lapi.L3FlowParams{}
+		p := v1.L3FlowParams{}
 		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 

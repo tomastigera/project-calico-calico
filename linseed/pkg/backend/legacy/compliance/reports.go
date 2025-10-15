@@ -13,7 +13,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -54,7 +53,7 @@ type reportsBackend struct {
 	deepPaginationCutOff int64
 	queryHelper          lmaindex.Helper
 	singleIndex          bool
-	index                api.Index
+	index                bapi.Index
 
 	// Migration knobs
 	migrationMode bool

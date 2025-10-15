@@ -11,7 +11,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/list"
@@ -480,7 +478,7 @@ func (r *complianceStore) StoreBenchmarks(ctx context.Context, b *v1.Benchmarks)
 	return err
 }
 
-func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time.Time) *v1.AuditLogParams {
+func constructAuditEventsQuery(filter *apiv3.AuditEventsSelection, start, end *time.Time) *v1.AuditLogParams {
 	params := v1.AuditLogParams{}
 	params.MaxPageSize = DefaultPageSize
 	params.Type = v1.AuditLogTypeAny
@@ -552,9 +550,9 @@ func getFlowEndpointType(flowLogEndpointType v1.EndpointType, endpointName strin
 		flowEndpointType = resources.TypeCalicoGlobalNetworkSets.Kind
 	case v1.Network:
 		switch endpointName {
-		case api.FlowLogNetworkPublic:
+		case lma.FlowLogNetworkPublic:
 			flowEndpointType = apiv3.KindFlowPublic
-		case api.FlowLogNetworkPrivate:
+		case lma.FlowLogNetworkPrivate:
 			flowEndpointType = apiv3.KindFlowPrivate
 		default:
 			logrus.WithFields(logrus.Fields{

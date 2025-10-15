@@ -456,12 +456,12 @@ func buildQueryServerEndpointKeyString(ns, name, nameaggr string) string {
 	if name == "-" {
 		return fmt.Sprintf("(.*?%s/.*?-%s)",
 			ns,
-			strings.Replace(nameaggr, "-", "--", -1))
+			strings.ReplaceAll(nameaggr, "-", "--"))
 
 	} else {
 		return fmt.Sprintf("(.*?%s/.*?-%s)",
 			ns,
-			strings.Replace(name, "-", "--", -1))
+			strings.ReplaceAll(name, "-", "--"))
 
 	}
 }

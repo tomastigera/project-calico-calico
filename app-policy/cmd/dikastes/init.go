@@ -17,11 +17,12 @@ import (
 
 func runInit(config *flags.Config) {
 	// Initialize iptables/nftables rules.
-	if config.Dataplane == "iptables" {
+	switch config.Dataplane {
+	case "iptables":
 		initIptables(config)
-	} else if config.Dataplane == "nftables" {
+	case "nftables":
 		initNftables(config)
-	} else {
+	default:
 		log.Fatal("Unsupported dataplane: " + config.Dataplane)
 	}
 

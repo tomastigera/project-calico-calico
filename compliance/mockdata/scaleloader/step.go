@@ -2,15 +2,15 @@ package scaleloader
 
 import (
 	"bytes"
+	json "encoding/json"
 	"fmt"
 	"os"
 	"reflect"
 	"text/template"
 
-	json "github.com/projectcalico/go-json/json"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	logrus "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
@@ -99,7 +99,7 @@ func readStep(log *logrus.Entry, scaleName string, stepCount int, path string) (
 	data, err := os.ReadFile(path)
 	if err != nil {
 		log.WithError(err).WithField("path", path).Error("failed to read yaml")
-		return Step{}, fmt.Errorf("Failed to read %s: %v", path, err)
+		return Step{}, fmt.Errorf("failed to read %s: %v", path, err)
 	}
 
 	// Extract group version kind from event response object.
@@ -174,7 +174,7 @@ func (s *Step) GetMsg(revision int, timestamp string) (string, error) {
 		return s.getAuditV1Beta(revision, timestamp)
 	}
 
-	return "", fmt.Errorf("Unexpected kind %s", s.GetTypeMeta())
+	return "", fmt.Errorf("unexpected kind %s", s.GetTypeMeta())
 }
 
 func (s *Step) String() string {
@@ -346,7 +346,7 @@ type ObjRef struct {
 
 func (s *Step) getObjRef() ObjRef {
 	rid := resources.GetResourceID(s.resource)
-	gvk := rid.TypeMeta.GroupVersionKind()
+	gvk := rid.GroupVersionKind()
 	o := ObjRef{
 		Name:       rid.Name,
 		APIVersion: gvk.Version,

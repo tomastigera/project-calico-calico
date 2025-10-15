@@ -14,7 +14,7 @@ func (c *reconciler) eeReconcileConfigMap() error {
 		return err
 	}
 
-	configMap.ObjectMeta.Namespace = c.managedOperatorNamespace
+	configMap.Namespace = c.managedOperatorNamespace
 	cp := resource.CopyConfigMap(configMap)
 	cp.Data["clusterName"] = c.clusterName
 	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, cp); err != nil {

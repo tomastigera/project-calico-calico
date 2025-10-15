@@ -42,7 +42,6 @@ import (
 	"k8s.io/klog/v2"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/projectcalico/calico/crypto/pkg/tls"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
@@ -556,7 +555,7 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		return nil, err
 	}
 
-	baseTLSConfig, err := tls.NewTLSConfig()
+	baseTLSConfig, err := calicotls.NewTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TLS Config: %w", err)
 	}

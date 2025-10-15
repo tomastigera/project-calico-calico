@@ -16,7 +16,6 @@ import (
 	corazatypes "github.com/corazawaf/coraza/v3/types"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -104,7 +103,7 @@ func (f *WAFHTTPFilter) Start() error {
 		go func() {
 			err = f.tcpGRPCServer.Serve(lis)
 			if err != nil {
-				log.Fatalf("failed to serve: %v", err)
+				logrus.Fatalf("failed to serve: %v", err)
 			}
 		}()
 	}
@@ -115,13 +114,13 @@ func (f *WAFHTTPFilter) Start() error {
 
 		if _, err := os.Stat(f.options.SocketPath); err == nil {
 			if err := os.RemoveAll(f.options.SocketPath); err != nil {
-				log.Fatalf("failed to remove: %v", err)
+				logrus.Fatalf("failed to remove: %v", err)
 			}
 		}
 
 		ul, err := net.Listen("unix", f.options.SocketPath)
 		if err != nil {
-			log.Fatalf("failed to listen: %v", err)
+			logrus.Fatalf("failed to listen: %v", err)
 		}
 
 		// We need to allow reading and writing to the socket by all users
@@ -129,13 +128,13 @@ func (f *WAFHTTPFilter) Start() error {
 		// envoy proxy runs as a non-root user.
 		err = os.Chmod(f.options.SocketPath, 0o666)
 		if err != nil {
-			log.Fatalf("failed to set permissions: %v", err)
+			logrus.Fatalf("failed to set permissions: %v", err)
 		}
 
 		go func() {
 			err = f.unixGRPCServer.Serve(ul)
 			if err != nil {
-				log.Fatalf("failed to serve: %v", err)
+				logrus.Fatalf("failed to serve: %v", err)
 			}
 		}()
 	}
@@ -176,36 +175,36 @@ func getHealthCheckHandler(opts ServerOptions) func(w http.ResponseWriter, r *ht
 
 		conn, err := grpc.NewClient(target, dialOpts...)
 		if err != nil {
-			log.Errorf("Could not connect: %v", err)
+			logrus.Errorf("Could not connect: %v", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintln(w, "service connection failed")
+			_, _ = fmt.Fprintln(w, "service connection failed")
 			return
 		}
 		client := healthzv1.NewHealthClient(conn)
 		defer func() {
 			if err := conn.Close(); err != nil {
-				log.Errorf("Could not close connection: %v", err)
+				logrus.Errorf("Could not close connection: %v", err)
 			}
 		}()
 
 		// Check health
-		log.Debugf("Checking health for %s", target)
+		logrus.Debugf("Checking health for %s", target)
 		healthResp, err := client.Check(r.Context(), &healthzv1.HealthCheckRequest{})
 		if err != nil {
-			log.Errorf("Could not check health: %v", err)
+			logrus.Errorf("Could not check health: %v", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintln(w, "health check failed")
+			_, _ = fmt.Fprintln(w, "health check failed")
 			return
 		}
 		if healthResp.Status != healthzv1.HealthCheckResponse_SERVING {
-			log.Errorf("Health check failed: %v", healthResp.Status)
+			logrus.Errorf("Health check failed: %v", healthResp.Status)
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintln(w, "service not ready")
+			_, _ = fmt.Fprintln(w, "service not ready")
 			return
 		}
-		log.Debugf("Health check passed: %v", healthResp.Status)
+		logrus.Debugf("Health check passed: %v", healthResp.Status)
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "OK")
+		_, _ = fmt.Fprintln(w, "OK")
 	}
 }
 

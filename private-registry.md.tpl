@@ -42,6 +42,7 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/compliance-benchmarker:__CE_VERSION__
     docker pull quay.io/tigera/ingress-collector:__CE_VERSION__
     docker pull quay.io/tigera/l7-collector:__CE_VERSION__
+    docker pull quay.io/tigera/gateway-l7-collector:__CE_VERSION__
     docker pull quay.io/tigera/l7-admission-controller:__CE_VERSION__
     docker pull quay.io/tigera/license-agent:__CE_VERSION__
     docker pull quay.io/tigera/cni:__CE_VERSION__
@@ -106,9 +107,10 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/compliance-snapshotter:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-snapshotter:__CE_VERSION__
     docker pull quay.io/tigera/compliance-server:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-server:__CE_VERSION__
     docker pull quay.io/tigera/compliance-benchmarker:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-benchmarker:__CE_VERSION__
-    docker pull quay.io/tigera/ingress-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/ingress-collector:__CE_VERSION__
-    docker pull quay.io/tigera/l7-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/l7-collector:__CE_VERSION__
-    docker pull quay.io/tigera/l7-admission-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/l7-admission-controller:__CE_VERSION__
+    docker tag quay.io/tigera/ingress-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/ingress-collector:__CE_VERSION__
+    docker tag quay.io/tigera/l7-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/l7-collector:__CE_VERSION__
+    docker tag quay.io/tigera/gateway-l7-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/gateway-l7-collector:__CE_VERSION__
+    docker tag quay.io/tigera/l7-admission-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/l7-admission-controller:__CE_VERSION__
     docker pull quay.io/tigera/license-agent:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/license-agent:__CE_VERSION__
     docker pull quay.io/tigera/cni:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__
     docker pull quay.io/tigera/cni:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__-fips
@@ -173,6 +175,7 @@ registry, and then push the newly tagged images to your own registry.
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-benchmarker:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/ingress-collector:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/l7-collector:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/gateway-l7-collector:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/l7-admission-controller:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/license-agent:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__

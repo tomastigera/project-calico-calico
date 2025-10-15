@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/apis/audit"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
@@ -63,10 +62,10 @@ type AuditLogParams struct {
 	Authors []string `json:"authors"`
 
 	// Match on stage.
-	Stages []auditv1.Stage `json:"stages"`
+	Stages []audit.Stage `json:"stages"`
 
 	// Match on level.
-	Levels []auditv1.Level `json:"levels"`
+	Levels []audit.Level `json:"levels"`
 
 	// Exclude DryRun records.
 	ExcludeDryRuns bool

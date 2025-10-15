@@ -273,15 +273,16 @@ func createIngressV3RulesForAddresses(srcAddress addr.Entry, action string, anno
 
 	// Define only the source entity for an ingress rule. Supported types are IPNetmask, and FQDN.
 	var srcEntityRule v3.EntityRule
-	if srcAddress.Type == panutils.IpNetmask {
+	switch srcAddress.Type {
+	case panutils.IpNetmask:
 		srcEntityRule = v3.EntityRule{
 			Nets: []string{srcAddress.Value},
 		}
-	} else if srcAddress.Type == panutils.Fqdn {
+	case panutils.Fqdn:
 		srcEntityRule = v3.EntityRule{
 			Domains: []string{srcAddress.Value},
 		}
-	} else {
+	default:
 		log.Debugf("The controller supports IPNetmask, and FQDN, cannot handle address type %s",
 			srcAddress.Type)
 
@@ -381,15 +382,16 @@ func createEgressV3RulesForAddresses(dstAddress addr.Entry, action string, annot
 
 	// Define only the destination entity for an egress rule. Supported types are IPNetmask, and FQDN.
 	var dstEntityRule v3.EntityRule
-	if dstAddress.Type == panutils.IpNetmask {
+	switch dstAddress.Type {
+	case panutils.IpNetmask:
 		dstEntityRule = v3.EntityRule{
 			Nets: []string{dstAddress.Value},
 		}
-	} else if dstAddress.Type == panutils.Fqdn {
+	case panutils.Fqdn:
 		dstEntityRule = v3.EntityRule{
 			Domains: []string{dstAddress.Value},
 		}
-	} else {
+	default:
 		log.Debugf("The controller supports IPNetmask, and FQDN, cannot handle address type %s",
 			dstAddress.Type)
 

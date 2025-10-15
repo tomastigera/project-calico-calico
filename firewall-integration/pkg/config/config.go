@@ -79,8 +79,8 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	if !(config.FwAddressSelection == fwRoutablePod || config.FwAddressSelection == fwRoutableNode) {
-		return nil, fmt.Errorf("Valid Firewall Address selector is 'node' or 'pod', given value isn't correct value %#v", config.FwAddressSelection)
+	if config.FwAddressSelection != fwRoutablePod && config.FwAddressSelection != fwRoutableNode {
+		return nil, fmt.Errorf("valid Firewall Address selector is 'node' or 'pod', given value isn't correct value %#v", config.FwAddressSelection)
 	}
 
 	// Validate and define tier name.

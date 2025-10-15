@@ -255,10 +255,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionTyp
 	name := endpoint.Name
 	namespace := endpoint.Namespace
 
-	gl := false
-	if namespace == "-" || namespace == "" {
-		gl = true
-	}
+	gl := namespace == "-" || namespace == ""
 
 	key := engineRuleKey{
 		global:    gl,

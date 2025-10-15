@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
@@ -165,7 +164,7 @@ func FilterRuleToIPVersion(ipVersion uint8, pRule *proto.Rule) *proto.Rule {
 	ruleCopy := googleproto.Clone(pRule).(*proto.Rule)
 	var filteredAll bool
 
-	logCxt := log.WithFields(log.Fields{
+	logCxt := logrus.WithFields(logrus.Fields{
 		"ipVersion": ipVersion,
 		"rule":      pRule,
 	})
@@ -298,10 +297,10 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		if r.Config.IsDNSPolicyModeInline() {
+		if r.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
-				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
+				logrus.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
 			}
 			matchBlockBuilder.AppendDestIPSetBPFMatchBlock(
 				r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
@@ -395,7 +394,7 @@ func (r *matchBlockBuilder) AppendPortMatchBlock(
 	// Figure out which bit to set.  See comment in positiveBlockMarkToSet() for details.
 	markToSet := r.positiveBlockMarkToSet()
 
-	logCxt := log.WithFields(log.Fields{
+	logCxt := logrus.WithFields(logrus.Fields{
 		"protocol":     protocol,
 		"portSplits":   numericPortSplits,
 		"namedPortIDs": namedPortIPSetIDs,
@@ -571,7 +570,7 @@ func (sod srcOrDst) MatchNet(m generictables.MatchCriteria, cidr string) generic
 	case dst:
 		return m.DestNet(cidr)
 	}
-	log.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
+	logrus.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
 	return nil
 }
 
@@ -582,7 +581,7 @@ func (sod srcOrDst) AppendMatchPorts(m generictables.MatchCriteria, pr []*proto.
 	case dst:
 		return m.DestPortRanges(pr)
 	}
-	log.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
+	logrus.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
 	return nil
 }
 
@@ -593,7 +592,7 @@ func (sod srcOrDst) MatchIPPortIPSet(m generictables.MatchCriteria, setID string
 	case dst:
 		return m.DestIPPortSet(setID)
 	}
-	log.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
+	logrus.WithField("srcOrDst", sod).Panic("Unknown source or dest type.")
 	return nil
 }
 
@@ -647,7 +646,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	var mark uint32
 
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
-	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.IsDNSPolicyModeDelayDeniedPacket()
+	markDNSPolicyRule := isDNSPolicyRule && !staged && r.IsDNSPolicyModeDelayDeniedPacket()
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -742,7 +741,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		markDNSPolicyRule = false
 		// Handled above.
 	default:
-		log.WithField("action", pRule.Action).Panic("Unknown rule action")
+		logrus.WithField("action", pRule.Action).Panic("Unknown rule action")
 	}
 
 	finalRules := []generictables.Rule{}
@@ -775,7 +774,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	return finalRules
 }
 
-func appendProtocolMatch(match generictables.MatchCriteria, protocol *proto.Protocol, logCxt *log.Entry) generictables.MatchCriteria {
+func appendProtocolMatch(match generictables.MatchCriteria, protocol *proto.Protocol, logCxt *logrus.Entry) generictables.MatchCriteria {
 	if protocol == nil {
 		return match
 	}
@@ -810,7 +809,7 @@ func (r *DefaultRuleRenderer) ipSetIDForBPFIPSets(ipsetID string, ipVersion uint
 func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) generictables.MatchCriteria {
 	match := r.NewMatch()
 
-	logCxt := log.WithFields(log.Fields{
+	logCxt := logrus.WithFields(logrus.Fields{
 		"ipVersion": ipVersion,
 		"rule":      pRule,
 	})
@@ -822,13 +821,13 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 		logCxt.WithField("cidr", pRule.SrcNet[0]).Debug("Adding src CIDR match")
 		match = match.SourceNet(pRule.SrcNet[0])
 	} else if len(pRule.SrcNet) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one CIDR in SrcNet.")
 	}
 
 	for _, ipsetID := range pRule.SrcIpSetIds {
 		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
 		}).Debug("Adding src IP set match")
@@ -836,19 +835,19 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.SrcPorts) > 0 {
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ports": pRule.SrcPorts,
 		}).Debug("Adding src port match")
 		match = match.SourcePortRanges(pRule.SrcPorts)
 	}
 
 	if len(pRule.SrcNamedPortIpSetIds) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"Bug: More than one source IP set ID left in rule.")
 	}
 	for _, np := range pRule.SrcNamedPortIpSetIds {
 		ipsetName := r.nameForIPSet(np, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
 		}).Debug("Adding source named port match")
@@ -859,69 +858,69 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 		logCxt.WithField("cidr", pRule.DstNet[0]).Debug("Adding dest CIDR match")
 		match = match.DestNet(pRule.DstNet[0])
 	} else if len(pRule.DstNet) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one CIDR in DstNet.")
 	}
 
 	if len(pRule.DstIpSetIds) == 1 {
 		ipsetName := r.nameForIPSet(pRule.DstIpSetIds[0], ipVersion)
 		match = match.DestIPSet(ipsetName)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ipsetID":   pRule.DstIpSetIds[0],
 			"ipSetName": ipsetName,
 		}).Debug("Adding dst IP set match")
 	} else if len(pRule.DstIpSetIds) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one DstIpSetIds.")
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		if r.Config.IsDNSPolicyModeInline() {
+		if r.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
-				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
+				logrus.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
 			}
 			match = match.BPFProgram(pinPath)
-			logCxt.WithFields(log.Fields{
+			logCxt.WithFields(logrus.Fields{
 				"ipsetID":     pRule.DstDomainIpSetIds[0],
 				"programPath": pinPath,
 			}).Debug("Adding BPF dst domain IP set match")
 		} else {
 			ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
 			match = match.DestIPSet(ipsetName)
-			logCxt.WithFields(log.Fields{
+			logCxt.WithFields(logrus.Fields{
 				"ipsetID":   pRule.DstDomainIpSetIds[0],
 				"ipSetName": ipsetName,
 			}).Debug("Adding dst domain IP set match")
 		}
 	} else if len(pRule.DstDomainIpSetIds) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one DstDomainIpSetIds.")
 	}
 
 	for _, ipsetID := range pRule.DstIpPortSetIds {
 		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
 		match = match.DestIPPortSet(ipsetName)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
 		}).Debug("Adding dst IP+port set match")
 	}
 
 	if len(pRule.DstPorts) > 0 {
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ports": pRule.SrcPorts,
 		}).Debug("Adding dst port match")
 		match = match.DestPortRanges(pRule.DstPorts)
 	}
 
 	if len(pRule.DstNamedPortIpSetIds) > 1 {
-		log.WithField("rule", pRule).Panic(
+		logrus.WithField("rule", pRule).Panic(
 			"Bug: More than one source IP set ID left in rule.")
 	}
 	for _, np := range pRule.DstNamedPortIpSetIds {
 		ipsetName := r.nameForIPSet(np, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
 		}).Debug("Adding dest named port match")
@@ -967,12 +966,12 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 		logCxt.WithField("cidr", pRule.NotSrcNet[0]).Debug("Adding !src CIDR match")
 		match = match.NotSourceNet(pRule.NotSrcNet[0])
 	} else if len(pRule.NotSrcNet) > 1 {
-		log.WithField("rule", pRule).Panic("CalculateRuleMatch() passed more than one CIDR in NotSrcNet.")
+		logrus.WithField("rule", pRule).Panic("CalculateRuleMatch() passed more than one CIDR in NotSrcNet.")
 	}
 
 	for _, ipsetID := range pRule.NotSrcIpSetIds {
 		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
 		}).Debug("Adding src IP set match")
@@ -980,7 +979,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.NotSrcPorts) > 0 {
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ports": pRule.NotSrcPorts,
 		}).Debug("Adding src port match")
 		for _, portSplit := range SplitPortList(pRule.NotSrcPorts) {
@@ -990,7 +989,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 
 	for _, np := range pRule.NotSrcNamedPortIpSetIds {
 		ipsetName := r.nameForIPSet(np, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
 		}).Debug("Adding negated source named port match")
@@ -1001,20 +1000,20 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 		logCxt.WithField("cidr", pRule.NotDstNet[0]).Debug("Adding !dst CIDR match")
 		match = match.NotDestNet(pRule.NotDstNet[0])
 	} else if len(pRule.NotDstNet) > 1 {
-		log.WithField("rule", pRule).Panic("CalculateRuleMatch() passed more than one CIDR in NotDstNet.")
+		logrus.WithField("rule", pRule).Panic("CalculateRuleMatch() passed more than one CIDR in NotDstNet.")
 	}
 
 	for _, ipsetID := range pRule.NotDstIpSetIds {
 		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
 		match = match.NotDestIPSet(ipsetName)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
 		}).Debug("Adding dst IP set match")
 	}
 
 	if len(pRule.NotDstPorts) > 0 {
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"ports": pRule.NotSrcPorts,
 		}).Debug("Adding dst port match")
 		for _, portSplit := range SplitPortList(pRule.NotDstPorts) {
@@ -1024,7 +1023,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 
 	for _, np := range pRule.NotDstNamedPortIpSetIds {
 		ipsetName := r.nameForIPSet(np, ipVersion)
-		logCxt.WithFields(log.Fields{
+		logCxt.WithFields(logrus.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
 		}).Debug("Adding negated dest named port match")

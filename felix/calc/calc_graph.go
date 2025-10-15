@@ -342,7 +342,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		if ipSet.Service != "" {
 			serviceIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Service)
 		} else if ipSet.Selector != nil {
-			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
+			if !ipSet.isDomainSet && !ipSet.IsEgressSelector {
 				defer gaugeNumActiveSelectors.Inc()
 			}
 			ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
@@ -353,7 +353,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		if ipSet.Service != "" {
 			serviceIndex.DeleteIPSet(ipSet.UniqueID())
 		} else if ipSet.Selector != nil {
-			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
+			if !ipSet.isDomainSet && !ipSet.IsEgressSelector {
 				defer gaugeNumActiveSelectors.Dec()
 			}
 			ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())

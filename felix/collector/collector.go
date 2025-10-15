@@ -721,7 +721,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 		if !data.Reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
 			data.SetSourceProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
-		if processInfo.TcpStatsData.IsDirty {
+		if processInfo.IsDirty {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
@@ -742,7 +742,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 		if !data.Reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
 			data.SetDestProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
-		if processInfo.TcpStatsData.IsDirty {
+		if processInfo.IsDirty {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
@@ -1484,8 +1484,8 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		// Address is an IP. Attempt to look up a service name by cluster IP
 		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(utils.IpStrTo16Byte(addr), port, t.Proto)
 		if found {
-			svcName = k8sSvcPortName.NamespacedName.Name
-			svcNamespace = k8sSvcPortName.NamespacedName.Namespace
+			svcName = k8sSvcPortName.Name
+			svcNamespace = k8sSvcPortName.Namespace
 			svcPortName = k8sSvcPortName.Port
 			validService = true
 		}

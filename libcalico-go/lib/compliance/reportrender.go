@@ -24,12 +24,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig"
-	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
+	"sigs.k8s.io/yaml"
 )
 
 var (

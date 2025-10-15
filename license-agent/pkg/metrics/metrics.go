@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -109,7 +108,7 @@ func (lr *LicenseReporter) servePrometheusMetrics() {
 		lr.port,
 		lr.certFile,
 		lr.keyFile,
-		string(v3.RequireAndVerifyClientCert),
+		string(apiv3.RequireAndVerifyClientCert),
 		lr.caFile,
 	)
 	if err != nil {

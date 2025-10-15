@@ -84,7 +84,7 @@ func StartFrom(opts v1.Params) (int, error) {
 				if sf, err := strconv.Atoi(v); err == nil {
 					return sf, nil
 				} else {
-					return 0, fmt.Errorf("Could not parse startFrom (%s) as an integer", v)
+					return 0, fmt.Errorf("could not parse startFrom (%s) as an integer", v)
 				}
 			case float64:
 				logrus.WithField("val", val).Trace("Handling float64 startFrom")

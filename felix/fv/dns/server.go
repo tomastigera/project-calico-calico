@@ -6,14 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 )
 
 func StartServer(records map[string][]RecordIP) *containers.Container {
 	recordsStr, err := json.Marshal(records)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	return containers.Run("dnsserver",
 		containers.RunOpts{AutoRemove: true, WithStdinPipe: true},

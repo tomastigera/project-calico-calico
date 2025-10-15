@@ -115,7 +115,7 @@ func (s *Server) Serve(lis net.Listener) error {
 	go func() {
 		defer s.wg.Done()
 		<-s.ctx.Done()
-		lis.Close()
+		_ = lis.Close()
 	}()
 
 	for {
@@ -244,7 +244,7 @@ func (ss *ServerStream) Identity() Identity {
 			return tlsc.ConnectionState().PeerCertificates[0]
 		}
 	}
-	return ss.Conn.RemoteAddr()
+	return ss.RemoteAddr()
 }
 
 // Read blocks until some bytes are received or an error happens. It is OK to

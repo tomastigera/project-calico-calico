@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -135,14 +135,14 @@ func SetTokenReviewsReactor(fakeK8sCli *fake.Clientset, tokens ...*FakeJWT) {
 	}
 	fakeK8sCli.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		createAction, ok := action.(k8stesting.CreateAction)
-		Expect(ok).To(BeTrue())
+		gomega.Expect(ok).To(gomega.BeTrue())
 		review, ok := createAction.GetObject().(*authnv1.TokenReview)
-		Expect(ok).To(BeTrue())
+		gomega.Expect(ok).To(gomega.BeTrue())
 
 		token, ok := tokenMap[review.Spec.Token]
-		Expect(ok).To(BeTrue(), "Token unknown to token reviews reactor.")
+		gomega.Expect(ok).To(gomega.BeTrue(), "Token unknown to token reviews reactor.")
 
-		Expect(review.Spec).To(Equal(authnv1.TokenReviewSpec{
+		gomega.Expect(review.Spec).To(gomega.Equal(authnv1.TokenReviewSpec{
 			Token: token.ToString(),
 		}))
 		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: fmt.Sprintf("%v", token.UserName())}, Authenticated: true}}, nil

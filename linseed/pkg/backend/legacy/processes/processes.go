@@ -101,7 +101,7 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 
 	// Determine the AfterKey to return.
 	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
+	if numHits := len(results.Hits.Hits); numHits < opts.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {
@@ -139,7 +139,7 @@ func (b *processBackend) ConvertElasticResult(log *logrus.Entry, results *elasti
 // convertBucket turns a composite aggregation bucket into one or more ProcessInfos.
 func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.AggregationBucketKeyItem) []v1.ProcessInfo {
 
-	if srcNameAggrItems, found := bucket.Aggregations.Terms(sourceNameAggrKey); !found {
+	if srcNameAggrItems, found := bucket.Terms(sourceNameAggrKey); !found {
 		log.Warnf("failed to get bucket key %s in sub-aggregation", sourceNameAggrKey)
 		return nil
 	} else {
@@ -157,7 +157,7 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 				return nil
 			}
 
-			if processNameItems, found := srcNameAggrBucket.Aggregations.Terms(processNameKey); !found {
+			if processNameItems, found := srcNameAggrBucket.Terms(processNameKey); !found {
 				log.Warnf("failed to get bucket key %s in sub-aggregation", processNameKey)
 				return nil
 			} else {
@@ -166,7 +166,7 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 						log.Warnf("failed to convert bucket key %v to string", bb.Key)
 						continue
 					} else {
-						if processIDItems, found := bb.Aggregations.Terms(processIDKey); !found {
+						if processIDItems, found := bb.Terms(processIDKey); !found {
 							log.Warnf("failed to get bucket key %s in sub-aggregation", processIDKey)
 							continue
 						} else {

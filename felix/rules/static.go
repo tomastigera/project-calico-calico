@@ -630,7 +630,7 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *generi
 func (r *DefaultRuleRenderer) failsafeInChain(table string, ipVersion uint8) *generictables.Chain {
 	rules := []generictables.Rule{}
 
-	for _, protoPort := range r.Config.FailsafeInboundHostPorts {
+	for _, protoPort := range r.FailsafeInboundHostPorts {
 		rule := generictables.Rule{
 			Match: r.NewMatch().
 				Protocol(protoPort.Protocol).
@@ -661,7 +661,7 @@ func (r *DefaultRuleRenderer) failsafeInChain(table string, ipVersion uint8) *ge
 		// Otherwise, it could fall through to some doNotTrack policy and half of the connection
 		// would get untracked.  If we ACCEPT here then the traffic falls through to the filter
 		// table, where it'll only be accepted if there's a conntrack entry.
-		for _, protoPort := range r.Config.FailsafeOutboundHostPorts {
+		for _, protoPort := range r.FailsafeOutboundHostPorts {
 			rule := generictables.Rule{
 				Match: r.NewMatch().
 					Protocol(protoPort.Protocol).
@@ -697,7 +697,7 @@ func (r *DefaultRuleRenderer) failsafeInChain(table string, ipVersion uint8) *ge
 func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *generictables.Chain {
 	rules := []generictables.Rule{}
 
-	for _, protoPort := range r.Config.FailsafeOutboundHostPorts {
+	for _, protoPort := range r.FailsafeOutboundHostPorts {
 		rule := generictables.Rule{
 			Match: r.NewMatch().
 				Protocol(protoPort.Protocol).
@@ -728,7 +728,7 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *g
 		// Otherwise, it could fall through to some doNotTrack policy and half of the connection
 		// would get untracked.  If we ACCEPT here then the traffic falls through to the filter
 		// table, where it'll only be accepted if there's a conntrack entry.
-		for _, protoPort := range r.Config.FailsafeInboundHostPorts {
+		for _, protoPort := range r.FailsafeInboundHostPorts {
 			rule := generictables.Rule{
 				Match: r.NewMatch().
 					Protocol(protoPort.Protocol).
@@ -871,7 +871,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 			// DNS response INPUT to host-networked client workload, so there is no outgoing interface.
 			baseMatch = r.NewMatch()
 		}
-		if r.Config.IsDNSPolicyModeDelayDNSResponse() && r.Config.DNSPacketsNfqueueID != 0 {
+		if r.IsDNSPolicyModeDelayDNSResponse() && r.DNSPacketsNfqueueID != 0 {
 			// We are delaying the DNS response by queueing the response packet.
 			rules = append(rules,
 				generictables.Rule{
@@ -879,10 +879,10 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 						ConntrackState("ESTABLISHED").
 						ConntrackOrigDstPort(server.Port).
 						ConntrackOrigDst(server.IP),
-					Action: r.NfqueueWithBypass(r.Config.DNSPacketsNfqueueID),
+					Action: r.NfqueueWithBypass(r.DNSPacketsNfqueueID),
 				},
 			)
-		} else if r.Config.IsDNSPolicyModeInline() {
+		} else if r.IsDNSPolicyModeInline() {
 			// We are parsing the DNS response inline by passing the response packet to a BPF Parser.
 			// BPF parser, parses the DNS response and fills the BPF IPSets.
 			// Add an NFLOG rule to snoop responses to felix.
@@ -1086,7 +1086,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 		match = match.SrcAddrType(generictables.AddrTypeLocal, false)
 		match = match.
 			DestPorts(
-				uint16(r.Config.EgressIPVXLANPort), // egress.calico
+				uint16(r.EgressIPVXLANPort), // egress.calico
 			)
 		rules = append(rules, generictables.Rule{
 			Match:   match,
@@ -1981,7 +1981,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 	}
 
 	// Set a mark on encapsulated packets coming from WireGuard to ensure the RPF check allows it
-	if ((r.WireguardEnabled && len(r.WireguardInterfaceName) > 0) || (r.WireguardEnabledV6 && len(r.WireguardInterfaceNameV6) > 0)) && r.Config.WireguardEncryptHostTraffic {
+	if ((r.WireguardEnabled && len(r.WireguardInterfaceName) > 0) || (r.WireguardEnabledV6 && len(r.WireguardInterfaceNameV6) > 0)) && r.WireguardEncryptHostTraffic {
 		log.Debug("Adding Wireguard iptables rule")
 		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch(),

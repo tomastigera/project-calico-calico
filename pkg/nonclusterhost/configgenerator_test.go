@@ -211,7 +211,7 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 		// Read certificate from a file
 		tmpFile, err := os.CreateTemp("", "nch-ca.crt")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 		_, err = tmpFile.Write([]byte("some-ca-cert-in-pem"))
 		Expect(err).NotTo(HaveOccurred())

@@ -4,8 +4,8 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -212,7 +212,7 @@ func Parse() (*Config, error) {
 	}
 
 	if config.TenantNamespace != "" && config.TenantID == "" {
-		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
+		return nil, errors.New("tenant namespace was provided but TenantID was not")
 	}
 	return &config, nil
 }

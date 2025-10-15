@@ -142,10 +142,12 @@ func (t TimeRange) Duration() time.Duration {
 }
 
 func (t TimeRange) InRange(t1 time.Time) bool {
+	//nolint:staticcheck // Ignore QF1001: could apply De Morgan's law
 	return !(t1.Before(t.From) || t1.After(t.To))
 }
 
 func (t TimeRange) Overlaps(from, to time.Time) bool {
+	//nolint:staticcheck // Ignore QF1001: could apply De Morgan's law
 	return !(to.Before(t.From) || from.After(t.To))
 }
 

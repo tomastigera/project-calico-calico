@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -62,10 +61,10 @@ func GetL7FlowData(ctx context.Context, lsClient client.Client, cluster string, 
 	defer cancel()
 
 	// Set up for performing paged list queries for L7 flows.
-	params := lapi.L7FlowParams{
+	params := lsv1.L7FlowParams{
 		QueryParams: lsv1.QueryParams{TimeRange: &tr},
 	}
-	pager := client.NewListPager[lapi.L7Flow](&params)
+	pager := client.NewListPager[lsv1.L7Flow](&params)
 	results, errors := pager.Stream(ctx, lsClient.L7Flows(cluster).List)
 
 	var foundFlow bool
@@ -145,7 +144,7 @@ func GetL7FlowData(ctx context.Context, lsClient client.Client, cluster string, 
 
 			// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
 			if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
-				return fs, DataTruncatedError
+				return fs, errDataTruncatedError
 			}
 		}
 	}

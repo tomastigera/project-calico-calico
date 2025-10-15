@@ -13,7 +13,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -162,7 +161,7 @@ func (b *runtimeReportBackend) Create(ctx context.Context, i bapi.ClusterInfo, r
 }
 
 // List lists reports that match the given parameters.
-func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.RuntimeReportParams) (*v1.List[v1.RuntimeReport], error) {
+func (b *runtimeReportBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.RuntimeReportParams) (*v1.List[v1.RuntimeReport], error) {
 	log := bapi.ContextLogger(i)
 
 	// Build the query.
@@ -227,7 +226,7 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 			tenant, cluster = b.extractTenantAndCluster(h.Index)
 		}
 		if b.migrationMode {
-			l.Report.ID = h.Id
+			l.ID = h.Id
 		}
 		reports = append(reports, v1.RuntimeReport{ID: h.Id, Tenant: tenant, Cluster: cluster, Report: l.Report})
 	}

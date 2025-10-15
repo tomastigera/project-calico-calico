@@ -98,7 +98,7 @@ func (r *WAFEventReporter) Report(event interface{}) error {
 		log.Debugf("Reporting buffer %+v", e)
 		return r.reportToBuffer(e)
 	default:
-		return fmt.Errorf("Unknown event type: %T", e)
+		return fmt.Errorf("unknown event type: %T", e)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1923,11 +1923,11 @@ func createResources(
 			}
 			delete(configured, key)
 			rm := resourcemgr.GetResourceManager(res)
-			Expect(rm).NotTo(BeNil())
+			gomega.Expect(rm).NotTo(gomega.BeNil())
 			_, err := rm.Delete(ctx, client, res)
 			if _, ok := err.(errors.ErrorResourceDoesNotExist); !ok {
 				// Only check for no error if the error is does not indicate a missing resource.
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			}
 		}
 	}
@@ -1936,10 +1936,10 @@ func createResources(
 	for _, res := range configure {
 		res := res.DeepCopyObject().(resourcemgr.ResourceObject)
 		rm := resourcemgr.GetResourceManager(res)
-		Expect(rm).NotTo(BeNil())
+		gomega.Expect(rm).NotTo(gomega.BeNil())
 		configured[resourceKey(res)] = res
 		_, err := rm.Apply(ctx, client, res)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 
 	return configured

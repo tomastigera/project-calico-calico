@@ -345,7 +345,7 @@ var _ = Describe("Proxy", func() {
 		It("Should fail for http target", func() {
 			file, _, err := createCa()
 			Expect(err).NotTo(HaveOccurred())
-			defer os.Remove(file.Name())
+			defer func() { _ = os.Remove(file.Name()) }()
 
 			_, err = proxy.New([]proxy.Target{
 				{
@@ -363,7 +363,7 @@ var _ = Describe("Proxy", func() {
 		It("Should work if the certs match", func() {
 			file, ca, err := createCa()
 			Expect(err).NotTo(HaveOccurred())
-			defer os.Remove(file.Name())
+			defer func() { _ = os.Remove(file.Name()) }()
 
 			server := httptest.NewUnstartedServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -412,7 +412,7 @@ var _ = Describe("Proxy", func() {
 		It("Should fail if the certs do not match", func() {
 			file, _, err := createCa()
 			Expect(err).NotTo(HaveOccurred())
-			defer os.Remove(file.Name())
+			defer func() { _ = os.Remove(file.Name()) }()
 
 			server := httptest.NewUnstartedServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

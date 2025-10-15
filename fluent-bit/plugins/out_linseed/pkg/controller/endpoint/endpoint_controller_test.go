@@ -48,13 +48,13 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 
 	AfterEach(func() {
 		close(stopCh)
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 	})
 
 	Context("Endpoint tests", func() {
 		It("should use endpoint from config if not empty", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
@@ -76,7 +76,7 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 
 		It("should update endpoint when an update event is received", func() {
 			_, err := f.WriteString(validKubeconfig)
-			f.Close()
+			_ = f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = os.Setenv("KUBECONFIG", f.Name())
