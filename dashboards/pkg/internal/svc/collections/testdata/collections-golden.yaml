@@ -270,6 +270,7 @@
     - field: source_namespace
   - field: source_namespace
     nested:
+    - field: dest_namespace
     - field: source_name_aggr
       nested:
       - field: dest_domains
@@ -301,6 +302,8 @@
       nested:
       - field: process_args
   - field: dest_namespace
+    nested:
+    - field: source_namespace
   - field: dest_domains
   - field: dest_port
   - field: source_ip
