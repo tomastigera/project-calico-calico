@@ -73,6 +73,7 @@ var (
 		"compliance-benchmarker",
 		"ingress-collector",
 		"l7-collector",
+		"gateway-l7-collector",
 		"l7-admission-controller",
 		"license-agent",
 		"cni",
