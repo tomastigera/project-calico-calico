@@ -41,7 +41,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/vishvananda/netlink"
@@ -4259,7 +4258,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 					if tmp < int32(tstride) {
 						tstride = int(tmp)
 					}
-					log.Debugf("Reducing trampoline stride to %d and retrying", tstride)
+					logrus.Debugf("Reducing trampoline stride to %d and retrying", tstride)
 					continue
 				} else {
 					return nil, fmt.Errorf("reducing trampoline stride below 1000 not practical")
@@ -4274,7 +4273,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 
 	for tstride < tstrideOrig {
 		if m.policyTrampolineStride.CompareAndSwap(int32(tstrideOrig), int32(tstride)) {
-			log.Warnf("Reducing policy program trampoline stride to %d", tstride)
+			logrus.Warnf("Reducing policy program trampoline stride to %d", tstride)
 		} else {
 			tstrideOrig = int(m.policyTrampolineStride.Load())
 		}
