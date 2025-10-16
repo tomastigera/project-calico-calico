@@ -42,8 +42,11 @@ endif
 
 # Configuration for Semaphore/Github integration.  This needs to be set
 # differently for a forked repo.
-ORGANIZATION = tigera
-GIT_REPO = calico-private
+ORGANIZATION  ?= tigera
+GIT_REPO      ?= calico-private
+
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
 
 # Part of the git remote that is common to git and HTTP representations.
 # Used to auto-detect the right remote.
@@ -61,9 +64,6 @@ BIRD_VERSION=v0.3.3-211-g9111ec3c
 # DEV_REGISTRIES configures the container image registries which are built from this
 # repository.
 DEV_REGISTRIES ?= tigera
-
-# The suffix added to development tags (and, by association, images)
-DEV_TAG_SUFFIX ?= calient-0.dev
 
 # RELEASE_REGISTRIES configures the container images registries which are published to
 # as part of an official release.
@@ -91,10 +91,10 @@ BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
 # The default branch for semaphore
 DEFAULT_BRANCH_OVERRIDE ?= master
-# Default branch prefix for release branches
-RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.
-OPERATOR_BRANCH=master
+OPERATOR_BRANCH       ?= master
+OPERATOR_ORGANIZATION ?= tigera
+OPERATOR_GIT_REPO     ?= operator
 # The manager branch corresponding to this branch.
 MANAGER_BRANCH ?= master
 

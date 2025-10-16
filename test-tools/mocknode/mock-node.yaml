@@ -28,7 +28,7 @@ spec:
                   fieldPath: metadata.namespace
             - name: FIPS_MODE_ENABLED
               value: "false"
-          image: gcr.io/unique-caldron-775/cnx/calico/mock-node:master
+          image: gcr.io/unique-caldron-775/cnx/tigera/mock-node:master
           imagePullPolicy: IfNotPresent
           name: mock-calico-node
           volumeMounts:
