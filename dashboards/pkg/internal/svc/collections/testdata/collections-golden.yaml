@@ -69,6 +69,18 @@
     nested:
     - field: qtype
     - field: rcode
+  - field: client_namespace
+    nested:
+    - field: client_name_aggr
+      nested:
+      - field: qtype
+      - field: rcode
+    - field: qname
+      nested:
+      - field: qtype
+      - field: rcode
+    - field: qtype
+    - field: rcode
   - field: cluster
   - field: end_time
   - field: qname
