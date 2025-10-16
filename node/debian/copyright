@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: calico-node
+Source: https://tigera.io/
+
+Files: *
+Copyright: 2025 Tigera, Inc
+License: Proprietary

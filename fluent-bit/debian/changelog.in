@@ -1,0 +1,5 @@
+@PACKAGE_NAME@ (@VERSION@) @DISTRIBUTION@; urgency=medium
+
+  * Automated build for @DISTRIBUTION@
+
+ -- Tigera Inc <maintainers@tigera.io>  @TIMESTAMP@

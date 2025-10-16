@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DFLB_DEBUG=Off \
+    -DFLB_EXAMPLES=Off \
+    -DFLB_FILTER_LUA=On \
+    -DFLB_FILTER_RECORD_MODIFIER=On \
+    -DFLB_IN_STORAGE_BACKLOG=On \
+    -DFLB_IN_TAIL=On \
+    -DFLB_KAFKA=Off \
+    -DFLB_LUAJIT=On \
+    -DFLB_MINIMAL=On \
+    -DFLB_PROXY_GO=On \
+    -DFLB_RELEASE=On \
+    -DFLB_SHARED_LIB=Off \
+    -DFLB_SQLDB=On \
+    -DFLB_TESTS_INTERNAL=Off \
+    -DFLB_TESTS_RUNTIME=Off \
+    -DFLB_TLS=On \
+    -DFLB_WASM=Off
+
+override_dh_install:
+	dh_install
+
+	mkdir -p debian/calico-fluent-bit/usr/lib/x86_64-linux-gnu/calico-fluent-bit
+	install -D debian/out_linseed.so debian/calico-fluent-bit/usr/lib/x86_64-linux-gnu/calico-fluent-bit/out_linseed.so
+
+	install -m 644 -D debian/record_transformer.lua debian/calico-fluent-bit/etc/calico/calico-fluent-bit/record_transformer.lua
+	install -m 644 -D debian/calico-fluent-bit.env debian/calico-fluent-bit/etc/calico/calico-fluent-bit/calico-fluent-bit.env
+	install -m 644 -D debian/calico-fluent-bit.conf debian/calico-fluent-bit/etc/calico/calico-fluent-bit/calico-fluent-bit.conf
+	install -m 644 -D debian/plugins.conf.debian debian/calico-fluent-bit/etc/calico/calico-fluent-bit/plugins.conf
+	rm -rf debian/calico-fluent-bit/lib
+	rm -rf debian/calico-fluent-bit/usr/include debian/calico-fluent-bit/usr/share debian/calico-fluent-bit/etc/fluent-bit
+	rm -rf debian/calico-fluent-bit/usr/bin/luajit  debian/calico-fluent-bit/usr/lib/*/libluajit.a

@@ -139,8 +139,8 @@ func TestBinaries(t *testing.T) {
 func resolveRPMVersion(t testing.TB, rpmVersion string) string {
 	t.Helper()
 
-	// hack/generate-rpm-version.sh
-	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-rpm-version.sh"), []string{repoRootDir, rpmVersion})
+	// hack/generate-package-version.sh
+	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-package-version.sh"), []string{repoRootDir, "rpm", rpmVersion})
 	if err != nil {
 		t.Fatalf("failed to determine full RPM version for %s: %v", rpmVersion, err)
 	}

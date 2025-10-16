@@ -405,7 +405,7 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 
 # This function replaces the version string in the spec template and builds the rpm package.
 define host_native_rpm_build
-	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(3)))
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) rpm "" $(3)))
 
 	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
 
@@ -415,6 +415,44 @@ define host_native_rpm_build
 				--define "_topdir $$PWD/package/$(1)" \
 				--define "_sourcedir $$PWD" \
 				-ba rhel/$(2).spec'
+endef
+
+define host_native_deb_build
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) deb $(4) $(3)))
+
+	$(eval timestamp := $(shell date -u '+%a, %d %b %Y %H:%M:%S +0000'))
+
+	mkdir -p package/$(1)/$(2)/debian/patches package/$(1)/$(2)/debian/source
+
+	sed -e 's/@VERSION@/$(version)/g' \
+	    -e 's/@DISTRIBUTION@/$(4)/g' \
+	    -e 's/@PACKAGE_NAME@/$(2)/g' \
+	    -e 's/@TIMESTAMP@/$(timestamp)/g' \
+		debian/changelog.in > package/$(1)/$(2)/debian/changelog
+
+	cp *.patch package/$(1)/$(2)/debian/patches/ || true
+	ls *.patch 2>/dev/null > package/$(1)/$(2)/debian/patches/series || echo -n "" > package/$(1)/$(2)/debian/patches/series
+
+	echo "3.0 (quilt)" > package/$(1)/$(2)/debian/source/format
+
+	cp \
+	   debian/control \
+	   debian/copyright \
+	   debian/rules \
+	   debian/$(2).postinst \
+		package/$(1)/$(2)/debian/
+
+	cp \
+	   *.conf \
+	   $(2).env \
+	   $(2).service \
+		package/$(1)/$(2)/debian/
+
+	tar --strip-components=$(5) -C package/$(1)/$(2) -xf $(2).tar.gz
+
+	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
+		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
+			sh -c 'cd package/$(1)/$(2) && debuild -us -uc -b'
 endef
 
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
