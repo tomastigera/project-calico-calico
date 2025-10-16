@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 ARG FLUENTD_UPSTREAM_VERSION
 
@@ -18,7 +18,7 @@ RUN mklink /D c:\ruby c:\ruby34 && \
         gem install elasticsearch-api -v 8.19.0 && \
         gem install elasticsearch-transport -v 7.17.11 && \
         gem install elasticsearch-xpack -v 7.17.11 && \
-        gem install elasticsearch -v 8.19.0 && \
+        gem install elasticsearch -v 8.19.1 && \
         gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && \
         gem install fluent-plugin-elasticsearch -v 6.0.0 && \
         gem install fluent-plugin-prometheus -v 2.2.1 && \
