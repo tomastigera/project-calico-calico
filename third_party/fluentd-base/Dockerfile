@@ -4,7 +4,7 @@ FROM registry.access.redhat.com/ubi9/ubi
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1
-ARG RUBY_VERSION=3.4.5
+ARG RUBY_VERSION=3.4.7
 ARG TARGETARCH
 
 RUN dnf upgrade -y && dnf install -y \
@@ -35,7 +35,7 @@ RUN gem install async -v 2.24.0 && \
 RUN gem install elasticsearch-api -v 8.19.0 && \
        gem install elasticsearch-transport -v 7.17.11 && \
        gem install elasticsearch-xpack -v 7.17.11 && \
-       gem install elasticsearch -v 8.19.0 && \
+       gem install elasticsearch -v 8.19.1 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && \
        gem install fluent-plugin-elasticsearch -v 6.0.0 && \
        gem install fluent-plugin-prometheus -v 2.2.1 && \

@@ -63,6 +63,27 @@ var collectionDNS = Collection{
 				groupBy{field: "rcode"},
 			},
 		},
+		groupBy{
+			field: "client_namespace",
+			nested: []GroupBy{
+				groupBy{
+					field: "client_name_aggr",
+					nested: []GroupBy{
+						groupBy{field: "qtype"},
+						groupBy{field: "rcode"},
+					},
+				},
+				groupBy{
+					field: "qname",
+					nested: []GroupBy{
+						groupBy{field: "qtype"},
+						groupBy{field: "rcode"},
+					},
+				},
+				groupBy{field: "qtype"},
+				groupBy{field: "rcode"},
+			},
+		},
 		groupBy{field: "cluster"},
 		groupBy{field: "end_time"},
 		groupBy{field: "qname"},
