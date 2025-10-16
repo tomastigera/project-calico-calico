@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-package ut
+package ut_test
 
 import (
 	"encoding/json"
