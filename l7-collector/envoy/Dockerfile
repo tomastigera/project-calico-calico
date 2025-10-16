@@ -10,7 +10,7 @@ RUN microdnf upgrade -y && microdnf install -y shadow-utils
 
 FROM envoyproxy/envoy:v1.33.1 AS envoy
 
-FROM quay.io/tigera/envoybinary:d09f1c3f01d046ddcd1a1beb1249a178795d3c49 AS envoybinary
+FROM quay.io/tigera/envoybinary:v1.35.3-e1e533c6fb AS envoybinary
 
 FROM scratch AS source
 
