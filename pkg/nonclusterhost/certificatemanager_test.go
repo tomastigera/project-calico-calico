@@ -75,9 +75,9 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 		Expect(certMan).NotTo(BeNil())
 
 		certMan.k8sClientSet = fakeClientSet
-		isBYO, err := certMan.IsBYO()
+		byo, err := certMan.fetchBYOSecrets()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(isBYO).To(BeFalse())
+		Expect(byo).To(BeNil())
 	})
 
 	Context("certificate validation", func() {
@@ -111,13 +111,13 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			// The certificate created by cryptoutils is valid for 10 years,
 			// so it should be valid even with a 90-day renewal threshold
 			renewalThreshold := 90 * 24 * time.Hour
-			valid, err := certMan.IsCertificateValid(renewalThreshold)
+			valid, err := certMan.isCertificateValid(renewalThreshold)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(valid).To(BeTrue())
 
 			// A very long renewal threshold should invalidate the certificate
 			renewalThreshold = 11 * 365 * 24 * time.Hour
-			valid, err = certMan.IsCertificateValid(renewalThreshold)
+			valid, err = certMan.isCertificateValid(renewalThreshold)
 			Expect(err).To(HaveOccurred())
 			Expect(valid).To(BeFalse())
 		})
@@ -128,7 +128,7 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			renewalThreshold := 9 * 24 * time.Hour
-			valid, err := certMan.IsCertificateValid(renewalThreshold)
+			valid, err := certMan.isCertificateValid(renewalThreshold)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(valid).To(BeFalse())
 		})
@@ -145,7 +145,7 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			renewalThreshold := 9 * 24 * time.Hour
-			valid, err := certMan.IsCertificateValid(renewalThreshold)
+			valid, err := certMan.isCertificateValid(renewalThreshold)
 			Expect(err).To(HaveOccurred())
 			Expect(valid).To(BeFalse())
 		})
@@ -216,15 +216,15 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			certMan.k8sClientSet = fakeClientSet
-			isBYO, err := certMan.IsBYO()
+			byo, err := certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isBYO).To(BeTrue())
+			Expect(byo).NotTo(BeNil())
 
-			Expect(certMan.byo).NotTo(BeNil())
-			Expect(certMan.byo.typhaCA).NotTo(BeNil())
-			Expect(certMan.byo.typhaCA).To(Equal(typhaCA))
-			Expect(certMan.byo.nodeSecret).NotTo(BeNil())
-			Expect(certMan.byo.nodeSecret).To(Equal(nodeSecret))
+			Expect(byo).NotTo(BeNil())
+			Expect(byo.typhaCA).NotTo(BeNil())
+			Expect(byo.typhaCA).To(Equal(typhaCA))
+			Expect(byo.nodeSecret).NotTo(BeNil())
+			Expect(byo.nodeSecret).To(Equal(nodeSecret))
 		})
 
 		It("should detect non-BYO when resources are absent", func() {
@@ -237,9 +237,9 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 			certMan.k8sClientSet = fakeClientSet
 
-			isBYO, err := certMan.IsBYO()
+			byo, err := certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isBYO).To(BeFalse())
+			Expect(byo).To(BeNil())
 
 			// recreate the typha-ca configmap, but delete the node-certs-noncluster-host secret
 			_, err = fakeClientSet.CoreV1().ConfigMaps("tigera-operator").Create(context.TODO(), typhaCA, metav1.CreateOptions{})
@@ -248,9 +248,9 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			err = fakeClientSet.CoreV1().Secrets("tigera-operator").Delete(context.TODO(), "node-certs-noncluster-host", metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			isBYO, err = certMan.IsBYO()
+			byo, err = certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isBYO).To(BeFalse())
+			Expect(byo).To(BeNil())
 		})
 
 		It("should write certificates from BYO resources", func() {
@@ -266,11 +266,11 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			certMan.k8sClientSet = fakeClientSet
-			isBYO, err := certMan.IsBYO()
+			byo, err := certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isBYO).To(BeTrue())
+			Expect(byo).NotTo(BeNil())
 
-			err = certMan.WriteBYOCertificate()
+			err = certMan.writeBYOCertificate(byo)
 			Expect(err).NotTo(HaveOccurred())
 
 			// verify certificate files
@@ -302,11 +302,11 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			certMan.k8sClientSet = fakeClientSet
-			isBYO, err := certMan.IsBYO()
+			byo, err := certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isBYO).To(BeTrue())
+			Expect(byo).NotTo(BeNil())
 
-			err = certMan.WriteBYOCertificate()
+			err = certMan.writeBYOCertificate(byo)
 			Expect(err).NotTo(HaveOccurred())
 			envBytes, err := os.ReadFile(envFilePath)
 			Expect(err).NotTo(HaveOccurred())

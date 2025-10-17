@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,6 @@ type CertificateManager struct {
 
 	k8sClientSet kubernetes.Interface
 
-	byo                     *byo
 	nodeEnvironmentFilePath string
 }
 
@@ -98,49 +98,96 @@ func NewCertificateManager(ctx context.Context, caFile, pkFile, certFile string,
 	}, nil
 }
 
-func (m *CertificateManager) IsBYO() (bool, error) {
+func (m *CertificateManager) MaybeRenewCertificate(renewalThreshold time.Duration) error {
+	valid, err := m.isCertificateValid(renewalThreshold)
+	if err != nil {
+		return err
+	}
+
+	if !valid {
+		logrus.Info("Certificate is not valid or is nearing expiry, attempting to renew")
+
+		if byo, err := m.fetchBYOSecrets(); err != nil {
+			return err
+		} else if byo != nil {
+			// Use BYO certificate.
+			logrus.Info("Using BYO certificate")
+
+			if err := m.writeBYOCertificate(byo); err != nil {
+				return err
+			}
+		} else {
+			// Send a CSR to the Tigera Operator signer to request a new certificate.
+			logrus.Info("Requesting new certificate from Tigera Operator")
+
+			resCh := make(chan error, 1)
+			defer close(resCh)
+
+			go func() {
+				// Rotate private key and request a new certificate when the current certificate is expired.
+				if err := m.requestAndWriteCertificate(); err != nil {
+					resCh <- err
+				}
+				resCh <- nil
+			}()
+
+			select {
+			case err := <-resCh:
+				if err != nil {
+					return err
+				}
+			case <-m.ctx.Done():
+				if err := m.ctx.Err(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (m *CertificateManager) fetchBYOSecrets() (*byo, error) {
 	typhaCA, err := m.k8sClientSet.CoreV1().ConfigMaps(tigeraOperatorNamespace).Get(m.ctx, typhaCAName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return false, nil
+			return nil, nil
 		}
-		return false, err
+		return nil, err
 	}
 
 	secretName := nodeCertSecretName + nonClusterHostSuffix
 	nodeSecret, err := m.k8sClientSet.CoreV1().Secrets(tigeraOperatorNamespace).Get(m.ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return false, nil
+			return nil, nil
 		}
-		return false, err
+		return nil, err
 	}
 
 	secretName = typhaCertSecretName + nonClusterHostSuffix
 	typhaSecret, err := m.k8sClientSet.CoreV1().Secrets(tigeraOperatorNamespace).Get(m.ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return false, nil
+			return nil, nil
 		}
-		return false, err
+		return nil, err
 	}
 
 	typhaCN, typhaURISAN, err := parseCommonNameAndURISAN(typhaSecret)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	m.byo = &byo{
+	return &byo{
 		typhaCA:    typhaCA,
 		nodeSecret: nodeSecret,
 
 		typhaCN:     typhaCN,
 		typhaURISAN: typhaURISAN,
-	}
-	return true, nil
+	}, nil
 }
 
-func (m *CertificateManager) IsCertificateValid(renewalThreshold time.Duration) (bool, error) {
+func (m *CertificateManager) isCertificateValid(renewalThreshold time.Duration) (bool, error) {
 	// Validate both the certificate and CA bundle
 	certs := []string{m.cfg.CertPath, m.cfg.CACertPath}
 	for _, cert := range certs {
@@ -167,7 +214,7 @@ func (m *CertificateManager) IsCertificateValid(renewalThreshold time.Duration) 
 	return true, nil
 }
 
-func (m *CertificateManager) RequestAndWriteCertificate() error {
+func (m *CertificateManager) requestAndWriteCertificate() error {
 	caCertPEM, err := m.requestCABundle()
 	if err != nil {
 		return err
@@ -187,36 +234,6 @@ func (m *CertificateManager) RequestAndWriteCertificate() error {
 		return err
 	}
 
-	return nil
-}
-
-func (m *CertificateManager) WriteBYOCertificate() error {
-	if m.byo == nil {
-		return errors.New("failed to get BYO certificates")
-	}
-
-	// write certificate files to disk
-	if err := os.WriteFile(m.cfg.KeyPath, m.byo.nodeSecret.Data[corev1.TLSPrivateKeyKey], 0600); err != nil {
-		return err
-	}
-	if err := os.WriteFile(m.cfg.CertPath, m.byo.nodeSecret.Data[corev1.TLSCertKey], 0644); err != nil {
-		return err
-	}
-	if err := os.WriteFile(m.cfg.CACertPath, []byte(m.byo.typhaCA.Data["caBundle"]), 0644); err != nil {
-		return err
-	}
-
-	// update environment file
-	if m.byo.typhaCN != "" {
-		if err := m.updateNodeEnvironmentFile("FELIX_TYPHACN", m.byo.typhaCN); err != nil {
-			return err
-		}
-	}
-	if m.byo.typhaURISAN != "" {
-		if err := m.updateNodeEnvironmentFile("FELIX_TYPHAURISAN", m.byo.typhaURISAN); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -283,6 +300,36 @@ func (m *CertificateManager) updateNodeEnvironmentFile(key, value string) error 
 
 	output := strings.Join(lines, "\n") + "\n"
 	return os.WriteFile(m.nodeEnvironmentFilePath, []byte(output), 0644)
+}
+
+func (m *CertificateManager) writeBYOCertificate(byo *byo) error {
+	if byo == nil {
+		return errors.New("failed to get BYO certificates")
+	}
+
+	// write certificate files to disk
+	if err := os.WriteFile(m.cfg.KeyPath, byo.nodeSecret.Data[corev1.TLSPrivateKeyKey], 0600); err != nil {
+		return err
+	}
+	if err := os.WriteFile(m.cfg.CertPath, byo.nodeSecret.Data[corev1.TLSCertKey], 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(m.cfg.CACertPath, []byte(byo.typhaCA.Data["caBundle"]), 0644); err != nil {
+		return err
+	}
+
+	// update environment file
+	if byo.typhaCN != "" {
+		if err := m.updateNodeEnvironmentFile("FELIX_TYPHACN", byo.typhaCN); err != nil {
+			return err
+		}
+	}
+	if byo.typhaURISAN != "" {
+		if err := m.updateNodeEnvironmentFile("FELIX_TYPHAURISAN", byo.typhaURISAN); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func parseCertificate(certPEM []byte) (*x509.Certificate, error) {

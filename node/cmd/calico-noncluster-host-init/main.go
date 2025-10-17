@@ -51,7 +51,7 @@ func main() {
 		logrus.Fatal("TyphaCertFile not found in configuration file")
 	}
 
-	if err := maybeRenewCertificate(caFile, pkFile, certFile); err != nil {
+	if err := renewCertificates(caFile, pkFile, certFile); err != nil {
 		os.Exit(1)
 	}
 
@@ -62,7 +62,7 @@ func main() {
 	os.Exit(0)
 }
 
-func maybeRenewCertificate(caFile, pkFile, certFile string) error {
+func renewCertificates(caFile, pkFile, certFile string) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), *timeout)
 	defer cancel()
 
@@ -72,56 +72,9 @@ func maybeRenewCertificate(caFile, pkFile, certFile string) error {
 		return err
 	}
 
-	valid, err := certManager.IsCertificateValid(*renewalThreshold)
-	if err != nil {
-		logrus.WithError(err).Fatal("Failed to validate certificate")
+	if err := certManager.MaybeRenewCertificate(*renewalThreshold); err != nil {
+		logrus.WithError(err).Fatal("Failed to renew certificates")
 		return err
-	}
-
-	if !valid {
-		logrus.Info("Certificate is not valid or is nearing expiry, attempting to renew")
-
-		isBYO, err := certManager.IsBYO()
-		if err != nil {
-			logrus.WithError(err).Warn("Failed to determine if using BYO certificate, assuming Tigera Operator managed")
-		}
-
-		if !isBYO {
-			// Send a CSR to the Tigera Operator signer to request a new certificate.
-			logrus.Info("Requesting new certificate from Tigera Operator")
-
-			resCh := make(chan error, 1)
-			defer close(resCh)
-
-			go func() {
-				// Rotate private key and request a new certificate when the current certificate is expired.
-				if err := certManager.RequestAndWriteCertificate(); err != nil {
-					resCh <- err
-				}
-				resCh <- nil
-			}()
-
-			select {
-			case err := <-resCh:
-				if err != nil {
-					logrus.WithError(err).Fatal("Failed to obtain certificate")
-					return err
-				}
-			case <-ctx.Done():
-				if err := ctx.Err(); err != nil {
-					logrus.WithError(err).Fatal("Context canceled while obtaining certificate")
-					return err
-				}
-			}
-		} else {
-			// Use BYO certificate.
-			logrus.Info("Using BYO certificate")
-
-			if err := certManager.WriteBYOCertificate(); err != nil {
-				logrus.WithError(err).Fatal("Failed to write BYO certificates")
-				return err
-			}
-		}
 	}
 	return nil
 }
