@@ -34,10 +34,6 @@ CALI_MAP(cali_qos,,
 
 static CALI_BPF_INLINE int qos_enforce_packet_rate(struct cali_tc_ctx *ctx)
 {
-#if !CALI_F_WEP
-		return TC_ACT_UNSPEC;
-#endif
-
 #if CALI_F_INGRESS
 	if (!INGRESS_PACKET_RATE_CONFIGURED) {
 		return TC_ACT_UNSPEC;
