@@ -1,0 +1,191 @@
+title: vX.Y.Z
+release_name: test-release
+note: |
+  Test note
+full_hash: vX.Y.Z-vA.B.C-vD.E.F
+tigera-operator:
+  version: vA.B.C
+  image: tigera/operator
+  registry: quay.io
+components:
+  alertmanager:
+    version: vX.Y.Z
+    image: alertmanager
+  apiserver:
+    version: vX.Y.Z
+    image: apiserver
+  calicoctl:
+    version: vX.Y.Z
+    image: calicoctl
+  calicoq:
+    version: vX.Y.Z
+    image: calicoq
+  compliance-benchmarker:
+    version: vX.Y.Z
+    image: compliance-benchmarker
+  compliance-controller:
+    version: vX.Y.Z
+    image: compliance-controller
+  compliance-reporter:
+    version: vX.Y.Z
+    image: compliance-reporter
+  compliance-server:
+    version: vX.Y.Z
+    image: compliance-server
+  compliance-snapshotter:
+    version: vX.Y.Z
+    image: compliance-snapshotter
+  coreos-alertmanager:
+    version: v0.28.0
+  coreos-prometheus:
+    version: v3.4.1
+  csi:
+    version: vX.Y.Z
+    image: csi
+  csi-node-driver-registrar:
+    version: vX.Y.Z
+    image: node-driver-registrar
+  deep-packet-inspection:
+    version: vX.Y.Z
+    image: deep-packet-inspection
+  dex:
+    version: vX.Y.Z
+    image: dex
+  dikastes:
+    version: vX.Y.Z
+    image: dikastes
+  eck-elasticsearch:
+    version: 8.18.4
+  eck-elasticsearch-operator:
+    version: 2.16.0
+  eck-kibana:
+    version: 8.18.4
+  egress-gateway:
+    version: vX.Y.Z
+    image: egress-gateway
+  elastic-tsee-installer:
+    version: vX.Y.Z
+    image: intrusion-detection-job-installer
+  elasticsearch:
+    version: vX.Y.Z
+    image: elasticsearch
+  elasticsearch-metrics:
+    version: vX.Y.Z
+    image: elasticsearch-metrics
+  elasticsearch-operator:
+    version: vX.Y.Z
+    image: eck-operator
+  envoy:
+    version: vX.Y.Z
+    image: envoy
+  es-gateway:
+    version: vX.Y.Z
+    image: es-gateway
+  firewall-integration:
+    version: vX.Y.Z
+    image: firewall-integration
+  flexvol:
+    version: vX.Y.Z
+    image: pod2daemon-flexvol
+  fluentd:
+    version: vX.Y.Z
+    image: fluentd
+  fluentd-windows:
+    version: vX.Y.Z
+    image: fluentd-windows
+  gateway-api-envoy-gateway:
+    version: vX.Y.Z
+    image: envoy-gateway
+  gateway-api-envoy-proxy:
+    version: vX.Y.Z
+    image: envoy-proxy
+  gateway-api-envoy-ratelimit:
+    version: vX.Y.Z
+    image: envoy-ratelimit
+  gateway-l7-collector:
+    version: vX.Y.Z
+    image: gateway-l7-collector
+  guardian:
+    version: vX.Y.Z
+    image: guardian
+  ingress-collector:
+    version: vX.Y.Z
+    image: ingress-collector
+  intrusion-detection-controller:
+    version: vX.Y.Z
+    image: intrusion-detection-controller
+  key-cert-provisioner:
+    version: vX.Y.Z
+    image: key-cert-provisioner
+  kibana:
+    version: vX.Y.Z
+    image: kibana
+  kube-controllers:
+    version: vX.Y.Z
+    image: kube-controllers
+  l7-admission-controller:
+    version: vX.Y.Z
+    image: l7-admission-controller
+  l7-collector:
+    version: vX.Y.Z
+    image: l7-collector
+  license-agent:
+    version: vX.Y.Z
+    image: license-agent
+  linseed:
+    version: vX.Y.Z
+    image: linseed
+  manager:
+    version: vD.E.F
+    image: manager
+  node:
+    version: vX.Y.Z
+    image: node
+  node-windows:
+    version: vX.Y.Z
+    image: node-windows
+  packetcapture:
+    version: vX.Y.Z
+    image: packetcapture
+  policy-recommendation:
+    version: vX.Y.Z
+    image: policy-recommendation
+  prometheus:
+    version: vX.Y.Z
+    image: prometheus
+  prometheus-config-reloader:
+    version: vX.Y.Z
+    image: prometheus-config-reloader
+  prometheus-operator:
+    version: vX.Y.Z
+    image: prometheus-operator
+  queryserver:
+    version: vX.Y.Z
+    image: queryserver
+  tigera-cni:
+    version: vX.Y.Z
+    image: cni
+  tigera-cni-windows:
+    version: vX.Y.Z
+    image: cni-windows
+  tigera-prometheus-service:
+    version: vX.Y.Z
+    image: prometheus-service
+  typha:
+    version: vX.Y.Z
+    image: typha
+  ui-apis:
+    version: vX.Y.Z
+    image: ui-apis
+  voltron:
+    version: vX.Y.Z
+    image: voltron
+  waf-http-filter:
+    version: vX.Y.Z
+    image: waf-http-filter
+  webhooks-processor:
+    version: vX.Y.Z
+    image: webhooks-processor
+calico:
+  minor_version: vF.G
+  archive_path: archive

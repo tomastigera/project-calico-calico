@@ -25,13 +25,17 @@ import (
 const managerComponent = "manager"
 
 var (
-	operatorExcludedComponents = []string{
-		"coreos-config-reloader",
-		"coreos-dex",
-		"upstream-fluentd",
-		"coreos-prometheus-operator",
+	// Components to be included for operator pinned_components.yaml
+	// even if they do not produce images.
+	operatorIncludedComponents = []string{
+		"eck-elasticsearch",
+		"eck-elasticsearch-operator",
+		"eck-kibana",
+		"coreos-alertmanager",
+		"coreos-prometheus",
 	}
-	noEntepriseImageComponents = []string{
+	// Components that do not produce images.
+	noEnterpriseImageComponents = []string{
 		"calico-private",
 		"manager-proxy",
 		"coreos-alertmanager",
@@ -74,38 +78,23 @@ type EnterprisePinnedVersion struct {
 }
 
 // GetComponentImageNames returns a list of Enterprise images that are part of the pinned version.
-// It excludes Tigera operator and components that do not produce images or are not built by Tigera.
-func (p *EnterprisePinnedVersion) GetComponentImageNames() []string {
+// It excludes components that do not produce images or are not built by Tigera
+// and Tigera operator itself unless includeOperator is true.
+func (p *EnterprisePinnedVersion) GetComponentImageNames(includeOperator bool) []string {
 	componentNames := make([]string, 0)
-	for name, component := range p.Components {
-		img := registry.EnterpriseImageMap[name]
-		if img == "" {
-			img = component.Image
-		}
-		if img == "" {
-			img = name
-		}
-		switch {
-		case utils.Contains(noEntepriseImageComponents, name),
-			strings.Contains(img, p.TigeraOperator.Image):
-			continue
-		default:
-			componentNames = append(componentNames, img)
-		}
+	for _, component := range p.ImageComponents(includeOperator) {
+		componentNames = append(componentNames, component.Image)
 	}
 	return componentNames
 }
 
-func (p *EnterprisePinnedVersion) ImageComponents() map[string]registry.Component {
-	components := p.Components
-	operator := registry.OperatorComponent{Component: p.TigeraOperator}
-	components[operator.Image] = operator.Component
-	initImage := operator.InitImage()
-	components[initImage.Image] = operator.InitImage()
-	for name, component := range components {
-		// Remove components that do not produce images.
-		if utils.Contains(noEntepriseImageComponents, name) {
-			delete(components, name)
+// ImageComponents returns a map of all components that produce images
+// including Tigera operator and its init image if includeOperator is true.
+func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[string]registry.Component {
+	components := make(map[string]registry.Component)
+	for name, component := range p.Components {
+		// Skip components that do not produce images.
+		if slices.Contains(noEnterpriseImageComponents, name) {
 			continue
 		}
 		img := registry.EnterpriseImageMap[name]
@@ -115,6 +104,11 @@ func (p *EnterprisePinnedVersion) ImageComponents() map[string]registry.Componen
 			component.Image = name
 		}
 		components[name] = component
+	}
+	if includeOperator {
+		for name, component := range p.operatorComponents() {
+			components[name] = component
+		}
 	}
 	return components
 }
@@ -170,10 +164,6 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	calicoMajorMinor := fmt.Sprintf("%s.%s", parts[0], parts[1])
 
 	versionData := version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
-	tmpl, err := template.New("pinnedversion").Parse(enterpriseTemplate)
-	if err != nil {
-		return nil, err
-	}
 	tmplData := &enterpriseTemplateData{
 		calicoTemplateData: calicoTemplateData{
 			ReleaseName:    releaseName,
@@ -193,13 +183,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 		CalicoMinorVersion: calicoMajorMinor,
 		ManagerVersion:     managerVer,
 	}
-	logrus.WithField("file", pinnedVersionPath).Info("Generating pinned version file")
-	pinnedVersionFile, err := os.Create(pinnedVersionPath)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = pinnedVersionFile.Close() }()
-	if err := tmpl.Execute(pinnedVersionFile, tmplData); err != nil {
+	if err := generateEnterprisePinnedVersionFile(tmplData, p.Dir); err != nil {
 		return nil, err
 	}
 
@@ -214,6 +198,25 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	}
 
 	return versionData, nil
+}
+
+func generateEnterprisePinnedVersionFile(data *enterpriseTemplateData, outputDir string) error {
+	tmpl, err := template.New("pinnedversion").Parse(enterpriseTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to parse enterprise pinned version template: %w", err)
+	}
+	pinnedVersionPath := PinnedVersionFilePath(outputDir)
+	logrus.WithField("file", pinnedVersionPath).Info("Generating pinned version file")
+	pinnedVersionFile, err := os.Create(pinnedVersionPath)
+	if err != nil {
+		return fmt.Errorf("failed to create pinned version file: %w", err)
+	}
+	defer func() { _ = pinnedVersionFile.Close() }()
+	if err := tmpl.Execute(pinnedVersionFile, data); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+	logrus.WithField("file", pinnedVersionPath).Debug("Pinned version file generated successfully")
+	return nil
 }
 
 // retrieveEnterprisePinnedVersion retrieves the pinned version from the pinned version file.
@@ -248,23 +251,14 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 		return op, "", err
 	}
 
-	for name, component := range pinnedVersion.Components {
-		// Remove components that are not part of the operator.
-		if slices.Contains(operatorExcludedComponents, name) {
-			delete(pinnedVersion.Components, name)
-			continue
+	components := pinnedVersion.ImageComponents(false)
+	// Include components that do not produce images but are required by the operator.
+	for _, name := range operatorIncludedComponents {
+		if component, ok := pinnedVersion.Components[name]; ok {
+			components[name] = component
 		}
-		if component.Image == "" {
-			img := registry.EnterpriseImageMap[name]
-			if img != "" {
-				component.Image = fmt.Sprintf("%s/%s", registry.TigeraNamespace, img)
-			} else if component.Version == pinnedVersion.Title || strings.HasPrefix(name, managerComponent) {
-				component.Image = fmt.Sprintf("%s/%s", registry.TigeraNamespace, name)
-			}
-		}
-		pinnedVersion.Components[name] = component
 	}
-
+	pinnedVersion.Components = components
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
 	operatorComponentsFile, err := os.Create(operatorComponentsFilePath)
 	if err != nil {
@@ -321,12 +315,14 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}, nil
 }
 
+// RetrieveEnterpriseImageComponents retrieves all components from the pinned version file
+// that produce images including Tigera operator and its init image.
 func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Component, error) {
 	pinnedVersion, err := retrieveEnterprisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
 	}
-	return pinnedVersion.ImageComponents(), nil
+	return pinnedVersion.ImageComponents(true), nil
 }
 
 func LoadEnterpriseHashreleaseFromRemote(hashreleaseName, outputDir, repoRootDir string) (*hashreleaseserver.EnterpriseHashrelease, error) {

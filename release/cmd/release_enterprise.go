@@ -288,7 +288,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				calico.WithOutputDir(releaseOutputDir(cfg.RepoRootDir, versions.Title)),
 				calico.WithTmpDir(cfg.TmpDir),
-				calico.WithComponents(versions.ImageComponents()),
+				calico.WithComponents(versions.ImageComponents(true)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 			}
 			if len(registries) > 0 {
@@ -355,7 +355,7 @@ func enterpriseReleaseValidationSubCommand(cfg *Config) *cli.Command {
 				fmt.Sprintf("-operator-version=%s", versions.TigeraOperator.Version),
 				fmt.Sprintf("-skip-operator=%t", c.Bool(skipImageValidationFlag.Name)),
 				fmt.Sprintf("-chart-version=%s", versions.HelmRelease),
-				fmt.Sprintf("-images=%s", strings.Join(versions.GetComponentImageNames(), " ")),
+				fmt.Sprintf("-images=%s", strings.Join(versions.GetComponentImageNames(false), " ")),
 				fmt.Sprintf("-skip-images=%t", c.Bool(skipImageValidationFlag.Name)),
 			}
 			if v := c.String(githubTokenFlag.Name); v != "" {

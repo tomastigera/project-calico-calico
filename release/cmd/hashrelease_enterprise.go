@@ -113,6 +113,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithOperatorDirectory(operatorDir),
 				operator.WithReleaseBranchPrefix(c.String(operatorReleaseBranchPrefixFlag.Name)),
 				operator.WithDevTagIdentifier(c.String(operatorDevTagSuffixFlag.Name)),
+				operator.WithImage(c.String(operatorImageFlag.Name)),
 				operator.IsHashRelease(),
 				operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 				operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
@@ -138,6 +139,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			calicoOpts := []calico.Option{
 				calico.WithVersion(data.ProductVersion()),
 				calico.WithOperator(c.String(operatorRegistryFlag.Name), c.String(operatorImageFlag.Name), data.OperatorVersion()),
+				calico.WithOperatorGit(c.String(operatorOrgFlag.Name), c.String(operatorRepoFlag.Name), c.String(operatorBranchFlag.Name)),
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 				calico.IsHashRelease(),

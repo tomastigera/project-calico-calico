@@ -84,6 +84,7 @@ ${HELM} -n tigera-operator template \
   --set tigeraOperator.image=$OPERATOR_IMAGE \
   --set tigeraOperator.version=$OPERATOR_VERSION \
   --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+  --set calicoctl.image=$REGISTRY/calicoctl \
   --set calicoctl.tag=$CALICO_VERSION \
   ../charts/tigera-operator >>tigera-operator.yaml
 
@@ -108,6 +109,7 @@ for FILE in $VALUES_FILES; do
     --set tigeraOperator.image=$OPERATOR_IMAGE \
     --set tigeraOperator.version=$OPERATOR_VERSION \
     --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+    --set calicoctl.image=$REGISTRY/calicoctl \
     --set calicoctl.tag=$CALICO_VERSION \
     --include-crds \
     --no-hooks \
