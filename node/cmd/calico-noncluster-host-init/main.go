@@ -15,9 +15,14 @@ import (
 	"github.com/projectcalico/calico/pkg/nonclusterhost"
 )
 
+const (
+	defaultFelixConfig      = "/etc/calico/calico-node/calico-node.conf"
+	nodeEnvironmentFilePath = "/etc/calico/calico-node/calico-node.env"
+)
+
 var flagSet = flag.NewFlagSet("CalicoNonClusterHostInit", flag.ContinueOnError)
 
-var felixConfig = flagSet.String("felix-config", "/etc/calico/calico-node/calico-node.conf", "Path to the Felix config file")
+var felixConfig = flagSet.String("felix-config", defaultFelixConfig, "Path to the Felix config file")
 var renewalThreshold = flagSet.Duration("renewal-threshold", 90*24*time.Hour, "Threshold for certificate renewal")
 var timeout = flagSet.Duration("timeout", 3*time.Minute, "Timeout for the certificate request")
 
@@ -46,7 +51,7 @@ func main() {
 		logrus.Fatal("TyphaCertFile not found in configuration file")
 	}
 
-	if err := maybeRenewCertificate(caFile, pkFile, certFile); err != nil {
+	if err := renewCertificates(caFile, pkFile, certFile); err != nil {
 		os.Exit(1)
 	}
 
@@ -57,41 +62,19 @@ func main() {
 	os.Exit(0)
 }
 
-func maybeRenewCertificate(caFile, pkFile, certFile string) error {
+func renewCertificates(caFile, pkFile, certFile string) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), *timeout)
 	defer cancel()
 
-	resCh := make(chan error, 1)
-	defer close(resCh)
+	certManager, err := nonclusterhost.NewCertificateManager(ctx, caFile, pkFile, certFile, nodeEnvironmentFilePath)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create certificate manager")
+		return err
+	}
 
-	go func() {
-		certManager, err := nonclusterhost.NewCertificateManager(ctx, caFile, pkFile, certFile)
-		if err != nil {
-			resCh <- err
-			return
-		}
-
-		certValid, err := certManager.IsCertificateValid(*renewalThreshold)
-		if err != nil || !certValid {
-			// Rotate private key and request a new certificate when the current certificate is expired.
-			if err := certManager.RequestAndWriteCertificate(); err != nil {
-				resCh <- err
-			}
-		}
-		resCh <- nil
-	}()
-
-	select {
-	case err := <-resCh:
-		if err != nil {
-			logrus.WithError(err).Fatal("Failed to obtain certificate")
-			return err
-		}
-	case <-ctx.Done():
-		if err := ctx.Err(); err != nil {
-			logrus.WithError(err).Fatal("Context canceled while obtaining certificate")
-			return err
-		}
+	if err := certManager.MaybeRenewCertificate(*renewalThreshold); err != nil {
+		logrus.WithError(err).Fatal("Failed to renew certificates")
+		return err
 	}
 	return nil
 }
