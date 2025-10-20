@@ -3,8 +3,13 @@ This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
 go 1.25.3
+<<<<<<< HEAD
 cel.dev/expr v0.20.0
 cloud.google.com/go v0.121.0
+=======
+cel.dev/expr v0.24.0
+cloud.google.com/go v0.120.0
+>>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 cloud.google.com/go/auth v0.16.1
 cloud.google.com/go/auth/oauth2adapt v0.2.8
 cloud.google.com/go/compute v1.38.0
