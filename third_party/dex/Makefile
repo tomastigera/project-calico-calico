@@ -33,6 +33,7 @@ $(DEX_DOWNLOADED):
 	curl -sfL https://github.com/dexidp/dex/archive/refs/tags/$(DEX_VERSION).tar.gz | tar xz --strip-components 1 -C dex
 	patch -d dex -p1 < patches/0001-Remove-unused-code-that-requires-code-generation.patch
 	patch -d dex -p1 < patches/0002-Dex-CVE-patch.patch
+	patch -d dex -p1 < patches/0003-fix-storage-kubernetes-Only-wrap-IPv6-addresses-in-b.patch
 	touch $@
 
 .PHONY: dex/bin/dex-$(ARCH)
