@@ -1,7 +1,5 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -20,9 +18,8 @@ func doRequest(method, url string, headers map[string]string, body []byte) (*htt
 		req.Header.Set(k, v)
 	}
 
-	res := &http.Response{}
 	client := http.DefaultClient
-	res, err = client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
