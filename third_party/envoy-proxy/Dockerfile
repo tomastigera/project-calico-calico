@@ -5,7 +5,7 @@ ARG ENVOYBINARY_IMAGE
 ARG UBI_IMAGE
 
 FROM ${ENVOYBINARY_IMAGE} AS envoybinary
-ADD nsswitch.conf /etc/nsswitch.conf
+ADD ./nsswitch.conf /etc/nsswitch.conf
 
 FROM ${UBI_IMAGE} AS ubi
 
