@@ -27,18 +27,18 @@ CODEOWNERS @tigera/codeowners-reviewers
 /lib/**                     @tigera/oss-merge-queue-reviewers
 /libcalico-go/**            @tigera/oss-merge-queue-reviewers @tigera/ev-team
 /licenses/**                @tigera/oss-merge-queue-reviewers
-/manifests/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/manifests/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
 /networking-calico/**       @tigera/oss-merge-queue-reviewers
 /node/**                    @tigera/oss-merge-queue-reviewers
 /pkg/**                     @tigera/oss-merge-queue-reviewers
 /pod2daemon/**              @tigera/oss-merge-queue-reviewers @tigera/ev-team
 /process/**                 @tigera/oss-merge-queue-reviewers
-/release/**                 @tigera/oss-merge-queue-reviewers
+/release/**                 @tigera/oss-merge-queue-reviewers @tigera/release-team
 /test-tools/mocknode/**     @tigera/oss-merge-queue-reviewers
 /third_party/envoy-*        @tigera/oss-merge-queue-reviewers
 /typha/**                   @tigera/oss-merge-queue-reviewers
 /whisker/**                 @tigera/oss-merge-queue-reviewers
 /whisker-backend/**         @tigera/oss-merge-queue-reviewers
 
-/metadata.mk                @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/lib.Makefile               @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/metadata.mk                @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
+/lib.Makefile               @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
