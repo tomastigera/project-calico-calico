@@ -780,7 +780,8 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 		createWorkloadDirectory := func(tempDir string, wl *workload.Workload) (string, string) {
 			dirName := dirNameForWorkload(wl)
 			hostWlDir := filepath.Join(tempDir, dirName)
-			os.MkdirAll(hostWlDir, 0777)
+			err := os.MkdirAll(hostWlDir, 0777)
+			Expect(err).NotTo(HaveOccurred())
 			return hostWlDir, filepath.Join("/var/run/calico/policysync", dirName)
 		}
 
@@ -864,10 +865,8 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 
 				createWorkloadConn := func(i int) (*grpc.ClientConn, proto.PolicySyncClient) {
 					var opts []grpc.DialOption
-					opts = append(opts, grpc.WithInsecure())
-					opts = append(opts, grpc.WithDialer(func(target string, timeout time.Duration) (net.Conn, error) {
-						return net.DialTimeout("unix", target, timeout)
-					}))
+					opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+					opts = append(opts, grpc.WithContextDialer(unixDialer))
 					var conn *grpc.ClientConn
 					conn, err = grpc.NewClient(hostWlSocketPath[i], opts...)
 					Expect(err).NotTo(HaveOccurred())

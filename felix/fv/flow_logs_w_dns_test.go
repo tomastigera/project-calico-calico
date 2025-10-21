@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package fv_test
@@ -132,11 +129,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		tier.Name = "tier1"
 		tier.Spec.Order = &float1_0
 		_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
 
 		tier = api.NewTier()
 		tier.Name = "tier2"
 		tier.Spec.Order = &float2_0
 		_, err = client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
 
 		// Add two global network sets one for the two different domains.
 		gns := api.NewGlobalNetworkSet()
@@ -520,7 +519,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 
 			errs := []string{}
 			// Track all errors before failing
-			flowTester.IterFlows(func(flowLog flowlog.FlowLog) error {
+			_ = flowTester.IterFlows(func(flowLog flowlog.FlowLog) error {
 				if flowLog.SrcMeta.Type == "wep" && flowLog.DstMeta.Type == "net" && flowLog.DstMeta.AggregatedName == "pub" {
 					log.Debugf("FlowLog: %#v", flowLog)
 					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep1_1.Name) {

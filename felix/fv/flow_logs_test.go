@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package fv_test
@@ -557,8 +554,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "dst", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; source %s; flow 1: %v", source.Name, err))
@@ -568,7 +565,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 							{}, // ""
 						})
 					if err != nil {
@@ -581,8 +578,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					flowlogs.NoService, 3, 1,
 					[]flowlogs.ExpectedPolicy{
-						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-						{"dst", "allow", []string{"0|default|default.gnp-1|allow|0"}},
+						{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "dst", Action: "allow", Policies: []string{"0|default|default.gnp-1|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow hep: %v", err))
@@ -595,7 +592,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -604,7 +601,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -617,8 +614,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "dst", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; source %s; flow 1: %v", source.Name, err))
@@ -628,7 +625,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 							{},
 						})
 					if err != nil {
@@ -641,8 +638,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					flowlogs.NoService, 1, 3,
 					[]flowlogs.ExpectedPolicy{
-						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-						{"dst", "allow", []string{"0|default|default.gnp-1|allow|0"}},
+						{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "dst", Action: "allow", Policies: []string{"0|default|default.gnp-1|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; hep: %v", err))
@@ -655,7 +652,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -664,7 +661,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -676,7 +673,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"wep default - wl-host2-*", "",
 					flowlogs.NoService, 1, 24,
 					[]flowlogs.ExpectedPolicy{
-						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						{}, // ""
 					})
 				if err != nil {
@@ -688,7 +685,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					flowlogs.NoService, 1, 12,
 					[]flowlogs.ExpectedPolicy{
 						{}, // ""
-						{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "dst", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
@@ -697,8 +694,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				var policies []flowlogs.ExpectedPolicy
 
 				policies = []flowlogs.ExpectedPolicy{
-					{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-					{"dst", "allow", []string{"0|default|default.gnp-1|allow|0"}},
+					{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+					{Reporter: "dst", Action: "allow", Policies: []string{"0|default|default.gnp-1|allow|0"}},
 				}
 
 				err = flowTester.CheckFlow(
@@ -716,7 +713,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -725,7 +722,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", Policies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -742,7 +739,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"dst", "deny", []string{"0|default|default/default.np-1|deny|0"}},
+							{Reporter: "dst", Action: "deny", Policies: []string{"0|default|default/default.np-1|deny|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for denied; agg none: %v", err))
@@ -756,7 +753,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{"dst", "deny", []string{"0|default|default/default.np-1|deny|0"}},
+							{Reporter: "dst", Action: "deny", Policies: []string{"0|default|default/default.np-1|deny|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for denied; agg source port: %v", err))
@@ -769,7 +766,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					flowlogs.NoService, 1, 12,
 					[]flowlogs.ExpectedPolicy{
 						{}, // ""
-						{"dst", "deny", []string{"0|default|default/default.np-1|deny|0"}},
+						{Reporter: "dst", Action: "deny", Policies: []string{"0|default|default/default.np-1|deny|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
@@ -1338,7 +1335,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		ep2_3.ConfigureInInfra(infra)
 
 		// Create a workload on host 2.
-		var heps []api.HostEndpoint
 		for _, f := range tc.Felixes {
 			hep, err := createHEP(f, client, interfaceName)
 			Expect(err).NotTo(HaveOccurred())
@@ -1346,7 +1342,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 				return verifyHostEndpointRules(f, bpfEnabled)
 			}, "30s", "1s").Should(BeNil(), "HostEndpoint rules were not correctly configured within timeout period")
 			logrus.Infof("Created host endpoint %+v", hep)
-			heps = append(heps, *hep)
 		}
 
 		// Create tiers tier1, and tier2.
@@ -1942,6 +1937,7 @@ var _ = infrastructure.DatastoreDescribe(
 				tier.Name = "tier1"
 				tier.Spec.Order = &float1_0
 				_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
 
 				// Create a policy with preDNAT that allows all traffic to the host endpoint.
 				gnpPreDnatAllow := api.NewGlobalNetworkPolicy()

@@ -5661,24 +5661,6 @@ func k8sService(name, clusterIP string, w *workload.Workload, port,
 	}
 }
 
-func k8sServiceEndpoints(serviceName string, tgtIP string, tgtPort int, protocol string) *v1.Endpoints {
-	k8sProto := v1.ProtocolTCP
-	if protocol == "udp" {
-		k8sProto = v1.ProtocolUDP
-	}
-
-	return &v1.Endpoints{
-		TypeMeta:   typeMetaV1("Endpoints"),
-		ObjectMeta: objectMetaV1(serviceName),
-		Subsets: []v1.EndpointSubset{
-			{
-				Addresses: []v1.EndpointAddress{{IP: tgtIP}},
-				Ports:     []v1.EndpointPort{{Name: fmt.Sprintf("port-%d", tgtPort), Port: int32(tgtPort), Protocol: k8sProto}},
-			},
-		},
-	}
-}
-
 func k8sLBService(name, clusterIP string, wname string, port,
 	tgtPort int, protocol string, externalIPs, srcRange []string,
 ) *v1.Service {

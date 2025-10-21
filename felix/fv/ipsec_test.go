@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package fv_test

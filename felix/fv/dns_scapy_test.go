@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package fv_test
@@ -942,14 +939,19 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			// we need to use normal Linux sending instead of scapy's send function, as
 			// the latter bypasses iptables.  We just use scapy to build the DNS
 			// payload.
-			io.WriteString(scapy.Stdin,
+			_, err := io.WriteString(scapy.Stdin,
 				fmt.Sprintf("dns = %v\n", dnsSpec))
-			io.WriteString(scapy.Stdin, "import socket\n")
-			io.WriteString(scapy.Stdin, "sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n")
-			io.WriteString(scapy.Stdin,
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.WriteString(scapy.Stdin, "import socket\n")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.WriteString(scapy.Stdin, "sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.WriteString(scapy.Stdin,
 				fmt.Sprintf("sock.bind(('%v', 53))\n", tc.Felixes[0].IP))
-			io.WriteString(scapy.Stdin,
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.WriteString(scapy.Stdin,
 				fmt.Sprintf("sock.sendto(dns.__bytes__(), ('%v', 53))\n", w[0].IP))
+			Expect(err).NotTo(HaveOccurred())
 		}
 	}
 

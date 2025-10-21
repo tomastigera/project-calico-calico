@@ -1988,7 +1988,9 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 
 							if overlap == OverlapTestType_ConnectDisconnect {
 								_, err = state[localCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), remoteRCC.Name, options.DeleteOptions{})
+								Expect(err).NotTo(HaveOccurred())
 								_, err = state[remoteCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), localRCC.Name, options.DeleteOptions{})
+								Expect(err).NotTo(HaveOccurred())
 							}
 						})
 
@@ -2045,7 +2047,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Support
 								for _, felix := range state[cluster].tc.Felixes {
 									Eventually(func() string {
 										return getWireguardRoutingRule(felix, ipVersion)
-									}, "10s", "100ms").Should(MatchRegexp(fmt.Sprintf("\\d+:\\s+not from all fwmark 0x\\d+/0x\\d+ lookup \\d+")))
+									}, "10s", "100ms").Should(MatchRegexp(`\d+:\s+not from all fwmark 0x\d+/0x\d+ lookup \d+`))
 								}
 							}
 
