@@ -1,7 +1,5 @@
 // Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv
 
 import (
@@ -130,7 +128,7 @@ func RunOiler(t *testing.T, args OilerArgs) *containers.Container {
 
 	name := "tigera-oiler-fv"
 
-	c := containers.Run(name, containers.RunOpts{RunAndExit: false, AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c := containers.Run(name, containers.RunOpts{RunAndExit: false, AutoRemove: true, OutputWriter: logutils.TestingTWriter{T: t}}, dockerArgs...)
 	return c
 }
 

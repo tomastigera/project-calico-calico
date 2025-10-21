@@ -1,7 +1,5 @@
 // Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv
 
 import (
