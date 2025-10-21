@@ -81,10 +81,12 @@ var (
 		Sources: cli.EnvVars("DEV_TAG_SUFFIX"),
 		Value:   "calient-0.dev",
 	}
-	publishBranchFlag = &cli.BoolFlag{
+
+	gitPublishFlag = &cli.BoolFlag{
 		Name:    "git-publish",
-		Aliases: []string{"publish-branch"},
-		Usage:   "Push branch git. If false, all changes are local.",
+		Aliases: []string{"publish-git"},
+		Usage:   "Push git changes to remote. If false, all changes are local.",
+		Sources: cli.EnvVars("PUBLISH_GIT"),
 		Value:   true,
 	}
 	newBranchFlag = &cli.StringFlag{

@@ -44,60 +44,25 @@ unless... :index_pointing_at_the_viewer:
 Follow these instructions for cutting new branch in both `tigera/calico-private` and `tigera/manager`.
 For `tigera/operator` follow ["Preparing a new release branch"](https://github.com/tigera/operator/blob/master/RELEASING.md#preparing-a-new-release-branch) steps outlined in Tigera Operator `RELEASING.md`.
 
-1. Checkout the latest master branch for calico-private (and manager)
+```sh
+make create-release-branch
+```
 
-    ```sh
-    git fetch <remote>
-    git switch -f -C master --track <remote>/master
-    ```
+This will create a new branch named `release-calico-vX.Y` in `tigera/calico-private` and `tigera/manager`
+where `X.Y` is the release stream for the release branch.
 
-1. Create new branch
+> [!NOTE]
+> While `vX.Y` is used as the release stream above, for EP1 branch cut, the branch will be named `release-calico-vX.Y-1`.
 
-    ```sh
-    git checkout -b release-calient-vX.Y # if EP1 for vX.Y this should be git checkout -b release-calient-vX.Y-1
-    ```
-
-1. Update files to use new release branch(es) instead of master.
-
-      > [!CAUTION]
-      > This is only for c`tigera/calico-private`, skip for `tigera/manager`
-
-   1. Update `OPERATOR_BRANCH` and `DEFAULT_BRANCH_OVERRIDE` in `metadata.mk`
-   2. Run generation
-
-      ```sh
-      make generate
-      ```
-
-   3. Commit your changes
-
-      ```sh
-      git add .
-      git commit -m "Updates for release-vX.Y'
-      ```
-
-   4. Push your changes
-
-      ```sh
-      git push <remote> release-vX.Y
-      ```
-
-2. Create an empty commit and tag in master
-
-    ```sh
-    git checkout <remote>/master
-    git commit --allow-empty -m "Start development for vX.(Y+1)" # After cutting EP1, this will be git commit --allow-empty -m "Start development for vX.(Y+1)"
-    git tag vX.(Y+1).0-calient-0.dev # git tag xX.Y.0-2.0-calient-0.dev
-    git push <remote> master
-    git push <remote> vX.(Y+1).0-calient-0.dev # git push <remote> xX.Y.0-2.0-calient-0.dev
-    ```
 
 ### Code thaw
 
 Add a message to the thread for the code freeze message from [earlier](#code-freeze) that the codes are unfrozen.
 
   > [!IMPORTANT]
-  > Ensure the checkbox for "Also send to #eng-eng" is selected
+  >
+  > - Ensure the checkbox for "Also send to #eng-eng" is selected
+  > - Update the message to `vX.Y-1` for EP1 branch cut.
 
 ```md
 code freeze over! :melting_face:
@@ -111,12 +76,12 @@ All Operator changes for Enterprise vX.Y should be committed to master branch an
   > [!CAUTION]
   > Wait for `tigera/calico-private` and `tigera/manager` to have published images from the release branch before completing step 2.
 
-1. Add a new task in [Semaphore project](https://tigera.semaphoreci.com/projects/calico-private/schedulers)
+1. Add a new task in [calico-private Semaphore project](https://tigera.semaphoreci.com/projects/calico-private/schedulers)
 
     > [!TIP]
-    > Use any of the "hashrelease: <BRANCH>" task as a template.
     >
-    > The other hashrelease tasks might also need their schedules updated.
+    > - Use any of the "hashrelease: RELEASE_STREAM" task as a template.
+    > - Adjust the schedule for this and other hashrelease tasks as needed.
 
 2. Hit "Run Now" and ensure the pipeline passes.
 

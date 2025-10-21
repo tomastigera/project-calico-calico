@@ -85,17 +85,20 @@ func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
 	return nil
 }
 
-func (b *BranchManager) retagThirdPartyBaseImages(stream string) error {
-	releaseBranchName := fmt.Sprintf("%s-%s", b.releaseBranchPrefix, stream)
-	logrus.WithField("branch", releaseBranchName).Info("retagging third-party base images")
+func (b *BranchManager) retagThirdPartyBaseImages(branch string) error {
+	logrus.WithField("branch", branch).Info("retagging third-party base images")
 
 	args := []string{"release-retag-third-party-base-images"}
 	envs := append(os.Environ(),
-		fmt.Sprintf("RELEASE_BRANCH=%s", releaseBranchName),
-		"CONFIRM=true",
+		fmt.Sprintf("RELEASE_BRANCH=%s", branch),
 	)
+	if b.publish {
+		envs = append(envs, "CONFIRM=true")
+	} else {
+		envs = append(envs, "DRYRUN=true")
+	}
 
-	if _, err := command.Make(args, envs); err != nil {
+	if _, err := command.MakeInDir(b.repoRoot, args, envs); err != nil {
 		return err
 	}
 	return nil

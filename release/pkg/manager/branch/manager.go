@@ -26,6 +26,7 @@ import (
 
 type RepoManager interface {
 	SetupReleaseBranch(branch string) error
+	UpdateMainBranch(releaseBranchStream string) error
 }
 
 type BranchManager struct {
@@ -119,9 +120,16 @@ func (b *BranchManager) CutVersionedBranch(stream string) error {
 			return fmt.Errorf("failed to set up release branch: %s", err)
 		}
 	}
+
 	if b.publish {
 		logrus.WithField("branch", newBranchName).Infof("Pushing new release branch to remote '%s'", b.remote)
 		if _, err := b.git("push", b.remote, newBranchName); err != nil {
+			return err
+		}
+	}
+
+	if b.retagThirdParty {
+		if err := b.retagThirdPartyBaseImages(newBranchName); err != nil {
 			return err
 		}
 	}
@@ -154,20 +162,21 @@ func (b *BranchManager) CutReleaseBranch() error {
 	if err := b.CutVersionedBranch(ver.Stream()); err != nil {
 		return err
 	}
-	if b.retagThirdParty {
-		if err := b.retagThirdPartyBaseImages(ver.Stream()); err != nil {
-			return err
-		}
-	}
 	if _, err := b.git("checkout", b.mainBranch); err != nil {
 		return err
 	}
 	nextVersion := ver.NextBranchVersion()
-	nextVersionTag := fmt.Sprintf("%s-%s", nextVersion.FormattedString(), b.devTagIdentifier)
-	logrus.WithField("tag", nextVersionTag).Info("Creating new development tag")
+	if b.repoManager != nil {
+		logrus.Infof("Performing setup necessary for %s branch", b.mainBranch)
+		if err := b.repoManager.UpdateMainBranch(ver.Stream()); err != nil {
+			return fmt.Errorf("failed to set up release branch: %s", err)
+		}
+	}
 	if _, err := b.git("commit", "--allow-empty", "-m", fmt.Sprintf("Begin development for %s", nextVersion.FormattedString())); err != nil {
 		return err
 	}
+	nextVersionTag := fmt.Sprintf("%s-%s", nextVersion.FormattedString(), b.devTagIdentifier)
+	logrus.WithField("tag", nextVersionTag).Info("Creating new development tag")
 	if _, err := b.git("tag", nextVersionTag); err != nil {
 		return err
 	}

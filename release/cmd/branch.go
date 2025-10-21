@@ -19,11 +19,14 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v3"
 
+	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/branch"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
 
@@ -50,14 +53,63 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 				baseBranchFlag,
 				releaseBranchPrefixFlag,
 				devTagSuffixFlag,
+				managerOrgFlag,
+				managerRepoFlag,
+				managerRemoteFlag,
+				managerBaseBranchFlag,
+				managerReleaseBranchPrefixFlag,
+				managerDevTagSuffixFlag,
+				skipManagerFlag,
 				operatorBranchFlag,
-				publishBranchFlag,
+				gitPublishFlag,
 				skipValidationFlag,
 			},
 			Action: func(_ context.Context, c *cli.Command) error {
 				configureLogging("branch-cut.log")
 
-				calicoManager := calico.NewManager(
+				if !c.Bool(skipManagerFlag.Name) {
+					logrus.WithFields(logrus.Fields{
+						"org":        c.String(managerOrgFlag.Name),
+						"repo":       c.String(managerRepoFlag.Name),
+						"baseBranch": c.String(managerBaseBranchFlag.Name),
+					}).Info("Cutting release branch for manager repository")
+					// Clone the manager repository.
+					managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
+					if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBaseBranchFlag.Name), managerDir); err != nil {
+						return fmt.Errorf("failed to clone manager repository: %v", err)
+					}
+					repoManager, err := manager.NewManager(
+						manager.WithDirectory(managerDir),
+						manager.WithRepoRemote(c.String(managerRemoteFlag.Name)),
+						manager.WithBranch(c.String(managerBaseBranchFlag.Name)),
+						manager.WithDevTagIdentifier(c.String(managerDevTagSuffixFlag.Name)),
+						manager.WithReleaseBranchPrefix(c.String(managerReleaseBranchPrefixFlag.Name)),
+						manager.WithValidate(!c.Bool(skipValidationFlag.Name)),
+					)
+					if err != nil {
+						return fmt.Errorf("failed to create manager: %v", err)
+					}
+					m := branch.NewManager(
+						branch.WithRepoRoot(managerDir),
+						branch.WithRepoRemote(c.String(managerRemoteFlag.Name)),
+						branch.WithMainBranch(c.String(managerBaseBranchFlag.Name)),
+						branch.WithDevTagIdentifier(c.String(managerDevTagSuffixFlag.Name)),
+						branch.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
+						branch.WithValidate(!c.Bool(skipValidationFlag.Name)),
+						branch.WithPublish(c.Bool(gitPublishFlag.Name)),
+						branch.WithRepoManager(repoManager),
+					)
+					if err := m.CutReleaseBranch(); err != nil {
+						return fmt.Errorf("failed to cut Tigera manager release branch: %v", err)
+					}
+				}
+
+				logrus.WithFields(logrus.Fields{
+					"org":        c.String(orgFlag.Name),
+					"repo":       c.String(repoFlag.Name),
+					"baseBranch": c.String(baseBranchFlag.Name),
+				}).Info("Cutting release branch for calico-private repository")
+				calicoManager := calico.NewEnterpriseManager([]calico.Option{
 					calico.WithGithubOrg(c.String(orgFlag.Name)),
 					calico.WithRepoName(c.String(repoFlag.Name)),
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
@@ -65,7 +117,8 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 					calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 					calico.WithOperatorBranch(c.String(operatorBranchFlag.Name)),
 					calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
-				)
+					calico.WithImageRegistries([]string{registry.DefaultEnterpriseHashreleaseRegistry}),
+				})
 
 				m := branch.NewManager(
 					branch.WithRepoRoot(cfg.RepoRootDir),
@@ -75,7 +128,7 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 					branch.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 					branch.WithRepoManager(calicoManager),
 					branch.WithValidate(!c.Bool(skipValidationFlag.Name)),
-					branch.WithPublish(c.Bool(publishBranchFlag.Name)),
+					branch.WithPublish(c.Bool(gitPublishFlag.Name)),
 					branch.WithRetagThirdPartyBaseImages(true))
 				return m.CutReleaseBranch()
 			},
@@ -89,7 +142,7 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 				operatorReleaseBranchPrefixFlag,
 				operatorDevTagSuffixFlag,
 				newBranchFlag,
-				publishBranchFlag,
+				gitPublishFlag,
 				skipValidationFlag,
 			),
 			Action: func(_ context.Context, c *cli.Command) error {
@@ -111,7 +164,7 @@ func branchSubCommands(cfg *Config) []*cli.Command {
 					operator.WithDevTagIdentifier(operatorDevTagSuffixFlag.Name),
 					operator.WithReleaseBranchPrefix(c.String(operatorReleaseBranchPrefixFlag.Name)),
 					operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
-					operator.WithPublish(c.Bool(publishBranchFlag.Name)),
+					operator.WithPublish(c.Bool(gitPublishFlag.Name)),
 				)
 
 				return m.CutBranch(c.String(newBranchFlag.Name))

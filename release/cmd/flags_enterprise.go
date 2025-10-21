@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v3"
 
 	"github.com/projectcalico/calico/release/internal/registry"
@@ -16,14 +17,14 @@ var (
 	managerOrgFlag = &cli.StringFlag{
 		Name:    "manager-org",
 		Usage:   "The GitHub organization of the manager repository",
-		Sources: cli.EnvVars("MANAGER_ORG"),
+		Sources: cli.EnvVars("MANAGER_ORG", "MANAGER_ORGANIZATION"),
 		Value:   manager.DefaultOrg,
 	}
 
 	managerRepoFlag = &cli.StringFlag{
 		Name:    "manager-repo",
 		Usage:   "The GitHub repository of the manager",
-		Sources: cli.EnvVars("MANAGER_REPO"),
+		Sources: cli.EnvVars("MANAGER_REPO", "MANAGER_GIT_REPO"),
 		Value:   manager.DefaultRepoName,
 	}
 
@@ -34,10 +35,23 @@ var (
 		Value:   manager.DefaultBranchName,
 	}
 
+	managerBaseBranchFlag = &cli.StringFlag{
+		Name:    "manager-base-branch",
+		Usage:   "The base branch to cut the Tigera manager release branch from",
+		Sources: cli.EnvVars("MANAGER_BASE_BRANCH"),
+		Value:   manager.DefaultBranchName,
+		Action: func(_ context.Context, c *cli.Command, str string) error {
+			if str != manager.DefaultBranchName {
+				logrus.Warnf("The new branch will be created from %s which is not the default branch %s", str, manager.DefaultBranchName)
+			}
+			return nil
+		},
+	}
+
 	managerRemoteFlag = &cli.StringFlag{
 		Name:    "manager-remote",
 		Usage:   "The remote of the manager repository",
-		Sources: cli.EnvVars("MANAGER_REMOTE"),
+		Sources: cli.EnvVars("MANAGER_REMOTE", "MANAGER_GIT_REMOTE"),
 		Value:   manager.DefaultRemote,
 	}
 
@@ -46,6 +60,13 @@ var (
 		Usage:   "The suffix used to denote development tags",
 		Sources: cli.EnvVars("MANAGER_DEV_TAG_SUFFIX"),
 		Value:   manager.DefaultDevTagSuffix,
+	}
+
+	managerReleaseBranchPrefixFlag = &cli.StringFlag{
+		Name:    "manager-release-branch-prefix",
+		Usage:   "The prefix to use for release branches",
+		Sources: cli.EnvVars("MANAGER_RELEASE_BRANCH_PREFIX"),
+		Value:   releaseBranchPrefixFlag.Value,
 	}
 
 	skipManagerFlag = &cli.BoolFlag{
@@ -89,13 +110,6 @@ var (
 		Name:    "publish-to-s3",
 		Usage:   "Publish the release to S3",
 		Sources: cli.EnvVars("PUBLISH_TO_S3"),
-		Value:   true,
-	}
-
-	publishGitFlag = &cli.BoolFlag{
-		Name:    "publish-git",
-		Usage:   "Publish git changes to remote",
-		Sources: cli.EnvVars("PUBLISH_GIT"),
 		Value:   true,
 	}
 )

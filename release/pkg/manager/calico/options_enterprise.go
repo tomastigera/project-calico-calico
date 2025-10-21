@@ -1,6 +1,8 @@
 package calico
 
-import "github.com/projectcalico/calico/release/internal/hashreleaseserver"
+import (
+	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
+)
 
 type EnterpriseOption func(*EnterpriseManager) error
 

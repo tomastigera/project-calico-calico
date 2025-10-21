@@ -1346,3 +1346,105 @@ func (m *EnterpriseManager) gcsCp(src, dest string, additionalFlags ...string) e
 	}
 	return nil
 }
+
+// SetupReleaseBranch sets up the repository for a new release branch by updating:
+//   - Chart versions: Set the chart versions to match the new release stream for the release branch & Tigera operator
+//   - metadata.mk: Update OPERATOR_BRANCH, and MANAGER_BRANCH variables
+//   - CAPZ Windows FV test script: Update the RELEASE_STREAM variable to match the new release stream
+//   - Code generation: Run code generation to ensure all generated code is up to date
+//
+// Finally, it commits the changes to the new release branch.
+func (m *EnterpriseManager) SetupReleaseBranch(branch string) error {
+	if err := m.releaseBranchPrereqs(branch); err != nil {
+		return err
+	}
+
+	// Set calico version and operator version to their respective branches for pre-release branch.
+	m.calicoVersion = branch
+	m.operatorVersion = m.operatorBranch
+
+	// Modify values in charts
+	if err := m.modifyHelmChartsValues(); err != nil {
+		return err
+	}
+
+	// Modify values in metadata.mk
+	makeMetadataFilePath := filepath.Join(m.repoRoot, "metadata.mk")
+	for key, replacement := range map[string]string{
+		"OPERATOR_BRANCH": m.operatorBranch,
+		"MANAGER_BRANCH":  branch,
+	} {
+		logrus.WithField(key, replacement).Debug("Updating variable in metadata.mk")
+		if out, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/^%s.*/%s ?= %s/g`, key, key, replacement), makeMetadataFilePath}, nil); err != nil {
+			logrus.Error(out)
+			return fmt.Errorf("failed to update %s in %s: %w", key, makeMetadataFilePath, err)
+		}
+	}
+
+	// Update release stream used for CAPZ - Windows FV tests.
+	releaseStream := strings.TrimPrefix(branch, m.releaseBranchPrefix+"-")
+	logrus.WithField("releaseStream", releaseStream).Debug("Updating release stream in setup script for CAPZ Windows FV tests")
+	scriptFilePath := filepath.Join(m.repoRoot, "process", "testing", "winfv-felix", "setup-fv-capz.sh")
+	if out, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/RELEASE_STREAM=.*HASH_RELEASE/RELEASE_STREAM=%s HASH_RELEASE/g`, releaseStream), scriptFilePath}, nil); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to update release stream in %s: %w", scriptFilePath, err)
+	}
+
+	// Run code generation.
+	logrus.Debug("Running code generation")
+	env := append(os.Environ(), fmt.Sprintf("DEFAULT_BRANCH_OVERRIDE=%s", branch))
+	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "generate", env...); err != nil {
+		return fmt.Errorf("failed to run code generation: %w", err)
+	}
+
+	// Commit the changes.
+	if out, err := m.git("add",
+		filepath.Join(m.repoRoot, ".semaphore"),
+		filepath.Join(m.repoRoot, "charts"),
+		filepath.Join(m.repoRoot, "manifests"),
+		filepath.Join(m.repoRoot, "metadata.mk"),
+		filepath.Join(m.repoRoot, "process", "testing", "winfv-felix", "setup-fv-capz.sh"),
+		filepath.Join(m.repoRoot, "test-tools", "mocknode"),
+	); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to add files to git: %s", err)
+	}
+	if out, err := m.git("commit", "-m", fmt.Sprintf("Updates for %s release branch", branch)); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to commit changes: %s", err)
+	}
+
+	return nil
+}
+
+// UpdateMainBranch updates the main branch after a release branch has been cut by:
+//   - Updating the CALICO_VERSION in Makefile to the next development version if necessary
+//
+// Finally, it adds the changes to git for committing by BranchManager.
+func (m *EnterpriseManager) UpdateMainBranch(releaseBranchStream string) error {
+	makeMetadataFilePath := filepath.Join(m.repoRoot, "metadata.mk")
+	// if the new cut release branch is EP1, we need to update the CALICO_VERSION in Makefile
+	// to the next development version of Calico OSS for future EP2/GA branch cut.
+	if !strings.HasSuffix(releaseBranchStream, "-1") {
+		logrus.Infof("No need to update CALICO_VERSION in %s for release branch %s-%s", makeMetadataFilePath, m.releaseBranchPrefix, releaseBranchStream)
+		return nil
+	}
+	// get current CALICO_VERSION from Makefile
+	out, err := m.runner.Run("grep", []string{"-oP", `^CALICO_VERSION=\K(.*)`, makeMetadataFilePath}, nil)
+	if err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to get current CALICO_VERSION from Makefile: %w", err)
+	}
+	ossVersion := version.New(out)
+	nextVersion := ossVersion.NextBranchVersion()
+	if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/^CALICO_VERSION=.*/CALICO_VERSION=%s/g`, nextVersion.FormattedString()), makeMetadataFilePath}, nil); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to update CALICO_VERSION in %s: %w", makeMetadataFilePath, err)
+	}
+	// add changes to git for BranchManager to commit
+	if out, err := m.git("add", makeMetadataFilePath); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to add %s to git: %s", makeMetadataFilePath, err)
+	}
+	return nil
+}

@@ -175,8 +175,64 @@ func (m *Manager) PrePublishValidation() error {
 	return nil
 }
 
+func (m *Manager) releaseBranchPrereqs(branch string) error {
+	if !m.validate {
+		logrus.Info("Skipping release branch setup validation")
+		return nil
+	}
+
+	var errStack error
+	if dirty, err := utils.GitIsDirty(m.dir); err != nil {
+		errStack = errors.Join(errStack, fmt.Errorf("failed to check if git is dirty: %s", err))
+	} else if dirty {
+		errStack = errors.Join(errStack, fmt.Errorf("there are uncommitted changes in the repository, please commit or stash them before cutting a release branch"))
+	}
+	if branch == "" {
+		errStack = errors.Join(errStack, fmt.Errorf("release branch not specified"))
+	}
+
+	return errStack
+}
+
+// SetupReleaseBranch prepares the repository for a new release branch by updating:
+//   - Makefile: point MONOREPO_BRANCH to the new branch equivalent in calico-private
+//
+// Finally, it commits the changes to the new release branch.
+func (m *Manager) SetupReleaseBranch(branch string) error {
+	if err := m.releaseBranchPrereqs(branch); err != nil {
+		return err
+	}
+
+	// Modify values in Makefile
+	logrus.WithField("MONOREPO_BRANCH", branch).Debug("Updating variables in Makefile")
+	makefileRelPath := "Makefile"
+	if _, err := m.runner.RunInDir(m.dir, "sed", []string{"-i", fmt.Sprintf(`s/^MONOREPO_BRANCH.*/MONOREPO_BRANCH ?= %s/g`, branch), makefileRelPath}, nil); err != nil {
+		logrus.WithError(err).Errorf("Failed to update manager branch in %s", makefileRelPath)
+		return fmt.Errorf("failed to update manager branch in %s: %w", makefileRelPath, err)
+	}
+
+	// Commit the changes.
+	if _, err := m.git("add", makefileRelPath); err != nil {
+		return fmt.Errorf("failed to add files to git: %s", err)
+	}
+	if _, err := m.git("commit", "-m", fmt.Sprintf("Updates for %s release branch", branch)); err != nil {
+		return fmt.Errorf("failed to commit changes: %s", err)
+	}
+	return nil
+}
+
+// UpdateMainBranch updates the main branch after a release branch has been cut.
+// This is a no-op for the manager repository.
+func (m *Manager) UpdateMainBranch(releaseBranchStream string) error {
+	return nil
+}
+
 func (m *Manager) make(target string, env []string) (string, error) {
 	return m.runner.Run("make", []string{"-C", m.dir, target}, env)
+}
+
+func (m *Manager) git(args ...string) (string, error) {
+	return m.runner.RunInDir(m.dir, "git", args, nil)
 }
 
 func Clone(org, repo, branch, dir string) error {
