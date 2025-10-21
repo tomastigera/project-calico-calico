@@ -90,8 +90,9 @@ var (
 		Value:   true,
 	}
 	newBranchFlag = &cli.StringFlag{
-		Name:  "branch-stream",
-		Usage: fmt.Sprintf("The new major and minor versions for the branch to create e.g. vX.Y to create a <release-branch-prefix>-vX.Y branch e.g. v1.37 for %s-v1.37 branch", releaseBranchPrefixFlag.Value),
+		Name:    "branch-stream",
+		Sources: cli.EnvVars("RELEASE_BRANCH_STREAM"),
+		Usage:   fmt.Sprintf("The new major and minor versions for the branch to create e.g. vX.Y to create a <release-branch-prefix>-vX.Y branch e.g. v1.37 for %s-v1.37 branch", releaseBranchPrefixFlag.Value),
 	}
 	baseBranchFlag = &cli.StringFlag{
 		Name:    "base-branch",
@@ -381,14 +382,16 @@ var (
 var (
 	// Publishing flags.
 	publishGitTagFlag = &cli.BoolFlag{
-		Name:  "publish-git-tag",
-		Usage: "Push the git tag to the remote",
-		Value: true,
+		Name:    "publish-git-tag",
+		Usage:   "Push the git tag to the remote",
+		Sources: cli.EnvVars("PUBLISH_GIT_TAG"),
+		Value:   true,
 	}
 	publishGitHubReleaseFlag = &cli.BoolFlag{
-		Name:  "publish-github-release",
-		Usage: "Publish the release to GitHub",
-		Value: true,
+		Name:    "publish-github-release",
+		Usage:   "Publish the release to GitHub",
+		Sources: cli.EnvVars("PUBLISH_GITHUB_RELEASE"),
+		Value:   true,
 		Action: func(_ context.Context, c *cli.Command, b bool) error {
 			if b && c.String(githubTokenFlag.Name) == "" {
 				return fmt.Errorf("GitHub token is required to publish release")
@@ -416,9 +419,10 @@ var (
 	// Hashrelease server configuration flags.
 	hashreleaseServerFlags = []cli.Flag{hashreleaseServerBucketFlag}
 	publishHashreleaseFlag = &cli.BoolFlag{
-		Name:  "publish-to-hashrelease-server",
-		Usage: "Publish the hashrelease to the hashrelease server",
-		Value: true,
+		Name:    "publish-to-hashrelease-server",
+		Usage:   "Publish the hashrelease to the hashrelease server",
+		Sources: cli.EnvVars("PUBLISH_TO_HASHRELEASE_SERVER"),
+		Value:   true,
 	}
 	latestFlag = &cli.BoolFlag{
 		Name:    "latest",
