@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -67,7 +65,8 @@ func TestMetrics(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create dns log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.DNSLogParams{

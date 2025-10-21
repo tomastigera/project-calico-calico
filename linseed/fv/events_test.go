@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -76,7 +74,8 @@ func TestFV_Events(t *testing.T) {
 			require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
 			// Refresh elasticsearch so that results appear.
-			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
 		}
 
 		// Read it back.
@@ -145,7 +144,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.EventParams{
@@ -169,7 +169,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
 
 		// Reading it back should show the event as dismissed.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
@@ -181,7 +182,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "delete event did not succeed")
 
 		// Reading it back should show the no events.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 0)
@@ -223,7 +225,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 3, "create events did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Keep it simple and trust the ut :)
 		params := v1.EventStatisticsParams{
@@ -281,7 +284,8 @@ func TestFV_Events(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read them back one at a time.
 		var afterKey map[string]interface{}
@@ -365,7 +369,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.EventParams{
@@ -415,7 +420,7 @@ func TestFV_Events(t *testing.T) {
 		for i := totalItems / 2; i < totalItems; i++ {
 			events = append(events, v1.Event{
 				ID:   strconv.Itoa(totalItems + i + 1),
-				Time: v1.NewEventDate(logTime.Add(time.Duration(i+1+totalItems) * time.Second)), // Make sure events are ordered.
+				Time: v1.NewEventDate(logTime.Add(time.Duration(i+1+totalItems) * time.Second)), // Make Sure events are ordered.
 				Host: fmt.Sprintf("%d", i+1+totalItems),
 			},
 			)
@@ -426,7 +431,8 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.EventParams{

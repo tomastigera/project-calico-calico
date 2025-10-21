@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -53,7 +51,8 @@ func runtimeReportsSetupAndTeardown(t *testing.T, args *RunLinseedArgs, idx bapi
 	anotherClusterInfo = bapi.ClusterInfo{Cluster: anotherCluster, Tenant: args.TenantID}
 
 	return func() {
-		testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, bapi.ClusterInfo{Cluster: anotherCluster})
+		err := testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, bapi.ClusterInfo{Cluster: anotherCluster})
+		require.NoError(t, err)
 	}
 }
 
@@ -473,7 +472,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		// Validate that we can't use a selector with a disallowed field.
 		params.Selector = "'tenant_id' = 'super-secret'"
-		resp, err = cli.RuntimeReports(cluster).List(ctx, &params)
+		_, err = cli.RuntimeReports(cluster).List(ctx, &params)
 		require.ErrorContains(t, err, "tenant_id")
 	})
 }

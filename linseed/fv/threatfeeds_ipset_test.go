@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -161,8 +159,10 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterAInfo))
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterBInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterAInfo))
+		require.NoError(t, err)
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterBInfo))
+		require.NoError(t, err)
 
 		// Read it back, not using any ID to get all feeds (like IDC does)
 		params := v1.IPSetThreatFeedParams{}
@@ -210,7 +210,8 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -301,7 +302,8 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create feeds did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.IPSetThreatFeedParams{
