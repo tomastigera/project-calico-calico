@@ -1,0 +1,2 @@
+[PLUGINS]
+    Path /usr/lib64/calico-fluent-bit/out_linseed.so

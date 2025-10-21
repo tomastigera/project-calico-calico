@@ -9,7 +9,7 @@ URL: https://www.tigera.io/
 Source0: calico-fluent-bit.tar.gz
 Source1: calico-fluent-bit.conf
 Source2: calico-fluent-bit.env
-Source3: plugins.conf
+Source3: plugins.conf.rhel
 Source4: record_transformer.lua
 Source5: out_linseed.so
 Source6: calico-fluent-bit.service
@@ -65,12 +65,13 @@ family operating systems. It's part of the Fluentd Ecosystem and a CNCF sub-proj
 %install
 # install vendor defaults
 %cmake_install
+
 # overwrite with Tigera customizations
 install -m 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/calico/%{name}
 install -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/calico/%{name}
-install -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/calico/%{name}
+install -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/calico/%{name}/plugins.conf
 install -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/calico/%{name}
-install -m 644 %{SOURCE5} %{buildroot}%{_sysconfdir}/calico/%{name}
+install -D -m 644 %{SOURCE5} %{buildroot}%{_libdir}/%{name}/out_linseed.so
 install -m 644 %{SOURCE6} %{buildroot}%{_unitdir}/%{name}.service
 # filesystem buffer
 install -d %{buildroot}%{_localstatedir}/log/calico/%{name}
@@ -99,7 +100,7 @@ rm -rvf %{buildroot}%{_includedir}
 %attr(0770,root,calico) %dir %{_rundir}/calico
 %dir %{_sysconfdir}/calico/%{name}
 %{_bindir}/%{name}
-%{_sysconfdir}/calico/%{name}/out_linseed.so
+%{_libdir}/%{name}/out_linseed.so
 %{_sysconfdir}/calico/%{name}/record_transformer.lua
 %{_unitdir}/%{name}.service
 

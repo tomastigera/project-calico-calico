@@ -61,11 +61,11 @@ assert_folder_user_group /var/log/calico/calico-fluent-bit/ "calico calico"
 # check files
 assert_file_exists /etc/calico/calico-fluent-bit/calico-fluent-bit.conf
 assert_file_exists /etc/calico/calico-fluent-bit/calico-fluent-bit.env
-assert_file_exists /etc/calico/calico-fluent-bit/out_linseed.so
 assert_file_exists /etc/calico/calico-fluent-bit/parsers.conf
 assert_file_exists /etc/calico/calico-fluent-bit/plugins.conf
 assert_file_exists /etc/calico/calico-fluent-bit/record_transformer.lua
 assert_file_exists /usr/bin/calico-fluent-bit
 assert_file_exists /usr/lib/systemd/system/calico-fluent-bit.service
+assert_file_exists /usr/lib64/calico-fluent-bit/out_linseed.so
 
 echo "Fluent Bit FV tests completed successfully."
