@@ -102,7 +102,7 @@ MOCKERY_FILE_PATHS= \
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
 ut-fast: gen-certs
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... ./cmd/... -cover -count 1'
 
 st:
 	@echo "No STs"
