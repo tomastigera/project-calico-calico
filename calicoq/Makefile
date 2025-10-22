@@ -58,7 +58,7 @@ clean:
 ###############################################################################
 # Location of a valid license to use in the tests. On semaphore, this is provided as part
 # of the build environment.
-TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
+TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
 .PHONY: ci
 ## Run what CI runs

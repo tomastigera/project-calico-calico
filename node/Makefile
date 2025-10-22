@@ -618,7 +618,7 @@ st-checks:
 	fi
 
 GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
-TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
+TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
 #
 # Dual ToR Tests

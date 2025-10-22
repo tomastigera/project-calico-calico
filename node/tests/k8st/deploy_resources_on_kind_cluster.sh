@@ -52,7 +52,7 @@ HELM=../bin/helm
 CHART=../bin/tigera-operator-$GIT_VERSION.tgz
 
 # Path to Enteprise product license
-: ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
+: ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/license.yaml}
 
 # kubectl binary.
 : ${kubectl:=../hack/test/kind/kubectl}
