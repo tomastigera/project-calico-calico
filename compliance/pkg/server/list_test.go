@@ -14,6 +14,7 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -241,7 +242,6 @@ var _ = Describe("List", func() {
 var _ = Describe("List query parameters", func() {
 	It("Can parse parameters correctly", func() {
 		By("parsing no query params in the URL")
-		maxItems := 100
 		v, _ := url.ParseQuery("")
 		qp, err := server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
@@ -250,29 +250,40 @@ var _ = Describe("List query parameters", func() {
 			FromTime: "",
 			ToTime:   "",
 			Page:     0,
-			MaxItems: &maxItems,
+			MaxItems: ptr.To(server.DefaultMaxItems),
 			SortBy:   []api.ReportSortBy{{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true}},
 		}))
 
 		By("parsing all query params in the URL")
-		v, _ = url.ParseQuery("reportTypeName=type1&reportTypeName=type2&reportName=name1&reportName=name2&" +
+		v, _ = url.ParseQuery("reportTypeName=type1&reportName=name1&" +
 			"page=2&fromTime=now-2d&toTime=now-4d&maxItems=4&sortBy=endTime&sortBy=reportName/ascending&" +
 			"sortBy=reportTypeName/descending")
-		maxItems = 4
 		qp, err = server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(qp).To(Equal(&api.ReportQueryParams{
-			Reports:  []api.ReportTypeAndName{{ReportTypeName: "type1", ReportName: ""}, {ReportTypeName: "type2", ReportName: ""}, {ReportTypeName: "", ReportName: "name1"}, {ReportTypeName: "", ReportName: "name2"}},
+			Reports:  []api.ReportTypeAndName{{ReportTypeName: "type1", ReportName: "name1"}},
 			FromTime: "now-2d",
 			ToTime:   "now-4d",
 			Page:     2,
-			MaxItems: &maxItems,
+			MaxItems: ptr.To(4),
 			SortBy:   []api.ReportSortBy{{Field: "endTime", Ascending: false}, {Field: "reportName", Ascending: true}, {Field: "reportTypeName", Ascending: false}, {Field: "startTime", Ascending: false}},
+		}))
+
+		By("parsing multiple reportTypeName and reportName in the URL")
+		v, _ = url.ParseQuery("reportTypeName=type1&reportTypeName=type2&reportName=name1&reportName=name2")
+		qp, err = server.GetListReportsQueryParams(v)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(qp).To(Equal(&api.ReportQueryParams{
+			Reports:  []api.ReportTypeAndName{{ReportTypeName: "type1", ReportName: "name1"}},
+			FromTime: "",
+			ToTime:   "",
+			Page:     0,
+			MaxItems: ptr.To(server.DefaultMaxItems),
+			SortBy:   []api.ReportSortBy{{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true}},
 		}))
 
 		By("parsing maxItems=all with page=0")
 		v, _ = url.ParseQuery("maxItems=all&page=0")
-		maxItems = 4
 		qp, err = server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(qp).To(Equal(&api.ReportQueryParams{

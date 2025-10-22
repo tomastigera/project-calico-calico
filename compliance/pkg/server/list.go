@@ -195,8 +195,13 @@ func GetListReportsQueryParams(vals url.Values) (*api.ReportQueryParams, error) 
 		return nil, err
 	}
 
+	var reports []api.ReportTypeAndName
+	rp := getReportsQueryParams(vals)
+	if rp != nil {
+		reports = []api.ReportTypeAndName{*rp}
+	}
 	return &api.ReportQueryParams{
-		Reports:  getReportsQueryParams(vals),
+		Reports:  reports,
 		FromTime: vals.Get(UrlParamFromTime),
 		ToTime:   vals.Get(UrlParamToTime),
 		Page:     page,
@@ -205,25 +210,23 @@ func GetListReportsQueryParams(vals url.Values) (*api.ReportQueryParams, error) 
 	}, nil
 }
 
-// getReportsQueryParams extracts the requested report types and reports from the query parameters.
-func getReportsQueryParams(vals url.Values) []api.ReportTypeAndName {
-	var reports []api.ReportTypeAndName
+// getReportsQueryParams extracts the requested report type and report name from the query parameters.
+// It returns a pointer to api.ReportTypeAndName by combining the first reportTypeName and first reportName if present.
+// If both ReportTypeName and ReportName are empty, it returns nil.
+func getReportsQueryParams(vals url.Values) *api.ReportTypeAndName {
+	var r api.ReportTypeAndName
 
-	// Add the report type name filters.
-	for _, val := range vals[UrlParamReportTypeName] {
-		reports = append(reports, api.ReportTypeAndName{
-			ReportTypeName: val,
-		})
+	if typeVals, ok := vals[UrlParamReportTypeName]; ok && len(typeVals) > 0 {
+		r.ReportTypeName = typeVals[0]
+	}
+	if nameVals, ok := vals[UrlParamReportName]; ok && len(nameVals) > 0 {
+		r.ReportName = nameVals[0]
 	}
 
-	// Add the report name filters.
-	for _, val := range vals[UrlParamReportName] {
-		reports = append(reports, api.ReportTypeAndName{
-			ReportName: val,
-		})
+	if r.ReportTypeName == "" && r.ReportName == "" {
+		return nil
 	}
-
-	return reports
+	return &r
 }
 
 // getPageQueryParams extracts the page number and max items from the query.
