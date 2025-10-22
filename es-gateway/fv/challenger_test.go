@@ -1,11 +1,8 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -90,7 +87,7 @@ func TestFV_Challenger(t *testing.T) {
 		log.Debugf("Making requests to verify that a Kibana space is created")
 		space := `{"id": "any","name": "Any Kibana space"}`
 		response, body, err := doRequest("POST", "http://localhost:5601/api/spaces/space", kibanaHeaders, []byte(space))
-		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		log.Debugf("Response body: %s", string(body))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, response.StatusCode)
 	})
@@ -124,7 +121,7 @@ func TestFV_Challenger(t *testing.T) {
 
 		log.Debugf("Making requests to verify that Kibana objects are created successfully")
 		response, body, err := doRequest("POST", "http://localhost:5601/api/saved_objects/_bulk_create", kibanaHeaders, []byte(savedObjects))
-		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		log.Debugf("Response body: %s", string(body))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, response.StatusCode)
 	})
@@ -136,21 +133,21 @@ func TestFV_Challenger(t *testing.T) {
 		tenantAData := `{"tenant":"A"}`
 		esHeaders := map[string]string{"Content-Type": "application/json"}
 		responseDocTenantA, body, err := doRequest("POST", "http://localhost:9200/calico_any.001/_doc/1?refresh=true", esHeaders, []byte(tenantAData))
-		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		log.Debugf("Response body: %s", string(body))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, responseDocTenantA.StatusCode)
 
 		// Write a document for tenant B in Elastic
 		tenantBData := `{"tenant":"B"}`
 		responseDocTenantB, body, err := doRequest("POST", "http://localhost:9200/calico_any.001/_doc/2?refresh=true", esHeaders, []byte(tenantBData))
-		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		log.Debugf("Response body: %s", string(body))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, responseDocTenantB.StatusCode)
 
 		// make an async search request via the Challenger
 		searchBody := `{"query": {"match_all":{}}}`
 		response, data, err := doRequest("POST", "http://localhost:5555/calico_any*/_async_search", kibanaHeaders, []byte(searchBody))
-		log.Debugf(fmt.Sprintf("Response body: %s", string(data)))
+		log.Debugf("Response body: %s", string(data))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, response.StatusCode)
 		require.Contains(t, string(data), tenantAData)

@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -104,7 +102,7 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 		name += "-" + args.TenantID
 	}
 
-	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{T: t}}, dockerArgs...)
 	c.StopLogs()
 	return c
 }
@@ -211,7 +209,7 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 
 	name := "tigera-configure-elastic-linseed-fv"
 
-	c := containers.Run(name, containers.RunOpts{RunAndExit: true, AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c := containers.Run(name, containers.RunOpts{RunAndExit: true, AutoRemove: true, OutputWriter: logutils.TestingTWriter{T: t}}, dockerArgs...)
 	c.StopLogs()
 	if c.ListedInDockerPS() {
 		c.Stop()

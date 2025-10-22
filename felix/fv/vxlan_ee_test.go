@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -153,7 +151,9 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ Cluster mesh VXLA
 					// Wait for the remotes to sync before we disconnect. We expect routes and IP sets to only reflect the local cluster as
 					// part of overlap handling, so we check the number of nodes seen by Felix to determine the status.
 					_, err = cs.local.infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), remoteRCC.Name, options.DeleteOptions{})
+					Expect(err).NotTo(HaveOccurred())
 					_, err = cs.remote.infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), localRCC.Name, options.DeleteOptions{})
+					Expect(err).NotTo(HaveOccurred())
 				}
 			})
 

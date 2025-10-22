@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package fv_test
@@ -117,7 +114,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 			createService := func(service *v1.Service, client *kubernetes.Clientset) *v1.Service {
 				log.WithField("service", dumpResource(service)).Info("Creating service")
-				svc, err := client.CoreV1().Services(service.ObjectMeta.Namespace).Create(context.Background(), service, metav1.CreateOptions{})
+				svc, err := client.CoreV1().Services(service.Namespace).Create(context.Background(), service, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(k8sGetEpsForServiceFunc(client, service), "10s").Should(HaveLen(1),
 					"Service endpoints didn't get created? Is controller-manager happy?")
@@ -211,8 +208,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				// XXX until we can safely remove roting rules and not break other tests
 				options.EnableIPv6 = false
 
-				var config *api.FelixConfiguration
-				config = api.NewFelixConfiguration()
+				config := api.NewFelixConfiguration()
 				config.SetName("default")
 				config.Spec.TPROXYMode = TPROXYMode
 
@@ -249,7 +245,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
-						w.Start()
+						Expect(w.Start()).To(Succeed())
 					}
 
 					labels["name"] = w.Name
@@ -411,7 +407,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 					if TPROXYMode == "Enabled" {
-						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+						v1Svc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
 					createService(v1Svc, clientset)
 				})
@@ -688,7 +684,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
 					if TPROXYMode == "Enabled" {
-						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+						v1Svc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
 					createService(v1Svc, clientset)
 
@@ -995,7 +991,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
 					if TPROXYMode == "Enabled" {
-						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+						v1Svc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
 					createService(v1Svc, clientset)
 				})
@@ -1050,22 +1046,22 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					By("setting up annotated service for the end points ")
 					// create service resource that has annotation at creation
 					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-					v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					v1Svc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					annotatedSvc := createService(v1Svc, clientset)
 
 					By("asserting that ipaddress, port of service updated in ipset ")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, true)
 
 					By("updating the service to not have l7 annotation ")
-					annotatedSvc.ObjectMeta.Annotations = map[string]string{}
-					_, err := clientset.CoreV1().Services(annotatedSvc.ObjectMeta.Namespace).Update(context.Background(), annotatedSvc, metav1.UpdateOptions{})
+					annotatedSvc.Annotations = map[string]string{}
+					_, err := clientset.CoreV1().Services(annotatedSvc.Namespace).Update(context.Background(), annotatedSvc, metav1.UpdateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ip, port exists for EnabledAllServices case and doesn't exist for others case when l7 annotation removed")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, TPROXYMode == "EnabledAllServices")
 
 					By("deleting the now unannotated service")
-					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+					err = clientset.CoreV1().Services(v1Svc.Namespace).Delete(context.Background(), v1Svc.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("assert that ip, port is removed from ipset when service is deleted")
@@ -1077,22 +1073,22 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// this case ensures that the process of annotating is repeatable and certain IPSet callbacks are
 					// not called ex. IPSetAdded (Felix fails if a IPSetAdded call to already existing ipset is made)
 					By("creating unannotated service, to verify the ipset created callbacks")
-					v1Svc.ObjectMeta.Annotations = map[string]string{}
+					v1Svc.Annotations = map[string]string{}
 					unannotatedSvc := createService(v1Svc, clientset)
 
 					By("asserting that ip, port exists for EnabledAllServices and doesn't exist for others case when l7 annotation not present")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, TPROXYMode == "EnabledAllServices")
 
 					By("updating the service to have l7 annotation ")
-					unannotatedSvc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
-					_, err = clientset.CoreV1().Services(unannotatedSvc.ObjectMeta.Namespace).Update(context.Background(), unannotatedSvc, metav1.UpdateOptions{})
+					unannotatedSvc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					_, err = clientset.CoreV1().Services(unannotatedSvc.Namespace).Update(context.Background(), unannotatedSvc, metav1.UpdateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ipaddress, port of service propagated to ipset")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, true)
 
 					By("deleting the annotated service")
-					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+					err = clientset.CoreV1().Services(v1Svc.Namespace).Delete(context.Background(), v1Svc.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ipaddress, port of service removed from ipset")
@@ -1157,7 +1153,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 					if TPROXYMode == "Enabled" {
-						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+						v1Svc.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
 					createService(v1Svc, clientset)
 				})

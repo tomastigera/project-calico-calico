@@ -102,7 +102,7 @@ MOCKERY_FILE_PATHS= \
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
 ut-fast: gen-certs
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... ./cmd/... -cover -count 1'
 
 st:
 	@echo "No STs"
@@ -181,7 +181,7 @@ fv-token-file:  run-k8s-apiserver
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
 build-tests: $(shell find ./fv -type f -name '*.go' -print)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c -o fv/fv.test'
 
 # Generate certificates for use by Linseed UT/FV tests.
 gen-certs:

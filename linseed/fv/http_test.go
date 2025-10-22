@@ -1,7 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -77,15 +75,16 @@ func xndJSONPostHTTPReqSpec(url, tenant, cluster string, token, body []byte) htt
 
 func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Response, []byte) {
 	req, err := http.NewRequest(spec.method, spec.url, bytes.NewBuffer(spec.body))
+	require.NoError(t, err)
 	for k, v := range spec.headers {
 		req.Header.Set(k, v)
 	}
-	require.NoError(t, err)
 
-	res := &http.Response{}
-	res, err = client.Do(req)
+	res, err := client.Do(req)
 	require.NoError(t, err)
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	var resBody []byte
 	resBody, err = io.ReadAll(res.Body)
@@ -207,7 +206,8 @@ func signAndEncodeCert(t *testing.T, ca *x509.Certificate, caPrivateKey *rsa.Pri
 
 	// Encode the certificate
 	certPEM := bytes.Buffer{}
-	pem.Encode(&certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	err = pem.Encode(&certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	require.NoError(t, err)
 
 	return certPEM.Bytes()
 }
@@ -217,7 +217,8 @@ func encodeKey(t *testing.T, key *rsa.PrivateKey) []byte {
 	keyPEM := bytes.Buffer{}
 	privateBytes, err := x509.MarshalPKCS8PrivateKey(key)
 	require.NoError(t, err)
-	pem.Encode(&keyPEM, &pem.Block{Type: "PRIVATE KEY", Bytes: privateBytes})
+	err = pem.Encode(&keyPEM, &pem.Block{Type: "PRIVATE KEY", Bytes: privateBytes})
+	require.NoError(t, err)
 
 	return keyPEM.Bytes()
 }

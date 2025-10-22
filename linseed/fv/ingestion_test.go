@@ -1,12 +1,9 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
 	"bytes"
-	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -352,7 +349,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(log)
 			require.NoError(t, err)
-			esLogs = append(esLogs, strings.Trim(string(buffer.Bytes()), "\n"))
+			esLogs = append(esLogs, strings.Trim(buffer.String(), "\n"))
 		}
 
 		assert.Equal(t, bgpLogs, strings.Join(esLogs, "\n"))
@@ -420,7 +417,7 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 	addr := "https://localhost:8443/api/v1/flows/bulk"
 	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
 
-	flo := proto.Flow{
+	flo := &proto.Flow{
 		Key: &proto.FlowKey{
 			SourceName:      "sourcename",
 			SourceNamespace: "sourcenamespace",
@@ -611,7 +608,7 @@ func TestFV_Ingestion(t *testing.T) {
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
 		var largeBody []byte
-		for float64(len(largeBody)) < 2*math.Pow(1024, 3)+10 {
+		for float64(len(largeBody)) < 2*1024*1024*1024+10 {
 			largeBody = append(largeBody, []byte(eeAuditLogs)...)
 		}
 

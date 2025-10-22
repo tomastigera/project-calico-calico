@@ -1,6 +1,3 @@
-//go:build fvtests
-// +build fvtests
-
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package fv_test
@@ -113,8 +110,7 @@ func describeALPTest(ipip bool) bool {
 
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
 
-				var config *api.FelixConfiguration
-				config = api.NewFelixConfiguration()
+				config := api.NewFelixConfiguration()
 				config.SetName("default")
 				config.Spec.TPROXYMode = "Enabled"
 
@@ -143,7 +139,7 @@ func describeALPTest(ipip bool) bool {
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
-						w.Start()
+						Expect(w.Start()).To(Succeed())
 					}
 
 					labels["name"] = w.Name

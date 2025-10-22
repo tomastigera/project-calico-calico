@@ -1,7 +1,5 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -48,7 +46,7 @@ func RunChallenger(t *testing.T, args *RunChallengerArgs) *containers.Container 
 
 	name := "tigera-challenger-fv"
 
-	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{T: t}}, dockerArgs...)
 	c.StopLogs()
 	return c
 }
@@ -70,7 +68,7 @@ func RunKibana(t *testing.T, args *RunKibanaArgs) *containers.Container {
 
 	name := "tigera-kibana"
 
-	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{T: t}}, dockerArgs...)
 	c.StopLogs()
 	return c
 }

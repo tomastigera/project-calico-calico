@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -729,7 +727,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Should(BeNumerically("==", 0))
 
 					testSvc := k8sService("svc-no-backends", clusterIP, w[0], 80, 8055, 0, testOpts.protocol)
-					testSvcNamespace := testSvc.ObjectMeta.Namespace
+					testSvcNamespace := testSvc.Namespace
 					k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 					_, err = k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(),
 						testSvc, metav1.CreateOptions{})
@@ -1762,7 +1760,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							clusterIP1 = "dead:beef::abcd:0:0:111"
 						}
 						testSvc := k8sService("svc-no-backends", clusterIP1, w[0][0], 80, 1234, 0, testOpts.protocol)
-						testSvcNamespace := testSvc.ObjectMeta.Namespace
+						testSvcNamespace := testSvc.Namespace
 						testSvc.Spec.Selector = map[string]string{"somelabel": "somevalue"}
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(),
 							testSvc, metav1.CreateOptions{})
@@ -1977,7 +1975,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							testOpts.protocol, externalIP, srcIPRange)
 
 						By("Deleting first service")
-						err := k8sClient.CoreV1().Services(testSvc.ObjectMeta.Namespace).Delete(context.Background(), testSvcName, metav1.DeleteOptions{})
+						err := k8sClient.CoreV1().Services(testSvc.Namespace).Delete(context.Background(), testSvcName, metav1.DeleteOptions{})
 						Expect(err).NotTo(HaveOccurred())
 
 						By("Sleeping")
@@ -2059,11 +2057,11 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						tcpdump := externalClient.AttachTCPDump("any")
 						tcpdump.SetLogEnabled(true)
 						if testOpts.ipv6 {
-							tcpdump.AddMatcher("unreach", regexp.MustCompile("destination unreachable"))
-							tcpdump.AddMatcher("bad csum", regexp.MustCompile("bad icmp6 cksum"))
+							tcpdump.AddMatcher("unreach", regexp.MustCompile(`destination unreachable`))
+							tcpdump.AddMatcher("bad csum", regexp.MustCompile(`bad icmp6 cksum`))
 						} else {
-							tcpdump.AddMatcher("unreach", regexp.MustCompile("port \\d+ unreachable"))
-							tcpdump.AddMatcher("bad csum", regexp.MustCompile("wrong icmp cksum"))
+							tcpdump.AddMatcher("unreach", regexp.MustCompile(`port \d+ unreachable`))
+							tcpdump.AddMatcher("bad csum", regexp.MustCompile(`wrong icmp cksum`))
 						}
 
 						tcpdump.Start("-vv", testOpts.protocol, "port", strconv.Itoa(int(port)), "or", icmpProto)
@@ -2166,7 +2164,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					// Create a service of type clusterIP
 					BeforeEach(func() {
 						testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, tgtPort, 0, testOpts.protocol)
-						testSvcNamespace = testSvc.ObjectMeta.Namespace
+						testSvcNamespace = testSvc.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
@@ -2477,7 +2475,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 					BeforeEach(func() {
 						testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, tgtPort, 0, testOpts.protocol)
-						testSvcNamespace = testSvc.ObjectMeta.Namespace
+						testSvcNamespace = testSvc.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
@@ -2553,10 +2551,10 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					It("should have connectivity from workload via a service IP to a host-process listening on that IP", func() {
 						By("Setting up a dummy service " + excludeSvcIP)
 						svc := k8sService("dummy-service", excludeSvcIP, w[0][0] /* unimportant */, 8066, 8077, 0, testOpts.protocol)
-						svc.ObjectMeta.Annotations = map[string]string{
+						svc.Annotations = map[string]string{
 							proxy.ExcludeServiceAnnotation: "true",
 						}
-						_, err := k8sClient.CoreV1().Services(testSvc.ObjectMeta.Namespace).
+						_, err := k8sClient.CoreV1().Services(testSvc.Namespace).
 							Create(context.Background(), svc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
 
@@ -2699,8 +2697,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							svc, err := k8sClient.CoreV1().
 								Services(testSvcNamespace).
 								Get(context.Background(), testSvcName, metav1.GetOptions{})
+							Expect(err).NotTo(HaveOccurred())
 
-							testSvcUpdated.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+							testSvcUpdated.ResourceVersion = svc.ResourceVersion
 
 							_, err = k8sClient.CoreV1().Services(testSvcNamespace).Update(context.Background(), testSvcUpdated, metav1.UpdateOptions{})
 							Expect(err).NotTo(HaveOccurred())
@@ -2844,7 +2843,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						BeforeEach(func() {
 							testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, 8055, 0, testOpts.protocol)
-							testSvcNamespace = testSvc.ObjectMeta.Namespace
+							testSvcNamespace = testSvc.Namespace
 							// select all pods with port 8055
 							testSvc.Spec.Selector = map[string]string{"port": "8055"}
 							if setAffinity {
@@ -3027,7 +3026,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						By("Setting up the service", func() {
 							testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, 8055, 0, testOpts.protocol)
-							testSvcNamespace = testSvc.ObjectMeta.Namespace
+							testSvcNamespace = testSvc.Namespace
 							// select all pods with port 8055
 							testSvc.Spec.Selector = map[string]string{"port": "8055"}
 							testSvc.Spec.SessionAffinity = "ClientIP"
@@ -3128,7 +3127,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						By("Setting up the service", func() {
 							testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, 8055, 0, testOpts.protocol)
-							testSvcNamespace = testSvc.ObjectMeta.Namespace
+							testSvcNamespace = testSvc.Namespace
 							_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 							Expect(err).NotTo(HaveOccurred())
 							Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
@@ -3233,7 +3232,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							internalLocal := v1.ServiceInternalTrafficPolicyLocal
 							testSvc.Spec.InternalTrafficPolicy = &internalLocal
 						}
-						testSvcNamespace = testSvc.ObjectMeta.Namespace
+						testSvcNamespace = testSvc.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
@@ -3751,9 +3750,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					if intLocal {
 						It("workload should have connectivity to self via local and not remote node", func() {
 							w00Expects := []ExpectationOption{ExpectWithPorts(npPort)}
-							hostW0SrcIP := ExpectWithSrcIPs("0.0.0.0")
-
-							hostW0SrcIP = ExpectWithSrcIPs(felixIP(0))
+							hostW0SrcIP := ExpectWithSrcIPs(felixIP(0))
 							if testOpts.ipv6 {
 								hostW0SrcIP = ExpectWithSrcIPs(felixIP(0))
 								switch testOpts.tunnel {
@@ -4267,7 +4264,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 								}
 
 								svcHostNP := k8sService("test-host-np", clusterIP, hostW[0], 81, 8055, int32(hostNP), testOpts.protocol)
-								testSvcNamespace := svcHostNP.ObjectMeta.Namespace
+								testSvcNamespace := svcHostNP.Namespace
 								_, err = k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), svcHostNP, metav1.CreateOptions{})
 								Expect(err).NotTo(HaveOccurred())
 								Eventually(k8sGetEpsForServiceFunc(k8sClient, svcHostNP), "10s").Should(HaveLen(1),
@@ -4449,7 +4446,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 						testSvc = k8sService(testSvcName, clusterIP,
 							tgtWorkload, 80, tgtPort, int32(npPort), testOpts.protocol)
-						testSvcNamespace = testSvc.ObjectMeta.Namespace
+						testSvcNamespace = testSvc.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
@@ -4719,7 +4716,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			It("should have connectivity from host-networked pods via service to host-networked backend", func() {
 				By("Setting up the service")
 				testSvc := k8sService("host-svc", clusterIP, hostW[0], 80, 8055, 0, testOpts.protocol)
-				testSvcNamespace := testSvc.ObjectMeta.Namespace
+				testSvcNamespace := testSvc.Namespace
 				k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -5664,24 +5661,6 @@ func k8sService(name, clusterIP string, w *workload.Workload, port,
 	}
 }
 
-func k8sServiceEndpoints(serviceName string, tgtIP string, tgtPort int, protocol string) *v1.Endpoints {
-	k8sProto := v1.ProtocolTCP
-	if protocol == "udp" {
-		k8sProto = v1.ProtocolUDP
-	}
-
-	return &v1.Endpoints{
-		TypeMeta:   typeMetaV1("Endpoints"),
-		ObjectMeta: objectMetaV1(serviceName),
-		Subsets: []v1.EndpointSubset{
-			{
-				Addresses: []v1.EndpointAddress{{IP: tgtIP}},
-				Ports:     []v1.EndpointPort{{Name: fmt.Sprintf("port-%d", tgtPort), Port: int32(tgtPort), Protocol: k8sProto}},
-			},
-		},
-	}
-}
-
 func k8sLBService(name, clusterIP string, wname string, port,
 	tgtPort int, protocol string, externalIPs, srcRange []string,
 ) *v1.Service {
@@ -5749,17 +5728,17 @@ func k8sServiceWithExtIP(name, clusterIP string, w *workload.Workload, port,
 	}
 }
 
-func k8sGetEpsForService(k8s kubernetes.Interface, svc *v1.Service) []v1.EndpointSubset {
+func k8sGetEpsForService(k8s kubernetes.Interface, svc *v1.Service) []v1.EndpointSubset { //nolint:staticcheck
 	ep, _ := k8s.CoreV1().
-		Endpoints(svc.ObjectMeta.Namespace).
-		Get(context.Background(), svc.ObjectMeta.Name, metav1.GetOptions{})
+		Endpoints(svc.Namespace).
+		Get(context.Background(), svc.Name, metav1.GetOptions{})
 	log.WithField("endpoints",
-		spew.Sprint(ep)).Infof("Got endpoints for %s", svc.ObjectMeta.Name)
+		spew.Sprint(ep)).Infof("Got endpoints for %s", svc.Name)
 	return ep.Subsets
 }
 
-func k8sGetEpsForServiceFunc(k8s kubernetes.Interface, svc *v1.Service) func() []v1.EndpointSubset {
-	return func() []v1.EndpointSubset {
+func k8sGetEpsForServiceFunc(k8s kubernetes.Interface, svc *v1.Service) func() []v1.EndpointSubset { //nolint:staticcheck
+	return func() []v1.EndpointSubset { //nolint:staticcheck
 		return k8sGetEpsForService(k8s, svc)
 	}
 }
@@ -5768,8 +5747,9 @@ func k8sUpdateService(k8sClient kubernetes.Interface, nameSpace, svcName string,
 	svc, err := k8sClient.CoreV1().
 		Services(nameSpace).
 		Get(context.Background(), svcName, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
 	log.WithField("origSvc", svc).Info("Read original service before updating it")
-	newsvc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+	newsvc.ResourceVersion = svc.ResourceVersion
 	_, err = k8sClient.CoreV1().Services(nameSpace).Update(context.Background(), newsvc, metav1.UpdateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(k8sGetEpsForServiceFunc(k8sClient, oldsvc), "10s").Should(HaveLen(1),
@@ -5795,7 +5775,7 @@ func k8sCreateLBServiceWithEndPoints(k8sClient kubernetes.Interface, name, clust
 		testSvc = k8sLBService(name, clusterIP, "nobackend", port, tgtPort, protocol, externalIPs, srcRange)
 		epslen = 0
 	}
-	testSvcNamespace = testSvc.ObjectMeta.Namespace
+	testSvcNamespace = testSvc.Namespace
 	_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(epslen),

@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build fvtests
-// +build fvtests
-
 package fv_test
 
 import (
@@ -347,9 +344,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		ippool.Spec.NATOutgoing = false
 		ippool.Spec.BlockSize = 29
 		ippool.Spec.NodeSelector = "!all()"
-		if overlay == OV_VXLAN {
+		switch overlay {
+		case OV_VXLAN:
 			ippool.Spec.VXLANMode = api.VXLANModeAlways
-		} else if overlay == OV_IPIP {
+		case OV_IPIP:
 			ippool.Spec.IPIPMode = api.IPIPModeAlways
 		}
 		_, err = client.IPPools().Create(context.Background(), ippool, options.SetOptions{})
@@ -542,9 +540,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				ippool.Spec.NATOutgoing = false
 				ippool.Spec.BlockSize = 29
 				ippool.Spec.NodeSelector = "!all()"
-				if overlay == OV_VXLAN {
+				switch overlay {
+				case OV_VXLAN:
 					ippool.Spec.VXLANMode = api.VXLANModeAlways
-				} else if overlay == OV_IPIP {
+				case OV_IPIP:
 					ippool.Spec.IPIPMode = api.IPIPModeAlways
 				}
 				_, err = client.IPPools().Create(context.Background(), ippool, options.SetOptions{})
@@ -696,8 +695,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					cc.ResetExpectations()
 
 					By("Adding the local pods back")
-					blueGWs[0].Start()
-					redGWs[0].Start()
+					Expect(blueGWs[0].Start()).To(Succeed())
+					Expect(redGWs[0].Start()).To(Succeed())
 					blueGWs[0].ConfigureInInfra(infra)
 					redGWs[0].ConfigureInInfra(infra)
 					cc.ExpectSNAT(egwClient, blueGWs[0].IP, extWorkloads[1], 4321)
@@ -881,13 +880,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}()
 
 			By("Check gateway route exists")
+			gwRouteRe := regexp.MustCompile(`^10.10.10.1 dev cali`)
 			checkGatewayRoute := func() (err error) {
 				routes, err := tc.Felixes[0].ExecOutput("ip", "r")
 				if err != nil {
 					return
 				}
 				for _, route := range strings.Split(routes, "\n") {
-					if matched, _ := regexp.MatchString("^10.10.10.1 dev cali", route); matched {
+					if matched := gwRouteRe.MatchString(route); matched {
 						return
 					}
 				}

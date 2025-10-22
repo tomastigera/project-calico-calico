@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build fvtests
-
 package fv_test
 
 import (
@@ -156,7 +154,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 						log.Info("Deleted start-" + key)
 					} else {
 						// Unexpected flow log.
-						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
+						return fmt.Errorf("Unexpected flow log: %v", fl)
 					}
 				}
 				if fl.NumFlowsCompleted == 1 {
@@ -166,12 +164,12 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 						log.Info("Deleted end-" + key)
 					} else {
 						// Unexpected flow log.
-						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
+						return fmt.Errorf("Unexpected flow log: %v", fl)
 					}
 				}
 			}
 			if len(expectedKeys) != 0 {
-				return errors.New(fmt.Sprintf("Expected flow logs not seen: %v", expectedKeys))
+				return fmt.Errorf("Expected flow logs not seen: %v", expectedKeys)
 			}
 			return nil
 		}, "300s", "15s").ShouldNot(HaveOccurred())
