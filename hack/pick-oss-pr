@@ -81,15 +81,15 @@ init-vars "$DST_UPSTREAM_REMOTE/$TARGET_BRANCH" "$@"
 orig_pr_ids=()
 orig_commit_shas=()
 for pullnumber in "${PULLS[@]}"; do
-  pull_json=$(hub api repos/${SRC_MAIN_REPO_ORG}/${SRC_MAIN_REPO_NAME}/pulls/${pullnumber})
+  pull_json=$(gh pr view -R "${SRC_MAIN_REPO_ORG}/${SRC_MAIN_REPO_NAME}" "${pullnumber}" --json title,body,labels,mergeCommit,headRefOid)
   pull_title=$(echo "${pull_json}" | jq -r '.title')
   pull_body=$(echo "${pull_json}" | jq -r '.body')
   pull_labels=$(echo "${pull_json}" | jq -r '.labels[].name' | paste -sd$'\n')
 
   # Gather metadata for the summary block
-  merge_sha=$(echo "${pull_json}" | jq -r '.merge_commit_sha // empty')
+  merge_sha=$(echo "${pull_json}" | jq -r '.mergeCommit.oid // empty')
   if [[ -z "${merge_sha}" || "${merge_sha}" == "null" ]]; then
-    merge_sha=$(echo "${pull_json}" | jq -r '.head.sha // empty')
+    merge_sha=$(echo "${pull_json}" | jq -r '.headRefOid // empty')
   fi
   
   merge_sha_short=""
