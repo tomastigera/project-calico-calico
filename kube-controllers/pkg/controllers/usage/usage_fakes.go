@@ -337,6 +337,10 @@ func (e *errorReturningFakeRuntimeClient) Update(ctx context.Context, obj ctrlcl
 	panic("implement me")
 }
 
+func (e *errorReturningFakeRuntimeClient) Apply(ctx context.Context, _ runtime.ApplyConfiguration, opts ...ctrlclient.ApplyOption) error {
+	panic("implement me")
+}
+
 func (e *errorReturningFakeRuntimeClient) Patch(ctx context.Context, obj ctrlclient.Object, patch ctrlclient.Patch, opts ...ctrlclient.PatchOption) error {
 	panic("implement me")
 }
