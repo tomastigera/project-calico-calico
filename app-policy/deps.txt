@@ -37,20 +37,12 @@ github.com/coreos/go-semver v0.3.1
 github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.5.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-<<<<<<< HEAD
-=======
-github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 github.com/emicklei/go-restful/v3 v3.12.2
 github.com/envoyproxy/go-control-plane v0.13.4
 github.com/envoyproxy/go-control-plane/envoy v1.32.4
 github.com/envoyproxy/protoc-gen-validate v1.2.1
-<<<<<<< HEAD
 github.com/florianl/go-nfqueue v1.3.2
-github.com/fxamacker/cbor/v2 v2.7.0
-=======
 github.com/fxamacker/cbor/v2 v2.9.0
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 github.com/go-ini/ini v1.67.0
 github.com/go-logr/logr v1.4.3
 github.com/go-openapi/jsonpointer v0.21.1
@@ -78,12 +70,7 @@ github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.6
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 github.com/kelseyhightower/envconfig v1.4.0
 github.com/leodido/go-urn v1.4.0
-<<<<<<< HEAD
-github.com/lithammer/dedent v1.1.0
 github.com/mailru/easyjson v0.9.0
-=======
-github.com/mailru/easyjson v0.7.7
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 github.com/mattn/go-runewidth v0.0.16
 github.com/mdlayher/genetlink v1.3.2
 github.com/mdlayher/netlink v1.7.2
@@ -120,7 +107,7 @@ github.com/tidwall/match v1.1.1
 github.com/tidwall/pretty v1.2.1
 github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 github.com/valllabh/ocsf-schema-golang v1.0.3
-github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
+github.com/vishvananda/netlink v1.3.1
 github.com/vishvananda/netns v0.0.5
 github.com/x448/float16 v0.8.4
 github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -132,14 +119,9 @@ go.opentelemetry.io/otel/trace v1.35.0
 go.uber.org/multierr v1.11.0
 go.uber.org/zap v1.27.0
 go.yaml.in/yaml/v2 v2.4.2
-<<<<<<< HEAD
+go.yaml.in/yaml/v3 v3.0.4
 golang.org/x/crypto v0.40.0
 golang.org/x/net v0.42.0
-=======
-go.yaml.in/yaml/v3 v3.0.4
-golang.org/x/crypto v0.41.0
-golang.org/x/net v0.43.0
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 golang.org/x/oauth2 v0.30.0
 golang.org/x/sync v0.16.0
 golang.org/x/sys v0.35.0
@@ -167,16 +149,10 @@ k8s.io/component-helpers v0.34.1
 k8s.io/controller-manager v0.34.1
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
-<<<<<<< HEAD
-k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-k8s.io/kubernetes v1.33.5
-k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
-rsc.io/binaryregexp v0.2.0
-=======
 k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
 k8s.io/kubernetes v1.34.1
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
+rsc.io/binaryregexp v0.2.0
 sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8
 sigs.k8s.io/knftables v0.0.18
 sigs.k8s.io/network-policy-api v0.1.5

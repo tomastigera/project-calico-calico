@@ -32,7 +32,6 @@ github.com/coreos/go-semver v0.3.1
 github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.5.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-<<<<<<< HEAD
 github.com/elastic/cloud-on-k8s/v2 v2.16.1
 github.com/elastic/go-elasticsearch/v7 v7.17.10
 github.com/elastic/go-sysinfo v1.13.1
@@ -40,9 +39,6 @@ github.com/elastic/go-ucfg v0.8.8
 github.com/emicklei/go-restful/v3 v3.12.2
 github.com/evanphx/json-patch v5.9.11+incompatible
 github.com/evanphx/json-patch/v5 v5.9.11
-=======
-github.com/emicklei/go-restful/v3 v3.12.2
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 github.com/felixge/httpsnoop v1.0.4
 github.com/florianl/go-nfqueue v1.3.2
 github.com/fsnotify/fsnotify v1.9.0
@@ -81,12 +77,7 @@ github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 github.com/kelseyhightower/envconfig v1.4.0
 github.com/kylelemons/godebug v1.1.0
 github.com/leodido/go-urn v1.4.0
-<<<<<<< HEAD
-github.com/lithammer/dedent v1.1.0
 github.com/mailru/easyjson v0.9.0
-=======
-github.com/mailru/easyjson v0.7.7
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 github.com/mattn/go-runewidth v0.0.16
 github.com/mdlayher/genetlink v1.3.2
 github.com/mdlayher/netlink v1.7.2
@@ -119,7 +110,7 @@ github.com/stretchr/objx v0.5.2
 github.com/stretchr/testify v1.10.0
 github.com/tchap/go-patricia/v2 v2.3.3
 github.com/tigera/api v0.0.0-20240708152828-da21375e20da
-github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
+github.com/vishvananda/netlink v1.3.1
 github.com/vishvananda/netns v0.0.5
 github.com/x448/float16 v0.8.4
 github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -141,14 +132,9 @@ go.opentelemetry.io/proto/otlp v1.5.0
 go.uber.org/multierr v1.11.0
 go.uber.org/zap v1.27.0
 go.yaml.in/yaml/v2 v2.4.2
-<<<<<<< HEAD
+go.yaml.in/yaml/v3 v3.0.4
 golang.org/x/crypto v0.40.0
 golang.org/x/net v0.42.0
-=======
-go.yaml.in/yaml/v3 v3.0.4
-golang.org/x/crypto v0.41.0
-golang.org/x/net v0.43.0
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 golang.org/x/oauth2 v0.30.0
 golang.org/x/sync v0.16.0
 golang.org/x/sys v0.35.0
@@ -167,23 +153,7 @@ gopkg.in/go-playground/validator.v9 v9.30.2
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/yaml.v3 v3.0.1
-<<<<<<< HEAD
 howett.net/plist v1.0.1
-k8s.io/api v0.33.5
-k8s.io/apiextensions-apiserver v0.33.5
-k8s.io/apimachinery v0.33.5
-k8s.io/apiserver v0.33.5
-k8s.io/client-go v0.33.5
-k8s.io/component-base v0.33.5
-k8s.io/component-helpers v0.33.5
-k8s.io/controller-manager v0.33.5
-k8s.io/klog v0.2.0
-k8s.io/klog/v2 v2.130.1
-k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-k8s.io/kubernetes v1.33.5
-k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
-sigs.k8s.io/controller-runtime v0.21.0
-=======
 k8s.io/api v0.34.1
 k8s.io/apiextensions-apiserver v0.34.1
 k8s.io/apimachinery v0.34.1
@@ -197,7 +167,7 @@ k8s.io/klog/v2 v2.130.1
 k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
 k8s.io/kubernetes v1.34.1
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
+sigs.k8s.io/controller-runtime v0.20.4
 sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8
 sigs.k8s.io/knftables v0.0.18
 sigs.k8s.io/network-policy-api v0.1.5

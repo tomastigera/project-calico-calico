@@ -49,12 +49,8 @@ github.com/x448/float16 v0.8.4
 go.opentelemetry.io/otel v1.35.0
 go.opentelemetry.io/otel/trace v1.35.0
 go.yaml.in/yaml/v2 v2.4.2
-<<<<<<< HEAD
-golang.org/x/net v0.42.0
-=======
 go.yaml.in/yaml/v3 v3.0.4
-golang.org/x/net v0.43.0
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
+golang.org/x/net v0.42.0
 golang.org/x/oauth2 v0.30.0
 golang.org/x/sys v0.35.0
 golang.org/x/term v0.34.0
@@ -76,19 +72,11 @@ k8s.io/component-helpers v0.34.1
 k8s.io/controller-manager v0.34.1
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
-<<<<<<< HEAD
-k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-k8s.io/kubelet v0.33.5
-k8s.io/kubernetes v1.33.5
-k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
-sigs.k8s.io/controller-runtime v0.21.0
-=======
 k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
 k8s.io/kubelet v0.34.1
 k8s.io/kubernetes v1.34.1
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 sigs.k8s.io/controller-runtime v0.20.4
->>>>>>> 2eb5c65fa6 (bump k8s 1.34.1 (#11200))
 sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8
 sigs.k8s.io/randfill v1.0.0
 sigs.k8s.io/structured-merge-diff/v6 v6.3.0
