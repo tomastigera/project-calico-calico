@@ -48,14 +48,20 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 		p3Key.Kind = v3.KindNetworkPolicy
 		p3Key.Name = model.PolicyNamePrefixStaged + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedNetworkPolicy); ok {
+			// Preserve the original UID from the staged policy
+			originalUID := p3Value.UID
 			_, cp3Value := v3.ConvertStagedPolicyToEnforced(p3Value)
 			cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+			// Restore the UID so it appears in the API response
+			cp3Value.UID = originalUID
 			uv3.Value = cp3Value
 		}
 	case v3.KindStagedKubernetesNetworkPolicy:
 		p3Key.Kind = v3.KindNetworkPolicy
 		p3Key.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedKubernetesNetworkPolicy); ok {
+			// Preserve the original UID from the staged policy
+			originalUID := p3Value.UID
 			//From StagedKubernetesNetworkPolicy to networkingv1 NetworkPolicy
 			_, v1NetworkPolicy := v3.ConvertStagedKubernetesPolicyToK8SEnforced(p3Value)
 			c := conversion.NewConverter()
@@ -64,6 +70,8 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 			if err == nil {
 				if cp3Value, ok := kvPair.Value.(*v3.NetworkPolicy); ok {
 					cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+					// Restore the UID so it appears in the API response
+					cp3Value.UID = originalUID
 					uv3.Value = cp3Value
 				}
 			}
@@ -72,8 +80,12 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 		p3Key.Kind = v3.KindGlobalNetworkPolicy
 		p3Key.Name = model.PolicyNamePrefixStaged + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedGlobalNetworkPolicy); ok {
+			// Preserve the original UID from the staged policy
+			originalUID := p3Value.UID
 			_, cp3Value := v3.ConvertStagedGlobalPolicyToEnforced(p3Value)
 			cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+			// Restore the UID so it appears in the API response
+			cp3Value.UID = originalUID
 			uv3.Value = cp3Value
 		}
 	}
