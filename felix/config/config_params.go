@@ -611,12 +611,13 @@ type Config struct {
 	GenericXDPEnabled bool `config:"bool;false"`
 
 	// Config for egress gateways.
-	EgressIPSupport               string        `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
-	EgressIPVXLANPort             int           `config:"int;4790"`
-	EgressIPVXLANVNI              int           `config:"int;4097"`
-	EgressIPRoutingRulePriority   int           `config:"int;100"`
-	EgressGatewayPollInterval     time.Duration `config:"seconds;10"`
-	EgressGatewayPollFailureCount int           `config:"int;3"`
+	EgressIPSupport               string           `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
+	EgressIPVXLANPort             int              `config:"int;4790"`
+	EgressIPVXLANVNI              int              `config:"int;4097"`
+	EgressIPRoutingRulePriority   int              `config:"int;100"`
+	EgressGatewayPollInterval     time.Duration    `config:"seconds;10"`
+	EgressGatewayPollFailureCount int              `config:"int;3"`
+	EgressIPHostIfacePattern      []*regexp.Regexp `config:"iface-list-regexp;;"`
 
 	// Config for external networks.
 	ExternalNetworkSupport             string `config:"oneof(Disabled,Enabled);Disabled"`

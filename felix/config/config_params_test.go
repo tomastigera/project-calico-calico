@@ -984,6 +984,38 @@ var _ = DescribeTable("Config InterfaceExclude",
 	}),
 )
 
+var _ = DescribeTable("Config EgressIPHostIfacePattern",
+	func(ifacePatterns string, expected []*regexp.Regexp) {
+		cfg := config.New()
+		_, err := cfg.UpdateFrom(map[string]string{"EgressIPHostIfacePattern": ifacePatterns}, config.EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		regexps := cfg.EgressIPHostIfacePattern
+		Expect(regexps).To(Equal(expected))
+	},
+
+	Entry("empty list", "", nil),
+	Entry("invalid regexp", `/^abc\K/`, nil),
+	Entry("invalid non-regexp", `!!!!@@@@`, nil),
+	Entry("non-regexp single value", "bond0", []*regexp.Regexp{
+		regexp.MustCompile("^bond0$"),
+	}),
+	Entry("non-regexp many values", "bond0,bond01234", []*regexp.Regexp{
+		regexp.MustCompile("^bond0$"),
+		regexp.MustCompile("^bond01234$"),
+	}),
+	Entry("regexp single value", "/^bond0.*/", []*regexp.Regexp{
+		regexp.MustCompile("^bond0.*"),
+	}),
+	Entry("regexp many values", "/bond0.*/,/bond1.*/", []*regexp.Regexp{
+		regexp.MustCompile("bond0.*"),
+		regexp.MustCompile("bond1.*"),
+	}),
+	Entry("mix of regexp and non-regexp", "/bond0.*/,bond1", []*regexp.Regexp{
+		regexp.MustCompile("bond0.*"),
+		regexp.MustCompile("^bond1$"),
+	}),
+)
+
 var _ = Describe("Config copy tests", func() {
 	var conf *config.Config
 

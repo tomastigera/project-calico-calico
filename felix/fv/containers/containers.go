@@ -1044,3 +1044,24 @@ func (c *Container) BPFNATHasBackendForService(svcIP string, svcPort, proto int,
 
 	return true
 }
+
+func (c *Container) ProcSysValueForIface(iface string) string {
+	path := fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/src_valid_mark", iface)
+	out, err := c.ExecOutput("cat", path)
+	if err != nil {
+		log.WithError(err).Warn("Error cat'ing proc-sys file")
+		return ""
+	}
+
+	if len(out) == 0 {
+		return ""
+	}
+
+	return string(out[0])
+}
+
+func (c *Container) ProcSysValueForIfaceFn(iface string) func() string {
+	return func() string {
+		return c.ProcSysValueForIface(iface)
+	}
+}

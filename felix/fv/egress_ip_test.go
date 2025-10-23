@@ -322,6 +322,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPVXLANPORT"] = "4790"
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPVXLANPORT"] = "4790"
+		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPHOSTIFACEPATTERN"] = "eth0"
 		// IPv6 is not supported in egress gateways
 		topologyOptions.EnableIPv6 = false
 		if overlay == OV_VXLAN {
@@ -903,6 +904,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			By("Check gateway route still present")
 			Expect(checkGatewayRoute()).To(Succeed())
 			Consistently(checkGatewayRoute, "5s", "1s").Should(Succeed())
+		})
+
+		It("programs src_valid_mark according to FELIX_EGRESSIPHOSTIFACEPATTERN", func() {
+			Eventually(tc.Felixes[0].ProcSysValueForIfaceFn("eth0"), "10s").Should(BeEquivalentTo("1"))
 		})
 
 		It("updates rules and routing as gateways are added and removed", func() {
