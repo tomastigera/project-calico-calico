@@ -611,37 +611,39 @@ syn_force_policy:
 		 * on egress from an egress gateway, because the whole point of egress
 		 * gateways, on the return path, is to forward from destination IPs that
 		 * are not their own IP. */
-		if (!EGRESS_GATEWAY) {
-			if (wep_rpf_check(ctx, src_rt) == RPF_RES_FAIL) {
-				goto deny;
-			}
+		if (EGRESS_GATEWAY) {
+			goto nat_outgoing;
+		}
+		if (wep_rpf_check(ctx, src_rt) == RPF_RES_FAIL) {
+			goto deny;
+		}
 
-			if (cali_rt_flags_skip_ingress_redirect(src_flags)) {
-				ctx->state->flags |= CALI_ST_SKIP_REDIR_PEER;
-			}
+		if (cali_rt_flags_skip_ingress_redirect(src_flags)) {
+			ctx->state->flags |= CALI_ST_SKIP_REDIR_PEER;
+		}
 
-			if ((EGRESS_CLIENT) && (cali_rt_flags_outside_cluster(dst_flags))) {
-				// Packet is from an egress client and destined to outside
-				// the cluster, so CT state will be marked as an egress
-				// gateway flow.
-				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
-				ctx->state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
+		if ((EGRESS_CLIENT) && (cali_rt_flags_outside_cluster(dst_flags))) {
+			// Packet is from an egress client and destined to outside
+			// the cluster, so CT state will be marked as an egress
+			// gateway flow.
+			CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
+			ctx->state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
+		}
+		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
+		if (!(cali_rt_flags_is_in_pool(src_flags))) {
+			CALI_DEBUG("Source " IP_FMT " not in IP pool", debug_ip(ctx->state->ip_src));
+			if (!(dst_flags & (CALI_RT_WORKLOAD | CALI_RT_HOST))) {
+				CALI_DEBUG("Outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
+				ctx->state->flags |= CALI_ST_SKIP_FIB;
 			}
-			/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
-			if (!(cali_rt_flags_is_in_pool(src_flags))) {
-				CALI_DEBUG("Source " IP_FMT " not in IP pool", debug_ip(ctx->state->ip_src));
-				if (!(dst_flags & (CALI_RT_WORKLOAD | CALI_RT_HOST))) {
-					CALI_DEBUG("Outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
-					ctx->state->flags |= CALI_ST_SKIP_FIB;
-				}
-			} else {
-				if (cali_rt_flags_should_set_dscp(dst_flags)) {
-					CALI_DEBUG("Remote host or outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
-					ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
-				}
+		} else {
+			if (cali_rt_flags_should_set_dscp(dst_flags)) {
+				CALI_DEBUG("Remote host or outside cluster dest " IP_FMT "", debug_ip(ctx->state->post_nat_ip_dst));
+				ctx->state->flags |= CALI_ST_CLUSTER_EXTERNAL;
 			}
 		}
 
+nat_outgoing:
 		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
 		// client. This is because, packets from egress clients are destined outside the cluster
 		// the SNATing is done by the egw itself.
