@@ -3,45 +3,62 @@
 
 set -ex
 
-zone=$1
-vm_name=$2-rocky8
+install_package() {
+    shopt -s nullglob
+    files=(/package/*)
+    [[ ${#files[@]} -eq 0 ]] && { echo "Error: No files found in /package/" >&2; exit 1; }
+
+    package_file="${files[0]}"
+    case "$package_file" in
+        *.deb)
+            echo "Installing DEB package: $(basename "$package_file")"
+            apt install -y "$package_file"
+            ;;
+        *.rpm)
+            echo "Installing RPM package: $(basename "$package_file")"
+            dnf install --disablerepo='*' -y "$package_file"
+            ;;
+    esac
+}
 
 assert_file_exists() {
-    if ! gcloud compute ssh --zone="$zone" "user@$vm_name" -- test -f "$1"; then
+    if [ ! -f "$1" ]; then
         echo "file $1 doesn't exist"
         exit 1
     fi
 }
 
 assert_folder_exists() {
-    if ! gcloud compute ssh --zone="$zone" "user@$vm_name" -- test -d "$1"; then
+    if [ ! -d "$1" ]; then
         echo "folder $1 doesn't exist"
         exit 1
     fi
 }
 
 assert_folder_user_group() {
-    if ! gcloud compute ssh --zone="$zone" "user@$vm_name" -- ls -dl "$1" | grep "$2"; then
+    if ! ls -dl "$1" | grep "$2"; then
         echo "entry $1 doesn't have expected user and group $2"
         exit 1
     fi
 }
 
 assert_user_exists() {
-    if ! gcloud compute ssh --zone="$zone" "user@$vm_name" -- getent passwd "$1"; then
+    if ! getent passwd "$1"; then
         echo "user $1 doesn't exist"
         exit 1
     fi
 }
 
 assert_group_exists() {
-    if ! gcloud compute ssh --zone="$zone" "user@$vm_name" -- getent group "$1"; then
+    if ! getent group "$1"; then
         echo "group $1 doesn't exist"
         exit 1
     fi
 }
 
 echo "running Fluent Bit FV tests ..."
+
+install_package
 
 # check user and group
 assert_user_exists calico

@@ -12,14 +12,7 @@
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
         - export REPO_NAME=$(basename $(pwd))
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-fluent-bit
-        - export ZONE=us-east4-c
-        - echo VM_PREFIX=${VM_PREFIX}
     jobs:
       - name: fluent-bit tests
         commands:
           - make ci
-    epilogue:
-      always:
-        commands:
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}

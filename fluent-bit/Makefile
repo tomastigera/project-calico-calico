@@ -75,13 +75,15 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r plugins/'
 
-ZONE ?= us-central1-a
-VM_PREFIX ?= $(USER)-fluent-bit
-
 .PHONY: fv
 fv: package
-	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX) $(FLUENT_BIT_VERSION)
-	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(FLUENT_BIT_VERSION)))
+
+	docker run --rm \
+		-v ./package/rhel9/RPMS/x86_64/calico-fluent-bit-$(version)-1.el9.x86_64.rpm:/package/calico-fluent-bit.rpm \
+		-v ./fv:/fv \
+		almalinux:9 \
+		/fv/run-tests.sh
 
 ###############################################################################
 # CI
