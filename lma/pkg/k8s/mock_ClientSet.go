@@ -41,7 +41,6 @@ import (
 	flowcontrolv1beta2 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
 	v1beta3 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
-	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 	nodev1 "k8s.io/client-go/kubernetes/typed/node/v1"
 	nodev1alpha1 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
@@ -51,6 +50,7 @@ import (
 	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	rbacv1alpha1 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	resourcev1 "k8s.io/client-go/kubernetes/typed/resource/v1"
 	v1alpha3 "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	resourcev1beta1 "k8s.io/client-go/kubernetes/typed/resource/v1beta1"
 	resourcev1beta2 "k8s.io/client-go/kubernetes/typed/resource/v1beta2"
@@ -788,26 +788,6 @@ func (_m *MockClientSet) NetworkingV1() networkingv1.NetworkingV1Interface {
 	return r0
 }
 
-// NetworkingV1alpha1 provides a mock function with no fields
-func (_m *MockClientSet) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for NetworkingV1alpha1")
-	}
-
-	var r0 networkingv1alpha1.NetworkingV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() networkingv1alpha1.NetworkingV1alpha1Interface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(networkingv1alpha1.NetworkingV1alpha1Interface)
-		}
-	}
-
-	return r0
-}
-
 // NetworkingV1beta1 provides a mock function with no fields
 func (_m *MockClientSet) NetworkingV1beta1() networkingv1beta1.NetworkingV1beta1Interface {
 	ret := _m.Called()
@@ -1022,6 +1002,26 @@ func (_m *MockClientSet) ResourceV1alpha3() v1alpha3.ResourceV1alpha3Interface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(v1alpha3.ResourceV1alpha3Interface)
+		}
+	}
+
+	return r0
+}
+
+// ResourceV1 provides a mock function with no fields
+func (_m *MockClientSet) ResourceV1() resourcev1.ResourceV1Interface {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResourceV1")
+	}
+
+	var r0 resourcev1.ResourceV1Interface
+	if rf, ok := ret.Get(0).(func() resourcev1.ResourceV1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(resourcev1.ResourceV1Interface)
 		}
 	}
 

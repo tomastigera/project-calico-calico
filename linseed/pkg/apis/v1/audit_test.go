@@ -81,8 +81,7 @@ var (
     "metadata": {
       "name": "some-name",
       "uid": "some-uid",
-      "resourceVersion": "any",
-      "creationTimestamp": null
+      "resourceVersion": "any"
     },
     "spec": {},
     "status": {}
@@ -93,8 +92,7 @@ var (
     "metadata": {
       "name": "some-name",
       "uid": "some-uid",
-      "resourceVersion": "any",
-      "creationTimestamp": null
+      "resourceVersion": "any"
     },
     "spec": {},
     "status": {}

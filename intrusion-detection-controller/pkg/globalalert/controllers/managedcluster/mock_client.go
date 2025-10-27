@@ -103,6 +103,10 @@ func (MockClientWithWatch) Patch(context.Context, client.Object, client.Patch, .
 	return nil
 }
 
+func (MockClientWithWatch) Apply(context.Context, runtime.ApplyConfiguration, ...client.ApplyOption) error {
+	return nil
+}
+
 func (MockClientWithWatch) Update(context.Context, client.Object, ...client.UpdateOption) error {
 	return nil
 }
