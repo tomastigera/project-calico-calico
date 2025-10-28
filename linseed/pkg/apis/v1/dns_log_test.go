@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"reflect"
@@ -19,6 +20,13 @@ var (
 	decodedDNSSOA = "tigera.io. root.tigera.io. 1 3600 60 86400 1800"
 	decodedDNSSRV = "10 20 53 ns.tigera.io."
 	decodedDNSMX  = "10 mail.tigera.io."
+	dnsPublicKey  = []byte{ // "Hello, World!" in bytes for testing
+		0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x57,
+		0x6f, 0x72, 0x6c, 0x64, 0x21,
+	}
+	decodedDNSKEY = "257 3 8 " + base64.StdEncoding.EncodeToString(dnsPublicKey)
+	dnsSignature  = "Hello World!"
+	decodedRRSIG  = "A 8 2 3600 20250405000000 20250102000000 12345 example.com. " + base64.StdEncoding.EncodeToString([]byte(dnsSignature))
 	dnsSRV        = layers.DNSSRV{
 		Priority: 10,
 		Weight:   20,
@@ -37,6 +45,23 @@ var (
 	dnsMX = layers.DNSMX{
 		Preference: 10,
 		Name:       []byte("mail.tigera.io."),
+	}
+	dnsDNSKEY = layers.DNSKEY{
+		Flags:     layers.DNSKEYFlagSecureEntryPoint,
+		Protocol:  layers.DNSKEYProtocolValue,
+		Algorithm: layers.DNSSECAlgorithmRSASHA256,
+		PublicKey: dnsPublicKey,
+	}
+	dnsRRSIG = layers.DNSRRSIG{
+		TypeCovered: layers.DNSTypeA,
+		Algorithm:   layers.DNSSECAlgorithmRSASHA256,
+		Labels:      2,
+		OriginalTTL: 3600,
+		Expiration:  1743811200, // 2025-04-05 00:00:00 UTC
+		Inception:   1735776000, // 2025-01-02 00:00:00 UTC
+		KeyTag:      12345,
+		SignerName:  []byte("example.com."),
+		Signature:   []byte(dnsSignature),
 	}
 )
 
@@ -176,6 +201,16 @@ func TestDNSRData_MarshalJSON(t *testing.T) {
 			[]byte(fmt.Sprintf("\"%s\"", decodedDNSMX)), false,
 		},
 		{
+			"RRSIG",
+			DNSRData{nil, dnsRRSIG},
+			[]byte(fmt.Sprintf("\"%s\"", decodedRRSIG)), false,
+		},
+		{
+			"DNSKEY",
+			DNSRData{nil, dnsDNSKEY},
+			[]byte(fmt.Sprintf("\"%s\"", decodedDNSKEY)), false,
+		},
+		{
 			"IP",
 			DNSRData{nil, net.ParseIP("1.2.3.4")},
 			[]byte(`"1.2.3.4"`), false,
@@ -238,6 +273,18 @@ func TestDNSRData_UnmarshalJSON(t *testing.T) {
 			"MX",
 			[]byte(fmt.Sprintf("\"%s\"", decodedDNSMX)),
 			DNSRData{[]byte(decodedDNSMX), dnsMX},
+			false,
+		},
+		{
+			"RRSIG",
+			[]byte(fmt.Sprintf("\"%s\"", decodedRRSIG)),
+			DNSRData{[]byte(decodedRRSIG), dnsRRSIG},
+			false,
+		},
+		{
+			"DNSKEY",
+			[]byte(fmt.Sprintf("\"%s\"", decodedDNSKEY)),
+			DNSRData{[]byte(decodedDNSKEY), dnsDNSKEY},
 			false,
 		},
 		{
@@ -319,6 +366,13 @@ func TestDNSRData_UnmarshalJSON(t *testing.T) {
 						logrus.Infof("%d %d %d %s", v.Priority, v.Weight, v.Port, v.Name)
 					case layers.DNSMX:
 						logrus.Infof("%d %s", v.Preference, v.Name)
+					case layers.DNSKEY:
+						logrus.Infof("%d %d %d %s", v.Flags, v.Protocol, v.Algorithm, base64.StdEncoding.EncodeToString(v.PublicKey))
+					case layers.DNSRRSIG:
+						logrus.Infof("%s %d %d %d %s %s %d %s %s",
+							v.TypeCovered.String(), v.Algorithm, v.Labels, v.OriginalTTL,
+							formatRRSIGTimestamp(v.Expiration), formatRRSIGTimestamp(v.Inception),
+							v.KeyTag, string(v.SignerName), base64.StdEncoding.EncodeToString(v.Signature))
 					default:
 						logrus.Infof("%v", v)
 					}
@@ -448,6 +502,24 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 				},
 			},
 			[]byte(`[{"name":"","class":1232,"type":"OPT","rdata":[""]}]`), false,
+		},
+		{
+			"marshal RRSets with RRSIG data",
+			DNSRRSets{
+				DNSName{Name: "any", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeRRSIG)}: DNSRDatas{
+					{nil, dnsRRSIG},
+				},
+			},
+			[]byte(`[{"name":"any","class":"IN","type":"RRSIG","rdata":["A 8 2 3600 20250405000000 20250102000000 12345 example.com. ` + base64.StdEncoding.EncodeToString([]byte(dnsSignature)) + `"]}]`), false,
+		},
+		{
+			"marshal RRSets with DNSKEY data",
+			DNSRRSets{
+				DNSName{Name: "any", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeDNSKEY)}: DNSRDatas{
+					{nil, dnsDNSKEY},
+				},
+			},
+			[]byte(`[{"name":"any","class":"IN","type":"DNSKEY","rdata":["257 3 8 ` + base64.StdEncoding.EncodeToString(dnsPublicKey) + `"]}]`), false,
 		},
 	}
 	for _, tt := range tests {
@@ -588,6 +660,50 @@ func TestDNSRRSets_UnmarshalJSON(t *testing.T) {
 					Class: DNSClass(1232),
 					Type:  DNSType(layers.DNSTypeOPT),
 				}: DNSRDatas{{[]byte{}, ""}},
+			},
+			false,
+		},
+		{
+			"RRSIG", []byte(`[{"name":"example.com","class":"IN","type":"RRSIG","rdata":["A 8 2 3600 20250405000000 20250102000000 12345 example.com. ` + base64.StdEncoding.EncodeToString([]byte(dnsSignature)) + `"]}]`),
+			DNSRRSets{
+				DNSName{
+					Name:  "example.com",
+					Class: DNSClass(layers.DNSClassIN),
+					Type:  DNSType(layers.DNSTypeRRSIG),
+				}: DNSRDatas{{Raw: []byte(decodedRRSIG), Decoded: dnsRRSIG}},
+			},
+			false,
+		},
+		{
+			"RRSIG integer type 46", []byte(`[{"name":"example.com","class":"IN","type":46,"rdata":["A 8 2 3600 20250405000000 20250102000000 12345 example.com. ` + base64.StdEncoding.EncodeToString([]byte(dnsSignature)) + `"]}]`),
+			DNSRRSets{
+				DNSName{
+					Name:  "example.com",
+					Class: DNSClass(layers.DNSClassIN),
+					Type:  DNSType(layers.DNSTypeRRSIG),
+				}: DNSRDatas{{Raw: []byte(decodedRRSIG), Decoded: dnsRRSIG}},
+			},
+			false,
+		},
+		{
+			"DNSKEY", []byte(`[{"name":"example.com","class":"IN","type":"DNSKEY","rdata":["257 3 8 ` + base64.StdEncoding.EncodeToString(dnsPublicKey) + `"]}]`),
+			DNSRRSets{
+				DNSName{
+					Name:  "example.com",
+					Class: DNSClass(layers.DNSClassIN),
+					Type:  DNSType(layers.DNSTypeDNSKEY),
+				}: DNSRDatas{{Raw: []byte(decodedDNSKEY), Decoded: dnsDNSKEY}},
+			},
+			false,
+		},
+		{
+			"DNSKEY integer type 48", []byte(`[{"name":"example.com","class":"IN","type":48,"rdata":["257 3 8 ` + base64.StdEncoding.EncodeToString(dnsPublicKey) + `"]}]`),
+			DNSRRSets{
+				DNSName{
+					Name:  "example.com",
+					Class: DNSClass(layers.DNSClassIN),
+					Type:  DNSType(layers.DNSTypeDNSKEY),
+				}: DNSRDatas{{Raw: []byte(decodedDNSKEY), Decoded: dnsDNSKEY}},
 			},
 			false,
 		},
@@ -926,6 +1042,10 @@ func TestDNSType_MarshalJSON(t *testing.T) {
 		{"AAAA", DNSType(layers.DNSTypeAAAA), []byte("\"AAAA\""), false},
 		{"SRV", DNSType(layers.DNSTypeSRV), []byte("\"SRV\""), false},
 		{"OPT", DNSType(layers.DNSTypeOPT), []byte("\"OPT\""), false},
+		{"RRSIG", DNSType(layers.DNSTypeRRSIG), []byte("\"RRSIG\""), false},
+		{"DNSKEY", DNSType(layers.DNSTypeDNSKEY), []byte("\"DNSKEY\""), false},
+		{"SVCB", DNSType(layers.DNSTypeSVCB), []byte("\"SVCB\""), false},
+		{"HTTPS", DNSType(layers.DNSTypeHTTPS), []byte("\"HTTPS\""), false},
 		{"URI", DNSType(layers.DNSTypeURI), []byte("\"URI\""), false},
 		{"Unmapped value", DNSType(50), []byte("\"#50\""), false},
 		{"Max value", DNSType(65535), []byte("\"#65535\""), false},
@@ -970,6 +1090,10 @@ func TestDNSType_String(t *testing.T) {
 		{"AAAA", DNSType(layers.DNSTypeAAAA), "AAAA"},
 		{"SRV", DNSType(layers.DNSTypeSRV), "SRV"},
 		{"OPT", DNSType(layers.DNSTypeOPT), "OPT"},
+		{"RRSIG", DNSType(layers.DNSTypeRRSIG), "RRSIG"},
+		{"DNSKEY", DNSType(layers.DNSTypeDNSKEY), "DNSKEY"},
+		{"SVCB", DNSType(layers.DNSTypeSVCB), "SVCB"},
+		{"HTTPS", DNSType(layers.DNSTypeHTTPS), "HTTPS"},
 		{"URI", DNSType(layers.DNSTypeURI), "URI"},
 		{"Unmapped value", DNSType(50), "#50"},
 		{"Max value", DNSType(65535), "#65535"},
@@ -1010,6 +1134,10 @@ func TestDNSType_UnmarshalJSON(t *testing.T) {
 		{"AAAA", []byte("\"AAAA\""), DNSType(layers.DNSTypeAAAA), false},
 		{"SRV", []byte("\"SRV\""), DNSType(layers.DNSTypeSRV), false},
 		{"OPT", []byte("\"OPT\""), DNSType(layers.DNSTypeOPT), false},
+		{"RRSIG", []byte("\"RRSIG\""), DNSType(layers.DNSTypeRRSIG), false},
+		{"DNSKEY", []byte("\"DNSKEY\""), DNSType(layers.DNSTypeDNSKEY), false},
+		{"SVCB", []byte("\"SVCB\""), DNSType(layers.DNSTypeSVCB), false},
+		{"HTTPS", []byte("\"HTTPS\""), DNSType(layers.DNSTypeHTTPS), false},
 		{"URI", []byte("\"URI\""), DNSType(layers.DNSTypeURI), false},
 		{"Unmapped value", []byte("\"#60\""), DNSType(60), false},
 		{"Any string", []byte("\"Any\""), DNSType(0), false},
