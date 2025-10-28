@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/workload"
@@ -49,12 +48,13 @@ var _ = infrastructure.DatastoreDescribe("drop action override tests", []apiconf
 		infra = getInfra(iOpts...)
 
 		options := infrastructure.DefaultTopologyOptions()
-		options.IPIPMode = apiv3.IPIPModeNever
+		options.IPIPMode = api.IPIPModeNever
 		options.EnableIPv6 = false
-		tc, client = infrastructure.StartNNodeTopology(1, options, infra)
+		tc, client = infrastructure.StartSingleNodeTopology(options, infra)
 
 		// Install a default profile that deny all ingress in the absence of any Policy.
-		infra.AddDefaultDeny()
+		err := infra.AddDefaultDeny()
+		Expect(err).NotTo(HaveOccurred())
 
 		// Create workload on host 1 (Felix0).
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
@@ -80,7 +80,7 @@ var _ = infrastructure.DatastoreDescribe("drop action override tests", []apiconf
 		infra.Stop()
 	})
 
-	Context("create a LOG rule when the LogAndDrop action is used.", func() {
+	Context("should create a LOG rule when the LogAndDrop action is used.", func() {
 		BeforeEach(func() {
 			if BPFMode() {
 				Skip("Skipping for BPF dataplane.")
@@ -106,7 +106,8 @@ var _ = infrastructure.DatastoreDescribe("drop action override tests", []apiconf
 					return output
 				}
 
-				Eventually(getRules, 5*time.Second, 100*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
+				Eventually(getRules, 10*time.Second, 100*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
+				Consistently(getRules, 5*time.Second, 100*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
 			},
 			Entry("End of tier", "End of tier .*. Drop if no policies passed packet"),
 			Entry("End of profile", "Drop if no profiles matched"),
