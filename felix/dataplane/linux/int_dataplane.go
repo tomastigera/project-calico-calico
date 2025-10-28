@@ -1328,7 +1328,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			nil,
 			&config,
 			bpfMaps,
-			true,
 			workloadIfaceRegex,
 			ipSetIDAllocatorV4,
 			ipSetIDAllocatorV6,

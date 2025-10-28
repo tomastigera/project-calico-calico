@@ -4337,13 +4337,13 @@
           "ParsedDefaultJSON": "\"Disabled\"",
           "ParsedType": "string",
           "YAMLType": "string",
-          "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`, `\"L2Only\"`.",
+          "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`, `\"Enabled\"`.",
           "YAMLEnumValues": [
             "Disabled",
             "Enabled",
-            "L2Only"
+            "Enabled"
           ],
-          "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>, <code>\"L2Only\"</code>.",
+          "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>, <code>\"Enabled\"</code>.",
           "YAMLDefault": "Disabled",
           "Required": true,
           "OnParseFailure": "ReplaceWithDefault",

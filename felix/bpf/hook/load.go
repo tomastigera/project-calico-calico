@@ -72,7 +72,6 @@ type AttachType struct {
 	Family     int
 	Type       tcdefs.EndpointType
 	LogLevel   string
-	FIB        bool
 	ToHostDrop bool
 	DSR        bool
 }
@@ -143,7 +142,6 @@ func SetObjectFile(at AttachType, file string) {
 }
 
 func initObjectFiles() {
-	fibEnabled := true
 	for _, family := range []int{4, 6} {
 		for _, logLevel := range []string{"off", "debug"} {
 			for _, epToHostDrop := range []bool{false, true} {
@@ -172,7 +170,6 @@ func initObjectFiles() {
 								Type:       epType,
 								Hook:       hook,
 								ToHostDrop: epToHostDrop,
-								FIB:        fibEnabled,
 								DSR:        dsr,
 								LogLevel:   logLevel,
 							}
@@ -181,7 +178,6 @@ func initObjectFiles() {
 								epType,
 								toOrFrom,
 								epToHostDrop,
-								fibEnabled,
 								dsr,
 								logLevel,
 								bpfutils.BTFEnabled,

@@ -300,7 +300,6 @@ type bpfEndpointManager struct {
 	logFilters              map[string]string
 	bpfLogLevel             string
 	hostname                string
-	fibLookupEnabled        bool
 	dataIfaceRegex          *regexp.Regexp
 	l3IfaceRegex            *regexp.Regexp
 	workloadIfaceRegex      *regexp.Regexp
@@ -445,7 +444,6 @@ func NewBPFEndpointManager(
 	dp bpfDataplane,
 	config *Config,
 	bpfmaps *bpfmap.Maps,
-	fibLookupEnabled bool,
 	workloadIfaceRegex *regexp.Regexp,
 	ipSetIDAllocV4 *idalloc.IDAllocator,
 	ipSetIDAllocV6 *idalloc.IDAllocator,
@@ -492,7 +490,6 @@ func NewBPFEndpointManager(
 		bpfLogLevel:             config.BPFLogLevel,
 		logFilters:              config.BPFLogFilters,
 		hostname:                config.Hostname,
-		fibLookupEnabled:        fibLookupEnabled,
 		l3IfaceRegex:            config.BPFL3IfacePattern,
 		workloadIfaceRegex:      workloadIfaceRegex,
 		epToHostAction:          config.RulesConfig.EndpointToHostAction,
@@ -3119,10 +3116,6 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 		ap.NATin = uint32(m.natInIdx)
 		ap.NATout = uint32(m.natOutIdx)
 
-		ap.RedirectPeer = true
-		if m.bpfRedirectToPeer == "Disabled" {
-			ap.RedirectPeer = false
-		}
 	} else {
 		ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 		ap.EnableTCPStats = m.enableTcpStats
@@ -3132,8 +3125,11 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 		ap.NATOutgoingExcludeHosts = true
 	}
 
+	ap.RedirectPeer = true
+	if m.bpfRedirectToPeer == "Disabled" {
+		ap.RedirectPeer = false
+	}
 	ap.ToHostDrop = (m.epToHostAction == "DROP")
-	ap.FIB = m.fibLookupEnabled
 	ap.DSR = m.dsrEnabled
 	ap.DSROptoutCIDRs = m.dsrOptoutCidrs
 	ap.LogLevel, ap.LogFilter = m.apLogFilter(ap, ifaceName)
@@ -3865,7 +3861,6 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 			Hook:       aptc.HookName(),
 			Type:       aptc.Type,
 			LogLevel:   aptc.LogLevel,
-			FIB:        aptc.FIB,
 			ToHostDrop: aptc.ToHostDrop,
 			DSR:        aptc.DSR,
 		}

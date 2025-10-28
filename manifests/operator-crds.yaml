@@ -38263,7 +38263,7 @@ spec:
                   enum:
                     - Enabled
                     - Disabled
-                    - L2Only
+                    - Enabled
                   type: string
                 captureDir:
                   description:

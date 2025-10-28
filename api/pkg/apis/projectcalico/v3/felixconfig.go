@@ -1360,7 +1360,7 @@ type FelixConfigurationSpec struct {
 	// IPIP tunnel or Wireguard directly to the peer side of the workload's device. This
 	// makes redirection faster, however, it breaks tools like tcpdump on the peer side.
 	// Use Enabled with caution. [Default: Disabled]
-	// +kubebuilder:validation:Enum=Enabled;Disabled;L2Only
+	// +kubebuilder:validation:Enum=Enabled;Disabled;Enabled
 	BPFRedirectToPeer string `json:"bpfRedirectToPeer,omitempty"`
 
 	// BPFProfiling controls profiling of BPF programs. At the monent, it can be

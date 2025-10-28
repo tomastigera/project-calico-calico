@@ -2361,7 +2361,7 @@ Use Enabled with caution.
 | Encoding (env var/config file) | One of: <code>Disabled</code>, <code>Enabled</code>, <code>L2Only</code> (case insensitive) |
 | Default value (above encoding) | `Disabled` |
 | `FelixConfiguration` field | `bpfRedirectToPeer` (YAML) `BPFRedirectToPeer` (Go API) |
-| `FelixConfiguration` schema | One of: <code>"Disabled"</code>, <code>"Enabled"</code>, <code>"L2Only"</code>. |
+| `FelixConfiguration` schema | One of: <code>"Disabled"</code>, <code>"Enabled"</code>, <code>"Enabled"</code>. |
 | Default value (YAML) | `Disabled` |
 | Notes | Required. | 
 
