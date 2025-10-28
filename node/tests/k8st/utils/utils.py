@@ -93,6 +93,13 @@ def log_calico_node(node_ip):
     pod_name = run(" kubectl get pod -n calico-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
     kubectl("logs %s -n calico-system " % pod_name.strip())
 
+def exec_in_calico_node(node, command):
+    calicoPod = kubectl("-n calico-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % node)
+    if calicoPod is None:
+        raise Exception("No calico-node pod found on node %s" % node)
+    calicoPod = calicoPod.strip()
+    return kubectl("exec -n calico-system %s -- %s" % (calicoPod, command))
+
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
     run("df -h")
