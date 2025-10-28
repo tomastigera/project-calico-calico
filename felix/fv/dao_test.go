@@ -85,13 +85,6 @@ var _ = infrastructure.DatastoreDescribe("drop action override tests", []apiconf
 			if BPFMode() {
 				Skip("Skipping for BPF dataplane.")
 			}
-
-			fc := api.NewFelixConfiguration()
-			fc.SetName("default")
-			fc.Spec.DropActionOverride = "LogAndDrop"
-
-			fc, err := client.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
-			Expect(err).NotTo(HaveOccurred())
 		})
 		DescribeTable("Test DropActionOverride LogAndDrop creates LOG rule",
 			func(expectedComment string) {
@@ -106,8 +99,20 @@ var _ = infrastructure.DatastoreDescribe("drop action override tests", []apiconf
 					return output
 				}
 
-				Eventually(getRules, 10*time.Second, 100*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
-				Consistently(getRules, 5*time.Second, 100*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
+				By("Checking that the LOG rule is not present initially")
+				Consistently(getRules, 3*time.Second, 500*time.Millisecond).ShouldNot(MatchRegexp(expectedRuleRegexp))
+
+				By("Creating a FelixConfiguration with DropActionOverride set to LogAndDrop")
+				fc := api.NewFelixConfiguration()
+				fc.SetName("default")
+				fc.Spec.DropActionOverride = "LogAndDrop"
+
+				fc, err := client.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Checking that the LOG rule is now present")
+				Eventually(getRules, 10*time.Second, 500*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
+				Consistently(getRules, 3*time.Second, 500*time.Millisecond).Should(MatchRegexp(expectedRuleRegexp))
 			},
 			Entry("End of tier", "End of tier .*. Drop if no policies passed packet"),
 			Entry("End of profile", "Drop if no profiles matched"),
