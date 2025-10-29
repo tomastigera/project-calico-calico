@@ -46,9 +46,7 @@ RUN gem install elasticsearch-api -v 8.19.0 && \
 
 
 # Cleanup
-RUN rm -fr /usr/lib64/ruby/gems/3.4.0/specifications/rexml-3.4.0.gemspec
-RUN rm -fr /usr/lib64/ruby/gems/3.4.0/cache/rexml-3.4.0.gem
-RUN rm -fr /usr/lib64/ruby/gems/3.4.0/gems/rexml-3.4.0
+RUN gem uninstall rexml -v 3.4.0
 
 # Download jq 1.8, dnf would get 1.6, which has vulnerabilities.
 RUN curl -L https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${TARGETARCH} -o /usr/bin/jq && chmod +x /usr/bin/jq
