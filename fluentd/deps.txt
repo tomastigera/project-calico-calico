@@ -32,10 +32,10 @@ github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 github.com/x448/float16 v0.8.4
 go.yaml.in/yaml/v2 v2.4.2
 go.yaml.in/yaml/v3 v3.0.4
-golang.org/x/net v0.42.0
-golang.org/x/sys v0.35.0
-golang.org/x/text v0.28.0
-google.golang.org/protobuf v1.36.7
+golang.org/x/net v0.46.0
+golang.org/x/sys v0.37.0
+golang.org/x/text v0.30.0
+google.golang.org/protobuf v1.36.10
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/yaml.v3 v3.0.1
 k8s.io/api v0.34.1
