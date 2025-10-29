@@ -1,20 +1,19 @@
-From 8ec0ba271aa3334a6697d6530c77c84cfe83478a Mon Sep 17 00:00:00 2001
-From: Vara <vara@tigera.io>
-Date: Tue, 5 Nov 2024 22:13:47 -0800
+From c20a0bd3dbc2c3793bcaf40495773c7635c8d5e1 Mon Sep 17 00:00:00 2001
+From: Tian Feng <tian@tigera.io>
+Date: Fri, 17 Oct 2025 16:11:02 -0700
 Subject: [PATCH] support ubi arm64 builds
 
 ---
- src/dev/build/tasks/os_packages/create_os_package_tasks.ts | 6 ++++++
- .../os_packages/docker_generator/templates/base/Dockerfile | 7 +++++++
- .../docker_generator/templates/build_docker_sh.template.ts | 6 +++---
- 3 files changed, 16 insertions(+), 3 deletions(-)
+ src/dev/build/tasks/os_packages/create_os_package_tasks.ts  | 6 ++++++
+ .../docker_generator/templates/build_docker_sh.template.ts  | 6 +++---
+ 2 files changed, 9 insertions(+), 3 deletions(-)
 
 diff --git a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-index f422d9fae..de2d3f951 100644
+index 75bc84bcb..4d4308440 100644
 --- a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
 +++ b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-@@ -128,6 +128,12 @@ export const CreateDockerUBI: Task = {
-   description: 'Creating Docker UBI image',
+@@ -176,6 +176,12 @@ export const CreateDockerUBIX64: Task = {
+   description: `${dockerUbiDesc} ${X64}`,
  
    async run(config, log, build) {
 +    await runDockerGenerator(config, log, build, {
@@ -27,23 +26,24 @@ index f422d9fae..de2d3f951 100644
        architecture: 'x64',
        baseImage: 'ubi',
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
-index 2da3821ef..33cec08ed 100644
+index 1514ad1d1..e0cd27ba9 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
 +++ b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
-@@ -24,10 +24,10 @@ function generator({
+@@ -25,11 +25,11 @@ function generator({
  }: TemplateContext) {
    const tag =
      (dockerTag ? dockerTag : version) + (dockerTagQualifier ? '-' + dockerTagQualifier : '');
 -  const dockerTargetName = `${imageTag}${imageFlavor}:${tag}`;
 -  const dockerArchitecture = architecture === 'aarch64' ? 'linux/arm64' : 'linux/amd64';
 +  const dockerArchitecture = architecture === 'aarch64' ? 'arm64' : 'amd64';
+   const dockerfileName = architecture === 'aarch64' ? 'Dockerfile.aarch64' : 'Dockerfile.x86_64';
 +  const dockerTargetName = `${imageTag}${imageFlavor}:${tag}-${dockerArchitecture}`;
    const dockerBuild = dockerCrossCompile
--    ? `docker buildx build --platform ${dockerArchitecture} -t ${dockerTargetName} -f Dockerfile . || exit 1;`
-+    ? `docker buildx build --platform linux/${dockerArchitecture} -t ${dockerTargetName} -f Dockerfile . || exit 1;`
-     : `docker build -t ${dockerTargetName} -f Dockerfile . || exit 1;`;
+-    ? `docker buildx build --platform ${dockerArchitecture} -t ${dockerTargetName} -f ${dockerfileName} . || exit 1;`
++    ? `docker buildx build --platform linux/${dockerArchitecture} -t ${dockerTargetName} -f ${dockerfileName} . || exit 1;`
+     : `docker build -t ${dockerTargetName} -f ${dockerfileName} . || exit 1;`;
    return dedent(`
    #!/usr/bin/env bash
 -- 
-2.25.1
+2.43.0
 
