@@ -155,7 +155,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     4,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 		Expect(at).To(HaveKey(hook.AttachType{
@@ -163,7 +162,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     4,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 		Expect(at).NotTo(HaveKey(hook.AttachType{
@@ -171,7 +169,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     6,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 		Expect(at).NotTo(HaveKey(hook.AttachType{
@@ -179,7 +176,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     6,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 
@@ -209,7 +205,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     4,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 			Expect(at).To(HaveKey(hook.AttachType{
@@ -217,7 +212,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     4,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 			Expect(at).To(HaveKey(hook.AttachType{
@@ -225,7 +219,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     6,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 			Expect(at).To(HaveKey(hook.AttachType{
@@ -233,7 +226,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     6,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 
@@ -373,7 +365,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     4,
 			Type:       tcdefs.EpTypeWorkload,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 		Expect(at).To(HaveKey(hook.AttachType{
@@ -381,7 +372,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Family:     4,
 			Type:       tcdefs.EpTypeWorkload,
 			LogLevel:   loglevel,
-			FIB:        true,
 			ToHostDrop: false,
 			DSR:        false}))
 		if ipv6Enabled {
@@ -390,7 +380,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     6,
 				Type:       tcdefs.EpTypeWorkload,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 			Expect(at).To(HaveKey(hook.AttachType{
@@ -398,7 +387,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Family:     6,
 				Type:       tcdefs.EpTypeWorkload,
 				LogLevel:   loglevel,
-				FIB:        true,
 				ToHostDrop: false,
 				DSR:        false}))
 		}
@@ -813,7 +801,6 @@ func TestAttachWithMultipleWorkloadUpdate(t *testing.T) {
 		Family:     4,
 		Type:       tcdefs.EpTypeWorkload,
 		LogLevel:   loglevel,
-		FIB:        true,
 		ToHostDrop: false,
 		DSR:        false}))
 	Expect(at).To(HaveKey(hook.AttachType{
@@ -821,7 +808,6 @@ func TestAttachWithMultipleWorkloadUpdate(t *testing.T) {
 		Family:     4,
 		Type:       tcdefs.EpTypeWorkload,
 		LogLevel:   loglevel,
-		FIB:        true,
 		ToHostDrop: false,
 		DSR:        false}))
 
