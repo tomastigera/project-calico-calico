@@ -29,7 +29,7 @@ RUN gem install async -v 2.24.0 && \
        gem install fluentd -v ${FLUENTD_VERSION} && \
        gem install json -v 2.13.2 && \
        gem install oj -v 3.16.11 && \
-       gem install rexml -v 3.4.1
+       gem install rexml -v 3.4.2
 
 # Calico Enterprise dependencies
 RUN gem install elasticsearch-api -v 8.19.0 && \
@@ -43,6 +43,12 @@ RUN gem install elasticsearch-api -v 8.19.0 && \
        gem install fluent-plugin-s3 -v 1.8.3 && \
        gem install fluent-plugin-splunk-hec -v 1.3.3 && \
        gem sources --clear-all
+
+
+# Cleanup
+RUN rm -fr /usr/lib64/ruby/gems/3.4.0/specifications/rexml-3.4.0.gemspec
+RUN rm -fr /usr/lib64/ruby/gems/3.4.0/cache/rexml-3.4.0.gem
+RUN rm -fr /usr/lib64/ruby/gems/3.4.0/gems/rexml-3.4.0
 
 # Download jq 1.8, dnf would get 1.6, which has vulnerabilities.
 RUN curl -L https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${TARGETARCH} -o /usr/bin/jq && chmod +x /usr/bin/jq

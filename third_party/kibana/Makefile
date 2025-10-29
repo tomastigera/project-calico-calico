@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 8.18.4
+KIBANA_VERSION = 8.18.8
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -29,7 +29,7 @@ init-source: $(KIBANA_DOWNLOADED)
 $(KIBANA_DOWNLOADED):
 	git clone --depth 1 --branch v$(KIBANA_VERSION) --single-branch https://github.com/elastic/kibana.git
 	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
-	patch -d kibana -p1 < patches/0002-Update-caniuse-lite-and-form-data.patch
+	patch -d kibana -p1 < patches/0002-Update-libraries-to-patch-CVE.patch
 	patch -d kibana -p1 < patches/0003-Reduce-all-platforms-to-only-linux-variant.patch
 	patch -d kibana -p1 < patches/0004-support-ubi-arm64-builds.patch
 	cp -r plugins/tigera kibana/plugins/
