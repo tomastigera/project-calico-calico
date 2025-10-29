@@ -55,11 +55,11 @@ components:
     version: vX.Y.Z
     image: dikastes
   eck-elasticsearch:
-    version: 8.18.4
+    version: 8.18.8
   eck-elasticsearch-operator:
     version: 2.16.0
   eck-kibana:
-    version: 8.18.4
+    version: 8.18.8
   egress-gateway:
     version: vX.Y.Z
     image: egress-gateway

@@ -49,11 +49,11 @@
     dikastes:
       version: v3.22.1
     eck-elasticsearch:
-      version: 8.18.4
+      version: 8.18.8
     eck-elasticsearch-operator:
       version: 2.16.0
     eck-kibana:
-      version: 8.18.4
+      version: 8.18.8
     egress-gateway:
       version: v3.22.1
     elastic-tsee-installer:
