@@ -60,7 +60,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Kibana connects to Elastic via Kibana Proxy", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.18.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.8",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
@@ -76,7 +76,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Kibana Spaces can be created", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.18.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.8",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
@@ -94,7 +94,7 @@ func TestFV_Challenger(t *testing.T) {
 
 	t.Run("Ensure Dashboards and Index Patterns can be created", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
-			Image: "docker.elastic.co/kibana/kibana:8.18.4",
+			Image: "docker.elastic.co/kibana/kibana:8.18.8",
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
