@@ -15,6 +15,8 @@ func newMetaSpecFromUpdate(update Update, ak AggregationKind) (L7Meta, L7Spec, e
 	meta := L7Meta{
 		ResponseCode:     update.ResponseCode,
 		RouteName:        update.RouteName,
+		GatewayName:      update.GatewayName,
+		Protocol:         update.Protocol,
 		Method:           update.Method,
 		Domain:           update.Domain,
 		Path:             update.Path,

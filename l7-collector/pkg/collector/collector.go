@@ -81,8 +81,9 @@ type EnvoyLog struct {
 	// Requires the proper XFF (xff_num_trusted_hops) configuration to be set in the gateway.
 	// Envoy var: %REQ(X-FORWARDED-FOR)%
 	XForwardedFor string `json:"x_forwarded_for"`
+	GatewayName   string `json:"gateway_name"`
+	Protocol      string `json:"protocol"`
 
-	Protocol    string `json:"protocol"`
 	SrcIp       string
 	DstIp       string
 	SrcPort     int32

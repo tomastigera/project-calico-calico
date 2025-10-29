@@ -6658,6 +6658,8 @@ type HTTPData struct {
 	Type          string `protobuf:"bytes,13,opt,name=type,proto3" json:"type,omitempty"`
 	Latency       int32  `protobuf:"varint,14,opt,name=latency,proto3" json:"latency,omitempty"`
 	RouteName     string `protobuf:"bytes,15,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
+	GatewayName   string `protobuf:"bytes,16,opt,name=gateway_name,json=gatewayName,proto3" json:"gateway_name,omitempty"`
+	Protocol      string `protobuf:"bytes,17,opt,name=protocol,proto3" json:"protocol,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6793,6 +6795,20 @@ func (x *HTTPData) GetLatency() int32 {
 func (x *HTTPData) GetRouteName() string {
 	if x != nil {
 		return x.RouteName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayName() string {
+	if x != nil {
+		return x.GatewayName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
 	}
 	return ""
 }
@@ -8955,7 +8971,7 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\tDirection\x12\v\n" +
 	"\aINBOUND\x10\x00\x12\f\n" +
 	"\bOUTBOUND\x10\x01B\x04\n" +
-	"\x02id\"\xdc\x03\n" +
+	"\x02id\"\x9b\x04\n" +
 	"\bHTTPData\x12&\n" +
 	"\x0fx_forwarded_for\x18\x01 \x01(\tR\rxForwardedFor\x12\x1a\n" +
 	"\tx_real_ip\x18\x02 \x01(\tR\axRealIp\x12\x1a\n" +
@@ -8975,7 +8991,9 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\x04type\x18\r \x01(\tR\x04type\x12\x18\n" +
 	"\alatency\x18\x0e \x01(\x05R\alatency\x12\x1d\n" +
 	"\n" +
-	"route_name\x18\x0f \x01(\tR\trouteName\"\x84\x01\n" +
+	"route_name\x18\x0f \x01(\tR\trouteName\x12!\n" +
+	"\fgateway_name\x18\x10 \x01(\tR\vgatewayName\x12\x1a\n" +
+	"\bprotocol\x18\x11 \x01(\tR\bprotocol\"\x84\x01\n" +
 	"\x17WireguardEndpointUpdate\x12\x1a\n" +
 	"\bhostname\x18\x01 \x01(\tR\bhostname\x12\x1d\n" +
 	"\n" +

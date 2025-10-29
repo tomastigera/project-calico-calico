@@ -37,6 +37,8 @@ type Update struct {
 	Type         string
 	Count        int
 	RouteName    string
+	GatewayName  string
+	Protocol     string
 }
 
 // L7Log represents the  the JSON representation of a L7Log we are pushing to fluentd/elastic.
@@ -73,6 +75,8 @@ type L7Log struct {
 	ResponseCode string `json:"response_code"`
 	RouteName    string `json:"route_name"`
 	Type         string `json:"type"`
+	GatewayName  string `json:"gateway_name"`
+	Protocol     string `json:"protocol"`
 }
 
 // L7Meta represents the identifiable information for an L7 log.
@@ -94,6 +98,8 @@ type L7Meta struct {
 
 	ResponseCode string
 	RouteName    string
+	GatewayName  string
+	Protocol     string
 	Method       string
 	Domain       string
 	Path         string
@@ -158,6 +164,8 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 		UserAgent:    ld.UserAgent,
 		ResponseCode: ld.ResponseCode,
 		RouteName:    ld.RouteName,
+		GatewayName:  ld.GatewayName,
+		Protocol:     ld.Protocol,
 		Type:         ld.Type,
 	}
 

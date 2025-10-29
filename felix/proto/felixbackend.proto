@@ -919,6 +919,8 @@ message HTTPData {
   string type = 13;
   int32 latency = 14;
   string route_name = 15;
+  string gateway_name = 16;
+  string protocol = 17;
 }
 
 message WireguardEndpointUpdate {

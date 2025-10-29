@@ -159,6 +159,8 @@ type AccessLog struct {
 	UpstreamServiceTime   string `json:"upstream_service_time"`
 	Route                 string `json:"route_name"`
 	XForwardedFor         string `json:"x_forwarded_for"`
+	GatewayName           string `json:"gateway_name"`
+	Protocol              string `json:"protocol"`
 }
 
 func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
@@ -211,6 +213,8 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 		UpstreamHost:          accLog.UpstreamHost,
 		RouteName:             accLog.Route,
 		XForwardedFor:         accLog.XForwardedFor,
+		GatewayName:           accLog.GatewayName,
+		Protocol:              accLog.Protocol,
 	}
 	// write entry out to envoy log file
 	entry, err = ParseFiveTupleInformation(entry)
