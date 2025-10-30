@@ -803,14 +803,14 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 							Action: r.Nflog(nflogGroup, CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name), 0),
 						})
 					}
-					rules = append(rules, generictables.Rule{
-						Match:  r.NewMatch().MarkClear(r.MarkPass),
-						Action: r.IptablesFilterDenyAction(),
-						Comment: []string{fmt.Sprintf("End of tier %s. %s if no policies passed packet",
+
+					rules = append(rules, r.DropRules(
+						r.NewMatch().MarkClear(r.MarkPass),
+						fmt.Sprintf("End of tier %s. %s if no policies passed packet",
 							tier.Name,
 							r.IptablesFilterDenyAction()),
-						},
-					})
+					)...)
+
 				} else if r.FlowLogsEnabled {
 					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
 					// staged), then add an end of tier pass nflog action so that we can at least track that we
