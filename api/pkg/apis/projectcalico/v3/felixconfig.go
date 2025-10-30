@@ -1358,7 +1358,7 @@ type FelixConfigurationSpec struct {
 	// Setting this option to "Enabled" allows direct redirection (including from L3 host devices such as IPIP tunnels or WireGuard),
 	// which can improve redirection performance but causes the redirected packets to bypass the host‑side ingress path.
 	// As a result, packet‑capture tools on the host side of the workload device (for example, tcpdump) will not see that traffic. [Default: Disabled]
-	// +kubebuilder:validation:Enum=Enabled;Disabled;Enabled
+	// +kubebuilder:validation:Enum=Enabled;Disabled
 	BPFRedirectToPeer string `json:"bpfRedirectToPeer,omitempty"`
 
 	// BPFProfiling controls profiling of BPF programs. At the monent, it can be

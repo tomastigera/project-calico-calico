@@ -38261,7 +38261,6 @@ spec:
                   enum:
                     - Enabled
                     - Disabled
-                    - Enabled
                   type: string
                 captureDir:
                   description:
