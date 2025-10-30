@@ -33,7 +33,7 @@ const (
 	ThreatDefense          = "threat-defense"
 	PacketCapture          = "packet-capture"
 	MultiClusterManagement = "multi-cluster-management"
-	IngressGateway         = "ingress-gateway"
+	IngressGateway         = "ingress-gateway-addons"
 )
 
 type set map[string]bool
@@ -46,9 +46,17 @@ const (
 // PackageNames defines the name of the license packages available
 var PackageNames = set{Enterprise: true}
 
+// AddonNames defines the names addons available.
+var AddonNames = set{IngressGateway: true}
+
 // IsValidPackageName return true if a package name matches the one defined in PackageNames
 func IsValidPackageName(value string) bool {
 	return PackageNames[value]
+}
+
+// IsValidAddonName return true if a package name matches the one defined in PackageNames
+func IsValidAddonName(value string) bool {
+	return AddonNames[value]
 }
 
 // OpenSourceAPIs maps calico open source APIs
