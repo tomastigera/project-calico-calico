@@ -285,21 +285,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		epCorrectFn := func() error {
 			eps := getEpsFunc()
 			if len(eps) != 1 {
-				return fmt.Errorf("Wrong number of endpoints: %#v", eps)
+				return fmt.Errorf("Wrong number of endpointslices: %#v", eps)
 			}
-			addrs := eps[0].Addresses
+			if len(eps[0].Endpoints) != 1 {
+				return fmt.Errorf("Wrong number of endpoints: %#v", eps[0])
+			}
+			endpoints := eps[0].Endpoints
+			addrs := endpoints[0].Addresses
 			if len(addrs) != 1 {
 				return fmt.Errorf("Wrong number of addresses: %#v", eps[0])
 			}
-			if addrs[0].IP != ep2_1.IP {
-				return fmt.Errorf("Unexpected IP: %s != %s", addrs[0].IP, ep2_1.IP)
+			if addrs[0] != ep2_1.IP {
+				return fmt.Errorf("Unexpected IP: %s != %s", addrs[0], ep2_1.IP)
 			}
 			ports := eps[0].Ports
 			if len(ports) != 1 {
 				return fmt.Errorf("Wrong number of ports: %#v", eps[0])
 			}
-			if ports[0].Port != int32(wepPort) {
-				return fmt.Errorf("Wrong port %d != svcPort", ports[0].Port)
+			if *ports[0].Port != int32(wepPort) {
+				return fmt.Errorf("Wrong port %d != svcPort", *ports[0].Port)
 			}
 			return nil
 		}
