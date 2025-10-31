@@ -106,6 +106,12 @@
     "type": {
       "type": "keyword"
     },
+    "gateway_name": {
+      "type": "keyword"
+    },
+    "protocol": {
+      "type": "keyword"
+    },
     "host": {
       "type": "keyword"
     },
