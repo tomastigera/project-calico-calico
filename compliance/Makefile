@@ -48,28 +48,30 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 
 KUBERNETES_DOWNLOADED=.kubernetes.downloaded
 
-KUBERNETES_VERSION=$(shell go list -m all | grep k8s.io/kubernetes | awk '{print $$2}')
-
 .PHONY: init-source
 init-source: $(KUBERNETES_DOWNLOADED)
 $(KUBERNETES_DOWNLOADED):
-	git clone --depth 1 --branch $(KUBERNETES_VERSION) --single-branch https://github.com/kubernetes/kubernetes.git
+	git clone --depth 1 --branch $(K8S_VERSION) --single-branch https://github.com/kubernetes/kubernetes.git
 	touch $@
 
-bin/kubectl-$(ARCH): init-source
+bin/kubectl-$(ARCH): $(KUBERNETES_DOWNLOADED)
 	$(eval KUBE_GIT_COMMIT = $(shell git -C kubernetes rev-parse --short HEAD))
 	$(eval KUBE_GIT_VERSION = $(shell git -C kubernetes describe --tags --dirty --abbrev=14))
 	$(eval KUBE_GIT_TREE_STATE = $(if $(shell git -C kubernetes status --porcelain),dirty,clean))
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) \
+	-e KUBE_GIT_COMMIT=$(KUBE_GIT_COMMIT) \
+	-e KUBE_GIT_VERSION=$(KUBE_GIT_VERSION) \
+	-e KUBE_GIT_TREE_STATE=$(KUBE_GIT_TREE_STATE) \
+	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		cd kubernetes && CGO_ENABLED=0 go build \
 		-o ../bin/kubectl-$(ARCH) \
 		-v \
 		-buildvcs=false \
-		-ldflags "-X k8s.io/client-go/pkg/version.gitVersion=$(KUBE_GIT_VERSION) \
-		-X k8s.io/client-go/pkg/version.gitCommit=$(KUBE_GIT_COMMIT) \
-		-X k8s.io/client-go/pkg/version.gitTreeState=$(KUBE_GIT_TREE_STATE) \
-		-X k8s.io/client-go/pkg/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-		./cmd/kubectl '
+		-ldflags "-X k8s.io/component-base/version.gitVersion=$(KUBE_GIT_VERSION) \
+		-X k8s.io/component-base/version.gitCommit=$(KUBE_GIT_COMMIT) \
+		-X k8s.io/component-base/version.gitTreeState=$(KUBE_GIT_TREE_STATE) \
+		-X k8s.io/component-base/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+		./cmd/kubectl'
 
 build: bin/benchmarker-$(ARCH) \
 	bin/controller-$(ARCH) \
@@ -244,12 +246,10 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/D
 	touch $@
 
 .PHONY: clean
-clean:
+clean: clean-kubernetes
 	rm -rf bin \
 	       docker-image/scaleloader/bin \
-	       release-notes-* \
-	       kubernetes \
-	       $(KUBERNETES_DOWNLOADED)
+	       release-notes-*
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
@@ -267,7 +267,9 @@ clean:
 	-docker image rm -f $$(docker images $(COMPLIANCE_SCALELOADER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_BENCHMARKER_IMAGE) -a -q)
 
-
+.PHONY: clean-kubernetes
+clean-kubernetes:
+	rm -rf kubernetes $(KUBERNETES_DOWNLOADED) kubernetes
 
 ###############################################################################
 # Tests
@@ -285,10 +287,12 @@ run-linseed:
 ###############################################################################
 .PHONY: cd ci
 
-## Builds the code and runs all tests.
-ci: clean image ut static-checks
+# Builds the code and runs all tests.
+# Running clean-kubernetes before ut again, otherwise the entire k8s repo will
+# be added to ginkgo cover, causing it to fail.
+ci: clean image clean-kubernetes ut static-checks
 
-## Deploys images to registry
+# Deploys images to registry
 cd: image-all cd-common
 
 ###############################################################################
