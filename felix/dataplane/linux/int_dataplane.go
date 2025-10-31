@@ -32,7 +32,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/vishvananda/netlink"
@@ -3579,7 +3578,7 @@ func startBPFDataplaneComponents(
 
 		// We cannot wait for the healthz server as we cannot stop it.
 		go func() {
-			log.Infof("Starting BPF Proxy Healthz server on %s", healthzAddr)
+			logrus.Infof("Starting BPF Proxy Healthz server on %s", healthzAddr)
 			for {
 				err := config.bpfProxyHealthzServer.Run(context.Background()) // context is mosstly ignored inside
 				if err != nil {
