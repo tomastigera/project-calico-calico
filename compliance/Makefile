@@ -43,8 +43,34 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 		$(shell find ../lma/pkg -name '*.go')
 
 ###############################################################################
-# Building the binary
+# Building the binaries
 ###############################################################################
+
+KUBERNETES_DOWNLOADED=.kubernetes.downloaded
+
+KUBERNETES_VERSION=$(shell go list -m all | grep k8s.io/kubernetes | awk '{print $$2}')
+
+.PHONY: init-source
+init-source: $(KUBERNETES_DOWNLOADED)
+$(KUBERNETES_DOWNLOADED):
+	git clone --depth 1 --branch $(KUBERNETES_VERSION) --single-branch https://github.com/kubernetes/kubernetes.git
+	touch $@
+
+bin/kubectl-$(ARCH): init-source
+	$(eval KUBE_GIT_COMMIT = $(shell git -C kubernetes rev-parse --short HEAD))
+	$(eval KUBE_GIT_VERSION = $(shell git -C kubernetes describe --tags --dirty --abbrev=14))
+	$(eval KUBE_GIT_TREE_STATE = $(if $(shell git -C kubernetes status --porcelain),dirty,clean))
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		cd kubernetes && CGO_ENABLED=0 go build \
+		-o ../bin/kubectl-$(ARCH) \
+		-v \
+		-buildvcs=false \
+		-ldflags "-X k8s.io/client-go/pkg/version.gitVersion=$(KUBE_GIT_VERSION) \
+		-X k8s.io/client-go/pkg/version.gitCommit=$(KUBE_GIT_COMMIT) \
+		-X k8s.io/client-go/pkg/version.gitTreeState=$(KUBE_GIT_TREE_STATE) \
+		-X k8s.io/client-go/pkg/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+		./cmd/kubectl '
+
 build: bin/benchmarker-$(ARCH) \
 	bin/controller-$(ARCH) \
 	bin/kube-bench-$(ARCH) \
@@ -115,7 +141,7 @@ else
 endif
 
 .PHONY: bin/benchmarker-$(ARCH)
-bin/benchmarker-$(ARCH): $(SRC_FILES)
+bin/benchmarker-$(ARCH): $(SRC_FILES) bin/kubectl-$(ARCH)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
 else
@@ -221,7 +247,9 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/D
 clean:
 	rm -rf bin \
 	       docker-image/scaleloader/bin \
-	       release-notes-*
+	       release-notes-* \
+	       kubernetes \
+	       $(KUBERNETES_DOWNLOADED)
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
@@ -238,6 +266,8 @@ clean:
 	-docker image rm -f $$(docker images $(COMPLIANCE_REPORTER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_SCALELOADER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_BENCHMARKER_IMAGE) -a -q)
+
+
 
 ###############################################################################
 # Tests

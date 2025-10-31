@@ -1,4 +1,5 @@
 docker-image/scaleloader/playbooks
 docker-image/scaleloader/scenarios
-
+kubernetes/
+.kubernetes.downloaded
 !pkg/report
