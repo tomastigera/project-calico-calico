@@ -45,37 +45,10 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 ###############################################################################
 # Building the binaries
 ###############################################################################
-
-KUBERNETES_DOWNLOADED=.kubernetes.downloaded
-
-.PHONY: init-source
-init-source: $(KUBERNETES_DOWNLOADED)
-$(KUBERNETES_DOWNLOADED):
-	git clone --depth 1 --branch $(K8S_VERSION) --single-branch https://github.com/kubernetes/kubernetes.git
-	touch $@
-
-bin/kubectl-$(ARCH): $(KUBERNETES_DOWNLOADED)
-	$(eval KUBE_GIT_COMMIT = $(shell git -C kubernetes rev-parse --short HEAD))
-	$(eval KUBE_GIT_VERSION = $(shell git -C kubernetes describe --tags --dirty --abbrev=14))
-	$(eval KUBE_GIT_TREE_STATE = $(if $(shell git -C kubernetes status --porcelain),dirty,clean))
-	$(DOCKER_RUN) \
-	-e KUBE_GIT_COMMIT=$(KUBE_GIT_COMMIT) \
-	-e KUBE_GIT_VERSION=$(KUBE_GIT_VERSION) \
-	-e KUBE_GIT_TREE_STATE=$(KUBE_GIT_TREE_STATE) \
-	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		cd kubernetes && CGO_ENABLED=0 go build \
-		-o ../bin/kubectl-$(ARCH) \
-		-v \
-		-buildvcs=false \
-		-ldflags "-X k8s.io/component-base/version.gitVersion=$(KUBE_GIT_VERSION) \
-		-X k8s.io/component-base/version.gitCommit=$(KUBE_GIT_COMMIT) \
-		-X k8s.io/component-base/version.gitTreeState=$(KUBE_GIT_TREE_STATE) \
-		-X k8s.io/component-base/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-		./cmd/kubectl'
-
 build: bin/benchmarker-$(ARCH) \
 	bin/controller-$(ARCH) \
 	bin/kube-bench-$(ARCH) \
+	bin/kubectl-$(ARCH) \
 	bin/report-type-gen-$(ARCH) \
 	bin/reporter-$(ARCH) \
 	bin/scaleloader-$(ARCH) \
@@ -143,12 +116,21 @@ else
 endif
 
 .PHONY: bin/benchmarker-$(ARCH)
-bin/benchmarker-$(ARCH): $(SRC_FILES) bin/kubectl-$(ARCH)
+bin/benchmarker-$(ARCH): $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
 else
 	$(call build_binary, cmd/benchmarker/benchmarker.go, $@)
 endif
+
+
+KUBERNETES_VERSION := $(shell grep -E 'k8s.io/kubernetes' ../go.mod | awk '{print$$2;exit}')
+bin/kubectl-$(ARCH):
+	$(eval LDFLAGS = -X k8s.io/component-base/version.gitVersion=$(KUBERNETES_VERSION) \
+		-X k8s.io/component-base/version.gitCommit=$(KUBERNETES_VERSION) \
+		-X k8s.io/component-base/version.gitTreeState=$(clean) \
+		-X k8s.io/component-base/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ'))
+	$(call build_binary, cmd/kubectl/kubectl.go, $@)
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:
@@ -226,7 +208,7 @@ $(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/r
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH)
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) bin/kubectl-$(ARCH)
 	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
@@ -246,7 +228,7 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/D
 	touch $@
 
 .PHONY: clean
-clean: clean-kubernetes
+clean:
 	rm -rf bin \
 	       docker-image/scaleloader/bin \
 	       release-notes-*
@@ -267,10 +249,6 @@ clean: clean-kubernetes
 	-docker image rm -f $$(docker images $(COMPLIANCE_SCALELOADER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_BENCHMARKER_IMAGE) -a -q)
 
-.PHONY: clean-kubernetes
-clean-kubernetes:
-	rm -rf kubernetes $(KUBERNETES_DOWNLOADED) kubernetes
-
 ###############################################################################
 # Tests
 ###############################################################################
@@ -288,9 +266,7 @@ run-linseed:
 .PHONY: cd ci
 
 # Builds the code and runs all tests.
-# Running clean-kubernetes before ut again, otherwise the entire k8s repo will
-# be added to ginkgo cover, causing it to fail.
-ci: clean image clean-kubernetes ut static-checks
+ci: clean image ut static-checks
 
 # Deploys images to registry
 cd: image-all cd-common
