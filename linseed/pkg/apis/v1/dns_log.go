@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/idna"
 
