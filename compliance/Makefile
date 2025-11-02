@@ -43,11 +43,12 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 		$(shell find ../lma/pkg -name '*.go')
 
 ###############################################################################
-# Building the binary
+# Building the binaries
 ###############################################################################
 build: bin/benchmarker-$(ARCH) \
 	bin/controller-$(ARCH) \
 	bin/kube-bench-$(ARCH) \
+	bin/kubectl-$(ARCH) \
 	bin/report-type-gen-$(ARCH) \
 	bin/reporter-$(ARCH) \
 	bin/scaleloader-$(ARCH) \
@@ -121,6 +122,15 @@ ifeq ($(FIPS),true)
 else
 	$(call build_binary, cmd/benchmarker/benchmarker.go, $@)
 endif
+
+
+KUBERNETES_VERSION := $(shell grep -E 'k8s.io/kubernetes' ../go.mod | awk '{print$$2;exit}')
+bin/kubectl-$(ARCH):
+	$(eval LDFLAGS = -X k8s.io/component-base/version.gitVersion=$(KUBERNETES_VERSION) \
+		-X k8s.io/component-base/version.gitCommit=$(KUBERNETES_VERSION) \
+		-X k8s.io/component-base/version.gitTreeState=$(clean) \
+		-X k8s.io/component-base/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ'))
+	$(call build_binary, cmd/kubectl/kubectl.go, $@)
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:
@@ -198,7 +208,7 @@ $(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/r
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH)
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) bin/kubectl-$(ARCH)
 	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
@@ -255,10 +265,10 @@ run-linseed:
 ###############################################################################
 .PHONY: cd ci
 
-## Builds the code and runs all tests.
+# Builds the code and runs all tests.
 ci: clean image ut static-checks
 
-## Deploys images to registry
+# Deploys images to registry
 cd: image-all cd-common
 
 ###############################################################################
