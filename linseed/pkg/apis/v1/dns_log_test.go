@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 

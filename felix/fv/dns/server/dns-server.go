@@ -7,8 +7,8 @@ import (
 	"net"
 
 	"github.com/docopt/docopt-go"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/dns"

@@ -5,7 +5,7 @@ package testutils
 import (
 	"net"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 )
 
 func MakeQ(name string) layers.DNSQuestion {
