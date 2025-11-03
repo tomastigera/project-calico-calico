@@ -18,6 +18,7 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 )
@@ -109,7 +110,7 @@ func TestMetadataService(t *testing.T) {
 
 	fakeDashboardID := types.DashboardID("fake-dashboard-id")
 
-	subject := NewRemoteMetadataService(logger, httpServer.URL+"/server-path")
+	subject := NewRemoteMetadataService(logger, httpServer.URL+"/server-path", collections.Collections(nil))
 
 	ctx := security.NewUserAuthContext(
 		context.Background(),

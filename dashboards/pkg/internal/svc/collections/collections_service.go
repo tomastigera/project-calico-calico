@@ -11,29 +11,29 @@ import (
 )
 
 type CollectionsService struct {
-	logger logging.Logger
+	logger      logging.Logger
+	collections []collections.Collection
 }
 
-func NewCollectionsService(logger logging.Logger) *CollectionsService {
+func NewCollectionsService(logger logging.Logger, enabledCollections []collections.Collection) *CollectionsService {
 	return &CollectionsService{
-		logger: logger.WithName("CollectionsService"),
+		logger:      logger.WithName("CollectionsService"),
+		collections: enabledCollections,
 	}
 }
 
 func (s *CollectionsService) Collections(ctx security.Context) (client.CollectionsResponse, error) {
 	s.logger.DebugC(ctx, "Collections")
 
-	allCollections := collections.Collections()
-
 	// authorize users with lma rules for any cluster
-	authorized, err := ctx.IsAnyPermitted(security.APIGroupLMATigera, slices.Map(allCollections, collections.Collection.LmaResourceName))
+	authorized, err := ctx.IsAnyPermitted(security.APIGroupLMATigera, slices.Map(s.collections, collections.Collection.LmaResourceName))
 	if err != nil {
 		return client.CollectionsResponse{}, err
 	} else if !authorized {
 		return client.CollectionsResponse{}, httpreply.ReplyAccessDenied
 	}
 
-	return slices.Map(allCollections, mapCollection), nil
+	return slices.Map(s.collections, mapCollection), nil
 }
 
 func mapCollection(from collections.Collection) client.Collection {

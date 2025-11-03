@@ -18,18 +18,20 @@ import (
 type RemoteMetadataService struct {
 	http.Client
 	logger           logging.Logger
+	collections      []collections.Collection
 	metadataEndpoint string
 }
 
-func NewRemoteMetadataService(logger logging.Logger, metadataEndpoint string) *RemoteMetadataService {
+func NewRemoteMetadataService(logger logging.Logger, metadataEndpoint string, enabledCollections []collections.Collection) *RemoteMetadataService {
 	return &RemoteMetadataService{
 		logger:           logger,
+		collections:      enabledCollections,
 		metadataEndpoint: metadataEndpoint,
 	}
 }
 
 func (s *RemoteMetadataService) authorize(ctx security.Context) error {
-	authorized, err := ctx.IsAnyPermitted(security.APIGroupLMATigera, slices.Map(collections.Collections(), collections.Collection.LmaResourceName))
+	authorized, err := ctx.IsAnyPermitted(security.APIGroupLMATigera, slices.Map(s.collections, collections.Collection.LmaResourceName))
 	if err != nil {
 		return err
 	} else if !authorized {

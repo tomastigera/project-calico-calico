@@ -19,12 +19,13 @@ import (
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/handler"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/metrics"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository/linseed"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/auth"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/collections"
+	svccollections "github.com/projectcalico/calico/dashboards/pkg/internal/svc/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata"
 	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
@@ -78,9 +79,12 @@ func Start(
 		return err
 	}
 
+	enabledCollections := collections.Collections(collections.ToCollectionNames(strings.Split(cfg.DisabledCollections, ",")))
+
 	queryService := query.NewQueryService(
 		logger,
 		linseedRepository,
+		enabledCollections,
 		managedClusterNameLister,
 		query.Config{
 			QueryTimeout:           time.Duration(2) * time.Minute,
@@ -91,14 +95,14 @@ func Start(
 
 	var metadataService metadata.Storer
 	if cfg.ProductMode == config.ProductModeCloud {
-		metadataService = metadata.NewRemoteMetadataService(logger, cfg.MetadataAPIEndpoint)
+		metadataService = metadata.NewRemoteMetadataService(logger, cfg.MetadataAPIEndpoint, enabledCollections)
 	} else {
 		metadataService, err = staticmetadata.NewStaticMetadataService()
 		if err != nil {
 			return err
 		}
 	}
-	collectionsService := collections.NewCollectionsService(logger)
+	collectionsService := svccollections.NewCollectionsService(logger, enabledCollections)
 
 	handlerRegistry, err := handler.NewHandler(
 		cfg,

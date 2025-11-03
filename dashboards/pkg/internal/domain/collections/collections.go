@@ -1,6 +1,8 @@
 package collections
 
-import "github.com/tigera/tds-apiserver/lib/slices"
+import (
+	"github.com/tigera/tds-apiserver/lib/slices"
+)
 
 type FieldName string
 type FieldType string
@@ -40,8 +42,16 @@ type Collection struct {
 
 var allCollections = []Collection{collectionDNS, collectionFlows, collectionL7, collectionWAF}
 
-func Collections() []Collection {
-	return slices.Clone(allCollections)
+func Collections(disabledCollections []CollectionName) []Collection {
+	return slices.FilterBy(slices.Clone(allCollections), func(collection Collection) bool {
+		return !slices.Contains(disabledCollections, collection.name)
+	})
+}
+
+func ToCollectionNames(collectionNames []string) []CollectionName {
+	return slices.Map(collectionNames, func(s string) CollectionName {
+		return CollectionName(s)
+	})
 }
 
 func (c Collection) Name() CollectionName {
