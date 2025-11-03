@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	gojson "encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -177,7 +178,7 @@ func (d *DNSResponseCode) String() string {
 
 func (d *DNSResponseCode) MarshalJSON() ([]byte, error) {
 	if d == nil {
-		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+		return []byte{}, errors.New("cannot marshal nil value into JSON")
 	}
 	if res, ok := dnsResponseCodeTable[*d]; ok {
 		return json.Marshal(&res)
@@ -294,7 +295,7 @@ func (d *DNSClass) MarshalJSON() ([]byte, error) {
 		return json.Marshal(&s)
 	}
 
-	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	return []byte{}, errors.New("cannot marshal nil value into JSON")
 }
 
 func (d *DNSClass) UnmarshalJSON(data []byte) error {
@@ -316,7 +317,7 @@ func convertToDNSClass(val interface{}) (DNSClass, error) {
 	case float64:
 		return DNSClass(v), nil
 	default:
-		return DNSClass(0), fmt.Errorf("failed to read dns class format")
+		return DNSClass(0), errors.New("failed to read dns class format")
 	}
 }
 
@@ -367,7 +368,7 @@ func (d *DNSType) MarshalJSON() ([]byte, error) {
 		return json.Marshal(&s)
 	}
 
-	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	return []byte{}, errors.New("cannot marshal nil value into JSON")
 }
 
 func (d *DNSType) UnmarshalJSON(data []byte) error {
@@ -431,6 +432,14 @@ func toDNSType(val string) DNSType {
 		return DNSType(layers.DNSTypeSRV)
 	case "OPT":
 		return DNSType(layers.DNSTypeOPT)
+	case "RRSIG":
+		return DNSType(layers.DNSTypeRRSIG)
+	case "DNSKEY":
+		return DNSType(layers.DNSTypeDNSKEY)
+	case "SVCB":
+		return DNSType(layers.DNSTypeSVCB)
+	case "HTTPS":
+		return DNSType(layers.DNSTypeHTTPS)
 	case "URI":
 		return DNSType(layers.DNSTypeURI)
 	default:
@@ -493,7 +502,7 @@ type dnsRRSetsEncoded struct {
 
 func (d *DNSRRSets) MarshalJSON() ([]byte, error) {
 	if d == nil {
-		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+		return []byte{}, errors.New("cannot marshal nil value into JSON")
 	}
 	var r []dnsRRSetsEncoded
 	for name, rdatas := range *d {
@@ -516,12 +525,24 @@ func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
 		if error != nil {
 			return fmt.Errorf("failed to convert %v to string", dnsRRSet.Class)
 		}
-		dnsType, ok := dnsRRSet.Type.(string)
-		if !ok {
-			return fmt.Errorf("failed to convert %v to DNSType", dnsRRSet.Type)
+		var dnsType DNSType
+		if s, ok := dnsRRSet.Type.(string); ok {
+			dnsType = toDNSType(s)
+		} else {
+			// Handle unsupported DNS type values in logs by casting integers back to DNS types.
+			//
+			// Before CE v3.22 EP2, the outdated google/gopacket third-party dependency didn't support
+			// newer DNS types such as DNSKEY or RRSIG. As a result, these types were logged as raw
+			// integers. This fallback detects integer DNS type values and converts them directly
+			// back to DNS types instead of rejecting the JSON entirely.
+			if f64, ok := dnsRRSet.Type.(float64); ok {
+				dnsType = DNSType(uint16(f64))
+			} else {
+				return fmt.Errorf("failed to convert %v to DNSType", dnsRRSet.Type)
+			}
 		}
 
-		dnsName := DNSName{Name: dnsRRSet.Name, Class: dnsClass, Type: toDNSType(dnsType)}
+		dnsName := DNSName{Name: dnsRRSet.Name, Class: dnsClass, Type: dnsType}
 		for _, rdata := range dnsRRSet.RData {
 			rrSets.Add(dnsName, rdata)
 		}
@@ -575,6 +596,13 @@ func (d *DNSRData) String() string {
 		return fmt.Sprintf("%d %d %d %s", v.Priority, v.Weight, v.Port, v.Name)
 	case layers.DNSMX:
 		return fmt.Sprintf("%d %s", v.Preference, v.Name)
+	case layers.DNSKEY:
+		return fmt.Sprintf("%d %d %d %s", v.Flags, v.Protocol, v.Algorithm, base64.StdEncoding.EncodeToString(v.PublicKey))
+	case layers.DNSRRSIG:
+		return fmt.Sprintf("%s %d %d %d %s %s %d %s %s",
+			v.TypeCovered.String(), v.Algorithm, v.Labels, v.OriginalTTL,
+			formatRRSIGTimestamp(v.Expiration), formatRRSIGTimestamp(v.Inception),
+			v.KeyTag, string(v.SignerName), base64.StdEncoding.EncodeToString(v.Signature))
 	default:
 		return fmt.Sprintf("%#v", d.Decoded)
 	}
@@ -600,6 +628,13 @@ func (d *DNSRData) IDNAString() string {
 		return fmt.Sprintf("%d %d %d %s", v.Priority, v.Weight, v.Port, aNameToUName(string(v.Name)))
 	case layers.DNSMX:
 		return fmt.Sprintf("%d %s", v.Preference, aNameToUName(string(v.Name)))
+	case layers.DNSKEY:
+		return fmt.Sprintf("%d %d %d %s", v.Flags, v.Protocol, v.Algorithm, base64.StdEncoding.EncodeToString(v.PublicKey))
+	case layers.DNSRRSIG:
+		return fmt.Sprintf("%s %d %d %d %s %s %d %s %s",
+			v.TypeCovered.String(), v.Algorithm, v.Labels, v.OriginalTTL,
+			formatRRSIGTimestamp(v.Expiration), formatRRSIGTimestamp(v.Inception),
+			v.KeyTag, string(v.SignerName), base64.StdEncoding.EncodeToString(v.Signature))
 	default:
 		return fmt.Sprintf("%#v", d.Decoded)
 	}
@@ -614,7 +649,7 @@ func (d *DNSRData) MarshalJSON() ([]byte, error) {
 		return json.Marshal(d.IDNAString())
 	}
 
-	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	return []byte{}, errors.New("cannot marshal nil value into JSON")
 }
 
 func (d *DNSRData) UnmarshalJSON(data []byte) error {
@@ -636,15 +671,18 @@ func (d *DNSRData) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		d.Decoded = *mx
-
 	case 4:
-		// Detect an SRV record
-		srv, err := toSRVRecord(tokens)
+		// Detect an SRV or a DNSKEY record
+		r, err := toSRVOrDNSKeyRecord(tokens)
 		if err != nil {
 			return err
 		}
-		d.Decoded = *srv
-
+		switch v := r.(type) {
+		case *layers.DNSSRV:
+			d.Decoded = *v
+		case *layers.DNSKEY:
+			d.Decoded = *v
+		}
 	case 7:
 		// Detected a SOA record
 		soa, err := toSOARecord(tokens)
@@ -652,6 +690,13 @@ func (d *DNSRData) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		d.Decoded = *soa
+	case 9:
+		// Detected a RRSIG record
+		rrsig, err := toRRSIGRecord(tokens)
+		if err != nil {
+			return err
+		}
+		d.Decoded = *rrsig
 	}
 
 	d.Raw = []byte(val)
@@ -661,7 +706,7 @@ func (d *DNSRData) UnmarshalJSON(data []byte) error {
 
 func toMXRecord(tokens []string) (*layers.DNSMX, error) {
 	if len(tokens) != 2 {
-		return nil, fmt.Errorf("invalid format for DNSMX record")
+		return nil, errors.New("invalid format for DNSMX record")
 	}
 
 	preference, err := strconv.Atoi(tokens[0])
@@ -674,35 +719,64 @@ func toMXRecord(tokens []string) (*layers.DNSMX, error) {
 	}, nil
 }
 
-func toSRVRecord(tokens []string) (*layers.DNSSRV, error) {
+func toSRVOrDNSKeyRecord(tokens []string) (any, error) {
 	if len(tokens) != 4 {
-		return nil, fmt.Errorf("invalid format for DNSSRV record")
+		return nil, errors.New("invalid format for DNSSRV or DNSKEY record")
 	}
 
-	priority, err := strconv.Atoi(tokens[0])
+	// SRV: Priority or DNSKEY: Flag
+	p0, err := strconv.Atoi(tokens[0])
 	if err != nil {
 		return nil, err
 	}
-	weight, err := strconv.Atoi(tokens[1])
+	// SRV: Weight or DNSKEY: Protocol
+	p1, err := strconv.Atoi(tokens[1])
 	if err != nil {
 		return nil, err
 	}
-	port, err := strconv.Atoi(tokens[2])
+	// SRV: Port or DNSKEY: Algorithm
+	p2, err := strconv.Atoi(tokens[2])
 	if err != nil {
 		return nil, err
+	}
+	// SRV: Name or DNSKEY: PublicKey
+	p3 := tokens[3]
+	publicKey, err := base64.StdEncoding.DecodeString(p3)
+
+	// We don't have explicit DNS type information here, so apply heuristics
+	// to distinguish between DNSKEY and SRV records:
+	// - RFC 4034 2.1.1: DNSKEY Flags are typically 0 (other), 256 (zone), or 257 (SEP).
+	// - RFC 4034 2.1.2: DNSKEY Protocol MUST be 3.
+	// - DNSKEY public key is Base64 data; if base64 decode fails we treat as SRV.
+	isPossibleFlag := p0 == int(layers.DNSKEYFlagOtherKey) ||
+		p0 == int(layers.DNSKEYFlagZoneKey) ||
+		p0 == int(layers.DNSKEYFlagSecureEntryPoint)
+	isProtocol := p1 == int(layers.DNSKEYProtocolValue)
+	isBase64 := err == nil && len(publicKey) > 0
+
+	// Only consider this a DNSKEY if all heuristics match. If base64 decode failed
+	// we fall back to treating the token as an SRV name.
+	isDNSKey := isPossibleFlag && isProtocol && isBase64
+	if isDNSKey {
+		return &layers.DNSKEY{
+			Flags:     layers.DNSKEYFlag(p0),
+			Protocol:  layers.DNSKEYProtocol(p1),
+			Algorithm: layers.DNSSECAlgorithm(p2),
+			PublicKey: publicKey,
+		}, nil
 	}
 
 	return &layers.DNSSRV{
-		Priority: uint16(priority),
-		Weight:   uint16(weight),
-		Port:     uint16(port),
-		Name:     []byte(tokens[3]),
+		Priority: uint16(p0),
+		Weight:   uint16(p1),
+		Port:     uint16(p2),
+		Name:     []byte(p3),
 	}, nil
 }
 
 func toSOARecord(tokens []string) (*layers.DNSSOA, error) {
 	if len(tokens) != 7 {
-		return nil, fmt.Errorf("invalid format for DNSSOA record")
+		return nil, errors.New("invalid format for DNSSOA record")
 	}
 
 	serial, err := strconv.Atoi(tokens[2])
@@ -736,6 +810,56 @@ func toSOARecord(tokens []string) (*layers.DNSSOA, error) {
 	}, nil
 }
 
+func toRRSIGRecord(tokens []string) (*layers.DNSRRSIG, error) {
+	if len(tokens) != 9 {
+		return nil, errors.New("invalid format for DNSRRSIG record")
+	}
+
+	typeCovered := toDNSType(tokens[0])
+	if typeCovered == DNSType(0) {
+		return nil, errors.New("invalid TypeCovered for DNSRRSIG record")
+	}
+	algorithm, err := strconv.Atoi(tokens[1])
+	if err != nil {
+		return nil, err
+	}
+	labels, err := strconv.Atoi(tokens[2])
+	if err != nil {
+		return nil, err
+	}
+	originalTTL, err := strconv.Atoi(tokens[3])
+	if err != nil {
+		return nil, err
+	}
+	expiration, err := parseRRSIGTimestamp(tokens[4])
+	if err != nil {
+		return nil, err
+	}
+	inception, err := parseRRSIGTimestamp(tokens[5])
+	if err != nil {
+		return nil, err
+	}
+	keyTag, err := strconv.Atoi(tokens[6])
+	if err != nil {
+		return nil, err
+	}
+	signature, err := base64.StdEncoding.DecodeString(tokens[8])
+	if err != nil {
+		return nil, err
+	}
+	return &layers.DNSRRSIG{
+		TypeCovered: layers.DNSType(typeCovered),
+		Algorithm:   layers.DNSSECAlgorithm(algorithm),
+		Labels:      uint8(labels),
+		OriginalTTL: uint32(originalTTL),
+		Expiration:  uint32(expiration),
+		Inception:   uint32(inception),
+		KeyTag:      uint16(keyTag),
+		SignerName:  []byte(tokens[7]),
+		Signature:   signature,
+	}, nil
+}
+
 type DNSServer struct {
 	Endpoint
 	IP     net.IP
@@ -756,7 +880,7 @@ type dnsServerEncoded struct {
 
 func (d *DNSServer) MarshalJSON() ([]byte, error) {
 	if d == nil {
-		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+		return []byte{}, errors.New("cannot marshal nil value into JSON")
 	}
 
 	ip := d.IP.String()
@@ -832,4 +956,30 @@ func aNameToUName(aname string) string {
 		return aname
 	}
 	return u
+}
+
+func parseRRSIGTimestamp(value string) (int, error) {
+	// RFC 4034 3.1.5: timestamp specifies a date and time in the form of a 32-bit
+	// unsigned number of seconds elapsed since 1 January 1970 00:00:00 UTC.
+
+	// The YYYYMMDDHHmmss format is always 14 characters long.
+	if len(value) == 14 {
+		t, err := time.ParseInLocation("20060102150405", value, time.UTC)
+		if err != nil {
+			return 0, err
+		}
+		return int(t.Unix()), nil
+	}
+
+	// Assume Unix epoch time in seconds
+	epoch, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return int(epoch), nil
+}
+
+func formatRRSIGTimestamp(unixTime uint32) string {
+	t := time.Unix(int64(unixTime), 0).UTC()
+	return t.Format("20060102150405")
 }
