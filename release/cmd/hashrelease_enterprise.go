@@ -178,8 +178,8 @@ func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command
 	if c.Bool(publishHashreleaseFlag.Name) {
 		//  check that hashrelease server configuration is set.
 		if !hashreleaseServerConfig(c).Valid() {
-			return fmt.Errorf("missing hashrelease publishing configuration, ensure --%s and --%s are set",
-				hashreleaseServerBucketFlag.Name, hashreleaseServerCredentialsFlag.Name)
+			return fmt.Errorf("missing hashrelease publishing configuration, ensure --%s is set",
+				hashreleaseServerBucketFlag.Name)
 		}
 		// If building locally, do not allow setting the hashrelease as latest.
 		if c.Bool(latestFlag.Name) && !c.Bool(ciFlag.Name) {
