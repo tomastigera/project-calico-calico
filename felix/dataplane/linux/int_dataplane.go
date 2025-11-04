@@ -3579,7 +3579,7 @@ func startBPFDataplaneComponents(
 			config.KubeProxyMinSyncPeriod,
 		)
 		if err != nil {
-			log.WithError(err).Error("Failed to initialize BPF kube-proxy health check")
+			logrus.WithError(err).Error("Failed to initialize BPF kube-proxy health check")
 		}
 	}
 
