@@ -108,7 +108,6 @@ type labelsJSONOutput struct {
 }
 
 type policiesJSONOutput struct {
-	AllPolicies      []string `json:"all_policies"`
 	EnforcedPolicies []string `json:"enforced_policies"`
 	PendingPolicies  []string `json:"pending_policies"`
 	TransitPolicies  []string `json:"transit_policies"`
@@ -208,15 +207,11 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.Action = string(l.Action)
 	out.Reporter = string(l.Reporter)
 
-	if l.FlowAllPolicySet == nil {
+	if l.FlowEnforcedPolicySet == nil {
 		out.Policies = nil
 	} else {
 		if out.Policies == nil {
 			out.Policies = &policiesJSONOutput{}
-		}
-		out.Policies.AllPolicies = out.Policies.AllPolicies[:0]
-		for pol := range l.FlowAllPolicySet {
-			out.Policies.AllPolicies = append(out.Policies.AllPolicies, pol)
 		}
 
 		out.Policies.EnforcedPolicies = out.Policies.EnforcedPolicies[:0]
@@ -418,15 +413,10 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.TotalRetrans = int(o.TotalRetrans)
 	fl.UnrecoveredRTO = int(o.UnrecoveredRTO)
 	if o.Policies == nil {
-		fl.FlowAllPolicySet = nil
 		fl.FlowEnforcedPolicySet = nil
 		fl.FlowPendingPolicySet = nil
 		fl.FlowTransitPolicySet = nil
 	} else {
-		fl.FlowAllPolicySet = make(FlowPolicySet)
-		for _, pol := range o.Policies.AllPolicies {
-			fl.FlowAllPolicySet[pol] = emptyValue
-		}
 		fl.FlowEnforcedPolicySet = make(FlowPolicySet)
 		for _, pol := range o.Policies.EnforcedPolicies {
 			fl.FlowEnforcedPolicySet[pol] = emptyValue

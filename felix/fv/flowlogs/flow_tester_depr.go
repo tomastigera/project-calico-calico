@@ -96,16 +96,16 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs() error {
 			fl.DstLabels = uniquelabels.Nil
 
 			if t.expectPolicies {
-				if len(fl.FlowAllPolicySet) == 0 {
+				if len(fl.FlowEnforcedPolicySet) == 0 {
 					return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
 				}
 				pols := []string{}
-				for p := range fl.FlowAllPolicySet {
+				for p := range fl.FlowEnforcedPolicySet {
 					pols = append(pols, p)
 				}
 				t.policies[ii][fl.FlowMeta] = pols
-			} else if len(fl.FlowAllPolicySet) != 0 {
-				return fmt.Errorf("unexpected Policies %v in %v", fl.FlowAllPolicySet, fl.FlowMeta)
+			} else if len(fl.FlowEnforcedPolicySet) != 0 {
+				return fmt.Errorf("unexpected Policies %v in %v", fl.FlowEnforcedPolicySet, fl.FlowMeta)
 			}
 
 			// Accumulate flow and packet counts for this FlowMeta.
@@ -160,7 +160,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 		expectedPolicies := []string{}
 		expectedPoliciesStr := "-"
 		if t.expectPolicies {
-			expectedPolicies = handling.Policies
+			expectedPolicies = handling.EnforcedPolicies
 			expectedPoliciesStr = "[" + strings.Join(expectedPolicies, ",") + "]"
 		}
 
