@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
 
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
-ARG WINDOWS_LTSC_VERSION
+ARG WINDOWS_VERSION
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.19.0-${THIRD_PARTY_RELEASE_BRANCH}-${WINDOWS_LTSC_VERSION}
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.19.0-${THIRD_PARTY_RELEASE_BRANCH}-windows-${WINDOWS_VERSION}
 
 USER ContainerAdministrator
 
