@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"slices"
 	"strings"
 	"text/template"
@@ -971,6 +970,14 @@ type makeInDirectoryWithOutputFn func(dir, target string, env ...string) (string
 func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir string, env []string) error {
 	// We allow for a certain number of retries when publishing each directory, since
 	// network flakes can occasionally result in images failing to push.
+	log := logrus.WithField("directory", dir)
+	for _, e := range env {
+		if strings.HasPrefix(e, "TESLA") {
+			log = log.WithField("cloud_image", strings.SplitN(e, "=", 2)[1])
+		} else if strings.HasPrefix(e, "WINDOWS_RELEASE") {
+			log = log.WithField("windows_image", strings.SplitN(e, "=", 2)[1])
+		}
+	}
 	maxRetries := 1
 	attempt := 0
 	for {
@@ -985,17 +992,16 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 		out, err := fn(dir, "cut-release-image", env...)
 		if err != nil {
 			if attempt < maxRetries {
-				logrus.WithField("directory", dir).WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+				log.WithField("attempt", attempt).WithError(err).Error("Publish failed, retrying")
 				attempt++
 				continue
 			}
 			// Log the output and return a formatted error
-			logrus.WithField("directory", dir).Error(out)
-			logrus.WithField("directory", dir).WithError(err).Error("Publishing failed")
-			return fmt.Errorf("failed to publish %s images: %w", dir, err)
+			log.Error(out)
+			return fmt.Errorf("Failed to publish %s images: %w", dir, err)
 		}
 		// Success - move on
-		logrus.WithField("directory", dir).Info(out)
+		log.Info(out)
 		break
 	}
 	return nil
@@ -1016,7 +1022,6 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 	}
 
 	eg, ctx := errgroup.WithContext(context.Background())
-	eg.SetLimit(runtime.GOMAXPROCS(0))
 
 	// Publish release images.
 	logrus.Info("Start publishing release images")
@@ -1037,25 +1042,24 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 		env = append(env, "SKIP_DEV_IMAGE_RETAG=true")
 	}
 	for _, dir := range enterpriseImageReleaseDirs {
+		baseEnv := slices.Clone(env)
 		current := dir
 		d := filepath.Join(m.repoRoot, current)
 		eg.Go(func() error {
-			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, env)
+			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, baseEnv)
 		})
 
 		// Publish images for cloud if the directory produces Calico Cloud images
 		if slices.Contains(cloudImageReleaseDirs, dir) {
-			cloudEnv := append(env, "CLOUD=true")
 			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, cloudEnv)
+				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "TESLA=true"))
 			})
 		}
 
 		// Publish images for Windows if the directory produces Windows images
 		if slices.Contains(enterpriseWindowsReleaseDirs, current) {
-			windowsEnv := append(env, "WINDOWS_RELEASE=true")
 			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, windowsEnv)
+				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true"))
 			})
 		}
 	}
