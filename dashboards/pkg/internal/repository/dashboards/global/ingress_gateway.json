@@ -56,6 +56,10 @@
                         "label": "Cluster"
                     },
                     {
+                        "field": "gateway_name",
+                        "label": "Gateway"
+                    },
+                    {
                         "field": "dest_namespace",
                         "label": "Namespace"
                     },
