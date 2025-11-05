@@ -16,7 +16,6 @@
       version: v3.31.0
     calicoctl:
       version: v3.31.0
-      image: ctl
     cni:
       version: v3.31.0
     cni-windows:

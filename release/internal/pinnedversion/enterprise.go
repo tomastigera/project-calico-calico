@@ -114,10 +114,20 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 }
 
 type enterpriseTemplateData struct {
-	calicoTemplateData
+	ReleaseName        string
+	BaseDomain         string
+	ProductVersion     string
+	Operator           registry.Component
+	Note               string
+	Hash               string
+	ReleaseBranch      string
 	HelmReleaseVersion string
 	CalicoMinorVersion string
 	ManagerVersion     string
+}
+
+func (d *enterpriseTemplateData) ReleaseURL() string {
+	return fmt.Sprintf("https://%s.%s", d.ReleaseName, d.BaseDomain)
 }
 
 type EnteprisePinnedVersions struct {
@@ -140,10 +150,6 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 	}
 	releaseName := fmt.Sprintf("%s-%s-%s", time.Now().Format("2006-01-02"), version.DeterminePublishStream(productBranch, productVer), RandomWord())
 	releaseName = strings.ReplaceAll(releaseName, ".", "-")
-	operatorBranch, err := p.OperatorCfg.GitBranch()
-	if err != nil {
-		return nil, err
-	}
 	operatorVer, err := p.OperatorCfg.GitVersion()
 	if err != nil {
 		return nil, err
@@ -165,20 +171,18 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 
 	versionData := version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
 	tmplData := &enterpriseTemplateData{
-		calicoTemplateData: calicoTemplateData{
-			ReleaseName:    releaseName,
-			BaseDomain:     hashreleaseserver.BaseDomain,
-			ProductVersion: versionData.ProductVersion(),
-			Operator: registry.Component{
-				Version:  versionData.OperatorVersion(),
-				Image:    p.OperatorCfg.Image,
-				Registry: p.OperatorCfg.Registry,
-			},
-			Hash: versionData.Hash(),
-			Note: fmt.Sprintf("%s - generated at %s using %s release branch with %s operator branch and %s manager branch",
-				releaseName, time.Now().Format(time.RFC1123), productBranch, operatorBranch, managerBranch),
-			ReleaseBranch: versionData.ReleaseBranch(p.ReleaseBranchPrefix),
+		ReleaseName:    releaseName,
+		BaseDomain:     hashreleaseserver.BaseDomain,
+		ProductVersion: versionData.ProductVersion(),
+		Operator: registry.Component{
+			Version:  versionData.OperatorVersion(),
+			Image:    p.OperatorCfg.Image,
+			Registry: p.OperatorCfg.Registry,
 		},
+		Hash: versionData.Hash(),
+		Note: fmt.Sprintf("%s - generated at %s using %s release branch with %s operator branch and %s manager branch",
+			releaseName, time.Now().Format(time.RFC1123), productBranch, p.OperatorCfg.Branch, managerBranch),
+		ReleaseBranch:      versionData.ReleaseBranch(p.ReleaseBranchPrefix),
 		HelmReleaseVersion: p.ChartVersion,
 		CalicoMinorVersion: calicoMajorMinor,
 		ManagerVersion:     managerVer,

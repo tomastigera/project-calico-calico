@@ -65,19 +65,17 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	dir := t.TempDir()
 	data := &enterpriseTemplateData{
-		calicoTemplateData: calicoTemplateData{
-			ReleaseName:    "test-release",
-			BaseDomain:     "example.com",
-			ProductVersion: "vX.Y.Z",
-			Operator: registry.Component{
-				Version:  "vA.B.C",
-				Image:    "tigera/operator",
-				Registry: "quay.io",
-			},
-			Hash:          "vX.Y.Z-vA.B.C-vD.E.F",
-			Note:          "Test note",
-			ReleaseBranch: "release-calient-v1.0",
+		ReleaseName:    "test-release",
+		BaseDomain:     "example.com",
+		ProductVersion: "vX.Y.Z",
+		Operator: registry.Component{
+			Version:  "vA.B.C",
+			Image:    "tigera/operator",
+			Registry: "quay.io",
 		},
+		Hash:               "vX.Y.Z-vA.B.C-vD.E.F",
+		Note:               "Test note",
+		ReleaseBranch:      "release-calient-v1.0",
 		CalicoMinorVersion: "vF.G",
 		ManagerVersion:     "vD.E.F",
 	}
