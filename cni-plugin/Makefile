@@ -5,7 +5,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni
-WINDOWS_IMAGE ?=cni-windows
+WINDOWS_IMAGE ?=$(CNI_PLUGIN_IMAGE)-windows
 
 # If this is a windows release build the windows image.  ARCHES will contain the values
 # in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
