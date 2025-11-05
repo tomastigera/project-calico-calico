@@ -25,8 +25,6 @@ SHELL := powershell.exe
 $(eval WINDOWS_BUILD_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuild))
 
 # Get Windows ltsc version based on build number.
-# See notes in https://github.com/tigera/fluentd-base/blob/windows-versions/README.md
-# on how we map windows versions.
 ifeq ($(WINDOWS_BUILD_VERSION),17763)
 WINDOWS_VERSION := ltsc2019
 else ifeq ($(WINDOWS_BUILD_VERSION),20348)
@@ -64,7 +62,7 @@ image:
 
 build-image-%:
 ifeq ($(OS),Windows_NT)
-	docker build --pull --build-arg FLUENTD_UPSTREAM_VERSION=v$(FLUENTD_VERSION)-$*-1.0 -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$* -f Dockerfile.windows .
+	docker build --pull --build-arg WINDOWS_VERSION=$(WINDOWS_VERSION) -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$* -f Dockerfile.windows .
 else
 	$(DOCKER_BUILD) --build-arg FLUENTD_VERSION=$(FLUENTD_VERSION) -t $(FLUENTD_BASE_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
