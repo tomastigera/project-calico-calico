@@ -126,6 +126,7 @@ func describeALPTest(ipip bool) bool {
 					proxy := tproxy.New(felix, 16001)
 					proxy.Start()
 					proxies = append(proxies, proxy)
+					infra.AddCleanup(proxy.Stop)
 				}
 
 				addWorkload := func(run bool, ii, wi, port int, labels map[string]string) *workload.Workload {
@@ -139,7 +140,7 @@ func describeALPTest(ipip bool) bool {
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
-						Expect(w.Start()).To(Succeed())
+						Expect(w.Start(infra)).To(Succeed())
 					}
 
 					labels["name"] = w.Name
@@ -248,26 +249,6 @@ func describeALPTest(ipip bool) bool {
 					}
 					return true
 				}, "20s", "1s").Should(BeTrue())
-			})
-
-			JustAfterEach(func() {
-				for _, p := range proxies {
-					p.Stop()
-				}
-
-				if CurrentGinkgoTestDescription().Failed {
-					for _, felix := range tc.Felixes {
-						felix.Exec("iptables-save", "-c")
-						felix.Exec("ipset", "list")
-					}
-				}
-			})
-
-			AfterEach(func() {
-				log.Info("AfterEach starting")
-				tc.Stop()
-				infra.Stop()
-				log.Info("AfterEach done")
 			})
 
 			Context("IPs on IPSet", func() {

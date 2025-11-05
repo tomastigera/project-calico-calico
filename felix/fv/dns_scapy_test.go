@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/felix/timeshim"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -140,11 +141,10 @@ func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrac
 	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, flags, a2bLeg, b2aLeg)
 }
 
-var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		scapyTrusted *containers.Container
 		pingTarget   *containers.Container
-		etcd         *containers.Container
 		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		infra        infrastructure.DatastoreInfra
@@ -219,6 +219,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 		Describe("DNSPolicyMode is "+mode, func() {
 			BeforeEach(func() {
+				infra = getInfra()
+
 				opts := infrastructure.DefaultTopologyOptions()
 				var err error
 				dnsDir, err = os.MkdirTemp("", "dnsinfo")
@@ -228,11 +230,13 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				scapyTrusted = containers.Run("scapy",
 					containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
 					"-i", "--privileged", "tigera-test/scapy")
+				infra.AddCleanup(scapyTrusted.Stop)
 
 				// Run another instance of scapy as our ping target for the tests.
 				pingTarget = containers.Run("scapy",
 					containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
 					"-i", "--privileged", "tigera-test/scapy")
+				infra.AddCleanup(pingTarget.Stop)
 
 				// Now start etcd and Felix, with Felix trusting scapy's IP.
 				opts.ExtraVolumes[dnsDir] = "/dnsinfo"
@@ -250,7 +254,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 				opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
 				opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-				tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+				tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 				infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 				if !BPFMode() && mode == string(api.DNSPolicyModeInline) {
 					infra.RunBPFLog()
@@ -266,33 +270,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				if BPFMode() {
 					ensureBPFProgramsAttached(tc.Felixes[0])
 				}
-			})
-
-			// Stop etcd and workloads, collecting some state if anything failed.
-			AfterEach(func() {
-				if CurrentGinkgoTestDescription().Failed {
-					if BPFMode() {
-						tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
-					}
-					tc.Felixes[0].Exec("ipset", "list")
-					tc.Felixes[0].Exec("iptables-save", "-c")
-					tc.Felixes[0].Exec("ip", "r")
-					tc.Felixes[0].Exec("conntrack", "-L")
-				}
-
-				pingTarget.Stop()
-				scapyTrusted.Stop()
-
-				for ii := range w {
-					w[ii].Stop()
-				}
-				tc.Stop()
-
-				if CurrentGinkgoTestDescription().Failed {
-					etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-				}
-				etcd.Stop()
-				infra.Stop()
 			})
 
 			DescribeTable("DNS response processing",
@@ -838,10 +815,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 })
 
-var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy with server on host", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		scapyTrusted *containers.Container
-		etcd         *containers.Container
 		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		infra        infrastructure.DatastoreInfra
@@ -849,6 +825,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
 		dnsDir, err = os.MkdirTemp("", "dnsinfo")
@@ -859,7 +836,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -888,30 +865,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 
 		// Allow time for Felix to restart before we send the DNS response from scapy.
 		time.Sleep(3 * time.Second)
-	})
-
-	// Stop etcd and workloads, collecting some state if anything failed.
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			if BPFMode() {
-				tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
-			}
-			tc.Felixes[0].Exec("ipset", "list")
-			tc.Felixes[0].Exec("iptables-save", "-c")
-			tc.Felixes[0].Exec("ip", "r")
-			tc.Felixes[0].Exec("conntrack", "-L")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	dnsServerSetup := func(scapy *containers.Container) {
@@ -971,9 +924,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	)
 })
 
-var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Precise DNS logging", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
-		etcd   *containers.Container
 		tc     infrastructure.TopologyContainers
 		felix  *infrastructure.Felix
 		server *infrastructure.Felix
@@ -984,6 +936,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
 		dnsDir, err = os.MkdirTemp("", "dnsinfo")
@@ -1002,7 +955,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		// Make sure we don't lose the log that we watch for.
 		opts.ExtraEnvVars["FELIX_DEBUGDISABLELOGDROPPING"] = "true"
 		opts.IPIPMode = api.IPIPModeNever
-		tc, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 		felix = tc.Felixes[0]
 		server = tc.Felixes[1]
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
@@ -1054,20 +1007,6 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		cc.ExpectSome(w[0], w[1])
 		cc.ExpectSome(w[1], w[0])
 		cc.CheckConnectivity()
-	})
-
-	// Stop etcd and workloads, collecting some state if anything failed.
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	dnsRequestBytes := func(id uint16) []byte {

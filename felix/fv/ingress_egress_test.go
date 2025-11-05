@@ -27,17 +27,16 @@ import (
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
-var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {
+var _ = infrastructure.DatastoreDescribe("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
-		etcd   *containers.Container
 		tc     infrastructure.TopologyContainers
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
@@ -46,12 +45,13 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -64,27 +64,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 		cc = &connectivity.Checker{}
 	})
 
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			if NFTMode() {
-				logNFTDiags(tc.Felixes[0])
-			} else {
-				tc.Felixes[0].Exec("iptables-save", "-c")
-			}
-			tc.Felixes[0].Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
-	})
 	It("full connectivity to and from workload 0", func() {
 		cc.ExpectSome(w[1], w[0])
 		cc.ExpectSome(w[2], w[0])
@@ -307,9 +286,8 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	})
 })
 
-var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd datastore, 3 workloads", func() {
+var _ = infrastructure.DatastoreDescribe("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd datastore, 3 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
-		etcd    *containers.Container
 		tc      infrastructure.TopologyContainers
 		client  client.Interface
 		infra   infrastructure.DatastoreInfra
@@ -319,9 +297,10 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		if NFTMode() {
@@ -338,28 +317,6 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 		}
 
 		cc = &connectivity.Checker{}
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			if NFTMode() {
-				logNFTDiags(tc.Felixes[0])
-			} else {
-				tc.Felixes[0].Exec("iptables-save", "-c")
-			}
-			tc.Felixes[0].Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	Context("with an ingress policy with no rules", func() {
@@ -415,9 +372,8 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 	})
 })
 
-var _ = Context("with Typha and Felix-Typha TLS", func() {
+var _ = infrastructure.DatastoreDescribe("with Typha and Felix-Typha TLS", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
-		etcd   *containers.Container
 		tc     infrastructure.TopologyContainers
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
@@ -426,10 +382,11 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		options := infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithFelixTyphaTLS = true
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		tc, client = infrastructure.StartSingleNodeTopology(options, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -440,28 +397,6 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 		}
 
 		cc = &connectivity.Checker{}
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			if NFTMode() {
-				logNFTDiags(tc.Felixes[0])
-			} else {
-				tc.Felixes[0].Exec("iptables-save", "-c")
-			}
-			tc.Felixes[0].Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	It("full connectivity to and from workload 0", func() {
@@ -499,9 +434,8 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 	})
 })
 
-var _ = Context("with TLS-secured Prometheus ports", func() {
+var _ = infrastructure.DatastoreDescribe("with TLS-secured Prometheus ports", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
-		etcd    *containers.Container
 		tc      infrastructure.TopologyContainers
 		client  client.Interface
 		infra   infrastructure.DatastoreInfra
@@ -511,10 +445,11 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	)
 
 	BeforeEach(func() {
+		infra = getInfra()
 		options = infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithPrometheusPortTLS = true
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		tc, client = infrastructure.StartSingleNodeTopology(options, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -525,24 +460,6 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		}
 
 		cc = &connectivity.Checker{}
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			tc.Felixes[0].Exec("iptables-save", "-c")
-			tc.Felixes[0].Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	It("full connectivity to and from workload 0", func() {

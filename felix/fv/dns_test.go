@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/types"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -70,8 +71,8 @@ func getDNSLogs(logFile string) ([]string, error) {
 	return logs, nil
 }
 
-var _ = Describe("DNS Policy", func() {
-	testDnsPolicy(false, false)
+var _ = infrastructure.DatastoreDescribe("DNS Policy", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+	defineDNSPolicyTests(getInfra, false, false)
 })
 
 // These tests rely solely on BPF making the updates to the policy iptables.
@@ -79,24 +80,23 @@ var _ = Describe("DNS Policy", func() {
 // ipsets manager can query which domains belong to which ipsets (which is
 // necessary to build the bpf structures, but it does not receive ip updates and
 // thus does not write the IPs in the sets.
-var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	if NFTMode() {
 		return
 	}
-	testDnsPolicy(true, false)
+	defineDNSPolicyTests(getInfra, true, false)
 })
 
 // This is the new default for BPF, precessing in BPF, with fixups from Felix
-var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Zero latency DNS Policy", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	if NFTMode() {
 		return
 	}
-	testDnsPolicy(true, true)
+	defineDNSPolicyTests(getInfra, true, true)
 })
 
-func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
+func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, setsUpdateFromFelix bool) {
 	var (
-		etcd             *containers.Container
 		dnsServer        *containers.Container
 		externalWorkload *containers.Container
 		tc               infrastructure.TopologyContainers
@@ -174,6 +174,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	}
 
 	BeforeEach(func() {
+		infra = getInfra()
 		saveFile = "/dnsinfo/dnsinfo.txt"
 		saveFileMappedOutsideContainer = true
 		enableLogs = true
@@ -188,11 +189,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 
 		// Instead of relying on external websites for DNS tests, we use an internally hosted HTTP service,
 		// and internal dns server, making functional validation tests more self-contained and reliable.
-		externalWorkload = infrastructure.StartExternalWorkloads("dns-external-workload", 1)[0]
+		externalWorkload = infrastructure.StartExternalWorkloads(infra, "dns-external-workload", 1)[0]
 		dnsRecords := map[string][]dns.RecordIP{
 			"www.fake-microsoft.test": {{TTL: 20, IP: externalWorkload.IP}},
 		}
-		dnsServer = dns.StartServer(dnsRecords)
+		dnsServer = dns.StartServer(infra, dnsRecords)
 		dnsServerIP = dnsServer.IP
 
 		opts.FelixLogSeverity = "Debug"
@@ -235,7 +236,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		if zeroLatency && !setsUpdateFromFelix {
 			opts.ExtraEnvVars["FELIX_DEBUGDNSDONOTWRITEIPSETS"] = "true"
 		}
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		if zeroLatency && !BPFMode() {
@@ -259,28 +260,10 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			logNFTDiags(tc.Felixes[0])
-			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump", "--debug")
-			tc.Felixes[0].Exec("ipset", "list")
-			tc.Felixes[0].Exec("iptables-save", "-c")
-			tc.Felixes[0].Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
 		if saveFileMappedOutsideContainer {
+			tc.Felixes[0].Stop() // Trigger felix to write out the file.
 			Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
 		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		infra.Stop()
-		externalWorkload.Stop()
-		dnsServer.Stop()
 	})
 
 	Context("with save file in initially non-existent directory", func() {
@@ -928,10 +911,9 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	})
 }
 
-var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
+var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		dnsserver       *containers.Container
-		etcd            *containers.Container
 		tc              infrastructure.TopologyContainers
 		client          client.Interface
 		infra           infrastructure.DatastoreInfra
@@ -958,6 +940,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		serviceIP     = "10.96.0.123"
 	)
 	BeforeEach(func() {
+		infra = getInfra()
 		var err error
 
 		opts := infrastructure.DefaultTopologyOptions()
@@ -969,7 +952,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 			"bazbiff.com": {{TTL: 20, IP: serviceIP}},
 		}
 
-		dnsserver = dns.StartServer(dnsRecords)
+		dnsserver = dns.StartServer(infra, dnsRecords)
 
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
@@ -977,7 +960,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
 		opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = "delayDeniedPacket"
 		opts.ExtraEnvVars["FELIX_NFTablesDNSPOLICYMODE"] = "delayDeniedPacket"
-		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		workload1 = workload.Run(tc.Felixes[0], workload1Name, "default", workload1IP, "8055", "tcp")
@@ -1058,32 +1041,6 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 			dnsPolicyAllowMatch1 = "cali40d-8FX6lj5QBNTr5qeMZJwks6E.*rule-name=allow-bazbiff"
 			dnsPolicyAllowMatch2 = "cali40d-c19ArGfvjwU6D6ljIxk2xsA.*rule-name=allow-foobar"
 		}
-	})
-
-	// Stop etcd and workloads, collecting some state if anything failed.
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			logNFTDiags(tc.Felixes[0])
-			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
-			tc.Felixes[0].Exec("ipset", "list")
-			tc.Felixes[0].Exec("iptables-save", "-c")
-			tc.Felixes[0].Exec("ip", "r")
-			tc.Felixes[0].Exec("conntrack", "-L")
-		}
-
-		for ii := range workloads {
-			workloads[ii].Stop()
-		}
-		workloads = nil
-
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
-		dnsserver.Stop()
 	})
 
 	When("when the dns response isn't programmed before the packet reaches the dns policy rule", func() {

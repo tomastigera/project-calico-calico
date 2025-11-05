@@ -20,7 +20,6 @@ import (
 )
 
 var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra infrastructure.DatastoreInfra
 		tc    infrastructure.TopologyContainers
@@ -93,19 +92,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 				felix.Exec("ip", "-s", "xfrm", "policy")
 			}
 		}
-
-		for _, wl := range w {
-			wl.Stop()
-		}
-		for _, wl := range hostW {
-			wl.Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 
 	// Function to get number of SAs for connection (src->dest) and SPI for first SA on destination workload.

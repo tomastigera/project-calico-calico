@@ -17,6 +17,9 @@ import (
 	"fmt"
 
 	"github.com/onsi/ginkgo"
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type LocalRemoteInfraFactories struct {
@@ -39,10 +42,58 @@ func (r *LocalRemoteInfraFactories) AllFactories() []InfraFactory {
 // DatastoreDescribeRemoteOnly invokes Describe, providing a factory that provides remote and local datastores. It creates just
 // one Describe invocation - use DatastoreDescribeWithRemote to get both local and local/remote describes.
 func DatastoreDescribeRemoteOnly(description string, body func(factories LocalRemoteInfraFactories)) bool {
-	ginkgo.Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
-		func() {
-			body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
+	description = fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description)
+	return ginkgo.Describe(description, func() {
+		var coreFilesAtStart set.Set[string]
+		var currentInfra []DatastoreInfra
+		ginkgo.BeforeEach(func() {
+			coreFilesAtStart = readCoreFiles()
+			currentInfra = nil
 		})
 
-	return true
+		body(LocalRemoteInfraFactories{
+			Local: func(opts ...CreateOption) DatastoreInfra {
+				infra := createK8sDatastoreInfra(opts...)
+				currentInfra = append(currentInfra, infra)
+				return infra
+			},
+			Remote: func(opts ...CreateOption) DatastoreInfra {
+				infra := createRemoteK8sDatastoreInfra(opts...)
+				currentInfra = append(currentInfra, infra)
+				return infra
+			},
+		})
+
+		ginkgo.AfterEach(func() {
+			// Always stop the infra after each test (collects diags on failure and cleans up).
+			logrus.Info("DatastoreDescribe AfterEach: stopping infrastructure.")
+			if len(currentInfra) > 0 {
+				for i := len(currentInfra) - 1; i >= 0; i-- {
+					if currentInfra[i] != nil {
+						currentInfra[i].Stop()
+					}
+				}
+				currentInfra = nil
+			}
+		})
+
+		ginkgo.AfterEach(func() {
+			// Then, perform the core file check.
+			logrus.Info("DatastoreDescribe AfterEach: checking for core files.")
+			afterCoreFiles := readCoreFiles()
+			coreFilesAtStart.Iter(func(item string) error {
+				afterCoreFiles.Discard(item)
+				return nil
+			})
+			if afterCoreFiles.Len() != 0 {
+				if ginkgo.CurrentGinkgoTestDescription().Failed {
+					ginkgo.Fail(fmt.Sprintf("Test FAILED and new core files were detected during tear-down: %v.  "+
+						"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+					return
+				}
+				ginkgo.Fail(fmt.Sprintf("Test PASSED but new core files were detected during tear-down: %v.  "+
+					"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+			}
+		})
+	})
 }

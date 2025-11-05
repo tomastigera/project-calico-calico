@@ -63,7 +63,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				regexp.MustCompile(`.*`+regexp.QuoteMeta(">")+` 10\.65\.\d+\.2.*`))
 			tcpdump.AddMatcher("numInboundWorkloadToHostPackets",
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
-			tcpdump.Start()
+			tcpdump.Start(infra)
 			tcpdumps = append(tcpdumps, tcpdump)
 
 			f.TriggerDelayedStart()
@@ -77,31 +77,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")
 			}
 		}
-
-		for _, wl := range w {
-			wl.Stop()
-		}
-		for _, wl := range hostW {
-			wl.Stop()
-		}
-		for _, t := range tcpdumps {
-			t.Stop()
-		}
-
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 
 	tcpdumpMatches := func(felix int, name string) func() int {
@@ -546,27 +525,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")
 			}
 		}
-
-		for _, wl := range w {
-			wl.Stop()
-		}
-		for _, wl := range hostW {
-			wl.Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 
 	It("should still have workload connectivity", func() {
@@ -611,7 +573,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			tcpdump.AddMatcher("numPlaintextOutboundWorkloadPackets", regexp.MustCompile(`.*10\.65\.\d+\.2.*`+regexp.QuoteMeta(" >")+`.*`))
 			tcpdump.AddMatcher("numInboundWorkloadToHostPackets",
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
-			tcpdump.Start()
+			tcpdump.Start(infra)
 			tcpdumps = append(tcpdumps, tcpdump)
 
 			f.TriggerDelayedStart()
@@ -626,31 +588,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")
 			}
 		}
-
-		for _, wl := range w {
-			wl.Stop()
-		}
-		for _, wl := range hostW {
-			wl.Stop()
-		}
-		for _, t := range tcpdumps {
-			t.Stop()
-		}
-
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 
 	It("should have encrypted connectivity from host with no workloads to/from workloads", func() {

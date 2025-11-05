@@ -299,15 +299,14 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 	)
 	return infrastructure.DatastoreDescribe(desc, []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 		var (
-			infra              infrastructure.DatastoreInfra
-			tc                 infrastructure.TopologyContainers
-			calicoClient       client.Interface
-			cc                 *Checker
-			externalClient     *containers.Container
-			deadWorkload       *workload.Workload
-			options            infrastructure.TopologyOptions
-			numericProto       uint8
-			felixPanicExpected bool
+			infra          infrastructure.DatastoreInfra
+			tc             infrastructure.TopologyContainers
+			calicoClient   client.Interface
+			cc             *Checker
+			externalClient *containers.Container
+			deadWorkload   *workload.Workload
+			options        infrastructure.TopologyOptions
+			numericProto   uint8
 		)
 
 		containerIP := func(c *containers.Container) string {
@@ -338,8 +337,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 		}
 
 		BeforeEach(func() {
-			felixPanicExpected = false
-
 			iOpts := []infrastructure.CreateOption{}
 			if testOpts.ipv6 {
 				iOpts = append(iOpts,
@@ -534,22 +531,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			}
 		})
 
-		AfterEach(func() {
-			log.Info("AfterEach starting")
-			for _, f := range tc.Felixes {
-				if !felixPanicExpected {
-					_ = f.ExecMayFail("calico-bpf", "connect-time", "clean")
-				}
-				f.Stop()
-			}
-			externalClient.Stop()
-			log.Info("AfterEach done")
-		})
-
-		AfterEach(func() {
-			infra.Stop()
-		})
-
 		createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
 			log.WithField("policy", dumpResource(policy)).Info("Creating policy")
 			policy, err := calicoClient.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
@@ -584,7 +565,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 			JustBeforeEach(func() {
 				tc, calicoClient = infrastructure.StartNNodeTopology(1, options, infra)
-
 				hostW = workload.Run(
 					tc.Felixes[0],
 					"host",
@@ -643,11 +623,10 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					BeforeEach(func() {
 						// Disable core dumps, we know we're about to cause a panic.
 						options.FelixCoreDumpsEnabled = false
-						felixPanicExpected = true
 					})
 
 					It("0xffff000 not covering BPF bits should panic", func() {
-						felixPanicExpected = true
+						tc.Felixes[0].PanicExpected = true
 						panicC := tc.Felixes[0].WatchStdoutFor(regexp.MustCompile("PANIC.*IptablesMarkMask/NftablesMarkMask doesn't cover bits that are used"))
 
 						fc, err := calicoClient.FelixConfigurations().Get(context.Background(), "default", options2.GetOptions{})
@@ -670,6 +649,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					})
 
 					It("0xfff00000 only covering BPF bits should panic", func() {
+						tc.Felixes[0].PanicExpected = true
 						panicC := tc.Felixes[0].WatchStdoutFor(regexp.MustCompile("PANIC.*Not enough mark bits available"))
 
 						fc, err := calicoClient.FelixConfigurations().Get(context.Background(), "default", options2.GetOptions{})
@@ -701,8 +681,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					tcpdump.SetLogEnabled(true)
 					tcpdump.AddMatcher("udp-be",
 						regexp.MustCompile(fmt.Sprintf("%s\\.12345 > %s\\.8055: \\[udp sum ok\\] UDP", w[1].IP, w[0].IP)))
-					tcpdump.Start("-vvv", "udp")
-					defer tcpdump.Stop()
+					tcpdump.Start(infra, "-vvv", "udp")
 
 					// Just to create the wrong normal entry to the service
 					_, err := w[1].RunCmd("pktgen", w[1].IP, clusterIP, "udp",
@@ -1277,7 +1256,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 				w.WorkloadEndpoint.Labels = labels
 				if run {
-					err := w.Start()
+					err := w.Start(infra)
 					Expect(err).NotTo(HaveOccurred())
 					w.ConfigureInInfra(infra)
 				}
@@ -1328,11 +1307,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			// We will use this container to model an external client trying to connect into
 			// workloads on a host.  Create a route in the container for the workload CIDR.
 			// TODO: Copied from another test
-			externalClient = infrastructure.RunExtClientWithOpts("ext-client",
-				infrastructure.ExtClientOpts{
-					IPv6Enabled: testOpts.ipv6,
-				},
-			)
+			externalClient = infrastructure.RunExtClientWithOpts(infra, "ext-client", infrastructure.ExtClientOpts{
+				IPv6Enabled: testOpts.ipv6,
+			})
 			_ = externalClient
 
 			err := infra.AddDefaultDeny()
@@ -1388,7 +1365,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						wlIP = "dead:beef::1:5"
 					}
 					dpOnlyWorkload := workload.New(tc.Felixes[1], "w-dp", "default", wlIP, "8057", testOpts.protocol)
-					err = dpOnlyWorkload.Start()
+					err = dpOnlyWorkload.Start(infra)
 					Expect(err).NotTo(HaveOccurred())
 					tc.Felixes[1].Exec("ip", "route", "add", dpOnlyWorkload.IP, "dev", dpOnlyWorkload.InterfaceName, "scope", "link")
 
@@ -1401,8 +1378,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						pattern = fmt.Sprintf(`IP6 .* %s\.8057: UDP`, dpOnlyWorkload.IP)
 					}
 					tcpdump.AddMatcher("UDP-8057", regexp.MustCompile(pattern))
-					tcpdump.Start()
-					defer tcpdump.Stop()
+					tcpdump.Start(infra)
 
 					// Send packets in the background.
 					var wg sync.WaitGroup
@@ -1718,15 +1694,13 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						tcpdump1.SetLogEnabled(true)
 						tcpdump1.AddMatcher("udp-frags", regexp.MustCompile(
 							fmt.Sprintf("%s.* > %s.*", w[1][0].IP, w[0][0].IP)))
-						tcpdump1.Start("-vvv", "src", "host", w[1][0].IP, "and", "dst", "host", w[0][0].IP)
-						defer tcpdump1.Stop()
+						tcpdump1.Start(infra, "-vvv", "src", "host", w[1][0].IP, "and", "dst", "host", w[0][0].IP)
 
 						tcpdump0 := w[0][0].AttachTCPDump()
 						tcpdump0.SetLogEnabled(true)
 						tcpdump0.AddMatcher("udp-pod-frags", regexp.MustCompile(
 							fmt.Sprintf("%s.* > %s.*", w[1][0].IP, w[0][0].IP)))
-						tcpdump0.Start("-vvv", "src", "host", w[1][0].IP, "and", "dst", "host", w[0][0].IP)
-						defer tcpdump1.Stop()
+						tcpdump0.Start(infra, "-vvv", "src", "host", w[1][0].IP, "and", "dst", "host", w[0][0].IP)
 
 						// Give tcpdump some time to start up!
 						time.Sleep(time.Second)
@@ -1795,8 +1769,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							pattern = fmt.Sprintf(`IP %s.\d+ > %s\.80`, w[0][0].IP, testSvc.Spec.ClusterIP)
 						}
 						tcpdump.AddMatcher("no-backend", regexp.MustCompile(pattern))
-						tcpdump.Start()
-						defer tcpdump.Stop()
+						tcpdump.Start(infra)
 
 						By("testing connectivity")
 
@@ -2064,8 +2037,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							tcpdump.AddMatcher("bad csum", regexp.MustCompile(`wrong icmp cksum`))
 						}
 
-						tcpdump.Start("-vv", testOpts.protocol, "port", strconv.Itoa(int(port)), "or", icmpProto)
-						defer tcpdump.Stop()
+						tcpdump.Start(infra, "-vv", testOpts.protocol, "port", strconv.Itoa(int(port)), "or", icmpProto)
 
 						cc.Expect(None, externalClient, TargetIP(ip[0]),
 							ExpectWithPorts(port),
@@ -3888,8 +3860,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 										tcpdump := tc.Felixes[0].AttachTCPDump("eth0")
 										tcpdump.SetLogEnabled(true)
 										tcpdump.AddMatcher("MACs", regexp.MustCompile(fmt.Sprintf("%s > %s", srcMAC, dstMAC)))
-										tcpdump.Start("-e", "udp", "and", "src", felixIP(0), "and", "port", "4789")
-										defer tcpdump.Stop()
+										tcpdump.Start(infra, "-e", "udp", "and", "src", felixIP(0), "and", "port", "4789")
 
 										cc.ExpectSome(externalClient, TargetIP(felixIP(1)), npPort)
 										cc.CheckConnectivity()
@@ -3999,8 +3970,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									}
 									tcpdump := tc.Felixes[0].AttachTCPDump("eth0")
 									tcpdump.SetLogEnabled(true)
-									tcpdump.Start("tcp", "port", "8055")
-									defer tcpdump.Stop()
+									tcpdump.Start(infra, "tcp", "port", "8055")
 
 									err := pc.Start()
 									Expect(err).NotTo(HaveOccurred())
@@ -4113,7 +4083,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 											InterfaceName: "eth20",
 											MTU:           1500, // Need to match host MTU or felix will restart.
 										}
-										err := eth20.Start()
+										err := eth20.Start(infra)
 										Expect(err).NotTo(HaveOccurred())
 
 										// assign address to eth20 and add route to the .20 network
@@ -4255,7 +4225,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									remoteWL.IP6 = remoteWLIP
 								}
 
-								err := remoteWL.Start()
+								err := remoteWL.Start(infra)
 								Expect(err).NotTo(HaveOccurred())
 
 								clusterIP := "10.101.0.211"
@@ -4313,8 +4283,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 								tcpdump := w[0][0].AttachTCPDump()
 								tcpdump.SetLogEnabled(true)
 								tcpdump.AddMatcher("mtu-1300", regexp.MustCompile("mtu 1300"))
-								tcpdump.Start("-vvv", "icmp", "or", "icmp6")
-								defer tcpdump.Stop()
+								tcpdump.Start(infra, "-vvv", "icmp", "or", "icmp6")
 
 								ipRouteFlushCache := []string{"ip", "route", "flush", "cache"}
 								if testOpts.ipv6 {
@@ -4349,8 +4318,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 								tcpdump.SetLogEnabled(true)
 								tcpdump.AddMatcher("mtu-1300", regexp.MustCompile("mtu 1300"))
 								// we also need to watch for the ICMP forwarded to the host with the backend via VXLAN
-								tcpdump.Start("-vvv", "icmp", "or", "icmp6", "or", "udp", "port", "4789")
-								defer tcpdump.Stop()
+								tcpdump.Start(infra, "-vvv", "icmp", "or", "icmp6", "or", "udp", "port", "4789")
 
 								ipRouteFlushCache := []string{"ip", "route", "flush", "cache"}
 								if testOpts.ipv6 {
@@ -4522,8 +4490,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									felixIP(1), containerIP(externalClient), felixIP(1))
 							}
 							tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-							tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
-							defer tcpdump.Stop()
+							tcpdump.Start(infra, testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
 
 							cc.ExpectNone(externalClient, TargetIP(felixIP(1)), npPort)
 							cc.CheckConnectivity()
@@ -4560,8 +4527,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 										felixIP(1), containerIP(externalClient), felixIP(1), npPort)
 								}
 								tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
-								defer tcpdump.Stop()
+								tcpdump.Start(infra, testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
 
 								cc.ExpectNone(externalClient, TargetIP(felixIP(1)), npPort)
 								cc.CheckConnectivity()
@@ -4584,8 +4550,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									tgtWorkload.IP, w[1][1].IP, tgtWorkload.IP, tgtPort)
 							}
 							tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-							tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(tgtPort), "or", icmpProto)
-							defer tcpdump.Stop()
+							tcpdump.Start(infra, testOpts.protocol, "port", strconv.Itoa(tgtPort), "or", icmpProto)
 
 							cc.ExpectNone(w[1][1], TargetIP(tgtWorkload.IP), uint16(tgtPort))
 							cc.CheckConnectivity()
@@ -4608,7 +4573,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 										tgtWorkload.IP, w[1][1].IP, w[0][0].IP, tgtPort)
 								}
 								tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(tgtPort), "or", icmpProto)
+								tcpdump.Start(infra, testOpts.protocol, "port", strconv.Itoa(tgtPort), "or", icmpProto)
 							} else {
 								if testOpts.ipv6 {
 									matcher = fmt.Sprintf("IP6 %s > %s: ICMP6, destination unreachable, unreachable port, %s udp port %d",
@@ -4618,9 +4583,8 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 										tgtWorkload.IP, w[1][1].IP, felixIP(1), npPort)
 								}
 								tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
+								tcpdump.Start(infra, testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
 							}
-							defer tcpdump.Stop()
 
 							cc.ExpectNone(w[1][1], TargetIP(felixIP(1)), npPort)
 							cc.CheckConnectivity()
@@ -4857,7 +4821,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Skip("NFT does not support third-party rules")
 					}
 
-					c := infrastructure.RunExtClient("ext-workload")
+					c := infrastructure.RunExtClient(infra, "ext-workload")
 					extWorkload = &workload.Workload{
 						C:        c,
 						Name:     "ext-workload",
@@ -4866,7 +4830,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						IP:       containerIP(c),
 					}
 
-					err := extWorkload.Start()
+					err := extWorkload.Start(infra) // FIXME
 					Expect(err).NotTo(HaveOccurred())
 
 					tool := "iptables"
@@ -4964,7 +4928,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					InterfaceName: "test30",
 					MTU:           1500, // Need to match host MTU or felix will restart.
 				}
-				err := test30.Start()
+				err := test30.Start(infra)
 				Expect(err).NotTo(HaveOccurred())
 				// assign address to test30 and add route to the .30 network
 				if testOpts.ipv6 {
@@ -5035,8 +4999,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						matcher := fmt.Sprintf("%s %s\\.30444 > %s\\.30444: UDP", ipVer, w[1][0].IP, w[0][0].IP)
 						tcpdump.AddMatcher("UDP-30444", regexp.MustCompile(matcher))
-						tcpdump.Start(testOpts.protocol, "port", "30444", "or", "port", "30445")
-						defer tcpdump.Stop()
+						tcpdump.Start(infra, testOpts.protocol, "port", "30444", "or", "port", "30445")
 
 						// send a packet from the correct workload to create a conntrack entry
 						_, err := w[1][0].RunCmd("pktgen", w[1][0].IP, w[0][0].IP, "udp",
@@ -5147,7 +5110,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							InterfaceName: "eth20",
 							MTU:           1500, // Need to match host MTU or felix will restart.
 						}
-						err := eth20.Start()
+						err := eth20.Start(infra)
 						Expect(err).NotTo(HaveOccurred())
 
 						// assign address to eth20 and add route to the .20 network
@@ -5180,7 +5143,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							InterfaceName: "eth30",
 							MTU:           1500, // Need to match host MTU or felix will restart.
 						}
-						err = eth30.Start()
+						err = eth30.Start(infra)
 						Expect(err).NotTo(HaveOccurred())
 
 						// assign address to eth30 and add route to the .30 network
@@ -5229,8 +5192,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						tcpdump.SetLogEnabled(true)
 						matcher := fmt.Sprintf("%s %s\\.30446 > %s\\.30446: UDP", ipVer, fakeWorkloadIP, w[1][1].IP)
 						tcpdump.AddMatcher("UDP-30446", regexp.MustCompile(matcher))
-						tcpdump.Start()
-						defer tcpdump.Stop()
+						tcpdump.Start(infra)
 
 						_, err := eth20.RunCmd("pktgen", fakeWorkloadIP, w[1][1].IP, "udp",
 							"--port-src", "30446", "--port-dst", "30446")

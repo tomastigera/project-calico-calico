@@ -95,7 +95,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		extClientOpts := infrastructure.ExtClientOpts{
 			Image: utils.Config.FelixImage,
 		}
-		extClient = infrastructure.RunExtClientWithOpts("ext-client1", extClientOpts)
+		extClient = infrastructure.RunExtClientWithOpts(infra, "ext-client1", extClientOpts)
 		extWorkload = &workload.Workload{
 			C:        extClient,
 			Name:     "ext-workload",
@@ -104,39 +104,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 			IP:       extClient.IP,
 			IP6:      extClient.IPv6,
 		}
-		err := extWorkload.Start()
+		err := extWorkload.Start(infra)
 		Expect(err).NotTo(HaveOccurred())
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				if NFTMode() {
-					logNFTDiags(felix)
-				} else {
-					felix.Exec("iptables-save", "-c")
-					felix.Exec("ip6tables-save", "-c")
-				}
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "-6", "r")
-				felix.Exec("calico-bpf", "policy", "dump", "eth0", "all", "--asm")
-				felix.Exec("calico-bpf", "-6", "policy", "dump", "eth0", "all", "--asm")
-				felix.Exec("calico-bpf", "counters", "dump")
-			}
-		}
-
-		hostw.Stop()
-		ep1_1.Stop()
-		ep2_1.Stop()
-		ep1_2.Stop()
-		ep2_2.Stop()
-		tc.Stop()
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-		extWorkload.Stop()
-		extClient.Stop()
 	})
 
 	It("should have expected restriction on the rule jumping to DSCP chain static rules", func() {

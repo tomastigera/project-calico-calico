@@ -933,55 +933,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-			if bpfEnabled {
-				for _, felix := range tc.Felixes {
-					felix.Exec("calico-bpf", "ipsets", "dump")
-					felix.Exec("calico-bpf", "routes", "dump")
-					felix.Exec("calico-bpf", "nat", "dump")
-					felix.Exec("calico-bpf", "nat", "aff")
-					felix.Exec("calico-bpf", "conntrack", "dump")
-					felix.Exec("calico-bpf", "arp", "dump")
-					felix.Exec("calico-bpf", "counters", "dump")
-					felix.Exec("calico-bpf", "ifstate", "dump")
-					felix.Exec("calico-bpf", "policy", "dump", "eth0", "all")
-				}
-				for _, w := range wlHost1 {
-					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", w.InterfaceName, "all")
-				}
-				for _, w := range wlHost1 {
-					tc.Felixes[1].Exec("calico-bpf", "policy", "dump", w.InterfaceName, "all")
-				}
-			}
-		}
-
-		for _, wl := range wlHost1 {
-			wl.Stop()
-		}
-		for _, wl := range wlHost2 {
-			wl.Stop()
-		}
-		for _, wl := range hostW {
-			wl.Stop()
-		}
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
-			felix.Stop()
 		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 })
 
@@ -1023,11 +979,6 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 
 		workload2 = workload.Run(tc.Felixes[0], "w2", "default", "10.65.0.2", "8055", "tcp")
 		workload2.ConfigureInInfra(infra)
-	})
-
-	AfterEach(func() {
-		tc.Stop()
-		infra.Stop()
 	})
 
 	It("Should report the nat outgoing ports for an SNAT'd flow", func() {
@@ -1114,7 +1065,7 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 
 			w.WorkloadEndpoint.Labels = labels
 			if run {
-				err := w.Start()
+				err := w.Start(infra)
 				Expect(err).NotTo(HaveOccurred())
 				w.ConfigureInInfra(infra)
 			}
@@ -1216,22 +1167,6 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		cc.Expect(connectivity.Some, w[0][0], w[1][0], connectivity.ExpectWithIPVersion(6))
 		cc.Expect(connectivity.None, w[0][1], w[1][0], connectivity.ExpectWithIPVersion(6))
 		cc.CheckConnectivity()
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("ip6tables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "-6", "r")
-				felix.Exec("ip", "a")
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ip", "r")
-			}
-		}
-		tc.Stop()
-		infra.Stop()
 	})
 
 	It("Should report the ipv6 flow logs", func() {
@@ -1680,35 +1615,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-			if bpfEnabled {
-				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
-				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")
-				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_3.InterfaceName, "all", "--asm")
-			}
-		}
-
-		ep1_1.Stop()
-		ep2_1.Stop()
-		ep2_3.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
-			felix.Stop()
 		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 })
 
@@ -1775,7 +1686,7 @@ var _ = infrastructure.DatastoreDescribe(
 			ep1_2 = workload.Run(tc.Felixes[0], "ep1-2", "default", "10.65.0.1", wepPortStr, "tcp")
 			ep1_2.ConfigureInInfra(infra)
 
-			externalClient = infrastructure.RunExtClient("ext-client")
+			externalClient = infrastructure.RunExtClient(infra, "ext-client")
 			externalClient.Exec("ip", "r", "add", "10.65.0.0/24", "via", tc.Felixes[0].IP)
 			externalClient.Exec("ip", "r", "add", extIP1+"/32", "via", tc.Felixes[0].IP)
 			externalClient.Exec("ip", "r", "add", extIP2+"/32", "via", tc.Felixes[0].IP)
@@ -1783,32 +1694,17 @@ var _ = infrastructure.DatastoreDescribe(
 
 		AfterEach(func() {
 			if CurrentGinkgoTestDescription().Failed {
-				for _, felix := range tc.Felixes {
-					logNFTDiags(felix)
-					felix.Exec("iptables-save", "-c")
-					felix.Exec("ipset", "list")
-					felix.Exec("ip", "r")
-					felix.Exec("ip", "a")
-				}
 				if bpfEnabled {
 					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_2.InterfaceName, "all", "--asm")
 					tc.Felixes[0].Exec("calico-bpf", "nat", "dump")
 				}
 			}
-			ep1_1.Stop()
-			ep1_2.Stop()
-			externalClient.Stop()
 			for _, f := range tc.Felixes {
 				if bpfEnabled {
 					f.Exec("calico-bpf", "connect-time", "clean")
 				}
-				f.Stop()
 			}
-			if CurrentGinkgoTestDescription().Failed {
-				infra.DumpErrorData()
-			}
-			infra.Stop()
 		})
 
 		Context("preDNAT policies applied", func() {

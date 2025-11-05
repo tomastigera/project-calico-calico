@@ -181,25 +181,6 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ Cluster mesh VXLA
 				}
 			})
 
-			AfterEach(func() {
-				for _, c := range cs.GetClusters() {
-					for _, wl := range c.w {
-						wl.Stop()
-					}
-					for _, wl := range c.w6 {
-						wl.Stop()
-					}
-					for _, wl := range c.hostW {
-						wl.Stop()
-					}
-					for _, wl := range c.hostW6 {
-						wl.Stop()
-					}
-					c.tc.Stop()
-					c.infra.Stop()
-				}
-			})
-
 			It("should have workload to workload connectivity", func() {
 				cc.ExpectSome(cs.local.w[0], cs.local.w[1])
 				cc.ExpectSome(cs.local.w[1], cs.local.w[0])

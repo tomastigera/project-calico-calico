@@ -59,7 +59,7 @@ func describeBPFMultiHomedTests() bool {
 			Felix = tc.Felixes[0]
 
 			w = workload.New(Felix, "workload", "default", "10.65.0.2", "8055", "tcp")
-			err := w.Start()
+			err := w.Start(infra)
 			Expect(err).NotTo(HaveOccurred())
 			w.ConfigureInInfra(infra)
 
@@ -73,23 +73,6 @@ func describeBPFMultiHomedTests() bool {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			ensureBPFProgramsAttached(tc.Felixes[0])
-		})
-
-		AfterEach(func() {
-			tc.Stop()
-			infra.Stop()
-		})
-
-		JustAfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
-				Felix.Exec("conntrack", "-L", "-f", "ipv6")
-				Felix.Exec("ip6tables-save", "-c")
-				Felix.Exec("ip", "link")
-				Felix.Exec("ip", "addr")
-				Felix.Exec("ip", "rule")
-				Felix.Exec("ip", "route", "show", "table", "all")
-				Felix.Exec("calico-bpf", "routes", "dump")
-			}
 		})
 
 		It("should allow asymmetric routing", func() {
@@ -108,7 +91,7 @@ func describeBPFMultiHomedTests() bool {
 				InterfaceName: "eth20",
 				MTU:           1500, // Need to match host MTU or felix will restart.
 			}
-			err := eth20.Start()
+			err := eth20.Start(infra)
 			Expect(err).NotTo(HaveOccurred())
 
 			eth30 := &workload.Workload{
@@ -120,7 +103,7 @@ func describeBPFMultiHomedTests() bool {
 				InterfaceName: "eth30",
 				MTU:           1500, // Need to match host MTU or felix will restart.
 			}
-			err = eth30.Start()
+			err = eth30.Start(infra)
 			Expect(err).NotTo(HaveOccurred())
 
 			// assign address to eth20 and add route to the .20 network
@@ -179,14 +162,12 @@ func describeBPFMultiHomedTests() bool {
 			dump20 := Felix.AttachTCPDump("eth20")
 			dump20.SetLogEnabled(true)
 			dump20.AddMatcher("eth20-egress", regexp.MustCompile("10.65.0.2.30444 > 10.65.1.3.30444: UDP"))
-			dump20.Start("-v", "udp", "and", "dst", "host", "10.65.1.3")
-			defer dump20.Stop()
+			dump20.Start(infra, "-v", "udp", "and", "dst", "host", "10.65.1.3")
 
 			dump30 := Felix.AttachTCPDump("eth30")
 			dump30.SetLogEnabled(true)
 			dump30.AddMatcher("eth30-ingress", regexp.MustCompile("10.65.1.3.30444 > 10.65.0.2.30444: UDP"))
-			dump30.Start("-v", "udp", "and", "dst", "host", "10.65.0.2")
-			defer dump30.Stop()
+			dump30.Start(infra, "-v", "udp", "and", "dst", "host", "10.65.0.2")
 
 			By("Sending packet from the workload via eth20")
 			_, err = w.RunCmd("pktgen", w.IP, "10.65.1.3", "udp", "--ip-id", "1",

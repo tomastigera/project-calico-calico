@@ -35,7 +35,6 @@ import (
 	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/dataplane/mock"
-	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
@@ -54,10 +53,9 @@ func init() {
 	resolver.SetDefaultScheme("passthrough")
 }
 
-var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
+var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
-		etcd              *containers.Container
 		tc                infrastructure.TopologyContainers
 		calicoClient      client.Interface
 		infra             infrastructure.DatastoreInfra
@@ -81,7 +79,8 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
 		options.ExtraVolumes[tempDir] = "/var/run/calico/policysync"
-		tc, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		infra = getInfra()
+		tc, calicoClient = infrastructure.StartSingleNodeTopology(options, infra)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -97,19 +96,6 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		if BPFMode() {
 			ensureBPFProgramsAttached(tc.Felixes[0])
 		}
-	})
-
-	AfterEach(func() {
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
-		}
-		etcd.Stop()
-		infra.Stop()
 	})
 
 	AfterEach(func() {
@@ -744,18 +730,6 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 		if BPFMode() {
 			ensureAllNodesBPFProgramsAttached(tc.Felixes)
 		}
-	})
-
-	AfterEach(func() {
-		for _, wl := range w {
-			wl.Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
 	})
 
 	AfterEach(func() {

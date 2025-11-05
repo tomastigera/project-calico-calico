@@ -94,22 +94,4 @@ var _ = infrastructure.DatastoreDescribe("iptables force-programming tests", []a
 			HaveKey("cali-po-_l_CMLPBmpkyZIIwB62k"),
 		))
 	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				if NFTMode() {
-					logNFTDiags(felix)
-				} else {
-					_ = felix.ExecMayFail("iptables-save", "-c")
-					_ = felix.ExecMayFail("ipset", "list")
-				}
-			}
-		}
-		tc.Stop()
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-	})
 })

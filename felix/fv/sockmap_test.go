@@ -259,7 +259,7 @@ var _ = infrastructure.DatastoreDescribe("[SOCKMAP] with Felix using sockmap", [
 	AfterEach(func() {
 		defer unlockSockmapTest()
 		host.Stop()
-		tc.Stop()
+
 		// Clean up the sockmap state. We do this by starting
 		// a new felix instance (after stopping the old one),
 		// so it cleans up the whatever state we ended up
@@ -272,7 +272,6 @@ var _ = infrastructure.DatastoreDescribe("[SOCKMAP] with Felix using sockmap", [
 		func() {
 			opts := getSockmapOpts()
 			tc, _ = infrastructure.StartSingleNodeTopology(opts, infra)
-			defer tc.Stop()
 			output, err := tc.Felixes[0].ExecOutput(
 				"bpftool",
 				"--json",
@@ -316,7 +315,6 @@ var _ = infrastructure.DatastoreDescribe("[SOCKMAP] with Felix using sockmap", [
 			}
 			log.Info("Cleanup finished")
 		}()
-		infra.Stop()
 	})
 
 	It("should put the IP of the host in sockmap endpoints map", func() {

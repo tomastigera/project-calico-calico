@@ -23,7 +23,7 @@ import (
 //
 // Panics:
 //   - If the number of created workloads does not match the requested workloadNumber.
-func StartExternalWorkloads(workloadBaseName string, workloadNumber int) []*containers.Container {
+func StartExternalWorkloads(infra CleanupProvider, workloadBaseName string, workloadNumber int) []*containers.Container {
 	workloads := make([]*containers.Container, workloadNumber)
 
 	for i := 0; i < workloadNumber; i++ {
@@ -35,6 +35,7 @@ func StartExternalWorkloads(workloadBaseName string, workloadNumber int) []*cont
 			utils.Config.BusyboxImage,
 			"/bin/sh", "-c", "httpd -f -p 80 & tail -f /dev/null", // Start HTTP server and keep container running
 		)
+		infra.AddCleanup(workloads[i].Stop)
 	}
 
 	return workloads

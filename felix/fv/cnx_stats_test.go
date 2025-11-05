@@ -92,17 +92,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				strings.Join(cdb, "\n") + "\n\n",
 			)
 		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-
-		infra.Stop()
 	})
 
 	It("should generate connection metrics for rule matches on a profile", func() {
@@ -924,7 +913,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged po
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -951,12 +939,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged po
 				strings.Join(cdb, "\n") + "\n\n",
 			)
 		}
-
-		ep1.Stop()
-		ep2.Stop()
-		tc.Stop()
-
-		infra.Stop()
 	})
 
 	Context("should generate metrics for staged policies", func() {

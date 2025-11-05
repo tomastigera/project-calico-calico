@@ -245,7 +245,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
-						Expect(w.Start()).To(Succeed())
+						Expect(w.Start(infra)).To(Succeed())
 					}
 
 					labels["name"] = w.Name
@@ -350,13 +350,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						felix.Exec("ip", "route")
 					}
 				}
-			})
-
-			AfterEach(func() {
-				log.Info("AfterEach starting")
-				tc.Stop()
-				infra.Stop()
-				log.Info("AfterEach done")
 			})
 
 			Context("Pod-Pod", func() {
@@ -877,7 +870,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					var externalClient *containers.Container
 
 					BeforeEach(func() {
-						externalClient = infrastructure.RunExtClient("ext-client")
+						externalClient = infrastructure.RunExtClient(infra, "ext-client")
 					})
 
 					AfterEach(func() {
