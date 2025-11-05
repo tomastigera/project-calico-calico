@@ -47,6 +47,7 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "method"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "response_code"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "route_name"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_name"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "url"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "user_agent"},
 	},
