@@ -373,6 +373,8 @@
     type: text
   - name: route_name
     type: text
+  - name: gateway_name
+    type: text
   - name: url
     type: text
   - name: user_agent
