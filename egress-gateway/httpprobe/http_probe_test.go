@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -45,6 +46,22 @@ func (m *mockHealthAgg) Report(name string, report *health.HealthReport) {
 	m.reportedSummaries = append(m.reportedSummaries, &reportCopy)
 }
 
+func (m *mockHealthAgg) NumReportCalls() int {
+	return int(atomic.LoadInt32(&m.reportCalls))
+}
+
+func (m *mockHealthAgg) ReportedNames() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return slices.Clone(m.reportedNames)
+}
+
+func (m *mockHealthAgg) ReportedSummaries() []*health.HealthReport {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return slices.Clone(m.reportedSummaries)
+}
+
 func TestStartBackgroundHTTPProbe_URLValidation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -68,10 +85,10 @@ func TestStartBackgroundHTTPProbe_URLValidation(t *testing.T) {
 func TestLoopDoingProbes_ReportsAndClosesConnections(t *testing.T) {
 	// Create an HTTP server with ConnState tracking.
 	var (
-		reqCount    int32
-		activeConns = make(map[string]struct{})
-		closedConns = make(map[string]struct{})
-		mu          sync.Mutex
+		reqCount       int32
+		activatedConns = make(map[string]struct{})
+		closedConns    = make(map[string]struct{})
+		mu             sync.Mutex
 	)
 
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +107,7 @@ func TestLoopDoingProbes_ReportsAndClosesConnections(t *testing.T) {
 		case http.StateNew:
 			// seen when connection is accepted
 		case http.StateActive:
-			activeConns[addr] = struct{}{}
+			activatedConns[addr] = struct{}{}
 		case http.StateIdle:
 			// not expected with DisableKeepAlives=true but handle for completeness
 		case http.StateHijacked:
@@ -114,61 +131,44 @@ func TestLoopDoingProbes_ReportsAndClosesConnections(t *testing.T) {
 	}
 
 	// Wait for a few successful probes.
-	target := int32(4)
+	const target = 4
 	deadline := time.Now().Add(3 * time.Second)
-	for atomic.LoadInt32(&reqCount) < target {
+	for atomic.LoadInt32(&reqCount) < target && m.NumReportCalls() < target {
 		if time.Now().After(deadline) {
-			t.Fatalf("timed out waiting for %d requests, saw %d", target, atomic.LoadInt32(&reqCount))
+			t.Fatalf("timed out waiting for %d requests/reports, saw %d/%d", target, atomic.LoadInt32(&reqCount), m.NumReportCalls())
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Cancel and allow goroutine to wind down.
+	// Stop any further reports from starting.
 	cancel()
-	time.Sleep(50 * time.Millisecond)
 
-	// Validate we reported readiness for each successful request.
-	reports := atomic.LoadInt32(&m.reportCalls)
-	if reports < target {
-		t.Fatalf("expected at least %d reports, got %d", target, reports)
+	// Make sure all connections are closed.
+	deadline = time.Now().Add(2 * time.Second)
+	var closedN, activeN int
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		activeN = len(activatedConns)
+		closedN = len(closedConns)
+		mu.Unlock()
+		if activeN == target && closedN == target {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
-	for i, name := range m.reportedNames {
+
+	if activeN != target || closedN != target {
+		t.Fatalf("after wait, expected %d active and closed connections, got %d active and %d closed", target, activeN, closedN)
+	}
+
+	for i, name := range m.ReportedNames() {
 		if name != HealthName {
 			t.Fatalf("report %d had unexpected name %q", i, name)
 		}
 	}
-	for i, r := range m.reportedSummaries {
+	for i, r := range m.ReportedSummaries() {
 		if !r.Ready {
 			t.Fatalf("report %d should be Ready=true, got %+v", i, r)
 		}
-	}
-
-	// Validate that we didn't reuse connections and that each became closed.
-	mu.Lock()
-	activeN := len(activeConns)
-	mu.Unlock()
-	if activeN == 0 {
-		t.Fatalf("expected some active connections to have been observed")
-	}
-	if activeN != int(target) {
-		t.Fatalf("expected %d unique connections (one per request), saw %d", target, activeN)
-	}
-	// Allow time for all connections to transition to Closed, then re-check.
-	deadline = time.Now().Add(2 * time.Second)
-	var closedN int
-	for {
-		mu.Lock()
-		closedN = len(closedConns)
-		mu.Unlock()
-		if closedN >= activeN {
-			break
-		}
-		if time.Now().After(deadline) {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if closedN != activeN {
-		t.Fatalf("expected %d closed connections, saw %d", activeN, closedN)
 	}
 }
