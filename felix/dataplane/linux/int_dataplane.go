@@ -39,7 +39,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/kubernetes"
-	k8shealthcheck "k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"sigs.k8s.io/knftables"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -234,11 +233,11 @@ type Config struct {
 	FatalErrorRestartCallback    func(error)
 	ChildExitedRestartCallback   func()
 
-	PostInSyncCallback    func()
-	HealthAggregator      *health.HealthAggregator
-	WatchdogTimeout       time.Duration
-	RouteTableManager     *idalloc.IndexAllocator
-	bpfProxyHealthzServer *k8shealthcheck.ProxyHealthServer
+	PostInSyncCallback  func()
+	HealthAggregator    *health.HealthAggregator
+	WatchdogTimeout     time.Duration
+	RouteTableManager   *idalloc.IndexAllocator
+	bpfProxyHealthCheck bpfproxy.Healthcheck
 
 	ExternalNodesCidrs []string
 
@@ -1302,12 +1301,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
 
 		// Start IPv4 BPF dataplane components
-		conntrackScannerV4, bpfIPSetsV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, config, ipsetsManager, dp)
+		conntrackScannerV4, bpfIPSetsV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, &config, ipsetsManager, dp)
 		if config.BPFIpv6Enabled {
 			// Start IPv6 BPF dataplane components
 			ipSetIDAllocatorV6 = idalloc.New()
 			ipSetIDAllocatorV6.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
-			conntrackScannerV6, _ = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, config, ipsetsManagerV6, dp)
+			conntrackScannerV6, _ = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, &config, ipsetsManagerV6, dp)
 		}
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
@@ -3555,7 +3554,7 @@ func startBPFDataplaneComponents(
 	ipFamily proto.IPVersion,
 	maps *bpfmap.IPMaps,
 	ipSetIDAllocator *idalloc.IDAllocator,
-	config Config,
+	config *Config,
 	ipSetsMgr *dpsets.IPSetsManager,
 	dp *InternalDataplane,
 ) (*bpfconntrack.Scanner, egressIPSets) {
@@ -3569,29 +3568,25 @@ func startBPFDataplaneComponents(
 	ctKey := bpfconntrack.KeyFromBytes
 	ctVal := bpfconntrack.ValueFromBytes
 
-	if config.bpfProxyHealthzServer == nil && config.KubeProxyHealtzPort != 0 {
-		healthzAddr := fmt.Sprintf(":%d", config.KubeProxyHealtzPort)
-		config.bpfProxyHealthzServer = k8shealthcheck.NewProxyHealthServer(
-			healthzAddr, config.KubeProxyMinSyncPeriod, nil)
-
-		// We cannot wait for the healthz server as we cannot stop it.
-		go func() {
-			for {
-				err := config.bpfProxyHealthzServer.Run(context.Background()) // context is mosstly ignored inside
-				if err != nil {
-					logrus.WithError(err).Error("BPF Proxy Healthz server failed, restarting in 1s")
-					time.Sleep(time.Second)
-				}
-			}
-		}()
+	if config.bpfProxyHealthCheck == nil && config.KubeProxyHealtzPort != 0 {
+		var err error
+		config.bpfProxyHealthCheck, err = bpfproxy.NewHealthCheck(
+			config.KubeClientSet,
+			config.Hostname,
+			config.KubeProxyHealtzPort,
+			config.KubeProxyMinSyncPeriod,
+		)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to initialize BPF kube-proxy health check")
+		}
 	}
 
 	bpfproxyOpts := []bpfproxy.Option{
 		bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
 	}
 
-	if config.bpfProxyHealthzServer != nil {
-		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithHealthzServer(config.bpfProxyHealthzServer))
+	if config.bpfProxyHealthCheck != nil {
+		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithHealthCheck(config.bpfProxyHealthCheck))
 	} else {
 		logrus.Info("No healthz server configured for BPF kube-proxy.")
 	}
@@ -3659,7 +3654,7 @@ func startBPFDataplaneComponents(
 	)
 	dp.RegisterManager(failsafeMgr)
 
-	bpfRTMgr := newBPFRouteManager(&config, maps, ipFamily, dp.loopSummarizer)
+	bpfRTMgr := newBPFRouteManager(config, maps, ipFamily, dp.loopSummarizer)
 	dp.RegisterManager(bpfRTMgr)
 
 	livenessScanner := bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled)

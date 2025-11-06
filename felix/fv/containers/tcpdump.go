@@ -79,7 +79,11 @@ func (t *TCPDump) MatchCount(name string) int {
 	return c
 }
 
-func (t *TCPDump) Start() {
+type CleanupProvider interface {
+	AddCleanup(func())
+}
+
+func (t *TCPDump) Start(infra CleanupProvider) {
 	// docker run --rm --network=container:48b6c5f44d57 --privileged corfr/tcpdump -nli cali01
 
 	args := []string{
@@ -105,13 +109,15 @@ func (t *TCPDump) Start() {
 
 	err = t.cmd.Start()
 
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	infra.AddCleanup(t.Stop)
+
 	select {
 	case <-t.listeningStarted:
 	case <-time.After(60 * time.Second):
 		ginkgo.Fail("Failed to start tcpdump: it never reported that it was listening")
 	}
 
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func (t *TCPDump) Stop() {

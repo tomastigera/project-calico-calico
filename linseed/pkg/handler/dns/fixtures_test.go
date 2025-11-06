@@ -3,7 +3,7 @@
 package dns
 
 import (
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )

@@ -51,6 +51,7 @@ const (
 func NewQueryService(
 	logger logging.Logger,
 	repository repository.Repository,
+	enabledCollections []collections.Collection,
 	managedClusterNameLister managedclusters.NameLister,
 	cfg Config,
 ) *QueryService {
@@ -58,7 +59,7 @@ func NewQueryService(
 		cfg:                      cfg,
 		logger:                   logger.WithName("QueryService"),
 		repository:               repository,
-		collections:              collections.Collections(),
+		collections:              enabledCollections,
 		managedClusterNameLister: managedClusterNameLister,
 		validator:                validatorv10.New(),
 	}

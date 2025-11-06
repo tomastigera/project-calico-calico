@@ -26,7 +26,6 @@ import (
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 // This is an extension of the flow_logs_tests.go file to test flow logs for flows enforced with DNS based policies.
@@ -91,12 +90,12 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 
 		// Instead of relying on external websites for DNS tests, we use an internally hosted HTTP service,
 		// and internal dns server, making functional validation tests more self-contained and reliable.
-		externalWorkloads = infrastructure.StartExternalWorkloads("dns-external-workload", 2)
+		externalWorkloads = infrastructure.StartExternalWorkloads(infra, "dns-external-workload", 2)
 		dnsRecords := map[string][]dns.RecordIP{
 			"www.fake-google.test": {{TTL: 20, IP: externalWorkloads[0].IP}},
 			"fake-microsoft.test":  {{TTL: 20, IP: externalWorkloads[1].IP}},
 		}
-		dnsServer = dns.StartServer(dnsRecords)
+		dnsServer = dns.StartServer(infra, dnsRecords)
 		dnsServerIP = dnsServer.IP
 
 		opts.IPIPMode = api.IPIPModeNever
@@ -364,37 +363,11 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-		}
-
-		_, err := client.GlobalNetworkSets().Delete(utils.Ctx, "netset1", options.DeleteOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = client.GlobalNetworkSets().Delete(utils.Ctx, "netset2", options.DeleteOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		ep1_1.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
-			felix.Stop()
 		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-		externalWorkloads[0].Stop()
-		externalWorkloads[1].Stop()
-		dnsServer.Stop()
 	})
 })
 
@@ -447,13 +420,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
-		externalWorkloads = infrastructure.StartExternalWorkloads("dns-external-workload", 2)
+		externalWorkloads = infrastructure.StartExternalWorkloads(infra, "dns-external-workload", 2)
 		dnsRecords := map[string][]dns.RecordIP{
 			"fake-microsoft.test":   {{TTL: 20, IP: externalWorkloads[0].IP}},
 			"gist.fake-github.test": {{TTL: 20, IP: externalWorkloads[1].IP}},
 			"fake-github.test":      {{TTL: 20, IP: externalWorkloads[1].IP}},
 		}
-		dnsServer = dns.StartServer(dnsRecords)
+		dnsServer = dns.StartServer(infra, dnsRecords)
 		dnsServerIP = dnsServer.IP
 
 		opts.IPIPMode = api.IPIPModeNever
@@ -554,32 +527,11 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-		}
-
-		ep1_1.Stop()
-		ep2_1.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
-			felix.Stop()
 		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-		externalWorkloads[0].Stop()
-		externalWorkloads[1].Stop()
-		dnsServer.Stop()
 	})
 })
 

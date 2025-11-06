@@ -5,7 +5,7 @@ package dnslog
 import (
 	"net"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -62,24 +62,32 @@ var _ = Describe("DNS log utility functions", func() {
 			Expect(v).Should(BeAssignableToTypeOf(""))
 			Expect(v).Should(Equal(string(decoded)))
 		})
-		It("returns a string for PTR", func() {
-			decoded := []byte("tigera.io")
-			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypePTR, PTR: decoded})
-			Expect(v).Should(BeAssignableToTypeOf(""))
-			Expect(v).Should(Equal(string(decoded)))
-		})
-		It("returns a [][]byte for TXT", func() {
-			decoded := [][]byte{[]byte("tigera."), []byte("io")}
-			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeTXT, TXTs: decoded})
-			Expect(v).Should(BeAssignableToTypeOf([][]byte{}))
-			Expect(v).Should(Equal(decoded))
-		})
 		It("returns a layers.DNSSOA for SOA", func() {
 			decoded := layers.DNSSOA{
 				MName: []byte("tigera.io."),
 			}
 			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeSOA, SOA: decoded})
 			Expect(v).Should(BeAssignableToTypeOf(layers.DNSSOA{}))
+			Expect(v).Should(Equal(decoded))
+		})
+		It("returns a string for PTR", func() {
+			decoded := []byte("tigera.io")
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypePTR, PTR: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(""))
+			Expect(v).Should(Equal(string(decoded)))
+		})
+		It("returns a layers.DNSMX for MX", func() {
+			decoded := layers.DNSMX{
+				Preference: 10,
+			}
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeMX, MX: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(layers.DNSMX{}))
+			Expect(v).Should(Equal(decoded))
+		})
+		It("returns a [][]byte for TXT", func() {
+			decoded := [][]byte{[]byte("tigera."), []byte("io")}
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeTXT, TXTs: decoded})
+			Expect(v).Should(BeAssignableToTypeOf([][]byte{}))
 			Expect(v).Should(Equal(decoded))
 		})
 		It("returns a layers.DNSSRV for SRV", func() {
@@ -90,12 +98,36 @@ var _ = Describe("DNS log utility functions", func() {
 			Expect(v).Should(BeAssignableToTypeOf(layers.DNSSRV{}))
 			Expect(v).Should(Equal(decoded))
 		})
-		It("returns a layers.DNSMX for MX", func() {
-			decoded := layers.DNSMX{
-				Preference: 10,
+		It("returns a layers.RRSIG for RRSIG", func() {
+			decoded := layers.DNSRRSIG{
+				TypeCovered: layers.DNSTypeA,
 			}
-			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeMX, MX: decoded})
-			Expect(v).Should(BeAssignableToTypeOf(layers.DNSMX{}))
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeRRSIG, RRSIG: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(layers.DNSRRSIG{}))
+			Expect(v).Should(Equal(decoded))
+		})
+		It("returns a layers.DNSKEY for DNSKEY", func() {
+			decoded := layers.DNSKEY{
+				Flags: layers.DNSKEYFlagZoneKey,
+			}
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeDNSKEY, DNSKEY: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(layers.DNSKEY{}))
+			Expect(v).Should(Equal(decoded))
+		})
+		It("returns a layers.SVCB for SVCB", func() {
+			decoded := layers.DNSSVCB{
+				Priority: 1,
+			}
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeSVCB, SVCB: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(layers.DNSSVCB{}))
+			Expect(v).Should(Equal(decoded))
+		})
+		It("returns a layers.DNSURI for URI", func() {
+			decoded := layers.DNSURI{
+				Priority: 1,
+			}
+			v := getRRDecoded(layers.DNSResourceRecord{Type: layers.DNSTypeURI, URI: decoded})
+			Expect(v).Should(BeAssignableToTypeOf(layers.DNSURI{}))
 			Expect(v).Should(Equal(decoded))
 		})
 		It("returns a []byte for unknown", func() {

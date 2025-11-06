@@ -108,7 +108,8 @@ type State struct {
 	RulesHit            uint32
 	RuleIDs             [MaxRuleIDs]uint64
 	Flags               uint64
-	ConntrackRCFlags    uint32
+	ConntrackRCPadding  uint32
+	ConntrackFlags      uint32
 	ConntrackNATIP      uint32
 	ConntrackNATsIP     uint32
 	ConntrackNATPorts   uint32
@@ -123,10 +124,14 @@ type State struct {
 	SrcAddrMasq1        uint32
 	SrcAddrMasq2        uint32
 	SrcAddrMasq3        uint32
-	_                   [48]byte // ipv6 padding
+	// Pad the v4 struct to match the v6 one.
+	// While many v4/v6 fields are unioned (will always be v6-sized),
+	// some are explicitly one or the other, leading to the size discrepancy.
+	// Example of such a field is ConntrackNATIP, a.k.a `ipv46_addr_t nat_ip;`.
+	_ [56]byte
 }
 
-const expectedSize = 496
+const expectedSize = 504
 
 func (s *State) AsBytes() []byte {
 	bPtr := (*[expectedSize]byte)(unsafe.Pointer(s))

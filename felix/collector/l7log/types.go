@@ -41,10 +41,11 @@ type Update struct {
 	Protocol     string
 }
 
-// L7Log represents the  the JSON representation of a L7Log we are pushing to fluentd/elastic.
+// L7Log represents the JSON representation of a L7Log we are pushing to fluentd/elastic.
 type L7Log struct {
-	StartTime    int64         `json:"start_time"`
-	EndTime      int64         `json:"end_time"`
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
+
 	DurationMean time.Duration `json:"duration_mean"`
 	DurationMax  time.Duration `json:"duration_max"`
 	Latency      time.Duration `json:"latency"`

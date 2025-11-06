@@ -43,15 +43,11 @@ type L7Log struct {
 	DestPortNum          int64  `json:"dest_port_num"`
 	DestServiceName      string `json:"dest_service_name"`
 	DestServiceNamespace string `json:"dest_service_namespace"`
-	// Name of the gateway route
-	RouteName string `json:"route_name"`
-
 	// DestServicePortName Name is the name of the port exposed by the Service which the connection is trying to reach.
 	// Described in the Service resource specs as specs.[]ports.name. It will have the empty L7 Log character field value of '-' when:
 	// - the optional port name field in the Service resource is not provided
 	// - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
 	DestServicePortName string `json:"dest_service_port_name"`
-
 	// DestServicePort is the numerical value of the port exposed by the service which the connection is trying to reach.
 	// Described in the Service resource specs as specs.[]ports.port. It will have the empty L7 Log numerical field value of 0 when:
 	// - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
@@ -61,7 +57,11 @@ type L7Log struct {
 	UserAgent    string `json:"user_agent"`
 	URL          string `json:"url"`
 	ResponseCode string `json:"response_code"`
-	Type         string `json:"type"`
+	// Name of the gateway route
+	RouteName   string `json:"route_name"`
+	Type        string `json:"type"`
+	GatewayName string `json:"gateway_name"`
+	Protocol    string `json:"protocol"`
 
 	Host string `json:"host"`
 

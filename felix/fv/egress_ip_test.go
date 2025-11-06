@@ -386,7 +386,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				extHostOpts := infrastructure.ExtClientOpts{
 					Image: utils.Config.FelixImage,
 				}
-				extHost = infrastructure.RunExtClientWithOpts("external-server", extHostOpts)
+				extHost = infrastructure.RunExtClientWithOpts(infra, "external-server", extHostOpts)
 
 				extWorkload = &workload.Workload{
 					C:        extHost,
@@ -396,7 +396,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					IP:       extHost.IP,
 				}
 
-				err = extWorkload.Start()
+				err = extWorkload.Start(infra)
 				Expect(err).NotTo(HaveOccurred())
 
 				cc = &connectivity.Checker{
@@ -513,7 +513,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 			JustBeforeEach(func() {
 				for i := 0; i < 4; i++ {
-					extHost := infrastructure.RunExtClient("external-server")
+					extHost := infrastructure.RunExtClient(infra, "external-server")
 					extWorkload := &workload.Workload{
 						C:        extHost,
 						Name:     fmt.Sprintf("ext-server%v", i),
@@ -521,7 +521,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						Protocol: protocol,
 						IP:       extHost.IP,
 					}
-					err = extWorkload.Start()
+					err = extWorkload.Start(infra)
 					Expect(err).NotTo(HaveOccurred())
 					extHosts = append(extHosts, extHost)
 					extWorkloads = append(extWorkloads, extWorkload)
@@ -696,8 +696,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					cc.ResetExpectations()
 
 					By("Adding the local pods back")
-					Expect(blueGWs[0].Start()).To(Succeed())
-					Expect(redGWs[0].Start()).To(Succeed())
+					Expect(blueGWs[0].Start(infra)).To(Succeed())
+					Expect(redGWs[0].Start(infra)).To(Succeed())
 					blueGWs[0].ConfigureInInfra(infra)
 					redGWs[0].ConfigureInInfra(infra)
 					cc.ExpectSNAT(egwClient, blueGWs[0].IP, extWorkloads[1], 4321)
@@ -1125,28 +1125,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			By("Check ip routes.")
 			checkIPRoute(table1, expectedRoute("10.10.10.1"))
 		})
-	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-		}
-
-		tc.Stop()
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-	})
-
-	AfterEach(func() {
-		infra.Stop()
 	})
 })
 

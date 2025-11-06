@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 

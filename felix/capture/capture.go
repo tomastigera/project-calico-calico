@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/pcapgo"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcap"
+	"github.com/gopacket/gopacket/pcapgo"
 	log "github.com/sirupsen/logrus"
 
 	calcCapture "github.com/projectcalico/calico/felix/calc/capture"

@@ -9,14 +9,20 @@ import (
 
 func TestCollections(t *testing.T) {
 
-	allCollections := Collections()
+	allCollections := Collections(nil)
 
-	t.Run("match expected collection names", func(t *testing.T) {
-
+	t.Run("matches expected collection names", func(t *testing.T) {
 		collectionNames := slices.Map(allCollections, func(c Collection) CollectionName {
 			return c.Name()
 		})
 		require.ElementsMatch(t, collectionNames, []CollectionName{"dns", "flows", "l7", "waf"})
+
+		t.Run("excludes disabled collection names", func(t *testing.T) {
+			collectionNames := slices.Map(Collections([]CollectionName{"flows", "l7"}), func(c Collection) CollectionName {
+				return c.Name()
+			})
+			require.ElementsMatch(t, collectionNames, []CollectionName{"dns", "waf"})
+		})
 	})
 
 	t.Run("contains start_time field", func(t *testing.T) {

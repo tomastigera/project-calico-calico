@@ -33,7 +33,7 @@ func TestCollectionsService(t *testing.T) {
 		)
 	}
 
-	subject := NewCollectionsService(logger)
+	subject := NewCollectionsService(logger, collections.Collections(nil))
 
 	t.Run("authorization", func(t *testing.T) {
 		t.Run("authorized", func(t *testing.T) {
@@ -50,23 +50,62 @@ func TestCollectionsService(t *testing.T) {
 
 	t.Run("collection names", func(t *testing.T) {
 
-		collectionsResponse, err := subject.Collections(newSecurityContext(true))
-		require.NoError(t, err)
+		testCases := []struct {
+			name                    string
+			collections             []collections.Collection
+			expectedCollectionNames []collections.CollectionName
+		}{
+			{
+				name:        "default",
+				collections: collections.Collections(nil),
+				expectedCollectionNames: []collections.CollectionName{
+					collections.CollectionNameDNS,
+					collections.CollectionNameFlows,
+					collections.CollectionNameL7,
+					collections.CollectionNameWAF,
+				},
+			},
+			{
+				name:        "with a collection disabled",
+				collections: collections.Collections([]collections.CollectionName{collections.CollectionNameL7}),
+				expectedCollectionNames: []collections.CollectionName{
+					collections.CollectionNameDNS,
+					collections.CollectionNameFlows,
+					collections.CollectionNameWAF,
+				},
+			},
+			{
+				name: "with all collections disabled",
+				collections: collections.Collections([]collections.CollectionName{
+					collections.CollectionNameL7,
+					collections.CollectionNameDNS,
+					collections.CollectionNameFlows,
+					collections.CollectionNameWAF,
+				}),
+				expectedCollectionNames: []collections.CollectionName{},
+			},
+		}
 
-		collectionMap := slices.AssociateBy(collectionsResponse, func(collection client.Collection) client.CollectionName {
-			return collection.Name
-		})
+		for _, tc := range testCases {
 
-		require.Len(t, collectionMap, 4)
-		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameL7))
-		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameDNS))
-		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameFlows))
-		require.Contains(t, collectionMap, client.CollectionName(collections.CollectionNameWAF))
+			t.Run(tc.name, func(t *testing.T) {
+				subject := NewCollectionsService(logger, tc.collections)
+
+				collectionsResponse, err := subject.Collections(newSecurityContext(true))
+				require.NoError(t, err)
+
+				collectionNames := slices.Map(collectionsResponse, func(collection client.Collection) collections.CollectionName {
+					return collections.CollectionName(collection.Name)
+				})
+
+				require.ElementsMatch(t, collectionNames, tc.expectedCollectionNames)
+			})
+		}
 	})
 
 	t.Run("internal fields are absent from the collection response", func(t *testing.T) {
 
-		flowsCollection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
+		flowsCollection, found := slices.Find(collections.Collections(nil), func(collection collections.Collection) bool {
 			return collection.Name() == collections.CollectionNameFlows
 		})
 		require.True(t, found)

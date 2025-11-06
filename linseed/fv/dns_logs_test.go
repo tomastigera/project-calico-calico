@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"

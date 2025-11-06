@@ -42,6 +42,8 @@ global_job_config:
       - .semaphore/publish-artifacts
 blocks:
   - name: Prerequisites
+    run:
+      when: "true or change_in(['/'], {pipeline_file: 'track'})"
     dependencies: []
     task:
       agent:

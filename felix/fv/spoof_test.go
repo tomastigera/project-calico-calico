@@ -30,9 +30,10 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 )
 
-var _ = Describe("Spoof tests", func() {
+var _ = infrastructure.DatastoreDescribe("Spoof tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra        infrastructure.DatastoreInfra
 		tc           infrastructure.TopologyContainers
@@ -41,32 +42,9 @@ var _ = Describe("Spoof tests", func() {
 		calicoClient client.Interface
 	)
 
-	teardownInfra := func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				if NFTMode() {
-					logNFTDiags(felix)
-				} else {
-
-					felix.Exec("iptables-save", "-c")
-					felix.Exec("ip6tables-save", "-c")
-				}
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "-6", "r")
-				felix.Exec("ip", "a")
-				felix.Exec("ip", "-6", "a")
-			}
-		}
-		for _, wl := range w {
-			wl.Stop()
-		}
-		tc.Stop()
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-	}
+	BeforeEach(func() {
+		infra = getInfra()
+	})
 
 	spoofTests := func() {
 		It("should drop spoofed traffic", func() {
@@ -106,12 +84,9 @@ var _ = Describe("Spoof tests", func() {
 				externalClient *containers.Container
 			)
 			BeforeEach(func() {
-				externalClient = infrastructure.RunExtClient("ext-client")
+				externalClient = infrastructure.RunExtClient(infra, "ext-client")
 				err := externalClient.CopyFileIntoContainer("../bin/pktgen", "pktgen")
 				Expect(err).NotTo(HaveOccurred())
-			})
-			AfterEach(func() {
-				externalClient.Stop()
 			})
 
 			It("should send RST for a stray TCP packet", func() {
@@ -119,8 +94,7 @@ var _ = Describe("Spoof tests", func() {
 				tcpdump.SetLogEnabled(true)
 				pattern := fmt.Sprintf(`IP %s\.1234 > %s\.3434: Flags \[R\], seq 123`, tc.Felixes[0].IP, externalClient.IP)
 				tcpdump.AddMatcher("RST", regexp.MustCompile(pattern))
-				tcpdump.Start("tcp", "port", "1234")
-				defer tcpdump.Stop()
+				tcpdump.Start(infra, "tcp", "port", "1234")
 
 				err := externalClient.ExecMayFail("pktgen", externalClient.IP, tc.Felixes[0].IP, "tcp",
 					"--port-src", "3434", "--port-dst", "1234", "--tcp-ack", "--tcp-ack-no=123", "--tcp-seq-no=111")
@@ -134,9 +108,6 @@ var _ = Describe("Spoof tests", func() {
 
 	Context("_BPF-SAFE_ IPv4", func() {
 		BeforeEach(func() {
-			var err error
-			infra, err = infrastructure.GetEtcdDatastoreInfra()
-			Expect(err).NotTo(HaveOccurred())
 			opts := infrastructure.DefaultTopologyOptions()
 			opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancing"] = string(api.BPFConnectTimeLBDisabled)
 			opts.ExtraEnvVars["FELIX_BPFHostNetworkedNATWithoutCTLB"] = string(api.BPFHostNetworkedNATEnabled)
@@ -171,18 +142,11 @@ var _ = Describe("Spoof tests", func() {
 			}
 		})
 
-		AfterEach(func() {
-			teardownInfra()
-		})
-
 		spoofTests()
 	})
 
 	Context("IPv6", func() {
 		BeforeEach(func() {
-			var err error
-			infra, err = infrastructure.GetEtcdDatastoreInfra()
-			Expect(err).NotTo(HaveOccurred())
 			opts := infrastructure.DefaultTopologyOptions()
 			opts.EnableIPv6 = true
 			opts.IPIPMode = api.IPIPModeNever
@@ -207,10 +171,6 @@ var _ = Describe("Spoof tests", func() {
 				w[ii] = workload.Run(tc.Felixes[0], wName, "default", wIP, "8055", "tcp")
 				w[ii].ConfigureInInfra(infra)
 			}
-		})
-
-		AfterEach(func() {
-			teardownInfra()
 		})
 
 		spoofTests()

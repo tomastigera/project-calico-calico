@@ -72,6 +72,9 @@ type Config struct {
 	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
 
+	// DisabledCollections is a comma separated list of collections to be disabled e.g.: waf,dns
+	DisabledCollections string `split_words:"true"`
+
 	ProductMode string `default:"enterprise" split_words:"true"`
 }
 

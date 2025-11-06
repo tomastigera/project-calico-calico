@@ -66,9 +66,12 @@ func TestQueryService(t *testing.T) {
 		return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
 	})
 
+	allCollections := collections.Collections(nil)
+
 	subject := NewQueryService(
 		logger,
 		repository,
+		allCollections,
 		managedClusterLister,
 		Config{
 			QueryTimeout:           time.Duration(2) * time.Minute,
@@ -295,6 +298,7 @@ func TestQueryService(t *testing.T) {
 			subject := NewQueryService(
 				logger,
 				repository,
+				allCollections,
 				managedClusterLister,
 				Config{
 					QueryTimeout:           time.Duration(2) * time.Minute,
@@ -316,6 +320,7 @@ func TestQueryService(t *testing.T) {
 			subject := NewQueryService(
 				logger,
 				repository,
+				allCollections,
 				managedClusterLister,
 				Config{
 					QueryTimeout:           time.Duration(2) * time.Minute,
@@ -929,7 +934,7 @@ func TestQueryService(t *testing.T) {
 			{functionType: "p100", expectedPercentile: 100},
 		}
 
-		queryCollection, found := slices.Find(collections.Collections(), func(collection collections.Collection) bool {
+		queryCollection, found := slices.Find(allCollections, func(collection collections.Collection) bool {
 			return collection.Name() == "flows"
 		})
 		require.True(t, found)
@@ -1134,6 +1139,7 @@ func TestQueryService(t *testing.T) {
 							subject := NewQueryService(
 								logger,
 								repository,
+								allCollections,
 								managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
 									return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
 								}),
@@ -1170,6 +1176,7 @@ func TestQueryService(t *testing.T) {
 					subject := NewQueryService(
 						logger,
 						repository,
+						allCollections,
 						managedClusterLister,
 						Config{
 							QueryTimeout:           time.Duration(2) * time.Minute,
@@ -1217,6 +1224,7 @@ func TestQueryService(t *testing.T) {
 						subject := NewQueryService(
 							logger,
 							repository,
+							allCollections,
 							managedClusterLister,
 							Config{
 								QueryTimeout:           time.Duration(2) * time.Minute,
@@ -1271,6 +1279,7 @@ func TestQueryService(t *testing.T) {
 					subject := NewQueryService(
 						logger,
 						repository,
+						allCollections,
 						managedClusterLister,
 						Config{
 							QueryTimeout:           time.Duration(2) * time.Minute,
@@ -1312,6 +1321,7 @@ func TestQueryService(t *testing.T) {
 			subject := NewQueryService(
 				logger,
 				repository,
+				allCollections,
 				managedClusterLister,
 				Config{
 					QueryTimeout:           time.Duration(2) * time.Minute,
@@ -1351,7 +1361,7 @@ func TestQueryService(t *testing.T) {
 
 	t.Run("mapping", func(t *testing.T) {
 		t.Run("client criterion or", func(t *testing.T) {
-			collection, found := slices.Find(collections.Collections(), func(c collections.Collection) bool { return c.Name() == "flows" })
+			collection, found := slices.Find(allCollections, func(c collections.Collection) bool { return c.Name() == "flows" })
 			require.True(t, found)
 
 			testCases := []struct {

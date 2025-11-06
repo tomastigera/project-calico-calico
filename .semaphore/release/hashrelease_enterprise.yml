@@ -22,20 +22,37 @@ global_job_config:
     - name: releasebot-slack
     # Secret for Semaphore API access
     - name: semaphore-api
+    # OIDC-related credentials
+    - name: oidc-credentials-gcp-tigera-dev-ci
+    - name: oidc-credentials-gcp-hashrelease-publish
+
   prologue:
     commands:
       - chmod 0600 ~/.keys/*
       - ssh-add ~/.keys/*
+
       # Install createrepo-c for RPMs
       - sudo apt-get -qq update && sudo apt-get -qq install --no-install-recommends createrepo-c
+
       # Checkout the code and unshallow it.
       - checkout
       - retry git fetch --quiet --unshallow
-      # Credentials for accessing gcloud, needed to push images to gcr
-      - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-      # Registries login
+
+        # Credentials for accessing gcloud
+      - echo "${SEMAPHORE_OIDC_TOKEN}" > "${SEMAPHORE_TOKEN_FILE_PATH}"
+      - |
+        gcloud iam workload-identity-pools create-cred-config \
+            $OIDC_GCP_POOL_URI \
+            --quiet \
+            --service-account="${OIDC_SERVICE_ACCOUNT_EMAIL}" \
+            --service-account-token-lifetime-seconds="${OIDC_SERVICE_ACCOUNT_LIFETIME}" \
+            --output-file="${GOOGLE_APPLICATION_CREDENTIALS}" \
+            --credential-source-file="${SEMAPHORE_TOKEN_FILE_PATH}" \
+            --credential-source-type="text"
+      - gcloud auth login --quiet --cred-file="${GOOGLE_APPLICATION_CREDENTIALS}"
+      - gcloud config set project --quiet "${OIDC_GCP_PROJECT_NAME}"
+      # Configure docker to use the gcloud credential helper
       - gcloud auth configure-docker --quiet
-      - gcloud auth print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 
 blocks:
   - name: Publish hashrelease

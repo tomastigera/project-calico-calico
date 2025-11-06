@@ -15,7 +15,7 @@ import (
 
 func TestParams(t *testing.T) {
 
-	collectionsMap := slices.AssociateBy(collections.Collections(), func(c collections.Collection) collections.CollectionName {
+	collectionsMap := slices.AssociateBy(collections.Collections(nil), func(c collections.Collection) collections.CollectionName {
 		return c.Name()
 	})
 

@@ -112,32 +112,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 			return fmt.Errorf("Process Info and tcp stats not proper in flows")
 		}, "30s", "3s").ShouldNot(HaveOccurred())
 	})
-
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range tc.Felixes {
-				logNFTDiags(felix)
-				felix.Exec("iptables-save", "-c")
-				felix.Exec("ipset", "list")
-				felix.Exec("ip", "r")
-				felix.Exec("ip", "a")
-			}
-		}
-
-		ep1_1.Stop()
-		ep1_2.Stop()
-		for _, felix := range tc.Felixes {
-			if bpfEnabled {
-				felix.Exec("calico-bpf", "connect-time", "clean")
-			}
-			felix.Stop()
-		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			infra.DumpErrorData()
-		}
-		infra.Stop()
-	})
 })
 
 func checkIfFlowLogHasTCPStats(flowLog flowlog.FlowLog) bool {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/utils"
@@ -126,6 +126,14 @@ func getRRDecoded(rr layers.DNSResourceRecord) interface{} {
 		return rr.SRV
 	case layers.DNSTypeMX:
 		return rr.MX
+	case layers.DNSTypeDNSKEY:
+		return rr.DNSKEY
+	case layers.DNSTypeRRSIG:
+		return rr.RRSIG
+	case layers.DNSTypeSVCB:
+		return rr.SVCB
+	case layers.DNSTypeURI:
+		return rr.URI
 	default:
 		return rr.Data
 	}

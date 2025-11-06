@@ -17,10 +17,11 @@ import (
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
-var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		felix  *infrastructure.Felix
 		w      *workload.Workload
@@ -37,18 +38,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	AfterEach(func() {
-		if w != nil {
-			w.Stop()
-		}
-		if felix != nil {
-			felix.Stop()
-		}
-		if infra != nil {
-			infra.Stop()
-		}
-	})
-
 	startWithPersistentFileContent := func(fileContent string) {
 		// Populate the DNS info file that Felix will read.
 		err := os.WriteFile(path.Join(dnsDir, "dnsinfo.txt"), []byte(fileContent), 0o644)
@@ -60,7 +49,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		var tc infrastructure.TopologyContainers
-		tc, _, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		infra = getInfra()
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 		felix = tc.Felixes[0]
 	}
 

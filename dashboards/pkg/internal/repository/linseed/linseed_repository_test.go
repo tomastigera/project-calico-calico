@@ -32,7 +32,7 @@ func TestLinseedRepository(t *testing.T) {
 	subject := NewLinseedRepositoryWithClient(logger, "", mockClient)
 
 	t.Run("has a client for each collection", func(t *testing.T) {
-		for _, c := range collections.Collections() {
+		for _, c := range collections.Collections(nil) {
 			require.Contains(t, subject.clients, c.Name())
 		}
 	})

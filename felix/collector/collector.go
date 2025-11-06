@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -141,6 +141,8 @@ type Config struct {
 
 	BPFConntrackTimeouts bpfconntrack.Timeouts
 	FelixHostName        string
+
+	PolicyStoreManager policystore.PolicyStoreManager
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -189,9 +191,13 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		ds:                    make(chan *proto.DataplaneStats, 1000),
 		wafEventsBatchC:       make(chan []*proto.WAFEvent),
 		wafEvents:             []*proto.WAFEvent{},
-		policyStoreManager:    policystore.NewPolicyStoreManager(),
 		displayDebugTraceLogs: cfg.DisplayDebugTraceLogs,
 		felixHostName:         cfg.FelixHostName,
+		policyStoreManager:    cfg.PolicyStoreManager,
+	}
+
+	if c.policyStoreManager == nil {
+		c.policyStoreManager = policystore.NewPolicyStoreManager()
 	}
 
 	if apiv3.FlowLogsPolicyEvaluationModeType(cfg.PolicyEvaluationMode) == apiv3.FlowLogsPolicyEvaluationModeContinuous {
@@ -450,6 +456,9 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, pktInfo *types.Pack
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
 		data = NewData(t, srcEp, dstEp, nodeEp, c.config.MaxOriginalSourceIPsIncluded)
 		c.updateEpStatsCache(t, data)
+
+		// Perform an initial evaluation of pending rule traces.
+		c.evaluatePendingRuleTraceForLocalEp(data)
 	} else if data.Reported {
 		if !data.UnreportedPacketInfo && !packetinfo {
 			// Data has been reported.  If the request has not come from a packet info update (e.g. nflog) and we do not
@@ -638,9 +647,6 @@ func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchI
 	if ru = data.AddRuleID(ruleID, matchIdx, numPkts, numBytes, isTransit); ru == RuleMatchIsDifferent {
 		c.handleDataEndpointOrRulesChanged(data)
 		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes, isTransit)
-	}
-	if ru == RuleMatchSet || ru == RuleMatchIsDifferent {
-		c.evaluatePendingRuleTraceForLocalEp(data)
 	}
 }
 
@@ -1220,22 +1226,28 @@ func (c *collector) updatePendingRuleTraces() {
 }
 
 func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
-	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
 	flow := TupleAsFlow(data.Tuple)
 
-	if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
-		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
-		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
-		})
+	srcEp := c.lookupEndpoint([16]byte{}, data.Tuple.Src, false)
+	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal()
+	dstEp := c.lookupEndpoint(data.Tuple.Src, data.Tuple.Dst, !srcEpIsNotLocal)
+
+	// If endpoints have changed compared to what Data currently holds, skip evaluation.
+	if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
+		return
 	}
 
-	if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
-		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
-		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+		// Evaluate ingress if destination is local workload endpoint
+		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
+			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+		}
+
+		// Evaluate egress if source is local workload endpoint
+		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
 			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
-		})
-	}
+		}
+	})
 }
 
 // evaluatePendingRuleTrace evaluates the pending rule trace for the given direction and endpoint,

@@ -118,9 +118,16 @@ struct cali_tc_state {
 	 */
 	DECLARE_IP_ADDR(ip_src_masq);
 #ifndef IPVER6
-	__u8 __pad_ipv4[48];
+	__u8 __pad_ipv4[56];
 #endif
 };
+
+static CALI_BPF_INLINE void __xxx_compile_asserts_cali_tc_state(void) {
+	#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wunused-local-typedef"
+	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 504));
+	#pragma clang diagnostic pop
+}
 
 struct pkt_scratch {
 	__u8 l4[24]; /* 20 bytes to fit udp, icmp, tcp w/o options and 24 to make 8-aligned */

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 )
 
 var (
@@ -62,6 +62,12 @@ var dnsTypeStringValidator = SetValidator(
 	layers.DNSTypeTXT.String(),
 	layers.DNSTypeAAAA.String(),
 	layers.DNSTypeSRV.String(),
+	layers.DNSTypeOPT.String(),
+	layers.DNSTypeRRSIG.String(),
+	layers.DNSTypeDNSKEY.String(),
+	layers.DNSTypeSVCB.String(),
+	layers.DNSTypeHTTPS.String(),
+	layers.DNSTypeURI.String(),
 )
 
 func DNSTypeValidator(a *Atom) error {
