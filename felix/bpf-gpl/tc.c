@@ -85,7 +85,7 @@ int calico_tc_main(struct __sk_buff *skb)
 	 * skip all processing. */
 	if (CALI_F_FROM_HOST && skb->mark == CALI_SKB_MARK_BYPASS &&
 			/* If we are on vxlan and we do not have the key set, we cannot short-cirquit */
-			!(CALI_F_VXLAN &&
+			!(CALI_F_TUNNEL &&
 			 !skb_mark_equals(skb, CALI_SKB_MARK_TUNNEL_KEY_SET, CALI_SKB_MARK_TUNNEL_KEY_SET))) {
 		if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_DEBUG) {
 			/* This generates a bit more richer output for logging */
@@ -262,6 +262,10 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 	case PARSING_ERROR:
 		goto deny;
 	case PARSING_ALLOW_WITHOUT_ENFORCING_POLICY:
+		if (CALI_F_FROM_HEP && (ctx->state->ip_proto == IPPROTO_IPIP ||
+					ctx->state->dport == WG_PORT)) {
+			fwd_fib_set(&(ctx->fwd), false);
+		}
 		goto allow;
 	}
 
