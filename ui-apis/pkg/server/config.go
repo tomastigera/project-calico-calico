@@ -91,6 +91,12 @@ type Config struct {
 	ServiceGraphCachePollQueryInterval    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"3s"`
 	ServiceGraphCacheDataSettleTime       time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
 	ServiceGraphCacheDataPrefetch         bool          `envconfig:"SERVICE_GRAPH_CACHE_DATA_PREFETCH" default:"true"`
+
+	// Enable querying for L7,DNS logs and events in Linseed. At the moment, used only for ServiceGraph
+	// They are disabled in free tier setup
+	L7LogsEnabled  bool `envconfig:"L7_LOGS_ENABLED" default:"true"`
+	DNSLogsEnabled bool `envconfig:"DNS_LOGS_ENABLED" default:"true"`
+	EventsEnabled  bool `envconfig:"EVENTS_ENABLED" default:"true"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

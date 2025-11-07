@@ -60,6 +60,7 @@ func NewServiceGraphCache(client ctrlclient.WithWatch, backend ServiceGraphBacke
 	if cfg.ServiceGraphCacheDataPrefetch {
 		sgc.prefetchRawData(ctx, client)
 	}
+
 	return sgc
 }
 
@@ -199,7 +200,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
-	if rbacFilter.IncludeL7Logs() {
+	if s.cfg.ServiceGraphCacheFetchL7 && rbacFilter.IncludeL7Logs() {
 		for _, rf := range cacheData.l7 {
 			if !rbacFilter.IncludeFlow(rf.Edge) {
 				continue
@@ -226,7 +227,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	fd.ServiceGroups.FinishMappings()
 
 	// Filter the DNS logs based on RBAC. All other graph content is removed through graph pruning.
-	if rbacFilter.IncludeDNSLogs() {
+	if s.cfg.ServiceGraphCacheFetchDNS && rbacFilter.IncludeDNSLogs() {
 		for _, dl := range cacheData.dns {
 			if !rbacFilter.IncludeEndpoint(dl.Endpoint) {
 				continue
@@ -243,7 +244,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	// Filter the events.
-	if rbacFilter.IncludeAlerts() {
+	if s.cfg.ServiceGraphCacheFetchEvents && rbacFilter.IncludeAlerts() {
 		for _, ev := range cacheData.events {
 			// Update the names in the events (if required).
 			ev = nameHelper.ConvertEvent(ev)
@@ -644,21 +645,28 @@ func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
 		defer wg.Done()
 		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, d.timeRange, flowConfig)
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
-	}()
+	if s.cfg.ServiceGraphCacheFetchL7 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+	if s.cfg.ServiceGraphCacheFetchDNS {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+	if s.cfg.ServiceGraphCacheFetchEvents {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

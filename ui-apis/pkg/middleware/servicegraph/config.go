@@ -41,6 +41,13 @@ type Config struct {
 	// Whether or not to prefetch raw data when the cache is initialized.
 	ServiceGraphCacheDataPrefetch bool
 
+	// ServiceGraphCacheFetchL7 will instruct whether to fetch L7 data.
+	ServiceGraphCacheFetchL7 bool
+	// ServiceGraphCacheFetchDNS will instruct weather to fetch DNS data or not
+	ServiceGraphCacheFetchDNS bool
+	// ServiceGraphCacheFetchEvents will instruct weather to fetch Events data or not
+	ServiceGraphCacheFetchEvents bool
+
 	// TenantNamespace is the namespace of the tenant this instance is serving, or empty if this is a single-tenant cluster.
 	TenantNamespace string
 

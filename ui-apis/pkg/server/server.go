@@ -197,6 +197,9 @@ func Start(cfg *Config) error {
 							ServiceGraphCachePollQueryInterval:    cfg.ServiceGraphCachePollQueryInterval,
 							ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
 							ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
+							ServiceGraphCacheFetchL7:              cfg.L7LogsEnabled,
+							ServiceGraphCacheFetchDNS:             cfg.DNSLogsEnabled,
+							ServiceGraphCacheFetchEvents:          cfg.EventsEnabled,
 							TenantNamespace:                       cfg.TenantNamespace,
 
 							// If impersonation is not enabled, then we cannot perform RBAC based on the original user.

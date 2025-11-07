@@ -107,6 +107,9 @@ var _ = Describe("Service graph cache tests", func() {
 				ServiceGraphCachePollQueryInterval: 5 * time.Millisecond,
 				ServiceGraphCacheDataSettleTime:    15 * time.Minute,
 				ServiceGraphCacheDataPrefetch:      false,
+				ServiceGraphCacheFetchL7:           true,
+				ServiceGraphCacheFetchDNS:          true,
+				ServiceGraphCacheFetchEvents:       true,
 			}
 
 			// Create a service graph with a mock backend.
@@ -532,6 +535,77 @@ var _ = Describe("Service graph cache tests", func() {
 		})
 	})
 
+	Context("Service graph cache tests with only L3 data for free tier", func() {
+		BeforeEach(func() {
+			cfg := &Config{
+				ServiceGraphCacheMaxEntries:        5,
+				ServiceGraphCachePolledEntryAgeOut: 1 * time.Hour,
+				ServiceGraphCachePollLoopInterval:  1 * time.Second,
+				ServiceGraphCachePollQueryInterval: 5 * time.Millisecond,
+				ServiceGraphCacheDataSettleTime:    15 * time.Minute,
+				ServiceGraphCacheDataPrefetch:      true,
+				ServiceGraphCacheFetchL7:           false,
+				ServiceGraphCacheFetchDNS:          false,
+				ServiceGraphCacheFetchEvents:       false,
+			}
+
+			// Create a service graph with a mock backend.
+			scheme := kscheme.Scheme
+			err := v3.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+			// create a managed clusters
+			managedClusterNames := []string{"managed-1"}
+			for _, managedClusterName := range managedClusterNames {
+				managedCluster := &v3.ManagedCluster{
+					ObjectMeta: metav1.ObjectMeta{Name: managedClusterName},
+					Spec:       v3.ManagedClusterSpec{},
+				}
+				err = fakeClient.Create(context.Background(), managedCluster)
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			backend = CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+			cache = NewServiceGraphCache(fakeClient, backend, cfg)
+		})
+
+		It("should prefetch raw data", func() {
+			// 1 (cluster) + 1 (managed-1)
+			Expect(cache.GetCacheSize()).To(Equal(2))
+
+			Expect(backend.GetNumCallsFlowConfig()).To(Equal(2))
+			Expect(backend.GetNumCallsL3()).To(Equal(2))
+			Expect(backend.GetNumCallsL7()).To(Equal(0))
+			Expect(backend.GetNumCallsDNS()).To(Equal(0))
+			Expect(backend.GetNumCallsEvents()).To(Equal(0))
+
+			// default manager UI time range: now-15m->now-0m
+			ctx := context.Background()
+			now := time.Now().UTC()
+			timeRange := &lmav1.TimeRange{
+				From: now.Add(-15 * time.Minute),
+				To:   now,
+				Now:  &now,
+			}
+
+			// request "managed-1" data which should be in cache already
+			_, err := cache.GetFilteredServiceGraphData(ctx, &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					Cluster:   "managed-1",
+					TimeRange: timeRange,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(backend.GetNumCallsL3(), "5s").Should(Equal(2))
+			Eventually(backend.GetNumCallsL7(), "5s").Should(Equal(0))
+			Eventually(backend.GetNumCallsDNS(), "5s").Should(Equal(0))
+			Eventually(backend.GetNumCallsEvents(), "5s").Should(Equal(0))
+		})
+	})
+
 	Context("Service graph cache tests with prefetch", func() {
 		BeforeEach(func() {
 			cfg := &Config{
@@ -541,6 +615,9 @@ var _ = Describe("Service graph cache tests", func() {
 				ServiceGraphCachePollQueryInterval: 5 * time.Millisecond,
 				ServiceGraphCacheDataSettleTime:    15 * time.Minute,
 				ServiceGraphCacheDataPrefetch:      true,
+				ServiceGraphCacheFetchL7:           true,
+				ServiceGraphCacheFetchDNS:          true,
+				ServiceGraphCacheFetchEvents:       true,
 			}
 
 			// Create a service graph with a mock backend.
