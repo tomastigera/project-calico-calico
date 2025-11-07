@@ -75,8 +75,12 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 ut:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -cover -r --skipPackage calicoq/*'
 
+bin/calicoctl:
+	make -C ../calicoctl build
+	cp ../calicoctl/bin/calicoctl-linux-$(ARCH) $@
+
 .PHONY: fv
-fv: image run-etcd
+fv: image run-etcd bin/calicoctl
 	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
@@ -89,7 +93,7 @@ fv: image run-etcd
 		-c 'CALICOQ=`pwd`/bin/calicoq-$(ARCH) fv/run-test'
 
 .PHONY: st
-st: image $(TOOLING_IMAGE_CREATED)
+st: image $(TOOLING_IMAGE_CREATED) bin/calicoctl
 	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
@@ -103,7 +107,7 @@ st: image $(TOOLING_IMAGE_CREATED)
 		-c 'CALICOQ=`pwd`/bin/calicoq-$(ARCH) st/run-test'
 
 .PHONY: scale-test
-scale-test: image
+scale-test: image bin/calicoctl
 	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
