@@ -602,21 +602,6 @@ load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 	# calicoctl is deployed as a pod on the cluster and needs to be recreated.
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) apply -f tests/k8st/infra/calicoctl.yaml
 
-.PHONY: st-checks
-st-checks:
-	@if mount | grep -q "cgroup on /sys/fs/cgroup"; then \
-		echo "cgroup v1 mounted"; \
-	else \
-		echo; \
-		echo "ERROR: Looks like your system uses cgroupv2, which is "; \
-		echo "not compatible with our ancient version of dind."; \
-		echo "You can either run this test in a VM, or add "; \
-		echo "systemd.unified_cgroup_hierarchy=0 to your kernel "; \
-		echo "command line (if supported by your kernel/OS)."; \
-		echo; \
-		exit 1; \
-	fi
-
 GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
 TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
@@ -755,7 +740,7 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -782,7 +767,7 @@ st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar wo
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean image ut st static-checks
+ci: static-checks ut image image-windows
 
 ## Deploys images to registry
 cd: image-all cd-common
