@@ -243,10 +243,6 @@ func (c *calicoctlExecClient) Patch(ctx context.Context, obj client.Object, patc
 	panic("not implemented")
 }
 
-func (c *calicoctlExecClient) Apply(ctx context.Context, _ runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
-	panic("not implemented")
-}
-
 func (c *calicoctlExecClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
 	panic("not implemented")
 }
