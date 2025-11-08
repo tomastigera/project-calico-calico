@@ -34,7 +34,7 @@ require (
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/containernetworking/cni v1.3.0
 	github.com/containernetworking/plugins v1.8.0
-	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.11.0
 	github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreos/go-iptables v0.8.0
