@@ -692,6 +692,7 @@ var _ = Describe("RouteGenerator", func() {
 				Expect(rg.client.cache).ToNot(HaveKey("/calico/staticroutes/127.0.0.1-32"))
 				Expect(rg.client.cache).ToNot(HaveKey("/calico/staticroutesv6/::1-128"))
 			})
+
 			It("should add the internal service's clusterIP into the svcRouteMap and then remove it for missing annotation", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onEPUpdate(nil, epInt)
@@ -1117,5 +1118,4 @@ var _ = Describe("Service Load Balancer Aggregation", func() {
 			})
 		})
 	})
-
 })
