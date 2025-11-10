@@ -81,13 +81,13 @@ static CALI_BPF_INLINE bool calico_check_for_dns(struct cali_tc_ctx *ctx)
 	CALI_DEBUG("Now have dst IP 0x%x port %d\n", debug_ip(dst_ip), bpf_ntohs(dst_port));
 
 	// Compare dst IP and port against 'ipset' for trusted DNS servers.
-	union ip_set_lpm_key sip;
+	struct ip_set_key sip;
 	__builtin_memset(&sip, 0, sizeof(sip));
-	sip.ip.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */;
-	sip.ip.set_id = bpf_cpu_to_be64(TRUSTED_DNS_SERVERS_ID);
-	sip.ip.addr = dst_ip;
-	sip.ip.port = bpf_ntohs(dst_port);
-	sip.ip.protocol = 17;
+	sip.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */;
+	sip.set_id = bpf_cpu_to_be64(TRUSTED_DNS_SERVERS_ID);
+	sip.addr = dst_ip;
+	sip.port = bpf_ntohs(dst_port);
+	sip.protocol = 17;
 
 	if (cali_ip_sets_lookup_elem(&sip)) {
 		CALI_DEBUG("Dst IP/port are trusted for DNS\n");
