@@ -11,12 +11,12 @@
 static CALI_BPF_INLINE bool is_egw_health_packet(ipv46_addr_t *ip, __be16 port)
 {
 #ifndef IPVER6
-	union ip_set_lpm_key sip = {
-		.ip.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */,
-		.ip.set_id = bpf_cpu_to_be64(EGRESS_GW_HEALTH_ID),
-		.ip.addr = *ip,
-		.ip.port = port,
-		.ip.protocol = 6
+	struct ip_set_key sip = {
+		.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */,
+		.set_id = bpf_cpu_to_be64(EGRESS_GW_HEALTH_ID),
+		.addr = *ip,
+		.port = port,
+		.protocol = 6
 	};
 	if (cali_ip_sets_lookup_elem(&sip)) {
 		return true;
