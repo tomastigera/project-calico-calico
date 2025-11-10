@@ -16,6 +16,7 @@ package updateprocessors_test
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -43,12 +44,8 @@ const (
 	wireguardMarker = "*WIREGUARDMARKER*"
 )
 
-const (
-	// numBaseFelixConfigs should match the OS value.
-	numBaseFelixConfigs = 172
-
-	// Add private-only fields to this count.
-	numPrivateOnlyFelixConfigs = 113
+var (
+	numBaseFelixConfigs = reflect.TypeOf(apiv3.FelixConfigurationSpec{}).NumField()
 )
 
 var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
@@ -73,7 +70,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindClusterInformation,
 		Name: "node.mynode",
 	}
-	numFelixConfigs := numBaseFelixConfigs + numPrivateOnlyFelixConfigs
+	numFelixConfigs := numBaseFelixConfigs
 	numClusterConfigs := 7
 	numNodeClusterConfigs := 6
 	felixMappedNames := map[string]interface{}{
