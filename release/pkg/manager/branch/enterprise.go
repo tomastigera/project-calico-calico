@@ -12,6 +12,25 @@ import (
 	"github.com/projectcalico/calico/release/internal/version"
 )
 
+func incrementDevTagIdentifier(devTagIdentifier string) (string, error) {
+	sansDevParts := strings.Split(devTagIdentifier, ".")
+	parts := strings.Split(sansDevParts[0], "-")
+	num := parts[len(parts)-1]
+	numInt, err := strconv.Atoi(num)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract number from dev tag identifier %s: %w", devTagIdentifier, err)
+	}
+
+	numInt += 1
+	// update the dev tag identifier
+	devTagIdentifier = strings.Join(parts[:len(parts)-1], "-")
+	if devTagIdentifier != "" {
+		devTagIdentifier = devTagIdentifier + "-"
+	}
+	devTagIdentifier = fmt.Sprintf("%s%d.%s", devTagIdentifier, numInt, sansDevParts[1])
+	return devTagIdentifier, nil
+}
+
 func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
 	// Tag the current commit with the release version
 	if releaseVersion == "" {
@@ -21,13 +40,13 @@ func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
 	if _, err := b.git("tag", releaseVersion); err != nil {
 		return err
 	}
-	gitVersion, err := command.GitVersion(b.repoRoot, true)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to get git version")
-		return fmt.Errorf("failed to get git version: %w", err)
+	if b.publish {
+		if _, err := b.git("push", b.remote, releaseVersion); err != nil {
+			return fmt.Errorf("failed to push release tag %s: %w", releaseVersion, err)
+		}
 	}
-	ver := version.New(gitVersion)
 	// Get Next release version
+	ver := version.New(releaseVersion)
 	nextVersion, err := ver.NextReleaseVersion()
 	if err != nil {
 		logrus.WithError(err).Error("Failed to determine next release version")
@@ -41,22 +60,11 @@ func (b *BranchManager) CreateNextDevelopmentTag(releaseVersion string) error {
 		return fmt.Errorf("failed to check if tag already exists: %w", err)
 	}
 	if out != "" {
-		// tag already exists,increment the number in the dev tag.
-		// i.e. if vX.Y.Z-calient-0.dev already exists use calient-1.dev
-		// for the dev tag identifier to give tag vX.Y.Z-calient-1.dev tag
-		sansDevParts := strings.Split(devTagIdentifier, ".")
-		parts := strings.Split(sansDevParts[0], "-")
-		num := parts[len(parts)-1]
-		numInt, err := strconv.Atoi(num)
+		updatedDevTagIdentifier, err := incrementDevTagIdentifier(devTagIdentifier)
 		if err != nil {
-			logrus.WithField("devTagIdentifier", devTagIdentifier).WithError(err).Error("Failed to extract number from dev tag identifier")
-			return fmt.Errorf("failed to extract number from dev tag identifier %s: %w", devTagIdentifier, err)
+			return err
 		}
-
-		numInt = numInt + 1
-		// update the dev tag identifier
-		devTagIdentifier = fmt.Sprintf("%s-%d", strings.Join(parts[:len(parts)-1], "-"), numInt)
-		logrus.WithField("newDevTagIdentifier", devTagIdentifier).Info("New development tag identifier created")
+		devTagIdentifier = updatedDevTagIdentifier
 	}
 	nextVersionTag = fmt.Sprintf("%s-%s", nextVersion.FormattedString(), devTagIdentifier)
 
