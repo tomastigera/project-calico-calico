@@ -42,118 +42,22 @@ var (
 	enterpriseS3Bucket = "tigera-public/ee"
 	s3ACLPublicRead    = []string{"--acl", "public-read"}
 
-	// images produced in this repo that should be expected for a release.
-	// This list needs to be kept up-to-date
-	// as images are added or removed.
-	enterpriseImages = []string{
-		"voltron",
-		"guardian",
-		"apiserver",
-		"queryserver",
-		"kube-controllers",
-		"calicoq",
-		"typha",
-		"calicoctl",
-		"node",
-		"dikastes",
-		"dex",
-		"fluentd",
-		"ui-apis",
-		"kibana",
-		"elasticsearch",
-		"intrusion-detection-job-installer",
-		"intrusion-detection-controller",
-		"waf-http-filter",
-		"webhooks-processor",
-		"compliance-controller",
-		"compliance-reporter",
-		"compliance-snapshotter",
-		"compliance-server",
-		"compliance-benchmarker",
-		"ingress-collector",
-		"l7-collector",
-		"gateway-l7-collector",
-		"l7-admission-controller",
-		"license-agent",
-		"cni",
-		"firewall-integration",
-		"egress-gateway",
-		"linseed",
-		"policy-recommendation",
-		"elasticsearch-metrics",
-		"packetcapture",
-		"prometheus",
-		"prometheus-operator",
-		"prometheus-config-reloader",
-		"prometheus-service",
-		"es-gateway",
-		"deep-packet-inspection",
-		"eck-operator",
-		"alertmanager",
-		"envoy",
-		"pod2daemon-flexvol",
-		"csi",
-		"node-driver-registrar",
-		"key-cert-provisioner",
-	}
-	enterpriseWindowsImages = []string{
-		"fluentd-windows",
-		"cni-windows",
-		"node-windows",
-	}
+	enterpriseImageReleaseDirs = utils.EnterpriseImageReleaseDirs
 
-	enterpriseImageReleaseDirs = []string{
-		"apiserver",
-		"app-policy",
-		"calicoctl",
-		"cni-plugin",
-		"kube-controllers",
-		"node",
-		"typha",
-		"calicoq",
-		"compliance",
-		"deep-packet-inspection",
-		"egress-gateway",
-		"elasticsearch-metrics",
-		"elasticsearch",
-		"es-gateway",
-		"ui-apis",
-		"firewall-integration",
-		"fluentd",
-		"gateway",
-		"ingress-collector",
-		"intrusion-detection-controller",
-		"key-cert-provisioner",
-		"kibana",
-		"l7-admission-controller",
-		"l7-collector",
-		"license-agent",
-		"linseed",
-		"packetcapture",
-		"pod2daemon",
-		"policy-recommendation",
-		"prometheus-service",
-		"queryserver",
-		"voltron",
-		"webhooks-processor",
-		"third_party/alertmanager",
-		"third_party/dex",
-		"third_party/eck-operator",
-		"third_party/envoy-gateway",
-		"third_party/envoy-proxy",
-		"third_party/envoy-ratelimit",
-		"third_party/prometheus-operator",
-		"third_party/prometheus",
-	}
+	// Directories that publish images for cloud.
 	cloudImageReleaseDirs = []string{
 		"kube-controllers",
 		"kibana",
 	}
+
+	// Directories that publish images for windows releases.
 	enterpriseWindowsReleaseDirs = []string{
 		"cni-plugin",
 		"fluentd",
 		"node",
 	}
+
+	// Directories that publish binaries for enterprise releases.
 	enterpriseBinaryReleaseDirs = []string{
 		"calicoctl",
 		"calicoq",
@@ -189,6 +93,8 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		enterpriseHashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
 		s3Bucket:                      enterpriseS3Bucket,
 		baseArtifactsURL:              enterpriseArtifactsBaseURL,
+		imageReleaseDirs:              enterpriseImageReleaseDirs,
+		includeManager:                true,
 	}
 
 	for _, o := range opts {
@@ -205,6 +111,12 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 
 type EnterpriseManager struct {
 	CalicoManager
+
+	// imageReleaseDirs is the list of directories from which we should publish images.
+	imageReleaseDirs []string
+
+	// manager variables
+	includeManager bool
 
 	devTagSuffix string
 
@@ -486,27 +398,30 @@ func (m *EnterpriseManager) getRegistryFromCharts() (string, error) {
 
 func (m *EnterpriseManager) BuildMetadata(dir string) error {
 	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
-		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
-		return err
+		return fmt.Errorf("failed to create metadata dir: %w", err)
 	}
 	registry, err := m.getRegistryFromManifests()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get registry from manifests: %w", err)
 	}
 
 	calicoVer, err := utils.DetermineCalicoVersion(m.repoRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine calico version: %w", err)
 	}
 
-	// For releases, all images (including the manager, except operator) are the same version.
-	// For hash releases, the manager image is a different version.
-	var images []string
+	enterpriseImages, err := utils.BuildReleaseImageList(m.repoRoot, m.imageReleaseDirs...)
+	if err != nil {
+		return fmt.Errorf("failed to get images built by release dirs: %w", err)
+	}
+	managerImage := fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.calicoVersion)
 	if m.isHashRelease {
-		images = releaseImages(append(enterpriseImages, enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
-		images = append(images, fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.enterpriseHashrelease.ManagerVersion))
-	} else {
-		images = releaseImages(append(append(enterpriseImages, manager.DefaultImage), enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+		// For hash releases, the manager image is a different version.
+		managerImage = fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.enterpriseHashrelease.ManagerVersion)
+	}
+	images := releaseImages(enterpriseImages, m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+	if m.includeManager {
+		images = append(images, managerImage)
 	}
 
 	data := enterpriseMetadata{
@@ -1182,6 +1097,11 @@ func (m *EnterpriseManager) PrepareRelease() error {
 		return err
 	}
 
+	releaseDirs := m.imageReleaseDirs
+	if m.includeManager {
+		releaseDirs = append(releaseDirs, manager.ReleaseDir)
+	}
+
 	// Create or update versions file.
 	v := &pinnedversion.EnterpriseReleaseVersions{
 		Hashrelease:     m.hashrelease.Name,
@@ -1194,6 +1114,7 @@ func (m *EnterpriseManager) PrepareRelease() error {
 			Registry: m.operatorRegistry,
 		},
 		HelmReleaseVersion: m.chartVersion,
+		ReleaseDirs:        releaseDirs,
 	}
 	if err := v.AddToEnterprisePinnedVersionFile(); err != nil {
 		return fmt.Errorf("failed to create pinned version file: %w", err)

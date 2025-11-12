@@ -44,12 +44,14 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			chartVersionFlag,
 			hashreleaseNameFlag,
 			registryFlag,
+			imageReleaseDirsFlag,
 			operatorRegistryFlag,
 			operatorImageFlag,
 			confirmFlag,
 			skipReleaseVersionCheckFlag,
 			skipValidationFlag,
 			skipBranchCheckFlag,
+			skipManagerFlag,
 			githubTokenFlag,
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
@@ -80,6 +82,7 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
+				calico.WithManager(!c.Bool(skipManagerFlag.Name)),
 				calico.WithEnterpriseHashrelease(hashreleaseserver.EnterpriseHashrelease{
 					Hashrelease: hashreleaseserver.Hashrelease{
 						Name:    c.String(hashreleaseNameFlag.Name),
@@ -87,6 +90,9 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 					},
 				}, hashreleaseserver.Config{}),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
+			}
+			if dirs := c.StringSlice(imageReleaseDirsFlag.Name); len(dirs) > 0 {
+				enterpriseOpts = append(enterpriseOpts, calico.WithImageReleaseDirs(dirs))
 			}
 
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
@@ -233,7 +239,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 			registries := c.StringSlice(registryFlag.Name)
 			hashrelRegistry := c.String(hashReleaseRegistryFlag.Name)
 
-			if !c.Bool(skipManagerFlag.Name) {
+			if _, exists := versions.Components[manager.ComponentName]; exists && !c.Bool(skipManagerFlag.Name) {
 				// Clone the manager repository.
 				managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
 				if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
