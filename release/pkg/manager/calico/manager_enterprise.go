@@ -998,7 +998,7 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 			}
 			// Log the output and return a formatted error
 			log.Error(out)
-			return fmt.Errorf("Failed to publish %s images: %w", dir, err)
+			return fmt.Errorf("failed to publish %s images: %w", dir, err)
 		}
 		// Success - move on
 		log.Info(out)
