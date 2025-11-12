@@ -174,6 +174,7 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 	defaultCalicoOpts := []Option{
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
 		WithBuildImages(false),
+		WithArchiveImages(false),
 		WithPublishGithubRelease(false),
 	}
 	calicoOpts = append(defaultCalicoOpts, calicoOpts...)

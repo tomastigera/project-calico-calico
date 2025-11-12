@@ -32,7 +32,7 @@ func NewEnterpriseManager(opts ...Option) *EnterpriseOperatorManager {
 }
 
 func (o *EnterpriseOperatorManager) PreBuildValidation() error {
-	if err := o.OperatorManager.PreBuildValidation(o.tmpDir); err != nil {
+	if err := o.OperatorManager.PreBuildValidation(); err != nil {
 		return err
 	}
 	return nil

@@ -9,7 +9,7 @@ NODE_IMAGE            ?=node
 # The windows image names are:
 # - OS: calico/node-windows
 # - EE: tigera/node-windows
-WINDOWS_IMAGE         ?=node-windows
+WINDOWS_IMAGE         ?=$(NODE_IMAGE)-windows
 
 # If this is a windows release build the windows image.  ARCHES will contain the values
 # in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
