@@ -252,7 +252,11 @@ cd: image-all cd-common
 
 ## Build fv binary for Windows
 $(WINDOWS_BIN)/win-fv.exe: $(WINFV_SRCFILES)
-	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(WINDOWS_BIN)/win-fv.exe'
+	$(DOCKER_RUN) \
+		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(WINDOWS_BIN)/win-fv.exe'
 
 ###############################################################################
 # Release

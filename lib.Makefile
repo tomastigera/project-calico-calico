@@ -214,6 +214,11 @@ define build_binary
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
+# GOEXPERIMENT=nodwarf5 is required to disable DWARF5 debug format which is incompatible
+# with current version of MinGW toolchain. Without this, binaries will fail with
+# "not a valid application for this OS platform" error.
+# https://github.com/golang/go/issues/75077
+
 # For windows builds that require cgo.
 define build_cgo_windows_binary
 	$(DOCKER_RUN) \
@@ -221,6 +226,7 @@ define build_cgo_windows_binary
 		-e CGO_ENABLED=1 \
 		-e GOARCH=amd64 \
 		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
 endef
@@ -231,6 +237,7 @@ define build_windows_binary
 		-e CGO_ENABLED=0 \
 		-e GOARCH=amd64 \
 		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
 endef
