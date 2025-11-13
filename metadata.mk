@@ -94,7 +94,7 @@ FLANNEL_VERSION=main
 BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
 # The operator branch corresponding to this branch.
-OPERATOR_BRANCH       ?= master
+OPERATOR_BRANCH ?= master
 OPERATOR_ORGANIZATION ?= tigera
 OPERATOR_GIT_REPO     ?= operator
 # The manager branch corresponding to this branch.
