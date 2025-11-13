@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -42,6 +43,8 @@ const (
 	// upstream components
 	upstreamFluentdComponentName = "upstream-fluentd"
 )
+
+var onceEnterprise sync.Once
 
 var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	coreosAlertmanagerComponentName:       {Version: "v0.28.0"},
@@ -215,11 +218,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, e
 }
 
 func mapEnterpriseImageToComponent(imageName, version string) (string, registry.Component) {
-	once.Do(func() {
-		// Initialize the image to component map (addded for unit tests)
-		for c, img := range componentToImageMap {
-			imageToComponentMap[img] = c
-		}
+	onceEnterprise.Do(func() {
 		// Initialize the enterprise image to component map.
 		for c, img := range enterpriseComponentImageMap {
 			enterpriseImageComponentMap[img] = c

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -29,6 +30,8 @@ const (
 	// EnterpriseArtifactsBaseURL is the base URL for accessing enterprise artifacts.
 	EnterpriseArtifactsBaseURL = "https://downloads.tigera.io/ee"
 )
+
+var onceEnterprise sync.Once
 
 var (
 	EnterpriseImageReleaseDirs = []string{
@@ -97,8 +100,7 @@ func CheckoutHashreleaseVersion(hashVersion string, repoRootDir string) error {
 }
 
 func EnterpriseReleaseImages() []string {
-	once.Do(func() {
-		initReleaseImages() // added for unit tests
+	onceEnterprise.Do(func() {
 		initEnterpriseImages()
 	})
 	return slices.Clone(enterpriseReleaseImages)
