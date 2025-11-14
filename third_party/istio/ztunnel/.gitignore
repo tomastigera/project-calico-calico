@@ -1,0 +1,5 @@
+.ztunnel.created-*
+.ztunnel.downloaded
+.release-*
+ztunnel/
+bin/

@@ -7,3 +7,25 @@ workflows:
       changes:
         in:
           - dashboards\/.*
+
+  - name: build-istio-ztunnel
+    workflowFile: third_party/istio/ztunnel/.argoci/buildztunnel.yaml
+    runWhen:
+      alwaysRunOnMerge: true
+      skipRunOnPr: false  # TEMPORARY: Enable PR builds for testing
+      changes:
+        in:
+          - third_party/istio/ztunnel\/.*
+          - metadata.mk
+          - lib.Makefile
+
+  - name: build-istio-proxy
+    workflowFile: third_party/istio/proxy/.argoci/buildproxy.yaml
+    runWhen:
+      alwaysRunOnMerge: true
+      skipRunOnPr: false  # TEMPORARY: Enable PR builds for testing
+      changes:
+        in:
+          - third_party/istio/proxy\/.*
+          - metadata.mk
+          - lib.Makefile
