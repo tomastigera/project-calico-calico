@@ -3,5 +3,6 @@ workflows:
   - name: build-istio-ztunnel
     workflowFile: .argoci/buildztunnel.yaml
     runWhen:
+      runOnTag: true
       alwaysRunOnMerge: true
       skipRunOnPr: true

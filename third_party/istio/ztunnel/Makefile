@@ -149,13 +149,15 @@ release-build: .release-$(VERSION).created
 .release-$(VERSION).created:
 	$(MAKE) clean image-all RELEASE=true
 	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
+	# Generate the `latest` images.
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
 	touch $@
 
 .PHONY: release-publish
 release-publish: release-prereqs .release-$(VERSION).published
 
 .release-$(VERSION).published:
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE)
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
 	touch $@
 
 ###############################################################################
