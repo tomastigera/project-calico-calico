@@ -1567,7 +1567,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/fluentd-base Windows images
     run:
-      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     execution_time_limit:
@@ -1601,7 +1601,7 @@ blocks:
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
   - name: Publish tigera/fluentd-base Windows multi-arch manifests
     run:
-      when: "false or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/fluentd-base Windows images
     task:

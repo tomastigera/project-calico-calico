@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+
+	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -288,7 +290,7 @@ func WaitForElastic(client *elastic.Client) {
 			// green or yellow means the cluster is healthy enough to test with (yellow just means
 			// there aren't enough nodes for proper replication, which will always be true of single
 			// node clusters)
-			if !(r.Status == "green" || r.Status == "yellow") {
+			if r.Status != "green" && r.Status != "yellow" {
 				lastError = fmt.Sprintf("elasticsearch ClusterHealth.Status %s", r.Status)
 				time.Sleep(ElasticHealthPollInterval)
 				continue
