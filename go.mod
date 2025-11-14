@@ -507,6 +507,11 @@ replace (
 	github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
 	github.com/projectcalico/calico/lib/std => ./lib/std
 
+	// Pin to testify v1.10.0 because v1.11.0 introduced breaking changes
+	// (see https://github.com/stretchr/testify/pull/1427). Our webhooks-processor
+	// unit tests are affected by these changes and need refactoring before we can upgrade.
+	github.com/stretchr/testify => github.com/stretchr/testify v1.10.0
+
 	github.com/tigera/api => ./api
 
 	// Newer versions set the file mode on logs to 0600, which breaks a lot of our tests.
