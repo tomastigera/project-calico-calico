@@ -79,7 +79,7 @@ github.com/spf13/cobra v1.10.1
 github.com/spf13/pflag v1.0.10
 github.com/stoewer/go-strcase v1.3.0
 github.com/tigera/api v0.0.0-20251017180206-9d7c2da4f711
-github.com/tigera/operator/api v0.0.0-20251107230428-2956bd3956a8
+github.com/tigera/operator/api v0.0.0-20251112210545-bc4ab6d9c660
 github.com/x448/float16 v0.8.4
 github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 go.opentelemetry.io/auto/sdk v1.2.1
