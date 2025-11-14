@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/istio/ztunnel
 # Must use = not ?= because metadata.mk already sets DEV_REGISTRIES
 DEV_REGISTRIES = quay.io/tigera
 
-ZTUNNEL_IMAGE ?= ztunnel
+ZTUNNEL_IMAGE ?= istio-ztunnel
 BUILD_IMAGES ?= $(ZTUNNEL_IMAGE)
 
 ZTUNNEL_VERSION = 1.27.3
