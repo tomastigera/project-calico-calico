@@ -30,10 +30,11 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
-	// pod2daemon/cisdriver build failure after upgrading to v1.10.0+
+	// pod2daemon/cisdriver build failure after upgrading to v1.10.0+.
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/containernetworking/cni v1.3.0
 	github.com/containernetworking/plugins v1.8.0
+	// Many WAF test failures due to hard-coded rule metadata after upgrading to v4.12.0+.
 	github.com/corazawaf/coraza-coreruleset/v4 v4.11.0
 	github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc
 	github.com/corazawaf/coraza/v3 v3.3.3
@@ -75,7 +76,8 @@ require (
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/google/safetext v0.0.0-20240722112252-5a72de7e7962
 	github.com/google/uuid v1.6.0
-	github.com/gopacket/gopacket v1.5.0
+	// SIGSEGV when accessing the application-layer payload inside udpResponseRaw() after upgrading to v1.5.0.
+	github.com/gopacket/gopacket v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gruntwork-io/terratest v0.52.0
 	github.com/hashicorp/yamux v0.1.2
