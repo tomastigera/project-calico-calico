@@ -25,8 +25,7 @@ BRANCH_NAME = $(GIT_COMMIT)
 LATEST_IMAGE_TAG = $(ZTUNNEL_VERSION)-$(GIT_COMMIT_SHORTER)
 
 # Rust build image - using Calico's rust-build container
-# TODO: Update to use TIGERA_DOCKER_REGISTRY when we push to quay.io
-CALICO_RUST_BUILD_IMAGE = docker.io/calico/rust-build:calico-rust-build
+CALICO_RUST_BUILD_IMAGE = docker.io/calico/rust-build:1.91.1
 
 ##############################################################################
 # Include lib.Makefile before anything else
