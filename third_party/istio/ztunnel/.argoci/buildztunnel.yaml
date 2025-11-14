@@ -32,7 +32,7 @@ spec:
             - secretRef:
                 name: marvin-github-ssh-private-key
             - secretRef:
-                name: quay-robot-semaphore-v2
+                name: quay-repo-push-access-public-repos
             - secretRef:
                 name: docker-hub
 
