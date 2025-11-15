@@ -409,6 +409,10 @@ func (r *DefaultRuleRenderer) PolicyGroupToIptablesChains(group *PolicyGroup) []
 	const returnStride = 5
 	seenNonStagedPolThisStride := false
 	for i, polName := range group.PolicyNames {
+		if model.PolicyIsStaged(polName) {
+			logrus.Debugf("Skip programming staged policy %v", polName)
+			continue
+		}
 		if i != 0 && i%returnStride == 0 && seenNonStagedPolThisStride {
 			// If policy makes a verdict (i.e. the pass or accept bit is
 			// non-zero) return to the per-endpoint chain.  Note: the per-endpoint
@@ -736,6 +740,10 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				if polGroup.ShouldBeInlined() {
 					// Group is too small to have its own chain.
 					for _, p := range polGroup.PolicyNames {
+						if model.PolicyIsStaged(p) {
+							logrus.Debugf("Skip programming staged policy %v", p)
+							continue
+						}
 						chainsToJumpTo = append(chainsToJumpTo, PolicyChainName(
 							policyPrefix,
 							&types.PolicyID{Tier: tier.Name, Name: p},
@@ -986,7 +994,16 @@ func (g *PolicyGroup) ChainName() string {
 }
 
 func (g *PolicyGroup) ShouldBeInlined() bool {
-	return len(g.PolicyNames) <= 1
+	var count int
+	for _, name := range g.PolicyNames {
+		if !model.PolicyIsStaged(name) {
+			count++
+			if count > 1 {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (g *PolicyGroup) HasNonStagedPolicies() bool {

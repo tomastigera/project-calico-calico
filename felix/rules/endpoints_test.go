@@ -1470,8 +1470,6 @@ var _ = table.DescribeTable("PolicyGroup chains",
 		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
-			jumpToPolicyGroup("cali-po-default/staged:a", 0),
-			jumpToPolicyGroup("cali-po-default/staged:b", 0),
 			jumpToPolicyGroup("cali-po-default/c", 0),
 			jumpToPolicyGroup("cali-po-default/d", 0x98),
 			jumpToPolicyGroup("cali-po-default/e", 0x98),
@@ -1496,11 +1494,7 @@ var _ = table.DescribeTable("PolicyGroup chains",
 		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
-			jumpToPolicyGroup("cali-po-default/staged:a", 0),
-			jumpToPolicyGroup("cali-po-default/staged:b", 0),
-			jumpToPolicyGroup("cali-po-default/staged:c", 0),
 			jumpToPolicyGroup("cali-po-default/d", 0),
-			jumpToPolicyGroup("cali-po-default/staged:e", 0x98),
 			{
 				Match:   Match().MarkNotClear(0x98),
 				Action:  ReturnAction{},
@@ -1520,11 +1514,6 @@ var _ = table.DescribeTable("PolicyGroup chains",
 		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
-			jumpToPolicyGroup("cali-po-default/staged:a", 0),
-			jumpToPolicyGroup("cali-po-default/staged:b", 0),
-			jumpToPolicyGroup("cali-po-default/staged:c", 0),
-			jumpToPolicyGroup("cali-po-default/staged:d", 0),
-			jumpToPolicyGroup("cali-po-default/staged:e", 0),
 			jumpToPolicyGroup("cali-po-default/f", 0),
 			jumpToPolicyGroup("cali-po-default/g", 0x98),
 		},
@@ -1961,9 +1950,8 @@ func (b *ruleBuilder) matchPolicies() []generictables.Rule {
 	var endOfTierDrop bool
 	// Add rules for policy groups.
 	for _, g := range b.policyGroups {
-		rules = append(rules, jumpToPolicyGroup(g.ChainName(), 0x10))
-
 		if g.HasNonStagedPolicies() {
+			rules = append(rules, jumpToPolicyGroup(g.ChainName(), 0x10))
 			rules = append(rules, returnIfAccepted())
 			endOfTierDrop = true
 		}
@@ -1971,6 +1959,11 @@ func (b *ruleBuilder) matchPolicies() []generictables.Rule {
 
 	// Add rules for policies.
 	for _, p := range b.policies {
+		if strings.Contains(p, "staged:") {
+			// Skip staged policies.
+			continue
+		}
+		endOfTierDrop = true
 		target := fmt.Sprintf("cali-pi-default/%v", p)
 		if b.egress {
 			target = fmt.Sprintf("cali-po-default/%v", p)
@@ -1987,10 +1980,8 @@ func (b *ruleBuilder) matchPolicies() []generictables.Rule {
 				Action: NoTrackAction{},
 			})
 		}
-		if !strings.Contains(p, "staged:") {
-			endOfTierDrop = true
-			rules = append(rules, returnIfAccepted())
-		}
+
+		rules = append(rules, returnIfAccepted())
 	}
 
 	// No drop actions or profiles in raw table.
