@@ -94,7 +94,7 @@
       always:
         commands:
           - ../.semaphore/vms/publish-artifacts
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+          - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
           - test-results publish ./report/*.xml --name "node-kind-tests" || true
     secrets:
       - name: google-service-account-for-gcr
