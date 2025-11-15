@@ -94,7 +94,7 @@ bin/ztunnel-$(ARCH): $(ZTUNNEL_DOWNLOADED)
 			-v $(CURDIR)/ztunnel:/work \
 			-e CARGO_TARGET_DIR=/work/target \
 			$(CALICO_RUST_BUILD_IMAGE) \
-			sh -c '. /etc/profile.d/rust.sh && cd /work && cargo build --release' && \
+			sh -c 'export PATH=/usr/local/rustup/toolchains/*/bin:$$PATH; cd /work && cargo build --release' && \
 		echo "Copying binary from build directory..." && \
 		cp ztunnel/target/release/ztunnel bin/ztunnel-$(ARCH) && \
 		chmod +x bin/ztunnel-$(ARCH) && \
