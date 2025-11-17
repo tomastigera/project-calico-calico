@@ -32,6 +32,6 @@ blocks:
       jobs:
         - name: Clean up GCE instances
           commands:
-            - ./.semaphore/clean-up-vms ${VM_PREFIX}
+            - ./.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
