@@ -54,8 +54,3 @@ metadata.yaml
 *.log
 /* Created by libcalico-go UTs */
 ut-tmp-dir
-
-# local files
-.local
-.claude
-.env
