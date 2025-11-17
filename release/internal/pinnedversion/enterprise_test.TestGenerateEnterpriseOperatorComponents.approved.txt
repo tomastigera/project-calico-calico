@@ -117,6 +117,9 @@ components:
   intrusion-detection-controller:
     version: v3.22.0
     image: intrusion-detection-controller
+  istio-ztunnel:
+    version: v3.22.0
+    image: istio-ztunnel
   key-cert-provisioner:
     version: v3.22.0
     image: key-cert-provisioner
