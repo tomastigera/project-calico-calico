@@ -340,6 +340,7 @@ CALICO_BASE ?= $(UBI_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
+CALICO_BASE_UBI10 ?= calico/base:$(CALICO_BASE_UBI10_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -352,6 +353,7 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
+	--build-arg CALICO_BASE_UBI10=$(CALICO_BASE_UBI10) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
@@ -496,6 +498,7 @@ define update_calico_base_pin
 	bash -c '\
 		if [[ "$(new_ver)" > "$(old_ver)" ]]; then \
 			sed -i "s/^CALICO_BASE_VER[[:space:]]*=.*/CALICO_BASE_VER=$(new_ver)/" $(1); \
+			sed -i "s/^CALICO_BASE_UBI10_VER[[:space:]]*=.*/CALICO_BASE_UBI10_VER=$(subst ubi9,ubi10,$(new_ver))/" $(1); \
 			echo "CALICO_BASE_VER is updated to $(new_ver)"; \
 		else \
 			echo "no need to update CALICO_BASE_VER"; \

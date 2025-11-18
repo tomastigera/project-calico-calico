@@ -1,6 +1,6 @@
 # Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE
+ARG CALICO_BASE_UBI10
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
@@ -37,10 +37,8 @@ COPY --from=elastic /usr/sbin/chroot /usr/sbin/chroot
 COPY --from=elastic /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=elastic /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=elastic /lib64/libcap.so.2 /lib64/libcap.so.2
-COPY --from=elastic /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=elastic /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=elastic /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=elastic /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=elastic /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 
 # Required by jvm
@@ -65,7 +63,7 @@ COPY --from=elastic /usr/bin/tini /usr/bin/tini
 # Tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 
-FROM ${CALICO_BASE}
+FROM ${CALICO_BASE_UBI10}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin
