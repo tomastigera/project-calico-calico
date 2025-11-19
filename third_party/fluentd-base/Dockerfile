@@ -32,10 +32,10 @@ RUN gem install async -v 2.24.0 && \
        gem install rexml -v 3.4.2
 
 # Calico Enterprise dependencies
-RUN gem install elasticsearch-api -v 8.19.0 && \
+RUN gem install elasticsearch-api -v 8.19.2 && \
        gem install elasticsearch-transport -v 7.17.11 && \
        gem install elasticsearch-xpack -v 7.17.11 && \
-       gem install elasticsearch -v 8.19.1 && \
+       gem install elasticsearch -v 8.19.2 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && \
        gem install fluent-plugin-elasticsearch -v 6.0.0 && \
        gem install fluent-plugin-prometheus -v 2.2.1 && \
