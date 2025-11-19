@@ -54,7 +54,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 # Note: OS is always set on Windows
 ifeq ($(OS),Windows_NT)
 BUILDARCH = x86_64
-BUILDOS = x86_64
+BUILDOS = Windows
 else
 BUILDARCH ?= $(shell uname -m)
 BUILDOS ?= $(shell uname -s | tr A-Z a-z)
@@ -1360,18 +1360,16 @@ check-dirty:
 
 .PHONY: bin/crane
 
-# This setup is used to download and install the 'crane' binary into the local bin/ directory.
-# The binary will be placed at: ./bin/crane (or ./bin/crane.exe)
+# This setup is used to download and install the `crane` binary into $(REPOROOT)/bin/crane (or crane.exe for Windows).
 
 .PHONY: bin/crane
-CRANE_FILENAME = go-containerregistry_$(CRANE_OS)_$(CRANE_BUILDARCH).tar.gz
-CRANE_URL = https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/$(CRANE_FILENAME)
+CRANE_URL = https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/go-containerregistry_$(CRANE_OS)_$(CRANE_ARCH).tar.gz
 
 # Special case for Windows - we don't use this yet, it will need testing
 ifeq ($(OS),Windows_NT)
-CRANE_BUILDARCH = x86_64
-CRANE_OS = Windows
+CRANE_ARCH = x86_64
 CRANE_CMD = $(CRANE_CMD).exe
+CRANE_OS = Windows
 
 # Install crane binary into bin/
 bin/crane: $(REPO_ROOT)/bin/crane.exe
@@ -1379,20 +1377,18 @@ $(REPO_ROOT)/bin/crane.exe:
 	$(info ::: Downloading crane from $(CRANE_URL))
 	@mkdir -p $(REPO_ROOT)/bin
 	@curl -sSfL --retry 5 $(CRANE_URL) | tar zx -C $(REPO_ROOT)/bin crane.exe
-
 else
-
 # All other OSes (macos/Linux)
 # Normalize architecture for go-containerregistry filenames
-CRANE_BUILDARCH := $(shell echo $(BUILDARCH) | sed -e 's/aarch64/arm64/' -e 's/amd64/x86_64/')
-CRANE_OS := $(shell uname -s)
+CRANE_ARCH = $(subst amd64,x86_64,$(BUILDARCH))
+CRANE_OS = $(shell uname -s)
+
 # Install crane binary into bin/
 bin/crane: $(REPO_ROOT)/bin/crane
 $(REPO_ROOT)/bin/crane:
 	$(info ::: Downloading crane from $(CRANE_URL))
 	@mkdir -p $(REPO_ROOT)/bin
-	@curl -sSfL --retry 5 $(CRANE_URL) | tar zx -C $(REPO_ROOT)/bin crane
-
+	@curl -sSfL --retry 5 $(CRANE_URL) | tar xz -C $(REPO_ROOT)/bin crane
 endif # Windows_NT
 
 
