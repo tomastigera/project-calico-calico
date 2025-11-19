@@ -302,7 +302,8 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			uint log_filter_jmp,
 			uint *jumps,
 			uint *jumps6,
-			short dscp)
+			short dscp,
+			uint maglev_lut_size)
 {
 	struct cali_tc_global_data v4 = {
 		.tunnel_mtu = tmtu,
@@ -321,6 +322,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
 		.dscp = dscp,
+		.maglev_lut_size = maglev_lut_size,
 	};
 
 	strncpy(v4.iface_name, iface_name, sizeof(v4.iface_name));

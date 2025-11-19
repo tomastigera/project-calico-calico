@@ -3761,6 +3761,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.BPFMaglevMaxEndpointsPerService != nil {
+		in, out := &in.BPFMaglevMaxEndpointsPerService, &out.BPFMaglevMaxEndpointsPerService
+		*out = new(int)
+		**out = **in
+	}
+	if in.BPFMaglevMaxServices != nil {
+		in, out := &in.BPFMaglevMaxServices, &out.BPFMaglevMaxServices
+		*out = new(int)
+		**out = **in
+	}
 	return
 }
 

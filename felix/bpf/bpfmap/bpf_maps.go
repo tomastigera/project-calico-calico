@@ -50,6 +50,7 @@ type IPMaps struct {
 	SrMsgMap     maps.Map
 	CtNatsMap    maps.Map
 	CtCleanupMap maps.Map
+	MaglevMap    maps.Map
 }
 
 type CommonMaps struct {
@@ -128,7 +129,7 @@ func getIPMaps(ipFamily int) *IPMaps {
 		CtCleanupMap: getmapWithExistsCheck(conntrack.CleanupMap, conntrack.CleanupMapV6),
 		SrMsgMap:     getmap(nat.SendRecvMsgMap, nat.SendRecvMsgMapV6),
 		CtNatsMap:    getmap(nat.AllNATsMsgMap, nat.AllNATsMsgMapV6),
-	}
+		MaglevMap:    getmapWithExistsCheck(nat.MaglevMap, nat.MaglevMapV6)}
 }
 
 func CreateBPFIPSetsMap(ipFamily proto.IPVersion) (maps.Map, error) {
@@ -214,6 +215,7 @@ func (i *IPMaps) slice() []maps.Map {
 		i.CtCleanupMap,
 		i.SrMsgMap,
 		i.CtNatsMap,
+		i.MaglevMap,
 	}
 }
 

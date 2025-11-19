@@ -44,6 +44,7 @@ const (
 	SubProgNewFlow
 	SubProgIPFrag
 	SubProgDNSParser
+	SubProgMaglev
 	SubProgTCMainDebug
 
 	SubProgXDPMain    = SubProgTCMain
@@ -63,6 +64,7 @@ var tcSubProgNames = []string{
 	"calico_tc_skb_new_flow_entrypoint",
 	"calico_tc_skb_ipv4_frag",
 	"calico_tc_dns_parser",
+	"calico_tc_maglev",
 }
 
 var xdpSubProgNames = []string{
@@ -243,6 +245,10 @@ func (pm *ProgramsMap) allocateLayout(at AttachType, obj *libbpf.Obj) (Layout, e
 		}
 
 		if SubProg(idx) == SubProgIPFrag && !at.hasIPDefrag() {
+			continue
+		}
+
+		if SubProg(idx) == SubProgMaglev && !at.hasMaglev() {
 			continue
 		}
 
