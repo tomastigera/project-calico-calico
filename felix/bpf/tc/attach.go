@@ -78,6 +78,7 @@ type AttachPoint struct {
 	IngressPacketRateConfigured bool
 	EgressPacketRateConfigured  bool
 	DSCP                        int8
+	MaglevLUTSize               uint32
 
 	// EE only
 	VethNS                  uint16
@@ -501,16 +502,17 @@ func (ap *AttachPoint) Config() string {
 
 func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 	globalData := &libbpf.TcGlobalData{
-		ExtToSvcMark: ap.ExtToServiceConnmark,
-		VxlanPort:    ap.VXLANPort,
-		Tmtu:         ap.TunnelMTU,
-		PSNatStart:   ap.PSNATStart,
-		PSNatLen:     ap.PSNATEnd,
-		WgPort:       ap.WgPort,
-		Wg6Port:      ap.Wg6Port,
-		NatIn:        ap.NATin,
-		NatOut:       ap.NATout,
-		LogFilterJmp: uint32(ap.LogFilterIdx),
+		ExtToSvcMark:  ap.ExtToServiceConnmark,
+		VxlanPort:     ap.VXLANPort,
+		Tmtu:          ap.TunnelMTU,
+		PSNatStart:    ap.PSNATStart,
+		PSNatLen:      ap.PSNATEnd,
+		WgPort:        ap.WgPort,
+		Wg6Port:       ap.Wg6Port,
+		NatIn:         ap.NATin,
+		NatOut:        ap.NATout,
+		LogFilterJmp:  uint32(ap.LogFilterIdx),
+		MaglevLUTSize: ap.MaglevLUTSize,
 
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,

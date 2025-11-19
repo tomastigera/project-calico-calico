@@ -409,7 +409,8 @@ type bpfEndpointManager struct {
 	updateRateLimitedLog *logutilslc.RateLimitedLogger
 	dnsInlineProcessing  bool
 
-	QoSMap maps.MapWithUpdateWithFlags
+	QoSMap        maps.MapWithUpdateWithFlags
+	maglevLUTSize int
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -540,7 +541,8 @@ func NewBPFEndpointManager(
 		profiling:        config.BPFProfiling,
 		bpfAttachType:    config.BPFAttachType,
 
-		QoSMap: bpfmaps.CommonMaps.QoSMap,
+		QoSMap:        bpfmaps.CommonMaps.QoSMap,
+		maglevLUTSize: config.BPFMaglevLUTSize,
 	}
 
 	m.policyTrampolineStride.Store(int32(asm.TrampolineStrideDefault))
@@ -3103,6 +3105,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 		AttachPoint: bpf.AttachPoint{
 			Iface: ifaceName,
 		},
+		MaglevLUTSize: uint32(m.maglevLUTSize),
 	}
 
 	ap.Type = m.getEndpointType(ifaceName)

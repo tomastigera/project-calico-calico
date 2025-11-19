@@ -123,6 +123,7 @@
 #endif
 
 #define CALI_FIB_ENABLED (CALI_F_TO_HOST || CALI_F_TO_HEP)
+#define HAS_MAGLEV        (CALI_F_FROM_HEP && CALI_F_MAIN)
 
 #define COMPILE_TIME_ASSERT(expr) {typedef char array[(expr) ? 1 : -1];}
 static CALI_BPF_INLINE void __compile_asserts(void) {
