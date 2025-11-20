@@ -149,7 +149,7 @@
     ui-apis:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     upstream-fluentd:
-      version: 1.19.0
+      version: 1.19.1
     voltron:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     waf-http-filter:

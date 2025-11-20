@@ -55,7 +55,7 @@ var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	eckElasticsearchComponentName:         {Version: "8.18.8"},
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
 	eckKibanaComponentName:                {Version: "8.18.8"},
-	upstreamFluentdComponentName:          {Version: "1.19.0"},
+	upstreamFluentdComponentName:          {Version: "1.19.1"},
 }
 
 var (
