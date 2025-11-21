@@ -23,7 +23,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
@@ -726,7 +725,7 @@ func startWorkloadsandWaitForPolicy(
 	felixes []*infrastructure.Felix,
 	w, hostW []*workload.Workload,
 	protocol string,
-	client client.Interface,
+	client clientv3.Interface,
 ) {
 	createWorkloads(infra, felixes, w, hostW, protocol, client)
 	waitForPolicy(felixes, w)
@@ -737,7 +736,7 @@ func createWorkloads(
 	felixes []*infrastructure.Felix,
 	w, hostW []*workload.Workload,
 	protocol string,
-	client client.Interface,
+	client clientv3.Interface,
 ) {
 	// Create workloads, using the default profile.  One on each "host".
 	for ii := range w {

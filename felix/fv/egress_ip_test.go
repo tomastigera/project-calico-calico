@@ -601,7 +601,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								gw = makeGatewayWithLabel(tc.Felixes[0], gwAddr, gwName, l)
 							} else {
 								gw = makeGatewayWithLabel(tc.Felixes[1], gwAddr, gwName, l)
-								tc.Felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
 							}
 							if l == "blue" {
 								blueGWs = append(blueGWs, gw)
