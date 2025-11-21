@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM registry.access.redhat.com/ubi9/ubi
+FROM registry.access.redhat.com/ubi9/ubi AS builder
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1
@@ -15,6 +15,8 @@ RUN dnf upgrade -y && dnf install -y \
        make \
        openssl-devel \
        zlib-devel
+
+RUN dnf clean all
 
 RUN mkdir -p /ruby-build && \
        curl -sfL https://cache.ruby-lang.org/pub/ruby/3.4/ruby-${RUBY_VERSION}.tar.gz | tar xz --strip-components=1 -C /ruby-build && \
@@ -65,3 +67,7 @@ RUN mkdir -p /fluentd/etc/output_waf
 RUN mkdir -p /fluentd/log
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb
+
+FROM scratch
+
+COPY --from=builder / /
