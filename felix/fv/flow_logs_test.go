@@ -155,6 +155,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range wlHost1 {
 			wIP := fmt.Sprintf("10.65.0.%d", ii)
 			wName := fmt.Sprintf("wl-host1-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[0].Hostname, client)
 			wlHost1[ii] = workload.Run(tc.Felixes[0], wName, "default", wIP, "8055", "tcp")
 			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
 			wlHost1[ii].ConfigureInInfra(infra)
@@ -164,6 +165,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range wlHost2 {
 			wIP := fmt.Sprintf("10.65.1.%d", ii)
 			wName := fmt.Sprintf("wl-host2-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[1].Hostname, client)
 			wlHost2[ii] = workload.Run(tc.Felixes[1], wName, "default", wIP, "8055", "tcp")
 			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
 			wlHost2[ii].ConfigureInInfra(infra)
@@ -1037,7 +1039,6 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 
 		opts.EnableIPv6 = true
 		opts.IPIPMode = api.IPIPModeNever
-		opts.SimulateBIRDRoutes = true
 		opts.NATOutgoingEnabled = true
 		opts.AutoHEPsEnabled = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
@@ -1049,14 +1050,17 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 
 		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
-		addWorkload := func(run bool, ii, wi, port int, labels map[string]string) *workload.Workload {
+		addWorkload := func(hostname string, ii, wi, port int, labels map[string]string) *workload.Workload {
 			if labels == nil {
 				labels = make(map[string]string)
 			}
 
 			wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
+			wIPv6 := fmt.Sprintf("dead:beef::%d:%d", ii, wi+2)
 			wName := fmt.Sprintf("w%d%d", ii, wi)
 
+			infrastructure.AssignIP(wName, wIP, hostname, client)
+			infrastructure.AssignIP(wName, wIPv6, hostname, client)
 			w := workload.New(tc.Felixes[ii], wName, "default",
 				wIP, strconv.Itoa(port), "tcp", workload.WithIPv6Address(net.ParseIP(fmt.Sprintf("dead:beef::%d:%d", ii, wi+2)).String()))
 
@@ -1064,18 +1068,16 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 			labels["workload"] = "regular"
 
 			w.WorkloadEndpoint.Labels = labels
-			if run {
-				err := w.Start(infra)
-				Expect(err).NotTo(HaveOccurred())
-				w.ConfigureInInfra(infra)
-			}
+			err := w.Start(infra)
+			Expect(err).NotTo(HaveOccurred())
+			w.ConfigureInInfra(infra)
 			return w
 		}
 
 		for ii := range tc.Felixes {
 			// Two workloads on each host so we can check the same host and other host cases.
-			w[ii][0] = addWorkload(true, ii, 0, 8055, map[string]string{"port": "8055"})
-			w[ii][1] = addWorkload(true, ii, 1, 8056, nil)
+			w[ii][0] = addWorkload(tc.Felixes[ii].Hostname, ii, 0, 8055, map[string]string{"port": "8055"})
+			w[ii][1] = addWorkload(tc.Felixes[ii].Hostname, ii, 1, 8056, nil)
 		}
 
 		err = infra.AddDefaultDeny()
@@ -1260,12 +1262,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-1", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-3", "10.65.1.2", tc.Felixes[1].Hostname, client)
 		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
 
