@@ -746,7 +746,8 @@ func (m *bpfEndpointManager) repinJumpMaps() error {
 	}
 
 	mps := []maps.Map{
-		m.commonMaps.ProgramsMap,
+		m.commonMaps.ProgramsMap[0],
+		m.commonMaps.ProgramsMap[1],
 		m.commonMaps.JumpMap,
 		m.commonMaps.XDPProgramsMap,
 		m.commonMaps.XDPJumpMap,
@@ -3182,6 +3183,11 @@ func (d *bpfEndpointManagerDataplane) configureTCAttachPoint(policyDirection Pol
 		}
 	}
 
+	ap.ProgramsMap = d.mgr.commonMaps.ProgramsMap[hook.Ingress]
+	if ap.Hook == hook.Egress {
+		ap.ProgramsMap = d.mgr.commonMaps.ProgramsMap[hook.Egress]
+	}
+
 	if d.mgr.FlowLogsEnabled() {
 		ap.FlowLogsEnabled = true
 	}
@@ -3817,10 +3823,8 @@ func (m *bpfEndpointManager) ensureQdisc(iface string) (bool, error) {
 	return tc.EnsureQdisc(iface)
 }
 
-func (m *bpfEndpointManager) loadTCObj(at hook.AttachType) (hook.Layout, error) {
-	pm := m.commonMaps.ProgramsMap.(*hook.ProgramsMap)
-
-	layout, err := pm.LoadObj(at)
+func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap) (hook.Layout, error) {
+	layout, err := pm.LoadObj(at, string(m.bpfAttachType))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load obj for %#v: %w", at, err)
 	}
@@ -3830,7 +3834,7 @@ func (m *bpfEndpointManager) loadTCObj(at hook.AttachType) (hook.Layout, error) 
 	}
 
 	at.LogLevel = "off"
-	layoutNoDebug, err := pm.LoadObj(at)
+	layoutNoDebug, err := pm.LoadObj(at, string(m.bpfAttachType))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load non-debug obj for %#v: %w", at, err)
 	}
@@ -3855,12 +3859,12 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		policyIdx := aptc.PolicyIdxV4
 		ap.Log().Debugf("ensureProgramLoaded %d", ipFamily)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if aptc.HookLayoutV6, err = m.loadTCObj(at); err != nil {
+			if aptc.HookLayoutV6, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 			policyIdx = aptc.PolicyIdxV6
 		} else {
-			if aptc.HookLayoutV4, err = m.loadTCObj(at); err != nil {
+			if aptc.HookLayoutV4, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 		}
@@ -3887,11 +3891,11 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		at.Family = int(ipFamily)
 		pm := m.commonMaps.XDPProgramsMap.(*hook.ProgramsMap)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if apxdp.HookLayoutV6, err = pm.LoadObj(at); err != nil {
+			if apxdp.HookLayoutV6, err = pm.LoadObj(at, ""); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		} else {
-			if apxdp.HookLayoutV4, err = pm.LoadObj(at); err != nil {
+			if apxdp.HookLayoutV4, err = pm.LoadObj(at, ""); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		}
@@ -4045,6 +4049,7 @@ func (m *bpfEndpointManager) updatePolicyProgram(rules polprog.Rules, polDir str
 		opts = append(opts, polprog.WithAllowDenyJumps(allow, deny))
 	}
 	insns, err := m.doUpdatePolicyProgram(
+		ap,
 		ap.HookName(),
 		progName,
 		ap.PolicyJmp(ipFamily),
@@ -4064,8 +4069,8 @@ func (m *bpfEndpointManager) updatePolicyProgram(rules polprog.Rules, polDir str
 }
 
 func (m *bpfEndpointManager) loadTCLogFilter(ap *tc.AttachPoint) (fileDescriptor, int, error) {
-	logFilter, err := filter.New(ap.Type, 64, ap.LogFilter,
-		m.commonMaps.ProgramsMap.MapFD(), m.commonMaps.StateMap.MapFD())
+	programsMapFD := ap.ProgramsMap.MapFD()
+	logFilter, err := filter.New(ap.Type, 64, ap.LogFilter, programsMapFD, m.commonMaps.StateMap.MapFD())
 	if err != nil {
 		return nil, 0, err
 	}
@@ -4187,6 +4192,7 @@ func (m *bpfEndpointManager) loadPolicyProgram(
 }
 
 func (m *bpfEndpointManager) doUpdatePolicyProgram(
+	ap attachPoint,
 	hk hook.Hook,
 	progName string,
 	polJumpMapIdx int,
@@ -4198,9 +4204,9 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 		opts = append(opts, polprog.WithPolicyDebugEnabled())
 	}
 
-	staticProgsMap := m.commonMaps.ProgramsMap
-	if hk == hook.XDP {
-		staticProgsMap = m.commonMaps.XDPProgramsMap
+	staticProgsMap := m.commonMaps.XDPProgramsMap
+	if apTc, ok := ap.(*tc.AttachPoint); ok {
+		staticProgsMap = apTc.ProgramsMap
 	}
 
 	// If we have to break a program up into sub-programs to please the
