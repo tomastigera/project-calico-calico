@@ -54,17 +54,17 @@ type IPMaps struct {
 }
 
 type CommonMaps struct {
-	StateMap        maps.Map
-	IfStateMap      maps.Map
-	RuleCountersMap maps.Map
-	CountersMap     maps.Map
-	ProgramsMap     []maps.Map
-	JumpMap         maps.MapWithDeleteIfExists
-	XDPProgramsMap  maps.Map
-	XDPJumpMap      maps.MapWithDeleteIfExists
-	ProfilingMap    maps.Map
-	CTLBProgramsMap []maps.Map
-	QoSMap          maps.MapWithUpdateWithFlags
+	StateMap         maps.Map
+	IfStateMap       maps.Map
+	RuleCountersMap  maps.Map
+	CountersMap      maps.Map
+	ProgramsMaps     []maps.Map
+	JumpMap          maps.MapWithDeleteIfExists
+	XDPProgramsMap   maps.Map
+	XDPJumpMap       maps.MapWithDeleteIfExists
+	ProfilingMap     maps.Map
+	CTLBProgramsMaps []maps.Map
+	QoSMap           maps.MapWithUpdateWithFlags
 }
 
 type Maps struct {
@@ -88,17 +88,17 @@ func (m *Maps) Destroy() {
 
 func getCommonMaps() *CommonMaps {
 	return &CommonMaps{
-		StateMap:        state.Map(),
-		IfStateMap:      ifstate.Map(),
-		RuleCountersMap: counters.PolicyMap(),
-		CountersMap:     counters.Map(),
-		ProgramsMap:     hook.NewProgramsMap(),
-		JumpMap:         jump.Map().(maps.MapWithDeleteIfExists),
-		XDPProgramsMap:  hook.NewXDPProgramsMap(),
-		XDPJumpMap:      jump.XDPMap().(maps.MapWithDeleteIfExists),
-		ProfilingMap:    profiling.Map(),
-		QoSMap:          qos.Map().(maps.MapWithUpdateWithFlags),
-		CTLBProgramsMap: nat.ProgramsMap(),
+		StateMap:         state.Map(),
+		IfStateMap:       ifstate.Map(),
+		RuleCountersMap:  counters.PolicyMap(),
+		CountersMap:      counters.Map(),
+		ProgramsMaps:     hook.NewProgramsMaps(),
+		JumpMap:          jump.Map().(maps.MapWithDeleteIfExists),
+		XDPProgramsMap:   hook.NewXDPProgramsMap(),
+		XDPJumpMap:       jump.XDPMap().(maps.MapWithDeleteIfExists),
+		ProfilingMap:     profiling.Map(),
+		CTLBProgramsMaps: nat.ProgramsMaps(),
+		QoSMap:           qos.Map().(maps.MapWithUpdateWithFlags),
 	}
 }
 
@@ -196,8 +196,8 @@ func (c *CommonMaps) slice() []maps.Map {
 		c.ProfilingMap,
 		c.QoSMap,
 	}
-	mapslice = append(mapslice, c.ProgramsMap...)
-	mapslice = append(mapslice, c.CTLBProgramsMap...)
+	mapslice = append(mapslice, c.ProgramsMaps...)
+	mapslice = append(mapslice, c.CTLBProgramsMaps...)
 	return mapslice
 }
 
