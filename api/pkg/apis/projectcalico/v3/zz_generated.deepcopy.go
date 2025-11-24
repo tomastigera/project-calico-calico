@@ -2684,11 +2684,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.IptablesLockTimeout != nil {
-		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	if in.IptablesLockProbeInterval != nil {
 		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
 		*out = new(v1.Duration)

@@ -361,7 +361,6 @@ fv-prereqs: $(REMOTE_DEPS) \
             $(TEST_DNS_SERVER_CONTAINER_CREATED) \
             $(SCAPY_CONTAINER_CREATED) \
             $(FV_BINARY) \
-            bin/iptables-locker \
             bin/test-workload \
             bin/test-connection \
             bin/calico-bpf \
@@ -538,10 +537,6 @@ bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/tproxy/cmd'
-
-bin/iptables-locker: ../go.mod $(shell find iptables -type f -name '*.go' -print)
-	@echo Building iptables-locker...
-	$(call build_binary, "$(PACKAGE_NAME)/fv/iptables-locker", $@)
 
 bin/test-workload: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
 	@echo Building test-workload...
