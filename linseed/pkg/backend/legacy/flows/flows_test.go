@@ -1787,3 +1787,513 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLo
 func ActionPtr(val v1.FlowAction) *v1.FlowAction {
 	return &val
 }
+
+// TestL3FlowCount tests the L3 flow count API with various parameters and scenarios.
+func TestL3FlowCount(t *testing.T) {
+	RunAllModes(t, "should count flows basic", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create 5 flow logs that will aggregate into a single L3 flow
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithSourcePort(12345).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=test")
+		_ = populateFlowDataN(t, ctx, bld, client, clusterInfo, 5)
+
+		// Create intra-namespace flow (production -> production) to validate no double-counting
+		bldIntra := backendutils.NewFlowLogBuilder()
+		bldIntra.WithType("wep").
+			WithSourceNamespace("production").
+			WithDestNamespace("production").
+			WithDestName("api-*").
+			WithDestIP("10.1.0.20").
+			WithDestService("api", 8080).
+			WithDestPort(8080).
+			WithSourcePort(34567).
+			WithProtocol("tcp").
+			WithSourceName("frontend").
+			WithSourceIP("192.168.3.5").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=frontend")
+		_ = populateFlowDataN(t, ctx, bldIntra, client, clusterInfo, 3)
+
+		// Count the flows
+		opts := v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+		}
+		countResp, err := fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Len(t, countResp.NamespacedCounts, 3)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["kube-system"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["production"]) // Validates no double-counting for intra-namespace flow
+
+		// Count with a different tenant ID - should return 0
+		countResp, err = fb.Count(ctx, bapi.ClusterInfo{Tenant: "dummy", Cluster: cluster1}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Empty(t, countResp.NamespacedCounts)
+	})
+
+	RunAllModes(t, "should count flows with filtering by source type", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create WEP flows
+		bldWep := backendutils.NewFlowLogBuilder()
+		bldWep.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithSourcePort(12345).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=wep-app")
+		_ = populateFlowDataN(t, ctx, bldWep, client, clusterInfo, 3)
+
+		// Create HEP flows
+		bldHep := backendutils.NewFlowLogBuilder()
+		bldHep.WithType("hep").
+			WithSourceNamespace("production").
+			WithDestNamespace("kube-system").
+			WithDestName("api-*").
+			WithDestIP("10.0.0.20").
+			WithDestService("api", 443).
+			WithDestPort(443).
+			WithSourcePort(23456).
+			WithProtocol("tcp").
+			WithSourceName("api").
+			WithSourceIP("192.168.2.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=hep-app")
+		_ = populateFlowDataN(t, ctx, bldHep, client, clusterInfo, 2)
+
+		// Count with selector filtering for wep
+		opts := v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				SourceTypes: []v1.EndpointType{v1.WEP},
+			},
+		}
+		countResp, err := fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["kube-system"])
+
+		// Count with selector filtering for hep
+		opts.SourceTypes = []v1.EndpointType{v1.HEP}
+		countResp, err = fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["production"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["kube-system"])
+	})
+
+	RunAllModes(t, "should count flows with namespace filtering", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow 1: default -> kube-system
+		bld1 := backendutils.NewFlowLogBuilder()
+		bld1.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithSourcePort(12345).
+			WithProtocol("udp").
+			WithSourceName("app1").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=app1")
+		_ = populateFlowDataN(t, ctx, bld1, client, clusterInfo, 2)
+
+		// Create flow 2: production -> database
+		bld2 := backendutils.NewFlowLogBuilder()
+		bld2.WithType("wep").
+			WithSourceNamespace("production").
+			WithDestNamespace("database").
+			WithDestName("postgres-*").
+			WithDestIP("10.0.0.20").
+			WithDestService("postgres", 5432).
+			WithDestPort(5432).
+			WithSourcePort(23456).
+			WithProtocol("tcp").
+			WithSourceName("api").
+			WithSourceIP("192.168.2.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=api")
+		_ = populateFlowDataN(t, ctx, bld2, client, clusterInfo, 1)
+
+		// Count with source namespace match
+		opts := v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default"},
+					},
+				},
+			},
+		}
+		countResp, err := fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["kube-system"])
+
+		// Count with destination namespace match
+		opts.NamespaceMatches = []v1.NamespaceMatch{
+			{
+				Type:       v1.MatchTypeDest,
+				Namespaces: []string{"database"},
+			},
+		}
+		countResp, err = fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["production"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["database"])
+	})
+
+	RunAllModes(t, "should count flows across multiple clusters", func(t *testing.T) {
+		tenant := backendutils.RandomTenantName()
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
+
+		f := backendutils.NewFlowLogBuilder()
+		f.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithSourcePort(12345).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("app=test")
+
+		for _, info := range []struct {
+			cluster bapi.ClusterInfo
+			num     int
+		}{
+			{cluster1Info, 2},
+			{cluster2Info, 3},
+			{cluster3Info, 1},
+		} {
+			_ = populateFlowDataN(t, ctx, f.Copy(), client, info.cluster, info.num)
+		}
+
+		opts := v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+		}
+
+		// Count single cluster
+		countResp, err := fb.Count(ctx, cluster1Info, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(1), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(1), countResp.NamespacedCounts["kube-system"])
+
+		// Count multiple clusters
+		opts.SetClusters([]string{cluster2, cluster3})
+		countResp, err = fb.Count(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount) // 1 from cluster2 + 1 from cluster3
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(2), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(2), countResp.NamespacedCounts["kube-system"])
+
+		// Count all clusters
+		opts.SetAllClusters(true)
+		countResp, err = fb.Count(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(3), *countResp.GlobalCount) // 1 from cluster1 + 1 from cluster2 + 1 from cluster3
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Equal(t, int64(3), countResp.NamespacedCounts["default"])
+		require.Equal(t, int64(3), countResp.NamespacedCounts["kube-system"])
+	})
+
+	RunAllModes(t, "should return 0 count when no flows exist", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Don't create any flows, just count
+		opts := v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+		}
+		countResp, err := fb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount)
+		require.False(t, countResp.GlobalCountTruncated)
+		require.NotNil(t, countResp.NamespacedCounts)
+		require.Empty(t, countResp.NamespacedCounts)
+	})
+
+	RunAllModes(t, "should error with no cluster ID", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{}
+		opts := &v1.L3FlowCountParams{}
+		countResp, err := fb.Count(ctx, clusterInfo, opts)
+		require.Error(t, err)
+		require.Nil(t, countResp)
+	})
+
+	// The following tests cover different combinations of page size, max count, and total count to test pagination and truncation.
+	setupTruncationFlows := func(totalCount int64) bapi.ClusterInfo {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		for i := int64(0); i < totalCount; i++ {
+			bld := backendutils.NewFlowLogBuilder()
+			bld.WithType("wep").
+				WithSourceNamespace(fmt.Sprintf("namespace-%d", i)).
+				WithDestNamespace("kube-system").
+				WithDestName("kube-dns-*").
+				WithDestIP(fmt.Sprintf("10.0.0.%d", i+10)).
+				WithDestService("kube-dns", int(53+i)).
+				WithDestPort(int(53 + i)).
+				WithSourcePort(int(10000 + i)).
+				WithProtocol("udp").
+				WithSourceName(fmt.Sprintf("app-%d", i)).
+				WithSourceIP(fmt.Sprintf("192.168.1.%d", i+1)).
+				WithRandomFlowStats().WithRandomPacketStats().
+				WithReporter("src").WithAction("allowed").
+				WithSourceLabels(fmt.Sprintf("app=app-%d", i))
+			_ = populateFlowDataN(t, ctx, bld, client, clusterInfo, 1)
+		}
+
+		return clusterInfo
+	}
+
+	createCountRequest := func(max, pageSize int64) *v1.L3FlowCountParams {
+		return &v1.L3FlowCountParams{
+			L3FlowParams: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+					MaxPageSize: int(pageSize),
+				},
+			},
+			MaxGlobalCount: &max,
+		}
+	}
+
+	expectResponse := func(t *testing.T, response *v1.CountResponse, err error, expectedCount int64, expectedTruncated bool) {
+		require.NoError(t, err)
+		if expectedTruncated {
+			require.NotNil(t, response.GlobalCount)
+			require.Equal(t, expectedCount, *response.GlobalCount)
+			require.True(t, response.GlobalCountTruncated)
+			require.Nil(t, response.NamespacedCounts)
+		} else {
+			require.NotNil(t, response.GlobalCount)
+			require.Equal(t, expectedCount, *response.GlobalCount)
+			require.False(t, response.GlobalCountTruncated)
+			require.NotNil(t, response.NamespacedCounts)
+			require.Len(t, response.NamespacedCounts, int(expectedCount+1)) // n source namespaces + kube-system
+			for i := int64(0); i < expectedCount; i++ {
+				require.Equal(t, int64(1), response.NamespacedCounts[fmt.Sprintf("namespace-%d", i)])
+			}
+			require.Equal(t, expectedCount, response.NamespacedCounts["kube-system"])
+		}
+	}
+
+	RunAllModes(t, "should not truncate when max < total count and page size > total count", func(t *testing.T) {
+		maxCount := int64(3)
+		total := int64(5)
+		pageSize := int64(10)
+
+		clusterInfo := setupTruncationFlows(total)
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// Expect global count equal to total count, with no signaled truncation.
+		expectResponse(t, countResp, err, total, false)
+	})
+
+	RunAllModes(t, "should not truncate when max < total count and page size = total count", func(t *testing.T) {
+		maxCount := int64(3)
+		total := int64(10)
+		pageSize := int64(10)
+
+		clusterInfo := setupTruncationFlows(total)
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// Since page size is equal to the total count, we expect no truncation. In reality, the handler does return the full
+		// count but sets truncated to true. This is due to a limitation of how pagination works in ES - the last page is always
+		// empty. Usually we can get around this by checking if the returned records for a page are less than the max page size,
+		// and thus avoid the last page. But in this case, the returned record count for the last non-empty page equals the page
+		// size, so we don't know if the next page will be empty or not. Thus we terminate pagination 'early' and signal truncation.
+		expectResponse(t, countResp, err, total, true)
+	})
+
+	RunAllModes(t, "should not truncate when max < total count and max is not divisible by page size and max is on the last page", func(t *testing.T) {
+		maxCount := int64(8)
+		total := int64(9)
+		pageSize := int64(5)
+
+		clusterInfo := setupTruncationFlows(total)
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// Expect global count equal to total count, with no signaled truncation.
+		expectResponse(t, countResp, err, total, false)
+	})
+
+	RunAllModes(t, "should truncate when max < total count and max is divisible by page size", func(t *testing.T) {
+		maxCount := int64(6)
+		total := int64(10)
+		pageSize := int64(3)
+
+		clusterInfo := setupTruncationFlows(total)
+
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// We'll hit the max before we hit the last page. The returned count will be the count up to the last page: 6.
+		expectResponse(t, countResp, err, int64(6), true)
+	})
+
+	RunAllModes(t, "should truncate when max < total count and max is not divisible by page and max is not on the last page", func(t *testing.T) {
+		maxCount := int64(5)
+		total := int64(10)
+		pageSize := int64(3)
+
+		clusterInfo := setupTruncationFlows(total)
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// We'll hit the max before we hit the last page. The returned count will be the count up to the last page: 6.
+		expectResponse(t, countResp, err, int64(6), true)
+	})
+
+	RunAllModes(t, "should not truncate when max = total count", func(t *testing.T) {
+		maxCount := int64(7)
+		total := int64(7)
+		pageSize := int64(3)
+
+		clusterInfo := setupTruncationFlows(total)
+
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// Expect global count equal to total count, with no signaled truncation.
+		expectResponse(t, countResp, err, total, false)
+	})
+
+	RunAllModes(t, "should not truncate when max > total count", func(t *testing.T) {
+		maxCount := int64(10)
+		total := int64(5)
+		pageSize := int64(3)
+
+		clusterInfo := setupTruncationFlows(total)
+
+		countReq := createCountRequest(maxCount, pageSize)
+		countResp, err := fb.Count(ctx, clusterInfo, countReq)
+
+		// Expect global count equal to total count, with no signaled truncation.
+		expectResponse(t, countResp, err, total, false)
+	})
+}

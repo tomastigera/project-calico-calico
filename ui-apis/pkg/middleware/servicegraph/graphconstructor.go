@@ -20,10 +20,13 @@ import (
 var K8SAllSelector = "all()"
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
-func GetServiceGraphResponse(sgd *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
+func GetServiceGraphResponse(sgd *ServiceGraphData, v *ParsedView, constructorOpts ...ServiceGraphConstructorOption) (*v1.ServiceGraphResponse, error) {
 
 	// The bulk of the work is done in the graph constructor.
-	s := newServiceGraphConstructor(sgd, v)
+	s, err := newServiceGraphConstructor(sgd, v, constructorOpts...)
+	if err != nil {
+		return nil, err
+	}
 
 	// Populate the graph construction data by loading the flows.
 	s.populate()
@@ -176,19 +179,43 @@ type serviceGraphConstructionData struct {
 
 	// The view selectors.
 	viewSelectors v1.GraphSelectors
+
+	// Whether to exclude stats from flows during graph construction.
+	excludeStatsFromFlows bool
+}
+
+// ServiceGraphConstructorOption is a functional option for configuring serviceGraphConstructionData.
+type ServiceGraphConstructorOption func(*serviceGraphConstructionData) error
+
+// WithExcludeStatsFromFlows configures whether to exclude stats from flows during graph construction.
+func WithExcludeStatsFromFlows(exclude bool) ServiceGraphConstructorOption {
+	return func(s *serviceGraphConstructionData) error {
+		s.excludeStatsFromFlows = exclude
+		return nil
+	}
 }
 
 // newServiceGraphConstructor initializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
-	return &serviceGraphConstructionData{
-		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
-		nodesMap:     make(map[v1.GraphNodeID]*trackedNode),
-		edgesMap:     make(map[v1.GraphEdgeID]*v1.GraphEdge),
-		serviceEdges: make(map[*trackedNode]*serviceEdges),
-		sgd:          sgd,
-		view:         v,
-		selh:         NewSelectorHelper(v, sgd.NameHelper, sgd.ServiceGroups),
+func newServiceGraphConstructor(sgd *ServiceGraphData, v *ParsedView, opts ...ServiceGraphConstructorOption) (*serviceGraphConstructionData, error) {
+	s := &serviceGraphConstructionData{
+		groupsMap:             make(map[v1.GraphNodeID]*trackedGroup),
+		nodesMap:              make(map[v1.GraphNodeID]*trackedNode),
+		edgesMap:              make(map[v1.GraphEdgeID]*v1.GraphEdge),
+		serviceEdges:          make(map[*trackedNode]*serviceEdges),
+		sgd:                   sgd,
+		view:                  v,
+		selh:                  NewSelectorHelper(v, sgd.NameHelper, sgd.ServiceGroups),
+		excludeStatsFromFlows: false,
 	}
+
+	// Apply options
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
 }
 
 // populate loads the flow data to populate the graph construction data.
@@ -273,19 +300,21 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	//
 	// Track source and dest from the top of the hiearchy applying to the "within" set when source and dest are the
 	// same, but then applying to the relevant ingress or egress set when they become divergent.
-	maxIdx := math.MinInt(len(srcEpHierarchy), len(dstEpHierarchy))
-	var divergentIdx int
-	for divergentIdx = 0; divergentIdx < maxIdx; divergentIdx++ {
-		if srcEpHierarchy[divergentIdx] != dstEpHierarchy[divergentIdx] {
-			break
+	if !s.excludeStatsFromFlows {
+		maxIdx := math.MinInt(len(srcEpHierarchy), len(dstEpHierarchy))
+		var divergentIdx int
+		for divergentIdx = 0; divergentIdx < maxIdx; divergentIdx++ {
+			if srcEpHierarchy[divergentIdx] != dstEpHierarchy[divergentIdx] {
+				break
+			}
+			srcEpHierarchy[divergentIdx].graphNode.IncludeStatsWithin(flow.Stats)
 		}
-		srcEpHierarchy[divergentIdx].graphNode.IncludeStatsWithin(flow.Stats)
-	}
-	for i := divergentIdx; i < len(srcEpHierarchy); i++ {
-		srcEpHierarchy[i].graphNode.IncludeStatsEgress(flow.Stats)
-	}
-	for i := divergentIdx; i < len(dstEpHierarchy); i++ {
-		dstEpHierarchy[i].graphNode.IncludeStatsIngress(flow.Stats)
+		for i := divergentIdx; i < len(srcEpHierarchy); i++ {
+			srcEpHierarchy[i].graphNode.IncludeStatsEgress(flow.Stats)
+		}
+		for i := divergentIdx; i < len(dstEpHierarchy); i++ {
+			dstEpHierarchy[i].graphNode.IncludeStatsIngress(flow.Stats)
+		}
 	}
 
 	// If the source and dest group are the same and the retain edges flags are not set for the nodes,

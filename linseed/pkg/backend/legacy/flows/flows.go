@@ -254,6 +254,13 @@ func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
 	}
 }
 
+func (b *flowBackend) countQuery() *lmaelastic.CompositeAggregationQuery {
+	return &lmaelastic.CompositeAggregationQuery{
+		Name:                    "buckets",
+		AggCompositeSourceInfos: b.compositeSources,
+	}
+}
+
 // List returns all flows which match the given options.
 func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
@@ -281,8 +288,57 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3F
 	}, err
 }
 
-// ConvertBucket turns a composite aggregation bucket into an L3Flow.
-func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
+func (b *flowBackend) Count(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3FlowCountParams) (*v1.CountResponse, error) {
+	log := bapi.ContextLogger(i)
+	err := i.Valid()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the aggregation request.
+	query := b.countQuery()
+	query.Query, err = b.buildQuery(i, &opts.L3FlowParams)
+	if err != nil {
+		return nil, err
+	}
+	query.DocumentIndex = b.index.Index(i)
+	query.MaxBucketsPerQuery = opts.GetMaxPageSize()
+
+	// Build the bucket handler that we will pass to PagedCount. This handler will compute our namespace counts as each bucket is processed.
+	namespacedCounts := make(map[string]int64)
+	flowNewHandler := func(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) {
+		flow := b.ConvertBucketToBaseFlow(log, bucket)
+		sourceNs := flow.Key.Source.Namespace
+		destNs := flow.Key.Destination.Namespace
+
+		if sourceNs != "" {
+			namespacedCounts[sourceNs]++
+		}
+
+		if destNs != "" && destNs != sourceNs {
+			namespacedCounts[destNs]++
+		}
+	}
+
+	// Perform the request.
+	globalCount, truncated, err := lmaelastic.PagedCount(ctx, b.lmaclient, query, log, opts.MaxGlobalCount, flowNewHandler)
+	if err != nil {
+		return nil, err
+	}
+	countResponse := v1.CountResponse{
+		GlobalCount:          &globalCount,
+		GlobalCountTruncated: truncated,
+	}
+	if !truncated {
+		// We have only constructed a complete namespace count if the global count was not truncated.
+		// Therefore, only include the namespace counts in the response if the global count was not truncated.
+		countResponse.NamespacedCounts = namespacedCounts
+	}
+
+	return &countResponse, nil
+}
+
+func (b *flowBackend) ConvertBucketToBaseFlow(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
 	key := bucket.CompositeAggregationKey
 
 	// Build the flow, starting with the key.
@@ -302,6 +358,16 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 		Port:           b.ft.ValueInt64(key, "dest_port"),
 	}
 	flow.Key.Cluster = b.ft.ValueString(key, "cluster")
+
+	return &flow
+}
+
+// ConvertBucket turns a composite aggregation bucket into an L3Flow.
+func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
+	key := bucket.CompositeAggregationKey
+
+	// Get the base flow for this bucket.
+	flow := b.ConvertBucketToBaseFlow(log, bucket)
 
 	// Build the flow.
 	flow.LogStats = &v1.LogStats{
@@ -380,7 +446,7 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.SourceIPs = getValuesFromAggregation(log, bucket.AggregatedTerms, "source_ip")
 	flow.DestinationIPs = getValuesFromAggregation(log, bucket.AggregatedTerms, "dest_ip")
 
-	return &flow
+	return flow
 }
 
 // buildQuery builds an elastic query using the given parameters.

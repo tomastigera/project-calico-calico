@@ -50,6 +50,12 @@ type AggregationHandler[A RequestParams] interface {
 	Aggregate() http.HandlerFunc
 }
 
+// CountHandler implements a basic HTTP handler that allows a read-only
+// implementation for counting APIs that return total matching documents
+type CountHandler[P RequestParams] interface {
+	Count() http.HandlerFunc
+}
+
 // GenericHandler implements a basic HTTP handler that allows us to have a common
 // implementation for most APIs that use common verbs - list, create and aggregate data
 type GenericHandler[T any, P RequestParams, B BulkRequestParams, A RequestParams] interface {
@@ -71,6 +77,7 @@ type (
 	ListFn[T any, P RequestParams] func(context.Context, bapi.ClusterInfo, *P) (*v1.List[T], error)
 	DeleteFn[B BulkRequestParams]  func(context.Context, bapi.ClusterInfo, []B) (*v1.BulkResponse, error)
 	AggregateFn[A RequestParams]   func(context.Context, bapi.ClusterInfo, *A) (*elastic.Aggregations, error)
+	CountFn[P RequestParams]       func(context.Context, bapi.ClusterInfo, *P) (*v1.CountResponse, error)
 )
 
 // NewRWHandler returns a generic implementation for a handler that supports both create and list APIs
@@ -244,6 +251,11 @@ func NewCompositeHandler[T any, P RequestParams, B BulkRequestParams, A RequestP
 	}
 }
 
+// NewCountHandler returns a generic implementation for a handler that counts resources
+func NewCountHandler[C RequestParams](c CountFn[C]) CountHandler[C] {
+	return &countHandler[C]{c}
+}
+
 // GenericAggregationHandler implements a basic HTTP handler that allows us to have a common
 // implementation for most APIs that use aggregation
 type aggregationHandler[A RequestParams] struct {
@@ -313,6 +325,66 @@ func (h aggregationHandler[A]) Aggregate() http.HandlerFunc {
 		}
 
 		logCtx.WithField("response", response).Debugf("Completed request")
+		httputils.Encode(w, response)
+	}
+}
+
+type countHandler[P RequestParams] struct {
+	CountFn[P]
+}
+
+func (h countHandler[P]) Count() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Include the request body in our logs.
+			body, err := ReadBody(w, req)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to read request body")
+			}
+			logCtx = logCtx.WithField("body", body)
+		}
+
+		params, httpErr := DecodeAndValidateReqParams[P](w, req)
+		if httpErr != nil {
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
+			return
+		}
+
+		// Get the timeout from the request, and use it to build a context.
+		timeout, err := Timeout(w, req)
+		if err != nil {
+			httputils.JSONError(w, &v1.HTTPError{
+				Msg:    err.Error(),
+				Status: http.StatusBadRequest,
+			}, http.StatusBadRequest)
+			return
+		}
+		ctx, cancel := context.WithTimeout(req.Context(), timeout.Duration)
+		defer cancel()
+
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		// Perform the count request
+		response, err := h.CountFn(ctx, clusterInfo, params)
+		if err != nil {
+			logCtx.WithError(err).Error("Error performing count")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+		logCtx.Debugf("Completed count request")
 		httputils.Encode(w, response)
 	}
 }

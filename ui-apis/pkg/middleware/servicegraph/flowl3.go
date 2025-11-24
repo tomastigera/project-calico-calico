@@ -5,6 +5,7 @@ package servicegraph
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -84,7 +85,7 @@ type L3FlowData struct {
 //     when an endpoint is subjected to a port scan.
 //   - Stats for TCP and Processes are aggregated for each flow.
 func GetL3FlowData(
-	ctx context.Context, linseed lsclient.Client, cluster string, tr lmav1.TimeRange,
+	ctx context.Context, linseed lsclient.Client, cluster string, namespaces string, tr lmav1.TimeRange,
 	fc *FlowConfig, cfg *Config,
 ) (fs []L3Flow, err error) {
 	// Trace progress.
@@ -99,7 +100,20 @@ func GetL3FlowData(
 	}
 
 	// Create the list pager.
-	params := lsv1.L3FlowParams{QueryParams: lsv1.QueryParams{TimeRange: &tr}}
+	var nsMatches []lsv1.NamespaceMatch
+	if namespaces != "" {
+		nsMatches = []lsv1.NamespaceMatch{
+			{
+				Type:       lsv1.MatchTypeAny,
+				Namespaces: strings.Split(namespaces, ","),
+			},
+		}
+	}
+
+	params := lsv1.L3FlowParams{
+		QueryParams:      lsv1.QueryParams{TimeRange: &tr},
+		NamespaceMatches: nsMatches,
+	}
 	pager := lsclient.NewListPager[lsv1.L3Flow](&params)
 	results, errors := pager.Stream(ctx, linseed.L3Flows(cluster).List)
 
