@@ -1100,6 +1100,6 @@ func ensureFelixRoutesProgrammed(felix *infrastructure.Felix) {
 		return strings.Contains(outv6, fmt.Sprintf("proto %v", dataplanedefs.DefaultRouteProto)) ||
 			strings.Contains(outv6, dataplanedefs.VXLANIfaceNameV6)
 	}
-	EventuallyWithOffset(2, routesExist, "1m", "1s").Should(BeTrue())
+	EventuallyWithOffset(2, routesExist, "30s", "500ms").Should(BeTrue())
 	ConsistentlyWithOffset(2, routesExist, "3s", "1s").Should(BeTrue())
 }
