@@ -73,9 +73,9 @@ func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeo
 	return closeChan
 }
 
-// Dialer is an interface that supports dialing to create a *Tunnel
+// Dialer is an interface that supports dialing to create a Tunnel.
 type Dialer interface {
-	Dial() (*Tunnel, error)
+	Dial() (Tunnel, error)
 	Timeout() time.Duration
 }
 
@@ -100,7 +100,7 @@ func (d *dialer) Timeout() time.Duration {
 	return d.timeout
 }
 
-func (d *dialer) Dial() (*Tunnel, error) {
+func (d *dialer) Dial() (Tunnel, error) {
 	var err error
 	for i := 0; i < d.retryAttempts; i++ {
 		t, err := d.dialerFun()
@@ -121,32 +121,48 @@ func (d *dialer) Dial() (*Tunnel, error) {
 }
 
 // DialerFunc is a function type used to create a tunnel
-type DialerFunc func() (*Tunnel, error)
+type DialerFunc func() (Tunnel, error)
 
-// Tunnel represents either side of the tunnel that allows waiting for,
+type Tunnel interface {
+	ErrChan() chan struct{}
+	WaitForError() error
+	Identity() Identity
+	OpenStream() (io.ReadWriteCloser, error)
+	Open() (net.Conn, error)
+	Addr() net.Addr
+	AcceptStream() (io.ReadWriteCloser, error)
+	AcceptWithChannel(acceptChan chan interface{}) chan bool
+	Accept() (net.Conn, error)
+	IsClosed() bool
+	Close() error
+	LastErr() error
+	DialTimeout() time.Duration
+}
+
+// tunnel represents either side of the tunnel that allows waiting for,
 // accepting and initiating creation of new BytePipes.
-type Tunnel struct {
+type tunnel struct {
 	stream io.ReadWriteCloser
 	mux    *yamux.Session
 
 	errOnce sync.Once
 	errCh   chan struct{}
-	LastErr error
+	lastErr error
 
 	keepAliveEnable   bool
 	keepAliveInterval time.Duration
-	DialTimeout       time.Duration
+	dialTimeout       time.Duration
 }
 
-func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunnel, error) {
-	t := &Tunnel{
+func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel, error) {
+	t := &tunnel{
 		stream: stream,
 		errCh:  make(chan struct{}),
 		// Defaults
 		keepAliveEnable: true,
 
 		keepAliveInterval: 100 * time.Millisecond,
-		DialTimeout:       60 * time.Second,
+		dialTimeout:       60 * time.Second,
 	}
 
 	var mux *yamux.Session
@@ -187,13 +203,13 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 
 // NewServerTunnel returns a new tunnel that uses the provided stream as the
 // carrier. The stream must be the server side of the stream
-func NewServerTunnel(stream io.ReadWriteCloser, opts ...Option) (*Tunnel, error) {
+func NewServerTunnel(stream io.ReadWriteCloser, opts ...Option) (Tunnel, error) {
 	return newTunnel(stream, true, opts...)
 }
 
 // NewClientTunnel returns a new tunnel that uses the provided stream as the
 // carrier. The stream must be the client side of the stream
-func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (*Tunnel, error) {
+func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (Tunnel, error) {
 	return newTunnel(stream, false, opts...)
 }
 
@@ -205,19 +221,27 @@ type hasIdentity interface {
 	Identity() Identity
 }
 
+func (t *tunnel) LastErr() error {
+	return t.lastErr
+}
+
+func (t *tunnel) DialTimeout() time.Duration {
+	return t.dialTimeout
+}
+
 // Close closes this end of the tunnel and so all existing connections
-func (t *Tunnel) Close() error {
+func (t *tunnel) Close() error {
 	defer logrus.Debugf("Tunnel: Closed")
 	return convertYAMUXErr(t.mux.Close())
 }
 
 // IsClosed checks if the tunnel is closed. If it is true is returned, otherwise false is returned
-func (t *Tunnel) IsClosed() bool {
+func (t *tunnel) IsClosed() bool {
 	return t.mux.IsClosed()
 }
 
 // Accept waits for a new connection, returns net.Conn or an error
-func (t *Tunnel) Accept() (net.Conn, error) {
+func (t *tunnel) Accept() (net.Conn, error) {
 	logrus.Debugf("Tunnel: Accepting connections")
 	defer logrus.Debugf("Tunnel: Accepted connection")
 	conn, err := t.mux.Accept()
@@ -229,7 +253,7 @@ func (t *Tunnel) Accept() (net.Conn, error) {
 // we're done accepting connections.
 //
 // If the tunnel hasn't been setup prior to calling this function it will panic.
-func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
+func (t *tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 	a := acceptChan
 	done := make(chan bool)
 	go func() {
@@ -264,7 +288,7 @@ func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 }
 
 // AcceptStream waits for a new connection, returns io.ReadWriteCloser or an error
-func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
+func (t *tunnel) AcceptStream() (io.ReadWriteCloser, error) {
 	logrus.Debugf("Tunnel: Accepting stream")
 	defer logrus.Debugf("Tunnel: Accepted stream")
 	rc, err := t.mux.AcceptStream()
@@ -272,7 +296,7 @@ func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
 }
 
 // Addr returns the address of this tunnel sides endpoint.
-func (t *Tunnel) Addr() net.Addr {
+func (t *tunnel) Addr() net.Addr {
 	a := addr{
 		net: "voltron-tunnel",
 	}
@@ -286,7 +310,7 @@ func (t *Tunnel) Addr() net.Addr {
 
 // Open opens a new net.Conn to the other side of the tunnel. Returns when
 // the the new connection is set up
-func (t *Tunnel) Open() (net.Conn, error) {
+func (t *tunnel) Open() (net.Conn, error) {
 	c, err := t.mux.Open()
 	err = convertYAMUXErr(err)
 	t.checkErr(err)
@@ -294,7 +318,7 @@ func (t *Tunnel) Open() (net.Conn, error) {
 }
 
 // OpenStream returns, unlike NewConn, an io.ReadWriteCloser
-func (t *Tunnel) OpenStream() (io.ReadWriteCloser, error) {
+func (t *tunnel) OpenStream() (io.ReadWriteCloser, error) {
 	s, err := t.mux.OpenStream()
 	err = convertYAMUXErr(err)
 	t.checkErr(err)
@@ -302,7 +326,7 @@ func (t *Tunnel) OpenStream() (io.ReadWriteCloser, error) {
 }
 
 // Identity provides the identity of the remote side that initiated the tunnel
-func (t *Tunnel) Identity() Identity {
+func (t *tunnel) Identity() Identity {
 	if id, ok := t.stream.(hasIdentity); ok {
 		return id.Identity()
 	}
@@ -312,20 +336,20 @@ func (t *Tunnel) Identity() Identity {
 
 // WaitForError blocks as long as the tunnel exists and will return the reason
 // why the tunnel exited
-func (t *Tunnel) WaitForError() error {
+func (t *tunnel) WaitForError() error {
 	<-t.errCh
-	return t.LastErr
+	return t.lastErr
 }
 
 // ErrChan returns the channel that's notified when an error occurs
-func (t *Tunnel) ErrChan() chan struct{} {
+func (t *tunnel) ErrChan() chan struct{} {
 	return t.errCh
 }
 
-func (t *Tunnel) checkErr(err error) {
+func (t *tunnel) checkErr(err error) {
 	if err != nil {
 		t.errOnce.Do(func() {
-			t.LastErr = err
+			t.lastErr = err
 			close(t.errCh)
 		})
 	}
@@ -333,7 +357,7 @@ func (t *Tunnel) checkErr(err error) {
 
 type serverCloser struct {
 	io.ReadWriteCloser
-	t *Tunnel
+	t *tunnel
 }
 
 func (sc *serverCloser) Close() error {
@@ -355,7 +379,7 @@ func (a addr) String() string {
 }
 
 // Dial returns a client side Tunnel or an error
-func Dial(target string, opts ...Option) (*Tunnel, error) {
+func Dial(target string, opts ...Option) (Tunnel, error) {
 	c, err := net.Dial("tcp", target)
 	if err != nil {
 		return nil, fmt.Errorf("tcp.Dial failed: %v", err)
@@ -365,7 +389,7 @@ func Dial(target string, opts ...Option) (*Tunnel, error) {
 }
 
 // DialTLS creates a TLS connection based on the config, must not be nil.
-func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, httpProxyURL *url.URL, opts ...Option) (*Tunnel, error) {
+func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, httpProxyURL *url.URL, opts ...Option) (Tunnel, error) {
 	if tunnelTLSConfig == nil {
 		return nil, errors.New("nil config")
 	}

@@ -401,14 +401,14 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 	}
 }
 
-func closeTunnel(t *tunnel.Tunnel) {
+func closeTunnel(t tunnel.Tunnel) {
 	err := t.Close()
 	if err != nil {
 		logrus.WithError(err).Error("Could not close tunnel")
 	}
 }
 
-func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string, certificate *x509.Certificate) {
+func (s *Server) extractIdentity(t tunnel.Tunnel) (clusterID, fingerprint string, certificate *x509.Certificate) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		// N.B. By now, we know that we signed this certificate as these checks
@@ -425,7 +425,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint strin
 	return
 }
 
-func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
+func (s *Server) extractMD5Identity(t tunnel.Tunnel) (fingerprint string) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))

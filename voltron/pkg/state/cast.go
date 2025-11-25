@@ -75,12 +75,12 @@ func InterfaceToTLSConfig(i interface{}) *tls.Config {
 }
 
 // InterfaceToTunnel casts an interface to a *Tunnel or nil, and panics otherwise
-func InterfaceToTunnel(i interface{}) *tunnel.Tunnel {
+func InterfaceToTunnel(i interface{}) tunnel.Tunnel {
 	switch t := i.(type) {
 	case nil:
 		return nil
-	case *tunnel.Tunnel:
-		return i.(*tunnel.Tunnel)
+	case tunnel.Tunnel:
+		return i.(tunnel.Tunnel)
 	default:
 		panic(fmt.Sprintf("unexpected type %T", t))
 	}

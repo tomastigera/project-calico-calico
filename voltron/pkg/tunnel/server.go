@@ -191,7 +191,7 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 }
 
 // AcceptTunnel accepts a new connection as a tunnel
-func (s *Server) AcceptTunnel(opts ...Option) (*Tunnel, error) {
+func (s *Server) AcceptTunnel(opts ...Option) (Tunnel, error) {
 	c, err := s.Accept()
 	if err != nil {
 		return nil, err

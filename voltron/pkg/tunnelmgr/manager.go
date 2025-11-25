@@ -35,7 +35,7 @@ var ErrStillDialing = fmt.Errorf("cannot access tunnel yet, still dialing")
 // [TODO] be a good idea to roll up "answering" that call in the Manager as well, instead of "answering" that call outside
 // [TODO] of the Manager and passing the tunnel to the Manager.
 type Manager interface {
-	SetTunnel(t *tunnel.Tunnel) error
+	SetTunnel(t tunnel.Tunnel) error
 	Open() (net.Conn, error)
 	OpenTLS(*tls.Config) (net.Conn, error)
 	Listener() (net.Listener, error)
@@ -92,12 +92,12 @@ func NewManagerWithDialer(dialer tunnel.Dialer) Manager {
 }
 
 // SetTunnel sets the tunnel for the manager, and returns an error if it's already running
-func (m *manager) SetTunnel(t *tunnel.Tunnel) error {
+func (m *manager) SetTunnel(t tunnel.Tunnel) error {
 	if m.isClosed() {
 		return ErrManagerClosed
 	}
 
-	return state.InterfaceToError(state.SendWithTimeout(m.setTunnel, t, t.DialTimeout))
+	return state.InterfaceToError(state.SendWithTimeout(m.setTunnel, t, t.DialTimeout()))
 }
 
 // startStateLoop starts the loop to accept requests over the channels used to synchronously access the manager's state.
@@ -122,7 +122,7 @@ func (m *manager) startStateLoop() {
 
 		ok := true
 		var err error
-		var tun *tunnel.Tunnel
+		var tun tunnel.Tunnel
 		var setTunnel, closeTunnel, openConnection, addListener, addErrListener state.SendInterface
 		var errListeners []chan error
 		var tunnelErrs chan struct{}
@@ -184,12 +184,12 @@ func (m *manager) startStateLoop() {
 				dialerCloseChan = nil
 
 				switch t := response.(type) {
-				case *tunnel.Tunnel:
+				case tunnel.Tunnel:
 					if tun == nil {
-						tun = response.(*tunnel.Tunnel)
+						tun = response.(tunnel.Tunnel)
 					} else {
 						log.Warning("Tried to set tunnel from dialer when one already exists.")
-						if err := response.(*tunnel.Tunnel).Close(); err != nil {
+						if err := response.(tunnel.Tunnel).Close(); err != nil {
 							log.WithError(err).Error("failed to close additional tunnel")
 						}
 					}
@@ -228,7 +228,7 @@ func (m *manager) startStateLoop() {
 			case <-tunnelErrs:
 				log.Debug("Received a tunnel error.")
 				if tun != nil {
-					err = tun.LastErr
+					err = tun.LastErr()
 				}
 			case <-m.close:
 				log.Debug("Received request to close the tunnel manager.")
@@ -268,7 +268,7 @@ func writeOutError(listeners []chan error, err error) {
 	}
 }
 
-func handleSetTunnel(tun *tunnel.Tunnel, setTunnel state.SendInterface) *tunnel.Tunnel {
+func handleSetTunnel(tun tunnel.Tunnel, setTunnel state.SendInterface) tunnel.Tunnel {
 	defer setTunnel.Close()
 	if tun != nil {
 		setTunnel.Return(ErrTunnelSet)
@@ -278,7 +278,7 @@ func handleSetTunnel(tun *tunnel.Tunnel, setTunnel state.SendInterface) *tunnel.
 }
 
 // handleOpenConnection is used by the state loop to handle a request to open a connection over the tunnel
-func (*manager) handleOpenConnection(tun *tunnel.Tunnel, openConnection state.SendInterface, dialing bool) error {
+func (*manager) handleOpenConnection(tun tunnel.Tunnel, openConnection state.SendInterface, dialing bool) error {
 	log.Debug("Handling opening a connection over the tunnel.")
 	if dialing {
 		log.Debug("Still dialing tunnel.")
@@ -316,7 +316,7 @@ func (*manager) handleOpenConnection(tun *tunnel.Tunnel, openConnection state.Se
 }
 
 // handleAddListener is used by the request loop to handle a request to retrieve a listener listening over the tunnel
-func (m *manager) handleAddListener(tun *tunnel.Tunnel, addListener state.SendInterface, dialing bool) error {
+func (m *manager) handleAddListener(tun tunnel.Tunnel, addListener state.SendInterface, dialing bool) error {
 	log.Debug("Handling add a new listener.")
 
 	if dialing {

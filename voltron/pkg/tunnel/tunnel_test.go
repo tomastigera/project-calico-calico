@@ -96,8 +96,8 @@ var _ = Describe("Tunnel server", func() {
 	})
 
 	var (
-		srvT *tunnel.Tunnel
-		clnT *tunnel.Tunnel
+		srvT tunnel.Tunnel
+		clnT tunnel.Tunnel
 	)
 
 	It("should setup a tunnel connection", func() {
@@ -235,11 +235,11 @@ func startServer() (*tunnel.Server, net.Addr) {
 	return srv, lis.Addr()
 }
 
-func setupTunnel(srv *tunnel.Server, dialTarget string) (*tunnel.Tunnel, *tunnel.Tunnel) {
+func setupTunnel(srv *tunnel.Server, dialTarget string) (tunnel.Tunnel, tunnel.Tunnel) {
 
 	var (
-		srvT *tunnel.Tunnel
-		clnT *tunnel.Tunnel
+		srvT tunnel.Tunnel
+		clnT tunnel.Tunnel
 		err  error
 		wg   sync.WaitGroup
 	)
@@ -262,7 +262,7 @@ func setupTunnel(srv *tunnel.Server, dialTarget string) (*tunnel.Tunnel, *tunnel
 	return srvT, clnT
 }
 
-func setupTunneledStream(srvT, clnT *tunnel.Tunnel,
+func setupTunneledStream(srvT, clnT tunnel.Tunnel,
 	reverse bool) (io.ReadWriteCloser, io.ReadWriteCloser) {
 
 	var (
@@ -459,7 +459,7 @@ var _ = Describe("Tunnel Dialing", func() {
 	Context("DialInRoutineWithTimeout", func() {
 		It("sends the tunnel over the result channel if dialing was successful", func() {
 			mockDialer := new(tunnel.MockDialer)
-			mockDialer.On("Dial").Return(&tunnel.Tunnel{}, nil)
+			mockDialer.On("Dial").Return(new(tunnel.MockTunnel), nil)
 
 			results := make(chan interface{})
 
@@ -472,7 +472,8 @@ var _ = Describe("Tunnel Dialing", func() {
 			select {
 			case result, ok := <-results:
 				Expect(ok).Should(BeTrue())
-				Expect(result).Should(BeAssignableToTypeOf(&tunnel.Tunnel{}))
+				_, ok = result.(tunnel.Tunnel)
+				Expect(ok).Should(BeTrue())
 			case <-timer.C:
 				Fail("timed out waiting for result")
 			}
