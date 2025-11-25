@@ -50,7 +50,7 @@ type Config struct {
 	LMAAuthorizationCacheTTL time.Duration `default:"10s" split_words:"true"`
 
 	// Endpoint for authorization requests
-	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingEndpoint string `default:"https://calico-manager.calico-system.svc:9443" split_words:"true"`
 	// CA used to verify the forwarding endpoint when contacting voltron (Cloud mode)
 	MultiClusterForwardingCA string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 

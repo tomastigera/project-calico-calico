@@ -18,7 +18,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
@@ -39,6 +37,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -48,7 +47,7 @@ var (
 	privateKey    *rsa.PrivateKey
 	factory       *k8s.MockClientSetFactory
 	mockK8sClient *k8sfake.Clientset
-	mockClientSet clientSetSet
+	mockClientSet testutils.ClientSetSet
 	fakeClient    ctrlclient.WithWatch
 
 	tenantName string
@@ -81,7 +80,7 @@ func setup(t *testing.T) func() {
 	// Set up expected mock calls. We expect a clientset to be generated for the
 	// managed cluster which will be used to check and create a secret.
 	mockK8sClient = k8sfake.NewSimpleClientset()
-	mockClientSet = clientSetSet{mockK8sClient, cs}
+	mockClientSet = testutils.ClientSetSet{mockK8sClient, cs}
 
 	mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		name := action.(k8stesting.GetAction).GetName()
@@ -722,7 +721,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -820,7 +819,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -934,7 +933,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -1019,7 +1018,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		}
 	})
 
-	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode, func(t *testing.T) {
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode+"no cluster information present", func(t *testing.T) {
 		defer setup(t)()
 
 		mc := v3.ManagedCluster{}
@@ -1065,7 +1064,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NoError(t, err)
 		require.NotNil(t, controller)
 
-		managedClientSet := clientSetSet{
+		managedClientSet := testutils.ClientSetSet{
 			k8sfake.NewSimpleClientset(),
 			fake.NewSimpleClientset(),
 		}
@@ -1091,13 +1090,193 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NoError(t, err)
 
 		secretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode+"no version skew", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &mc)
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(1 * time.Second),
+			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := testutils.ClientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		ci := v3.ClusterInformation{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.ClusterInformationSpec{
+				CalicoEnterpriseVersion: "v3.23.0",
+			},
+		}
+		clusterInformation, err := managedClientSet.ProjectcalicoV3().ClusterInformations().Create(ctx, &ci, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, clusterInformation)
+
+		// Reconcile
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go func() {
+			t.Helper()
+
+			err := controller.Run(stopCh)
+			require.NoError(t, err)
+		}()
+
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		secretCreated := func() bool {
 			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCert, v1.GetOptions{})
 			return err == nil
 		}
 		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
 	})
 
-	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode, func(t *testing.T) {
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode+"with version skew", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &mc)
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(1 * time.Second),
+			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := testutils.ClientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		ci := v3.ClusterInformation{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.ClusterInformationSpec{
+				CalicoEnterpriseVersion: "v3.19.0",
+			},
+		}
+		clusterInformation, err := managedClientSet.ProjectcalicoV3().ClusterInformations().Create(ctx, &ci, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, clusterInformation)
+
+		// Reconcile
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go func() {
+			t.Helper()
+
+			err := controller.Run(stopCh)
+			require.NoError(t, err)
+		}()
+
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		secretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode+"no cluster information present", func(t *testing.T) {
 		defer setup(t)()
 
 		mc := v3.ManagedCluster{}
@@ -1146,7 +1325,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NoError(t, err)
 		require.NotNil(t, controller)
 
-		managedClientSet := clientSetSet{
+		managedClientSet := testutils.ClientSetSet{
 			k8sfake.NewSimpleClientset(),
 			fake.NewSimpleClientset(),
 		}
@@ -1157,6 +1336,115 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, createdSecret)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go func() {
+			t.Helper()
+			err := controller.Run(stopCh)
+			require.NoError(t, err)
+		}()
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		// The controller will eventually cause the VoltronLinseedPublicCert to get copied into the managed cluster by
+		// way of the ManagedCluster creation update. Wait for this to occur then update the data in the secret to make
+		// sure we update correctly based on changes to the secret itself.
+		originalSecretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, originalSecretCreated, 5*time.Second, 100*time.Millisecond)
+
+		// Update voltronLinseedSecret to trigger copy process
+		updatedVoltronLinseedSecretData := "updated-data"
+		updatedVoltronLinseedSecret := voltronLinseedSecret.DeepCopy()
+		updatedVoltronLinseedSecret.StringData["key"] = updatedVoltronLinseedSecretData
+		updatedSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Update(ctx, updatedVoltronLinseedSecret, v1.UpdateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, updatedSecret)
+
+		// Now verify that voltronLinseedSecret has been copied with updated data
+		secretUpdated := func() bool {
+			updatedSecret, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
+			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
+		}
+		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode+"no version skew", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &mc)
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+			StringData: map[string]string{
+				"key": "original-data",
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(24 * time.Hour), // Make update period long enough that we're guaranteed not to trigger it during test
+			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := testutils.ClientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		ci := v3.ClusterInformation{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.ClusterInformationSpec{
+				CalicoEnterpriseVersion: "v3.23.0",
+			},
+		}
+		clusterInformation, err := managedClientSet.ProjectcalicoV3().ClusterInformations().Create(ctx, &ci, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, clusterInformation)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -1189,6 +1477,115 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Now verify that voltronLinseedSecret has been copied with updated data
 		secretUpdated := func() bool {
 			updatedSecret, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCert, v1.GetOptions{})
+			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
+		}
+		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode+"with version skew", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &mc)
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+			StringData: map[string]string{
+				"key": "original-data",
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(24 * time.Hour), // Make update period long enough that we're guaranteed not to trigger it during test
+			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := testutils.ClientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		ci := v3.ClusterInformation{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.ClusterInformationSpec{
+				CalicoEnterpriseVersion: "v3.19.0",
+			},
+		}
+		clusterInformation, err := managedClientSet.ProjectcalicoV3().ClusterInformations().Create(ctx, &ci, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, clusterInformation)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go func() {
+			t.Helper()
+			err := controller.Run(stopCh)
+			require.NoError(t, err)
+		}()
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		// The controller will eventually cause the VoltronLinseedPublicCert to get copied into the managed cluster by
+		// way of the ManagedCluster creation update. Wait for this to occur then update the data in the secret to make
+		// sure we update correctly based on changes to the secret itself.
+		originalSecretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, originalSecretCreated, 5*time.Second, 100*time.Millisecond)
+
+		// Update voltronLinseedSecret to trigger copy process
+		updatedVoltronLinseedSecretData := "updated-data"
+		updatedVoltronLinseedSecret := voltronLinseedSecret.DeepCopy()
+		updatedVoltronLinseedSecret.StringData["key"] = updatedVoltronLinseedSecretData
+		updatedSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Update(ctx, updatedVoltronLinseedSecret, v1.UpdateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, updatedSecret)
+
+		// Now verify that voltronLinseedSecret has been copied with updated data
+		secretUpdated := func() bool {
+			updatedSecret, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCertOld, v1.GetOptions{})
 			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
@@ -1456,7 +1853,7 @@ func TestMultiTenant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, controller)
 
-		managedClientSet := clientSetSet{
+		managedClientSet := testutils.ClientSetSet{
 			k8sfake.NewSimpleClientset(),
 			fake.NewSimpleClientset(),
 		}
@@ -1477,13 +1874,4 @@ func TestMultiTenant(t *testing.T) {
 		// care about "Impersonate" for the purposes of this particular test.
 		factory.AssertExpectations(t)
 	})
-}
-
-type clientSetSet struct {
-	kubernetes.Interface
-	Calico clientset.Interface
-}
-
-func (c *clientSetSet) ProjectcalicoV3() projectcalicov3.ProjectcalicoV3Interface {
-	return c.Calico.ProjectcalicoV3()
 }

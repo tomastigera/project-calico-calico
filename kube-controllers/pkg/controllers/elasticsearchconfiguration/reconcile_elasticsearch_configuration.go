@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,7 @@ type reconciler struct {
 	managementK8sCLI            kubernetes.Interface
 	managementOperatorNamespace string
 	managedK8sCLI               kubernetes.Interface
+	managedClientSetFactory     k8s.ClientSetFactory
 	managedOperatorNamespace    string
 	esK8sCLI                    relasticsearch.RESTClient
 	esHash                      string
@@ -112,7 +114,7 @@ func (c *reconciler) reconcileRoles() error {
 // presented by servers in the management cluster. The following secrets are copied:
 //
 // - tigera-secure-es-gateway-http-certs-public: for clients verifying the authenticity of es-gateway
-// - tigera-secure-voltron-linseed-http-certs-public: for clients verifying the authenticity of Voltron when talking to Linseed.
+// - calico-voltron-linseed-certs-public: for clients verifying the authenticity of Voltron when talking to Linseed.
 func (c *reconciler) reconcileCASecrets() error {
 	// Handle the es-gateway secret.
 	secret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
@@ -139,6 +141,16 @@ func (c *reconciler) reconcileCASecrets() error {
 
 	// Copy the Voltron secret through as well.
 	secret, err = c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.VoltronLinseedPublicCert, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	managedClient, err := c.managedClientSetFactory.NewClientSetForApplication(c.clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to generate clientset for managed cluster %v from factory: %v", c.clusterName, err)
+	}
+
+	secret.Name, err = utils.FetchVersionedVoltronLinseedPublicCertName(managedClient)
 	if err != nil {
 		return err
 	}

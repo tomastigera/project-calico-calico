@@ -838,15 +838,29 @@ func (c *controller) reconcileSecretsForCluster(mc *v3.ManagedCluster, secretsTo
 			continue
 		}
 
-		secret.Namespace = managedOperatorNS
-		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(secret)); err != nil {
+		secretCopy := resource.CopySecret(secret)
+
+		// The name of the voltron linseed cert has changed in newer releases (after Calico Enterprise v3.23). To not
+		// break functionality on older managed clusters that still expect to find the secret with the old name we need
+		// to copy the newly named cert into the managed cluster using the old name ie.
+		// calico-voltron-linseed-certs-public (on management cluster) -> tigera-voltron-linseed-certs-public (on managed cluster)
+
+		secretCopy.Name, err = utils.FetchVersionedVoltronLinseedPublicCertName(managedClient)
+		if err != nil {
+			log.Error(err.Error())
+			secretErrors = append(secretErrors, err)
+			continue
+		}
+
+		secretCopy.Namespace = managedOperatorNS
+		if err = resource.WriteSecretToK8s(managedClient, secretCopy); err != nil {
 			log.WithError(err).Error("Error writing secret to managed cluster")
 			secretErrors = append(secretErrors, err)
 			continue
 		}
 		log.WithFields(logrus.Fields{
-			"name":      secret.Name,
-			"namespace": secret.Namespace,
+			"name":      secretCopy.Name,
+			"namespace": secretCopy.Namespace,
 		}).Debug("Copied secret to managed cluster")
 	}
 	err := errors.Join(secretErrors...)

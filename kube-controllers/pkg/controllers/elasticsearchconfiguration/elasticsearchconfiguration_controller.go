@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,14 +83,15 @@ func New(
 ) controller.Controller {
 	logCtx := log.WithField("cluster", clusterName)
 	r := &reconciler{
-		clusterName:      clusterName,
-		ownerReference:   ownerReference,
-		managementK8sCLI: managementK8sCLI,
-		managedK8sCLI:    managedK8sCLI,
-		esK8sCLI:         esK8sCLI,
-		esClientBuilder:  esClientBuilder,
-		management:       management,
-		restartChan:      restartChan,
+		clusterName:             clusterName,
+		ownerReference:          ownerReference,
+		managementK8sCLI:        managementK8sCLI,
+		managedK8sCLI:           managedK8sCLI,
+		managedClientSetFactory: k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint),
+		esK8sCLI:                esK8sCLI,
+		esClientBuilder:         esClientBuilder,
+		management:              management,
+		restartChan:             restartChan,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a

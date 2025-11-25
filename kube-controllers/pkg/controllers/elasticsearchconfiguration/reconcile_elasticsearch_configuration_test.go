@@ -24,6 +24,10 @@ import (
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearchfake "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch/fake"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var cert = `-----BEGIN CERTIFICATE-----
@@ -596,6 +600,76 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
+		})
+
+		It("propagates voltron secrets with new name when no version skew", func() {
+			managedClientSetFactory := k8s.NewMockClientSetFactory(GinkgoT())
+
+			managedClusterName := "managed-1"
+
+			mockK8sClient := k8sfake.NewSimpleClientset()
+			cs := fake.NewSimpleClientset([]runtime.Object{
+				&v3.ClusterInformation{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+					Spec: v3.ClusterInformationSpec{
+						CalicoEnterpriseVersion: "v3.23.0",
+					},
+				},
+			}...)
+			mockClientSet := testutils.ClientSetSet{mockK8sClient, cs}
+
+			managedClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
+
+			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
+				func(r *reconciler) {
+					r.clusterName = managedClusterName
+					r.management = false
+					r.managedClientSetFactory = managedClientSetFactory
+				})
+
+			err := r.Reconcile(types.NamespacedName{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ctx := context.Background()
+			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.VoltronLinseedPublicCert, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("propagates voltron secrets with old name with version skew", func() {
+			managedClientSetFactory := k8s.NewMockClientSetFactory(GinkgoT())
+
+			managedClusterName := "managed-1"
+
+			mockK8sClient := k8sfake.NewSimpleClientset()
+			cs := fake.NewSimpleClientset([]runtime.Object{
+				&v3.ClusterInformation{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+					Spec: v3.ClusterInformationSpec{
+						CalicoEnterpriseVersion: "v3.19.0",
+					},
+				},
+			}...)
+			mockClientSet := testutils.ClientSetSet{mockK8sClient, cs}
+
+			managedClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
+
+			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
+				func(r *reconciler) {
+					r.clusterName = managedClusterName
+					r.management = false
+					r.managedClientSetFactory = managedClientSetFactory
+				})
+
+			err := r.Reconcile(types.NamespacedName{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ctx := context.Background()
+			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.VoltronLinseedPublicCertOld, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 

@@ -78,7 +78,7 @@ func (o *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 		"If set, manifests created for new managed clusters will use this value.")
 	flags.StringVar(&o.ManagementClusterCAType, "managementClusterCAType", "",
 		"Controls the value of tls.ca in generated ManagementClusterConnection resources")
-	flags.StringVar(&o.TunnelSecretName, "tunnelSecretName", "tigera-management-cluster-connection",
+	flags.StringVar(&o.TunnelSecretName, "tunnelSecretName", "calico-management-cluster-connection",
 		"Controls the value of secret name that contains the value x509 CA certificate for generating ManagementClusterConnection resources")
 	flags.BoolVar(&o.EnableValidatingAdmissionPolicy, "enable-validating-admission-policy", true,
 		"If true, establishes watches for ValidatingAdmissionPolicy at startup.")
