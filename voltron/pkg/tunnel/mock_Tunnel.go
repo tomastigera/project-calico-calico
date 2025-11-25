@@ -5,6 +5,7 @@
 package tunnel
 
 import (
+	"crypto/x509"
 	"io"
 	"net"
 	"time"
@@ -248,6 +249,52 @@ func (_c *MockTunnel_Addr_Call) RunAndReturn(run func() net.Addr) *MockTunnel_Ad
 	return _c
 }
 
+// Certificate provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) Certificate() *x509.Certificate {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Certificate")
+	}
+
+	var r0 *x509.Certificate
+	if returnFunc, ok := ret.Get(0).(func() *x509.Certificate); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*x509.Certificate)
+		}
+	}
+	return r0
+}
+
+// MockTunnel_Certificate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Certificate'
+type MockTunnel_Certificate_Call struct {
+	*mock.Call
+}
+
+// Certificate is a helper method to define mock.On call
+func (_e *MockTunnel_Expecter) Certificate() *MockTunnel_Certificate_Call {
+	return &MockTunnel_Certificate_Call{Call: _e.mock.On("Certificate")}
+}
+
+func (_c *MockTunnel_Certificate_Call) Run(run func()) *MockTunnel_Certificate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockTunnel_Certificate_Call) Return(certificate *x509.Certificate) *MockTunnel_Certificate_Call {
+	_c.Call.Return(certificate)
+	return _c
+}
+
+func (_c *MockTunnel_Certificate_Call) RunAndReturn(run func() *x509.Certificate) *MockTunnel_Certificate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function for the type MockTunnel
 func (_mock *MockTunnel) Close() error {
 	ret := _mock.Called()
@@ -288,6 +335,50 @@ func (_c *MockTunnel_Close_Call) Return(err error) *MockTunnel_Close_Call {
 }
 
 func (_c *MockTunnel_Close_Call) RunAndReturn(run func() error) *MockTunnel_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ClusterID provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) ClusterID() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClusterID")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockTunnel_ClusterID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClusterID'
+type MockTunnel_ClusterID_Call struct {
+	*mock.Call
+}
+
+// ClusterID is a helper method to define mock.On call
+func (_e *MockTunnel_Expecter) ClusterID() *MockTunnel_ClusterID_Call {
+	return &MockTunnel_ClusterID_Call{Call: _e.mock.On("ClusterID")}
+}
+
+func (_c *MockTunnel_ClusterID_Call) Run(run func()) *MockTunnel_ClusterID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockTunnel_ClusterID_Call) Return(s string) *MockTunnel_ClusterID_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockTunnel_ClusterID_Call) RunAndReturn(run func() string) *MockTunnel_ClusterID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -382,48 +473,46 @@ func (_c *MockTunnel_ErrChan_Call) RunAndReturn(run func() chan struct{}) *MockT
 	return _c
 }
 
-// Identity provides a mock function for the type MockTunnel
-func (_mock *MockTunnel) Identity() Identity {
+// Fingerprint provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) Fingerprint() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Identity")
+		panic("no return value specified for Fingerprint")
 	}
 
-	var r0 Identity
-	if returnFunc, ok := ret.Get(0).(func() Identity); ok {
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
 		r0 = returnFunc()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Identity)
-		}
+		r0 = ret.Get(0).(string)
 	}
 	return r0
 }
 
-// MockTunnel_Identity_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Identity'
-type MockTunnel_Identity_Call struct {
+// MockTunnel_Fingerprint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fingerprint'
+type MockTunnel_Fingerprint_Call struct {
 	*mock.Call
 }
 
-// Identity is a helper method to define mock.On call
-func (_e *MockTunnel_Expecter) Identity() *MockTunnel_Identity_Call {
-	return &MockTunnel_Identity_Call{Call: _e.mock.On("Identity")}
+// Fingerprint is a helper method to define mock.On call
+func (_e *MockTunnel_Expecter) Fingerprint() *MockTunnel_Fingerprint_Call {
+	return &MockTunnel_Fingerprint_Call{Call: _e.mock.On("Fingerprint")}
 }
 
-func (_c *MockTunnel_Identity_Call) Run(run func()) *MockTunnel_Identity_Call {
+func (_c *MockTunnel_Fingerprint_Call) Run(run func()) *MockTunnel_Fingerprint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockTunnel_Identity_Call) Return(v Identity) *MockTunnel_Identity_Call {
-	_c.Call.Return(v)
+func (_c *MockTunnel_Fingerprint_Call) Return(s string) *MockTunnel_Fingerprint_Call {
+	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *MockTunnel_Identity_Call) RunAndReturn(run func() Identity) *MockTunnel_Identity_Call {
+func (_c *MockTunnel_Fingerprint_Call) RunAndReturn(run func() string) *MockTunnel_Fingerprint_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -512,6 +601,50 @@ func (_c *MockTunnel_LastErr_Call) Return(err error) *MockTunnel_LastErr_Call {
 }
 
 func (_c *MockTunnel_LastErr_Call) RunAndReturn(run func() error) *MockTunnel_LastErr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MD5Fingerprint provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) MD5Fingerprint() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for MD5Fingerprint")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockTunnel_MD5Fingerprint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MD5Fingerprint'
+type MockTunnel_MD5Fingerprint_Call struct {
+	*mock.Call
+}
+
+// MD5Fingerprint is a helper method to define mock.On call
+func (_e *MockTunnel_Expecter) MD5Fingerprint() *MockTunnel_MD5Fingerprint_Call {
+	return &MockTunnel_MD5Fingerprint_Call{Call: _e.mock.On("MD5Fingerprint")}
+}
+
+func (_c *MockTunnel_MD5Fingerprint_Call) Run(run func()) *MockTunnel_MD5Fingerprint_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockTunnel_MD5Fingerprint_Call) Return(s string) *MockTunnel_MD5Fingerprint_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockTunnel_MD5Fingerprint_Call) RunAndReturn(run func() string) *MockTunnel_MD5Fingerprint_Call {
 	_c.Call.Return(run)
 	return _c
 }
