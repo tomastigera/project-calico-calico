@@ -1,0 +1,25 @@
+From fee4219259955add9f93a17abce34c2b04e54e51 Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Tue, 25 Nov 2025 12:01:42 -0800
+Subject: [PATCH] Build with Red Hat UBI 10
+
+---
+ src/dev/build/tasks/os_packages/docker_generator/run.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/dev/build/tasks/os_packages/docker_generator/run.ts b/src/dev/build/tasks/os_packages/docker_generator/run.ts
+index d06eee741aa5..6412b0e1e974 100644
+--- a/src/dev/build/tasks/os_packages/docker_generator/run.ts
++++ b/src/dev/build/tasks/os_packages/docker_generator/run.ts
+@@ -42,7 +42,7 @@ export async function runDockerGenerator(
+ ) {
+   let baseImageName = '';
+   if (flags.baseImage === 'ubuntu') baseImageName = 'ubuntu:24.04';
+-  if (flags.baseImage === 'ubi') baseImageName = 'redhat/ubi9-minimal:latest';
++  if (flags.baseImage === 'ubi') baseImageName = 'redhat/ubi10-minimal:latest';
+   /**
+    * Renovate config contains a regex manager to automatically updates this Chainguard reference
+    *
+-- 
+2.52.0
+
