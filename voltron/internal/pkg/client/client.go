@@ -89,7 +89,7 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 		var dialerFunc tunnel.DialerFunc
 		if client.tunnelCert == nil {
 			log.Warnf("No tunnel creds, using unsecured tunnel")
-			dialerFunc = func() (*tunnel.Tunnel, error) {
+			dialerFunc = func() (tunnel.Tunnel, error) {
 				return tunnel.Dial(
 					tunnelAddress,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
@@ -98,7 +98,7 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 		} else {
 			tunnelCert := client.tunnelCert
 			tunnelRootCAs := client.tunnelRootCAs
-			dialerFunc = func() (*tunnel.Tunnel, error) {
+			dialerFunc = func() (tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
 
 				tlsConfig, err := calicotls.NewTLSConfig()
