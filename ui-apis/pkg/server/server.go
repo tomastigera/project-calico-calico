@@ -178,33 +178,53 @@ func Start(cfg *Config) error {
 	// Service graph has additional RBAC control built in since it accesses multiple different tables. However, the
 	// minimum requirements for accessing SG is access to the flow logs. Perform that check here so it is done at the
 	// earliest opportunity.
+	sgConfig := &servicegraph.Config{
+		ServiceGraphCacheMaxEntries:           cfg.ServiceGraphCacheMaxEntries,
+		ServiceGraphCacheMaxBucketsPerQuery:   cfg.ServiceGraphCacheMaxBucketsPerQuery,
+		ServiceGraphCacheMaxAggregatedRecords: cfg.ServiceGraphCacheMaxAggregatedRecords,
+		ServiceGraphCachePolledEntryAgeOut:    cfg.ServiceGraphCachePolledEntryAgeOut,
+		ServiceGraphCacheSlowQueryEntryAgeOut: cfg.ServiceGraphCacheSlowQueryEntryAgeOut,
+		ServiceGraphCachePollLoopInterval:     cfg.ServiceGraphCachePollLoopInterval,
+		ServiceGraphCachePollQueryInterval:    cfg.ServiceGraphCachePollQueryInterval,
+		ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
+		ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
+		ServiceGraphCacheFetchL7:              cfg.L7LogsEnabled,
+		ServiceGraphCacheFetchDNS:             cfg.DNSLogsEnabled,
+		ServiceGraphCacheFetchEvents:          cfg.EventsEnabled,
+		ParallelGraphStatsFetch:               cfg.ParallelGraphStatsFetch,
+		GraphStatsRequestLogging:              cfg.GraphStatsRequestLogging,
+		XLargeFlowLogScaleThreshold:           cfg.XLargeFlowLogScaleThreshold,
+		LargeFlowLogScaleThreshold:            cfg.LargeFlowLogScaleThreshold,
+		LargeL3FlowScaleThreshold:             cfg.LargeL3FlowScaleThreshold,
+		GlobalStatsTimeoutSeconds:             cfg.GlobalStatsTimeoutSeconds,
+		TenantNamespace:                       cfg.TenantNamespace,
+
+		// If impersonation is not enabled, then we cannot perform RBAC based on the original user.
+		FineGrainedRBAC: cfg.Impersonate,
+	}
+	serviceGraphHandler := servicegraph.NewServiceGraphHandler(
+		authz,
+		client,
+		linseed,
+		k8sClientSetFactory,
+		sgConfig,
+	)
 	sm.Handle("/serviceGraph",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					servicegraph.NewServiceGraphHandler(
-						authz,
-						client,
+					serviceGraphHandler,
+				))))
+
+	sm.Handle("/serviceGraph/stats",
+		middleware.ClusterRequestToResource(flowLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					servicegraph.NewServiceGraphStatsHandler(
 						linseed,
 						k8sClientSetFactory,
-						&servicegraph.Config{
-							ServiceGraphCacheMaxEntries:           cfg.ServiceGraphCacheMaxEntries,
-							ServiceGraphCacheMaxBucketsPerQuery:   cfg.ServiceGraphCacheMaxBucketsPerQuery,
-							ServiceGraphCacheMaxAggregatedRecords: cfg.ServiceGraphCacheMaxAggregatedRecords,
-							ServiceGraphCachePolledEntryAgeOut:    cfg.ServiceGraphCachePolledEntryAgeOut,
-							ServiceGraphCacheSlowQueryEntryAgeOut: cfg.ServiceGraphCacheSlowQueryEntryAgeOut,
-							ServiceGraphCachePollLoopInterval:     cfg.ServiceGraphCachePollLoopInterval,
-							ServiceGraphCachePollQueryInterval:    cfg.ServiceGraphCachePollQueryInterval,
-							ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
-							ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
-							ServiceGraphCacheFetchL7:              cfg.L7LogsEnabled,
-							ServiceGraphCacheFetchDNS:             cfg.DNSLogsEnabled,
-							ServiceGraphCacheFetchEvents:          cfg.EventsEnabled,
-							TenantNamespace:                       cfg.TenantNamespace,
-
-							// If impersonation is not enabled, then we cannot perform RBAC based on the original user.
-							FineGrainedRBAC: cfg.Impersonate,
-						},
+						serviceGraphHandler.ServiceGraphCache(),
+						sgConfig,
 					)))))
 
 	sm.Handle("/flowLogs",

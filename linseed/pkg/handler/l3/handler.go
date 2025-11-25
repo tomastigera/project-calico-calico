@@ -11,21 +11,27 @@ import (
 )
 
 const (
-	FlowPath    = "/flows"
-	LogPath     = "/flows/logs"
-	AggsPath    = "/flows/logs/aggregation"
-	LogPathBulk = "/flows/logs/bulk"
+	FlowPath      = "/flows"
+	FlowCountPath = "/flows/count"
+	LogPath       = "/flows/logs"
+	AggsPath      = "/flows/logs/aggregation"
+	LogPathBulk   = "/flows/logs/bulk"
+	LogCountPath  = "/flows/logs/count"
 )
 
 type Flows struct {
-	logs  handler.GenericHandler[v1.FlowLog, v1.FlowLogParams, v1.FlowLog, v1.FlowLogAggregationParams]
-	flows handler.ReadOnlyHandler[v1.L3Flow, v1.L3FlowParams]
+	logs       handler.GenericHandler[v1.FlowLog, v1.FlowLogParams, v1.FlowLog, v1.FlowLogAggregationParams]
+	flows      handler.ReadOnlyHandler[v1.L3Flow, v1.L3FlowParams]
+	logsCount  handler.CountHandler[v1.FlowLogCountParams]
+	flowsCount handler.CountHandler[v1.L3FlowCountParams]
 }
 
 func New(flows bapi.FlowBackend, logs bapi.FlowLogBackend) *Flows {
 	return &Flows{
-		flows: handler.NewReadOnlyHandler(flows.List),
-		logs:  handler.NewCompositeHandler(logs.Create, logs.List, logs.Aggregations),
+		flows:      handler.NewReadOnlyHandler(flows.List),
+		logs:       handler.NewCompositeHandler(logs.Create, logs.List, logs.Aggregations),
+		logsCount:  handler.NewCountHandler(logs.Count),
+		flowsCount: handler.NewCountHandler(flows.Count),
 	}
 }
 
@@ -35,6 +41,12 @@ func (h Flows) APIS() []handler.API {
 			Method:          "POST",
 			URL:             FlowPath,
 			Handler:         h.flows.List(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "flows"},
+		},
+		{
+			Method:          "POST",
+			URL:             FlowCountPath,
+			Handler:         h.flowsCount.Count(),
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "flows"},
 		},
 		{
@@ -53,6 +65,12 @@ func (h Flows) APIS() []handler.API {
 			Method:          "POST",
 			URL:             AggsPath,
 			Handler:         h.logs.Aggregate(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "flowlogs"},
+		},
+		{
+			Method:          "POST",
+			URL:             LogCountPath,
+			Handler:         h.logsCount.Count(),
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "flowlogs"},
 		},
 	}

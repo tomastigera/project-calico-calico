@@ -48,6 +48,27 @@ type Config struct {
 	// ServiceGraphCacheFetchEvents will instruct weather to fetch Events data or not
 	ServiceGraphCacheFetchEvents bool
 
+	// Whether or not to fetch service graph statistics in parallel. When true, all statistics queries run
+	// concurrently. When false, namespaced counts wait for the total flow log count to complete first.
+	ParallelGraphStatsFetch bool
+
+	// Whether or not to log service graph statistics request details (durations, counts, etc).
+	GraphStatsRequestLogging bool
+
+	// Scale threshold for flow log count that the /stats handler considers excessively large. It will perform no further
+	// computations if this threshold is met.
+	XLargeFlowLogScaleThreshold int64
+
+	// Scale threshold for flow log count that the /stats handler considers large. Only limited namespace computations will occur.
+	LargeFlowLogScaleThreshold int64
+
+	// Scale threshold for L3 flow count that the /stats handler considers large. Namespaces with counts above this threshold
+	// are considered high volume.
+	LargeL3FlowScaleThreshold int64
+
+	// The base timeout set on all computations performed by the /stats handler.
+	GlobalStatsTimeoutSeconds int
+
 	// TenantNamespace is the namespace of the tenant this instance is serving, or empty if this is a single-tenant cluster.
 	TenantNamespace string
 

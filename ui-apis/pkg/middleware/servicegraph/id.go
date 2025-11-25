@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 
@@ -369,17 +370,8 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 		thisType := v1.GraphNodeType(parts[0])
 
 		// Check the type one of the allowed parent types.
-		if len(previousType) != 0 {
-			var allowed bool
-			for _, allowedParentType := range allowedParentTypes[previousType] {
-				if allowedParentType == thisType {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
-				return nil, fmt.Errorf("unexpected format of node ID: %s", id)
-			}
+		if err := validateParentChildRelationship(thisType, previousType, id); err != nil {
+			return nil, err
 		}
 
 		if thisType == v1.GraphNodeTypeServiceGroup {
@@ -401,15 +393,8 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 			foundMapping = true
 			for idx, field := range mappings {
 				// Check the segment syntax. Only the service port is allowed to be empty.
-				switch field {
-				case idpServicePortName:
-					if !IDValueAllowedEmptyRegex.MatchString(parts[idx]) {
-						return nil, fmt.Errorf("unexpected format of node ID %s: unexpected empty segment", id)
-					}
-				default:
-					if !IDValueRegex.MatchString(parts[idx]) {
-						return nil, fmt.Errorf("unexpected format of node ID %s: badly formatted segment", id)
-					}
+				if err := validateSegmentSyntax(field, parts[idx], id); err != nil {
+					return nil, err
 				}
 
 				switch field {
@@ -481,6 +466,140 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 	}
 
 	return idf, nil
+}
+
+func validateParentChildRelationship(parent, child v1.GraphNodeType, id v1.GraphNodeID) error {
+	if len(child) == 0 {
+		return nil
+	}
+
+	var allowed bool
+	for _, allowedParentType := range allowedParentTypes[child] {
+		if allowedParentType == parent {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		return fmt.Errorf("unexpected format of node ID: %s", id)
+	}
+
+	return nil
+}
+
+func validateSegmentSyntax(field idp, segment string, id v1.GraphNodeID) error {
+	// Check the segment syntax. Only the service port is allowed to be empty.
+	switch field {
+	case idpServicePortName:
+		if !IDValueAllowedEmptyRegex.MatchString(segment) {
+			return fmt.Errorf("unexpected format of node ID %s: unexpected empty segment", id)
+		}
+	default:
+		if !IDValueRegex.MatchString(segment) {
+			return fmt.Errorf("unexpected format of node ID %s: badly formatted segment", id)
+		}
+	}
+	return nil
+}
+
+// ParseNamespacesFromGraphNodeID determines the subset of all namespaces that should contain the entirety of the data required for this node.
+// If no such subset exists (and all data must be considered), the empty set is returned.
+func ParseNamespacesFromGraphNodeID(id v1.GraphNodeID) ([]string, error) {
+	namespaceSet := set.New[string]()
+	var globalResourceFound bool
+	var serviceGroupFound bool
+	var previousType v1.GraphNodeType
+	for _, component := range strings.Split(string(id), ";") {
+		parts := strings.Split(component, "/")
+		thisType := v1.GraphNodeType(parts[0])
+
+		if err := validateParentChildRelationship(thisType, previousType, id); err != nil {
+			return nil, err
+		}
+
+		var foundMapping bool
+		for _, mappings := range idMappings[thisType] {
+			if len(mappings) != len(parts) {
+				continue
+			}
+			foundMapping = true
+			for idx, field := range mappings {
+				if err := validateSegmentSyntax(field, parts[idx], id); err != nil {
+					return nil, err
+				}
+
+				// Track what types of resources we've encountered in this node ID.
+				if field == idpType {
+					switch v1.GraphNodeType(parts[idx]) {
+					case v1.GraphNodeTypeHost, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork:
+						globalResourceFound = true
+					case v1.GraphNodeTypeNetworkSet:
+						if len(parts) == 2 {
+							globalResourceFound = true
+						}
+					case v1.GraphNodeTypeServiceGroup:
+						serviceGroupFound = true
+					}
+				}
+
+				// Track what namespaces we've encountered in this node ID.
+				if field == idpNamespace || field == idpServiceNamespace {
+					namespaceSet.Add(parts[idx])
+				}
+
+			}
+			break
+		}
+
+		if !foundMapping {
+			return nil, fmt.Errorf("unexpected format of node ID %s", id)
+		}
+		previousType = thisType
+	}
+
+	// The resources we encountered might indicate to us that we need to consider all namespaces for this node ID.
+	// A global resource (e.g. host) that is not the child of a service group requires us to consider all namespaces.
+	// However, if a global resource is the child of a service group, then we can scope the namespaces for this node
+	// down to the namespaces of the service group. This is because when a global resource is the child of a service
+	// group, it means that this node represents all flows from that service group involving that global resource.
+	if globalResourceFound && !serviceGroupFound {
+		// Return the empty set of namespaces, indicating that all namespaces in the cluster need to be considered for this node.
+		return []string{}, nil
+	}
+
+	return namespaceSet.Slice(), nil
+}
+
+// ParseNamespacesFromFocus determines the subset of all namespaces that should contain the entirety of the data required for this focus.
+// If no such subset exists (and all data must be considered), the empty set is returned.
+func ParseNamespacesFromFocus(view v1.GraphView) ([]string, error) {
+	if view.FollowConnectionDirection {
+		// When FollowConnectionDirection is true, the nodes in the graph are no longer required to be connected to the
+		// nodes in the focus string. Without this constraint, we are unable to infer a subset of namespaces that traffic
+		// is contained within based on the focus string alone.
+		return []string{}, nil
+	}
+
+	namespaceSet := set.New[string]()
+	for _, graphNodeID := range view.Focus {
+		namespaces, err := ParseNamespacesFromGraphNodeID(graphNodeID)
+		if err != nil {
+			return nil, err
+		}
+
+		// If a node represents the empty set of namespaces, this means it is global.
+		// If we encounter any global node, we can exit early because we know this focus requires global scope.
+		if len(namespaces) == 0 {
+			return []string{}, nil
+		}
+
+		for _, ns := range namespaces {
+			namespaceSet.Add(ns)
+		}
+	}
+
+	return namespaceSet.Slice(), nil
 }
 
 // getServiceID returns the destination service ID of the service contained in this node.

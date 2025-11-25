@@ -115,7 +115,7 @@ st:
 # Normally we run Linseed in multi-tenant mode, expecting all requests to have "tenant-a".
 # But this can be overridden by pre-setting TENANT_ID_ENV.
 TENANT_ID_ENV ?= -e LINSEED_EXPECTED_TENANT_ID="tenant-a"
-run-image: stop-image stop-elastic run-elastic k8s-setup
+run-image: stop-image stop-elastic run-elastic k8s-setup gen-certs
 	docker run --detach \
 		--net=host \
 		--name=tigera-$(LINSEED_IMAGE) \
