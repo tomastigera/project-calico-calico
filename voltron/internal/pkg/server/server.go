@@ -135,7 +135,8 @@ type Server struct {
 
 	// The token that Voltron uses has an exp of 1h by default and is periodically refreshed in the rest config
 	// BearerTokenFile location by the kubelet (k8s 1.22+). This token source uses client-go's tokenSource.
-	tokenSource oauth2.TokenSource
+	tokenSource               oauth2.TokenSource
+	waitForStatusManagerClose func()
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -230,7 +231,7 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 
 		x := NewStatusUpdater(srv.ctx, client, vcfg, nil)
 		srv.clusters.statusUpdateFunc = x.SetStatus
-
+		srv.waitForStatusManagerClose = x.WaitForClose
 		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
 
@@ -278,6 +279,10 @@ func (s *Server) Close() error {
 	var internalCloseErr error
 	if s.internalHTTP != nil {
 		internalCloseErr = s.internalHTTP.Close()
+	}
+
+	if s.waitForStatusManagerClose != nil {
+		s.waitForStatusManagerClose()
 	}
 
 	if publicCloseErr := s.http.Close(); publicCloseErr != nil {
