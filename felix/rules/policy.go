@@ -35,44 +35,77 @@ import (
 // ruleRenderer defined in rules_defs.go.
 
 func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *types.PolicyID, policy *proto.Policy, ipVersion uint8) []*generictables.Chain {
-	isStaged := model.PolicyIsStaged(policyID.Name)
+	if model.PolicyIsStaged(policyID.Name) {
+		logrus.Debugf("Skip programming staged policy %v", policyID.Name)
+		return nil
+	}
 	inbound := generictables.Chain{
 		Name: PolicyChainName(PolicyInboundPfx, policyID, r.NFTables),
 		// Note that the policy name includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s ingress", policyID.Name)),
+		Rules: r.ProtoRulesToIptablesRules(
+			policy.InboundRules,
+			ipVersion, RuleOwnerTypePolicy,
+			RuleDirIngress,
+			policyID.Name,
+			policy.Untracked,
+			fmt.Sprintf("Policy %s ingress", policyID.Name),
+		),
 	}
 	outbound := generictables.Chain{
 		Name: PolicyChainName(PolicyOutboundPfx, policyID, r.NFTables),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s egress", policyID.Name)),
+		Rules: r.ProtoRulesToIptablesRules(
+			policy.OutboundRules,
+			ipVersion, RuleOwnerTypePolicy,
+			RuleDirEgress,
+			policyID.Name,
+			policy.Untracked,
+			fmt.Sprintf("Policy %s egress", policyID.Name),
+		),
 	}
 	return []*generictables.Chain{&inbound, &outbound}
 }
 
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *types.ProfileID, profile *proto.Profile, ipVersion uint8) (inbound, outbound *generictables.Chain) {
 	inbound = &generictables.Chain{
-		Name:  ProfileChainName(ProfileInboundPfx, profileID, r.NFTables),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false, false, fmt.Sprintf("Profile %s ingress", profileID.Name)),
+		Name: ProfileChainName(ProfileInboundPfx, profileID, r.NFTables),
+		Rules: r.ProtoRulesToIptablesRules(
+			profile.InboundRules,
+			ipVersion,
+			RuleOwnerTypeProfile,
+			RuleDirIngress,
+			profileID.Name,
+			false,
+			fmt.Sprintf("Profile %s ingress", profileID.Name),
+		),
 	}
 	outbound = &generictables.Chain{
-		Name:  ProfileChainName(ProfileOutboundPfx, profileID, r.NFTables),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false, false, fmt.Sprintf("Profile %s egress", profileID.Name)),
+		Name: ProfileChainName(ProfileOutboundPfx, profileID, r.NFTables),
+		Rules: r.ProtoRulesToIptablesRules(
+			profile.OutboundRules,
+			ipVersion, RuleOwnerTypeProfile,
+			RuleDirEgress,
+			profileID.Name,
+			false,
+			fmt.Sprintf("Profile %s egress", profileID.Name),
+		),
 	}
 	return
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, name string, untracked, staged bool, chainComments ...string) []generictables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(
+	protoRules []*proto.Rule,
+	ipVersion uint8,
+	owner RuleOwnerType,
+	dir RuleDir,
+	name string,
+	untracked bool,
+	chainComments ...string,
+) []generictables.Rule {
 	var rules []generictables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked, staged)...)
-	}
-
-	if staged && r.FlowLogsEnabled {
-		// If staged, append an extra no-match nflog rule. This will be reported by the collector as an end-of-tier
-		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
-		// actually drop the packet already).
-		rules = append(rules, r.StagedPolicyNoMatchRule(dir, name))
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked)...)
 	}
 	// Strip off any return rules at the end of the chain.  No matter their
 	// match criteria, they're effectively no-ops.
@@ -127,21 +160,6 @@ func isCatchAllCIDR(cidr string, ipVersion uint8) bool {
 	return (ipVersion == 4 && cidr == "0.0.0.0/0") || (ipVersion == 6 && cidr == "::/0")
 }
 
-func (r *DefaultRuleRenderer) StagedPolicyNoMatchRule(dir RuleDir, name string) generictables.Rule {
-	nflogGroup := NFLOGOutboundGroup
-	if dir == RuleDirIngress {
-		nflogGroup = NFLOGInboundGroup
-	}
-	return generictables.Rule{
-		Match: r.NewMatch(),
-		Action: r.Nflog(
-			nflogGroup,
-			CalculateNoMatchPolicyNFLOGPrefixStr(dir, name),
-			0,
-		),
-	}
-}
-
 // FilterRuleToIPVersion: If the rule applies to the given IP version, returns a copy of the rule
 // excluding the CIDRs that are not of the given IP version. If the rule does not apply to the
 // given IP version at all, returns nil.
@@ -193,7 +211,14 @@ func FilterRuleToIPVersion(ipVersion uint8, pRule *proto.Rule) *proto.Rule {
 	return ruleCopy
 }
 
-func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []generictables.Rule {
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(
+	pRule *proto.Rule,
+	ipVersion uint8,
+	owner RuleOwnerType,
+	dir RuleDir,
+	idx int, name string,
+	untracked bool,
+) []generictables.Rule {
 	ruleCopy := FilterRuleToIPVersion(ipVersion, pRule)
 	if ruleCopy == nil {
 		return nil
@@ -355,10 +380,9 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		match = match.MarkSingleBitSet(matchBlockBuilder.markAllBlocksPass)
 	}
 
-	rules := r.CombineMatchAndActionsForProtoRule(ruleCopy, match, owner, dir, idx, name, untracked, staged, isDNSPolicyRule)
 	rs := matchBlockBuilder.Rules
+	rules := r.CombineMatchAndActionsForProtoRule(ruleCopy, match, owner, dir, idx, name, untracked, isDNSPolicyRule)
 	rs = append(rs, rules...)
-
 	// Render rule annotations as comments on each rule.
 	for i := range rs {
 		for k, v := range pRule.GetMetadata().GetAnnotations() {
@@ -639,14 +663,13 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	idx int,
 	name string,
 	untracked,
-	staged bool,
 	isDNSPolicyRule bool,
 ) []generictables.Rule {
 	var rules []generictables.Rule
 	var mark uint32
 
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
-	markDNSPolicyRule := isDNSPolicyRule && !staged && r.IsDNSPolicyModeDelayDeniedPacket()
+	markDNSPolicyRule := isDNSPolicyRule && r.IsDNSPolicyModeDelayDeniedPacket()
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -668,9 +691,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	switch pRule.Action {
 	case "", "allow":
 		// If this is not a staged policy then allow needs to set the accept mark.
-		if !staged {
-			mark = r.MarkAccept
-		}
+		mark = r.MarkAccept
 
 		// NFLOG the allow - we don't do this for untracked due to the performance hit.
 		if !untracked && r.FlowLogsEnabled {
@@ -689,9 +710,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	case "next-tier", "pass":
 		// If this is not a staged policy then pass (called next-tier in the API for historical reasons) needs to set
 		// the pass mark.
-		if !staged {
-			mark = r.MarkPass
-		}
+		mark = r.MarkPass
 
 		// NFLOG the pass - we don't do this for untracked due to the performance hit.
 		if !untracked && r.FlowLogsEnabled {
@@ -709,12 +728,10 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		rules = append(rules, generictables.Rule{Match: r.NewMatch(), Action: r.Return()})
 	case "deny":
 		// If this is not a staged policy then deny maps to DROP.
-		if !staged {
-			mark = r.MarkDrop
-		}
+		mark = r.MarkDrop
 
 		nfqueueRule := r.NfqueueRuleDelayDeniedPacket(nil)
-		if !staged && nfqueueRule != nil {
+		if nfqueueRule != nil {
 			rules = append(rules, *nfqueueRule)
 		}
 
@@ -730,13 +747,8 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 			})
 		}
 
-		if !staged {
-			// We defer to DropActions() to allow for "sandbox" mode.
-			rules = append(rules, r.DropRules(nil)...)
-		} else {
-			// For staged mode we simply return to calling chain for end of policy.
-			rules = append(rules, generictables.Rule{Match: r.NewMatch(), Action: r.Return()})
-		}
+		// We defer to DropActions() to allow for "sandbox" mode.
+		rules = append(rules, r.DropRules(nil)...)
 	case "log":
 		markDNSPolicyRule = false
 		// Handled above.
@@ -1056,16 +1068,12 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 
 func PolicyChainName(prefix PolicyChainNamePrefix, polID *types.PolicyID, nft bool) string {
 	maxLen := iptables.MaxChainNameLength
-	name := polID.Name
 	if nft {
 		maxLen = nftables.MaxChainNameLength
-
-		// nftables doesn't allow ":" in chain names, so replace with "/".
-		name = strings.Replace(name, "staged:", "staged/", 1)
 	}
 	return hashutils.GetLengthLimitedID(
 		string(prefix),
-		polID.Tier+"/"+name,
+		polID.Tier+"/"+polID.Name,
 		maxLen,
 	)
 }

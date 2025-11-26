@@ -245,9 +245,9 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		Eventually(func() error {
 			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
 
-			// Track all errors before failing.  All flows originating from our workload should be going to either
-			// the DNS server or the network sets.  If bound for the network sets then networkset1 should be denied and
-			// networkset2 should be allowed.  All should have policy hits from both tiers.
+			// Track all errors before failing. All flows originating from our workload should be going to either
+			// the DNS server or the network sets. If bound for the network sets then networkset1 should be denied and
+			// networkset2 should be allowed. All should have policy hits from both tiers.
 			var errs []string
 			var foundDNS, foundNetset1, foundNetset2 bool
 			err := flowTester.IterFlows(func(flowLog flowlog.FlowLog) error {
@@ -257,16 +257,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					return nil
 				}
 
-				// Handle DNS requests separately.  These should have policy hits including both the staged policy and
-				// the enforced policy.
+				// Handle DNS requests separately. These should have policy hits.
 				if flowLog.Tuple.GetDestPort() == 53 {
 					foundDNS = true
-					if len(flowLog.FlowAllPolicySet) != 2 {
+					if len(flowLog.FlowAllPolicySet) != 1 {
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowAllPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|0")
-					delete(flowLog.FlowAllPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|allow|0")
+					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|0")
 					if len(flowLog.FlowAllPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowAllPolicySet))
 						return nil
@@ -295,18 +293,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 						errs = append(errs, fmt.Sprintf("Unexpected domains for netset1: %#v", domains))
 					}
 
-					// Netset1 is matched by the staged policy and the default drop from the enforced policy.
-					// The drop by the enforced policy should be an exact match. The hit from staged policy may be
-					// an allow if the network set has been programmed or otherwise a no-match deny.  As a result we
-					// have to expect 2 or 3 policies.
+					// Netset1 is matched by the default drop from the enforced policy. The drop
+					// by the enforced policy should be an exact match.
 					foundNetset1 = true
-					if len(flowLog.FlowAllPolicySet) != 2 && len(flowLog.FlowAllPolicySet) != 3 {
+					if len(flowLog.FlowAllPolicySet) != 1 {
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowAllPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|1")
-					delete(flowLog.FlowAllPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
-					delete(flowLog.FlowAllPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|deny|-1")
+					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|deny|-1")
 					if len(flowLog.FlowAllPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowAllPolicySet))
 						return nil
@@ -320,19 +314,15 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 						errs = append(errs, fmt.Sprintf("Unexpected domains for netset2 at %s: %#v", flowLog.Tuple.DestNet().String(), domains))
 					}
 
-					// Netset2 is matched by the staged policy and the default allow from the enforced policy.
-					// The allow by the enforced policy should be an exact match because the policy would otherwise
-					// be dropped and packet retry will continue until it is allowed. The hit from staged policy may be
-					// an allow if the network set has been programmed or otherwise a no-match deny.  As a result we
-					// have to expect 2 or 3 policies.
+					// Netset2 is matched by the default allow from the enforced policy. The allow
+					// by the enforced policy should be an exact match because the policy would
+					// otherwise be dropped and packet retry will continue until it is allowed.
 					foundNetset2 = true
-					if len(flowLog.FlowAllPolicySet) != 2 && len(flowLog.FlowAllPolicySet) != 3 {
+					if len(flowLog.FlowAllPolicySet) != 1 {
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowAllPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|2")
-					delete(flowLog.FlowAllPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
-					delete(flowLog.FlowAllPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|allow|1")
+					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|1")
 					if len(flowLog.FlowAllPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowAllPolicySet))
 					}

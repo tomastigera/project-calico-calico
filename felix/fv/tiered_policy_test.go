@@ -315,6 +315,29 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 		Eventually(epCorrectFn, "10s").ShouldNot(HaveOccurred())
 
 		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
+			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
+			rulesProgrammed := func() bool {
+				var out0, out1 string
+				var err error
+				if NFTMode() {
+					out0, err = tc.Felixes[0].ExecOutput("nft", "list", "table", "ip", "calico")
+					Expect(err).NotTo(HaveOccurred())
+					out1, err = tc.Felixes[1].ExecOutput("nft", "list", "table", "ip", "calico")
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					out0, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+					Expect(err).NotTo(HaveOccurred())
+					out1, err = tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
+					Expect(err).NotTo(HaveOccurred())
+				}
+				return strings.Count(out0, "default.ep1-1-allow-all") > 0 &&
+					strings.Count(out1, "default.ep1-1-allow-all") == 0 &&
+					strings.Count(out0, "staged") == 0 &&
+					strings.Count(out1, "staged") == 0
+			}
+			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected iptables rules to appear on the correct felix instances")
+
 			// Mimic the kube-proxy service iptable clusterIP rule.
 			for _, f := range tc.Felixes {
 				f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
