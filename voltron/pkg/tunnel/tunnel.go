@@ -7,6 +7,7 @@ package tunnel
 import (
 	"bufio"
 	"context"
+	"crypto/md5"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -126,7 +127,6 @@ type DialerFunc func() (Tunnel, error)
 type Tunnel interface {
 	ErrChan() chan struct{}
 	WaitForError() error
-	Identity() Identity
 	OpenStream() (io.ReadWriteCloser, error)
 	Open() (net.Conn, error)
 	Addr() net.Addr
@@ -137,6 +137,11 @@ type Tunnel interface {
 	Close() error
 	LastErr() error
 	DialTimeout() time.Duration
+
+	ClusterID() string
+	Fingerprint() string
+	MD5Fingerprint() string
+	Certificate() *x509.Certificate
 }
 
 // tunnel represents either side of the tunnel that allows waiting for,
@@ -152,6 +157,11 @@ type tunnel struct {
 	keepAliveEnable   bool
 	keepAliveInterval time.Duration
 	dialTimeout       time.Duration
+
+	clusterID      string
+	fingerprint    string
+	md5Fingerprint string
+	certificate    *x509.Certificate
 }
 
 func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel, error) {
@@ -163,6 +173,21 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel
 
 		keepAliveInterval: 100 * time.Millisecond,
 		dialTimeout:       60 * time.Second,
+	}
+
+	switch id := t.Identity().(type) {
+	case *x509.Certificate:
+		// N.B. By now, we know that we signed this certificate as these checks
+		// are performed during TLS handshake. We need to extract the common name
+		// and fingerprint of the certificate to check against our internal records
+		// We expect to have a cluster registered with this ID and matching fingerprint
+		// for the cert.
+		t.clusterID = id.Subject.CommonName
+		t.fingerprint = utils.GenerateFingerprint(id)
+		t.md5Fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
+		t.certificate = id
+	default:
+		logrus.Errorf("unknown tunnel identity type %T", id)
 	}
 
 	var mux *yamux.Session
@@ -213,12 +238,24 @@ func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (Tunnel, error) 
 	return newTunnel(stream, false, opts...)
 }
 
-// Identity represents remote peer identity
-// XXX the exact type TBD
-type Identity = interface{}
-
 type hasIdentity interface {
-	Identity() Identity
+	Identity() any
+}
+
+func (t *tunnel) ClusterID() string {
+	return t.clusterID
+}
+
+func (t *tunnel) Fingerprint() string {
+	return t.fingerprint
+}
+
+func (t *tunnel) MD5Fingerprint() string {
+	return t.md5Fingerprint
+}
+
+func (t *tunnel) Certificate() *x509.Certificate {
+	return t.certificate
 }
 
 func (t *tunnel) LastErr() error {
@@ -326,7 +363,7 @@ func (t *tunnel) OpenStream() (io.ReadWriteCloser, error) {
 }
 
 // Identity provides the identity of the remote side that initiated the tunnel
-func (t *tunnel) Identity() Identity {
+func (t *tunnel) Identity() any {
 	if id, ok := t.stream.(hasIdentity); ok {
 		return id.Identity()
 	}

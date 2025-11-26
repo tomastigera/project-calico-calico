@@ -4,8 +4,10 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -541,11 +543,48 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // assignTunnel may read and write state, so it must be called with c.Lock called.
 func (c *cluster) assignTunnel(t tunnel.Tunnel) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if len(c.Certificate) != 0 {
+		if err := validateCertificate(t.Certificate(), c.Certificate); err != nil {
+			closeTunnel(t)
+			return fmt.Errorf("failed to verify certificate for cluster %s: %w", t.ClusterID(), err)
+		}
+	} else {
+		if len(c.ActiveFingerprint) == 0 {
+			closeTunnel(t)
+			return fmt.Errorf("no fingerprint has been stored against the current connection")
+		}
+		// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+		// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+		// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+		if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+			if t.Fingerprint() != c.ActiveFingerprint {
+				closeTunnel(t)
+				return fmt.Errorf("stored fingerprint does not match provided fingerprint")
+			}
+		} else {
+			// check pre-v3.15 fingerprint (md5)
+			if t.MD5Fingerprint() != c.ActiveFingerprint {
+				closeTunnel(t)
+				return fmt.Errorf("stored fingerprint does not match provided fingerprint")
+			}
+
+			// update to v3.15 fingerprint hash (sha256) when matched
+			if err := c.updateActiveFingerprint(t.Fingerprint()); err != nil {
+				closeTunnel(t)
+				return fmt.Errorf("failed to update cluster %s stored fingerprint: %w", t.ClusterID(), err)
+			}
+
+			logrus.Infof("Cluster %s stored fingerprint is successfully updated", t.ClusterID())
+		}
+	}
 	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
 	}
 
-	// Set up the outbound proxy, which handles traffic from the management cluster desinted
+	// Set up the outbound proxy, which handles traffic from the management cluster designated.
 	// to the managed cluster over the tunnel.
 	outboundTLSConfig, err := calicotls.NewTLSConfig()
 	if err != nil {
@@ -624,6 +663,13 @@ func (c *cluster) assignTunnel(t tunnel.Tunnel) error {
 	go c.checkTunnelState()
 
 	return nil
+}
+
+func closeTunnel(t tunnel.Tunnel) {
+	err := t.Close()
+	if err != nil {
+		logrus.WithError(err).Error("Could not close tunnel")
+	}
 }
 
 func (c *cluster) sendStatusUpdate(status v3.ManagedClusterStatusValue) {

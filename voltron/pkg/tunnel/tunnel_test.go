@@ -28,7 +28,7 @@ func init() {
 var _ = Describe("Stream Server", func() {
 	var (
 		addr net.Addr
-		srv  *tunnel.Server
+		srv  tunnel.Server
 
 		cconns []net.Conn
 		sconns []io.ReadWriteCloser
@@ -88,7 +88,7 @@ var _ = Describe("Stream Server", func() {
 var _ = Describe("Tunnel server", func() {
 	var (
 		addr net.Addr
-		srv  *tunnel.Server
+		srv  tunnel.Server
 	)
 
 	It("should start listening", func() {
@@ -223,7 +223,7 @@ var _ = Describe("Tunnel server", func() {
 
 })
 
-func startServer() (*tunnel.Server, net.Addr) {
+func startServer() (tunnel.Server, net.Addr) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -235,7 +235,7 @@ func startServer() (*tunnel.Server, net.Addr) {
 	return srv, lis.Addr()
 }
 
-func setupTunnel(srv *tunnel.Server, dialTarget string) (tunnel.Tunnel, tunnel.Tunnel) {
+func setupTunnel(srv tunnel.Server, dialTarget string) (tunnel.Tunnel, tunnel.Tunnel) {
 
 	var (
 		srvT tunnel.Tunnel
@@ -308,7 +308,7 @@ var _ = Describe("TLS Stream", func() {
 
 	var (
 		lis net.Listener
-		srv *tunnel.Server
+		srv tunnel.Server
 	)
 
 	It("should start TLS server", func() {
