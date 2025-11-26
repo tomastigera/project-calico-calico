@@ -16,3 +16,9 @@ packages:
     interfaces:
       Dialer: {}
       Tunnel: {}
+  net:
+    config:
+      dir: 'pkg/thirdpartymocks/{{.SrcPackagePath}}'
+      pkgname: '{{.SrcPackageName}}'
+    interfaces:
+      Conn: {}

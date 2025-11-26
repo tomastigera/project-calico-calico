@@ -5,6 +5,7 @@
 package tunnel
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"io"
 	"net"
@@ -151,7 +152,7 @@ func (_c *MockTunnel_AcceptStream_Call) RunAndReturn(run func() (io.ReadWriteClo
 }
 
 // AcceptWithChannel provides a mock function for the type MockTunnel
-func (_mock *MockTunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
+func (_mock *MockTunnel) AcceptWithChannel(acceptChan chan ConnOrError) chan bool {
 	ret := _mock.Called(acceptChan)
 
 	if len(ret) == 0 {
@@ -159,7 +160,7 @@ func (_mock *MockTunnel) AcceptWithChannel(acceptChan chan interface{}) chan boo
 	}
 
 	var r0 chan bool
-	if returnFunc, ok := ret.Get(0).(func(chan interface{}) chan bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(chan ConnOrError) chan bool); ok {
 		r0 = returnFunc(acceptChan)
 	} else {
 		if ret.Get(0) != nil {
@@ -175,16 +176,16 @@ type MockTunnel_AcceptWithChannel_Call struct {
 }
 
 // AcceptWithChannel is a helper method to define mock.On call
-//   - acceptChan chan interface{}
+//   - acceptChan chan ConnOrError
 func (_e *MockTunnel_Expecter) AcceptWithChannel(acceptChan interface{}) *MockTunnel_AcceptWithChannel_Call {
 	return &MockTunnel_AcceptWithChannel_Call{Call: _e.mock.On("AcceptWithChannel", acceptChan)}
 }
 
-func (_c *MockTunnel_AcceptWithChannel_Call) Run(run func(acceptChan chan interface{})) *MockTunnel_AcceptWithChannel_Call {
+func (_c *MockTunnel_AcceptWithChannel_Call) Run(run func(acceptChan chan ConnOrError)) *MockTunnel_AcceptWithChannel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 chan interface{}
+		var arg0 chan ConnOrError
 		if args[0] != nil {
-			arg0 = args[0].(chan interface{})
+			arg0 = args[0].(chan ConnOrError)
 		}
 		run(
 			arg0,
@@ -198,7 +199,7 @@ func (_c *MockTunnel_AcceptWithChannel_Call) Return(boolCh chan bool) *MockTunne
 	return _c
 }
 
-func (_c *MockTunnel_AcceptWithChannel_Call) RunAndReturn(run func(acceptChan chan interface{}) chan bool) *MockTunnel_AcceptWithChannel_Call {
+func (_c *MockTunnel_AcceptWithChannel_Call) RunAndReturn(run func(acceptChan chan ConnOrError) chan bool) *MockTunnel_AcceptWithChannel_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -755,6 +756,68 @@ func (_c *MockTunnel_OpenStream_Call) Return(readWriteCloser io.ReadWriteCloser,
 }
 
 func (_c *MockTunnel_OpenStream_Call) RunAndReturn(run func() (io.ReadWriteCloser, error)) *MockTunnel_OpenStream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// OpenTLS provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) OpenTLS(config *tls.Config) (net.Conn, error) {
+	ret := _mock.Called(config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for OpenTLS")
+	}
+
+	var r0 net.Conn
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*tls.Config) (net.Conn, error)); ok {
+		return returnFunc(config)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*tls.Config) net.Conn); ok {
+		r0 = returnFunc(config)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(net.Conn)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*tls.Config) error); ok {
+		r1 = returnFunc(config)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnel_OpenTLS_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OpenTLS'
+type MockTunnel_OpenTLS_Call struct {
+	*mock.Call
+}
+
+// OpenTLS is a helper method to define mock.On call
+//   - config *tls.Config
+func (_e *MockTunnel_Expecter) OpenTLS(config interface{}) *MockTunnel_OpenTLS_Call {
+	return &MockTunnel_OpenTLS_Call{Call: _e.mock.On("OpenTLS", config)}
+}
+
+func (_c *MockTunnel_OpenTLS_Call) Run(run func(config *tls.Config)) *MockTunnel_OpenTLS_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *tls.Config
+		if args[0] != nil {
+			arg0 = args[0].(*tls.Config)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnel_OpenTLS_Call) Return(conn net.Conn, err error) *MockTunnel_OpenTLS_Call {
+	_c.Call.Return(conn, err)
+	return _c
+}
+
+func (_c *MockTunnel_OpenTLS_Call) RunAndReturn(run func(config *tls.Config) (net.Conn, error)) *MockTunnel_OpenTLS_Call {
 	_c.Call.Return(run)
 	return _c
 }

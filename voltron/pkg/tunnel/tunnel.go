@@ -33,13 +33,18 @@ import (
 // ErrTunnelClosed is used to notify a caller that an action can't proceed because the tunnel is closed
 var ErrTunnelClosed = fmt.Errorf("tunnel closed")
 
+type TunnelOrError struct {
+	Tunnel Tunnel
+	Error  error
+}
+
 // DialInRoutineWithTimeout calls dialer.Dial() in a routine and sends the result back on the given resultsChan. The
 // timeout given is not the timeout for dialing (the implementation of the Dialer needs to take care of that), but used
 // to timeout writing to the resultsChan in the event that the channel is blocked.
 //
 // The channel return is needed to signal the routine that we no longer need the result. This channel should be closed
 // to send that signal, and is the responsibility of the caller to close that channel regardless.
-func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeout time.Duration) chan struct{} {
+func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan TunnelOrError, timeout time.Duration) chan struct{} {
 	closeChan := make(chan struct{})
 
 	go func() {
@@ -48,11 +53,9 @@ func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeo
 		logrus.Debug("Dialing tunnel")
 		tun, err := dialer.Dial()
 
-		var result interface{}
-		if err != nil {
-			result = err
-		} else {
-			result = tun
+		result := TunnelOrError{
+			Tunnel: tun,
+			Error:  err,
 		}
 
 		timer := time.NewTimer(timeout)
@@ -124,14 +127,20 @@ func (d *dialer) Dial() (Tunnel, error) {
 // DialerFunc is a function type used to create a tunnel
 type DialerFunc func() (Tunnel, error)
 
+type ConnOrError struct {
+	Conn  net.Conn
+	Error error
+}
+
 type Tunnel interface {
 	ErrChan() chan struct{}
 	WaitForError() error
 	OpenStream() (io.ReadWriteCloser, error)
 	Open() (net.Conn, error)
+	OpenTLS(*tls.Config) (net.Conn, error)
 	Addr() net.Addr
 	AcceptStream() (io.ReadWriteCloser, error)
-	AcceptWithChannel(acceptChan chan interface{}) chan bool
+	AcceptWithChannel(acceptChan chan ConnOrError) chan bool
 	Accept() (net.Conn, error)
 	IsClosed() bool
 	Close() error
@@ -290,7 +299,7 @@ func (t *tunnel) Accept() (net.Conn, error) {
 // we're done accepting connections.
 //
 // If the tunnel hasn't been setup prior to calling this function it will panic.
-func (t *tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
+func (t *tunnel) AcceptWithChannel(acceptChan chan ConnOrError) chan bool {
 	a := acceptChan
 	done := make(chan bool)
 	go func() {
@@ -308,15 +317,15 @@ func (t *tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 			default:
 			}
 			if err == nil {
-				a <- conn
+				a <- ConnOrError{Conn: conn}
 			} else {
 				err = convertYAMUXErr(err)
 				// if the tunnel is closed we're done
-				if err == ErrTunnelClosed {
+				if errors.Is(err, ErrTunnelClosed) {
 					return
 				}
 
-				a <- err
+				a <- ConnOrError{Error: err}
 			}
 		}
 	}()
@@ -352,6 +361,15 @@ func (t *tunnel) Open() (net.Conn, error) {
 	err = convertYAMUXErr(err)
 	t.checkErr(err)
 	return c, err
+}
+
+func (t *tunnel) OpenTLS(tlsCfg *tls.Config) (net.Conn, error) {
+	conn, err := t.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	return tls.Client(conn, tlsCfg), nil
 }
 
 // OpenStream returns, unlike NewConn, an io.ReadWriteCloser
