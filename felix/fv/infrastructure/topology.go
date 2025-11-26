@@ -573,14 +573,16 @@ func ApplyGracePeriodLicense(client client.Interface) {
 }
 
 func AssignIP(workload, addr, hostname string, client client.Interface) {
-	// Assign the workload's IP in IPAM, this will trigger calculation of routes.
-	err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-		IP:       cnet.MustParseIP(addr),
-		HandleID: &workload,
-		Attrs: map[string]string{
-			ipam.AttributeNode: hostname,
-		},
-		Hostname: hostname,
-	})
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	go func() {
+		// Assign the workload's IP in IPAM, this will trigger calculation of routes.
+		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
+			IP:       cnet.MustParseIP(addr),
+			HandleID: &workload,
+			Attrs: map[string]string{
+				ipam.AttributeNode: hostname,
+			},
+			Hostname: hostname,
+		})
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	}()
 }
