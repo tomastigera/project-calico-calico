@@ -619,7 +619,7 @@ func generateSemaphoreYamls() {
 			"09-blocks.yml":
 			weeklyTemplates = append(weeklyTemplates, t)
 		default:
-			if strings.Contains(t.content, "WEEKLY_RUN") && !strings.Contains(t.content, "SKIP-WEEKLY-RUN") {
+			if strings.Contains(t.content, "WEEKLY_RUN") {
 				weeklyTemplates = append(weeklyTemplates, t)
 				foundWeekly = true
 			}
