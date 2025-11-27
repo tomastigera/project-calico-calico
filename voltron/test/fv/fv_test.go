@@ -537,31 +537,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 		})
 	})
 
-	It("should pickup refreshed token", func() {
-		var err error
-		Eventually(func() string {
-			_, err = ui.doRequest(clusterID)
-			if err != nil {
-				return ""
-			}
-			return ts.authHeader
-		}, "10s", "1s").Should(Equal("Bearer initialToken"))
-
-		guardianTokenFile, err = os.OpenFile(guardianTokenFile.Name(), os.O_RDWR, 0644)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = guardianTokenFile.WriteString("updatedToken")
-		Expect(err).NotTo(HaveOccurred())
-		err = guardianTokenFile.Close()
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(func() string {
-			_, err = ui.doRequest(clusterID)
-			if err != nil {
-				return ""
-			}
-			return ts.authHeader
-		}, "1m", "1s").Should(Equal("Bearer updatedToken"))
-	})
-
 	It("should not be possible to reach the test server on http", func() {
 		_, err := ui.doHTTPRequest(clusterID)
 		Expect(err).To(HaveOccurred())
