@@ -185,6 +185,75 @@ func TestFV_L7Ingestion(t *testing.T) {
 
 		assert.Equal(t, l7Logs, strings.Join(esLogs, "\n"))
 	})
+
+	RunL7LogTest(t, "ingest l7 logs with gateway collector fields via bulk API", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := mTLSClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(l7LogsGatewayCollector))
+
+		// make the request to ingest gateway collector logs
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		expectedResponse := `{"failed":0, "succeeded":4, "total":4}`
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+
+		params := v1.L7LogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(1732464722, 0),
+					To:   time.Unix(1732464902, 0),
+				},
+			},
+		}
+
+		resultList, err := cli.L7Logs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		require.Equal(t, int64(3), resultList.TotalHits)
+
+		// Verify that the new gateway collector fields are present in the results
+		for i, log := range resultList.Items {
+			testutils.AssertL7LogClusterAndReset(t, cluster, &log)
+			testutils.AssertGeneratedTimeAndReset(t, &log)
+
+			// Verify new collector fields are present
+			require.Equal(t, "gateway-collector", log.CollectorName, "CollectorName should be set")
+			require.NotEmpty(t, log.CollectorType, "CollectorType should be set")
+			require.NotEmpty(t, log.GatewayNamespace, "GatewayNamespace should be set")
+			require.NotEmpty(t, log.GatewayClass, "GatewayClass should be set")
+
+			// Verify new gateway listener fields
+			require.NotEmpty(t, log.GatewayListenerFullName, "GatewayListenerFullName should be set")
+			require.NotEmpty(t, log.GatewayListenerHostname, "GatewayListenerHostname should be set")
+
+			// Verify new unified gateway route fields
+			require.NotEmpty(t, log.GatewayRouteName, "GatewayRouteName should be set")
+			require.NotEmpty(t, log.GatewayRouteNamespace, "GatewayRouteNamespace should be set")
+			require.NotEmpty(t, log.GatewayRouteStatus, "GatewayRouteStatus should be set")
+
+			if i < 2 {
+				// First two logs are HTTP routes
+				require.Equal(t, "http", log.GatewayRouteType, "GatewayRouteType should be 'http' for HTTP routes")
+			} else {
+				// Third log is a GRPC route
+				require.Equal(t, "grpc", log.GatewayRouteType, "GatewayRouteType should be 'grpc' for GRPC routes")
+			}
+
+			logStr, err := json.Marshal(log)
+			require.NoError(t, err)
+			require.NotEmpty(t, string(logStr))
+		}
+	})
 }
 
 func TestFV_KubeAuditIngestion(t *testing.T) {
