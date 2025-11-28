@@ -240,6 +240,10 @@ promotions:
     pipeline_file: push-images/third_party/prometheus.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party istio images
+    pipeline_file: push-images/third_party/istio.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
 
   - name: Push fake-guardian images
     pipeline_file: push-images/fake-guardian.yml
