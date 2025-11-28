@@ -196,3 +196,7 @@ promotions:
     pipeline_file: ../third_party/prometheus/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut third-party Istio Release
+    pipeline_file: ../third_party/istio/istio/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
