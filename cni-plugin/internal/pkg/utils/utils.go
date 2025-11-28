@@ -801,11 +801,12 @@ func ConfigureLogging(conf types.NetConf) {
 	if conf.LogFilePath != "" {
 		// Create file logger with log file rotation.
 		fileLogger := &timberjack.Logger{
-			Filename:   conf.LogFilePath,
-			FileMode:   0o644,
-			MaxSize:    100,
-			MaxAge:     30,
-			MaxBackups: 10,
+			Filename:    conf.LogFilePath,
+			FileMode:    0o644,
+			Compression: "zstd",
+			MaxSize:     100,
+			MaxAge:      30,
+			MaxBackups:  10,
 		}
 
 		// Set the max size if exists. Defaults to 100 MB.

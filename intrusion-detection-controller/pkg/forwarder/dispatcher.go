@@ -43,10 +43,11 @@ func (d *fileDispatcher) Initialize() error {
 		return nil
 	}
 	d.logger = &timberjack.Logger{
-		Filename:   path.Join(d.directory, d.fileName),
-		FileMode:   0o644,
-		MaxSize:    d.maxMB,
-		MaxBackups: d.numFiles,
+		Filename:    path.Join(d.directory, d.fileName),
+		FileMode:    0o644,
+		Compression: "zstd",
+		MaxSize:     d.maxMB,
+		MaxBackups:  d.numFiles,
 	}
 	return nil
 }

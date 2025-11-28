@@ -43,10 +43,11 @@ func (f *FileReporter) Start() error {
 		return nil
 	}
 	logger := &timberjack.Logger{
-		Filename:   path.Join(f.directory, f.fileName),
-		FileMode:   0o644,
-		MaxSize:    f.maxMB,
-		MaxBackups: f.numFiles,
+		Filename:    path.Join(f.directory, f.fileName),
+		FileMode:    0o644,
+		Compression: "zstd",
+		MaxSize:     f.maxMB,
+		MaxBackups:  f.numFiles,
 	}
 	f.logger = bufio.NewWriterSize(logger, 1<<16)
 	return nil
