@@ -95,7 +95,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -176,7 +176,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -195,7 +195,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				},
 			})).NotTo(HaveOccurred())
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 			Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 		})
@@ -223,7 +223,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -237,7 +237,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(myClusters.clusters)).To(Equal(0))
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
@@ -290,7 +290,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				})).ShouldNot(HaveOccurred())
 				ctx, cancel = context.WithCancel(context.Background())
 				go func() {
-					_ = myClusters.watchK8s(ctx, nil)
+					_ = myClusters.watchK8s(ctx)
 				}()
 				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(0))
 			})
@@ -314,7 +314,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			}
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -447,7 +447,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			})).NotTo(HaveOccurred())
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 			Eventually(func() v3.ManagedClusterStatusValue {
 				mc := &v3.ManagedCluster{}
@@ -519,7 +519,7 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 			},
 		}
 
-		_, err = clusters.add(mc)
+		err = clusters.add(mc)
 		Expect(err).NotTo(HaveOccurred())
 		// Add a second cluster
 
@@ -532,7 +532,7 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 			},
 		}
 
-		_, err = clusters.add(mc)
+		err = clusters.add(mc)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Validate the certificates are in the map

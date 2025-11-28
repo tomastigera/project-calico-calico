@@ -668,12 +668,6 @@ func addImpersonationHeaders(r *http.Request, user user.Info) {
 
 // WatchK8s starts watching k8s resources, always exits with an error
 func (s *Server) WatchK8s() error {
-	return s.WatchK8sWithSync(nil)
-}
-
-// WatchK8sWithSync is a variant of WatchK8s for testing. Every time a watch
-// event is handled its result is posted on the syncC channel
-func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	logrus.Debug("WatchK8sWithSync")
 	defer logrus.Debug("WatchK8sWithSync done")
 
@@ -681,7 +675,7 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 		return errors.New("no k8s interface")
 	}
 
-	return s.clusters.watchK8s(s.ctx, syncC)
+	return s.clusters.watchK8s(s.ctx)
 }
 
 // FlushAccessLogs exposed for testing
