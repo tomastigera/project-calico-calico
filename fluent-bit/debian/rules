@@ -29,8 +29,8 @@ override_dh_auto_configure:
 override_dh_install:
 	dh_install
 
-	mkdir -p debian/calico-fluent-bit/usr/lib/x86_64-linux-gnu/calico-fluent-bit
-	install -D debian/out_linseed.so debian/calico-fluent-bit/usr/lib/x86_64-linux-gnu/calico-fluent-bit/out_linseed.so
+	mkdir -p debian/calico-fluent-bit/usr/lib/$(DEB_HOST_MULTIARCH)/calico-fluent-bit
+	install -D debian/out_linseed.so debian/calico-fluent-bit/usr/lib/$(DEB_HOST_MULTIARCH)/calico-fluent-bit/out_linseed.so
 
 	install -m 644 -D debian/record_transformer.lua debian/calico-fluent-bit/etc/calico/calico-fluent-bit/record_transformer.lua
 	install -m 644 -D debian/calico-fluent-bit.env debian/calico-fluent-bit/etc/calico/calico-fluent-bit/calico-fluent-bit.env
