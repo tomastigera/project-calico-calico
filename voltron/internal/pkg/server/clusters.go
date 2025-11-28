@@ -167,9 +167,9 @@ func (cs *clusters) makeInnerTLSConfig() error {
 	return nil
 }
 
-func (cs *clusters) add(mc v3.ManagedCluster) (*cluster, error) {
+func (cs *clusters) add(mc v3.ManagedCluster) error {
 	if cs.clusters[mc.Name] != nil {
-		return nil, fmt.Errorf("cluster id %q already exists", mc.Name)
+		return fmt.Errorf("cluster id %q already exists", mc.Name)
 	}
 
 	c := &cluster{
@@ -186,7 +186,7 @@ func (cs *clusters) add(mc v3.ManagedCluster) (*cluster, error) {
 	var err error
 	c.managedClusterQuerier, err = cs.managedClusterQuerierFactory.New(c.DialTLS2)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create managed cluster querier for cluster %s: %w", c.ID, err)
+		return fmt.Errorf("failed to create managed cluster querier for cluster %s: %w", c.ID, err)
 	}
 
 	// Append the new certificate to the client certificate pool.
@@ -227,40 +227,22 @@ func (cs *clusters) add(mc v3.ManagedCluster) (*cluster, error) {
 			vtls.WithInnerServer(innerServer),
 		)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		c.inboundTLSProxy = inboundProxy
 	}
 
 	cs.clusters[mc.Name] = c
-	return c, nil
-}
-
-func (cs *clusters) addNew(mc v3.ManagedCluster) error {
-	logrus.Infof("Adding cluster ID: %q", mc.Name)
-
-	_, err := cs.add(mc)
-	if err != nil {
-		return err
-	}
-
 	return nil
-}
-
-func (cs *clusters) addRecovered(mc v3.ManagedCluster) error {
-	logrus.Infof("Recovering cluster ID: %q", mc.Name)
-
-	_, err := cs.add(mc)
-	return err
 }
 
 func (cs *clusters) update(mc v3.ManagedCluster) error {
 	cs.Lock()
 	defer cs.Unlock()
-	return cs.updateLocked(mc, false)
+	return cs.updateLocked(mc)
 }
 
-func (cs *clusters) updateLocked(mc v3.ManagedCluster, recovery bool) error {
+func (cs *clusters) updateLocked(mc v3.ManagedCluster) error {
 	if c, ok := cs.clusters[mc.Name]; ok {
 		c.Lock()
 		clog := logrus.WithField("cluster", c.ID)
@@ -304,11 +286,7 @@ func (cs *clusters) updateLocked(mc v3.ManagedCluster, recovery bool) error {
 		return nil
 	}
 
-	if recovery {
-		return cs.addRecovered(mc)
-	}
-
-	return cs.addNew(mc)
+	return cs.add(mc)
 }
 
 func (cs *clusters) remove(mc v3.ManagedCluster) error {
@@ -339,7 +317,7 @@ func (cs *clusters) get(id string) *cluster {
 	return cs.clusters[id]
 }
 
-func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
+func (cs *clusters) watchK8sFrom(ctx context.Context, last string) error {
 	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{},
 		&ctrlclient.ListOptions{
 			Namespace: cs.voltronCfg.TenantNamespace,
@@ -382,15 +360,6 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			if err != nil {
 				logrus.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
 			}
-
-			if syncC != nil {
-				select {
-				case syncC <- err:
-				case <-ctx.Done():
-					watcher.Stop()
-					return fmt.Errorf("watcher exiting: %s", ctx.Err())
-				}
-			}
 		case <-ctx.Done():
 			watcher.Stop()
 			return fmt.Errorf("watcher exiting: %s", ctx.Err())
@@ -414,7 +383,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		known[mc.Name] = struct{}{}
 
 		logrus.Debugf("Sync K8s watch for cluster : %s", mc.Name)
-		err = cs.updateLocked(mc, true)
+		err = cs.updateLocked(mc)
 		if err != nil {
 			logrus.Errorf("ManagedClusters listing failed: %s", err)
 		}
@@ -440,14 +409,14 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	return list.ResourceVersion, nil
 }
 
-func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
+func (cs *clusters) watchK8s(ctx context.Context) error {
 	// Initial sync for new server
 	startupSync := true
 	for {
 		last, err := cs.resyncWithK8s(ctx, startupSync)
 		if err == nil {
 			startupSync = false
-			err = cs.watchK8sFrom(ctx, syncC, last)
+			err = cs.watchK8sFrom(ctx, last)
 			if err != nil {
 				err = errors.WithMessage(err, "k8s watch failed")
 			}

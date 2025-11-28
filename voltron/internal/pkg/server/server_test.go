@@ -89,15 +89,8 @@ var (
 	janeBearerToken = testing.NewFakeJWT(k8sIssuer, "jane@example.io")
 	bobBearerToken  = testing.NewFakeJWT(k8sIssuer, "bob@example.io")
 
-	watchSync chan error
-
 	mockFactory = &MockManagedClusterQuerierFactory{}
 )
-
-func init() {
-	log.SetOutput(GinkgoWriter)
-	log.SetLevel(log.DebugLevel)
-}
 
 type k8sClient struct {
 	kubernetes.Interface
@@ -236,7 +229,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			watchSync = make(chan error)
 			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				mockAuthenticator,
@@ -474,9 +466,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						})
 						Expect(err).ShouldNot(HaveOccurred())
 
-						// wait for one cycle of clusters.watchK8sFrom() to complete
-						Expect(<-watchSync).NotTo(HaveOccurred())
-
 						clusterBTLSCert, err = test.X509CertToTLSCert(clusterBCert, clusterBPrivKey)
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -580,9 +569,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 						clusterCTLSCert, err = test.X509CertToTLSCert(clusterCCert, clusterCPrivKey)
 						Expect(err).NotTo(HaveOccurred())
-
-						// wait for one cycle of clusters.watchK8sFrom() to complete
-						Expect(<-watchSync).NotTo(HaveOccurred())
 					})
 
 					It("can send requests from the server to the third cluster", func() {
@@ -744,8 +730,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
 			Expect(err).ShouldNot(HaveOccurred())
-
-			watchSync = make(chan error)
 
 			srv, httpsAddr, internalAddr, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
@@ -1047,7 +1031,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err = regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			watchSync = make(chan error)
 			srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				mockAuthenticator,
@@ -1137,8 +1120,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				}, 5*time.Second, nil)
 				Expect(err).NotTo(HaveOccurred())
 
-				// wait for one cycle of clusters.watchK8sFrom() to complete
-				Expect(<-watchSync).NotTo(HaveOccurred())
+				time.Sleep(2 * time.Second)
 
 				mc := &v3.ManagedCluster{}
 				Expect(fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterB, Namespace: clusterNS}, mc)).NotTo(HaveOccurred())
@@ -1270,7 +1252,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			var err error
 			var ctx context.Context
 			ctx, cancelFunc = context.WithCancel(context.Background())
-			watchSync = make(chan error)
 
 			// Configure authentication and authorization.
 			authorizerInvocations = 0
@@ -1466,7 +1447,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.With
 	}()
 
 	go func() {
-		_ = srv.WatchK8sWithSync(watchSync)
+		_ = srv.WatchK8s()
 	}()
 
 	return srv, lisHTTPS.Addr().String(), lisInternalHTTPS.Addr().String(), lisTun.Addr().String(), &wg
@@ -1507,13 +1488,8 @@ func createAndStartManagedCluster(
 		},
 	})).ShouldNot(HaveOccurred())
 
-	time.Sleep(2 * time.Second)
-
 	tlsCert, err := test.X509CertToTLSCert(clusterCert, clusterKey)
 	Expect(err).NotTo(HaveOccurred())
-
-	// wait for one cycle of clusters.watchK8sFrom() to complete
-	Expect(<-watchSync).NotTo(HaveOccurred())
 
 	tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
