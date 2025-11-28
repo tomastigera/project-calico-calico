@@ -1,0 +1,6 @@
+.istio.downloaded
+.istio-cni.created-*
+.istio-pilot.created-*
+.release-*
+istio/
+bin/
