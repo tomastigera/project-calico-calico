@@ -606,7 +606,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 
 		// And they still have the same data so that existing preamble programs
 		// and policies can still point to the right stuff.
-		oldProgsIngParams := hook.IngressProgramsMapParameters
+		oldProgsIngParams := hook.FromHostProgramsMapParameters
 		oldProgsIngParams.PinDir = tmp
 		oldProgs := maps.NewPinnedMap(oldProgsIngParams)
 		err = oldProgs.Open()
@@ -620,7 +620,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		}
 		Expect(pm).To(HaveLen(programsCount))
 
-		oldPoliciesParams := jump.IngressMapParameters
+		oldPoliciesParams := jump.FromHostMapParameters
 		oldPoliciesParams.PinDir = tmp
 		oldPolicies := maps.NewPinnedMap(oldPoliciesParams)
 		err = oldPolicies.Open()
