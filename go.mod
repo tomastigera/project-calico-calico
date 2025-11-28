@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/storage v1.57.1
 	dario.cat/mergo v1.0.2
 	github.com/BurntSushi/toml v1.5.0
+	github.com/DeRuina/timberjack v1.3.9
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Microsoft/hcsshim v0.13.0
@@ -166,8 +167,6 @@ require (
 	// validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
 	// with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.19.0
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
@@ -474,6 +473,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
@@ -515,9 +515,6 @@ replace (
 	github.com/stretchr/testify => github.com/stretchr/testify v1.10.0
 
 	github.com/tigera/api => ./api
-
-	// Newer versions set the file mode on logs to 0600, which breaks a lot of our tests.
-	gopkg.in/natefinch/lumberjack.v2 => gopkg.in/natefinch/lumberjack.v2 v2.0.0
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for

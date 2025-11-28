@@ -4,13 +4,11 @@ package archive
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"os"
 	"path"
 
+	"github.com/DeRuina/timberjack"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -47,15 +45,9 @@ func (d *fileDispatcher) Initialize() error {
 		// Already initialized; no-op
 		return nil
 	}
-	// Create the log directory before creating the logger.  If the logger creates it, it will do so
-	// with permission 0744, meaning that non-root users won't be able to "see" files in the
-	// directory, since "execute" permission on a directory needs to be granted.
-	err := os.MkdirAll(d.directory, 0o755)
-	if err != nil {
-		return fmt.Errorf("can't make directories for new logfile: %s", err)
-	}
-	d.logger = &lumberjack.Logger{
+	d.logger = &timberjack.Logger{
 		Filename:   path.Join(d.directory, d.fileName),
+		FileMode:   0o644,
 		MaxSize:    d.maxMB,
 		MaxBackups: d.numFiles,
 	}
