@@ -66,7 +66,7 @@ func New() *Config {
 	fs.Var(&cfg.WAFRulesetFiles, "waf-ruleset-file", "WAF ruleset file path to load. e.g. /etc/modsecurity-ruleset/tigera.conf. Can be specified multiple times.")
 	fs.StringVar(&cfg.WAFRulesetRootDir, "waf-ruleset-root-dir", "", "WAF ruleset root dir path. e.g. /etc/waf")
 	fs.Var(&cfg.WAFDirectives, "waf-directive", "Additional directives to specify for WAF (if enabled). Can be specified multiple times.")
-	fs.StringVar(&cfg.Dataplane, "dataplane", "iptables", "Dataplane to use e.g. iptables, nftables")
+	fs.StringVar(&cfg.Dataplane, "dataplane", util.GetEnv("DATAPLANE", "iptables"), "Dataplane to use e.g. iptables, nftables")
 
 	fs.StringVar(
 		&cfg.LogLevel,
