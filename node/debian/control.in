@@ -1,0 +1,26 @@
+Source: calico-node
+Maintainer: Tigera Inc <maintainers@tigera.io>
+Section: devel
+Priority: optional
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config
+
+Package: calico-node
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         adduser,
+         conntrack,
+         iproute2,
+         ipset,
+         iptables,
+         nftables,
+         iputils-ping,
+         kmod,
+         libnetfilter-conntrack3,
+         libnetfilter-cthelper0,
+         libnetfilter-cttimeout1,
+         libnetfilter-queue1,
+         libpcap0.8,
+         @BPFTOOL_PACKAGE@
+Description: Calico node handles networking and policy for Calico.
