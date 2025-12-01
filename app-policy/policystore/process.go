@@ -248,16 +248,14 @@ func (store *PolicyStore) mergeHTTPHeadersInRule(rule *proto.Rule) {
 	// Replace headers with consolidated ones
 	rule.HttpMatch.Headers = nil
 	for headerName, operators := range headerMap {
-		for operator, values := range operators {
-			// Remove duplicates and create comma-separated values for same header
-			uniqueValues := store.removeDuplicateStrings(values)
-			consolidatedValue := []string{strings.Join(uniqueValues, ",")}
+		for operator, headerValues := range operators {
+			uniqueHeaders := store.removeDuplicateStrings(headerValues)
 
-			log.Debugf("Adding consolidated header: %s %s %v", headerName, operator, consolidatedValue)
+			log.Debugf("Adding merged header: %s %s %v", headerName, operator, uniqueHeaders)
 			rule.HttpMatch.Headers = append(rule.HttpMatch.Headers, &proto.HTTPMatch_HeadersMatch{
 				Header:   headerName,
 				Operator: operator,
-				Values:   consolidatedValue,
+				Values:   uniqueHeaders,
 			})
 		}
 	}

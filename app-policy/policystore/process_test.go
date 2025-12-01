@@ -67,9 +67,9 @@ func TestPolicyHeaderMerging(t *testing.T) {
 	Expect(header.Header).To(Equal("content-type"))
 	Expect(header.Operator).To(Equal("In"))
 
-	// Should have merged values: "text/plain,application/json"
-	Expect(header.Values).To(HaveLen(1))
-	Expect(header.Values[0]).To(Equal("text/plain,application/json"))
+	// Should have merged values
+	Expect(header.Values).To(HaveLen(2))
+	Expect(header.Values).To(ConsistOf("text/plain", "application/json"))
 }
 
 func TestPolicyHeaderMergingWithDifferentOperators(t *testing.T) {
