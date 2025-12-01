@@ -26,6 +26,8 @@ global_job_config:
       - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
       - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+      - cd app-policy
+      - cache restore app-policy-geoip
 
 blocks:
   - name: Publish ALP images
@@ -36,7 +38,7 @@ blocks:
       jobs:
         - name: Linux amd64
           commands:
-            - make -C app-policy cd ARCHES=amd64 CONFIRM=true
+            - make cd ARCHES=amd64 CONFIRM=true
   - name: Publish ALP images - native arm64 runner
     dependencies: []
     skip:
@@ -48,7 +50,7 @@ blocks:
       jobs:
         - name: Linux arm64
           commands:
-            - make -C app-policy cd ARCHES=arm64 CONFIRM=true
+            - make cd ARCHES=arm64 CONFIRM=true
   - name: Publish ALP multi-arch manifests
     dependencies:
       - Publish ALP images

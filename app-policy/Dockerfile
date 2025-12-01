@@ -26,11 +26,11 @@ RUN mkdir -p /var/run/dikastes
 
 FROM scratch AS source
 
-ARG BIN_DIR
+ARG BINDIR
 ARG TARGETARCH
 
 # Copy default GeoIP MMDB binary files from DB-IP.
-COPY bin/database/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
+COPY geoip/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
@@ -39,7 +39,7 @@ COPY --from=builder /sbin/iptables /sbin/iptables
 COPY --from=builder /usr/lib64/xtables /usr/lib64/xtables
 COPY --from=builder /deps /
 
-COPY ${BIN_DIR}/dikastes-${TARGETARCH} /dikastes
+COPY ${BINDIR}/dikastes-${TARGETARCH} /dikastes
 
 FROM ${CALICO_BASE}
 

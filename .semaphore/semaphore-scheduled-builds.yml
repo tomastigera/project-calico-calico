@@ -326,6 +326,7 @@ blocks:
       prologue:
         commands:
           - cd app-policy
+          - cache restore app-policy-geoip
       epilogue:
         always:
           commands:
@@ -334,6 +335,7 @@ blocks:
         - name: app-policy tests
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
+            - cache store app-policy-geoip geoip
   - name: app-policy - native arm64 runner
     run:
       when: "true"
