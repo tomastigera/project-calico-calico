@@ -215,20 +215,8 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 		return nil, fmt.Errorf("failed to open obj file %s: %w", file, err)
 	}
 
-	if err := pm.configureMaps(obj, file); err != nil {
+	if err := pm.configureMapsAndPrograms(obj, file, progAttachType); err != nil {
 		return nil, err
-	}
-
-	if progAttachType == "TCX" {
-		for prog, err := obj.FirstProgram(); prog != nil && err == nil; prog, err = prog.NextProgram() {
-			attachType := libbpf.AttachTypeTcxEgress
-			if pm.expectedAttachType == "ingress" {
-				attachType = libbpf.AttachTypeTcxIngress
-			}
-			if err := obj.SetAttachType(prog.Name(), attachType); err != nil {
-				return nil, fmt.Errorf("error setting attach type for program %s: %w", prog.Name(), err)
-			}
-		}
 	}
 
 	if !at.hasIPDefrag() {
@@ -248,7 +236,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 			}
 
 			// Re-configure maps
-			if err := pm.configureMaps(obj, file); err != nil {
+			if err := pm.configureMapsAndPrograms(obj, file, progAttachType); err != nil {
 				return nil, err
 			}
 
@@ -273,7 +261,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 	return layout, err
 }
 
-func (pm *ProgramsMap) configureMaps(obj *libbpf.Obj, file string) error {
+func (pm *ProgramsMap) configureMapsAndPrograms(obj *libbpf.Obj, file, progAttachType string) error {
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
 		mapName := m.Name()
 		if strings.Contains(mapName, ".rodata") {
@@ -288,6 +276,18 @@ func (pm *ProgramsMap) configureMaps(obj *libbpf.Obj, file string) error {
 		}
 		log.Debugf("map %s k %d v %d pinned to %s for generic object file %s",
 			mapName, m.KeySize(), m.ValueSize(), path.Join(bpfdefs.GlobalPinDir, mapName), file)
+	}
+
+	if progAttachType == "TCX" {
+		for prog, err := obj.FirstProgram(); prog != nil && err == nil; prog, err = prog.NextProgram() {
+			attachType := libbpf.AttachTypeTcxEgress
+			if pm.expectedAttachType == "ingress" {
+				attachType = libbpf.AttachTypeTcxIngress
+			}
+			if err := obj.SetAttachType(prog.Name(), attachType); err != nil {
+				return fmt.Errorf("error setting attach type for program %s: %w", prog.Name(), err)
+			}
+		}
 	}
 	return nil
 }
