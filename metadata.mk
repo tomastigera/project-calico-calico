@@ -3,11 +3,11 @@
 #################################################################################################
 
 # Calico toolchain versions and the calico/base image to use.
-GO_BUILD_VER=1.25.4-llvm18.1.8-k8s1.34.1
+GO_BUILD_VER=1.25.5-llvm18.1.8-k8s1.34.2
 RUST_BUILD_VER=1.91.1
 
-CALICO_BASE_VER=ubi9-1763485988
-CALICO_BASE_UBI10_VER=ubi10-1763485988
+CALICO_BASE_VER=ubi9-1764706938
+CALICO_BASE_UBI10_VER=ubi10-1764706938
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
