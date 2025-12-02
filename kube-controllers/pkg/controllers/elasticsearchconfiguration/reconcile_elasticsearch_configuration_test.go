@@ -452,6 +452,7 @@ var _ = Describe("Reconcile", func() {
 	Context("Managed cluster configuration successfully created", func() {
 		var managedK8sCli *k8sfake.Clientset
 		var managedESConfigMap *corev1.ConfigMap
+		var mockClientSetFactory *k8s.MockClientSetFactory
 		BeforeEach(func() {
 			managedESConfigMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -465,6 +466,25 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 			managedK8sCli = k8sfake.NewSimpleClientset()
+
+			mockClientSetFactory = k8s.NewMockClientSetFactory(GinkgoT())
+
+			managedClusterName := "managed-1"
+
+			mockK8sClient := k8sfake.NewSimpleClientset()
+			cs := fake.NewSimpleClientset([]runtime.Object{
+				&v3.ClusterInformation{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+					Spec: v3.ClusterInformationSpec{
+						CalicoEnterpriseVersion: "v3.23.0",
+					},
+				},
+			}...)
+			mockClientSet := testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
+
+			mockClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
 		})
 
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
@@ -478,6 +498,7 @@ var _ = Describe("Reconcile", func() {
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err = r.Reconcile(types.NamespacedName{})
@@ -491,6 +512,7 @@ var _ = Describe("Reconcile", func() {
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err := r.Reconcile(types.NamespacedName{})
@@ -522,6 +544,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.ownerReference = "reference1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -538,6 +561,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.ownerReference = "reference1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -555,6 +579,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.ownerReference = "reference1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err := r.Reconcile(types.NamespacedName{})
@@ -572,6 +597,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.ownerReference = "reference2"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -594,6 +620,7 @@ var _ = Describe("Reconcile", func() {
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
 					r.management = false
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err = r.Reconcile(types.NamespacedName{})
@@ -603,30 +630,11 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("propagates voltron secrets with new name when no version skew", func() {
-			managedClientSetFactory := k8s.NewMockClientSetFactory(GinkgoT())
-
-			managedClusterName := "managed-1"
-
-			mockK8sClient := k8sfake.NewSimpleClientset()
-			cs := fake.NewSimpleClientset([]runtime.Object{
-				&v3.ClusterInformation{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
-					Spec: v3.ClusterInformationSpec{
-						CalicoEnterpriseVersion: "v3.23.0",
-					},
-				},
-			}...)
-			mockClientSet := testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
-
-			managedClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
-					r.clusterName = managedClusterName
+					r.clusterName = "managed-1"
 					r.management = false
-					r.managedClientSetFactory = managedClientSetFactory
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err := r.Reconcile(types.NamespacedName{})
@@ -677,6 +685,7 @@ var _ = Describe("Reconcile", func() {
 		var managedK8sCli *k8sfake.Clientset
 		var managedESConfigMap *corev1.ConfigMap
 		altOperatorNamespace := "alternate-operator"
+		var mockClientSetFactory *k8s.MockClientSetFactory
 		BeforeEach(func() {
 			managedESConfigMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -700,6 +709,25 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 			managedK8sCli = k8sfake.NewSimpleClientset(activeOperatorConfigMap)
+
+			mockClientSetFactory = k8s.NewMockClientSetFactory(GinkgoT())
+
+			managedClusterName := "managed-1"
+
+			mockK8sClient := k8sfake.NewSimpleClientset()
+			cs := fake.NewSimpleClientset([]runtime.Object{
+				&v3.ClusterInformation{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+					Spec: v3.ClusterInformationSpec{
+						CalicoEnterpriseVersion: "v3.23.0",
+					},
+				},
+			}...)
+			mockClientSet := testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
+
+			mockClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
 		})
 
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
@@ -714,6 +742,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err = r.Reconcile(types.NamespacedName{})
@@ -728,6 +757,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err := r.Reconcile(types.NamespacedName{})
@@ -760,6 +790,7 @@ var _ = Describe("Reconcile", func() {
 					r.ownerReference = "reference1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -777,6 +808,7 @@ var _ = Describe("Reconcile", func() {
 					r.ownerReference = "reference1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -795,6 +827,7 @@ var _ = Describe("Reconcile", func() {
 					r.ownerReference = "reference1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err := r.Reconcile(types.NamespacedName{})
@@ -813,6 +846,7 @@ var _ = Describe("Reconcile", func() {
 					r.ownerReference = "reference2"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -836,6 +870,7 @@ var _ = Describe("Reconcile", func() {
 					r.clusterName = "managed-1"
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
+					r.managedClientSetFactory = mockClientSetFactory
 				})
 
 			err = r.Reconcile(types.NamespacedName{})
