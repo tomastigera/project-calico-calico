@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +28,6 @@ import (
 	relasticsearchfake "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch/fake"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var cert = `-----BEGIN CERTIFICATE-----

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +19,7 @@ import (
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (

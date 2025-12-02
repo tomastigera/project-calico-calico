@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
