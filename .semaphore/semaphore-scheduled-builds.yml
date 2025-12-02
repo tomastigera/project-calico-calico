@@ -325,17 +325,19 @@ blocks:
     task:
       prologue:
         commands:
-          - cd app-policy
           - cache restore app-policy-geoip
+          - cd app-policy
       epilogue:
         always:
           commands:
             - test-results publish report
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
       jobs:
         - name: app-policy tests
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-            - cache store app-policy-geoip geoip
   - name: app-policy - native arm64 runner
     run:
       when: "true"
