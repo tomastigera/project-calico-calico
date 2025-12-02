@@ -618,7 +618,7 @@ var _ = Describe("Reconcile", func() {
 					},
 				},
 			}...)
-			mockClientSet := testutils.ClientSetSet{mockK8sClient, cs}
+			mockClientSet := testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
 
 			managedClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
 
@@ -653,7 +653,7 @@ var _ = Describe("Reconcile", func() {
 					},
 				},
 			}...)
-			mockClientSet := testutils.ClientSetSet{mockK8sClient, cs}
+			mockClientSet := testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
 
 			managedClientSetFactory.On("NewClientSetForApplication", managedClusterName).Return(&mockClientSet, nil)
 

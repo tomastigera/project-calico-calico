@@ -80,7 +80,7 @@ func setup(t *testing.T) func() {
 	// Set up expected mock calls. We expect a clientset to be generated for the
 	// managed cluster which will be used to check and create a secret.
 	mockK8sClient = k8sfake.NewSimpleClientset()
-	mockClientSet = testutils.ClientSetSet{mockK8sClient, cs}
+	mockClientSet = testutils.ClientSetSet{Interface: mockK8sClient, Calico: cs}
 
 	mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		name := action.(k8stesting.GetAction).GetName()
@@ -721,7 +721,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{Interface: mockK8sClient2, Calico: cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -819,7 +819,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{Interface: mockK8sClient2, Calico: cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -933,7 +933,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
 		mockK8sClient2 := k8sfake.NewSimpleClientset()
-		mockClientSet2 := testutils.ClientSetSet{mockK8sClient2, cs}
+		mockClientSet2 := testutils.ClientSetSet{Interface: mockK8sClient2, Calico: cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
 		})
@@ -1065,8 +1065,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1143,8 +1143,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1233,8 +1233,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1326,8 +1326,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1423,8 +1423,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1532,8 +1532,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1854,8 +1854,8 @@ func TestMultiTenant(t *testing.T) {
 		require.NotNil(t, controller)
 
 		managedClientSet := testutils.ClientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			Interface: k8sfake.NewSimpleClientset(),
+			Calico:    fake.NewSimpleClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
