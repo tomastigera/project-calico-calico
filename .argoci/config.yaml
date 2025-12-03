@@ -7,15 +7,3 @@ workflows:
       changes:
         in:
           - dashboards\/.*
-
-  - name: build-istio-ztunnel
-    workflowFile: third_party/istio/ztunnel/.argoci/buildztunnel.yaml
-    runWhen:
-      runOnTag: true
-      alwaysRunOnMerge: true
-      skipRunOnPr: false  # TEMPORARY: Enable PR builds for testing
-      changes:
-        in:
-          - third_party/istio/ztunnel\/.*
-          - metadata.mk
-          - lib.Makefile
