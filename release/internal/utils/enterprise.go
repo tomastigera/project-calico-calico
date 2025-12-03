@@ -74,6 +74,7 @@ var (
 		"third_party/envoy-gateway",
 		"third_party/envoy-proxy",
 		"third_party/envoy-ratelimit",
+		"third_party/istio-ztunnel",
 		"third_party/prometheus-operator",
 		"third_party/prometheus",
 	}
