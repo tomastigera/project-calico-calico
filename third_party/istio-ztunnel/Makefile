@@ -2,9 +2,9 @@
 # Ztunnel Component Makefile
 # Builds the Istio ztunnel proxy component
 ###############################################################################
-include ../../../metadata.mk
+include ../../metadata.mk
 
-PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/istio/ztunnel
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/istio-ztunnel
 
 ZTUNNEL_IMAGE ?= istio-ztunnel
 BUILD_IMAGES ?= $(ZTUNNEL_IMAGE)
@@ -21,7 +21,7 @@ LATEST_IMAGE_TAG = $(BRANCH_NAME)
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-include ../../../lib.Makefile
+include ../../lib.Makefile
 
 ###############################################################################
 # Source Download and Patching

@@ -1,6 +1,6 @@
 - name: Publish istio-ztunnel images
   run:
-    when: "change_in(['/third_party/istio/ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -12,10 +12,10 @@
     jobs:
       - name: Linux amd64
         commands:
-          - make -C third_party/istio/ztunnel cd ARCHES=amd64 CONFIRM=true
+          - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
 - name: Publish istio-ztunnel images - native arm64 runner
   run:
-    when: "change_in(['/third_party/istio/ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -30,10 +30,10 @@
     jobs:
       - name: Linux arm64
         commands:
-          - make -C third_party/istio/ztunnel cd ARCHES=arm64 CONFIRM=true
+          - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
 - name: Publish istio-ztunnel multi-arch manifests
   run:
-    when: "change_in(['/third_party/istio/ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Publish istio-ztunnel images
     - Publish istio-ztunnel images - native arm64 runner
@@ -46,4 +46,4 @@
     jobs:
       - name: Linux multi-arch manifests
         commands:
-          - make -C third_party/istio/ztunnel push-manifest CONFIRM=true
+          - make -C third_party/istio-ztunnel push-manifest CONFIRM=true
