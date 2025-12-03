@@ -5,11 +5,10 @@
 
 ARG CALICO_BASE
 ARG UBI_IMAGE
-ARG GIT_VERSION=unknown
 
 FROM ${UBI_IMAGE} AS ubi
 
-FROM ${CALICO_BASE}
+FROM scratch AS source
 
 ARG TARGETARCH
 
@@ -18,10 +17,13 @@ COPY --from=ubi /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
 COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
 
 # Copy the ztunnel binary built from patched source
-COPY bin/ztunnel-${TARGETARCH} /usr/local/bin/ztunnel
-
+COPY bin/ztunnel-${TARGETARCH} /usr/bin/ztunnel
 # Copy license from source
 COPY ztunnel/LICENSE /LICENSE
+
+FROM ${CALICO_BASE}
+
+ARG GIT_VERSION=unknown
 
 # These labels are required for OCP Certification
 LABEL description="This image contains a build of Istio's ztunnel component from github.com/istio/ztunnel with Calico patches applied"
@@ -40,6 +42,8 @@ LABEL org.opencontainers.image.vendor="Project Calico"
 LABEL org.opencontainers.image.version="${GIT_VERSION}"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
+COPY --from=source / /
+
 # Run as non-root user
 USER 10001:10001
 
@@ -50,5 +54,4 @@ USER 10001:10001
 # 15020: Metrics and health checks
 EXPOSE 15001 15006 15008 15020
 
-WORKDIR /
-ENTRYPOINT ["/usr/local/bin/ztunnel"]
+ENTRYPOINT ["/usr/bin/ztunnel"]
