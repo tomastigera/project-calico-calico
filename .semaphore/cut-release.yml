@@ -119,6 +119,10 @@ promotions:
     pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Istio Release
+    pipeline_file: ../istio/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Key-cert-provisioner Release
     pipeline_file: ../key-cert-provisioner/.semaphore/cut-release.yml
     auto_promote:
@@ -202,9 +206,5 @@ promotions:
       when: "result = 'passed'"
   - name: Cut third-party Prometheus Release
     pipeline_file: ../third_party/prometheus/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut third-party Istio Release
-    pipeline_file: ../third_party/istio/istio/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
