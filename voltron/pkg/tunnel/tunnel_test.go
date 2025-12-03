@@ -16,7 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-	"github.com/projectcalico/calico/voltron/pkg/state"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
@@ -407,7 +406,7 @@ var _ = Describe("tunnel tests", func() {
 				tun, err := tunnel.NewClientTunnel(cliConn)
 				Expect(err).ToNot(HaveOccurred())
 
-				connResults := make(chan interface{})
+				connResults := make(chan tunnel.ConnOrError)
 				done := tun.AcceptWithChannel(connResults)
 				defer close(done)
 
@@ -417,9 +416,9 @@ var _ = Describe("tunnel tests", func() {
 					defer GinkgoRecover()
 
 					defer wg.Done()
-					conn, err := state.InterfaceToConnOrError(<-connResults)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(conn).ToNot(BeNil())
+					result := <-connResults
+					Expect(result.Error).ToNot(HaveOccurred())
+					Expect(result.Conn).ToNot(BeNil())
 				}()
 
 				srvTunnel, err := tunnel.NewServerTunnel(srvConn)
@@ -434,7 +433,7 @@ var _ = Describe("tunnel tests", func() {
 				tun, err := tunnel.NewClientTunnel(cliConn)
 				Expect(err).ToNot(HaveOccurred())
 
-				connResults := make(chan interface{})
+				connResults := make(chan tunnel.ConnOrError)
 				done := tun.AcceptWithChannel(connResults)
 				defer close(done)
 
@@ -461,7 +460,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			mockDialer := new(tunnel.MockDialer)
 			mockDialer.On("Dial").Return(new(tunnel.MockTunnel), nil)
 
-			results := make(chan interface{})
+			results := make(chan tunnel.TunnelOrError)
 
 			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
 			defer close(closeChan)
@@ -472,8 +471,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			select {
 			case result, ok := <-results:
 				Expect(ok).Should(BeTrue())
-				_, ok = result.(tunnel.Tunnel)
-				Expect(ok).Should(BeTrue())
+				Expect(result.Error).ShouldNot(HaveOccurred())
 			case <-timer.C:
 				Fail("timed out waiting for result")
 			}
@@ -485,7 +483,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			mockDialer := new(tunnel.MockDialer)
 			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
 
-			results := make(chan interface{})
+			results := make(chan tunnel.TunnelOrError)
 
 			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
 			defer close(closeChan)
@@ -496,7 +494,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			select {
 			case result, ok := <-results:
 				Expect(ok).Should(BeTrue())
-				Expect(result).Should(BeAssignableToTypeOf(fmt.Errorf("")))
+				Expect(result.Error).Should(HaveOccurred())
 			case <-timer.C:
 				Fail("timed out waiting for result")
 			}
@@ -508,7 +506,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			mockDialer := new(tunnel.MockDialer)
 			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
 
-			results := make(chan interface{})
+			results := make(chan tunnel.TunnelOrError)
 
 			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
 			close(closeChan)
@@ -534,7 +532,7 @@ var _ = Describe("Tunnel Dialing", func() {
 			mockDialer := new(tunnel.MockDialer)
 			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
 
-			results := make(chan interface{})
+			results := make(chan tunnel.TunnelOrError)
 
 			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 100*time.Millisecond)
 			defer close(closeChan)

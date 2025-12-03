@@ -1,7 +1,9 @@
 package tunnelmgr
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -9,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/voltron/pkg/state"
+	"github.com/projectcalico/calico/lib/std/chanutil"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
@@ -45,59 +47,57 @@ type Manager interface {
 }
 
 type manager struct {
-	setTunnel state.SendToStateChan
+	setTunnel ThreadExchange[tunnel.Tunnel, any]
 	dialer    tunnel.Dialer
 
-	openConnection   state.SendToStateChan
-	addListener      state.SendToStateChan
-	addErrorListener state.SendToStateChan
+	openConnection    ThreadExchange[*tls.Config, net.Conn]
+	addListener       ThreadExchange[any, *listener]
+	addErrorListener  ThreadExchange[any, chan error]
+	dialerResultsChan chan tunnel.TunnelOrError
 
-	closeTunnel state.SendToStateChan
-	// this is used to notify the listener that the manager is closed
-	close chan bool
+	errListeners []chan error
+
+	tun        tunnel.Tunnel
+	tunnelErrs chan struct{}
+
+	closeTunnel ThreadExchange[any, any]
+	// This is used to notify the listener that the manager is closed
+	close chan struct{}
+	// This is used to notify that the manager is actually closed.
+	closed chan struct{}
 
 	closeOnce sync.Once
 }
 
 // NewManager returns an instance of the Manager interface.
 func NewManager() Manager {
-	m := &manager{}
-	m.setTunnel = make(state.SendToStateChan)
-
-	m.openConnection = make(state.SendToStateChan)
-	m.addListener = make(state.SendToStateChan)
-	m.addErrorListener = make(state.SendToStateChan)
-	m.closeTunnel = make(state.SendToStateChan)
-	m.close = make(chan bool)
+	m := newManager()
 
 	go m.startStateLoop()
 	return m
+}
+
+func newManager() *manager {
+	return &manager{
+		setTunnel:        make(ThreadExchange[tunnel.Tunnel, any]),
+		openConnection:   make(ThreadExchange[*tls.Config, net.Conn]),
+		addListener:      make(ThreadExchange[any, *listener]),
+		addErrorListener: make(ThreadExchange[any, chan error]),
+		closeTunnel:      make(ThreadExchange[any, any]),
+		close:            make(chan struct{}),
+		closed:           make(chan struct{}),
+	}
 }
 
 // NewManagerWithDialer returns an instance of the Manager interface that uses uses the given dialer to open connections
 // over the tunnel.
 func NewManagerWithDialer(dialer tunnel.Dialer) Manager {
-	m := &manager{}
-	m.dialer = dialer
+	m := newManager()
 
-	m.setTunnel = make(state.SendToStateChan)
-	m.openConnection = make(state.SendToStateChan)
-	m.addListener = make(state.SendToStateChan)
-	m.addErrorListener = make(state.SendToStateChan)
-	m.closeTunnel = make(state.SendToStateChan)
-	m.close = make(chan bool)
+	m.dialer = dialer
 
 	go m.startStateLoop()
 	return m
-}
-
-// SetTunnel sets the tunnel for the manager, and returns an error if it's already running
-func (m *manager) SetTunnel(t tunnel.Tunnel) error {
-	if m.isClosed() {
-		return ErrManagerClosed
-	}
-
-	return state.InterfaceToError(state.SendWithTimeout(m.setTunnel, t, t.DialTimeout()))
 }
 
 // startStateLoop starts the loop to accept requests over the channels used to synchronously access the manager's state.
@@ -106,243 +106,187 @@ func (m *manager) SetTunnel(t tunnel.Tunnel) error {
 func (m *manager) startStateLoop() {
 	// Dialing to the tunnel is done in a separate go routine so it doesn't block the state loop and this channel is
 	// used to send the dialing result back to the state loop.
-	var dialerResultsChan chan interface{}
 	var dialerCloseChan chan struct{}
 	defer func() {
+		close(m.setTunnel)
+		close(m.openConnection)
+		close(m.addListener)
+		close(m.addErrorListener)
+		close(m.closeTunnel)
+
 		// If dialerCloseChan isn't nil then it's guaranteed to not be closed since the switch case that closes the channel
 		// sets dialerCloseChan to nil immediately.
 		if dialerCloseChan != nil {
 			close(dialerCloseChan)
 		}
+		if m.tun != nil {
+			_ = m.tun.Close()
+		}
+
+		close(m.closed)
 	}()
 
-	mClosed := false
-	for !mClosed {
-		log.Debug("Starting state loop.")
-
-		ok := true
-		var err error
-		var tun tunnel.Tunnel
-		var setTunnel, closeTunnel, openConnection, addListener, addErrListener state.SendInterface
-		var errListeners []chan error
-		var tunnelErrs chan struct{}
-
-		// [TODO] <brian mcmahon> for readability this should be changed to have the switch statement first then just break
-		// [TODO] from the loop after the switch statement has executed if "ok" is false. The logic is the exact same, but
-		// [TODO] I realise now that it may be confusing to see handling variables that have not yet been set.
-		for ok {
-			if openConnection != nil {
-				err = m.handleOpenConnection(tun, openConnection, dialerResultsChan != nil)
-			}
-			if addListener != nil {
-				err = m.handleAddListener(tun, addListener, dialerResultsChan != nil)
-			}
-
-			if err != nil {
-				log.WithError(err).Debug("Handling error.")
-
-				writeOutError(errListeners, err)
-				if err == tunnel.ErrTunnelClosed {
-					// If there's no dialer exit the loop to reset and wait for a new tunnel to be set.
-					if m.dialer == nil {
-						ok = false
-						continue
-					}
-
-					// This means there's a dialer set the tunnel to nil so we trigger that block that dials for a new tunnel.
-					tun = nil
-				}
-			}
-
-			if tun == nil && m.dialer != nil && (dialerResultsChan == nil) {
-				dialerResultsChan = make(chan interface{})
-				dialerCloseChan = tunnel.DialInRoutineWithTimeout(m.dialer, dialerResultsChan, 2*time.Second)
-			}
-
-			if tun != nil {
-				tunnelErrs = tun.ErrChan()
-			}
-
-			// Reset all the variables so that we don't accidentally trigger a duplication of some action on the next
-			// iteration of the loop
-			openConnection, addListener, addErrListener, setTunnel, err = nil, nil, nil, nil, nil
-			select {
-			case setTunnel, ok = <-m.setTunnel:
-				log.Debug("Received request to set a new tunnel.")
-				if !ok {
-					continue
-				}
-
-				tun = handleSetTunnel(tun, setTunnel)
-			case response := <-dialerResultsChan:
-				log.Debug("Received result for dialer channel")
-				close(dialerCloseChan)
-
-				// It's the responsibility of the channel writer to close the channel, so at this point we can assume it's
-				// safe to set it to nil (if it's not closed this is an error with the channel writer).
-				dialerResultsChan = nil
-				dialerCloseChan = nil
-
-				switch t := response.(type) {
-				case tunnel.Tunnel:
-					if tun == nil {
-						tun = response.(tunnel.Tunnel)
-					} else {
-						log.Warning("Tried to set tunnel from dialer when one already exists.")
-						if err := response.(tunnel.Tunnel).Close(); err != nil {
-							log.WithError(err).Error("failed to close additional tunnel")
-						}
-					}
-				case error:
-					// TODO handle dialer fails as a special case as guardian may want to just crash and restart.
-					err = response.(error)
-					log.WithError(err).Error("failed to dial tunnel")
-				default:
-					// This is a programming error, a developer wrote code that sent the wrong type over this channel
-					// so fail hard.
-					panic(fmt.Sprintf("unexpected type %T", t))
-				}
-			case openConnection, ok = <-m.openConnection:
-				log.Debug("Received request open a new connection.")
-			case addListener, ok = <-m.addListener:
-				log.Debug("Received request for a new listener.")
-			case addErrListener, ok = <-m.addErrorListener:
-				log.Debug("Received request to add a new err listener.")
-				if !ok {
-					continue
-				}
-
-				errListener := make(chan error)
-				errListeners = append(errListeners, errListener)
-				addErrListener.Return(errListener)
-			case closeTunnel, ok = <-m.closeTunnel:
-				log.Debug("Received request to close the tunnel.")
-				if !ok {
-					continue
-				} else if tun == nil {
-					closeTunnel.Return(tunnel.ErrTunnelClosed)
-				}
-
-				closeTunnel.Close()
-				ok = false
-			case <-tunnelErrs:
-				log.Debug("Received a tunnel error.")
-				if tun != nil {
-					err = tun.LastErr()
-				}
-			case <-m.close:
-				log.Debug("Received request to close the tunnel manager.")
-				mClosed = true
-				ok = false
-			}
+	for {
+		if m.tun == nil && m.dialer != nil && (m.dialerResultsChan == nil) {
+			m.dialerResultsChan = make(chan tunnel.TunnelOrError)
+			dialerCloseChan = tunnel.DialInRoutineWithTimeout(m.dialer, m.dialerResultsChan, 2*time.Second)
 		}
 
-		if openConnection != nil {
-			openConnection.Return(err)
-			openConnection.Close()
+		if m.tun != nil {
+			m.tunnelErrs = m.tun.ErrChan()
 		}
 
-		if addListener != nil {
-			addListener.Return(err)
-			addListener.Close()
-		}
-
-		for _, errorListener := range errListeners {
-			close(errorListener)
-		}
-
-		if tun != nil {
-			if err := tun.Close(); err != nil {
-				log.WithError(err).Error("failed to close the tunnel")
-			}
-		}
-	}
-}
-
-func writeOutError(listeners []chan error, err error) {
-	for _, listener := range listeners {
 		select {
-		case listener <- err:
-		default:
+		case req := <-m.setTunnel:
+			log.Debug("Received request to set a new tunnel.")
+
+			if m.tun != nil {
+				req.ReturnError(ErrTunnelSet)
+			} else {
+				m.tun = req.Get()
+				req.Return(nil)
+			}
+		case result := <-m.dialerResultsChan:
+			log.Debug("Received result for dialer channel.")
+			close(dialerCloseChan)
+
+			// It's the responsibility of the channel writer to close the channel, so at this point we can assume it's
+			// safe to set it to nil (if it's not closed, this is an error with the channel writer).
+			m.dialerResultsChan = nil
+			dialerCloseChan = nil
+
+			if result.Error != nil {
+				m.handleError(result.Error)
+			} else {
+				// The tunnel will always be unset at this point since we only dial if it's not set.
+				m.tun = result.Tunnel
+				m.tunnelErrs = m.tun.ErrChan()
+			}
+		case req := <-m.openConnection:
+			log.Debug("Received request open a new connection.")
+
+			conn, err := m.handleOpenConnection(req.Get())
+			if err != nil {
+				req.ReturnError(err)
+
+				if errors.Is(err, tunnel.ErrTunnelClosed) {
+					m.tun = nil
+					m.tunnelErrs = nil
+				}
+			} else {
+				req.Return(conn)
+			}
+
+		case req := <-m.addListener:
+			log.Debug("Received request for a new listener.")
+			listener, err := m.handleAddListener()
+			if err != nil {
+				req.ReturnError(err)
+
+				if errors.Is(err, tunnel.ErrTunnelClosed) {
+					m.tun = nil
+					m.tunnelErrs = nil
+				}
+			} else {
+				req.Return(listener)
+			}
+		case req := <-m.addErrorListener:
+			log.Debug("Received request to add a new err listener.")
+
+			errListener := make(chan error, 1)
+			m.errListeners = append(m.errListeners, errListener)
+			req.Return(errListener)
+		case req := <-m.closeTunnel:
+			log.Debug("Received request to close the tunnel.")
+			if m.tun == nil {
+				req.ReturnError(tunnel.ErrTunnelClosed)
+			} else {
+				if err := m.tun.Close(); err != nil {
+					log.WithError(err).Error("An error occurred while closing the tunnel.")
+				}
+				m.tun = nil
+				m.tunnelErrs = nil
+
+				req.Return(nil)
+			}
+		case <-m.tunnelErrs:
+			log.Debug("Received a tunnel error.")
+			if m.tun != nil {
+				m.handleError(m.tun.LastErr())
+			}
+		case <-m.close:
+			log.Debug("Received request to close the tunnel manager.")
+			return
 		}
 	}
 }
 
-func handleSetTunnel(tun tunnel.Tunnel, setTunnel state.SendInterface) tunnel.Tunnel {
-	defer setTunnel.Close()
-	if tun != nil {
-		setTunnel.Return(ErrTunnelSet)
+func (m *manager) tunnel() (tunnel.Tunnel, error) {
+	if m.dialerResultsChan != nil {
+		log.Debug("Still dialing tunnel.")
+		return nil, ErrStillDialing
 	}
 
-	return state.InterfaceToTunnel(setTunnel.Get())
+	if m.tun == nil {
+		log.Debug("Tunnel is nil.")
+		return nil, tunnel.ErrTunnelClosed
+	}
+
+	return m.tun, nil
+}
+
+func (m *manager) handleError(err error) {
+	for _, listener := range m.errListeners {
+		chanutil.WriteNonBlocking(listener, err)
+	}
+
+	if errors.Is(err, tunnel.ErrTunnelClosed) {
+		m.tun = nil
+		m.tunnelErrs = nil
+	}
 }
 
 // handleOpenConnection is used by the state loop to handle a request to open a connection over the tunnel
-func (*manager) handleOpenConnection(tun tunnel.Tunnel, openConnection state.SendInterface, dialing bool) error {
-	log.Debug("Handling opening a connection over the tunnel.")
-	if dialing {
-		log.Debug("Still dialing tunnel.")
-		openConnection.Return(ErrStillDialing)
-		openConnection.Close()
-		return nil
-	}
-
-	if tun == nil {
-		log.Debug("Tunnel is nil.")
-		openConnection.Return(tunnel.ErrTunnelClosed)
-		openConnection.Close()
-		return nil
-	}
-
-	conn, err := tun.Open()
+func (m *manager) handleOpenConnection(tlsCfg *tls.Config) (net.Conn, error) {
+	tun, err := m.tunnel()
 	if err != nil {
-		if err == tunnel.ErrTunnelClosed {
-			log.Debug("Tunnel is closed.")
-			return err
-		}
-
-		openConnection.Return(err)
+		return nil, err
 	}
-
-	tlsCfg := state.InterfaceToTLSConfig(openConnection.Get())
 	if tlsCfg != nil {
-		conn = tls.Client(conn, tlsCfg)
+		return tun.OpenTLS(tlsCfg)
 	}
 
-	log.Debug("Connection was opened.")
-	openConnection.Return(conn)
-	openConnection.Close()
-	return nil
+	return tun.Open()
 }
 
 // handleAddListener is used by the request loop to handle a request to retrieve a listener listening over the tunnel
-func (m *manager) handleAddListener(tun tunnel.Tunnel, addListener state.SendInterface, dialing bool) error {
-	log.Debug("Handling add a new listener.")
-
-	if dialing {
-		log.Debug("Still dialing tunnel.")
-		addListener.Return(ErrStillDialing)
-		addListener.Close()
-		return nil
+func (m *manager) handleAddListener() (*listener, error) {
+	tun, err := m.tunnel()
+	if err != nil {
+		return nil, err
 	}
 
-	if tun == nil {
-		log.Debug("Tunnel is nil.")
-		addListener.Return(tunnel.ErrTunnelClosed)
-		addListener.Close()
-		return nil
-	}
-
-	conResults := make(chan interface{})
+	// A buffer size of 10 is chosen to give some room in case multiple connections are being established to stop
+	// the underlying muxer from blocking. This is theoretical, but it doesn't hurt to give it a little room to
+	// work with.
+	conResults := make(chan tunnel.ConnOrError, 10)
 	done := tun.AcceptWithChannel(conResults)
-	addListener.Return(&listener{
+	return &listener{
 		conns: conResults,
 		done:  done,
 		addr:  tun.Addr(),
 		close: m.close,
-	})
+	}, nil
+}
 
-	return nil
+// SetTunnel sets the tunnel for the manager and returns an error if it's already running.
+func (m *manager) SetTunnel(t tunnel.Tunnel) error {
+	if m.isClosed() {
+		return ErrManagerClosed
+	}
+
+	_, err := m.setTunnel.Send(context.Background(), t)
+	return err
 }
 
 // Open opens a connection over the tunnel
@@ -350,10 +294,8 @@ func (m *manager) Open() (net.Conn, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	if m.dialer == nil {
-		return state.InterfaceToConnOrError(state.Send(m.openConnection, nil))
-	}
-	return state.InterfaceToConnOrError(state.SendWithTimeout(m.openConnection, nil, m.dialer.Timeout()))
+
+	return m.openConnection.Send(context.Background(), nil)
 }
 
 // OpenTLS opens a tls connection over the tunnel
@@ -361,10 +303,8 @@ func (m *manager) OpenTLS(cfg *tls.Config) (net.Conn, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	if m.dialer == nil {
-		return state.InterfaceToConnOrError(state.Send(m.openConnection, cfg))
-	}
-	return state.InterfaceToConnOrError(state.SendWithTimeout(m.openConnection, cfg, m.dialer.Timeout()))
+
+	return m.openConnection.Send(context.Background(), cfg)
 }
 
 // Listener retrieves a listener listening on the tunnel for connections
@@ -372,10 +312,8 @@ func (m *manager) Listener() (net.Listener, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	if m.dialer == nil {
-		return state.InterfaceToListenerOrError(state.Send(m.addListener, nil))
-	}
-	return state.InterfaceToListenerOrError(state.SendWithTimeout(m.addListener, nil, m.dialer.Timeout()))
+
+	return m.addListener.Send(context.Background(), nil)
 }
 
 // ListenForErrors allows the user to register a channel to listen to errors on
@@ -386,10 +324,9 @@ func (m *manager) ListenForErrors() chan error {
 		close(errChan)
 		return errChan
 	}
-	if m.dialer == nil {
-		return state.InterfaceToErrorChan(state.Send(m.addErrorListener, nil))
-	}
-	return state.InterfaceToErrorChan(state.SendWithTimeout(m.addErrorListener, nil, m.dialer.Timeout()))
+
+	errChan, _ := m.addErrorListener.Send(context.Background(), nil)
+	return errChan
 }
 
 // CloseTunnel closes the managers tunnel. If a dialer is set (i.e. NewManagerWithDialer was used to create the Manager)
@@ -399,7 +336,9 @@ func (m *manager) CloseTunnel() error {
 	if m.isClosed() {
 		return ErrManagerClosed
 	}
-	return state.InterfaceToError(state.Send(m.closeTunnel, true))
+
+	_, err := m.closeTunnel.Send(context.Background(), true)
+	return err
 }
 
 func (m *manager) isClosed() bool {
@@ -414,14 +353,13 @@ func (m *manager) isClosed() bool {
 // Close closes the manager. A closed manager cannot be reused.
 func (m *manager) Close() error {
 	m.closeOnce.Do(func() {
-		close(m.setTunnel)
-		close(m.openConnection)
-		close(m.addListener)
-		close(m.addErrorListener)
-
-		close(m.closeTunnel)
 		close(m.close)
 	})
 
+	// Give the manager 5 seconds to close, just in case it needs it (which it shouldn't) to avoid hanging forever.
+	_, err := chanutil.ReadWithDeadline(context.Background(), m.closed, 5*time.Second)
+	if !errors.Is(err, chanutil.ErrChannelClosed) {
+		return err
+	}
 	return nil
 }

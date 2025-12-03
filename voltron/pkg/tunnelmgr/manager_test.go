@@ -1,409 +1,264 @@
 package tunnelmgr_test
 
 import (
-	"bytes"
 	"crypto/tls"
-	"io"
-	"net"
-	"net/http"
-	"sync"
+	"testing"
 	"time"
 
-	"github.com/hashicorp/yamux"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/calico/voltron/pkg/state"
+	"github.com/projectcalico/calico/lib/std/chanutil"
+	mocknet "github.com/projectcalico/calico/voltron/pkg/thirdpartymocks/net"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
-type ConnOpener interface {
-	Open() (net.Conn, error)
+type fakeAddr struct{}
+
+func (f fakeAddr) Network() string {
+	return ""
 }
 
-type responseList struct {
-	nextIndex int
-	responses []string
+func (f fakeAddr) String() string {
+	return "127.0.0.1:1234"
 }
 
-func (rList *responseList) Next() string {
-	if rList.responses == nil || rList.nextIndex >= len(rList.responses) {
-		return ""
-	}
+func TestManager(t *testing.T) {
+	RegisterTestingT(t)
+	t.Run("Open", func(t *testing.T) {
+		t.Run("Successfully opens a single connection over the tunnel", func(t *testing.T) {
+			tunnelErrors := make(chan struct{}, 2)
+			defer close(tunnelErrors)
 
-	r := rList.responses[rList.nextIndex]
-	rList.nextIndex++
-	return r
-}
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().Open().Return(new(mocknet.Conn), nil).Once()
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().Close().Return(nil)
 
-var _ = Describe("Manager", func() {
-	Context("client side tunnel", func() {
-		Context("opens connections", func() {
-			It("opens a connection to a tunnel and writes to it", func() {
-				cliConn, srvConn := net.Pipe()
-				srv := getServerFromConnection(srvConn, "Response")
-				defer func() { _ = srv.Close() }()
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
 
-				tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
+			conn, err := mgr.Open()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn).ShouldNot(BeNil())
 
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				conn, err := m.Open()
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(conn).ShouldNot(BeNil())
-
-				cli := getClientFromOpener(m)
-
-				response, err := cli.Get("http://localhost")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(readResponseBody(response)).To(Equal("Response"))
-			})
-
-			It("adheres to the timeout and fails to setup when it is too low", func() {
-				cliConn, srvConn := net.Pipe()
-				srv := getServerFromConnection(srvConn, "Response")
-				defer func() { _ = srv.Close() }()
-
-				tun, err := tunnel.NewClientTunnel(cliConn,
-					tunnel.WithKeepAliveSettings(true, 100*time.Second),
-					// Set a very low timeout.
-					tunnel.WithDialTimeout(1*time.Nanosecond))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				// When the timeout  is only 1 ns, the context times out.
-				Expect(m.SetTunnel(tun)).To(HaveOccurred())
-				errStruct := state.ErrChannelWriteTimeout{}
-				Expect(m.SetTunnel(tun).Error()).To(Equal(errStruct.Error()))
-			})
-
-			It("opens multiple connections over the single tunnel", func() {
-				cliConn, srvConn := net.Pipe()
-				srv := getServerFromConnection(srvConn, "Response 1", "Response 2")
-				defer func() { _ = srv.Close() }()
-
-				tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				conn, err := m.Open()
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(conn).ShouldNot(BeNil())
-
-				cli := getClientFromOpener(m)
-
-				response, err := cli.Get("http://localhost")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(readResponseBody(response)).To(Equal("Response 1"))
-
-				response, err = cli.Get("http://localhost")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(readResponseBody(response)).To(Equal("Response 2"))
-			})
-
-			It("test tunnel closed before opening", func() {
-				cliConn, _ := net.Pipe()
-
-				tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				Expect(tun.Close()).ShouldNot(HaveOccurred())
-				conn, err := m.Open()
-				Expect(err).Should(Equal(tunnel.ErrTunnelClosed))
-				Expect(conn).Should(BeNil())
-			})
+			Expect(mgr.CloseTunnel()).ShouldNot(HaveOccurred())
 		})
+		t.Run("Tunnel manager supports multiple open connections", func(t *testing.T) {
+			tunnelErrors := make(chan struct{}, 2)
+			defer close(tunnelErrors)
 
-		Context("Listen", func() {
-			It("accepts a connection from the tunnel and responds to it", func() {
-				cliConn, srvConn := net.Pipe()
-				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().Open().Return(new(mocknet.Conn), nil).Twice()
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().Close().Return(nil)
 
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
 
-				listener, err := m.Listener()
-				Expect(err).ShouldNot(HaveOccurred())
+			conn, err := mgr.Open()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn).ShouldNot(BeNil())
 
-				var wg sync.WaitGroup
-				wg.Add(1)
-				acceptAndRespondOnce(listener, &wg, "200", "Response")
+			conn, err = mgr.Open()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn).ShouldNot(BeNil())
 
-				cliTun, err := tunnel.NewClientTunnel(cliConn)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				cli := getClientFromOpener(cliTun)
-				response, err := cli.Get("http://example.com")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(readResponseBody(response)).To(Equal("Response"))
-				wg.Wait()
-			})
-			It("receives an error when the connection is closed while waiting to accept a connection", func() {
-				cliConn, srvConn := net.Pipe()
-				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				listener, err := m.Listener()
-				Expect(err).ShouldNot(HaveOccurred())
-
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					conn, err := listener.Accept()
-					Expect(err).Should(HaveOccurred())
-					Expect(conn).Should(BeNil())
-				}()
-
-				Expect(cliConn.Close()).ShouldNot(HaveOccurred())
-				wg.Wait()
-			})
-			It("receives an error when the manager is closed while waiting to accept a connection", func() {
-				_, srvConn := net.Pipe()
-				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				listener, err := m.Listener()
-				Expect(err).ShouldNot(HaveOccurred())
-
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					conn, err := listener.Accept()
-					Expect(err).Should(HaveOccurred())
-					Expect(conn).Should(BeNil())
-				}()
-
-				_ = m.Close()
-				Expect(err).ShouldNot(HaveOccurred())
-				wg.Wait()
-			})
-			// This test is here not because we necessarily expect to have multiple listeners, but the current implementation
-			// allows for it so it should be tested.
-			It("Listens multiple times", func() {
-				cliConn, srvConn := net.Pipe()
-				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				m := tunnelmgr.NewManager()
-				defer func() { _ = m.Close() }()
-				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
-
-				listener1, err := m.Listener()
-				Expect(err).ShouldNot(HaveOccurred())
-				listener2, err := m.Listener()
-				Expect(err).ShouldNot(HaveOccurred())
-
-				var wg sync.WaitGroup
-				wg.Add(2)
-				acceptAndRespondOnce(listener1, &wg, "200", "Response1")
-				acceptAndRespondOnce(listener2, &wg, "200", "Response2")
-
-				cliTun, err := tunnel.NewClientTunnel(cliConn)
-				Expect(err).ShouldNot(HaveOccurred())
-				cli := getClientFromOpener(cliTun)
-
-				response1, err := cli.Get("http://example.com")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				response2, err := cli.Get("http://example.com")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(len(filter([]string{"Response1", "Response2"}, readResponseBody(response1), readResponseBody(response2)))).To(Equal(0))
-
-				wg.Wait()
-			})
-
-			Context("Dialing for the tunnel", func() {
-				It("Successfully dials for a tunnel and allows the user to get a listener", func() {
-					cliConn, srvConn := net.Pipe()
-					defer func() { _ = cliConn.Close() }()
-					defer func() { _ = srvConn.Close() }()
-
-					tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-					Expect(err).ShouldNot(HaveOccurred())
-
-					mockDialer := new(tunnel.MockDialer)
-					mockDialer.On("Dial").Return(tun, nil)
-					mockDialer.On("Timeout").Return(5 * time.Second)
-
-					m := tunnelmgr.NewManagerWithDialer(mockDialer)
-					defer func() { _ = m.Close() }()
-
-					Eventually(func() error {
-						_, err := m.Listener()
-						return err
-					}, "5s", "100ms").ShouldNot(HaveOccurred())
-				})
-				Context("when dialing hangs", func() {
-					It("All functions access the manager state should return ErrStillDialing and then work without error"+
-						"after the dialer has finished",
-						func() {
-							cliConn, srvConn := net.Pipe()
-							defer func() { _ = cliConn.Close() }()
-
-							srv := getServerFromConnection(srvConn, "Response")
-							defer func() { _ = srv.Close() }()
-
-							tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-							Expect(err).ShouldNot(HaveOccurred())
-
-							// We use this to block the dialer so we can test a hanging dialer
-							waitChan := make(chan time.Time)
-							defer close(waitChan)
-
-							mockDialer := new(tunnel.MockDialer)
-							mockDialer.On("Dial").Return(tun, nil).WaitUntil(waitChan)
-							mockDialer.On("Timeout").Return(5 * time.Second)
-
-							m := tunnelmgr.NewManagerWithDialer(mockDialer)
-							defer func() { _ = m.Close() }()
-
-							// While dialing all the functions should return ErrStillDialing errors.
-							_, err = m.Listener()
-							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
-
-							_, err = m.Open()
-							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
-
-							_, err = m.OpenTLS(&tls.Config{})
-							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
-
-							waitChan <- time.Now()
-
-							// Once dialing is done we should be able to get listeners and open connections.
-							Eventually(func() error {
-								_, err := m.Listener()
-								return err
-							}, "5s", "100ms").ShouldNot(HaveOccurred())
-
-							// If the previous check succeeded we know the dialing is complete so we don't need an eventually
-							// check
-							conn, err := m.Open()
-							Expect(err).ShouldNot(HaveOccurred())
-							Expect(conn).ShouldNot(BeNil())
-						},
-					)
-				})
-			})
+			Expect(mgr.CloseTunnel()).ShouldNot(HaveOccurred())
 		})
-		Context("Manager closed", func() {
-			It("returns errors", func() {
-				m := tunnelmgr.NewManager()
-				Expect(m.Close()).ShouldNot(HaveOccurred())
-				_, err := m.Listener()
-				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
-				_, err = m.Open()
-				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
-				_, err = m.OpenTLS(&tls.Config{})
-				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		t.Run("Returns an error if the tunnel was closed before calling Open", func(t *testing.T) {
+			tunnelErrors := make(chan struct{}, 2)
 
-				errChan := m.ListenForErrors()
-				Expect(<-errChan).Should(Equal(tunnelmgr.ErrManagerClosed))
-				cliConn, srvConn := net.Pipe()
-				defer func() { _ = cliConn.Close() }()
-				defer func() { _ = srvConn.Close() }()
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().LastErr().Return(tunnel.ErrTunnelClosed)
 
-				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				Expect(err).ShouldNot(Equal(tunnelmgr.ErrManagerClosed))
-				Expect(m.SetTunnel(tun)).Should(Equal(tunnelmgr.ErrManagerClosed))
-			})
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
+			errs := mgr.ListenForErrors()
+			close(tunnelErrors)
+
+			// Wait for the error to be returned.
+			Eventually(errs).Should(Receive())
+
+			conn, err := mgr.Open()
+			Expect(err).Should(Equal(tunnel.ErrTunnelClosed))
+			Expect(conn).Should(BeNil())
 		})
 	})
-})
 
-func getServerFromConnection(conn net.Conn, responses ...string) *http.Server {
-	session, err := yamux.Server(conn, nil)
-	if err != nil {
-		panic(err)
-	}
+	t.Run("Listener", func(t *testing.T) {
+		t.Run("Retrieves a listener from the tunnel successfully", func(t *testing.T) {
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
 
-	srv := new(http.Server)
-	rList := responseList{responses: responses}
-	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte(rList.Next()))
-		Expect(err).ShouldNot(HaveOccurred())
+			done := make(chan bool)
+			tunnelErrors := make(chan struct{}, 2)
+
+			var connChan chan tunnel.ConnOrError
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).RunAndReturn(func(acceptChan chan tunnel.ConnOrError) chan bool {
+				connChan = acceptChan
+				return done
+			})
+			mockTunnel.EXPECT().Addr().Return(fakeAddr{})
+			mockTunnel.EXPECT().Close().Return(nil)
+
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
+
+			listener, err := mgr.Listener()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(listener).ShouldNot(BeNil())
+
+			Expect(chanutil.WriteWithDeadline(t.Context(), connChan, tunnel.ConnOrError{Conn: new(mocknet.Conn)}, 5*time.Second)).ShouldNot(HaveOccurred())
+			conn, err := listener.Accept()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn).ShouldNot(BeNil())
+		})
+		t.Run("Retrieves multiple listener from the tunnel successfully", func(t *testing.T) {
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
+
+			done := make(chan bool)
+			tunnelErrors := make(chan struct{}, 2)
+
+			var connChan1, connChan2 chan tunnel.ConnOrError
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).RunAndReturn(func(acceptChan chan tunnel.ConnOrError) chan bool {
+				connChan1 = acceptChan
+				return done
+			}).Once()
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).RunAndReturn(func(acceptChan chan tunnel.ConnOrError) chan bool {
+				connChan2 = acceptChan
+				return done
+			}).Once()
+
+			mockTunnel.EXPECT().Addr().Return(fakeAddr{})
+			mockTunnel.EXPECT().Close().Return(nil)
+
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
+
+			listener1, err := mgr.Listener()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(listener1).ShouldNot(BeNil())
+
+			Expect(chanutil.WriteWithDeadline(t.Context(), connChan1, tunnel.ConnOrError{Conn: new(mocknet.Conn)}, 5*time.Second)).ShouldNot(HaveOccurred())
+			conn1, err := listener1.Accept()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn1).ShouldNot(BeNil())
+
+			listener2, err := mgr.Listener()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(listener2).ShouldNot(BeNil())
+
+			Expect(chanutil.WriteWithDeadline(t.Context(), connChan2, tunnel.ConnOrError{Conn: new(mocknet.Conn)}, 5*time.Second)).ShouldNot(HaveOccurred())
+			conn2, err := listener2.Accept()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(conn2).ShouldNot(BeNil())
+		})
+		t.Run("receives an error when the connection is closed while waiting to accept a connection", func(t *testing.T) {
+			mgr := tunnelmgr.NewManager()
+			defer func() { _ = mgr.Close() }()
+
+			done := make(chan bool)
+			tunnelErrors := make(chan struct{}, 2)
+
+			var connChan chan tunnel.ConnOrError
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).RunAndReturn(func(acceptChan chan tunnel.ConnOrError) chan bool {
+				connChan = acceptChan
+				return done
+			})
+			mockTunnel.EXPECT().Addr().Return(fakeAddr{})
+			mockTunnel.EXPECT().Close().Return(nil)
+
+			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
+
+			listener, err := mgr.Listener()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(listener).ShouldNot(BeNil())
+
+			close(connChan)
+
+			conn, err := listener.Accept()
+			Expect(err).Should(Equal(tunnel.ErrTunnelClosed))
+			Expect(conn).Should(BeNil())
+		})
+		t.Run("Successfully dials for a tunnel", func(t *testing.T) {
+			done := make(chan bool)
+			tunnelErrors := make(chan struct{}, 2)
+
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).Return(done)
+			mockTunnel.EXPECT().Addr().Return(fakeAddr{})
+			mockTunnel.EXPECT().Close().Return(nil)
+
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(mockTunnel, nil)
+			mockDialer.On("Timeout").Return(5 * time.Second)
+
+			mgr := tunnelmgr.NewManagerWithDialer(mockDialer)
+			defer func() { _ = mgr.Close() }()
+
+			Eventually(func() error {
+				_, err := mgr.Listener()
+				return err
+			}, "5s", "100ms").ShouldNot(HaveOccurred())
+		})
+		t.Run("Returns an error when it's still dialing", func(t *testing.T) {
+			done := make(chan bool)
+			tunnelErrors := make(chan struct{}, 2)
+
+			mockTunnel := new(tunnel.MockTunnel)
+			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
+			mockTunnel.EXPECT().AcceptWithChannel(mock.Anything).Return(done)
+			mockTunnel.EXPECT().Addr().Return(fakeAddr{})
+			mockTunnel.EXPECT().Close().Return(nil)
+
+			waitChan := make(chan time.Time)
+			defer close(waitChan)
+
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(mockTunnel, nil).WaitUntil(waitChan)
+			mockDialer.On("Timeout").Return(5 * time.Second)
+
+			mgr := tunnelmgr.NewManagerWithDialer(mockDialer)
+			defer func() { _ = mgr.Close() }()
+
+			_, err := mgr.Listener()
+			Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
+
+			waitChan <- time.Now()
+
+			Eventually(func() error {
+				_, err := mgr.Listener()
+				return err
+			}, "5s", "100ms").ShouldNot(HaveOccurred())
+		})
 	})
-	go func() { _ = srv.Serve(session) }()
-	return srv
-}
 
-func acceptAndRespondOnce(listener net.Listener, wg *sync.WaitGroup, status, body string) {
-	go func() {
-		defer GinkgoRecover()
+	t.Run("Closed manager returns errors", func(t *testing.T) {
+		m := tunnelmgr.NewManager()
+		Expect(m.Close()).ShouldNot(HaveOccurred())
+		_, err := m.Listener()
+		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		_, err = m.Open()
+		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		_, err = m.OpenTLS(&tls.Config{})
+		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
 
-		defer wg.Done()
-		conn, err := listener.Accept()
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(conn).ShouldNot(BeNil())
+		errChan := m.ListenForErrors()
+		Expect(<-errChan).Should(Equal(tunnelmgr.ErrManagerClosed))
 
-		Expect(createResponse(status, body).Write(conn)).ShouldNot(HaveOccurred())
-	}()
-}
-
-func createResponse(status, body string) *http.Response {
-	closer := io.NopCloser(bytes.NewReader([]byte(body)))
-	return &http.Response{
-		Status:        status,
-		ContentLength: int64(len(body)),
-		Body:          closer,
-	}
-}
-
-func readResponseBody(r *http.Response) string {
-	body, err := io.ReadAll(r.Body)
-	Expect(err).ShouldNot(HaveOccurred())
-	return string(body)
-}
-
-func filter(p []string, filters ...string) []string {
-	arr := make([]string, len(p))
-	copy(arr, p)
-	for _, filter := range filters {
-		for i := 0; i < len(arr); i++ {
-			if filter == arr[i] {
-				if i < len(arr)-1 {
-					arr = append([]string{}, append(arr[:i], arr[i+1:]...)...)
-				} else {
-					arr = arr[:i]
-				}
-			}
-		}
-	}
-
-	return arr
-}
-
-func getClientFromOpener(o ConnOpener) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			Dial: func(network, addr string) (net.Conn, error) {
-				return o.Open()
-			},
-		},
-	}
+		mockTunnel := new(tunnel.MockTunnel)
+		Expect(m.SetTunnel(mockTunnel)).Should(Equal(tunnelmgr.ErrManagerClosed))
+	})
 }
