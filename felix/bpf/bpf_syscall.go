@@ -109,8 +109,6 @@ func tryLoadBPFProgramFromInsns(insns asm.Insns, name, license string, logSize u
 
 	var logBuf unsafe.Pointer
 	var logLevel uint
-	var fd uintptr
-	var errno syscall.Errno
 	if logSize > 0 {
 		logLevel = 1
 		logBuf = C.malloc((C.size_t)(logSize))
