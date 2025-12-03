@@ -10,7 +10,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
+	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/registry"
+	"github.com/projectcalico/calico/release/internal/version"
 )
 
 func TestEnterprisePinnedVersion(t *testing.T) {
@@ -32,10 +34,10 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 					"calico-private": {
 						Version: "v1.0.0",
 					},
-					managerComponent: {
+					managerComponentName: {
 						Version: "v1.0.0",
 					},
-					fmt.Sprintf("%s-proxy", managerComponent): {
+					fmt.Sprintf("%s-proxy", managerComponentName): {
 						Version: "v1.0.0",
 					},
 				},
@@ -43,7 +45,7 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 		}
 		t.Run("without operator", func(t *testing.T) {
 			got := v.GetComponentImageNames(false)
-			want := []string{"alertmanager", "compliance-server", managerComponent}
+			want := []string{"alertmanager", "compliance-server", managerComponentName}
 			if diff := cmp.Diff(got, want, cmpopts.SortSlices(func(a, b string) bool {
 				return a < b
 			})); diff != "" {
@@ -52,7 +54,7 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 		})
 		t.Run("with operator", func(t *testing.T) {
 			got := v.GetComponentImageNames(true)
-			want := []string{"alertmanager", "compliance-server", managerComponent, "tigera/operator", "tigera/operator-init"}
+			want := []string{"alertmanager", "compliance-server", managerComponentName, "tigera/operator", "tigera/operator-init"}
 			if diff := cmp.Diff(got, want, cmpopts.SortSlices(func(a, b string) bool {
 				return a < b
 			})); diff != "" {
@@ -62,26 +64,156 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 	})
 }
 
+func TestGenerateEnterprisePinnedVersionFile(t *testing.T) {
+	rootDir, err := command.GitDir()
+	if err != nil {
+		t.Fatalf("failed to get git root dir: %v", err)
+	}
+	t.Run("no manager", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		productBranch := "release-calient-v3.22"
+		p := &EnteprisePinnedVersions{
+			CalicoPinnedVersions: CalicoPinnedVersions{
+				Dir:                 dir,
+				RootDir:             rootDir,
+				ReleaseBranchPrefix: "release",
+				OperatorCfg: OperatorConfig{
+					Image:    "tigera/operator",
+					Registry: "quay.io",
+					Branch:   "release-v1.41",
+				},
+			},
+			releaseName:   "test-release",
+			productBranch: productBranch,
+			calicoStream:  "v3.31",
+			versionData:   version.NewEnterpriseHashreleaseVersions(version.New("v3.22.1-calient-0.dev-741-gde13c547862d"), "0", "v1.41.1-0.dev-41-g2c4e573cd894", ""),
+		}
+		err = generateEnterprisePinnedVersionFile(p)
+		if err != nil {
+			t.Fatalf("failed to generate pinned version file: %v", err)
+		}
+		pinnedVersionPath := PinnedVersionFilePath(dir)
+		if _, err := os.Stat(pinnedVersionPath); err != nil {
+			t.Fatalf("pinned version file not created: %v", err)
+		}
+		content, err := os.ReadFile(pinnedVersionPath)
+		if err != nil {
+			t.Fatalf("failed to read pinned version file: %v", err)
+		}
+		approvals.VerifyString(t, string(content), approvals.Options().WithScrubber(dateApprovalScrubber))
+	})
+
+	t.Run("all", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		productBranch := "release-calient-v3.22-1"
+		managerDir := fakeManagerRepo(t, rootDir, productBranch)
+		p := &EnteprisePinnedVersions{
+			CalicoPinnedVersions: CalicoPinnedVersions{
+				Dir:                 dir,
+				RootDir:             rootDir,
+				ReleaseBranchPrefix: "release",
+				OperatorCfg: OperatorConfig{
+					Image:    "tigera/operator",
+					Registry: "docker.io",
+					Branch:   "release-v1.40",
+				},
+			},
+			ManagerCfg: ManagerConfig{
+				Dir:    managerDir,
+				Branch: productBranch,
+			},
+			releaseName:   "test-release",
+			productBranch: productBranch,
+			calicoStream:  "v3.31",
+			versionData:   version.NewEnterpriseHashreleaseVersions(version.New("v3.22.0-1.0-calient-0.dev-741-gde13c547862d"), "0", "v1.40.0-0.dev-41-g2c4e573cd894", "v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76"),
+		}
+		err = generateEnterprisePinnedVersionFile(p)
+		if err != nil {
+			t.Fatalf("failed to generate pinned version file: %v", err)
+		}
+		pinnedVersionPath := PinnedVersionFilePath(dir)
+		if _, err := os.Stat(pinnedVersionPath); err != nil {
+			t.Fatalf("pinned version file not created: %v", err)
+		}
+		content, err := os.ReadFile(pinnedVersionPath)
+		if err != nil {
+			t.Fatalf("failed to read pinned version file: %v", err)
+		}
+		approvals.VerifyString(t, string(content), approvals.Options().WithScrubber(dateApprovalScrubber))
+	})
+
+	t.Run("hashrelease", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		productBranch := "release-calient-v3.22-1"
+		managerDir := fakeManagerRepo(t, rootDir, productBranch)
+		p := &EnteprisePinnedVersions{
+			CalicoPinnedVersions: CalicoPinnedVersions{
+				Dir:                 dir,
+				RootDir:             rootDir,
+				ReleaseBranchPrefix: "release",
+				OperatorCfg: OperatorConfig{
+					Image:    "tigera/operator",
+					Registry: "docker.io",
+					Branch:   "release-v1.40",
+				},
+			},
+			ManagerCfg: ManagerConfig{
+				Branch: productBranch,
+				Dir:    managerDir,
+			},
+			releaseName:   "test-release",
+			productBranch: productBranch,
+			calicoStream:  "v3.31",
+			versionData:   version.NewEnterpriseHashreleaseVersions(version.New("v3.22.0-1.0-calient-0.dev-741-gde13c547862d"), "0", "v1.40.0-0.dev-41-g2c4e573cd894", "v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76"),
+		}
+		err = generateEnterprisePinnedVersionFile(p)
+		if err != nil {
+			t.Fatalf("failed to generate pinned version file: %v", err)
+		}
+		pinnedVersionPath := PinnedVersionFilePath(dir)
+		if _, err := os.Stat(pinnedVersionPath); err != nil {
+			t.Fatalf("pinned version file not created: %v", err)
+		}
+		content, err := os.ReadFile(pinnedVersionPath)
+		if err != nil {
+			t.Fatalf("failed to read pinned version file: %v", err)
+		}
+		approvals.VerifyString(t, string(content), approvals.Options().WithScrubber(dateApprovalScrubber))
+	})
+}
+
 func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	dir := t.TempDir()
-	data := &enterpriseTemplateData{
-		calicoTemplateData: calicoTemplateData{
-			ReleaseName:    "test-release",
-			BaseDomain:     "example.com",
-			ProductVersion: "vX.Y.Z",
-			Operator: registry.Component{
-				Version:  "vA.B.C",
+	rootDir, err := command.GitDir()
+	if err != nil {
+		t.Fatalf("failed to get git root dir: %v", err)
+	}
+	productBranch := "release-calient-v3.22"
+	managerDir := fakeManagerRepo(t, rootDir, productBranch)
+	p := &EnteprisePinnedVersions{
+		CalicoPinnedVersions: CalicoPinnedVersions{
+			Dir:                 dir,
+			RootDir:             rootDir,
+			ReleaseBranchPrefix: "release",
+			OperatorCfg: OperatorConfig{
 				Image:    "tigera/operator",
 				Registry: "quay.io",
+				Branch:   "release-v1.40",
 			},
-			Hash:          "vX.Y.Z-vA.B.C-vD.E.F",
-			Note:          "Test note",
-			ReleaseBranch: "release-calient-v1.0",
 		},
-		CalicoMinorVersion: "vF.G",
-		ManagerVersion:     "vD.E.F",
+		ManagerCfg: ManagerConfig{
+			Dir:    managerDir,
+			Branch: productBranch,
+		},
+		releaseName:   "test-release",
+		productBranch: "release-calient-v3.22",
+		calicoStream:  "v3.31",
+		versionData:   version.NewEnterpriseHashreleaseVersions(version.New("v3.22.0"), "0", "v1.40.0", "v3.22.0"),
 	}
-	err := generateEnterprisePinnedVersionFile(data, dir)
+	err = generateEnterprisePinnedVersionFile(p)
 	if err != nil {
 		t.Fatalf("failed to generate pinned version file: %v", err)
 	}
@@ -91,7 +223,7 @@ func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	}
 	expectedOperator := registry.OperatorComponent{
 		Component: registry.Component{
-			Version:  "vA.B.C",
+			Version:  "v1.40.0-v3.22.0",
 			Image:    "tigera/operator",
 			Registry: "quay.io",
 		},
@@ -106,5 +238,29 @@ func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read generated file: %v", err)
 	}
-	approvals.VerifyString(t, string(f))
+	approvals.VerifyString(t, string(f), approvals.Options().WithScrubber(dateApprovalScrubber))
+}
+
+func fakeManagerRepo(t testing.TB, monoRepoDir, branch string) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "manager")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("failed to create temp dir for manager: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	// create a git repo
+	if _, err := command.GitInDir(dir, "init", "-b", branch); err != nil {
+		t.Fatalf("failed to init git repo: %v", err)
+	}
+	// create Makefile with lib.Makefile
+	makefilePath := filepath.Join(dir, "Makefile")
+	makefileContent := fmt.Sprintf(`MANAGER_IMAGE         ?=manager
+BUILD_IMAGES          ?=$(MANAGER_IMAGE)
+
+include %s/lib.Makefile
+`, monoRepoDir)
+	if err := os.WriteFile(makefilePath, []byte(makefileContent), 0o644); err != nil {
+		t.Fatalf("failed to write Makefile: %v", err)
+	}
+	return dir
 }

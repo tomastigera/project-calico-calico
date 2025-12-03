@@ -1,7 +1,7 @@
 - name: Check images availability
   run:
     # Script fails on enterprise due to missing values.yaml.
-    when: "false and (${FORCE_RUN} or change_in(['/charts/', '/manifests/'], {pipeline_file: 'ignore'}))"
+    when: "false and (${FORCE_RUN} or (branch !~ 'build-v.*' and change_in(['/charts/', '/manifests/'], {pipeline_file: 'ignore'})))"
   dependencies: []
   task:
     jobs:

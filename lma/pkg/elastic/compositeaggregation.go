@@ -720,6 +720,45 @@ func PagedSearch[T any](ctx context.Context,
 	return page, rawResults.AfterKey, nil
 }
 
+func PagedCount(ctx context.Context,
+	c Client,
+	query *CompositeAggregationQuery,
+	logger *log.Entry,
+	maxCount *int64,
+	process func(*log.Entry, *CompositeAggregationBucket),
+) (int64, bool, error) {
+	var afterKey map[string]interface{}
+	var count int64
+	var truncated bool
+	var err error
+	for {
+		// Wrap the function that processes each bucket in a function that respects the conversion function interface.
+		// We are only interested in counting buckets, not assembling pages from converted buckets. Therefore, we
+		// return nil and count the buckets ourselves.
+		convert := func(l *log.Entry, c *CompositeAggregationBucket) *any {
+			count++
+			process(l, c)
+			return nil
+		}
+
+		_, afterKey, err = PagedSearch(ctx, c, query, logger, convert, afterKey)
+		if err != nil {
+			return 0, false, err
+		}
+
+		if afterKey == nil {
+			break
+		}
+
+		if maxCount != nil && count >= *maxCount {
+			truncated = true
+			break
+		}
+	}
+
+	return count, truncated, nil
+}
+
 func searchCompositeAggregationsHelper(
 	ctx context.Context,
 	query *CompositeAggregationQuery,

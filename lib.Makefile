@@ -54,7 +54,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 # Note: OS is always set on Windows
 ifeq ($(OS),Windows_NT)
 BUILDARCH = x86_64
-BUILDOS = x86_64
+BUILDOS = Windows
 else
 BUILDARCH ?= $(shell uname -m)
 BUILDOS ?= $(shell uname -s | tr A-Z a-z)
@@ -179,6 +179,9 @@ endif
 GO_BUILD_IMAGE ?= calico/go-build
 CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 
+RUST_BUILD_IMAGE ?= calico/rust-build
+CALICO_RUST_BUILD = $(RUST_BUILD_IMAGE):$(RUST_BUILD_VER)
+
 # Build a binary with boring crypto support.
 # This function expects you to pass in two arguments:
 #   1st arg: path/to/input/package(s)
@@ -214,6 +217,11 @@ define build_binary
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
+# GOEXPERIMENT=nodwarf5 is required to disable DWARF5 debug format which is incompatible
+# with current version of MinGW toolchain. Without this, binaries will fail with
+# "not a valid application for this OS platform" error.
+# https://github.com/golang/go/issues/75077
+
 # For windows builds that require cgo.
 define build_cgo_windows_binary
 	$(DOCKER_RUN) \
@@ -221,6 +229,7 @@ define build_cgo_windows_binary
 		-e CGO_ENABLED=1 \
 		-e GOARCH=amd64 \
 		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
 endef
@@ -231,6 +240,7 @@ define build_windows_binary
 		-e CGO_ENABLED=0 \
 		-e GOARCH=amd64 \
 		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
 endef
@@ -249,7 +259,12 @@ ifeq ($(GIT_USE_SSH),true)
 endif
 
 # Get version from git. We allow setting this manually for the hashrelease process.
-GIT_VERSION ?= $(shell git describe --tags --dirty --always --abbrev=12)
+# By default, includes commit count and hash (--long). During releases (RELEASE=true),
+# only the tag is used without the commit count suffix.
+GIT_VERSION ?= $(shell git describe --tags --dirty --always --abbrev=12 --long)
+ifeq ($(RELEASE),true)
+	GIT_VERSION := $(shell git describe --tags --dirty --always --abbrev=12)
+endif
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -333,6 +348,7 @@ CALICO_BASE ?= $(UBI_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
+CALICO_BASE_UBI10 ?= calico/base:$(CALICO_BASE_UBI10_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -345,6 +361,7 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
+	--build-arg CALICO_BASE_UBI10=$(CALICO_BASE_UBI10) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
@@ -372,6 +389,15 @@ DOCKER_RUN := $(DOCKER_RUN_PRIV_NET) --net=host
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
+DOCKER_RUST_BUILD := mkdir -p bin && \
+	docker run --rm \
+		--init \
+		--user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+		$(EXTRA_DOCKER_ARGS) \
+		-v $(REPO_ROOT):/rust/src/github.com/projectcalico/calico:rw \
+		-w /rust/src/$(PACKAGE_NAME) \
+		$(CALICO_RUST_BUILD)
+
 # Host native build images
 HOST_NATIVE_BUILD_IMAGE ?= calico/host-native-build
 
@@ -391,7 +417,7 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 
 # This function replaces the version string in the spec template and builds the rpm package.
 define host_native_rpm_build
-	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(3)))
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) rpm "" $(3)))
 
 	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
 
@@ -401,6 +427,44 @@ define host_native_rpm_build
 				--define "_topdir $$PWD/package/$(1)" \
 				--define "_sourcedir $$PWD" \
 				-ba rhel/$(2).spec'
+endef
+
+define host_native_deb_build
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) deb $(4) $(3)))
+
+	$(eval timestamp := $(shell date -u '+%a, %d %b %Y %H:%M:%S +0000'))
+
+	mkdir -p package/$(1)/$(2)/debian/patches package/$(1)/$(2)/debian/source
+
+	sed -e 's/@VERSION@/$(version)/g' \
+	    -e 's/@DISTRIBUTION@/$(4)/g' \
+	    -e 's/@PACKAGE_NAME@/$(2)/g' \
+	    -e 's/@TIMESTAMP@/$(timestamp)/g' \
+		debian/changelog.in > package/$(1)/$(2)/debian/changelog
+
+	cp *.patch package/$(1)/$(2)/debian/patches/ || true
+	ls *.patch 2>/dev/null > package/$(1)/$(2)/debian/patches/series || echo -n "" > package/$(1)/$(2)/debian/patches/series
+
+	echo "3.0 (quilt)" > package/$(1)/$(2)/debian/source/format
+
+	cp \
+	   debian/control \
+	   debian/copyright \
+	   debian/rules \
+	   debian/$(2).postinst \
+		package/$(1)/$(2)/debian/
+
+	cp \
+	   *.conf \
+	   $(2).env \
+	   $(2).service \
+		package/$(1)/$(2)/debian/
+
+	tar --strip-components=$(5) -C package/$(1)/$(2) -xf $(2).tar.gz
+
+	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
+		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
+			sh -c 'cd package/$(1)/$(2) && debuild -us -uc -b'
 endef
 
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
@@ -489,6 +553,7 @@ define update_calico_base_pin
 	bash -c '\
 		if [[ "$(new_ver)" > "$(old_ver)" ]]; then \
 			sed -i "s/^CALICO_BASE_VER[[:space:]]*=.*/CALICO_BASE_VER=$(new_ver)/" $(1); \
+			sed -i "s/^CALICO_BASE_UBI10_VER[[:space:]]*=.*/CALICO_BASE_UBI10_VER=$(subst ubi9,ubi10,$(new_ver))/" $(1); \
 			echo "CALICO_BASE_VER is updated to $(new_ver)"; \
 		else \
 			echo "no need to update CALICO_BASE_VER"; \
@@ -1021,6 +1086,26 @@ retag-build-image-arch-with-registry-%: var-require-all-REGISTRY-BUILD_IMAGE-IMA
 		$(NOECHO) $(NOOP)\
 	)
 
+# retag-third-party-images-with-registries retags the third-party images specified by THIRD_PARTY_IMAGES and VALIDARCHES with
+# the registries specified by DEV_REGISTRIES.
+retag-third-party-images-with-registries: $(addprefix retag-third-party-images-with-registry-,$(call escapefs,$(DEV_REGISTRIES)))
+
+# retag-third-party-images-with-registry-% retags the third-party images specified by THIRD_PARTY_IMAGES and VALIDARCHES with
+# the registry specified by $*.
+retag-third-party-images-with-registry-%:
+	$(MAKE) $(addprefix retag-third-party-image-with-registry-,$(call escapefs,$(THIRD_PARTY_IMAGES))) REGISTRY=$(call unescapefs,$*)
+
+# retag-third-party-image-with-registry-% retag the third-party arch images specified by $* and VALIDARCHES with the
+# registry specified by REGISTRY.
+retag-third-party-image-with-registry-%: var-require-all-REGISTRY-THIRD_PARTY_IMAGES
+	$(MAKE) $(addprefix retag-third-party-image-arch-with-registry-,$(VALIDARCHES)) THIRD_PARTY_IMAGE=$(call unescapefs,$*)
+
+# retag-third-party-image-arch-with-registry-% retags the third-party image specified by $* and THIRD_PARTY_IMAGE with the
+# registry specified by REGISTRY.
+retag-third-party-image-arch-with-registry-%: var-require-all-REGISTRY-THIRD_PARTY_IMAGE-IMAGETAG
+	docker pull $(THIRD_PARTY_REGISTRY)/$(THIRD_PARTY_IMAGE):$(LATEST_IMAGE_TAG)-$*
+	docker tag $(THIRD_PARTY_REGISTRY)/$(THIRD_PARTY_IMAGE):$(LATEST_IMAGE_TAG)-$* $(call filter-registry,$(REGISTRY))$(THIRD_PARTY_IMAGE):$(IMAGETAG)-$*
+
 # push-images-to-registries pushes the build / arch images specified by BUILD_IMAGES and VALIDARCHES to the registries
 # specified by DEV_REGISTRY.
 push-images-to-registries: $(addprefix push-images-to-registry-,$(call escapefs,$(DEV_REGISTRIES)))
@@ -1069,11 +1154,17 @@ push-manifests-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANC
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGE,
-# and BRANCH_NAME env variables to figure out what to tag and where to push it to.
+# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGES,
+# and BRANCH_NAME env variables to figure out what to tag and where to push them to.
 cd-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+# cd-common tags and pushes third-party images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGES, THIRD_PARTY_IMAGES,
+# and BRANCH_NAME env variables to figure out what to tag and where to push them to.
+cd-third-party-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
+	$(MAKE) retag-third-party-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) retag-third-party-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release targets and helpers
@@ -1153,6 +1244,14 @@ var-require-all-%:
 # must be set you would call var-require-all-FOO-BAR.
 var-require-one-of-%:
 	@$(MAKE) --quiet --no-print-directory var-require REQUIRED_VARS=$*
+
+# build-images echos the images that would be built.
+# If WINDOWS_IMAGE is set then it echos the windows image that would be built as well.
+build-images: var-require-all-BUILD_IMAGES
+	$(if $(WINDOWS_IMAGE),\
+		@echo $(BUILD_IMAGES) $(WINDOWS_IMAGE),\
+		@echo $(BUILD_IMAGES)\
+	)
 
 # sem-cut-release triggers the cut-release pipeline (or test-cut-release if CONFIRM is not specified) in semaphore to
 # cut the release. The pipeline is triggered for the current commit, and the branch it's triggered on is calculated
@@ -1342,18 +1441,16 @@ check-dirty:
 
 .PHONY: bin/crane
 
-# This setup is used to download and install the 'crane' binary into the local bin/ directory.
-# The binary will be placed at: ./bin/crane (or ./bin/crane.exe)
+# This setup is used to download and install the `crane` binary into $(REPOROOT)/bin/crane (or crane.exe for Windows).
 
 .PHONY: bin/crane
-CRANE_FILENAME = go-containerregistry_$(CRANE_OS)_$(CRANE_BUILDARCH).tar.gz
-CRANE_URL = https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/$(CRANE_FILENAME)
+CRANE_URL = https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/go-containerregistry_$(CRANE_OS)_$(CRANE_ARCH).tar.gz
 
 # Special case for Windows - we don't use this yet, it will need testing
 ifeq ($(OS),Windows_NT)
-CRANE_BUILDARCH = x86_64
-CRANE_OS = Windows
+CRANE_ARCH = x86_64
 CRANE_CMD = $(CRANE_CMD).exe
+CRANE_OS = Windows
 
 # Install crane binary into bin/
 bin/crane: $(REPO_ROOT)/bin/crane.exe
@@ -1361,20 +1458,18 @@ $(REPO_ROOT)/bin/crane.exe:
 	$(info ::: Downloading crane from $(CRANE_URL))
 	@mkdir -p $(REPO_ROOT)/bin
 	@curl -sSfL --retry 5 $(CRANE_URL) | tar zx -C $(REPO_ROOT)/bin crane.exe
-
 else
-
 # All other OSes (macos/Linux)
 # Normalize architecture for go-containerregistry filenames
-CRANE_BUILDARCH := $(shell echo $(BUILDARCH) | sed -e 's/aarch64/arm64/' -e 's/amd64/x86_64/')
-CRANE_OS := $(shell uname -s)
+CRANE_ARCH = $(subst amd64,x86_64,$(BUILDARCH))
+CRANE_OS = $(shell uname -s)
+
 # Install crane binary into bin/
 bin/crane: $(REPO_ROOT)/bin/crane
 $(REPO_ROOT)/bin/crane:
 	$(info ::: Downloading crane from $(CRANE_URL))
 	@mkdir -p $(REPO_ROOT)/bin
-	@curl -sSfL --retry 5 $(CRANE_URL) | tar zx -C $(REPO_ROOT)/bin crane
-
+	@curl -sSfL --retry 5 $(CRANE_URL) | tar xz -C $(REPO_ROOT)/bin crane
 endif # Windows_NT
 
 
@@ -1402,7 +1497,15 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 		--tls-private-key-file=/home/user/certs/kubernetes-key.pem \
 		--enable-priority-and-fairness=false \
 		--max-mutating-requests-inflight=0 \
-		--max-requests-inflight=0
+		--max-requests-inflight=0 \
+		--enable-aggregator-routing \
+		--requestheader-client-ca-file=/home/user/certs/ca.pem \
+		--requestheader-username-headers=X-Remote-User \
+		--requestheader-group-headers=X-Remote-Group \
+		--requestheader-extra-headers-prefix=X-Remote-Extra- \
+		--proxy-client-cert-file=/home/user/certs/kubernetes.pem \
+		--proxy-client-key-file=/home/user/certs/kubernetes-key.pem
+
 
 	# Wait until the apiserver is accepting requests.
 	while ! docker exec $(APISERVER_NAME) kubectl get namespace default; do echo "Waiting for apiserver to come up..."; sleep 2; done
@@ -1735,14 +1838,6 @@ docker-credential-gcr-binary: var-require-all-WINDOWS_DIST-DOCKER_CREDENTIAL_VER
 # lib.Makefile) on the specific package Makefile otherwise they are not correctly
 # recognized.
 
-# Translate WINDOWS_VERSIONS defined in metadata.mk to Windows LTSC versions.
-# For some enterprise components like fluentd for windows, we build off ltsc2019
-# but re-tag it to 1809 due to the version number is being used in some old releases.
-# (see version mapping note in https://github.com/tigera/fluentd-base/blob/windows-versions/README.md).
-# FIXME fix the confusing 1809 to ltsc2019 Windows version mapping.
-WINDOWS_LTSC_VERSION_1809 := windows-ltsc2019
-WINDOWS_LTSC_VERSION_ltsc2022 := windows-ltsc2022
-
 windows-sub-image-%: var-require-all-GIT_VERSION-WINDOWS_IMAGE-WINDOWS_DIST-WINDOWS_IMAGE_REQS
 	# ensure dir for windows image tars exits
 	-mkdir -p $(WINDOWS_DIST)
@@ -1754,7 +1849,6 @@ windows-sub-image-%: var-require-all-GIT_VERSION-WINDOWS_IMAGE-WINDOWS_DIST-WIND
 		--build-arg GIT_VERSION=$(GIT_VERSION) \
 		--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
 		--build-arg THIRD_PARTY_RELEASE_BRANCH=$(THIRD_PARTY_RELEASE_BRANCH) \
-		--build-arg WINDOWS_LTSC_VERSION=$(WINDOWS_LTSC_VERSION_$*) \
 		--build-arg WINDOWS_VERSION=$* \
 		-f Dockerfile-windows .
 

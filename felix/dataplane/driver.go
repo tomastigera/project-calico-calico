@@ -98,11 +98,12 @@ func StartDataplaneDriver(
 			// In BPF mode, the BPF programs use mark bits that are not configurable.  Make sure that those
 			// bits are covered by our allowed mask.
 			if allowedMarkBits&tcdefs.MarksMask != tcdefs.MarksMask {
-				log.WithFields(log.Fields{
-					"Name":            "felix-iptables",
-					"MarkMask":        allowedMarkBits,
-					"RequiredBPFBits": tcdefs.MarksMask,
-				}).Panic("IptablesMarkMask/NftablesMarkMask doesn't cover bits that are used (unconditionally) by eBPF mode.")
+				log.WithFields(
+					log.Fields{
+						"Name":            "felix-iptables",
+						"MarkMask":        allowedMarkBits,
+						"RequiredBPFBits": tcdefs.MarksMask,
+					}).Panic("IptablesMarkMask/NftablesMarkMask doesn't cover bits that are used (unconditionally) by eBPF mode.")
 			}
 			allowedMarkBits ^= allowedMarkBits & tcdefs.MarksMask
 			log.WithField("updatedBits", allowedMarkBits).Info(
@@ -158,10 +159,11 @@ func StartDataplaneDriver(
 			log.Info("Wireguard enabled, allocating a mark bit")
 			markWireguard, _ = markBitsManager.NextSingleBitMark()
 			if markWireguard == 0 {
-				log.WithFields(log.Fields{
-					"Name":     "felix-iptables",
-					"MarkMask": allowedMarkBits,
-				}).Panic("Failed to allocate a mark bit for wireguard, not enough mark bits available.")
+				log.WithFields(
+					log.Fields{
+						"Name":     "felix-iptables",
+						"MarkMask": allowedMarkBits,
+					}).Panic("Failed to allocate a mark bit for wireguard, not enough mark bits available.")
 			}
 		}
 
@@ -181,10 +183,11 @@ func StartDataplaneDriver(
 		}
 
 		if markAccept == 0 || markScratch0 == 0 || markPass == 0 || markScratch1 == 0 {
-			log.WithFields(log.Fields{
-				"Name":     "felix-iptables",
-				"MarkMask": allowedMarkBits,
-			}).Panic("Not enough mark bits available.")
+			log.WithFields(
+				log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": allowedMarkBits,
+				}).Panic("Not enough mark bits available.")
 		}
 
 		var markDNSPolicy, markSkipDNSPolicyNfqueue uint32
@@ -200,10 +203,11 @@ func StartDataplaneDriver(
 		markEndpointMark, allocated := markBitsManager.NextBlockBitsMark(markBitsManager.AvailableMarkBitCount())
 		if kubeIPVSSupportEnabled {
 			if allocated == 0 {
-				log.WithFields(log.Fields{
-					"Name":     "felix-iptables",
-					"MarkMask": allowedMarkBits,
-				}).Panic("Not enough mark bits available for endpoint mark.")
+				log.WithFields(
+					log.Fields{
+						"Name":     "felix-iptables",
+						"MarkMask": allowedMarkBits,
+					}).Panic("Not enough mark bits available for endpoint mark.")
 			}
 			// Take lowest bit position (position 1) from endpoint mark mask reserved for non-calico endpoint.
 			markEndpointNonCaliEndpoint = uint32(1) << uint(bits.TrailingZeros32(markEndpointMark))
@@ -260,9 +264,10 @@ func StartDataplaneDriver(
 			// Code defensively here as k8sClientSet may be nil for certain FV tests e.g. OpenStack
 			felixNode, err := k8sClientSet.CoreV1().Nodes().Get(context.Background(), felixHostname, v1.GetOptions{})
 			if err != nil {
-				log.WithFields(log.Fields{
-					"FelixHostname": felixHostname,
-				}).Info("Unable to extract node labels from Felix host")
+				log.WithFields(
+					log.Fields{
+						"FelixHostname": felixHostname,
+					}).Info("Unable to extract node labels from Felix host")
 			}
 
 			felixNodeZone = felixNode.Labels[coreV1.LabelTopologyZone]
@@ -418,8 +423,6 @@ func StartDataplaneDriver(
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
 			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
 			IptablesInsertMode:             configParams.ChainInsertMode,
-			IptablesLockFilePath:           configParams.IptablesLockFilePath,
-			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
 			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
 			MaxIPSetSize:                   configParams.MaxIpsetSize,
 			IPv6Enabled:                    configParams.Ipv6Support,
@@ -503,6 +506,8 @@ func StartDataplaneDriver(
 			BPFMapSizeConntrackCleanupQueue:    configParams.BPFMapSizeConntrackCleanupQueue,
 			BPFMapSizeIPSets:                   configParams.BPFMapSizeIPSets,
 			BPFMapSizeIfState:                  configParams.BPFMapSizeIfState,
+			BPFMapSizeMaglev:                   configParams.BPFMapSizeMaglev(),
+			BPFMaglevLUTSize:                   configParams.BPFLUTSizeMaglev(),
 			BPFEnforceRPF:                      configParams.BPFEnforceRPF,
 			BPFDisableGROForIfaces:             configParams.BPFDisableGROForIfaces,
 			BPFExportBufferSizeMB:              configParams.BPFExportBufferSizeMB,

@@ -3,51 +3,109 @@ package pinnedversion
 import (
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"testing"
 
 	approvals "github.com/approvals/go-approval-tests"
+
+	"github.com/projectcalico/calico/release/internal/command"
+	"github.com/projectcalico/calico/release/internal/utils"
+	"github.com/projectcalico/calico/release/internal/version"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
 func TestEnterpriseReleaseVersions(t *testing.T) {
-	_, p, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("unable to get current file path")
+	rootDir, err := command.GitDir()
+	if err != nil {
+		t.Fatalf("failed to get git root dir: %v", err)
 	}
-	fakeRepoRoot := t.TempDir()
-	fakeTmpDir := filepath.Dir(p) // Use the directory of the test file as the temporary directory
-	v := &EnterpriseReleaseVersions{
-		Hashrelease:     "2025-07-24-v3-22-1-handiness",
-		RepoRootDir:     fakeRepoRoot,
-		TmpDir:          filepath.Join(fakeTmpDir, "testdata"),
-		ProductVersion:  "v3.22.1",
-		OperatorVersion: "v1.22.1",
-		OperatorCfg: OperatorConfig{
-			Image:    "tigera/operator",
-			Registry: "docker.io/tigera",
+	for _, tc := range []struct {
+		name            string
+		releaseDirs     []string
+		wantGenerateErr bool
+	}{
+		{name: "standard"},
+		{name: "duplicate dirs", releaseDirs: []string{"linseed", "linseed"}, wantGenerateErr: true},
+		{name: "all dirs", releaseDirs: append(utils.EnterpriseImageReleaseDirs, manager.ReleaseDir)},
+		{name: "no manager", releaseDirs: []string{"linseed", "guardian"}},
+		{name: "with manager", releaseDirs: []string{"linseed", manager.ReleaseDir, "guardian"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p, cleanup := fakeHashreleasePinnedVersions(t, rootDir)
+			t.Cleanup(cleanup)
+			fakeRepoRoot, cleanup := fakeReleaseRepo(t)
+			t.Cleanup(cleanup)
+			v := &EnterpriseReleaseVersions{
+				Hashrelease:     p.releaseName,
+				RepoRootDir:     rootDir,
+				TmpDir:          p.Dir,
+				ProductVersion:  "v3.22.0-1.0",
+				OperatorVersion: "v1.40.0",
+				OperatorCfg: OperatorConfig{
+					Image:    "tigera/operator",
+					Registry: "quay.io",
+				},
+				HelmReleaseVersion: "0",
+				outDir:             filepath.Join(fakeRepoRoot, relVersionsDirPath),
+				ReleaseDirs:        tc.releaseDirs,
+			}
+			err := v.generateVersions()
+			if tc.wantGenerateErr {
+				if err == nil {
+					t.Fatalf("expected error generating versions, but got none")
+				}
+				return
+			}
+
+			if err := v.updateVersionsFile(); err != nil {
+				t.Fatalf("failed to update versions file: %v", err)
+			}
+			c, err := os.ReadFile(filepath.Join(fakeRepoRoot, relVersionsFilePath))
+			if err != nil {
+				t.Fatalf("failed to read versions file: %v", err)
+			}
+			approvals.VerifyString(t, string(c))
+		})
+	}
+}
+
+func fakeHashreleasePinnedVersions(t testing.TB, rootDir string) (*EnteprisePinnedVersions, func()) {
+	tmpDir := t.TempDir()
+	productBranch := "release-calient-v3.22-1"
+	managerDir := fakeManagerRepo(t, rootDir, productBranch)
+	p := &EnteprisePinnedVersions{
+		CalicoPinnedVersions: CalicoPinnedVersions{
+			Dir:                 tmpDir,
+			RootDir:             rootDir,
+			ReleaseBranchPrefix: "release-calient",
+			OperatorCfg: OperatorConfig{
+				Image:    "tigera/operator",
+				Registry: "docker.io",
+				Branch:   "release-v1.40",
+			},
 		},
-		HelmReleaseVersion: "0",
+		ManagerCfg: ManagerConfig{
+			Branch: productBranch,
+			Dir:    managerDir,
+		},
+		releaseName:   "test-release-name",
+		productBranch: productBranch,
+		calicoStream:  "v3.31",
+		versionData:   version.NewEnterpriseHashreleaseVersions(version.New("v3.22.0-1.0-calient-0.dev-741-gde13c547862d"), "0", "v1.40.0-0.dev-41-g2c4e573cd894", "v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76"),
 	}
+	if err := generateEnterprisePinnedVersionFile(p); err != nil {
+		t.Fatalf("failed to generate pinned versions file: %v", err)
+	}
+	return p, func() { _ = os.RemoveAll(tmpDir) }
+}
 
-	if err := v.generateVersions(); err != nil {
-		t.Fatalf("failed to generate versions: %v", err)
-	}
+func fakeReleaseRepo(t testing.TB) (string, func()) {
+	t.Helper()
+	dir := t.TempDir()
+	fakeRepoRoot := filepath.Join(dir, utils.CalicoPrivateRepo)
 
-	if err := v.updateVersionsFile(); err != nil {
-		t.Fatalf("failed to update versions file: %v", err)
+	if err := os.MkdirAll(fakeRepoRoot, 0o755); err != nil {
+		t.Fatalf("failed to create test data dir: %v", err)
 	}
-	c, err := os.ReadFile(filepath.Join(v.RepoRootDir, relVersionsFilePath))
-	if err != nil {
-		t.Fatalf("failed to read versions file: %v", err)
-	}
-	approvals.VerifyString(t, string(c))
-
-	ev, err := LoadEnterpriseVersionsFromDataFile(v.RepoRootDir, v.ProductVersion)
-	if err != nil {
-		t.Fatalf("failed to load enterprise versions: %v", err)
-	}
-	if !reflect.DeepEqual(ev, &v.versions) {
-		t.Fatalf("loaded versions do not match expected versions: got %+v, want %+v", ev, &v.versions)
-	}
+	return fakeRepoRoot, func() { _ = os.RemoveAll(dir) }
 }

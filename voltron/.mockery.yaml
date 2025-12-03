@@ -1,0 +1,24 @@
+dir: '{{.InterfaceDir}}/mocks'
+structname: '{{.InterfaceName}}'
+pkgname: mocks
+template: testify
+filename: "{{.InterfaceName}}.go"
+template-data:
+  unroll-variadic: true
+packages:
+  github.com/projectcalico/calico/voltron/pkg/tunnel:
+    config:
+      inpackage: true
+      dir: "{{.InterfaceDir}}"
+      pkgname: "{{.SrcPackageName}}"
+      filename: "mock_{{.InterfaceName}}.go"
+      structname: "Mock{{.InterfaceName}}"
+    interfaces:
+      Dialer: {}
+      Tunnel: {}
+  net:
+    config:
+      dir: 'pkg/thirdpartymocks/{{.SrcPackagePath}}'
+      pkgname: '{{.SrcPackageName}}'
+    interfaces:
+      Conn: {}

@@ -1,11 +1,11 @@
-FROM registry.access.redhat.com/ubi9/ubi:latest
+FROM registry.access.redhat.com/ubi10/ubi:latest AS builder
 
 ARG ELASTIC_ARCH
 ARG ELASTIC_VERSION
 ARG TARGETARCH
 ARG TINI_VERSION
 
-RUN dnf upgrade -y
+RUN dnf upgrade -y && dnf clean all
 
 ################################################################################
 # Install and config the elasticsearch archive
@@ -19,7 +19,8 @@ RUN dnf upgrade -y
 COPY build/elasticsearch-${ELASTIC_VERSION}-linux-${ELASTIC_ARCH}.tar.gz /tmp/elasticsearch.tar.gz
 
 RUN mkdir /usr/share/elasticsearch && \
-    tar -zxf /tmp/elasticsearch.tar.gz --strip-components=1 -C /usr/share/elasticsearch/
+    tar -zxf /tmp/elasticsearch.tar.gz --strip-components=1 -C /usr/share/elasticsearch/ && \
+    rm -f /tmp/elasticsearch.tar.gz
 
 COPY build/elasticsearch-${ELASTIC_VERSION}/distribution/docker/src/docker/bin/docker-entrypoint.sh /usr/share/elasticsearch/bin/docker-entrypoint.sh
 
@@ -40,3 +41,7 @@ RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch repository
 RUN groupadd -g 10001 elasticsearch && \
     adduser --uid 10001 --gid 10001 --home /usr/share/elasticsearch elasticsearch && \
     chown -R 10001:10001 /usr/share/elasticsearch
+
+FROM scratch
+
+COPY --from=builder / /

@@ -4,16 +4,15 @@ import (
 	"net"
 	"sync"
 
-	"github.com/projectcalico/calico/voltron/pkg/state"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // listener implements the net.Listener interface and is used by the Manager to allow components to listen for connections
 // over the tunnel
 type listener struct {
-	conns     chan interface{}
+	conns     chan tunnel.ConnOrError
 	done      chan bool
-	close     chan bool
+	close     chan struct{}
 	addr      net.Addr
 	closeOnce sync.Once
 }
@@ -21,12 +20,12 @@ type listener struct {
 // Accept waits for a connection to be opened from the other side of the connection and returns it.
 func (l *listener) Accept() (net.Conn, error) {
 	select {
-	case inf, ok := <-l.conns:
+	case conn, ok := <-l.conns:
 		// a closed channel signals that the tunnel has been closed
 		if !ok {
 			return nil, tunnel.ErrTunnelClosed
 		}
-		return state.InterfaceToConnOrError(inf)
+		return conn.Conn, conn.Error
 	case <-l.close:
 		return nil, ErrManagerClosed
 	}

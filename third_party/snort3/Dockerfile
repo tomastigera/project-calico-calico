@@ -1,8 +1,8 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM almalinux:9 AS snort
+FROM almalinux:9 AS builder
 
-ARG DAQ_VERSION=3.0.21
+ARG DAQ_VERSION=3.0.22
 ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
@@ -32,6 +32,8 @@ RUN dnf --enablerepo=crb install -y \
     libnfnetlink-devel \
     libpcap-devel
 
+RUN dnf clean all
+
 RUN mkdir /build
 WORKDIR /build
 
@@ -48,6 +50,9 @@ RUN curl -sfL https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSIO
     cd build && \
     make -j$(nproc) && make install
 
+# Clean up build files
+RUN rm -fr /build
+
 # Create Snorts Log directory
 RUN mkdir /var/log/snort /var/log/snort-alerts
 
@@ -56,3 +61,7 @@ COPY snort3-community.rules /usr/etc/snort/rules/snort3-community.rules
 
 # Snort config validation
 RUN snort -V && snort -c /usr/etc/snort/snort.lua -R /usr/etc/snort/rules/* -T
+
+FROM scratch
+
+COPY --from=builder / /

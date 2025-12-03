@@ -33,10 +33,14 @@ blocks:
     skip:
       when: "branch !~ '.+'"
     task:
+      prologue:
+        commands:
+          # Restore cached geoip database
+          - cache restore app-policy-geoip
       jobs:
         - name: Linux amd64
           commands:
-            - make -C app-policy cd ARCHES=amd64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C app-policy cd ARCHES=amd64 CONFIRM=true; fi
   - name: Publish ALP images - native arm64 runner
     dependencies: []
     skip:
@@ -45,10 +49,14 @@ blocks:
       agent:
         machine:
           type: s1-aws-arm64-2
+      prologue:
+        commands:
+          # Restore cached geoip database
+          - cache restore app-policy-geoip
       jobs:
         - name: Linux arm64
           commands:
-            - make -C app-policy cd ARCHES=arm64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C app-policy cd ARCHES=arm64 CONFIRM=true; fi
   - name: Publish ALP multi-arch manifests
     dependencies:
       - Publish ALP images

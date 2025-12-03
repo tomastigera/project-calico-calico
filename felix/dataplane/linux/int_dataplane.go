@@ -212,7 +212,6 @@ type Config struct {
 	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
 	IptablesInsertMode             string
-	IptablesLockFilePath           string
 	IptablesLockTimeout            time.Duration
 	IptablesLockProbeInterval      time.Duration
 	XDPRefreshInterval             time.Duration
@@ -274,6 +273,8 @@ type Config struct {
 	BPFMapSizeNATAffinity              int
 	BPFMapSizeIPSets                   int
 	BPFMapSizeIfState                  int
+	BPFMapSizeMaglev                   int
+	BPFMaglevLUTSize                   int
 	BPFIpv6Enabled                     bool
 	BPFHostConntrackBypass             bool
 	BPFEnforceRPF                      string
@@ -373,7 +374,7 @@ type Config struct {
 	KubernetesProvider felixconfig.Provider
 
 	// For testing purposes - allows unit tests to mock out the creation of the nftables dataplane.
-	NewNftablesDataplane func(knftables.Family, string) (knftables.Interface, error)
+	NewNftablesDataplane func(knftables.Family, string, ...knftables.Option) (knftables.Interface, error)
 }
 
 type UpdateBatchResolver interface {
@@ -659,7 +660,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		InsertMode:            config.IptablesInsertMode,
 		RefreshInterval:       config.TableRefreshInterval,
 		PostWriteInterval:     config.IptablesPostWriteCheckInterval,
-		LockTimeout:           config.IptablesLockTimeout,
 		LockProbeInterval:     config.IptablesLockProbeInterval,
 		BackendMode:           backendMode,
 		LookPathOverride:      config.LookPathOverride,
@@ -697,31 +697,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		iptablesNATOptions.ExtraCleanupRegexPattern += "|" + rules.HistoricInsertedNATRuleRegex
 	}
 
-	var iptablesLock sync.Locker
-	if config.RulesConfig.NFTables {
-		iptablesLock = dummyLock{}
-	} else {
-		if dataplaneFeatures.RestoreSupportsLock {
-			logrus.Debug("Calico implementation of iptables lock disabled (because detected version of " +
-				"iptables-restore will use its own implementation).")
-			iptablesLock = dummyLock{}
-		} else if config.IptablesLockTimeout <= 0 {
-			logrus.Debug("Calico implementation of iptables lock disabled (by configuration).")
-			iptablesLock = dummyLock{}
-		} else {
-			// Create the shared iptables lock.  This allows us to block other processes from
-			// manipulating iptables while we make our updates.  We use a shared lock because we
-			// actually do multiple updates in parallel (but to different tables), which is safe.
-			logrus.WithField("timeout", config.IptablesLockTimeout).Debug(
-				"Calico implementation of iptables lock enabled")
-			iptablesLock = iptables.NewSharedLock(
-				config.IptablesLockFilePath,
-				config.IptablesLockTimeout,
-				config.IptablesLockProbeInterval,
-			)
-		}
-	}
-
 	// iptables and nftables implementations.
 	var mangleTableV4NFT, natTableV4NFT, rawTableV4NFT, filterTableV4NFT generictables.Table
 	var mangleTableV4IPT, natTableV4IPT, rawTableV4IPT, filterTableV4IPT generictables.Table
@@ -738,10 +713,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	// Create iptables table implementations.
-	mangleTableV4IPT = iptables.NewTable("mangle", 4, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
-	natTableV4IPT = iptables.NewTable("nat", 4, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesNATOptions)
-	rawTableV4IPT = iptables.NewTable("raw", 4, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
-	filterTableV4IPT = iptables.NewTable("filter", 4, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
+	mangleTableV4IPT = iptables.NewTable("mangle", 4, rules.RuleHashPrefix, featureDetector, iptablesOptions)
+	natTableV4IPT = iptables.NewTable("nat", 4, rules.RuleHashPrefix, featureDetector, iptablesNATOptions)
+	rawTableV4IPT = iptables.NewTable("raw", 4, rules.RuleHashPrefix, featureDetector, iptablesOptions)
+	filterTableV4IPT = iptables.NewTable("filter", 4, rules.RuleHashPrefix, featureDetector, iptablesOptions)
 
 	// Based on configuration, some of the above tables should be active and others not.
 	var mangleTableV4, natTableV4, rawTableV4, filterTableV4 generictables.Table
@@ -1079,7 +1054,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	filterTableV6NFT = nftables.NewTableLayer("filter", nftablesV6RootTable)
 
 	// Create iptables Table implementations for IPv6.
-	filterTableV6IPT = iptables.NewTable("filter", 6, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
+	filterTableV6IPT = iptables.NewTable("filter", 6, rules.RuleHashPrefix, featureDetector, iptablesOptions)
 
 	// Select the correct table implementation based on whether we're using nftables or iptables.
 	var filterTableV6 generictables.Table
@@ -1140,7 +1115,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	bpfipsets.SetMapSize(config.BPFMapSizeIPSets)
-	bpfnat.SetMapSizes(config.BPFMapSizeNATFrontend, config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity)
+	bpfnat.SetMapSizes(config.BPFMapSizeNATFrontend, config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity, config.BPFMapSizeMaglev)
 	bpfroutes.SetMapSize(config.BPFMapSizeRoute)
 	bpfconntrack.SetMapSize(bpfMapSizeConntrack)
 	bpfconntrack.SetCleanupMapSize(config.BPFMapSizeConntrackCleanupQueue)
@@ -1384,7 +1359,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 			// Activate the connect-time load balancer.
 			err = bpfnat.InstallConnectTimeLoadBalancer(true, config.BPFIpv6Enabled,
-				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMap)
+				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMaps)
 			if err != nil {
 				logrus.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -1652,9 +1627,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		// Define iptables table implementations for IPv6.
-		mangleTableV6IPT = iptables.NewTable("mangle", 6, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
-		natTableV6IPT = iptables.NewTable("nat", 6, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesNATOptions)
-		rawTableV6IPT = iptables.NewTable("raw", 6, rules.RuleHashPrefix, iptablesLock, featureDetector, iptablesOptions)
+		mangleTableV6IPT = iptables.NewTable("mangle", 6, rules.RuleHashPrefix, featureDetector, iptablesOptions)
+		natTableV6IPT = iptables.NewTable("nat", 6, rules.RuleHashPrefix, featureDetector, iptablesNATOptions)
+		rawTableV6IPT = iptables.NewTable("raw", 6, rules.RuleHashPrefix, featureDetector, iptablesOptions)
 
 		// Select the correct table implementation based on whether we're using nftables or iptables.
 		var mangleTableV6, natTableV6, rawTableV6 generictables.Table
@@ -1961,7 +1936,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		logrus.Info("Starting BPF event poller")
 		if err := bpfEventPoller.Start(); err != nil {
 			logrus.WithError(err).Info("Stopping bpf event poller")
-			bpfEvnt.Close()
+			err := bpfEvnt.Close()
+			if err != nil {
+				logrus.WithError(err).Info("Error from closing bpf event source.")
+			}
 		}
 	}
 
@@ -3542,14 +3520,6 @@ func (d *InternalDataplane) reportHealth() {
 	}
 }
 
-type dummyLock struct{}
-
-func (d dummyLock) Lock() {
-}
-
-func (d dummyLock) Unlock() {
-}
-
 func startBPFDataplaneComponents(
 	ipFamily proto.IPVersion,
 	maps *bpfmap.IPMaps,
@@ -3583,6 +3553,7 @@ func startBPFDataplaneComponents(
 
 	bpfproxyOpts := []bpfproxy.Option{
 		bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
+		bpfproxy.WithMaglevLUTSize(config.BPFMaglevLUTSize),
 	}
 
 	if config.bpfProxyHealthCheck != nil {

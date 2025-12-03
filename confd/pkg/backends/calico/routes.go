@@ -477,14 +477,6 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, eps []*discovery
 		return false
 	}
 
-	// advertise the /32 of ClusterIP services only if they have an annotation override
-	if svc.Spec.Type == v1.ServiceTypeClusterIP {
-		if _, ok := svc.Annotations[advertiseClusterIPAnnotation]; !ok {
-			logc.Debug("Skipping ClusterIP service without annotation override")
-			return false
-		}
-	}
-
 	// we need to announce single IPs for services of type externalTrafficPolicy Cluster.
 	// There are 2 cases inside this type:
 	// - LoadBalancer with a single IP.
@@ -502,11 +494,20 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, eps []*discovery
 		}
 	}
 
+	// Advertise ClusterIP services if they have an annotation override, and otherwise do not.
+	if svc.Spec.Type == v1.ServiceTypeClusterIP {
+		if _, ok := svc.Annotations[advertiseClusterIPAnnotation]; ok {
+			logc.Debug("Advertise ClusterIP service with annotation override")
+			return true
+		}
+		return false
+	}
+
+	// The following logic applies only to NodePort and LoadBalancer services.
+
 	// For Cluster services, check aggregation setting to determine if we should proceed with endpoint-based logic.
 	// When aggregation is enabled, Cluster services are handled by global CIDR advertisement instead of individual routes.
-	if svc.Spec.Type != v1.ServiceTypeClusterIP &&
-		svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal &&
-		rg.client.ShouldAggregateLoadBalancerServices() {
+	if svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal && rg.client.ShouldAggregateLoadBalancerServices() {
 		logc.Debugf("Skipping service with non-local external traffic policy '%s'", svc.Spec.ExternalTrafficPolicy)
 		return false
 	}
@@ -539,6 +540,7 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, eps []*discovery
 			}
 		}
 	}
+
 	logc.Debugf("Skipping service with no local endpoints")
 	return false
 }

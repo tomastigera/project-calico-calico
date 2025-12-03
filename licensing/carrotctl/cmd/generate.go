@@ -25,7 +25,7 @@ import (
 var (
 	claims client.LicenseClaims
 
-	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, useDBFlag, privKeyPathFlag, certPathFlag, packageFlags, addonsFlag *pflag.FlagSet
+	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, useDBFlag, privKeyPathFlag, certPathFlag, packageFlags *pflag.FlagSet
 
 	// Tigera private key location.
 	// Defaults to "./tigera.io_private_key.pem"
@@ -44,8 +44,6 @@ var (
 	nodes int
 
 	useDB bool
-
-	addons string
 )
 
 func init() {
@@ -75,9 +73,6 @@ func init() {
 
 	useDBFlag = GenerateLicenseCmd.PersistentFlags()
 	useDBFlag.BoolVarP(&useDB, "useDB", "u", true, "Connect with the password database while generating this license")
-
-	addonsFlag = GenerateLicenseCmd.PersistentFlags()
-	addonsFlag.StringVar(&addons, "addons", "a", "Comma separated list of add-ons to add")
 
 	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("customer")
 	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("expiry")
@@ -118,12 +113,6 @@ var GenerateLicenseCmd = &cobra.Command{
 		switch licensePackage {
 		case features.Enterprise:
 			claims.Features = strings.Split(licensePackage, "|")
-		}
-		for _, addon := range strings.Split(addons, ",") {
-			if !features.IsValidAddonName(addon) {
-				log.Fatalf("[ERROR] Addon names must match one of %#v", features.AddonNames)
-			}
-			claims.Features = append(claims.Features, addon)
 		}
 
 		// This might be used in future. Or it could be used for debugging.

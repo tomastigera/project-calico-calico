@@ -215,7 +215,7 @@ func StartNNodeTopology(
 	var err error
 
 	if opts.EnableIPv6 && opts.IPIPMode != api.IPIPModeNever && os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-		log.Errorf("IPIP not supported in BPF with ipv6!")
+		ginkgo.Fail("IPIP not supported in BPF with ipv6!")
 		return
 	}
 
@@ -478,6 +478,11 @@ func StartNNodeTopology(
 	}
 
 	wg.Wait()
+	if ginkgo.CurrentGinkgoTestDescription().Failed {
+		// If one of our parallel start-up goroutines fails, it will eventually
+		// fail the test but Ginkgo has no automatic way to abort the main goroutine.
+		ginkgo.Fail("StartNNodeTopology: failure on background goroutine.")
+	}
 	success = true
 	return
 }

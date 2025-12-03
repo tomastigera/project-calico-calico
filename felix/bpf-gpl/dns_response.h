@@ -17,22 +17,14 @@
 DECLARE_IP_SET_KEY(ip6_set_key, ipv6_addr_t);
 CALI_MAP(cali_v6_ip_sets,,
 	BPF_MAP_TYPE_LPM_TRIE,
-	union ip6_set_lpm_key,
+	struct ip6_set_key,
 	__u32,
 	1024*1024,
 	BPF_F_NO_PREALLOC)
 
-union ip6_set_lpm_key {
-	struct bpf_lpm_trie_key lpm;
-	struct ip6_set_key ip;
-};
-
-union dns_lpm_key {
-        struct bpf_lpm_trie_key lpm;
-	struct {
-		__u32 len;
-		unsigned char rev_name[DNS_NAME_LEN];
-	};
+struct dns_key {
+	__u32 len;
+	unsigned char rev_name[DNS_NAME_LEN];
 };
 
 struct dns_lpm_value {
@@ -41,12 +33,12 @@ struct dns_lpm_value {
 
 CALI_MAP(cali_dns_pfx, 2,
 	 BPF_MAP_TYPE_LPM_TRIE,
-	 union dns_lpm_key, struct dns_lpm_value,
+	 struct dns_key, struct dns_lpm_value,
 	 64*1024, BPF_F_NO_PREALLOC)
 
 CALI_MAP(cali_dns_pfx6, 2,
 	 BPF_MAP_TYPE_LPM_TRIE,
-	 union dns_lpm_key, struct dns_lpm_value,
+	 struct dns_key, struct dns_lpm_value,
 	 64*1024, BPF_F_NO_PREALLOC)
 
 struct dns_set_key {
@@ -69,7 +61,7 @@ struct dns_scratch {
 	unsigned char name[DNS_NAME_LEN];
 	char ip[32];
 	unsigned char buf[DNS_SCRATCH_SIZE];
-	union dns_lpm_key lpm_key;
+	struct dns_key lpm_key;
 };
 
 struct dns_iter_ctx {
@@ -228,12 +220,10 @@ static long dns_update_sets_with_ip(__unused void *map, const void *key, __unuse
 		return 0;
 	}
 
-	union ip_set_lpm_key k = {
-		.ip = {
-			.set_id = sk->set_id,
-			.mask = (8 + ictx->ip_len) * 8,
-			.addr = *(__u32*)scratch->ip,
-		},
+	struct ip_set_key k = {
+		.set_id = sk->set_id,
+		.mask = (8 + ictx->ip_len) * 8,
+		.addr = *(__u32*)scratch->ip,
 	};
 
 	__u32 v = 0;
@@ -257,14 +247,12 @@ static long dns_update_sets_with_ip6(__unused void *map, const void *key, __unus
 		return 0;
 	}
 
-	union ip6_set_lpm_key k = {
-		.ip = {
-			.set_id = sk->set_id,
-			.mask = (8 + ictx->ip_len) * 8,
-		},
+	struct ip6_set_key k = {
+		.set_id = sk->set_id,
+		.mask = (8 + ictx->ip_len) * 8,
 	};
 
-	k.ip.addr = *(ipv6_addr_t *)&scratch->ip;
+	k.addr = *(ipv6_addr_t *)&scratch->ip;
 
 	__u32 v = 0;
 	int ret = cali_v6_ip_sets_update_elem(&k, &v, 0);

@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -1402,9 +1403,15 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("License Package Type does not match")
 	}
 
-	if !reflect.DeepEqual(lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true})) {
-		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true}))
-		return fmt.Errorf("License features do not match")
+	// Check that required features (cnx and all) are present in the license
+	requiredFeatures := []string{"cnx", "all"}
+
+	for _, requiredFeature := range requiredFeatures {
+		if !slices.Contains(lic.Status.Features, requiredFeature) {
+			err := fmt.Errorf("License is missing required feature '%s'. Actual features: %v\n", requiredFeature, lic.Status.Features)
+			fmt.Print(err)
+			return err
+		}
 	}
 
 	return nil

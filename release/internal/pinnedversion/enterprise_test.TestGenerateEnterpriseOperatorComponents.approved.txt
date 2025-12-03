@@ -1,58 +1,58 @@
-title: vX.Y.Z
+title: v3.22.0
+manifest_url: https://test-release.docs.eng.tigera.net
 release_name: test-release
-note: |
-  Test note
-full_hash: vX.Y.Z-vA.B.C-vD.E.F
+note: test-release - generated at [Date1] using release-calient-v3.22 release branch with release-v1.40 operator branch and release-calient-v3.22 manager branch
+full_hash: v3.22.0-v1.40.0-v3.22.0
 tigera-operator:
-  version: vA.B.C
+  version: v1.40.0-v3.22.0
   image: tigera/operator
   registry: quay.io
 components:
   alertmanager:
-    version: vX.Y.Z
+    version: v3.22.0
     image: alertmanager
   apiserver:
-    version: vX.Y.Z
+    version: v3.22.0
     image: apiserver
   calicoctl:
-    version: vX.Y.Z
+    version: v3.22.0
     image: calicoctl
   calicoq:
-    version: vX.Y.Z
+    version: v3.22.0
     image: calicoq
   compliance-benchmarker:
-    version: vX.Y.Z
+    version: v3.22.0
     image: compliance-benchmarker
   compliance-controller:
-    version: vX.Y.Z
+    version: v3.22.0
     image: compliance-controller
   compliance-reporter:
-    version: vX.Y.Z
+    version: v3.22.0
     image: compliance-reporter
   compliance-server:
-    version: vX.Y.Z
+    version: v3.22.0
     image: compliance-server
   compliance-snapshotter:
-    version: vX.Y.Z
+    version: v3.22.0
     image: compliance-snapshotter
   coreos-alertmanager:
     version: v0.28.0
   coreos-prometheus:
     version: v3.4.1
   csi:
-    version: vX.Y.Z
+    version: v3.22.0
     image: csi
   csi-node-driver-registrar:
-    version: vX.Y.Z
+    version: v3.22.0
     image: node-driver-registrar
   deep-packet-inspection:
-    version: vX.Y.Z
+    version: v3.22.0
     image: deep-packet-inspection
   dex:
-    version: vX.Y.Z
+    version: v3.22.0
     image: dex
   dikastes:
-    version: vX.Y.Z
+    version: v3.22.0
     image: dikastes
   eck-elasticsearch:
     version: 8.18.8
@@ -61,131 +61,140 @@ components:
   eck-kibana:
     version: 8.18.8
   egress-gateway:
-    version: vX.Y.Z
+    version: v3.22.0
     image: egress-gateway
   elastic-tsee-installer:
-    version: vX.Y.Z
+    version: v3.22.0
     image: intrusion-detection-job-installer
   elasticsearch:
-    version: vX.Y.Z
+    version: v3.22.0
     image: elasticsearch
   elasticsearch-metrics:
-    version: vX.Y.Z
+    version: v3.22.0
     image: elasticsearch-metrics
   elasticsearch-operator:
-    version: vX.Y.Z
+    version: v3.22.0
     image: eck-operator
   envoy:
-    version: vX.Y.Z
+    version: v3.22.0
     image: envoy
   es-gateway:
-    version: vX.Y.Z
+    version: v3.22.0
     image: es-gateway
   firewall-integration:
-    version: vX.Y.Z
+    version: v3.22.0
     image: firewall-integration
+  flannel-migration-controller:
+    version: v3.22.0
+    image: flannel-migration-controller
   flexvol:
-    version: vX.Y.Z
+    version: v3.22.0
     image: pod2daemon-flexvol
   fluentd:
-    version: vX.Y.Z
+    version: v3.22.0
     image: fluentd
   fluentd-windows:
-    version: vX.Y.Z
+    version: v3.22.0
     image: fluentd-windows
   gateway-api-envoy-gateway:
-    version: vX.Y.Z
+    version: v3.22.0
     image: envoy-gateway
   gateway-api-envoy-proxy:
-    version: vX.Y.Z
+    version: v3.22.0
     image: envoy-proxy
   gateway-api-envoy-ratelimit:
-    version: vX.Y.Z
+    version: v3.22.0
     image: envoy-ratelimit
   gateway-l7-collector:
-    version: vX.Y.Z
+    version: v3.22.0
     image: gateway-l7-collector
   guardian:
-    version: vX.Y.Z
+    version: v3.22.0
     image: guardian
   ingress-collector:
-    version: vX.Y.Z
+    version: v3.22.0
     image: ingress-collector
   intrusion-detection-controller:
-    version: vX.Y.Z
+    version: v3.22.0
     image: intrusion-detection-controller
+  istio-ztunnel:
+    version: v3.22.0
+    image: istio-ztunnel
   key-cert-provisioner:
-    version: vX.Y.Z
+    version: v3.22.0
     image: key-cert-provisioner
   kibana:
-    version: vX.Y.Z
+    version: v3.22.0
     image: kibana
   kube-controllers:
-    version: vX.Y.Z
+    version: v3.22.0
     image: kube-controllers
   l7-admission-controller:
-    version: vX.Y.Z
+    version: v3.22.0
     image: l7-admission-controller
   l7-collector:
-    version: vX.Y.Z
+    version: v3.22.0
     image: l7-collector
   license-agent:
-    version: vX.Y.Z
+    version: v3.22.0
     image: license-agent
   linseed:
-    version: vX.Y.Z
+    version: v3.22.0
     image: linseed
   manager:
-    version: vD.E.F
+    version: v3.22.0
     image: manager
   node:
-    version: vX.Y.Z
+    version: v3.22.0
     image: node
   node-windows:
-    version: vX.Y.Z
+    version: v3.22.0
     image: node-windows
   packetcapture:
-    version: vX.Y.Z
+    version: v3.22.0
     image: packetcapture
   policy-recommendation:
-    version: vX.Y.Z
+    version: v3.22.0
     image: policy-recommendation
   prometheus:
-    version: vX.Y.Z
+    version: v3.22.0
     image: prometheus
   prometheus-config-reloader:
-    version: vX.Y.Z
+    version: v3.22.0
     image: prometheus-config-reloader
   prometheus-operator:
-    version: vX.Y.Z
+    version: v3.22.0
     image: prometheus-operator
   queryserver:
-    version: vX.Y.Z
+    version: v3.22.0
     image: queryserver
+  test-signer:
+    version: v3.22.0
+    image: test-signer
   tigera-cni:
-    version: vX.Y.Z
+    version: v3.22.0
     image: cni
   tigera-cni-windows:
-    version: vX.Y.Z
+    version: v3.22.0
     image: cni-windows
   tigera-prometheus-service:
-    version: vX.Y.Z
+    version: v3.22.0
     image: prometheus-service
   typha:
-    version: vX.Y.Z
+    version: v3.22.0
     image: typha
   ui-apis:
-    version: vX.Y.Z
+    version: v3.22.0
     image: ui-apis
   voltron:
-    version: vX.Y.Z
+    version: v3.22.0
     image: voltron
   waf-http-filter:
-    version: vX.Y.Z
+    version: v3.22.0
     image: waf-http-filter
   webhooks-processor:
-    version: vX.Y.Z
+    version: v3.22.0
     image: webhooks-processor
 calico:
-  minor_version: vF.G
+  minor_version: v3.31
   archive_path: archive

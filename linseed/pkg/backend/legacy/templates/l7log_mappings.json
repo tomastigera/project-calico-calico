@@ -117,6 +117,58 @@
     },
     "cluster": {
       "type": "keyword"
+    },
+    "collector_name": {
+      "type": "keyword"
+    },
+    "collector_type": {
+      "type": "keyword"
+    },
+    "gateway_namespace": {
+      "type": "keyword"
+    },
+    "gateway_class": {
+      "type": "keyword"
+    },
+    "gateway_status": {
+      "type": "keyword"
+    },
+    "gateway_status_message": {
+      "type": "keyword"
+    },
+    "gateway_listener_name": {
+      "type": "keyword"
+    },
+    "gateway_listener_port": {
+      "type": "long",
+      "null_value": 0
+    },
+    "gateway_listener_protocol": {
+      "type": "keyword"
+    },
+    "gateway_listener_full_name": {
+      "type": "keyword"
+    },
+    "gateway_listener_hostname": {
+      "type": "keyword"
+    },
+    "gateway_route_type": {
+      "type": "keyword"
+    },
+    "gateway_route_name": {
+      "type": "keyword"
+    },
+    "gateway_route_namespace": {
+      "type": "keyword"
+    },
+    "gateway_route_hostname": {
+      "type": "keyword"
+    },
+    "gateway_route_status": {
+      "type": "keyword"
+    },
+    "gateway_route_status_message": {
+      "type": "keyword"
     }
   }
 }

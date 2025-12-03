@@ -49,7 +49,6 @@ clean:
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	rm -rf bin report
-	rm -f $(MMDB_FILES)
 	-docker image rm -f $$(docker images $(DIKASTES_IMAGE) -a -q)
 
 .PHONY: clean-generated
@@ -97,6 +96,13 @@ protobuf: $(GENERATED_FILES)
 ###############################################################################
 # Building the image
 ###############################################################################
+# Look for city-lite release filename pattern: dbip-city-lite-YYYY-MM.mmdb.gz.
+# The Semaphore pipeline caches this file to avoid repeated downloads.
+geoip/dbip-city-lite.mmdb:
+	mkdir -p geoip
+	$(eval MMDB_RELEASE=$(shell curl -s https://db-ip.com/db/download/ip-to-city-lite | grep -o 'dbip-city-lite-[0-9]\{4\}-[0-9]\{2\}.mmdb.gz'))
+	curl -sfL https://download.db-ip.com/free/$(MMDB_RELEASE) | zcat > geoip/dbip-city-lite.mmdb
+
 .PHONY: image $(DIKASTES_IMAGE)
 image: $(DIKASTES_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -104,13 +110,13 @@ sub-image-%:
 	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): mmdb Dockerfile $(BINDIR)/dikastes-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(CONTAINER_CREATED): geoip/dbip-city-lite.mmdb Dockerfile $(BINDIR)/dikastes-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BINDIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
+$(CONTAINER_FIPS_CREATED): geoip/dbip-city-lite.mmdb Dockerfile $(BINDIR)/dikastes-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BINDIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -121,7 +127,7 @@ bin/LICENSE: ../LICENSE.md
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: mmdb protobuf ut-exec
+ut: geoip/dbip-city-lite.mmdb protobuf ut-exec
 
 ut-exec:
 	$(DOCKER_GO_BUILD) sh -c "gotestsum --junitfile report/tests.xml -- -count 1 ./..."
@@ -153,16 +159,3 @@ check-generated-files:
 .PHONY: cd
 ## Deploys images to registry
 cd: image-all cd-common
-
-###############################################################################
-MMDB_DIR=./bin/database
-MMDB_RELEASE=$(shell date '+%Y-%m')
-MMDB_SRC_URL=https://download.db-ip.com/free/dbip-city-lite-$(MMDB_RELEASE).mmdb.gz
-MMDB_FILES=$(MMDB_DIR)/dbip-city-lite.mmdb
-$(MMDB_FILES):
-	@echo "[INFO] Downloading MMDB from DB-IP.com (city) $@ ..."
-	mkdir -p $(MMDB_DIR)
-	wget -O $(MMDB_DIR)/dbip-city-lite.mmdb.gz $(MMDB_SRC_URL)
-	gzip --force -d $(MMDB_DIR)/dbip-city-lite.mmdb.gz
-.PHONY: mmdb
-mmdb: $(MMDB_FILES)

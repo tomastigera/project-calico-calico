@@ -239,9 +239,8 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 		return false
 	}
 
-	isAddOnFeature := features.AddOnFeatures[feature]
 	for _, f := range c.Features {
-		if !isAddOnFeature && f == features.All {
+		if f == features.All {
 			return true
 		}
 		if f == feature {

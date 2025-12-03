@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"slices"
 	"strings"
 	"text/template"
@@ -43,118 +42,22 @@ var (
 	enterpriseS3Bucket = "tigera-public/ee"
 	s3ACLPublicRead    = []string{"--acl", "public-read"}
 
-	// images produced in this repo that should be expected for a release.
-	// This list needs to be kept up-to-date
-	// as images are added or removed.
-	enterpriseImages = []string{
-		"voltron",
-		"guardian",
-		"apiserver",
-		"queryserver",
-		"kube-controllers",
-		"calicoq",
-		"typha",
-		"calicoctl",
-		"node",
-		"dikastes",
-		"dex",
-		"fluentd",
-		"ui-apis",
-		"kibana",
-		"elasticsearch",
-		"intrusion-detection-job-installer",
-		"intrusion-detection-controller",
-		"waf-http-filter",
-		"webhooks-processor",
-		"compliance-controller",
-		"compliance-reporter",
-		"compliance-snapshotter",
-		"compliance-server",
-		"compliance-benchmarker",
-		"ingress-collector",
-		"l7-collector",
-		"gateway-l7-collector",
-		"l7-admission-controller",
-		"license-agent",
-		"cni",
-		"firewall-integration",
-		"egress-gateway",
-		"linseed",
-		"policy-recommendation",
-		"elasticsearch-metrics",
-		"packetcapture",
-		"prometheus",
-		"prometheus-operator",
-		"prometheus-config-reloader",
-		"prometheus-service",
-		"es-gateway",
-		"deep-packet-inspection",
-		"eck-operator",
-		"alertmanager",
-		"envoy",
-		"pod2daemon-flexvol",
-		"csi",
-		"node-driver-registrar",
-		"key-cert-provisioner",
-	}
-	enterpriseWindowsImages = []string{
-		"fluentd-windows",
-		"cni-windows",
-		"node-windows",
-	}
+	enterpriseImageReleaseDirs = utils.EnterpriseImageReleaseDirs
 
-	enterpriseImageReleaseDirs = []string{
-		"apiserver",
-		"app-policy",
-		"calicoctl",
-		"cni-plugin",
-		"kube-controllers",
-		"node",
-		"typha",
-		"calicoq",
-		"compliance",
-		"deep-packet-inspection",
-		"egress-gateway",
-		"elasticsearch-metrics",
-		"elasticsearch",
-		"es-gateway",
-		"ui-apis",
-		"firewall-integration",
-		"fluentd",
-		"gateway",
-		"ingress-collector",
-		"intrusion-detection-controller",
-		"key-cert-provisioner",
-		"kibana",
-		"l7-admission-controller",
-		"l7-collector",
-		"license-agent",
-		"linseed",
-		"packetcapture",
-		"pod2daemon",
-		"policy-recommendation",
-		"prometheus-service",
-		"queryserver",
-		"voltron",
-		"webhooks-processor",
-		"third_party/alertmanager",
-		"third_party/dex",
-		"third_party/eck-operator",
-		"third_party/envoy-gateway",
-		"third_party/envoy-proxy",
-		"third_party/envoy-ratelimit",
-		"third_party/prometheus-operator",
-		"third_party/prometheus",
-	}
+	// Directories that publish images for cloud.
 	cloudImageReleaseDirs = []string{
 		"kube-controllers",
 		"kibana",
 	}
+
+	// Directories that publish images for windows releases.
 	enterpriseWindowsReleaseDirs = []string{
 		"cni-plugin",
 		"fluentd",
 		"node",
 	}
+
+	// Directories that publish binaries for enterprise releases.
 	enterpriseBinaryReleaseDirs = []string{
 		"calicoctl",
 		"calicoq",
@@ -174,6 +77,7 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 	defaultCalicoOpts := []Option{
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
 		WithBuildImages(false),
+		WithArchiveImages(false),
 		WithPublishGithubRelease(false),
 	}
 	calicoOpts = append(defaultCalicoOpts, calicoOpts...)
@@ -189,6 +93,8 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		enterpriseHashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
 		s3Bucket:                      enterpriseS3Bucket,
 		baseArtifactsURL:              enterpriseArtifactsBaseURL,
+		imageReleaseDirs:              enterpriseImageReleaseDirs,
+		includeManager:                true,
 	}
 
 	for _, o := range opts {
@@ -205,6 +111,12 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 
 type EnterpriseManager struct {
 	CalicoManager
+
+	// imageReleaseDirs is the list of directories from which we should publish images.
+	imageReleaseDirs []string
+
+	// manager variables
+	includeManager bool
 
 	devTagSuffix string
 
@@ -486,27 +398,30 @@ func (m *EnterpriseManager) getRegistryFromCharts() (string, error) {
 
 func (m *EnterpriseManager) BuildMetadata(dir string) error {
 	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
-		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
-		return err
+		return fmt.Errorf("failed to create metadata dir: %w", err)
 	}
 	registry, err := m.getRegistryFromManifests()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get registry from manifests: %w", err)
 	}
 
 	calicoVer, err := utils.DetermineCalicoVersion(m.repoRoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine calico version: %w", err)
 	}
 
-	// For releases, all images (including the manager, except operator) are the same version.
-	// For hash releases, the manager image is a different version.
-	var images []string
+	enterpriseImages, err := utils.BuildReleaseImageList(m.repoRoot, m.imageReleaseDirs...)
+	if err != nil {
+		return fmt.Errorf("failed to get images built by release dirs: %w", err)
+	}
+	managerImage := fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.calicoVersion)
 	if m.isHashRelease {
-		images = releaseImages(append(enterpriseImages, enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
-		images = append(images, fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.enterpriseHashrelease.ManagerVersion))
-	} else {
-		images = releaseImages(append(append(enterpriseImages, manager.DefaultImage), enterpriseWindowsImages...), m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+		// For hash releases, the manager image is a different version.
+		managerImage = fmt.Sprintf("%s/%s:%s", registry, manager.DefaultImage, m.enterpriseHashrelease.ManagerVersion)
+	}
+	images := releaseImages(enterpriseImages, m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry)
+	if m.includeManager {
+		images = append(images, managerImage)
 	}
 
 	data := enterpriseMetadata{
@@ -971,6 +886,14 @@ type makeInDirectoryWithOutputFn func(dir, target string, env ...string) (string
 func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir string, env []string) error {
 	// We allow for a certain number of retries when publishing each directory, since
 	// network flakes can occasionally result in images failing to push.
+	log := logrus.WithField("directory", dir)
+	for _, e := range env {
+		if strings.HasPrefix(e, "TESLA") {
+			log = log.WithField("cloud_image", strings.SplitN(e, "=", 2)[1])
+		} else if strings.HasPrefix(e, "WINDOWS_RELEASE") {
+			log = log.WithField("windows_image", strings.SplitN(e, "=", 2)[1])
+		}
+	}
 	maxRetries := 1
 	attempt := 0
 	for {
@@ -985,17 +908,16 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 		out, err := fn(dir, "cut-release-image", env...)
 		if err != nil {
 			if attempt < maxRetries {
-				logrus.WithField("directory", dir).WithField("attempt", attempt).WithError(err).Warn("Publish failed, retrying")
+				log.WithField("attempt", attempt).WithError(err).Error("Publish failed, retrying")
 				attempt++
 				continue
 			}
 			// Log the output and return a formatted error
-			logrus.WithField("directory", dir).Error(out)
-			logrus.WithField("directory", dir).WithError(err).Error("Publishing failed")
+			log.Error(out)
 			return fmt.Errorf("failed to publish %s images: %w", dir, err)
 		}
 		// Success - move on
-		logrus.WithField("directory", dir).Info(out)
+		log.Info(out)
 		break
 	}
 	return nil
@@ -1016,7 +938,6 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 	}
 
 	eg, ctx := errgroup.WithContext(context.Background())
-	eg.SetLimit(runtime.GOMAXPROCS(0))
 
 	// Publish release images.
 	logrus.Info("Start publishing release images")
@@ -1037,25 +958,24 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 		env = append(env, "SKIP_DEV_IMAGE_RETAG=true")
 	}
 	for _, dir := range enterpriseImageReleaseDirs {
+		baseEnv := slices.Clone(env)
 		current := dir
 		d := filepath.Join(m.repoRoot, current)
 		eg.Go(func() error {
-			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, env)
+			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, baseEnv)
 		})
 
 		// Publish images for cloud if the directory produces Calico Cloud images
 		if slices.Contains(cloudImageReleaseDirs, dir) {
-			cloudEnv := append(env, "CLOUD=true")
 			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, cloudEnv)
+				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "TESLA=true"))
 			})
 		}
 
 		// Publish images for Windows if the directory produces Windows images
 		if slices.Contains(enterpriseWindowsReleaseDirs, current) {
-			windowsEnv := append(env, "WINDOWS_RELEASE=true")
 			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, windowsEnv)
+				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true"))
 			})
 		}
 	}
@@ -1177,6 +1097,11 @@ func (m *EnterpriseManager) PrepareRelease() error {
 		return err
 	}
 
+	releaseDirs := m.imageReleaseDirs
+	if m.includeManager {
+		releaseDirs = append(releaseDirs, manager.ReleaseDir)
+	}
+
 	// Create or update versions file.
 	v := &pinnedversion.EnterpriseReleaseVersions{
 		Hashrelease:     m.hashrelease.Name,
@@ -1189,6 +1114,7 @@ func (m *EnterpriseManager) PrepareRelease() error {
 			Registry: m.operatorRegistry,
 		},
 		HelmReleaseVersion: m.chartVersion,
+		ReleaseDirs:        releaseDirs,
 	}
 	if err := v.AddToEnterprisePinnedVersionFile(); err != nil {
 		return fmt.Errorf("failed to create pinned version file: %w", err)
@@ -1218,8 +1144,11 @@ func (m *EnterpriseManager) PrepareRelease() error {
 	}
 
 	// Create a new branch for the release and commit the changes.
+	// Use "switch -C" to force-create the branch in case it already exists.
+	// This allows re-running the preparation if needed.
+	// Also, force push the branch to remote to update any existing PR.
 	prepBranch := fmt.Sprintf("prep-%s", m.calicoVersion)
-	if _, err := m.git("checkout", "-b", prepBranch); err != nil {
+	if _, err := m.git("switch", "-C", prepBranch); err != nil {
 		return fmt.Errorf("failed to create branch %s: %s", prepBranch, err)
 	}
 	if _, err := m.git("add", filepath.Join(m.repoRoot, "calico"), filepath.Join(m.repoRoot, "charts"), filepath.Join(m.repoRoot, "manifests")); err != nil {

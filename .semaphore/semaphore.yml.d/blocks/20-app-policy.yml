@@ -6,11 +6,15 @@
   task:
     prologue:
       commands:
+        - cache restore app-policy-geoip
         - cd app-policy
     epilogue:
       always:
         commands:
           - test-results publish report
+      on_pass:
+        commands:
+          - cache store app-policy-geoip app-policy/geoip
     jobs:
       - name: app-policy tests
         commands:

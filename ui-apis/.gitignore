@@ -1,0 +1,4 @@
+# Test-generated files
+test/cert/
+test/ui-apis-token
+test/apiserver.local.config/

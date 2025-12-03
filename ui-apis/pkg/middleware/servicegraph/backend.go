@@ -23,7 +23,7 @@ type ServiceGraphBackend interface {
 	// These methods access data for the cache and therefore use an application context rather than the user request
 	// context.
 	GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error)
-	GetL3FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
+	GetL3FlowData(ctx context.Context, cluster string, namespaces string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
 	GetL7FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
 	GetDNSData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
 	GetEvents(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]Event, error)
@@ -150,10 +150,8 @@ func (r *realServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 	return GetFlowConfig(ctx, cs)
 }
 
-func (r *realServiceGraphBackend) GetL3FlowData(
-	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
-) ([]L3Flow, error) {
-	return GetL3FlowData(ctx, r.linseed, cluster, tr, fc, r.config)
+func (r *realServiceGraphBackend) GetL3FlowData(ctx context.Context, cluster string, namespace string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+	return GetL3FlowData(ctx, r.linseed, cluster, namespace, tr, fc, r.config)
 }
 
 func (r *realServiceGraphBackend) GetDNSData(
@@ -293,7 +291,7 @@ func (m *MockServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 }
 
 func (m *MockServiceGraphBackend) GetL3FlowData(
-	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
+	ctx context.Context, cluster string, namespace string, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
 	m.waitLinseed()
 	m.lock.Lock()

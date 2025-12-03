@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
 
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
-ARG WINDOWS_LTSC_VERSION
+ARG WINDOWS_VERSION
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.19.0-${THIRD_PARTY_RELEASE_BRANCH}-${WINDOWS_LTSC_VERSION}
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.19.1-${THIRD_PARTY_RELEASE_BRANCH}-windows-${WINDOWS_VERSION}
 
 USER ContainerAdministrator
 
 # The ROOT_DIR is set for Windows only.
-ENV ROOT_DIR=c:
+ENV ROOT_DIR=C:
 
 # On Windows, the destination format for COPY must use forward slashes.
 COPY elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
@@ -117,10 +117,6 @@ COPY eks/bin/eks-log-forwarder-startup.exe /bin/eks-log-forwarder-startup.exe
 EXPOSE 24284
 
 ENTRYPOINT []
-# The inner command run by bash.exe is the actual ruby path (c:/ruby34).
-# Using the symlinked path (c:/ruby) fails at runtime:
-# c:/ruby/bin/fluentd: Invalid argument @ rb_readlink - c:/ruby (Errno::EINVAL)
-#
 # Must use the "exec" form of CMD to work for both docker and containerd
 # https://github.com/containerd/containerd/issues/5067
-CMD ["c:/ruby/msys64/usr/bin/bash.exe", "-lc", "c:/bin/ee_entrypoint.sh c:/ruby34/bin/fluentd -c c:/fluentd/etc/fluent.conf -p c:/fluentd/plugins"]
+CMD ["C:/ruby34/msys64/usr/bin/bash.exe", "-lc", "C:/bin/ee_entrypoint.sh C:/ruby34/bin/fluentd -c C:/fluentd/etc/fluent.conf -p C:/fluentd/plugins"]

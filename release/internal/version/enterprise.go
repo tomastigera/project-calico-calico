@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func NewEnterpriseHashreleaseVersions(calico Version, chartVersion, operator, manager string) Versions {
+func NewEnterpriseHashreleaseVersions(calico Version, chartVersion, operator, manager string) *EnterpriseVersions {
 	return &EnterpriseVersions{
 		HashreleaseVersions: HashreleaseVersions{
 			calico:   calico,
@@ -42,6 +42,9 @@ func (v *EnterpriseVersions) OperatorVersion() string {
 }
 
 func (v *EnterpriseVersions) Hash() string {
+	if v.manager == "" {
+		return fmt.Sprintf("%s-%s", v.calico.FormattedString(), v.operator)
+	}
 	return fmt.Sprintf("%s-%s-%s", v.calico.FormattedString(), v.operator, v.manager)
 }
 

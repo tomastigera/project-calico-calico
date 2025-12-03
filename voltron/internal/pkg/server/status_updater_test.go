@@ -241,6 +241,8 @@ var _ = Describe("statusUpdater should provide metrics", func() {
 				statusHandlerChan:       make(chan managedClusterStatusRequest, 2),
 				statusUpdateChan:        make(chan *managedClusterStatusUpdate, 2),
 				config:                  testStatusConfig,
+				runDone:                 make(chan struct{}),
+				listenDone:              make(chan struct{}),
 			}
 			go sui.run(ctx)
 		})
@@ -335,6 +337,8 @@ var _ = Describe("statusUpdater test sorting", func() {
 				statusHandlerChan:       make(chan managedClusterStatusRequest, 1),
 				statusUpdateChan:        make(chan *managedClusterStatusUpdate, 1),
 				config:                  testStatusConfig,
+				runDone:                 make(chan struct{}),
+				listenDone:              make(chan struct{}),
 			}
 			// Don't start running becausewe want to setup some connectionStatuses before
 			// starting

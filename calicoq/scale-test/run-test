@@ -68,13 +68,7 @@ function workload_with_n_policies {
     for num in `seq 1 $n`; do policy $num; done
 }
 
-# Get a calicoctl.
-cd scale-test
-if ! test -x calicoctl; then
-    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0/calicoctl
-    chmod a+x calicoctl
-fi
-CALICOCTL=`pwd`/calicoctl
+CALICOCTL=$(pwd)/bin/calicoctl
 
 TIMED_CALICOCTL_APPLY="/usr/bin/time -o timing-ctl.txt -f 'calicoctl took kernel-mode %Ss user-mode %Us' ${CALICOCTL} apply -f -"
 

@@ -102,6 +102,10 @@ func (at AttachType) hasIPDefrag() bool {
 	return at.Hook == Ingress
 }
 
+func (at AttachType) hasMaglev() bool {
+	return at.Type == tcdefs.EpTypeHost && at.Hook == Ingress
+}
+
 type DefPolicy int
 
 const (

@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"sort"
 	"testing"
 	"time"
 
@@ -199,15 +198,6 @@ func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {
 			}
 		},
 	)
-}
-
-func sortedKeys(set map[string]bool) []string {
-	var keys []string
-	for k := range set {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func createEnterprise(client calicoclient.Interface, ctx context.Context) error {

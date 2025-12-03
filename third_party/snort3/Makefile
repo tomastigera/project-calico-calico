@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 SNORT3_IMAGE ?= snort
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
-SNORT3_VERSION = 3.9.6.0
+SNORT3_VERSION = 3.9.7.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)

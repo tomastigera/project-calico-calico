@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	ReleaseDir          = "manager"
+	ComponentName       = "manager"
 	DefaultImage        = "manager"
 	DefaultOrg          = utils.TigeraOrg
 	DefaultRepoName     = "manager"

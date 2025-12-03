@@ -1,0 +1,163 @@
+- title: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+  manifest_url: https://test-release.docs.eng.tigera.net
+  release_name: test-release
+  note: test-release - generated at [Date1] using release-calient-v3.22-1 release branch with release-v1.40 operator branch and release-calient-v3.22-1 manager branch
+  full_hash: v3.22.0-1.0-calient-0.dev-741-gde13c547862d-v1.40.0-0.dev-41-g2c4e573cd894-v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76
+  tigera-operator:
+    version: v1.40.0-0.dev-41-g2c4e573cd894-v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    image: tigera/operator
+    registry: docker.io
+  components:
+    alertmanager:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    apiserver:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    calico-private:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    calicoctl:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    calicoq:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    compliance-benchmarker:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    compliance-controller:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    compliance-reporter:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    compliance-server:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    compliance-snapshotter:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    coreos-alertmanager:
+      version: v0.28.0
+    coreos-config-reloader:
+      version: v0.84.0
+    coreos-dex:
+      version: v2.41.1
+    coreos-prometheus:
+      version: v3.4.1
+    coreos-prometheus-operator:
+      version: v0.84.0
+    csi:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    csi-node-driver-registrar:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: node-driver-registrar
+    deep-packet-inspection:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    dex:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    dikastes:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    eck-elasticsearch:
+      version: 8.18.8
+    eck-elasticsearch-operator:
+      version: 2.16.0
+    eck-kibana:
+      version: 8.18.8
+    egress-gateway:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    elastic-tsee-installer:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: intrusion-detection-job-installer
+    elasticsearch:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    elasticsearch-metrics:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    elasticsearch-operator:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: eck-operator
+    envoy:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    es-gateway:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    firewall-integration:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    flannel-migration-controller:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    flexvol:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: pod2daemon-flexvol
+    fluentd:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    fluentd-windows:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    gateway-api-envoy-gateway:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: envoy-gateway
+    gateway-api-envoy-proxy:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: envoy-proxy
+    gateway-api-envoy-ratelimit:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: envoy-ratelimit
+    gateway-l7-collector:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    guardian:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    ingress-collector:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    intrusion-detection-controller:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    istio-ztunnel:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    key-cert-provisioner:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    kibana:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    kube-controllers:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    l7-admission-controller:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    l7-collector:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    license-agent:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    linseed:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    manager:
+      version: v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76
+    manager-proxy:
+      version: v3.22.0-1.0-calient-0.dev-48-gc89d7d35db76
+    node:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    node-windows:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    packetcapture:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    policy-recommendation:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    prometheus:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    prometheus-config-reloader:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    prometheus-operator:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    queryserver:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    test-signer:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    tigera-cni:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: cni
+    tigera-cni-windows:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: cni-windows
+    tigera-prometheus-service:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+      image: prometheus-service
+    typha:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    ui-apis:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    upstream-fluentd:
+      version: 1.19.1
+    voltron:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    waf-http-filter:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+    webhooks-processor:
+      version: v3.22.0-1.0-calient-0.dev-741-gde13c547862d
+  calico:
+    minor_version: v3.31
+    archive_path: archive

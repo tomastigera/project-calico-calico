@@ -1,15 +1,15 @@
 package pinnedversion
 
 import (
-	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-	"text/template"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -20,38 +20,88 @@ import (
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
+	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
-const managerComponent = "manager"
+const (
+	managerComponentName       = manager.ComponentName
+	managerProxyComponentName  = managerComponentName + "-proxy"
+	calicoPrivateComponentName = "calico-private"
+
+	// coreos components
+	coreosAlertmanagerComponentName       = "coreos-alertmanager"
+	coreosConfigReloaderComponentName     = "coreos-config-reloader"
+	coreosPrometheusComponentName         = "coreos-prometheus"
+	coreosPrometheusOperatorComponentName = "coreos-prometheus-operator"
+	coreosDexComponentName                = "coreos-dex"
+
+	// eck components
+	eckElasticsearchComponentName         = "eck-elasticsearch"
+	eckElasticsearchOperatorComponentName = "eck-elasticsearch-operator"
+	eckKibanaComponentName                = "eck-kibana"
+
+	// upstream components
+	upstreamFluentdComponentName = "upstream-fluentd"
+)
+
+var onceEnterprise sync.Once
+
+var thirdPartyEnterpriseComponents = map[string]registry.Component{
+	coreosAlertmanagerComponentName:       {Version: "v0.28.0"},
+	coreosConfigReloaderComponentName:     {Version: "v0.84.0"},
+	coreosDexComponentName:                {Version: "v2.41.1"},
+	coreosPrometheusComponentName:         {Version: "v3.4.1"},
+	coreosPrometheusOperatorComponentName: {Version: "v0.84.0"},
+	eckElasticsearchComponentName:         {Version: "8.18.8"},
+	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
+	eckKibanaComponentName:                {Version: "8.18.8"},
+	upstreamFluentdComponentName:          {Version: "1.19.1"},
+}
 
 var (
 	// Components to be included for operator pinned_components.yaml
 	// even if they do not produce images.
 	operatorIncludedComponents = []string{
-		"eck-elasticsearch",
-		"eck-elasticsearch-operator",
-		"eck-kibana",
-		"coreos-alertmanager",
-		"coreos-prometheus",
+		eckElasticsearchComponentName,
+		eckElasticsearchOperatorComponentName,
+		eckKibanaComponentName,
+		coreosAlertmanagerComponentName,
+		coreosPrometheusComponentName,
 	}
 	// Components that do not produce images.
 	noEnterpriseImageComponents = []string{
-		"calico-private",
-		"manager-proxy",
-		"coreos-alertmanager",
-		"coreos-config-reloader",
-		"coreos-dex",
-		"coreos-prometheus",
-		"coreos-prometheus-operator",
-		"eck-elasticsearch",
-		"eck-elasticsearch-operator",
-		"eck-kibana",
-		"upstream-fluentd",
+		calicoPrivateComponentName,
+		managerProxyComponentName,
+		coreosAlertmanagerComponentName,
+		coreosConfigReloaderComponentName,
+		coreosDexComponentName,
+		coreosPrometheusComponentName,
+		coreosPrometheusOperatorComponentName,
+		eckElasticsearchComponentName,
+		eckElasticsearchOperatorComponentName,
+		eckKibanaComponentName,
+		upstreamFluentdComponentName,
 	}
 )
 
-//go:embed templates/enterprise-versions.yaml.gotmpl
-var enterpriseTemplate string
+var (
+	// enterpriseComponentImageMap maps the component name to its image for enterprise.
+	enterpriseComponentImageMap = map[string]string{
+		"csi-node-driver-registrar":   "node-driver-registrar",
+		"elastic-tsee-installer":      "intrusion-detection-job-installer",
+		"elasticsearch-operator":      "eck-operator",
+		"flexvol":                     "pod2daemon-flexvol",
+		"tigera-cni":                  "cni",
+		"tigera-cni-windows":          "cni-windows",
+		"tigera-prometheus-service":   "prometheus-service",
+		"gateway-api-envoy-gateway":   "envoy-gateway",
+		"gateway-api-envoy-proxy":     "envoy-proxy",
+		"gateway-api-envoy-ratelimit": "envoy-ratelimit",
+	}
+	// enterpriseImageComponentMap maps the image name to its component for enterprise.
+	// It is initialized lazily and should be accessed via mapEnterpriseImageToComponent.
+	enterpriseImageComponentMap = map[string]string{}
+)
 
 type ManagerConfig struct {
 	Dir    string
@@ -60,10 +110,6 @@ type ManagerConfig struct {
 
 func (m ManagerConfig) GitVersion() (string, error) {
 	return command.GitVersion(m.Dir, true)
-}
-
-func (m ManagerConfig) GitBranch() (string, error) {
-	return utils.GitBranch(m.Dir)
 }
 
 type CalicoComponent struct {
@@ -93,12 +139,11 @@ func (p *EnterprisePinnedVersion) GetComponentImageNames(includeOperator bool) [
 func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[string]registry.Component {
 	components := make(map[string]registry.Component)
 	for name, component := range p.Components {
-		// Skip components that do not produce images.
+		// Remove components that should be excluded. Either because they do not have an image, or not built by Calico.
 		if slices.Contains(noEnterpriseImageComponents, name) {
 			continue
 		}
-		img := registry.EnterpriseImageMap[name]
-		if img != "" {
+		if img, found := enterpriseComponentImageMap[name]; found {
 			component.Image = img
 		} else if component.Image == "" {
 			component.Image = name
@@ -113,44 +158,35 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 	return components
 }
 
-type enterpriseTemplateData struct {
-	calicoTemplateData
-	HelmReleaseVersion string
-	CalicoMinorVersion string
-	ManagerVersion     string
-}
-
 type EnteprisePinnedVersions struct {
 	CalicoPinnedVersions
 	ManagerCfg   ManagerConfig
 	ChartVersion string
+
+	releaseName   string
+	productBranch string
+	calicoStream  string
+	versionData   *version.EnterpriseVersions
 }
 
-func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
+func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, error) {
 	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
 	productBranch, err := utils.GitBranch(p.RootDir)
 	if err != nil {
 		return nil, err
 	}
+	p.productBranch = productBranch
 	productVer, err := command.GitVersion(p.RootDir, true)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to determine product git version")
 		return nil, err
 	}
 	releaseName := fmt.Sprintf("%s-%s-%s", time.Now().Format("2006-01-02"), version.DeterminePublishStream(productBranch, productVer), RandomWord())
-	releaseName = strings.ReplaceAll(releaseName, ".", "-")
-	operatorBranch, err := p.OperatorCfg.GitBranch()
-	if err != nil {
-		return nil, err
-	}
+	p.releaseName = strings.ReplaceAll(releaseName, ".", "-")
 	operatorVer, err := p.OperatorCfg.GitVersion()
 	if err != nil {
 		return nil, err
-	}
-	managerBranch, err := p.ManagerCfg.GitBranch()
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine manager git branch: %w", err)
 	}
 	managerVer, err := p.ManagerCfg.GitVersion()
 	if err != nil {
@@ -161,34 +197,15 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 		return nil, fmt.Errorf("failed to determine calico version: %w", err)
 	}
 	parts := strings.Split(calicoVer, ".")
-	calicoMajorMinor := fmt.Sprintf("%s.%s", parts[0], parts[1])
+	p.calicoStream = fmt.Sprintf("%s.%s", parts[0], parts[1])
 
-	versionData := version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
-	tmplData := &enterpriseTemplateData{
-		calicoTemplateData: calicoTemplateData{
-			ReleaseName:    releaseName,
-			BaseDomain:     hashreleaseserver.BaseDomain,
-			ProductVersion: versionData.ProductVersion(),
-			Operator: registry.Component{
-				Version:  versionData.OperatorVersion(),
-				Image:    p.OperatorCfg.Image,
-				Registry: p.OperatorCfg.Registry,
-			},
-			Hash: versionData.Hash(),
-			Note: fmt.Sprintf("%s - generated at %s using %s release branch with %s operator branch and %s manager branch",
-				releaseName, time.Now().Format(time.RFC1123), productBranch, operatorBranch, managerBranch),
-			ReleaseBranch: versionData.ReleaseBranch(p.ReleaseBranchPrefix),
-		},
-		HelmReleaseVersion: p.ChartVersion,
-		CalicoMinorVersion: calicoMajorMinor,
-		ManagerVersion:     managerVer,
-	}
-	if err := generateEnterprisePinnedVersionFile(tmplData, p.Dir); err != nil {
+	p.versionData = version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
+	if err := generateEnterprisePinnedVersionFile(p); err != nil {
 		return nil, err
 	}
 
 	if p.BaseHashreleaseDir != "" {
-		hashreleaseDir := filepath.Join(p.BaseHashreleaseDir, versionData.Hash())
+		hashreleaseDir := filepath.Join(p.BaseHashreleaseDir, p.versionData.Hash())
 		if err := os.MkdirAll(hashreleaseDir, utils.DirPerms); err != nil {
 			return nil, err
 		}
@@ -197,25 +214,76 @@ func (p *EnteprisePinnedVersions) GenerateFile() (version.Versions, error) {
 		}
 	}
 
-	return versionData, nil
+	return p.versionData, nil
 }
 
-func generateEnterprisePinnedVersionFile(data *enterpriseTemplateData, outputDir string) error {
-	tmpl, err := template.New("pinnedversion").Parse(enterpriseTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to parse enterprise pinned version template: %w", err)
+func mapEnterpriseImageToComponent(imageName, version string) (string, registry.Component) {
+	onceEnterprise.Do(func() {
+		// Initialize the enterprise image to component map.
+		for c, img := range enterpriseComponentImageMap {
+			enterpriseImageComponentMap[img] = c
+		}
+	})
+	if compName, found := enterpriseImageComponentMap[imageName]; found {
+		return compName, registry.Component{
+			Version: version,
+			Image:   imageName,
+		}
 	}
-	pinnedVersionPath := PinnedVersionFilePath(outputDir)
-	logrus.WithField("file", pinnedVersionPath).Info("Generating pinned version file")
+	return imageName, registry.Component{Version: version}
+}
+
+func generateEnterprisePinnedVersionFile(p *EnteprisePinnedVersions) error {
+	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
+	components := maps.Clone(thirdPartyEnterpriseComponents)
+	components[calicoPrivateComponentName] = registry.Component{Version: p.versionData.ProductVersion()}
+	note := fmt.Sprintf("%s - generated at %s using %s release branch with %s operator branch",
+		p.releaseName, time.Now().Format(time.RFC1123), p.productBranch, p.OperatorCfg.Branch)
+	if p.ManagerCfg.Branch != "" {
+		note = fmt.Sprintf("%s and %s manager branch", note, p.ManagerCfg.Branch)
+	}
+	// If the manager dir is set, no version information is available.
+	components[managerComponentName] = registry.Component{Version: p.versionData.ManagerVersion()}
+	components[managerProxyComponentName] = registry.Component{Version: p.versionData.ManagerVersion()}
+	for _, img := range utils.EnterpriseReleaseImages() {
+		name, c := mapEnterpriseImageToComponent(img, p.versionData.ProductVersion())
+		components[name] = c
+	}
+
+	pinned := EnterprisePinnedVersion{
+		PinnedVersion: PinnedVersion{
+			Title:       p.versionData.ProductVersion(),
+			ManifestURL: fmt.Sprintf("https://%s.%s", p.releaseName, hashreleaseserver.BaseDomain),
+			ReleaseName: p.releaseName,
+			Note:        note,
+			Hash:        p.versionData.Hash(),
+			TigeraOperator: registry.Component{
+				Image:    p.OperatorCfg.Image,
+				Registry: p.OperatorCfg.Registry,
+				Version:  p.versionData.OperatorVersion(),
+			},
+			Components: components,
+		},
+		HelmRelease: p.ChartVersion,
+		Calico: CalicoComponent{
+			MinorVersion: p.calicoStream,
+			ArchivePath:  "archive",
+		},
+	}
+
+	logrus.WithField("file", pinnedVersionPath).Info("Creating pinned version file")
 	pinnedVersionFile, err := os.Create(pinnedVersionPath)
 	if err != nil {
-		return fmt.Errorf("failed to create pinned version file: %w", err)
+		return fmt.Errorf("cannot create pinned version file: %w", err)
 	}
 	defer func() { _ = pinnedVersionFile.Close() }()
-	if err := tmpl.Execute(pinnedVersionFile, data); err != nil {
-		return fmt.Errorf("failed to execute template: %w", err)
+	enc := yaml.NewEncoder(pinnedVersionFile)
+	enc.SetIndent(2)
+	defer func() { _ = enc.Close() }()
+
+	if err := enc.Encode([]EnterprisePinnedVersion{pinned}); err != nil {
+		return fmt.Errorf("failed to encode pinned version file: %w", err)
 	}
-	logrus.WithField("file", pinnedVersionPath).Debug("Pinned version file generated successfully")
 	return nil
 }
 
@@ -237,7 +305,7 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 		return nil, err
 	}
 
-	managerVer := pinnedVersion.Components[managerComponent].Version
+	managerVer := pinnedVersion.Components[managerComponentName].Version
 
 	return version.NewEnterpriseHashreleaseVersions(version.New(pinnedVersion.Title), pinnedVersion.HelmRelease, pinnedVersion.TigeraOperator.Version, managerVer), nil
 }
@@ -311,7 +379,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 			Latest:          latest,
 		},
 		ChartVersion:   pinnedVersion.HelmRelease,
-		ManagerVersion: pinnedVersion.Components[managerComponent].Version,
+		ManagerVersion: pinnedVersion.Components[managerComponentName].Version,
 	}, nil
 }
 

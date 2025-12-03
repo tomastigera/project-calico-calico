@@ -2,7 +2,7 @@ ARG KIBANA_VERSION
 
 ARG TARGETARCH
 
-FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH}
+FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH} AS builder
 
 ARG KIBANA_VERSION
 
@@ -20,6 +20,6 @@ COPY kibana/plugins/googletagmanager/build/googletagmanager-${KIBANA_VERSION}.zi
 RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/googletagmanager-${KIBANA_VERSION}.zip && \ 
     rm -f /tmp/googletagmanager-${KIBANA_VERSION}.zip
 
+FROM scratch
 
-CMD ["/usr/local/bin/kibana-docker"]
-
+COPY --from=builder / /

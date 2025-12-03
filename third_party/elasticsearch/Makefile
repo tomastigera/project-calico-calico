@@ -73,13 +73,10 @@ image: $(ELASTICSEARCH_IMAGE)
 $(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE_MARKER)
 
 ELASTIC_ARCH=
-OPENJDK_ARCH=
 ifeq ($(ARCH),amd64)
 	override ELASTIC_ARCH=x86_64
-	override OPENJDK_ARCH=x64
 else ifeq ($(ARCH),arm64)
 	override ELASTIC_ARCH=aarch64
-	override OPENJDK_ARCH=aarch64
 endif
 
 $(ELASTICSEARCH_IMAGE_MARKER): Dockerfile build

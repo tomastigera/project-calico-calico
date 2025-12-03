@@ -30,7 +30,7 @@ func NewServiceGraphHandler(
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
-) http.Handler {
+) ServiceGraphHandler {
 	return NewServiceGraphHandlerWithBackend(
 		client,
 		&realServiceGraphBackend{
@@ -47,13 +47,18 @@ func NewServiceGraphHandlerWithBackend(
 	client ctrlclient.WithWatch,
 	backend ServiceGraphBackend,
 	cfg *Config,
-) http.Handler {
+) ServiceGraphHandler {
 	noServiceGroups := NewServiceGroups()
 	noServiceGroups.FinishMappings()
 	return &serviceGraph{
 		sgCache:         NewServiceGraphCache(client, backend, cfg),
 		noServiceGroups: noServiceGroups,
 	}
+}
+
+type ServiceGraphHandler interface {
+	http.Handler
+	ServiceGraphCache() ServiceGraphCache
 }
 
 // serviceGraph implements the ServiceGraph interface.
@@ -68,27 +73,52 @@ type serviceGraph struct {
 // RequestData encapsulates data parsed from the request that is shared between the various components that construct
 // the service graph.
 type RequestData struct {
-	HTTPRequest         *http.Request
 	ServiceGraphRequest *v1.ServiceGraphRequest
 }
 
 func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
-	// Extract the request specific data used to collate and filter the data.
-	sgr, err := s.getServiceGraphRequest(w, req)
-	if err != nil {
+	// Extract the request from the body.
+	var sgr v1.ServiceGraphRequest
+	if err := httputils.Decode(w, req, &sgr); err != nil {
 		httputils.EncodeError(w, err)
 		return
 	}
 
+	cluster := middleware.MaybeParseClusterNameFromRequest(req)
+	sg, err := HandleServiceGraphRequest(req.Context(), cluster, &sgr, s.noServiceGroups, s.sgCache)
+	if err != nil {
+		httputils.EncodeError(w, err)
+		return
+	}
+	httputils.Encode(w, sg)
+
+	log.Infof("Service graph request took %s; returning %d nodes and %d edges", time.Since(start), len(sg.Nodes), len(sg.Edges))
+}
+
+func (s *serviceGraph) ServiceGraphCache() ServiceGraphCache {
+	return s.sgCache
+}
+
+func HandleServiceGraphRequest(
+	ctx context.Context,
+	parsedClusterName string,
+	sgr *v1.ServiceGraphRequest,
+	emptyServiceGroups ServiceGroups,
+	serviceGraphCache ServiceGraphCache,
+	serviceGraphConstructorOpts ...ServiceGraphConstructorOption) (*v1.ServiceGraphResponse, error) {
+	sgr, err := validateAndDefaultServiceGraphRequest(sgr, parsedClusterName)
+	if err != nil {
+		return nil, err
+	}
+
 	// Construct a context with timeout based on the service graph request.
-	ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, sgr.Timeout.Duration)
 	defer cancel()
 
 	// Create the request data.
 	rd := &RequestData{
-		HTTPRequest:         req,
 		ServiceGraphRequest: sgr,
 	}
 
@@ -98,34 +128,21 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// - parse the view IDs, this time with service group info
 	// - Compile the graph
 	// - Write the response.
-	if _, err := ParseViewIDs(rd, s.noServiceGroups); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
-		httputils.EncodeError(w, err)
-		return
+	if _, err := ParseViewIDs(rd, emptyServiceGroups); err != nil {
+		return nil, err
+	} else if f, err := serviceGraphCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
+		return nil, err
 	} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
-		httputils.EncodeError(w, err)
-		return
+		return nil, err
+	} else if sg, err := GetServiceGraphResponse(f, pv, serviceGraphConstructorOpts...); err != nil {
+		return nil, err
 	} else {
-		httputils.Encode(w, sg)
-
-		log.Infof("Service graph request took %s; returning %d nodes and %d edges",
-			time.Since(start), len(sg.Nodes), len(sg.Edges))
+		return sg, nil
 	}
 }
 
-// getServiceGraphRequest parses the request from the HTTP request body.
-func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.Request) (*v1.ServiceGraphRequest, error) {
-	// Extract the request from the body.
-	var sgr v1.ServiceGraphRequest
-	if err := httputils.Decode(w, req, &sgr); err != nil {
-		return nil, err
-	}
-
+// validateAndDefaultServiceGraphRequest validates and processes a service graph request.
+func validateAndDefaultServiceGraphRequest(sgr *v1.ServiceGraphRequest, parsedClusterName string) (*v1.ServiceGraphRequest, error) {
 	// Validate parameters.
 	if err := validator.Validate(sgr); err != nil {
 		return nil, &httputils.HttpStatusError{
@@ -139,7 +156,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 		sgr.Timeout.Duration = middleware.DefaultRequestTimeout
 	}
 	if sgr.Cluster == "" {
-		sgr.Cluster = middleware.MaybeParseClusterNameFromRequest(req)
+		sgr.Cluster = parsedClusterName
 	}
 
 	// Sanity check any user configuration that may potentially break the API. In particular all user defined names
@@ -166,5 +183,5 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 		allAggrHostnames.Add(selector.Name)
 	}
 
-	return &sgr, nil
+	return sgr, nil
 }

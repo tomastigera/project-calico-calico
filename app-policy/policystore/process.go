@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 package policystore
 
 import (
@@ -180,17 +180,102 @@ func (store *PolicyStore) processActiveProfileRemove(update *proto.ActiveProfile
 }
 
 func (store *PolicyStore) processActivePolicyUpdate(update *proto.ActivePolicyUpdate) {
-	if log.IsLevelEnabled(log.DebugLevel) {
-		log.WithFields(log.Fields{
-			"id": update.Id,
-		}).Debug("Processing ActivePolicyUpdate")
-	}
+	log.WithFields(log.Fields{
+		"id":             update.Id,
+		"inbound_rules":  update.Policy.InboundRules,
+		"outbound_rules": update.Policy.OutboundRules,
+	}).Debug("Processing ActivePolicyUpdate")
+
 	if update.Id == nil {
 		log.Error("got ActivePolicyUpdate with nil PolicyID")
 		return
 	}
 	id := types.ProtoToPolicyID(update.GetId())
+
+	store.mergePolicyHTTPHeaders(update.Policy)
 	store.PolicyByID[id] = update.Policy
+}
+
+// mergePolicyHTTPHeaders consolidates duplicate HTTP header rules within a policy
+func (store *PolicyStore) mergePolicyHTTPHeaders(policy *proto.Policy) {
+	if policy == nil {
+		return
+	}
+
+	store.mergeHTTPHeadersInRules(policy.InboundRules)
+	store.mergeHTTPHeadersInRules(policy.OutboundRules)
+}
+
+// mergeHTTPHeadersInRules consolidates duplicate HTTP headers within rules
+func (store *PolicyStore) mergeHTTPHeadersInRules(rules []*proto.Rule) {
+	for _, rule := range rules {
+		store.mergeHTTPHeadersInRule(rule)
+	}
+}
+
+// mergeHTTPHeadersInRule consolidates duplicate HTTP headers within a single rule
+func (store *PolicyStore) mergeHTTPHeadersInRule(rule *proto.Rule) {
+	if rule == nil || rule.HttpMatch == nil || len(rule.HttpMatch.Headers) <= 1 {
+		headerCount := 0
+		if rule != nil && rule.HttpMatch != nil {
+			headerCount = len(rule.HttpMatch.Headers)
+		}
+		log.Debugf("Skipping merge - rule nil: %v, HttpMatch nil: %v, headers count: %d",
+			rule == nil,
+			rule != nil && rule.HttpMatch == nil,
+			headerCount)
+		return
+	}
+
+	log.Debugf("Starting header merge for rule with %d headers", len(rule.HttpMatch.Headers))
+
+	// Group headers by name and operator
+	headerMap := make(map[string]map[string][]string) // header -> operator -> values
+
+	for _, header := range rule.HttpMatch.Headers {
+		log.Infof("Processing header: %s %s %v", header.Header, header.Operator, header.Values)
+		if headerMap[header.Header] == nil {
+			headerMap[header.Header] = make(map[string][]string)
+		}
+		headerMap[header.Header][header.Operator] = append(
+			headerMap[header.Header][header.Operator],
+			header.Values...,
+		)
+	}
+
+	log.Debugf("Header map after grouping: %+v", headerMap)
+
+	// Replace headers with consolidated ones
+	rule.HttpMatch.Headers = nil
+	for headerName, operators := range headerMap {
+		for operator, headerValues := range operators {
+			uniqueHeaders := store.removeDuplicateStrings(headerValues)
+
+			log.Debugf("Adding merged header: %s %s %v", headerName, operator, uniqueHeaders)
+			rule.HttpMatch.Headers = append(rule.HttpMatch.Headers, &proto.HTTPMatch_HeadersMatch{
+				Header:   headerName,
+				Operator: operator,
+				Values:   uniqueHeaders,
+			})
+		}
+	}
+
+	log.Debugf("Finished merge - rule now has %d headers", len(rule.HttpMatch.Headers))
+}
+
+// removeDuplicateStrings removes duplicate strings from a slice
+func (store *PolicyStore) removeDuplicateStrings(values []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+
+	for _, value := range values {
+		if !seen[value] {
+			seen[value] = true
+			result = append(result, value)
+		}
+	}
+
+	return result
 }
 
 func (store *PolicyStore) processActivePolicyRemove(update *proto.ActivePolicyRemove) {

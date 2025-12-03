@@ -245,7 +245,7 @@ $(BPF_GPL_MAP_STUB_C_FILES):
 
 # We pre-build lots of different variants of the TC programs, defer to the script.
 BPF_GPL_O_FILES:=$(addprefix bpf-gpl/,$(shell bpf-gpl/list-objs))
-BPF_GPL_O_FILES+=bpf-gpl/bin/tc_preamble.o \
+BPF_GPL_O_FILES+=bpf-gpl/bin/tc_preamble_ingress.o bpf-gpl/bin/tc_preamble_egress.o \
 		 bpf-gpl/bin/xdp_preamble.o bpf-gpl/bin/policy_default.o \
 		 bpf-gpl/bin/tcx_test.o
 BPF_GPL_O_FILES+=$(BPF_GPL_MAP_STUB_O_FILES)
@@ -361,7 +361,6 @@ fv-prereqs: $(REMOTE_DEPS) \
             $(TEST_DNS_SERVER_CONTAINER_CREATED) \
             $(SCAPY_CONTAINER_CREATED) \
             $(FV_BINARY) \
-            bin/iptables-locker \
             bin/test-workload \
             bin/test-connection \
             bin/calico-bpf \
@@ -538,10 +537,6 @@ bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/tproxy/cmd'
-
-bin/iptables-locker: ../go.mod $(shell find iptables -type f -name '*.go' -print)
-	@echo Building iptables-locker...
-	$(call build_binary, "$(PACKAGE_NAME)/fv/iptables-locker", $@)
 
 bin/test-workload: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
 	@echo Building test-workload...

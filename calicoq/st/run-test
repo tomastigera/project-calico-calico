@@ -16,7 +16,7 @@ function summarise_test {
     echo
 }
 
-CALICOCTL=$(pwd)/fv/calicoctl
+CALICOCTL=$(pwd)/bin/calicoctl
 
 export ETCD_ENDPOINTS=http://127.0.0.1:2379
 export DATASTORE_TYPE=etcdv3

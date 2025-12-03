@@ -1,0 +1,38 @@
+# !! WARNING, DO NOT EDIT !! This file is generated and updated during a release.
+- title: v3.22.0-1.0
+  release_name: test-release-name
+  note: test-release-name - generated from git hash de13c547862d
+  full_hash: de13c547862d
+  tigera-operator:
+    version: v1.40.0
+    image: tigera/operator
+    registry: quay.io
+  components:
+    calico-private:
+      version: v3.22.0-1.0
+    coreos-alertmanager:
+      version: v0.28.0
+    coreos-config-reloader:
+      version: v0.84.0
+    coreos-dex:
+      version: v2.41.1
+    coreos-prometheus:
+      version: v3.4.1
+    coreos-prometheus-operator:
+      version: v0.84.0
+    eck-elasticsearch:
+      version: 8.18.8
+    eck-elasticsearch-operator:
+      version: 2.16.0
+    eck-kibana:
+      version: 8.18.8
+    guardian:
+      version: v3.22.0-1.0
+    linseed:
+      version: v3.22.0-1.0
+    upstream-fluentd:
+      version: 1.19.1
+  helmRelease: "0"
+  calico:
+    minor_version: v3.31
+    archive_path: archive

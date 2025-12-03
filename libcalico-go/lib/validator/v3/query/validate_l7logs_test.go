@@ -78,4 +78,12 @@ var _ = DescribeTable("L7", func(atom Atom, ok bool) {
 	Entry("url", Atom{Key: "url", Value: "www.voodoohoodoo.com/v1/foo/bar"}, true),
 	Entry("response_code", Atom{Key: "response_code", Value: "foo"}, true),
 	Entry("type", Atom{Key: "type", Value: "foo"}, true),
+	Entry("gateway_name", Atom{Key: "gateway_name", Value: "foo"}, true),
+	Entry("gateway_namespace", Atom{Key: "gateway_namespace", Value: "foo"}, true),
+	Entry("gateway_route_name", Atom{Key: "gateway_route_name", Value: "foo"}, true),
+	Entry("gateway_route_namespace", Atom{Key: "gateway_route_namespace", Value: "foo"}, true),
+	Entry("gateway_listener_full_name", Atom{Key: "gateway_listener_full_name", Value: "foo"}, true),
+	Entry("gateway_class", Atom{Key: "gateway_class", Value: "foo"}, true),
+	Entry("gateway_status", Atom{Key: "gateway_status", Value: "foo"}, true),
+	Entry("gateway_route_status", Atom{Key: "gateway_route_status", Value: "foo"}, true),
 )

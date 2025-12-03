@@ -2,9 +2,12 @@
 # This file contains Makefile configuration parameters and metadata for this branch.
 #################################################################################################
 
-# The version of calico/go-build and calico/base to use.
-GO_BUILD_VER=1.25.3-llvm18.1.8-k8s1.34.1
-CALICO_BASE_VER=ubi9-1761116414
+# Calico toolchain versions and the calico/base image to use.
+GO_BUILD_VER=1.25.4-llvm18.1.8-k8s1.34.1
+RUST_BUILD_VER=1.91.1
+
+CALICO_BASE_VER=ubi9-1763485988
+CALICO_BASE_UBI10_VER=ubi10-1763485988
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
@@ -15,8 +18,8 @@ K8S_VERSION=v1.34.1
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-CRANE_VERSION=v0.20.6
-ETCD_VERSION=v3.5.6
+CRANE_VERSION := v0.20.6
+ETCD_VERSION=v3.5.24
 GHR_VERSION=v0.17.0
 GITHUB_CLI_VERSION=2.76.2
 GOTESTSUM_VERSION=v1.12.3
@@ -79,7 +82,7 @@ WINDOWS_DIST = dist/windows
 # The Windows HPC container version used as base for Calico Windows images
 WINDOWS_HPC_VERSION ?= v1.0.0
 # The Windows versions used as base for Calico Windows images
-WINDOWS_VERSIONS ?= 1809 ltsc2022
+WINDOWS_VERSIONS ?= ltsc2019 ltsc2022
 
 # The CNI plugin and flannel code that will be cloned and rebuilt with this repo's go-build image
 # whenever the cni-plugin image is created.

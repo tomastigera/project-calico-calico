@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 
-	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
@@ -38,11 +37,11 @@ func WithRateLimiter(rl *rate.Limiter) InnerHandlerOption {
 	}
 }
 
-func NewInnerHandler(t string, c *jclust.ManagedCluster, proxy http.Handler, opts ...InnerHandlerOption) InnerHandler {
+func NewInnerHandler(t string, managedClusterID string, proxy http.Handler, opts ...InnerHandlerOption) InnerHandler {
 	h := &handlerHelper{
-		ManagedCluster: c,
-		proxy:          proxy,
-		tenantID:       t,
+		managedClusterID: managedClusterID,
+		proxy:            proxy,
+		tenantID:         t,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -51,9 +50,9 @@ func NewInnerHandler(t string, c *jclust.ManagedCluster, proxy http.Handler, opt
 }
 
 type handlerHelper struct {
-	ManagedCluster *jclust.ManagedCluster
-	proxy          http.Handler
-	tenantID       string
+	managedClusterID string
+	proxy            http.Handler
+	tenantID         string
 
 	// If specified, this tokenPath will be inserted for use when forwarding requests to Linseed.
 	// This is used for OSS clusters that don't have their own tokenPath.
@@ -77,7 +76,7 @@ func (h *handlerHelper) Handler() http.Handler {
 		logCtx := log.WithFields(fields)
 		start := time.Now()
 
-		promLabels := []string{h.ManagedCluster.ID, tenantID, r.URL.String()}
+		promLabels := []string{h.managedClusterID, tenantID, r.URL.String()}
 
 		httpStatus := http.StatusOK
 		w = httpsnoop.Wrap(w, httpsnoop.Hooks{
@@ -128,7 +127,7 @@ func (h *handlerHelper) Handler() http.Handler {
 		}
 
 		if clusterID != "" {
-			if clusterID != h.ManagedCluster.ID {
+			if clusterID != h.managedClusterID {
 				// Cluster ID is set, and it doesn't match what we expect.
 				logCtx.Warn("Unexpected cluster ID")
 				if metric, err := metrics.InnerRequestBadClusterIDErrors.GetMetricWithLabelValues(promLabels...); err != nil {
@@ -142,7 +141,7 @@ func (h *handlerHelper) Handler() http.Handler {
 		}
 
 		// Set the cluster ID header before forwarding to indicate the originating cluster.
-		r.Header.Set(utils.ClusterHeaderField, h.ManagedCluster.ID)
+		r.Header.Set(utils.ClusterHeaderField, h.managedClusterID)
 
 		if h.tenantID != "" {
 			// Running in multi-tenant mode. We need to set the tenant ID on

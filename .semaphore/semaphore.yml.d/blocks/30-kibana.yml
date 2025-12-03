@@ -1,4 +1,3 @@
-# SKIP-WEEKLY-RUN - exclude from the third-party semaphore.yml for now.
 - name: Publish tigera/kibana images
   run:
     when: "${WEEKLY_RUN} or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"

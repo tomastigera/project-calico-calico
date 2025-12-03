@@ -74,7 +74,7 @@
 
 - name: Publish tigera/fluentd-base Windows images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   execution_time_limit:
@@ -108,7 +108,7 @@
           - BASE=true CONFIRM=true .semaphore/windows-cd.sh
 - name: Publish tigera/fluentd-base Windows multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Publish tigera/fluentd-base Windows images
   task:

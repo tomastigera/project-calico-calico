@@ -2,12 +2,15 @@ package enterprise
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
+
+var cloudImages = []string{"kibana", "kube-controllers"}
 
 func TestImagesPublished(t *testing.T) {
 	t.Parallel()
@@ -41,6 +44,15 @@ func TestImagesPublished(t *testing.T) {
 						t.Logf("Image %s found for architecture %s", fqImage, arch)
 					})
 				}
+			}
+			if slices.Contains(cloudImages, image) {
+				fqCloudImage := fmt.Sprintf("%s/%s:tesla-%s", releaseRegistry, image, releaseVersion)
+				if ok, err := registry.CheckImage(fqCloudImage); err != nil {
+					t.Fatalf("failed to check image %s: %v", fqCloudImage, err)
+				} else if !ok {
+					t.Fatalf("image (%s) not found", fqCloudImage)
+				}
+				t.Logf("Cloud image %s found", fqCloudImage)
 			}
 		})
 	}

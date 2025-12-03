@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v3"
 
 	"github.com/projectcalico/calico/release/internal/registry"
+	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
 
@@ -208,4 +210,26 @@ var skipOperatorValidationFlag = &cli.BoolFlag{
 	Usage:   "Skip validation of the Tigera operator image",
 	Sources: cli.EnvVars("SKIP_OPERATOR_VALIDATION"),
 	Value:   false,
+}
+
+var imageReleaseDirsFlag = &cli.StringSliceFlag{
+	Name:    "image-release-dir",
+	Usage:   "Override list of directories that publish images. Repeat for multiple directories.",
+	Sources: cli.EnvVars("IMAGE_RELEASE_DIRS"),
+	Action: func(ctx context.Context, c *cli.Command, dirs []string) error {
+		parentReleaseDirs := make(map[string]struct{})
+		for _, dir := range utils.EnterpriseImageReleaseDirs {
+			parentReleaseDirs[dir] = struct{}{}
+		}
+		diff := []string{}
+		for _, dir := range dirs {
+			if _, ok := parentReleaseDirs[dir]; !ok {
+				diff = append(diff, dir)
+			}
+		}
+		if len(diff) > 0 {
+			return fmt.Errorf("invalid image release dirs specified: %v", strings.Join(diff, ", "))
+		}
+		return nil
+	},
 }

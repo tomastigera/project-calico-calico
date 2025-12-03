@@ -247,6 +247,9 @@ var _ = Describe("Service graph data tests", func() {
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
 				ServiceGraphCachePollQueryInterval: 5 * time.Minute,
 				ServiceGraphCacheDataSettleTime:    5 * time.Minute,
+				ServiceGraphCacheFetchL7:           true,
+				ServiceGraphCacheFetchDNS:          true,
+				ServiceGraphCacheFetchEvents:       true,
 			})
 
 			// Fix the time range in the request.
@@ -632,6 +635,9 @@ var _ = Describe("Service graph data tests", func() {
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
 				ServiceGraphCachePollQueryInterval: 5 * time.Minute,
 				ServiceGraphCacheDataSettleTime:    5 * time.Minute,
+				ServiceGraphCacheFetchL7:           true,
+				ServiceGraphCacheFetchDNS:          true,
+				ServiceGraphCacheFetchEvents:       true,
 			})
 
 			// Marshal the request and create an HTTP request

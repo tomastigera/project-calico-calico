@@ -5,7 +5,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni
-WINDOWS_IMAGE ?=cni-windows
+WINDOWS_IMAGE ?=$(CNI_PLUGIN_IMAGE)-windows
 
 # If this is a windows release build the windows image.  ARCHES will contain the values
 # in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
@@ -252,7 +252,11 @@ cd: image-all cd-common
 
 ## Build fv binary for Windows
 $(WINDOWS_BIN)/win-fv.exe: $(WINFV_SRCFILES)
-	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(WINDOWS_BIN)/win-fv.exe'
+	$(DOCKER_RUN) \
+		-e GOOS=windows \
+		-e GOEXPERIMENT=nodwarf5 \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(WINDOWS_BIN)/win-fv.exe'
 
 ###############################################################################
 # Release

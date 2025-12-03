@@ -9,7 +9,7 @@ NODE_IMAGE            ?=node
 # The windows image names are:
 # - OS: calico/node-windows
 # - EE: tigera/node-windows
-WINDOWS_IMAGE         ?=node-windows
+WINDOWS_IMAGE         ?=$(NODE_IMAGE)-windows
 
 # If this is a windows release build the windows image.  ARCHES will contain the values
 # in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
@@ -295,7 +295,22 @@ init-package: $(NODE_CONTAINER_BINARY) $(NONCLUSTER_HOST_INIT_BINARY)
 	rm -f calico-node calico-noncluster-host-init
 
 .PHONY: package
-package: calico-node.rhel8 calico-node.rhel9
+package: calico-node.debian12 \
+         calico-node.debian13 \
+         calico-node.rhel8 \
+         calico-node.rhel9 \
+         calico-node.ubuntu22 \
+         calico-node.ubuntu24
+
+.PHONY: calico-node.debian12
+calico-node.debian12: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,debian12,calico-node,,bookworm,0)
+
+.PHONY: calico-node.debian13
+calico-node.debian13: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,debian13,calico-node,,trixie,0)
 
 .PHONY: calico-node.rhel8
 calico-node.rhel8: bin/yq host-native-build init-package rhel/calico-node.spec.in
@@ -304,6 +319,16 @@ calico-node.rhel8: bin/yq host-native-build init-package rhel/calico-node.spec.i
 .PHONY: calico-node.rhel9
 calico-node.rhel9: bin/yq host-native-build init-package rhel/calico-node.spec.in
 	$(call host_native_rpm_build,rhel9,calico-node,)
+
+.PHONY: calico-node.ubuntu22
+calico-node.ubuntu22: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/linux-tools-common/g' debian/control.in > debian/control
+	$(call host_native_deb_build,ubuntu22,calico-node,,jammy,0)
+
+.PHONY: calico-node.ubuntu24
+calico-node.ubuntu24: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,ubuntu24,calico-node,,noble,0)
 
 ##########################################################################################
 # TESTING
@@ -602,21 +627,6 @@ load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 	# calicoctl is deployed as a pod on the cluster and needs to be recreated.
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) apply -f tests/k8st/infra/calicoctl.yaml
 
-.PHONY: st-checks
-st-checks:
-	@if mount | grep -q "cgroup on /sys/fs/cgroup"; then \
-		echo "cgroup v1 mounted"; \
-	else \
-		echo; \
-		echo "ERROR: Looks like your system uses cgroupv2, which is "; \
-		echo "not compatible with our ancient version of dind."; \
-		echo "You can either run this test in a VM, or add "; \
-		echo "systemd.unified_cgroup_hierarchy=0 to your kernel "; \
-		echo "command line (if supported by your kernel/OS)."; \
-		echo; \
-		exit 1; \
-	fi
-
 GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
 TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
@@ -755,7 +765,7 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -782,7 +792,7 @@ st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar wo
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean image ut st static-checks
+ci: static-checks ut image image-windows
 
 ## Deploys images to registry
 cd: image-all cd-common

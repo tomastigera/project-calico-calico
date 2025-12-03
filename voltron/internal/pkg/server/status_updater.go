@@ -73,6 +73,7 @@ type managedClusterStatusState struct {
 type StatusUpdater interface {
 	IsRetryInProgress(string) bool
 	SetStatus(managedClusterName string, status v3.ManagedClusterStatusValue)
+	WaitForClose()
 }
 
 type statusUpdaterImpl struct {
@@ -82,6 +83,8 @@ type statusUpdaterImpl struct {
 	managedClusterNamespace string
 	statusUpdateChan        chan *managedClusterStatusUpdate
 	config                  *StatusConfig
+	runDone                 chan struct{}
+	listenDone              chan struct{}
 }
 
 // statusUpdater is intended to be ran as a go thread that will read the last state sent to the statusUpdate channel
@@ -98,6 +101,8 @@ func NewStatusUpdater(ctx context.Context, client ctrlclient.WithWatch, cfg conf
 		managedClusterNamespace: cfg.TenantNamespace,
 		statusUpdateChan:        make(chan *managedClusterStatusUpdate, 20),
 		config:                  sc,
+		runDone:                 make(chan struct{}),
+		listenDone:              make(chan struct{}),
 	}
 	go sui.run(ctx)
 	go sui.listenForStatusUpdates(ctx, client)
@@ -122,6 +127,7 @@ func (su *statusUpdaterImpl) SetStatus(managedClusterName string, status v3.Mana
 // a race condition between a previous retry and a new status update that the retry will ensure
 // eventually we'll have the correct connection status.
 func (su *statusUpdaterImpl) run(ctx context.Context) {
+	defer close(su.runDone)
 	retryTicker := time.NewTicker(su.config.tickPeriod)
 	defer retryTicker.Stop()
 
@@ -258,6 +264,7 @@ func (su *statusUpdaterImpl) run(ctx context.Context) {
 }
 
 func (su *statusUpdaterImpl) listenForStatusUpdates(ctx context.Context, client ctrlclient.WithWatch) {
+	defer close(su.listenDone)
 	logrus.Debug("Starting statusHandler")
 
 	for {
@@ -319,4 +326,11 @@ func setConnectedStatus(client ctrlclient.WithWatch, namespace, managedClusterNa
 	}
 
 	return nil
+}
+
+// WaitForClose blocks until both background goroutines (run and listenForStatusUpdates) have exited.
+// This ensures clean shutdown and prevents race conditions during testing.
+func (su *statusUpdaterImpl) WaitForClose() {
+	<-su.runDone
+	<-su.listenDone
 }

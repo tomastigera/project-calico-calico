@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,6 +61,7 @@ func NewServiceGraphCache(client ctrlclient.WithWatch, backend ServiceGraphBacke
 	if cfg.ServiceGraphCacheDataPrefetch {
 		sgc.prefetchRawData(ctx, client)
 	}
+
 	return sgc
 }
 
@@ -199,7 +201,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
-	if rbacFilter.IncludeL7Logs() {
+	if s.cfg.ServiceGraphCacheFetchL7 && rbacFilter.IncludeL7Logs() {
 		for _, rf := range cacheData.l7 {
 			if !rbacFilter.IncludeFlow(rf.Edge) {
 				continue
@@ -226,7 +228,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	fd.ServiceGroups.FinishMappings()
 
 	// Filter the DNS logs based on RBAC. All other graph content is removed through graph pruning.
-	if rbacFilter.IncludeDNSLogs() {
+	if s.cfg.ServiceGraphCacheFetchDNS && rbacFilter.IncludeDNSLogs() {
 		for _, dl := range cacheData.dns {
 			if !rbacFilter.IncludeEndpoint(dl.Endpoint) {
 				continue
@@ -243,7 +245,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	// Filter the events.
-	if rbacFilter.IncludeAlerts() {
+	if s.cfg.ServiceGraphCacheFetchEvents && rbacFilter.IncludeAlerts() {
 		for _, ev := range cacheData.events {
 			// Update the names in the events (if required).
 			ev = nameHelper.ConvertEvent(ev)
@@ -590,21 +592,32 @@ func (s *serviceGraphCache) prefetchRawData(ctx context.Context, client ctrlclie
 	}
 }
 
-// calculateKey calculates the cache data key for the reqeust.
+// calculateKey calculates the cache data key for the request.
 func (s *serviceGraphCache) calculateKey(rd *RequestData) (cacheKey, error) {
+	var namespaces string
+	if rd.ServiceGraphRequest.CacheByFocus {
+		namespacesSlice, err := ParseNamespacesFromFocus(rd.ServiceGraphRequest.SelectedView)
+		if err != nil {
+			return cacheKey{}, err
+		}
+		namespaces = strings.Join(namespacesSlice, ",")
+	}
+
 	if rd.ServiceGraphRequest.TimeRange.Now == nil {
 		return cacheKey{
-			relative: false,
-			start:    rd.ServiceGraphRequest.TimeRange.From.Unix(),
-			end:      rd.ServiceGraphRequest.TimeRange.To.Unix(),
-			cluster:  rd.ServiceGraphRequest.Cluster,
+			relative:   false,
+			start:      rd.ServiceGraphRequest.TimeRange.From.Unix(),
+			end:        rd.ServiceGraphRequest.TimeRange.To.Unix(),
+			cluster:    rd.ServiceGraphRequest.Cluster,
+			namespaces: namespaces,
 		}, nil
 	}
 	return cacheKey{
-		relative: true,
-		start:    int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.From) / time.Second),
-		end:      int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.To) / time.Second),
-		cluster:  rd.ServiceGraphRequest.Cluster,
+		relative:   true,
+		start:      int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.From) / time.Second),
+		end:        int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.To) / time.Second),
+		cluster:    rd.ServiceGraphRequest.Cluster,
+		namespaces: namespaces,
 	}, nil
 }
 
@@ -642,23 +655,30 @@ func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, d.timeRange, flowConfig)
+		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, e.namespaces, d.timeRange, flowConfig)
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
-	}()
+	if s.cfg.ServiceGraphCacheFetchL7 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+	if s.cfg.ServiceGraphCacheFetchDNS {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+	if s.cfg.ServiceGraphCacheFetchEvents {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
+		}()
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -934,6 +954,11 @@ func (q *cacheEntryQueue) remove(d *cacheEntry) {
 type cacheKey struct {
 	// Whether the time is absolute or relative to now.
 	relative bool
+
+	// The namespaces of this cache key.
+	// Set if the originating request specified caching by focus, and the focus yielded a subset of all namespaces that
+	// contains the entirety of the data required for the focus.
+	namespaces string
 
 	// If "relative" is true these are the start and end Unix time in seconds.
 	// If "relative" is false, these are the offsets from "now" in seconds.

@@ -145,7 +145,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.IsHashRelease(),
 				calico.WithOutputDir(hashreleaseDir),
 				calico.WithTmpDir(cfg.TmpDir),
-				calico.WithBuildImages(c.Bool(buildHashreleaseImageFlag.Name)),
+				calico.WithBuildImages(c.Bool(buildHashreleaseImagesFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				calico.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				calico.WithGithubOrg(c.String(orgFlag.Name)),

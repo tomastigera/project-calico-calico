@@ -35,6 +35,7 @@ enum calico_reason {
 	CALI_REASON_DROPPED_BY_QOS,
 	// counters specific to calico enterprise
 	CALI_REASON_ACCEPTED_BY_EGW,
+	CALI_REASON_MAGLEV_NO_BACKEND,
 	// Not used by counters map
 	CALI_REASON_ACCEPTED_BY_XDP,
 	CALI_REASON_WEP_NOT_READY,

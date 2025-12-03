@@ -2684,11 +2684,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.IptablesLockTimeout != nil {
-		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	if in.IptablesLockProbeInterval != nil {
 		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
 		*out = new(v1.Duration)
@@ -3754,6 +3749,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.RequireMTUFile != nil {
 		in, out := &in.RequireMTUFile, &out.RequireMTUFile
 		*out = new(bool)
+		**out = **in
+	}
+	if in.BPFMaglevMaxEndpointsPerService != nil {
+		in, out := &in.BPFMaglevMaxEndpointsPerService, &out.BPFMaglevMaxEndpointsPerService
+		*out = new(int)
+		**out = **in
+	}
+	if in.BPFMaglevMaxServices != nil {
+		in, out := &in.BPFMaglevMaxServices, &out.BPFMaglevMaxServices
+		*out = new(int)
 		**out = **in
 	}
 	return

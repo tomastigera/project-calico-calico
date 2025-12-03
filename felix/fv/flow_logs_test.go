@@ -2194,6 +2194,221 @@ var _ = infrastructure.DatastoreDescribe(
 	},
 )
 
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log networkset precedence tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+	var (
+		infra                  infrastructure.DatastoreInfra
+		tc                     infrastructure.TopologyContainers
+		opts                   infrastructure.TopologyOptions
+		client                 client.Interface
+		swl1, swl2, swl3, swl4 *workload.Workload
+		dwl1, dwl2             *workload.Workload
+		cc                     *connectivity.Checker
+	)
+
+	BeforeEach(func() {
+		if NFTMode() {
+			Skip("Not supported in NFT mode")
+		}
+
+		infra = getInfra()
+		opts = infrastructure.DefaultTopologyOptions()
+		opts.FlowLogSource = infrastructure.FlowLogSourceFile
+		opts.IPIPMode = api.IPIPModeNever
+
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
+		// opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLENETWORKSETS"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
+		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+	})
+
+	JustBeforeEach(func() {
+		var err error
+		numNodes := 2
+		tc, client = infrastructure.StartNNodeTopology(numNodes, opts, infra)
+
+		if BPFMode() {
+			ensureBPFProgramsAttached(tc.Felixes[0])
+			ensureBPFProgramsAttached(tc.Felixes[1])
+		}
+
+		infra.AddDefaultAllow()
+
+		// Source workloads on Node 0
+		// swl1 in ns1
+		swl1 = workload.Run(tc.Felixes[0], "swl1", "ns1", "10.65.0.2", "8055", "tcp")
+		swl1.WorkloadEndpoint.GenerateName = "swl1-"
+		swl1.WorkloadEndpoint.Namespace = "ns1"
+		swl1.ConfigureInInfra(infra)
+
+		// swl2 in ns2
+		swl2 = workload.Run(tc.Felixes[0], "swl2", "ns2", "10.65.0.3", "8055", "tcp")
+		swl2.WorkloadEndpoint.GenerateName = "swl2-"
+		swl2.WorkloadEndpoint.Namespace = "ns2"
+		swl2.ConfigureInInfra(infra)
+
+		// swl3 in ns3
+		swl3 = workload.Run(tc.Felixes[0], "swl3", "ns3", "10.65.0.4", "8055", "tcp")
+		swl3.WorkloadEndpoint.GenerateName = "swl3-"
+		swl3.WorkloadEndpoint.Namespace = "ns3"
+		swl3.ConfigureInInfra(infra)
+
+		// swl4 in ns3
+		swl4 = workload.Run(tc.Felixes[0], "swl4", "ns3", "10.65.0.5", "8055", "tcp")
+		swl4.WorkloadEndpoint.GenerateName = "swl4-"
+		swl4.WorkloadEndpoint.Namespace = "ns3"
+		swl4.ConfigureInInfra(infra)
+
+		// Destination workloads on Node 1 (Host Networked to simulate external/non-WEP IPs)
+
+		// dwl1
+		dwl1 = workload.New(tc.Felixes[1], "dwl1", "", "10.65.1.2", "8055", "tcp", workload.WithHostNetworked())
+		// Add IP before starting workload so it can bind
+		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.2/32", "dev", "lo")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dwl1.Start(tc.Felixes[1])).NotTo(HaveOccurred())
+
+		// dwl2
+		dwl2 = workload.New(tc.Felixes[1], "dwl2", "", "10.65.1.3", "8055", "tcp", workload.WithHostNetworked())
+		// Add IP before starting workload so it can bind
+		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.3/32", "dev", "lo")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dwl2.Start(tc.Felixes[1])).NotTo(HaveOccurred())
+
+		// Add a policy to allow all traffic
+		policy := api.NewGlobalNetworkPolicy()
+		policy.Name = "allow-all"
+		order := float64(20)
+		policy.Spec.Order = &order
+		policy.Spec.Selector = "all()"
+		policy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
+		policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		if !BPFMode() {
+			Eventually(getRuleFuncTable(tc.Felixes[0], "API0|default.allow-all", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[0], "APE0|default.allow-all", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+		} else {
+			bpfWaitForPolicyRule(tc.Felixes[0], swl1.InterfaceName, "ingress", "default.allow-all", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], swl1.InterfaceName, "egress", "default.allow-all", `action:"allow"`)
+		}
+
+		// NetworkSets
+		// netset-1 in ns1 matches dwl1
+		netset1 := api.NewNetworkSet()
+		netset1.Name = "netset-1"
+		netset1.Namespace = "ns1"
+		netset1.Spec.Nets = []string{dwl1.IP + "/32"}
+		_, err = client.NetworkSets().Create(utils.Ctx, netset1, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// netset-2 in ns2 matches dwl1
+		netset2 := api.NewNetworkSet()
+		netset2.Name = "netset-2"
+		netset2.Namespace = "ns2"
+		netset2.Spec.Nets = []string{dwl1.IP + "/32"}
+		_, err = client.NetworkSets().Create(utils.Ctx, netset2, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// gns-1 (global) matches dwl1
+		gnetset := api.NewGlobalNetworkSet()
+		gnetset.Name = "gns-1"
+		gnetset.Spec.Nets = []string{dwl1.IP + "/32"}
+		_, err = client.GlobalNetworkSets().Create(utils.Ctx, gnetset, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// netset-4 in ns4 matches dwl2
+		netset4 := api.NewNetworkSet()
+		netset4.Name = "netset-4"
+		netset4.Namespace = "ns4"
+		netset4.Spec.Nets = []string{dwl2.IP + "/32"}
+		_, err = client.NetworkSets().Create(utils.Ctx, netset4, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		if BPFMode() {
+			ensureAllNodesBPFProgramsAttached(tc.Felixes)
+		}
+	})
+
+	It("should report correct network sets based on namespace precedence", func() {
+		// Connectivity check
+		cc = &connectivity.Checker{}
+		cc.ExpectSome(swl1, dwl1)
+		cc.ExpectSome(swl2, dwl1)
+		cc.ExpectSome(swl3, dwl1)
+		cc.ExpectSome(swl4, dwl2)
+		cc.CheckConnectivity()
+
+		bpfMode := BPFMode()
+		flowlogs.WaitForConntrackScan(bpfMode)
+
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
+		}
+
+		Eventually(func() error {
+			wepPort := 8055
+			flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+				ExpectLabels:           true,
+				ExpectAllPolicies:      true,
+				ExpectEnforcedPolicies: true,
+				MatchEnforcedPolicies:  true,
+				MatchLabels:            false,
+				Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			})
+
+			err := flowTester.PopulateFromFlowLogs(tc.Felixes[0])
+			if err != nil {
+				return fmt.Errorf("error populating flow logs from Felix[0]: %s", err)
+			}
+
+			type checkArgs struct {
+				desc       string
+				srcNS      string
+				srcName    string
+				srcAggName string
+				srcIP      string
+				dstNS      string
+				dstName    string
+				dstAggName string
+				dstIP      string
+			}
+			check := func(args checkArgs) {
+				var srcIP, dstIP [16]byte
+				copy(srcIP[:], net.ParseIP(args.srcIP).To16())
+				copy(dstIP[:], net.ParseIP(args.dstIP).To16())
+				t := tuple.Make(srcIP, dstIP, 6, flowlogs.SourcePortIsIncluded, wepPort)
+
+				flowTester.CheckFlow(flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      t,
+						SrcMeta:    endpoint.Metadata{Type: "wep", Namespace: args.srcNS, Name: args.srcName, AggregatedName: args.srcAggName},
+						DstMeta:    endpoint.Metadata{Type: "ns", Namespace: args.dstNS, Name: args.dstName, AggregatedName: args.dstAggName},
+						DstService: flowlog.FlowService{Namespace: flowlog.FieldNotIncluded, Name: flowlog.FieldNotIncluded, PortName: flowlog.FieldNotIncluded, PortNum: 0},
+						Action:     "allow", Reporter: "src",
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|default.allow-all|allow|0": {}},
+				})
+			}
+
+			check(checkArgs{desc: "ns1 -> netset-1", srcNS: "ns1", srcName: swl1.Name, srcAggName: "swl1-*", srcIP: swl1.IP, dstNS: "ns1", dstName: "netset-1", dstAggName: "netset-1", dstIP: dwl1.IP})
+			check(checkArgs{desc: "ns2 -> netset-2", srcNS: "ns2", srcName: swl2.Name, srcAggName: "swl2-*", srcIP: swl2.IP, dstNS: "ns2", dstName: "netset-2", dstAggName: "netset-2", dstIP: dwl1.IP})
+			check(checkArgs{desc: "ns3 -> gns-1", srcNS: "ns3", srcName: swl3.Name, srcAggName: "swl3-*", srcIP: swl3.IP, dstNS: flowlog.FieldNotIncluded, dstName: "gns-1", dstAggName: "gns-1", dstIP: dwl1.IP})
+			check(checkArgs{desc: "ns3 -> netset-3", srcNS: "ns3", srcName: swl4.Name, srcAggName: "swl4-*", srcIP: swl4.IP, dstNS: "ns4", dstName: "netset-4", dstAggName: "netset-4", dstIP: dwl2.IP})
+
+			if err := flowTester.Finish(); err != nil {
+				return fmt.Errorf("Flows incorrect on Felix[0]:\n%v", err)
+			}
+			return nil
+		}, "30s", "3s").ShouldNot(HaveOccurred())
+	})
+})
+
 func createHEP(f *infrastructure.Felix, client client.Interface, ifname string) (hep *api.HostEndpoint, err error) {
 	hep = api.NewHostEndpoint()
 	hep.Name = ifname + "-" + f.Name

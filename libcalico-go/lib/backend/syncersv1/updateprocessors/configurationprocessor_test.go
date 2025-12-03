@@ -16,6 +16,7 @@ package updateprocessors_test
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -43,12 +44,8 @@ const (
 	wireguardMarker = "*WIREGUARDMARKER*"
 )
 
-const (
-	// numBaseFelixConfigs should match the OS value.
-	numBaseFelixConfigs = 171
-
-	// Add private-only fields to this count.
-	numPrivateOnlyFelixConfigs = 113
+var (
+	numBaseFelixConfigs = reflect.TypeOf(apiv3.FelixConfigurationSpec{}).NumField()
 )
 
 var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
@@ -73,7 +70,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindClusterInformation,
 		Name: "node.mynode",
 	}
-	numFelixConfigs := numBaseFelixConfigs + numPrivateOnlyFelixConfigs
+	numFelixConfigs := numBaseFelixConfigs
 	numClusterConfigs := 7
 	numNodeClusterConfigs := 6
 	felixMappedNames := map[string]interface{}{
@@ -229,6 +226,8 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		res.Spec.NftablesFilterDenyAction = "Accept"
 		res.Spec.NftablesFilterAllowAction = "Drop"
 		res.Spec.NftablesMangleAllowAction = "Accept"
+		res.Spec.BPFMaglevMaxEndpointsPerService = &intype
+		res.Spec.BPFMaglevMaxServices = &intype
 		expected := map[string]interface{}{
 			"RouteRefreshInterval":               "12.345",
 			"IptablesLockProbeIntervalMillis":    "54.321",
@@ -248,6 +247,8 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"NftablesFilterDenyAction":           "Accept",
 			"NftablesFilterAllowAction":          "Drop",
 			"NftablesMangleAllowAction":          "Accept",
+			"BPFMaglevMaxServices":               "3",
+			"BPFMaglevMaxEndpointsPerService":    "3",
 		}
 		kvps, err := cc.Process(&model.KVPair{
 			Key:   perNodeFelixKey,

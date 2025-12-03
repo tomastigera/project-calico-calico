@@ -1,6 +1,9 @@
 package calico
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 )
 
@@ -103,6 +106,34 @@ func WithDryRun(dryRun bool) EnterpriseOption {
 func WithBaseArtifactsURL(url string) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.baseArtifactsURL = url
+		return nil
+	}
+}
+
+func WithImageReleaseDirs(dirs []string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		// ensure that the dirs specified are part of the expected enterprise dirs
+		parentReleaseDirs := make(map[string]struct{})
+		for _, dir := range enterpriseImageReleaseDirs {
+			parentReleaseDirs[dir] = struct{}{}
+		}
+		diff := []string{}
+		for _, dir := range dirs {
+			if _, ok := parentReleaseDirs[dir]; !ok {
+				diff = append(diff, dir)
+			}
+		}
+		if len(diff) > 0 {
+			return fmt.Errorf("invalid image release dirs specified: %v", strings.Join(diff, ", "))
+		}
+		r.imageReleaseDirs = dirs
+		return nil
+	}
+}
+
+func WithManager(include bool) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.includeManager = include
 		return nil
 	}
 }

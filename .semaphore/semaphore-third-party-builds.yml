@@ -280,7 +280,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/fluentd-base Windows images
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Prerequisites
     execution_time_limit:
@@ -314,7 +314,7 @@ blocks:
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
   - name: Publish tigera/fluentd-base Windows multi-arch manifests
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
       - Publish tigera/fluentd-base Windows images
     task:
@@ -343,3 +343,53 @@ blocks:
         - name: build windows image
           commands:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
+  - name: Publish tigera/kibana images
+    run:
+      when: "true or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch images
+          commands:
+            - make -C third_party/kibana cd CONFIRM=true
+  - name: Publish tigera/kibana multi-arch manifests
+    run:
+      when: "true or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/kibana images
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/kibana push-manifest CONFIRM=true
+  - name: kibana
+    run:
+      when: "true"
+    dependencies:
+      - Publish tigera/kibana multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd kibana
+      jobs:
+        - name: kibana tests
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci

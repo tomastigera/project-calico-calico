@@ -22,4 +22,4 @@
     epilogue:
       always:
         commands:
-          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+          - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}

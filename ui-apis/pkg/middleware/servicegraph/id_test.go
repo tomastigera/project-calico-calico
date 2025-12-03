@@ -623,6 +623,349 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 	)
 })
 
+var _ = Describe("ParseNamespacesFromGraphNodeID", func() {
+	ExecuteParseNamespacesFromGraphNodeIDScenario := func(graphNodeID string, expectedNamespaces []string) {
+		namespaces, err := ParseNamespacesFromGraphNodeID(v1.GraphNodeID(graphNodeID))
+		Expect(err).NotTo(HaveOccurred())
+		if len(expectedNamespaces) == 0 {
+			Expect(namespaces).To(BeEmpty())
+		} else {
+			Expect(namespaces).To(ConsistOf(expectedNamespaces))
+		}
+	}
+
+	It("should extract from namespace type", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"namespace/production",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from service type", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svc/production/api",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from replicaset type", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"rep/production/nginx",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from workload type", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"wep/production/pod/aggr",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from namespaced networkset", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/production/allowed-ips",
+			[]string{"production"},
+		)
+	})
+
+	It("should handle wildcard in namespaced resource", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"rep/production/*",
+			[]string{"production"},
+		)
+	})
+
+	It("should return empty for layer", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"layer/infrastructure",
+			[]string{},
+		)
+	})
+
+	It("should return empty for host", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"host/node-1/*",
+			[]string{},
+		)
+	})
+
+	It("should return empty for hosts", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"hosts/*",
+			[]string{},
+		)
+	})
+
+	It("should return empty for network", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"net/public",
+			[]string{},
+		)
+	})
+
+	It("should return empty for global networkset", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/global-allowlist",
+			[]string{},
+		)
+	})
+
+	It("should extract from service group with single service", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svcgp;svc/production/api",
+			[]string{"production"},
+		)
+	})
+
+	It("should deduplicate service group with same namespace", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svcgp;svc/production/api;svc/production/frontend",
+			[]string{"production"},
+		)
+	})
+
+	It("should collect union from service group with different namespaces", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svcgp;svc/production/api;svc/staging/api;svc/dev/api",
+			[]string{"production", "staging", "dev"},
+		)
+	})
+
+	It("should handle many services in service group", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svcgp;svc/ns1/s1;svc/ns2/s2;svc/ns3/s3;svc/ns4/s4;svc/ns5/s5",
+			[]string{"ns1", "ns2", "ns3", "ns4", "ns5"},
+		)
+	})
+
+	It("should extract from service group when global resource has service group context - host", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"host/db-node/*;svcgp;svc/production/db",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from service group when global resource has service group context - network", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"net/public;svcgp;svc/production/api;svc/staging/api",
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should extract from service group when global networkset has service group context", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/global;svcgp;svc/production/api",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from namespaced networkset with service group when both have same namespace", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/production/allowed-ips;svcgp;svc/production/api",
+			[]string{"production"},
+		)
+	})
+
+	It("should extract from namespaced networkset with service group when they have different namespaces", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/production/allowed-ips;svcgp;svc/staging/api",
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should ignore port and extract from namespaced parent - replicaset", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/8080;rep/production/nginx",
+			[]string{"production"},
+		)
+	})
+
+	It("should ignore port and extract from namespaced parent - workload", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/8080;wep/production/pod/aggr",
+			[]string{"production"},
+		)
+	})
+
+	It("should ignore port and return empty for global parent - host", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/5432;host/db-node/*",
+			[]string{},
+		)
+	})
+
+	It("should ignore port and return empty for global parent - network", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/80;net/public",
+			[]string{},
+		)
+	})
+
+	It("should ignore direction and extract from namespaced networkset", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/production/allowed;dir/ingress",
+			[]string{"production"},
+		)
+	})
+
+	It("should ignore direction and return empty for global networkset", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"ns/global-blocked;dir/egress",
+			[]string{},
+		)
+	})
+
+	It("should extract from service port hierarchy", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"svcport/tcp/http/8080;svc/production/api",
+			[]string{"production"},
+		)
+	})
+
+	It("should handle port + global + service group", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/5432;host/db/*;svcgp;svc/production/db;svc/staging/db",
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should handle port + namespaced networkset + direction", func() {
+		ExecuteParseNamespacesFromGraphNodeIDScenario(
+			"port/tcp/443;ns/production/allowed;dir/ingress",
+			[]string{"production"},
+		)
+	})
+
+	It("should error on empty string", func() {
+		_, err := ParseNamespacesFromGraphNodeID("")
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should error on malformed component", func() {
+		_, err := ParseNamespacesFromGraphNodeID("invalidformat")
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should error on invalid parent-child relationship", func() {
+		_, err := ParseNamespacesFromGraphNodeID("svc/production/api;host/node/*")
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should error on invalid characters", func() {
+		_, err := ParseNamespacesFromGraphNodeID("svc/prod$uction/api")
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("ParseNamespacesFromFocus", func() {
+	ExecuteParseNamespacesFromFocusScenario := func(focus []v1.GraphNodeID, expectedNamespaces []string) {
+		view := v1.GraphView{Focus: focus, FollowConnectionDirection: false}
+
+		// Validate response when FollowConnectionDirection is false
+		namespaces, err := ParseNamespacesFromFocus(view)
+		Expect(err).NotTo(HaveOccurred())
+		if len(expectedNamespaces) == 0 {
+			Expect(namespaces).To(BeEmpty())
+		} else {
+			Expect(namespaces).To(ConsistOf(expectedNamespaces))
+		}
+
+		// Validate response when FollowConnectionDirection is true
+		view.FollowConnectionDirection = true
+		namespaces, err = ParseNamespacesFromFocus(view)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(namespaces).To(BeEmpty())
+	}
+
+	It("should return empty for empty array", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{},
+			[]string{},
+		)
+	})
+
+	It("should handle single namespaced item", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"namespace/production"},
+			[]string{"production"},
+		)
+	})
+
+	It("should handle single global item", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"hosts/*"},
+			[]string{},
+		)
+	})
+
+	It("should collect union of different namespaces", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"svc/production/api", "rep/staging/nginx", "namespace/dev"},
+			[]string{"production", "staging", "dev"},
+		)
+	})
+
+	It("should deduplicate same namespace", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"svc/production/api", "rep/production/nginx"},
+			[]string{"production"},
+		)
+	})
+
+	It("should return empty if any item is global", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"namespace/production", "namespace/staging", "hosts/*", "namespace/dev"},
+			[]string{},
+		)
+	})
+
+	It("should extract from service group in focus", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"svcgp;svc/production/api;svc/staging/api"},
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should combine service group with other focus items", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"svcgp;svc/production/api;svc/staging/api", "namespace/dev", "rep/test/nginx"},
+			[]string{"production", "staging", "dev", "test"},
+		)
+	})
+
+	It("should handle global with service group context in focus", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"host/db/*;svcgp;svc/production/db", "namespace/staging"},
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should handle hierarchies with port and direction", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"port/tcp/8080;rep/production/nginx", "ns/staging/allowed;dir/ingress"},
+			[]string{"production", "staging"},
+		)
+	})
+
+	It("should handle mix of all namespaced resource types", func() {
+		ExecuteParseNamespacesFromFocusScenario(
+			[]v1.GraphNodeID{"namespace/ns1", "svc/ns2/api", "rep/ns3/nginx", "wep/ns4/pod/aggr", "ns/ns5/allowed"},
+			[]string{"ns1", "ns2", "ns3", "ns4", "ns5"},
+		)
+	})
+
+	It("should propagate error from invalid focus item", func() {
+		_, err := ParseNamespacesFromFocus(v1.GraphView{
+			Focus: []v1.GraphNodeID{
+				"namespace/production",
+				"invalid-format",
+			},
+		})
+		Expect(err).To(HaveOccurred())
+	})
+})
+
 type mockServiceGroups struct {
 	ServiceGroups
 	sg *ServiceGroup

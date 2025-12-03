@@ -205,8 +205,8 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 					currBpfepsV6  []nat.BackendMapMemV6
 				)
 
-				currBpfsvcsV6, currBpfepsV6 = dumpNATmapsV6(tc.Felixes)
-				currBpfsvcs, currBpfeps = dumpNATmaps(tc.Felixes)
+				currBpfsvcsV6, currBpfepsV6, _ = dumpNATmapsV6(tc.Felixes)
+				currBpfsvcs, currBpfeps, _ = dumpNATmaps(tc.Felixes)
 
 				for i, felix := range tc.Felixes {
 					log.Infof("[%d]FrontendMapV6: %+v", i, currBpfsvcsV6[i])
@@ -491,6 +491,7 @@ func describeBPFDualStackProxyHealthTests() bool {
 			infra = getInfra(iOpts...)
 			opts := infrastructure.DefaultTopologyOptions()
 			opts.EnableIPv6 = true
+			opts.IPIPMode = api.IPIPModeNever
 			opts.NATOutgoingEnabled = true
 			opts.BPFProxyHealthzPort = 10256
 			opts.IPIPMode = api.IPIPModeNever

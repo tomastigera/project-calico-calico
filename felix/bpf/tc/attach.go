@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/dataplane/linux/qos"
 )
@@ -78,6 +79,7 @@ type AttachPoint struct {
 	IngressPacketRateConfigured bool
 	EgressPacketRateConfigured  bool
 	DSCP                        int8
+	MaglevLUTSize               uint32
 
 	// EE only
 	VethNS                  uint16
@@ -89,6 +91,7 @@ type AttachPoint struct {
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
 	DNSInlineProcessing     bool
+	ProgramsMap             maps.Map
 }
 
 var ErrDeviceNotFound = errors.New("device not found")
@@ -171,7 +174,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	// only need to load and configure the preamble that will pass the
 	// configuration further to the selected set of programs.
 
-	binaryToLoad := path.Join(bpfdefs.ObjectDir, "tc_preamble.o")
+	binaryToLoad := path.Join(bpfdefs.ObjectDir, fmt.Sprintf("tc_preamble_%s.o", ap.Hook))
 	if ap.AttachType == apiv3.BPFAttachOptionTCX {
 		err := ap.attachTCXProgram(binaryToLoad)
 		if err != nil {
@@ -501,16 +504,17 @@ func (ap *AttachPoint) Config() string {
 
 func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 	globalData := &libbpf.TcGlobalData{
-		ExtToSvcMark: ap.ExtToServiceConnmark,
-		VxlanPort:    ap.VXLANPort,
-		Tmtu:         ap.TunnelMTU,
-		PSNatStart:   ap.PSNATStart,
-		PSNatLen:     ap.PSNATEnd,
-		WgPort:       ap.WgPort,
-		Wg6Port:      ap.Wg6Port,
-		NatIn:        ap.NATin,
-		NatOut:       ap.NATout,
-		LogFilterJmp: uint32(ap.LogFilterIdx),
+		ExtToSvcMark:  ap.ExtToServiceConnmark,
+		VxlanPort:     ap.VXLANPort,
+		Tmtu:          ap.TunnelMTU,
+		PSNatStart:    ap.PSNATStart,
+		PSNatLen:      ap.PSNATEnd,
+		WgPort:        ap.WgPort,
+		Wg6Port:       ap.Wg6Port,
+		NatIn:         ap.NATin,
+		NatOut:        ap.NATout,
+		LogFilterJmp:  uint32(ap.LogFilterIdx),
+		MaglevLUTSize: ap.MaglevLUTSize,
 
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,

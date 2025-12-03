@@ -49,6 +49,7 @@ global_job_config:
       - gcloud config set project --quiet "${OIDC_GCP_PROJECT_NAME}"
       # Configure docker to use the gcloud credential helper
       - gcloud auth configure-docker --quiet
+      - gcloud auth configure-docker --quiet us-central1-docker.pkg.dev
 
 blocks:
   - name: Publish hashrelease

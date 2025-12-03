@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM registry.access.redhat.com/ubi9/ubi
+FROM registry.access.redhat.com/ubi9/ubi AS builder
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1
@@ -15,6 +15,8 @@ RUN dnf upgrade -y && dnf install -y \
        make \
        openssl-devel \
        zlib-devel
+
+RUN dnf clean all
 
 RUN mkdir -p /ruby-build && \
        curl -sfL https://cache.ruby-lang.org/pub/ruby/3.4/ruby-${RUBY_VERSION}.tar.gz | tar xz --strip-components=1 -C /ruby-build && \
@@ -32,10 +34,10 @@ RUN gem install async -v 2.24.0 && \
        gem install rexml -v 3.4.2
 
 # Calico Enterprise dependencies
-RUN gem install elasticsearch-api -v 8.19.0 && \
+RUN gem install elasticsearch-api -v 8.19.2 && \
        gem install elasticsearch-transport -v 7.17.11 && \
        gem install elasticsearch-xpack -v 7.17.11 && \
-       gem install elasticsearch -v 8.19.1 && \
+       gem install elasticsearch -v 8.19.2 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && \
        gem install fluent-plugin-elasticsearch -v 6.0.0 && \
        gem install fluent-plugin-prometheus -v 2.2.1 && \
@@ -65,3 +67,7 @@ RUN mkdir -p /fluentd/etc/output_waf
 RUN mkdir -p /fluentd/log
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb
+
+FROM scratch
+
+COPY --from=builder / /

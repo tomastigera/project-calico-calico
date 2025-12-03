@@ -11,7 +11,7 @@ blocks:
     dependencies: []
     skip:
       # Only run on branches that begin with 'release-calient-v'
-      when: "branch !~ '^release-calient-v/'"
+      when: "branch !~ '^release-calient-v'"
     task:
       secrets:
         - name: marvin-github-ssh-private-key

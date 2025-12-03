@@ -746,7 +746,7 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, v4CIDR *net.IPNet, v6CIDR *n
 	}
 	if len(felix.IPv6) > 0 && v6CIDR != nil {
 		nodeIn.Annotations["projectcalico.org/IPv6Address"] = fmt.Sprintf("%s/%s", felix.IPv6, felix.IPv6Prefix)
-		v6CIDR := fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%d:0/96", v6CIDR.IP[0], v6CIDR.IP[1], v6CIDR.IP[2], v6CIDR.IP[3], v6CIDR.IP[4], v6CIDR.IP[5], v6CIDR.IP[6], v6CIDR.IP[7], v6CIDR.IP[8], v6CIDR.IP[9], v6CIDR.IP[10], v6CIDR.IP[11], idx)
+		v6CIDR := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%04x::/96", v6CIDR.IP[0], v6CIDR.IP[1], v6CIDR.IP[2], v6CIDR.IP[3], v6CIDR.IP[4], v6CIDR.IP[5], v6CIDR.IP[6], v6CIDR.IP[7], v6CIDR.IP[8], v6CIDR.IP[9], idx)
 		// Put the CIDR into canonical format, as required by k8s validation.
 		v6CIDR = ip.MustParseCIDROrIP(v6CIDR).String()
 		nodeIn.Spec.PodCIDRs = append(nodeIn.Spec.PodCIDRs, v6CIDR)
@@ -1239,7 +1239,7 @@ func cleanupAllNetworkSets(clientset *kubernetes.Clientset, client client.Interf
 	}
 	log.WithField("count", len(ns.Items)).Info("networksets present")
 	for _, n := range ns.Items {
-		_, err = client.NetworkSets().Delete(ctx, n.Name, n.Namespace, options.DeleteOptions{})
+		_, err = client.NetworkSets().Delete(ctx, n.Namespace, n.Name, options.DeleteOptions{})
 		if err != nil {
 			panic(err)
 		}
@@ -1395,6 +1395,7 @@ func getPodStatusFromWep(wep *libapi.WorkloadEndpoint) v1.PodStatus {
 	podIPs := []v1.PodIP{}
 	for _, ipnet := range wep.Spec.IPNetworks {
 		podIP := strings.Split(ipnet, "/")[0]
+		podIP = net.ParseIP(podIP).String() // Normalise the IP.
 		podIPs = append(podIPs, v1.PodIP{IP: podIP})
 	}
 	podStatus := v1.PodStatus{
