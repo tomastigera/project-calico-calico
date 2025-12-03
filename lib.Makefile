@@ -217,6 +217,13 @@ define build_binary
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
+define build_binary_dir
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=0 \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -C $(1) -o $(3) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(2)'
+endef
+
 # GOEXPERIMENT=nodwarf5 is required to disable DWARF5 debug format which is incompatible
 # with current version of MinGW toolchain. Without this, binaries will fail with
 # "not a valid application for this OS platform" error.

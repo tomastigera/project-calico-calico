@@ -1,5 +1,5 @@
 version: v1.0
-name: Cut Release - Istio
+name: Test Cut Release - Istio
 
 execution_time_limit:
   minutes: 60
@@ -18,10 +18,10 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
-      - cd third_party/istio/istio
+      - cd istio
 
 blocks:
-  - name: "Cut Release - Istio"
+  - name: "Test Cut Release - Istio"
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -33,10 +33,10 @@ blocks:
           # Login to quay in order to push images to quay.
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
       jobs:
-        - name: Cut Release - Istio
+        - name: Test Cut Release - Istio
           env_vars:
             - name: DEV_REGISTRIES
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
-            - make cut-release CONFIRM=true IMAGE_ONLY=true
+            - make cut-release DRYRUN=true

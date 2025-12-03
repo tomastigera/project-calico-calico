@@ -4,19 +4,19 @@
 # The binary is built separately using the Makefile, which compiles istio with Calico patches applied.
 
 ARG CALICO_BASE
-ARG UBI_IMAGE
-ARG GIT_VERSION=unknown
+
+FROM scratch AS source
+
+ARG TARGETARCH
+
+# Copy the pilot-discovery binary built from patched source
+COPY bin/pilot-discovery-${TARGETARCH} /usr/bin/pilot-discovery
+# Copy license from source
+COPY istio/LICENSE /LICENSE
 
 FROM ${CALICO_BASE}
 
-ARG TARGETARCH
-ARG GIT_VERSION
-
-# Copy the pilot-discovery binary built from patched source
-COPY bin/pilot-discovery-${TARGETARCH} /usr/local/bin/pilot-discovery
-
-# Copy license from source
-COPY istio/LICENSE /LICENSE
+ARG GIT_VERSION=unknown
 
 # These labels are required for OCP Certification
 LABEL description="This image contains a build of Istio's pilot-discovery component from github.com/istio/istio with Calico patches applied"
@@ -35,6 +35,8 @@ LABEL org.opencontainers.image.vendor="Project Calico"
 LABEL org.opencontainers.image.version="${GIT_VERSION}"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
+COPY --from=source / /
+
 # Run as non-root user
 USER 10001:10001
 
@@ -44,5 +46,4 @@ USER 10001:10001
 # 8080: HTTP debug/monitoring
 EXPOSE 15010 15017 8080
 
-WORKDIR /
-ENTRYPOINT ["/usr/local/bin/pilot-discovery"]
+ENTRYPOINT ["/usr/bin/pilot-discovery"]

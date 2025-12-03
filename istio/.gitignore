@@ -1,6 +1,5 @@
-.istio.downloaded
 .istio-cni.created-*
 .istio-pilot.created-*
+.istio.downloaded
 .release-*
 istio/
-bin/
