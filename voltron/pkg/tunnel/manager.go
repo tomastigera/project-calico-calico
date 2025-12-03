@@ -1,4 +1,4 @@
-package tunnelmgr
+package tunnel
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lib/std/chanutil"
-	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // ErrManagerClosed is returned when a closed manager is used
@@ -37,7 +36,7 @@ var ErrStillDialing = fmt.Errorf("cannot access tunnel yet, still dialing")
 // [TODO] be a good idea to roll up "answering" that call in the Manager as well, instead of "answering" that call outside
 // [TODO] of the Manager and passing the tunnel to the Manager.
 type Manager interface {
-	SetTunnel(t tunnel.Tunnel) error
+	SetTunnel(t Tunnel) error
 	Open() (net.Conn, error)
 	OpenTLS(*tls.Config) (net.Conn, error)
 	Listener() (net.Listener, error)
@@ -47,17 +46,17 @@ type Manager interface {
 }
 
 type manager struct {
-	setTunnel ThreadExchange[tunnel.Tunnel, any]
-	dialer    tunnel.Dialer
+	setTunnel ThreadExchange[Tunnel, any]
+	dialer    Dialer
 
 	openConnection    ThreadExchange[*tls.Config, net.Conn]
 	addListener       ThreadExchange[any, *listener]
 	addErrorListener  ThreadExchange[any, chan error]
-	dialerResultsChan chan tunnel.TunnelOrError
+	dialerResultsChan chan TunnelOrError
 
 	errListeners []chan error
 
-	tun        tunnel.Tunnel
+	tun        Tunnel
 	tunnelErrs chan struct{}
 
 	closeTunnel ThreadExchange[any, any]
@@ -79,7 +78,7 @@ func NewManager() Manager {
 
 func newManager() *manager {
 	return &manager{
-		setTunnel:        make(ThreadExchange[tunnel.Tunnel, any]),
+		setTunnel:        make(ThreadExchange[Tunnel, any]),
 		openConnection:   make(ThreadExchange[*tls.Config, net.Conn]),
 		addListener:      make(ThreadExchange[any, *listener]),
 		addErrorListener: make(ThreadExchange[any, chan error]),
@@ -91,7 +90,7 @@ func newManager() *manager {
 
 // NewManagerWithDialer returns an instance of the Manager interface that uses uses the given dialer to open connections
 // over the tunnel.
-func NewManagerWithDialer(dialer tunnel.Dialer) Manager {
+func NewManagerWithDialer(dialer Dialer) Manager {
 	m := newManager()
 
 	m.dialer = dialer
@@ -128,8 +127,8 @@ func (m *manager) startStateLoop() {
 
 	for {
 		if m.tun == nil && m.dialer != nil && (m.dialerResultsChan == nil) {
-			m.dialerResultsChan = make(chan tunnel.TunnelOrError)
-			dialerCloseChan = tunnel.DialInRoutineWithTimeout(m.dialer, m.dialerResultsChan, 2*time.Second)
+			m.dialerResultsChan = make(chan TunnelOrError)
+			dialerCloseChan = DialInRoutineWithTimeout(m.dialer, m.dialerResultsChan, 2*time.Second)
 		}
 
 		if m.tun != nil {
@@ -169,7 +168,7 @@ func (m *manager) startStateLoop() {
 			if err != nil {
 				req.ReturnError(err)
 
-				if errors.Is(err, tunnel.ErrTunnelClosed) {
+				if errors.Is(err, ErrTunnelClosed) {
 					m.tun = nil
 					m.tunnelErrs = nil
 				}
@@ -183,7 +182,7 @@ func (m *manager) startStateLoop() {
 			if err != nil {
 				req.ReturnError(err)
 
-				if errors.Is(err, tunnel.ErrTunnelClosed) {
+				if errors.Is(err, ErrTunnelClosed) {
 					m.tun = nil
 					m.tunnelErrs = nil
 				}
@@ -199,7 +198,7 @@ func (m *manager) startStateLoop() {
 		case req := <-m.closeTunnel:
 			log.Debug("Received request to close the tunnel.")
 			if m.tun == nil {
-				req.ReturnError(tunnel.ErrTunnelClosed)
+				req.ReturnError(ErrTunnelClosed)
 			} else {
 				if err := m.tun.Close(); err != nil {
 					log.WithError(err).Error("An error occurred while closing the tunnel.")
@@ -221,7 +220,7 @@ func (m *manager) startStateLoop() {
 	}
 }
 
-func (m *manager) tunnel() (tunnel.Tunnel, error) {
+func (m *manager) tunnel() (Tunnel, error) {
 	if m.dialerResultsChan != nil {
 		log.Debug("Still dialing tunnel.")
 		return nil, ErrStillDialing
@@ -229,7 +228,7 @@ func (m *manager) tunnel() (tunnel.Tunnel, error) {
 
 	if m.tun == nil {
 		log.Debug("Tunnel is nil.")
-		return nil, tunnel.ErrTunnelClosed
+		return nil, ErrTunnelClosed
 	}
 
 	return m.tun, nil
@@ -240,7 +239,7 @@ func (m *manager) handleError(err error) {
 		chanutil.WriteNonBlocking(listener, err)
 	}
 
-	if errors.Is(err, tunnel.ErrTunnelClosed) {
+	if errors.Is(err, ErrTunnelClosed) {
 		m.tun = nil
 		m.tunnelErrs = nil
 	}
@@ -269,7 +268,7 @@ func (m *manager) handleAddListener() (*listener, error) {
 	// A buffer size of 10 is chosen to give some room in case multiple connections are being established to stop
 	// the underlying muxer from blocking. This is theoretical, but it doesn't hurt to give it a little room to
 	// work with.
-	conResults := make(chan tunnel.ConnOrError, 10)
+	conResults := make(chan ConnOrError, 10)
 	done := tun.AcceptWithChannel(conResults)
 	return &listener{
 		conns: conResults,
@@ -280,7 +279,7 @@ func (m *manager) handleAddListener() (*listener, error) {
 }
 
 // SetTunnel sets the tunnel for the manager and returns an error if it's already running.
-func (m *manager) SetTunnel(t tunnel.Tunnel) error {
+func (m *manager) SetTunnel(t Tunnel) error {
 	if m.isClosed() {
 		return ErrManagerClosed
 	}

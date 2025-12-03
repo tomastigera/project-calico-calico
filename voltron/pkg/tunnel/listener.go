@@ -1,16 +1,14 @@
-package tunnelmgr
+package tunnel
 
 import (
 	"net"
 	"sync"
-
-	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // listener implements the net.Listener interface and is used by the Manager to allow components to listen for connections
 // over the tunnel
 type listener struct {
-	conns     chan tunnel.ConnOrError
+	conns     chan ConnOrError
 	done      chan bool
 	close     chan struct{}
 	addr      net.Addr
@@ -23,7 +21,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	case conn, ok := <-l.conns:
 		// a closed channel signals that the tunnel has been closed
 		if !ok {
-			return nil, tunnel.ErrTunnelClosed
+			return nil, ErrTunnelClosed
 		}
 		return conn.Conn, conn.Error
 	case <-l.close:

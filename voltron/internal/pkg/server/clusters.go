@@ -36,7 +36,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -62,7 +61,7 @@ type cluster struct {
 
 	sync.RWMutex
 
-	tunnelManager tunnelmgr.Manager
+	tunnelManager tunnel.Manager
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
 
@@ -176,7 +175,7 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 		ID:                mc.Name,
 		ActiveFingerprint: mc.Annotations[AnnotationActiveCertificateFingerprint],
 		Certificate:       mc.Spec.Certificate,
-		tunnelManager:     tunnelmgr.NewManager(),
+		tunnelManager:     tunnel.NewManager(),
 		k8sCLI:            cs.k8sCLI,
 		client:            cs.client,
 		voltronCfg:        cs.voltronCfg,
@@ -580,7 +579,7 @@ func (c *cluster) assignTunnel(t tunnel.Tunnel) error {
 				func() {
 					listener, err := c.tunnelManager.Listener()
 					if err != nil {
-						if err == tunnel.ErrTunnelClosed || err == tunnelmgr.ErrManagerClosed {
+						if err == tunnel.ErrTunnelClosed || err == tunnel.ErrManagerClosed {
 							shouldStop = true
 							return
 						}

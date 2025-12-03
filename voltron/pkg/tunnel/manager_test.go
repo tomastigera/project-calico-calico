@@ -1,4 +1,4 @@
-package tunnelmgr_test
+package tunnel_test
 
 import (
 	"crypto/tls"
@@ -11,7 +11,6 @@ import (
 	"github.com/projectcalico/calico/lib/std/chanutil"
 	mocknet "github.com/projectcalico/calico/voltron/pkg/thirdpartymocks/net"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 type fakeAddr struct{}
@@ -36,7 +35,7 @@ func TestManager(t *testing.T) {
 			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
 			mockTunnel.EXPECT().Close().Return(nil)
 
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
 
@@ -55,7 +54,7 @@ func TestManager(t *testing.T) {
 			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
 			mockTunnel.EXPECT().Close().Return(nil)
 
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
 
@@ -76,7 +75,7 @@ func TestManager(t *testing.T) {
 			mockTunnel.EXPECT().ErrChan().Return(tunnelErrors)
 			mockTunnel.EXPECT().LastErr().Return(tunnel.ErrTunnelClosed)
 
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 			Expect(mgr.SetTunnel(mockTunnel)).ShouldNot(HaveOccurred())
 			errs := mgr.ListenForErrors()
@@ -93,7 +92,7 @@ func TestManager(t *testing.T) {
 
 	t.Run("Listener", func(t *testing.T) {
 		t.Run("Retrieves a listener from the tunnel successfully", func(t *testing.T) {
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 
 			done := make(chan bool)
@@ -121,7 +120,7 @@ func TestManager(t *testing.T) {
 			Expect(conn).ShouldNot(BeNil())
 		})
 		t.Run("Retrieves multiple listener from the tunnel successfully", func(t *testing.T) {
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 
 			done := make(chan bool)
@@ -163,7 +162,7 @@ func TestManager(t *testing.T) {
 			Expect(conn2).ShouldNot(BeNil())
 		})
 		t.Run("receives an error when the connection is closed while waiting to accept a connection", func(t *testing.T) {
-			mgr := tunnelmgr.NewManager()
+			mgr := tunnel.NewManager()
 			defer func() { _ = mgr.Close() }()
 
 			done := make(chan bool)
@@ -205,7 +204,7 @@ func TestManager(t *testing.T) {
 			mockDialer.On("Dial").Return(mockTunnel, nil)
 			mockDialer.On("Timeout").Return(5 * time.Second)
 
-			mgr := tunnelmgr.NewManagerWithDialer(mockDialer)
+			mgr := tunnel.NewManagerWithDialer(mockDialer)
 			defer func() { _ = mgr.Close() }()
 
 			Eventually(func() error {
@@ -230,11 +229,11 @@ func TestManager(t *testing.T) {
 			mockDialer.On("Dial").Return(mockTunnel, nil).WaitUntil(waitChan)
 			mockDialer.On("Timeout").Return(5 * time.Second)
 
-			mgr := tunnelmgr.NewManagerWithDialer(mockDialer)
+			mgr := tunnel.NewManagerWithDialer(mockDialer)
 			defer func() { _ = mgr.Close() }()
 
 			_, err := mgr.Listener()
-			Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
+			Expect(err).Should(Equal(tunnel.ErrStillDialing))
 
 			waitChan <- time.Now()
 
@@ -246,19 +245,19 @@ func TestManager(t *testing.T) {
 	})
 
 	t.Run("Closed manager returns errors", func(t *testing.T) {
-		m := tunnelmgr.NewManager()
+		m := tunnel.NewManager()
 		Expect(m.Close()).ShouldNot(HaveOccurred())
 		_, err := m.Listener()
-		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		Expect(err).Should(Equal(tunnel.ErrManagerClosed))
 		_, err = m.Open()
-		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		Expect(err).Should(Equal(tunnel.ErrManagerClosed))
 		_, err = m.OpenTLS(&tls.Config{})
-		Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+		Expect(err).Should(Equal(tunnel.ErrManagerClosed))
 
 		errChan := m.ListenForErrors()
-		Expect(<-errChan).Should(Equal(tunnelmgr.ErrManagerClosed))
+		Expect(<-errChan).Should(Equal(tunnel.ErrManagerClosed))
 
 		mockTunnel := new(tunnel.MockTunnel)
-		Expect(m.SetTunnel(mockTunnel)).Should(Equal(tunnelmgr.ErrManagerClosed))
+		Expect(m.SetTunnel(mockTunnel)).Should(Equal(tunnel.ErrManagerClosed))
 	})
 }
