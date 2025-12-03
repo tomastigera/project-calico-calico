@@ -84,6 +84,10 @@ promotions:
     pipeline_file: push-images/intrusion-detection-controller.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push istio images
+    pipeline_file: push-images/istio.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push key-cert-provisioner images
     pipeline_file: push-images/key-cert-provisioner.yml
     auto_promote:
@@ -191,10 +195,6 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push third-party prometheus images
     pipeline_file: push-images/third_party/prometheus.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push third-party istio images
-    pipeline_file: push-images/third_party/istio.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 

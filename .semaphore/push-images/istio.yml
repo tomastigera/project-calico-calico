@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish third-party istio images
+name: Publish istio images
 agent:
   machine:
     type: f1-standard-2
@@ -28,7 +28,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish istio images
+  - name: Publish istio images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -36,14 +36,4 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/istio/istio cd CONFIRM=true; fi
-  - name: Publish istio multi-arch manifests
-    dependencies:
-      - Publish istio images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/istio/istio push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C istio cd push-manifests-with-tag CONFIRM=true; fi

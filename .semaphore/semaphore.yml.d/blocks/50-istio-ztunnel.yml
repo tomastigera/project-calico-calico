@@ -1,6 +1,6 @@
 - name: Publish istio-ztunnel images
   run:
-    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -15,7 +15,7 @@
           - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
 - name: Publish istio-ztunnel images - native arm64 runner
   run:
-    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -33,7 +33,7 @@
           - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
 - name: Publish istio-ztunnel multi-arch manifests
   run:
-    when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${FORCE_RUN} or change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Publish istio-ztunnel images
     - Publish istio-ztunnel images - native arm64 runner
