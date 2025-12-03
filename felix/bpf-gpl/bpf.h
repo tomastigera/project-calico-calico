@@ -113,6 +113,23 @@
 #define CALI_F_CGROUP	(((CALI_COMPILE_FLAGS) & CALI_CGROUP) != 0)
 #define CALI_F_DSR	((CALI_COMPILE_FLAGS & CALI_TC_DSR) != 0)
 
+#if CALI_F_HEP || CALI_F_PREAMBLE || CALI_F_DEF_POLICY
+// For HEPs policy direction (CALI_F_INGRESS) matches attachment direction.
+#if CALI_F_INGRESS
+#define CALI_HOOK_INGRESS
+#else
+#define CALI_F_HOOK_EGRESS
+#endif
+#else
+// For WEPs, the policy direction is opposite to the tc hook that the
+// program is attached to.
+#if CALI_F_INGRESS
+#define CALI_HOOK_EGRESS
+#else
+#define CALI_HOOK_INGRESS
+#endif
+#endif
+
 /* EE only */
 #define CALI_F_KPROBE	(((CALI_COMPILE_FLAGS) & CALI_KPROBE) != 0)
 #define CALI_F_STATS	(((CALI_COMPILE_FLAGS) & CALI_STATS) != 0)

@@ -389,8 +389,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		filterTableV6        Table
 		ifStateMap           *mock.Map
 		countersMap          *mock.Map
-		jumpMapFH            *mock.Map
-		jumpMapTH            *mock.Map
+		jumpMapIng           *mock.Map
+		jumpMapEgr           *mock.Map
 		xdpJumpMap           *mock.Map
 		qosMap               *mock.Map
 	)
@@ -448,10 +448,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		commonMaps.ProgramsMaps = append(commonMaps.ProgramsMaps, mock.NewMockMap(progsParamsIng))
 		commonMaps.ProgramsMaps = append(commonMaps.ProgramsMaps, mock.NewMockMap(progsParamsEg))
 		commonMaps.XDPProgramsMap = mock.NewMockMap(progsParamsIng)
-		jumpMapFH = mock.NewMockMap(progsParamsIng)
-		jumpMapTH = mock.NewMockMap(progsParamsEg)
-		commonMaps.JumpMaps = append(commonMaps.JumpMaps, jumpMapFH)
-		commonMaps.JumpMaps = append(commonMaps.JumpMaps, jumpMapTH)
+		jumpMapIng = mock.NewMockMap(progsParamsIng)
+		jumpMapEgr = mock.NewMockMap(progsParamsEg)
+		commonMaps.JumpMaps = append(commonMaps.JumpMaps, jumpMapIng)
+		commonMaps.JumpMaps = append(commonMaps.JumpMaps, jumpMapEgr)
 		xdpJumpMap = mock.NewMockMap(progsParamsIng)
 		commonMaps.XDPJumpMap = xdpJumpMap
 
@@ -1774,10 +1774,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	Describe("ifstate(ipv6 disabled)", func() {
 		It("should clean up jump map entries for missing interfaces", func() {
 			for i := 0; i < 9; i++ {
-				_ = jumpMapFH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapFH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
 			for i := 0; i < 5; i++ {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
@@ -1808,11 +1808,11 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(ifStateMap.IsEmpty()).To(BeTrue())
-			Expect(jumpMapFH.Contents).To(Equal(map[string]string{
+			Expect(jumpMapIng.Contents).To(Equal(map[string]string{
 				string(jump.Key(8)):                         string(jump.Value(uint32(1000 + 8))),
 				string(jump.Key(8 + jump.TCMaxEntryPoints)): string(jump.Value(uint32(1000 + 8))),
 			}))
-			Expect(jumpMapTH.Contents).To(Equal(map[string]string{
+			Expect(jumpMapEgr.Contents).To(Equal(map[string]string{
 				string(jump.Key(8)):                         string(jump.Value(uint32(1000 + 8))),
 				string(jump.Key(8 + jump.TCMaxEntryPoints)): string(jump.Value(uint32(1000 + 8))),
 			}))
@@ -1847,10 +1847,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
 			for i := 0; i < 4; i++ {
-				_ = jumpMapFH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapFH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
 			for i := 1; i < 2; i++ {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
@@ -1897,8 +1897,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				Expect(jmps).To(HaveKeyWithValue(10000, 1000))
 				Expect(jmps).To(HaveKeyWithValue(10001, 1001))
 			}
-			checkJumpMap(jumpMapFH)
-			checkJumpMap(jumpMapTH)
+			checkJumpMap(jumpMapIng)
+			checkJumpMap(jumpMapEgr)
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
@@ -2247,10 +2247,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
 			for i := 0; i < 13; i++ {
-				_ = jumpMapFH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapFH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
 			for i := 0; i < 9; i++ {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
@@ -2281,11 +2281,11 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(ifStateMap.IsEmpty()).To(BeTrue())
-			Expect(jumpMapFH.Contents).To(Equal(map[string]string{
+			Expect(jumpMapIng.Contents).To(Equal(map[string]string{
 				string(jump.Key(12)):                         string(jump.Value(uint32(1000 + 12))),
 				string(jump.Key(12 + jump.TCMaxEntryPoints)): string(jump.Value(uint32(1000 + 12))),
 			}))
-			Expect(jumpMapTH.Contents).To(Equal(map[string]string{
+			Expect(jumpMapEgr.Contents).To(Equal(map[string]string{
 				string(jump.Key(12)):                         string(jump.Value(uint32(1000 + 12))),
 				string(jump.Key(12 + jump.TCMaxEntryPoints)): string(jump.Value(uint32(1000 + 12))),
 			}))
@@ -2320,10 +2320,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
 			for i := 0; i < 6; i++ {
-				_ = jumpMapFH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapFH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i), jump.Value(uint32(1000+i)))
-				_ = jumpMapTH.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
+				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
 			for i := 1; i < 2; i++ {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
@@ -2374,8 +2374,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				Expect(jmps).To(HaveKeyWithValue(10002, 1002))
 				Expect(jmps).To(HaveKeyWithValue(10000, 1000))
 			}
-			checkJumpMap(jumpMapFH)
-			checkJumpMap(jumpMapTH)
+			checkJumpMap(jumpMapIng)
+			checkJumpMap(jumpMapEgr)
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
@@ -2721,8 +2721,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(jumpMapFH.Contents).To(HaveLen(2)) // 2x policy and 2x filter
-			Expect(jumpMapTH.Contents).To(HaveLen(2)) // 2x policy and 2x filter
+			Expect(jumpMapIng.Contents).To(HaveLen(2)) // 2x policy and 2x filter
+			Expect(jumpMapEgr.Contents).To(HaveLen(2)) // 2x policy and 2x filter
 			Expect(xdpJumpMap.Contents).To(HaveLen(0))
 
 			genIfaceUpdate("cali12345", ifacemonitor.StateDown, 15)()
@@ -2730,7 +2730,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(jumpMapFH.Contents).To(HaveLen(0))
+			Expect(jumpMapIng.Contents).To(HaveLen(0))
 			Expect(xdpJumpMap.Contents).To(HaveLen(0))
 		})
 
@@ -2748,8 +2748,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(jumpMapFH.Contents).To(HaveLen(2))  // 2x policy and 2x filter
-			Expect(jumpMapTH.Contents).To(HaveLen(2))  // 2x policy and 2x filter
+			Expect(jumpMapIng.Contents).To(HaveLen(2)) // 2x policy and 2x filter
+			Expect(jumpMapEgr.Contents).To(HaveLen(2)) // 2x policy and 2x filter
 			Expect(xdpJumpMap.Contents).To(HaveLen(1)) // 1x policy
 
 			genIfaceUpdate("eth0", ifacemonitor.StateDown, 10)()
@@ -2757,7 +2757,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(jumpMapFH.Contents).To(HaveLen(0))
+			Expect(jumpMapIng.Contents).To(HaveLen(0))
 			Expect(xdpJumpMap.Contents).To(HaveLen(0))
 		})
 
@@ -2775,17 +2775,17 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(jumpMapFH.Contents).To(HaveLen(2)) // 2x policy and 2x filter
-			Expect(jumpMapTH.Contents).To(HaveLen(2)) // 2x policy and 2x filter
+			Expect(jumpMapIng.Contents).To(HaveLen(2)) // 2x policy and 2x filter
+			Expect(jumpMapEgr.Contents).To(HaveLen(2)) // 2x policy and 2x filter
 			Expect(xdpJumpMap.Contents).To(HaveLen(0))
 
-			jumpCopyContentsFH := make(map[string]string, len(jumpMapFH.Contents))
-			jumpCopyContentsTH := make(map[string]string, len(jumpMapTH.Contents))
-			for k, v := range jumpMapFH.Contents {
-				jumpCopyContentsFH[k] = v
+			jumpCopyContentsIng := make(map[string]string, len(jumpMapIng.Contents))
+			jumpCopyContentsEgr := make(map[string]string, len(jumpMapEgr.Contents))
+			for k, v := range jumpMapIng.Contents {
+				jumpCopyContentsIng[k] = v
 			}
-			for k, v := range jumpMapTH.Contents {
-				jumpCopyContentsTH[k] = v
+			for k, v := range jumpMapEgr.Contents {
+				jumpCopyContentsEgr[k] = v
 			}
 
 			genPolicy("default", "anotherpolicy")()
@@ -2794,20 +2794,20 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(len(jumpCopyContentsFH)).To(Equal(len(jumpMapFH.Contents)))
-			Expect(jumpCopyContentsFH).NotTo(Equal(jumpMapFH.Contents))
-			Expect(len(jumpCopyContentsTH)).To(Equal(len(jumpMapTH.Contents)))
-			Expect(jumpCopyContentsTH).NotTo(Equal(jumpMapTH.Contents))
+			Expect(len(jumpCopyContentsIng)).To(Equal(len(jumpMapIng.Contents)))
+			Expect(jumpCopyContentsIng).NotTo(Equal(jumpMapIng.Contents))
+			Expect(len(jumpCopyContentsEgr)).To(Equal(len(jumpMapEgr.Contents)))
+			Expect(jumpCopyContentsEgr).NotTo(Equal(jumpMapEgr.Contents))
 
 			changes := 0
 
-			for k, v := range jumpCopyContentsFH {
-				if v != jumpMapFH.Contents[k] {
+			for k, v := range jumpCopyContentsIng {
+				if v != jumpMapIng.Contents[k] {
 					changes++
 				}
 			}
-			for k, v := range jumpCopyContentsTH {
-				if v != jumpMapTH.Contents[k] {
+			for k, v := range jumpCopyContentsEgr {
+				if v != jumpMapEgr.Contents[k] {
 					changes++
 				}
 			}
@@ -2816,13 +2816,13 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			// restart
 
-			jumpCopyContentsFH = make(map[string]string, len(jumpMapFH.Contents))
-			jumpCopyContentsTH = make(map[string]string, len(jumpMapTH.Contents))
-			for k, v := range jumpMapFH.Contents {
-				jumpCopyContentsFH[k] = v
+			jumpCopyContentsIng = make(map[string]string, len(jumpMapIng.Contents))
+			jumpCopyContentsEgr = make(map[string]string, len(jumpMapEgr.Contents))
+			for k, v := range jumpMapIng.Contents {
+				jumpCopyContentsIng[k] = v
 			}
-			for k, v := range jumpMapTH.Contents {
-				jumpCopyContentsTH[k] = v
+			for k, v := range jumpMapEgr.Contents {
+				jumpCopyContentsEgr[k] = v
 			}
 
 			dp = newMockDataplane()
@@ -2850,20 +2850,20 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(len(jumpCopyContentsFH)).To(Equal(len(jumpMapFH.Contents)))
-			Expect(jumpCopyContentsFH).NotTo(Equal(jumpMapFH.Contents))
-			Expect(len(jumpCopyContentsTH)).To(Equal(len(jumpMapTH.Contents)))
-			Expect(jumpCopyContentsTH).NotTo(Equal(jumpMapTH.Contents))
+			Expect(len(jumpCopyContentsIng)).To(Equal(len(jumpMapIng.Contents)))
+			Expect(jumpCopyContentsIng).NotTo(Equal(jumpMapIng.Contents))
+			Expect(len(jumpCopyContentsEgr)).To(Equal(len(jumpMapEgr.Contents)))
+			Expect(jumpCopyContentsEgr).NotTo(Equal(jumpMapEgr.Contents))
 
 			changes = 0
 
-			for k, v := range jumpCopyContentsFH {
-				if v != jumpMapFH.Contents[k] {
+			for k, v := range jumpCopyContentsIng {
+				if v != jumpMapIng.Contents[k] {
 					changes++
 				}
 			}
-			for k, v := range jumpCopyContentsTH {
-				if v != jumpMapTH.Contents[k] {
+			for k, v := range jumpCopyContentsEgr {
+				if v != jumpMapEgr.Contents[k] {
 					changes++
 				}
 			}

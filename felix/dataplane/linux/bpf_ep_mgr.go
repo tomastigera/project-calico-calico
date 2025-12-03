@@ -319,8 +319,8 @@ type bpfEndpointManager struct {
 	legacyCleanUp           bool
 	hostIfaceTrees          bpfIfaceTrees
 
-	jumpMapAllocFromHEP *jumpMapAlloc
-	jumpMapAllocToHEP   *jumpMapAlloc
+	jumpMapAllocIngress *jumpMapAlloc
+	jumpMapAllocEgress  *jumpMapAlloc
 	xdpJumpMapAlloc     *jumpMapAlloc
 	policyDefaultObj    *libbpf.Obj
 	policyTcAllowFDs    [2]bpf.ProgFD
@@ -515,8 +515,8 @@ func NewBPFEndpointManager(
 		// Note: the allocators only allocate a fraction of the map, the
 		// rest is reserved for sub-programs generated if a single program
 		// would be too large.
-		jumpMapAllocFromHEP: newJumpMapAlloc(jump.TCMaxEntryPoints),
-		jumpMapAllocToHEP:   newJumpMapAlloc(jump.TCMaxEntryPoints),
+		jumpMapAllocIngress: newJumpMapAlloc(jump.TCMaxEntryPoints),
+		jumpMapAllocEgress:  newJumpMapAlloc(jump.TCMaxEntryPoints),
 		xdpJumpMapAlloc:     newJumpMapAlloc(jump.XDPMaxEntryPoints),
 		ruleRenderer:        iptablesRuleRenderer,
 		onStillAlive:        livenessCallback,
@@ -999,11 +999,11 @@ func (m *bpfEndpointManager) reclaimPolicyIdx(name string, ipFamily int, iface *
 		}
 		if attachHook != hook.XDP {
 			if attachHook == hook.Ingress {
-				if err := m.jumpMapAllocFromHEP.Put(idx.policyIdx[attachHook], name); err != nil {
+				if err := m.jumpMapAllocIngress.Put(idx.policyIdx[attachHook], name); err != nil {
 					logrus.WithError(err).Errorf("Policy family %d, hook %s", ipFamily, attachHook)
 				}
 			} else {
-				if err := m.jumpMapAllocToHEP.Put(idx.policyIdx[attachHook], name); err != nil {
+				if err := m.jumpMapAllocEgress.Put(idx.policyIdx[attachHook], name); err != nil {
 					logrus.WithError(err).Errorf("Policy family %d, hook %s", ipFamily, attachHook)
 				}
 			}
@@ -1021,11 +1021,11 @@ func (m *bpfEndpointManager) reclaimFilterIdx(name string, iface *bpfInterface) 
 			logrus.WithError(err).Warn("Filter program may leak.")
 		}
 		if attachHook == hook.Ingress {
-			if err := m.jumpMapAllocFromHEP.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
+			if err := m.jumpMapAllocIngress.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
 				logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 			}
 		} else {
-			if err := m.jumpMapAllocToHEP.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
+			if err := m.jumpMapAllocEgress.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
 				logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 			}
 		}
@@ -1551,9 +1551,9 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 						seenIndexes = xdpSeenIndexes
 					} else {
 						if h == hook.Ingress {
-							alloc = m.jumpMapAllocFromHEP
+							alloc = m.jumpMapAllocIngress
 						} else {
-							alloc = m.jumpMapAllocToHEP
+							alloc = m.jumpMapAllocEgress
 						}
 						seenIndexes = tcSeenIndexes
 					}
@@ -2215,14 +2215,14 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 func (m *bpfEndpointManager) allocJumpIndicesForWEP(ifaceName string, idx *bpfInterfaceJumpIndices) error {
 	var err error
 	if idx.policyIdx[hook.Ingress] == -1 {
-		idx.policyIdx[hook.Ingress], err = m.jumpMapAllocFromHEP.Get(ifaceName)
+		idx.policyIdx[hook.Ingress], err = m.jumpMapAllocIngress.Get(ifaceName)
 		if err != nil {
 			return err
 		}
 	}
 
 	if idx.policyIdx[hook.Egress] == -1 {
-		idx.policyIdx[hook.Egress], err = m.jumpMapAllocToHEP.Get(ifaceName)
+		idx.policyIdx[hook.Egress], err = m.jumpMapAllocEgress.Get(ifaceName)
 		if err != nil {
 			return err
 		}
@@ -2235,14 +2235,14 @@ func (m *bpfEndpointManager) allocJumpIndicesForDataIface(ifaceName string, xdpM
 	var err error
 	if xdpMode != XDPModeOnly {
 		if idx.policyIdx[hook.Ingress] == -1 {
-			idx.policyIdx[hook.Ingress], err = m.jumpMapAllocFromHEP.Get(ifaceName)
+			idx.policyIdx[hook.Ingress], err = m.jumpMapAllocIngress.Get(ifaceName)
 			if err != nil {
 				return err
 			}
 		}
 
 		if idx.policyIdx[hook.Egress] == -1 {
-			idx.policyIdx[hook.Egress], err = m.jumpMapAllocToHEP.Get(ifaceName)
+			idx.policyIdx[hook.Egress], err = m.jumpMapAllocEgress.Get(ifaceName)
 			if err != nil {
 				return err
 			}
@@ -2280,13 +2280,13 @@ func (m *bpfEndpointManager) wepStateFillJumps(ap *tc.AttachPoint, state *bpfInt
 
 	if ap.LogLevel == "debug" {
 		if state.filterIdx[hook.Ingress] == -1 {
-			state.filterIdx[hook.Ingress], err = m.jumpMapAllocFromHEP.Get(ap.IfaceName())
+			state.filterIdx[hook.Ingress], err = m.jumpMapAllocIngress.Get(ap.IfaceName())
 			if err != nil {
 				return err
 			}
 		}
 		if state.filterIdx[hook.Egress] == -1 {
-			state.filterIdx[hook.Egress], err = m.jumpMapAllocToHEP.Get(ap.IfaceName())
+			state.filterIdx[hook.Egress], err = m.jumpMapAllocEgress.Get(ap.IfaceName())
 			if err != nil {
 				return err
 			}
@@ -2297,11 +2297,11 @@ func (m *bpfEndpointManager) wepStateFillJumps(ap *tc.AttachPoint, state *bpfInt
 				logrus.WithError(err).Warn("Filter program may leak.")
 			}
 			if attachHook == hook.Ingress {
-				if err := m.jumpMapAllocFromHEP.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
+				if err := m.jumpMapAllocIngress.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
 					logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 				}
 			} else {
-				if err := m.jumpMapAllocToHEP.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
+				if err := m.jumpMapAllocEgress.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
 					logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 				}
 			}
@@ -2330,13 +2330,13 @@ func (m *bpfEndpointManager) dataIfaceStateFillJumps(ap *tc.AttachPoint, xdpMode
 
 	if ap.LogLevel == "debug" {
 		if state.filterIdx[hook.Ingress] == -1 {
-			state.filterIdx[hook.Ingress], err = m.jumpMapAllocFromHEP.Get(ap.IfaceName())
+			state.filterIdx[hook.Ingress], err = m.jumpMapAllocIngress.Get(ap.IfaceName())
 			if err != nil {
 				return err
 			}
 		}
 		if state.filterIdx[hook.Egress] == -1 {
-			state.filterIdx[hook.Egress], err = m.jumpMapAllocToHEP.Get(ap.IfaceName())
+			state.filterIdx[hook.Egress], err = m.jumpMapAllocEgress.Get(ap.IfaceName())
 			if err != nil {
 				return err
 			}
@@ -2347,11 +2347,11 @@ func (m *bpfEndpointManager) dataIfaceStateFillJumps(ap *tc.AttachPoint, xdpMode
 				logrus.WithError(err).Warn("Filter program may leak.")
 			}
 			if attachHook == hook.Ingress {
-				if err := m.jumpMapAllocFromHEP.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
+				if err := m.jumpMapAllocIngress.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
 					logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 				}
 			} else {
-				if err := m.jumpMapAllocToHEP.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
+				if err := m.jumpMapAllocEgress.Put(state.filterIdx[attachHook], ap.IfaceName()); err != nil {
 					logrus.WithError(err).Errorf("Filter hook %s", attachHook)
 				}
 			}
