@@ -1086,6 +1086,26 @@ retag-build-image-arch-with-registry-%: var-require-all-REGISTRY-BUILD_IMAGE-IMA
 		$(NOECHO) $(NOOP)\
 	)
 
+# retag-third-party-images-with-registries retags the third-party images specified by THIRD_PARTY_IMAGES and VALIDARCHES with
+# the registries specified by DEV_REGISTRIES.
+retag-third-party-images-with-registries: $(addprefix retag-third-party-images-with-registry-,$(call escapefs,$(DEV_REGISTRIES)))
+
+# retag-third-party-images-with-registry-% retags the third-party images specified by THIRD_PARTY_IMAGES and VALIDARCHES with
+# the registry specified by $*.
+retag-third-party-images-with-registry-%:
+	$(MAKE) $(addprefix retag-third-party-image-with-registry-,$(call escapefs,$(THIRD_PARTY_IMAGES))) REGISTRY=$(call unescapefs,$*)
+
+# retag-third-party-image-with-registry-% retag the third-party arch images specified by $* and VALIDARCHES with the
+# registry specified by REGISTRY.
+retag-third-party-image-with-registry-%: var-require-all-REGISTRY-THIRD_PARTY_IMAGES
+	$(MAKE) $(addprefix retag-third-party-image-arch-with-registry-,$(VALIDARCHES)) THIRD_PARTY_IMAGE=$(call unescapefs,$*)
+
+# retag-third-party-image-arch-with-registry-% retags the third-party image specified by $* and THIRD_PARTY_IMAGE with the
+# registry specified by REGISTRY.
+retag-third-party-image-arch-with-registry-%: var-require-all-REGISTRY-THIRD_PARTY_IMAGE-IMAGETAG
+	docker pull $(THIRD_PARTY_REGISTRY)/$(THIRD_PARTY_IMAGE):$(LATEST_IMAGE_TAG)-$*
+	docker tag $(THIRD_PARTY_REGISTRY)/$(THIRD_PARTY_IMAGE):$(LATEST_IMAGE_TAG)-$* $(call filter-registry,$(REGISTRY))$(THIRD_PARTY_IMAGE):$(IMAGETAG)-$*
+
 # push-images-to-registries pushes the build / arch images specified by BUILD_IMAGES and VALIDARCHES to the registries
 # specified by DEV_REGISTRY.
 push-images-to-registries: $(addprefix push-images-to-registry-,$(call escapefs,$(DEV_REGISTRIES)))
@@ -1134,11 +1154,17 @@ push-manifests-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANC
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGE,
-# and BRANCH_NAME env variables to figure out what to tag and where to push it to.
+# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGES,
+# and BRANCH_NAME env variables to figure out what to tag and where to push them to.
 cd-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+# cd-common tags and pushes third-party images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGES, THIRD_PARTY_IMAGES,
+# and BRANCH_NAME env variables to figure out what to tag and where to push them to.
+cd-third-party-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
+	$(MAKE) retag-third-party-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) retag-third-party-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release targets and helpers
