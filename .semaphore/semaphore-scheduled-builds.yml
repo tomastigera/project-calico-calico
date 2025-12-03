@@ -938,24 +938,6 @@ blocks:
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
-  - name: istio
-    run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/istio/istio'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Prerequisites
-    task:
-      prologue:
-        commands:
-          - cd third_party/istio/istio
-      jobs:
-        - name: Build binaries
-          matrix:
-            - env_var: ARCH
-              values:
-                - amd64
-                - arm64
-          commands:
-            - ../../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: kube-controllers
     run:
       when: "true"
