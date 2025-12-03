@@ -213,6 +213,11 @@ func syncDatastore(ctx context.Context, cfg Config, client clientv3.KubeControll
 	// set to the empty state.
 	var currentSet bool
 	var w watch.Interface
+	defer func() {
+		if w != nil {
+			w.Stop()
+		}
+	}()
 
 	env := make(map[string]string)
 	for _, k := range AllEnvs {
@@ -294,7 +299,6 @@ MAINLOOP:
 			time.Sleep(datastoreBackoff)
 			continue MAINLOOP
 		}
-		defer w.Stop()
 		for e := range w.ResultChan() {
 			switch e.Type {
 			case watch.Error:
