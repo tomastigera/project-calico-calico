@@ -9,11 +9,13 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/istio
 # Image names matching the prior tigera/istio repository convention
 ISTIO_CNI_IMAGE ?= istio-install-cni
 ISTIO_PILOT_IMAGE ?= istio-pilot
+ISTIO_ZTUNNEL_IMAGE ?= istio-ztunnel
 
-BUILD_IMAGES ?= $(ISTIO_CNI_IMAGE) $(ISTIO_PILOT_IMAGE)
+BUILD_IMAGES ?= $(ISTIO_CNI_IMAGE) $(ISTIO_PILOT_IMAGE) $(ISTIO_ZTUNNEL_IMAGE)
 
 # Upstream version (configurable)
 ISTIO_VERSION ?= 1.27.3
+ISTIO_ZTUNNEL_VERSION ?= $(shell grep -E '^ZTUNNEL_VERSION[[:space:]]*=' $(REPO_ROOT)/third_party/istio-ztunnel/Makefile | cut -d '=' -f2 | tr -d ' ')
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -56,6 +58,7 @@ bin/install-cni-$(ARCH): $(ISTIO_DOWNLOADED)
 ###############################################################################
 ISTIO_CNI_IMAGE_CREATED = .istio-cni.created-$(ARCH)
 ISTIO_PILOT_IMAGE_CREATED = .istio-pilot.created-$(ARCH)
+ISTIO_ZTUNNEL_IMAGE_CREATED = .istio-ztunnel.created-$(ARCH)
 
 # Build images for all architectures
 .PHONY: image-all
@@ -81,6 +84,13 @@ $(ISTIO_PILOT_IMAGE_CREATED): Dockerfile-pilot bin/pilot-discovery-$(ARCH)
 	$(MAKE) retag-build-images-with-registries BUILD_IMAGES=$(ISTIO_PILOT_IMAGE) VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
+# istio-ztunnel image
+$(ISTIO_ZTUNNEL_IMAGE): $(ISTIO_ZTUNNEL_IMAGE_CREATED)
+$(ISTIO_ZTUNNEL_IMAGE_CREATED): Dockerfile-ztunnel
+	$(DOCKER_BUILD_THIRD_PARTY) --build-arg ISTIO_ZTUNNEL_VERSION=$(ISTIO_ZTUNNEL_VERSION) -t $(ISTIO_ZTUNNEL_IMAGE):latest-$(ARCH) -f Dockerfile-ztunnel .
+	$(MAKE) retag-build-images-with-registries BUILD_IMAGES=$(ISTIO_ZTUNNEL_IMAGE) VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
+
 ###############################################################################
 # Clean
 ###############################################################################
@@ -88,10 +98,11 @@ $(ISTIO_PILOT_IMAGE_CREATED): Dockerfile-pilot bin/pilot-discovery-$(ARCH)
 clean:
 	rm -fr bin/ istio/
 	rm -f $(ISTIO_DOWNLOADED)
-	rm -f $(ISTIO_CNI_IMAGE_CREATED) $(ISTIO_PILOT_IMAGE_CREATED)
+	rm -f $(ISTIO_CNI_IMAGE_CREATED) $(ISTIO_PILOT_IMAGE_CREATED) $(ISTIO_ZTUNNEL_IMAGE_CREATED)
 	rm -f .release-*
 	-docker image rm -f $$(docker images $(ISTIO_CNI_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(ISTIO_PILOT_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(ISTIO_ZTUNNEL_IMAGE) -a -q)
 
 ###############################################################################
 # CI/CD

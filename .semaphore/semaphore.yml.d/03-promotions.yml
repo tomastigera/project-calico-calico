@@ -185,11 +185,6 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
-  - name: Push third-party istio-ztunnel images
-    pipeline_file: push-images/third_party/istio-ztunnel.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
