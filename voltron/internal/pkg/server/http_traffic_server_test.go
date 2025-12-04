@@ -21,13 +21,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"golang.org/x/net/http2"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
@@ -40,7 +37,6 @@ func init() {
 
 var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 	var (
-		k8sAPI     bootstrap.K8sClient
 		fakeClient ctrlclient.WithWatch
 
 		mockAuthenticator  *auth.MockJWTAuth
@@ -59,10 +55,6 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		k8sAPI = &k8sClient{
-			Interface:                k8sfake.NewSimpleClientset(),
-			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
-		}
 
 		mockAuthenticator = new(auth.MockJWTAuth)
 
@@ -105,7 +97,6 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		voltronConfig := vcfg.Config{}
 
 		srv, err = server.New(
-			k8sAPI,
 			fakeClient,
 			config,
 			voltronConfig,

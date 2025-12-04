@@ -34,7 +34,6 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
@@ -77,7 +76,6 @@ type Server struct {
 	// internalHTTP only created & started if the lazily initialized internalMux is not nil
 	internalHTTP *http.Server
 
-	k8s bootstrap.K8sClient
 	// When impersonating a user we use the tigera-manager sa bearer token from this config.
 	config        *rest.Config
 	authenticator auth.JWTAuth
@@ -140,15 +138,13 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
+func New(client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
 	srv := &Server{
-		k8s:           k8s,
 		config:        config,
 		authenticator: authenticator,
 		clusters: &clusters{
 			clusters:   make(map[string]*cluster),
 			voltronCfg: &vcfg,
-			k8sCLI:     k8s,
 			client:     client,
 			// Dummy function that will be overwritten if voltron is accepting
 			// managed cluster connections.
@@ -670,7 +666,7 @@ func (s *Server) WatchK8s() error {
 	logrus.Debug("WatchK8sWithSync")
 	defer logrus.Debug("WatchK8sWithSync done")
 
-	if s.k8s == nil {
+	if s.clusters.client == nil {
 		return errors.New("no k8s interface")
 	}
 

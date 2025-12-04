@@ -162,7 +162,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
 		mockAuthenticator := new(auth.MockJWTAuth)
 		_, err := server.New(
-			k8sAPI,
 			fakeClient,
 			config,
 			*vfg,
@@ -229,7 +228,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
+			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(fakeClient,
 				config,
 				mockAuthenticator,
 				clusterNS,
@@ -731,7 +730,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, internalAddr, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
+			srv, httpsAddr, internalAddr, tunnelAddr, srvWg = createAndStartServer(fakeClient,
 				config,
 				authenticator,
 				clusterNS,
@@ -980,7 +979,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(err).NotTo(HaveOccurred())
 
 			vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
-			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator, mockFactory,
+			_, err = server.New(fakeClient, config, *vfg, authenticator, mockFactory,
 				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
@@ -1031,7 +1030,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err = regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
+			srv, _, _, tunnelAddr, srvWg = createAndStartServer(fakeClient,
 				config,
 				mockAuthenticator,
 				clusterNS,
@@ -1179,7 +1178,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			voltronTunnelCAs.AppendCertsFromPEM(test.CertToPemBytes(voltronTunnelCert))
 
 			srv, _, _, tunnelAddr, wg = createAndStartServer(
-				k8sAPI,
 				fakeClient,
 				config,
 				mockAuthenticator,
@@ -1302,7 +1300,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(err).NotTo(HaveOccurred())
 
 			srv, httpsAddr, _, _, srvWg = createAndStartServer(
-				k8sAPI,
 				fakeClient,
 				config,
 				authenticator,
@@ -1413,11 +1410,11 @@ func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Re
 	return
 }
 
-func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.WithWatch, config *rest.Config, authenticator auth.JWTAuth, clusterNS string,
+func createAndStartServer(fakeClient ctrlclient.WithWatch, config *rest.Config, authenticator auth.JWTAuth, clusterNS string,
 	options ...server.Option,
 ) (*server.Server, string, string, string, *sync.WaitGroup) {
 	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS, ManagedClusterSupportsImpersonation: true}
-	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, mockFactory, options...)
+	srv, err := server.New(fakeClient, config, *vcfg, authenticator, mockFactory, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	lisHTTPS, err := net.Listen("tcp", "localhost:0")
