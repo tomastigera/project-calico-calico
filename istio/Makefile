@@ -123,13 +123,7 @@ clean:
 ci: clean image
 
 .PHONY: cd
-cd: image var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) retag-build-images-with-registries push-images-to-registries \
-		IMAGETAG=$(LATEST_IMAGE_TAG) EXCLUDEARCH="$(EXCLUDEARCH)" VALIDARCHES=$(ARCH)
-
-.PHONY: push-manifest
-push-manifest:
-	$(MAKE) push-manifests IMAGETAG=$(LATEST_IMAGE_TAG)
+cd: image-all cd-common
 
 ###############################################################################
 # Release
