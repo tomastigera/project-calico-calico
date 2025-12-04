@@ -1,4 +1,4 @@
-- name: dex
+- name: Dex
   run:
     when: "${FORCE_RUN} or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd third_party/dex
     jobs:
-      - name: dex tests
+      - name: "Dex: CI"
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Dex: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -1,4 +1,4 @@
-- name: queryserver
+- name: Query Server
   run:
     when: "${CHANGE_IN(queryserver)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd queryserver
     jobs:
-      - name: queryserver tests
+      - name: "Query Server: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Query Server: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -1,4 +1,4 @@
-- name: app-policy
+- name: Application Layer Policy
   run:
     when: "${CHANGE_IN(app-policy)}"
   dependencies:
@@ -11,20 +11,20 @@
     epilogue:
       always:
         commands:
-          - test-results publish report
+          - test-results publish report --name "App policy"
       on_pass:
         commands:
           - cache store app-policy-geoip app-policy/geoip
     jobs:
-      - name: app-policy tests
+      - name: "Application Layer Policy: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: app-policy - native arm64 runner
+- name: 'Application Layer Policy: native arm64 runner'
   run:
     when: "${CHANGE_IN(app-policy)}"
   dependencies:
-    - app-policy
+    - Application Layer Policy
   task:
     agent:
       machine:
@@ -35,8 +35,8 @@
     epilogue:
       always:
         commands:
-          - test-results publish report
+          - test-results publish report --name "App policy" --suite-prefix=(arm64)
     jobs:
-      - name: build binary
+      - name: "Application Layer Policy: build arm64"
         commands:
           - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64

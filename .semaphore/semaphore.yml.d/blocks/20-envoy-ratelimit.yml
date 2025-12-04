@@ -1,4 +1,4 @@
-- name: envoy-ratelimit
+- name: "Envoy Ratelimit"
   run:
     when: "${FORCE_RUN} or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
@@ -8,7 +8,7 @@
       commands:
         - cd third_party/envoy-ratelimit
     jobs:
-      - name: Build binaries
+      - name: "Envoy Ratelimit: build multi-arch binaries"
         matrix:
           - env_var: ARCH
             values:

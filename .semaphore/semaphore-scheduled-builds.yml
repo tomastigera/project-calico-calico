@@ -30,7 +30,8 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - export REPO_DIR="$(pwd)"
+      - export CALICO_DIR="$(pwd)"
+      - export CALICO_DIR_NAME="$(basename "$CALICO_DIR")"
       - mkdir artifacts
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
@@ -38,7 +39,7 @@ global_job_config:
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
   epilogue:
     commands:
-      - cd "$REPO_DIR"
+      - cd "$CALICO_DIR"
       - .semaphore/publish-artifacts
 promotions:
   # Manual promotion for publishing a hashrelease.
@@ -296,10 +297,10 @@ blocks:
         commands:
           - cd api
       jobs:
-        - name: make ci
+        - name: "API: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
-  - name: apiserver
+  - name: API Server
     run:
       when: "true"
     execution_time_limit:
@@ -311,17 +312,17 @@ blocks:
         commands:
           - cd apiserver
       jobs:
-        - name: make ci
+        - name: "API Server: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
-        - name: Build binary
+        - name: "API Server: Build"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: app-policy
+  - name: Application Layer Policy
     run:
       when: "true"
     dependencies:
@@ -334,19 +335,19 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report
+            - test-results publish report --name "App policy"
         on_pass:
           commands:
             - cache store app-policy-geoip app-policy/geoip
       jobs:
-        - name: app-policy tests
+        - name: "Application Layer Policy: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: app-policy - native arm64 runner
+  - name: 'Application Layer Policy: native arm64 runner'
     run:
       when: "true"
     dependencies:
-      - app-policy
+      - Application Layer Policy
     task:
       agent:
         machine:
@@ -357,9 +358,9 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report
+            - test-results publish report --name "App policy" --suite-prefix=(arm64)
       jobs:
-        - name: build binary
+        - name: "Application Layer Policy: build arm64"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
   - name: calicoctl
@@ -372,17 +373,17 @@ blocks:
         commands:
           - cd calicoctl
       jobs:
-        - name: calicoctl tests
+        - name: "calicoctl: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "calicoctl: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: cni-plugin
+  - name: CNI Plugin
     run:
       when: "true"
     dependencies:
@@ -392,20 +393,20 @@ blocks:
         commands:
           - cd cni-plugin
       jobs:
-        - name: cni-plugin tests
+        - name: "CNI Plugin: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "CNI Plugin: build multi-arch"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-        - name: build windows cni-plugin images
+        - name: "CNI Plugin: build windows images"
           commands:
             - ../.semaphore/run-and-monitor ci.log make image-windows
-  - name: "cni-plugin: Windows"
+  - name: "CNI Plugin: Windows"
     run:
       when: "true"
     dependencies:
@@ -443,7 +444,7 @@ blocks:
         - name: KUBE_VERSION
           value: v1.29.7
       jobs:
-        - name: Containerd - Windows FV - overlay
+        - name: "CNI Plugin: Windows Containerd FV - overlay"
           execution_time_limit:
             minutes: 60
           commands:
@@ -451,7 +452,7 @@ blocks:
             - export AZURE_RESOURCE_GROUP=${RG_PREFIX}-${BACKEND}-rg
             - echo AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
             - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
-        - name: Containerd - Windows FV - l2bridge
+        - name: "CNI Plugin: Windows Containerd FV - l2bridge"
           execution_time_limit:
             minutes: 60
           commands:
@@ -474,7 +475,7 @@ blocks:
             minutes: 60
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: crypto
+  - name: Crypto
     run:
       when: "true"
     dependencies:
@@ -484,10 +485,10 @@ blocks:
         commands:
           - cd crypto
       jobs:
-        - name: "crypto tests"
+        - name: "Crypto: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: e2e script & pipeline validations
+  - name: E2E script & pipeline validations
     run:
       when: "true or change_in(['/.semaphore/end-to-end/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
@@ -496,10 +497,10 @@ blocks:
       - Prerequisites
     task:
       jobs:
-        - name: Test Pipeline files are valid yaml
+        - name: "E2E script & pipeline validations: validate yaml"
           commands:
             - ./.semaphore/end-to-end/scripts/test_scripts/e2e-validation.sh
-  - name: e2e tests
+  - name: E2E tests
     run:
       when: "true"
     dependencies:
@@ -521,12 +522,12 @@ blocks:
           type: f1-standard-4
           os_image: ubuntu2204
       jobs:
-        - name: Conformance e2e tests
+        - name: "E2E tests: Conformance"
           execution_time_limit:
             minutes: 60
           commands:
             - .semaphore/run-and-monitor e2e-test.log make e2e-test
-  - name: envoy-gateway
+  - name: Envoy Gateway
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
@@ -536,7 +537,7 @@ blocks:
         commands:
           - cd third_party/envoy-gateway
       jobs:
-        - name: Build binaries
+        - name: "Envoy Gateway: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
@@ -544,7 +545,7 @@ blocks:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: envoy-proxy
+  - name: Envoy Proxy
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
@@ -556,17 +557,17 @@ blocks:
         commands:
           - cd third_party/envoy-proxy
       jobs:
-        - name: make ci
+        - name: "Envoy Proxy: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
-        - name: Build binary
+        - name: "Envoy Proxy: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
-  - name: envoy-ratelimit
+  - name: "Envoy Ratelimit"
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
@@ -576,7 +577,7 @@ blocks:
         commands:
           - cd third_party/envoy-ratelimit
       jobs:
-        - name: Build binaries
+        - name: "Envoy Ratelimit: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
@@ -596,7 +597,7 @@ blocks:
           - cache restore go-pkg-cache
           - cache restore go-mod-cache
       jobs:
-        - name: Build and run UT, k8sfv
+        - name: "Felix: Build and run UT, k8sfv"
           execution_time_limit:
             minutes: 60
           commands:
@@ -616,11 +617,20 @@ blocks:
             - ../.semaphore/run-and-monitor ut.log make ut
             - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
             - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-        - name: Static checks
+        - name: "Felix: Static checks"
           execution_time_limit:
             minutes: 60
           commands:
             - ../.semaphore/run-and-monitor static-checks.log make static-checks
+      epilogue:
+        always:
+          commands:
+            - 'test-results compile --name "Felix: FV" ./report/*k8sfv*.xml ./report/k8sfv_sem.json || true'
+            - rm -f ./report/*k8sfv*.xml
+            - 'test-results compile --name "Felix: UT" ./report/*.xml ./report/ut_sem.json || true'
+            - test-results combine report/*_sem.json report/report.json
+            - artifact push job report/report.json -d test-results/junit.json || true
+            - artifact push workflow report/report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
   - name: "Felix: Build - native arm64 runner"
     run:
       when: "true"
@@ -636,7 +646,7 @@ blocks:
           - cache restore go-pkg-cache
           - cache restore go-mod-cache
       jobs:
-        - name: Build binary
+        - name: "Felix: build arm64 binaries"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
   - name: "Felix: Build Windows binaries"
@@ -646,7 +656,7 @@ blocks:
       - Prerequisites
     task:
       jobs:
-        - name: Build Windows binaries
+        - name: "Felix: Build Windows binaries"
           commands:
             - cd felix
             - make bin/calico-felix.exe fv/win-fv.exe
@@ -687,7 +697,7 @@ blocks:
         - name: CONTAINERD_VERSION
           value: 1.7.22
       jobs:
-        - name: CAPZ - Windows FV
+        - name: "Felix: Windows FV - CAPZ"
           commands:
             - ./.semaphore/run-win-fv
   - name: "Felix: FV Tests"
@@ -741,14 +751,14 @@ blocks:
           # routing in that first felix container chooses different source IPs than the tests are expecting.
           - sudo modprobe ipip
       jobs:
-        - name: FV Test matrix
+        - name: "Felix: FV Tests (iptables)"
           execution_time_limit:
             minutes: 120
           commands:
             - make check-wireguard
             - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
           parallelism: 3
-        - name: nftables FV Test matrix
+        - name: "Felix: FV Tests (nftables)"
           execution_time_limit:
             minutes: 120
           env_vars:
@@ -761,10 +771,9 @@ blocks:
       epilogue:
         always:
           commands:
-            - .semaphore/vms/collect-artifacts
-            - .semaphore/vms/publish-artifacts
-            - test-results publish /home/semaphore/calico/felix/report/fv_suite.xml --name "felix-fv-${SEMAPHORE_JOB_INDEX}" || true
-            - test-results publish /home/semaphore/calico/felix/report/fv_nft_suite.xml --name "felix-fv-nft-${SEMAPHORE_JOB_INDEX}" || true
+            # We're still in the felix directory here.
+            - 'test-results publish report/*.xml --name "Felix: FV" || true'
+            - ../.semaphore/collect-artifacts
   - name: "Felix: BPF tests on Ubuntu 24.04"
     run:
       when: "true"
@@ -779,9 +788,10 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-ipt-
+          - export JOB_TAG=felix-ipt
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export NUM_FV_BATCHES=8
           - export RUN_UT=true
           - export FV_FOCUS=BPF-SAFE
@@ -791,7 +801,7 @@ blocks:
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests on Ubuntu 24.04"
           execution_time_limit:
             minutes: 180
           commands:
@@ -799,9 +809,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-24.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -819,16 +828,17 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-nft-
+          - export JOB_TAG=felix-nft
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export NUM_FV_BATCHES=4
           - export RUN_UT=true
           - export FV_FOCUS='_BPF_.*ct=true'
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests on Ubuntu 22.04 (nftables)"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
@@ -841,9 +851,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-22.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -861,9 +870,10 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-2504-
+          - export JOB_TAG=felix-2504
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export IMAGE=ubuntu-2504-plucky-amd64-v20250805
           - export UBUNTU_VERSION=plucky
           - export DOCKER_VERSION=5:28.3.3-1~ubuntu.25.04~plucky
@@ -873,7 +883,7 @@ blocks:
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: Load / verify precompiled BPF programs
+        - name: "Felix: BPF tests on Ubuntu 25.04, load/verify programs"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
@@ -886,9 +896,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-25.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -903,28 +912,31 @@ blocks:
           - cd $HOME
           - tar -czf calico-private.tar.gz calico-private
           - cd calico-private/felix
+          - mkdir -p ../artifacts
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-jithard-
+          - export JOB_TAG=felix-jithard
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export IMAGE=ubuntu-2504-plucky-amd64-v20250805
           - export UBUNTU_VERSION=plucky
           - export DOCKER_VERSION=5:28.3.3-1~ubuntu.25.04~plucky
           - export NUM_FV_BATCHES=2
           - export RUN_UT=true
           - export FV_FOCUS='_BPF_.*tcp.*ct=true'
-          - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
           - ../.semaphore/vms/run-on-vms ${VM_PREFIX} "sudo sysctl -w net.core.bpf_jit_harden=2"
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests with bpf_jit_harden=2"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
             - name: FELIX_FV_BPFATTACHTYPE
               value: "tc"
+            - name: FV_EXTRA_REPORT_SUFFIX
+              value: "bpf_jit_harden=2"
           execution_time_limit:
             minutes: 180
           commands:
@@ -932,9 +944,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-25.04/nftables/bpf_jit_harden=2"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -952,21 +963,23 @@ blocks:
         commands:
           - cd kube-controllers
       jobs:
-        - name: "kube-controllers: tests"
+        - name: "kube-controllers: CI"
           commands:
+            - export TEST_SUITE_PREFIX=""
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "kube-controllers: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
+            - export TEST_SUITE_PREFIX="$ARCH"
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
       epilogue:
         always:
           commands:
-            - test-results publish report
-  - name: lib
+            - test-results publish report --name "kube-controllers" --suite-prefix="$TEST_SUITE_PREFIX"
+  - name: Libraries (lib)
     run:
       when: "true or change_in(['/lib/'], {pipeline_file: 'ignore'})"
     execution_time_limit:
@@ -978,7 +991,7 @@ blocks:
         commands:
           - cd lib
       jobs:
-        - name: make ci
+        - name: "Libraries: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: libcalico-go
@@ -991,7 +1004,7 @@ blocks:
         commands:
           - cd libcalico-go
       jobs:
-        - name: "libcalico-go: tests"
+        - name: "libcalico-go: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: "Node: Build"
@@ -1035,10 +1048,10 @@ blocks:
         commands:
           - cd node
       jobs:
-        - name: Build Windows archive
+        - name: "Node: build Windows archive"
           commands:
             - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
-        - name: Build Windows image
+        - name: "Node: build Windows image"
           commands:
             - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
   - name: "Node: Build - native arm64 runner"
@@ -1056,7 +1069,7 @@ blocks:
         commands:
           - cd node
       jobs:
-        - name: Build image
+        - name: "Node: build arm64 image"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
   - name: "Node: kind-cluster tests"
@@ -1076,7 +1089,7 @@ blocks:
           - export ZONE=us-east4-c
           - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=node
           - export VM_DISK_SIZE=120GB
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
@@ -1089,15 +1102,15 @@ blocks:
       epilogue:
         always:
           commands:
-            - ../.semaphore/vms/publish-artifacts
+            - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
+            - '../.semaphore/vms/publish-reports "Node: KinD STs"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
-            - test-results publish ./report/*.xml --name "node-kind-tests" || true
       secrets:
         - name: google-service-account-for-gcr
         - name: google-service-account-for-gce
         - name: tigera-dev-ci-pull-credentials
         - name: test-customer-license
-  - name: pkg
+  - name: 'Packaging (pkg)'
     run:
       when: "true or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
     dependencies:
@@ -1107,7 +1120,7 @@ blocks:
         commands:
           - cd pkg
       jobs:
-        - name: make ci
+        - name: 'Packaging (pkg): CI'
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: pod2daemon
@@ -1120,11 +1133,11 @@ blocks:
         commands:
           - cd pod2daemon
       jobs:
-        - name: pod2daemon tests
+        - name: "pod2daemon: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-            - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
-        - name: Build binary
+            - 'test-results publish ./report/*.xml --name "pod2daemon: UT" || true'
+        - name: "pod2daemon: Build multi-arch"
           matrix:
             - env_var: ARCH
               values:
@@ -1141,7 +1154,7 @@ blocks:
         commands:
           - cd hack
       jobs:
-        - name: "Tools (hack directory)"
+        - name: "Tools (hack directory): CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: Typha
@@ -1156,16 +1169,18 @@ blocks:
       jobs:
         - name: "Typha: UT and FV tests"
           commands:
-            - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
-        - name: Build binary
+            - export TEST_SUITE_PREFIX="calico/base"
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+        - name: "Typha: build multi-arch"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-        - name: "Typha: UT and FV tests on UBI-minimal"
+        - name: "Typha: FV tests on UBI-minimal"
           commands:
+            - 'export TEST_SUITE_PREFIX="UBI-minimal"'
             - ../.semaphore/run-and-monitor make-fv-ubi.log make clean image fv
           env_vars:
             - name: USE_UBI_AS_CALICO_BASE
@@ -1173,19 +1188,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - |
-              for f in /home/semaphore/calico/typha/report/*; do
-                NAME=$(basename $f)
-                test-results compile --name typha-$NAME $f $NAME.json || true
-              done
-              for f in /home/semaphore/calico/typha/pkg/report/*; do
-                NAME=$(basename $f)
-                test-results compile --name typha-$NAME $f $NAME.json || true
-              done
-              test-results combine *.xml.json report.json || true
-              artifact push job report.json -d test-results/junit.json || true
-              artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
-            - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
+            - 'test-results publish --ignore-missing ./report/*.xml ../felix/report/*.xml --suite-prefix="$TEST_SUITE_PREFIX" --name "Typha" || true'
   - name: calicoq
     run:
       when: "true"
@@ -1198,17 +1201,17 @@ blocks:
         commands:
           - cd calicoq
       jobs:
-        - name: make ci
+        - name: "calicoq: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "calicoq: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: compliance
+  - name: Compliance
     run:
       when: "true"
     dependencies:
@@ -1218,17 +1221,17 @@ blocks:
         commands:
           - cd compliance
       jobs:
-        - name: compliance tests
+        - name: "Compliance: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Compliance: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: dashboards
+  - name: Dashboards
     run:
       when: "true"
     dependencies:
@@ -1238,10 +1241,10 @@ blocks:
         commands:
           - cd dashboards
       jobs:
-        - name: dashboards tests
+        - name: "Dashboards: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Dashboards: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1264,7 +1267,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/snort3 images: Linux amd64"
           commands:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
@@ -1282,7 +1285,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/snort3 images: Linux arm64"
           commands:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
@@ -1298,10 +1301,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/snort3 multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/snort3 push-manifest CONFIRM=true
-  - name: deep-packet-inspection
+  - name: Deep packet inspection
     run:
       when: "true"
     dependencies:
@@ -1314,17 +1317,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd deep-packet-inspection
       jobs:
-        - name: deep-packet-inspection tests
+        - name: "Deep packet inspection: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Deep packet inspection: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: egress-gateway
+  - name: Egress gateway
     run:
       when: "true"
     dependencies:
@@ -1334,18 +1337,18 @@ blocks:
         commands:
           - cd egress-gateway
       jobs:
-        - name: make ci
+        - name: "Egress gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
       epilogue:
         always:
           commands:
             - ../.semaphore/publish-artifacts
-  - name: egress-gateway - native arm64 runner
+  - name: Egress gateway - native arm64 runner
     run:
       when: "true"
     dependencies:
-      - egress-gateway
+      - Egress gateway
     task:
       agent:
         machine:
@@ -1358,14 +1361,14 @@ blocks:
           - touch felix/proto/felixbackend.pb.go
           - cd egress-gateway
       jobs:
-        - name: Build image
+        - name: "Egress gateway: build arm64"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
       epilogue:
         always:
           commands:
             - ../.semaphore/publish-artifacts
-  - name: elasticsearch-metrics
+  - name: Elasticsearch metrics
     run:
       when: "true"
     dependencies:
@@ -1375,10 +1378,10 @@ blocks:
         commands:
           - cd elasticsearch-metrics
       jobs:
-        - name: elasticsearch-metrics tests
+        - name: "Elasticsearch metrics: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Elasticsearch metrics: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1401,7 +1404,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/elasticsearch images: Linux amd64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/elasticsearch images - native arm64 runner
@@ -1419,7 +1422,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/elasticsearch images: Linux arm64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/elasticsearch multi-arch manifests
@@ -1435,10 +1438,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/elasticsearch multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/elasticsearch push-manifest CONFIRM=true
-  - name: elasticsearch
+  - name: Elasticsearch
     run:
       when: "true"
     dependencies:
@@ -1451,10 +1454,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd elasticsearch
       jobs:
-        - name: elasticsearch tests
+        - name: "Elasticsearch: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Elasticsearch: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1471,17 +1474,17 @@ blocks:
         commands:
           - cd es-gateway
       jobs:
-        - name: es-gateway tests
+        - name: "es-gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "es-gateway: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: firewall-integration
+  - name: Firewall integration
     run:
       when: "true"
     dependencies:
@@ -1491,10 +1494,10 @@ blocks:
         commands:
           - cd firewall-integration
       jobs:
-        - name: firewall-integration tests
+        - name: "Firewall integration: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Firewall integration: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1513,7 +1516,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/fluentd-base images: Linux amd64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/fluentd-base images - native arm64 runner
@@ -1531,7 +1534,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/fluentd-base images: Linux arm64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/fluentd-base multi-arch manifests
@@ -1547,7 +1550,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/fluentd-base multi-arch manifests: Linux multi-arch manifests"
           commands:
             - make -C third_party/fluentd-base push-manifest CONFIRM=true
   - name: fluentd
@@ -1563,10 +1566,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: fluentd tests
+        - name: "fluentd: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "fluentd: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1603,7 +1606,7 @@ blocks:
             - cd ~/process/testing/windows-instances
             - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
       jobs:
-        - name: Windows amd64
+        - name: "Publish tigera/fluentd-base Windows images"
           commands:
             - export PROCESS_REPO=~/process/testing/windows-instances
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
@@ -1619,7 +1622,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Windows multi-arch manifests
+        - name: "Publish tigera/fluentd-base Windows multi-arch manifests: Windows multi-arch"
           commands:
             - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
   - name: fluentd Windows
@@ -1635,10 +1638,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: build windows image
+        - name: "fluentd: build windows image"
           commands:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
-  - name: gateway
+  - name: Gateway
     run:
       when: "true"
     dependencies:
@@ -1651,17 +1654,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd gateway
       jobs:
-        - name: gateway tests
+        - name: "Gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Gateway: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: ingress-collector
+  - name: Ingress collector
     run:
       when: "true"
     dependencies:
@@ -1671,17 +1674,17 @@ blocks:
         commands:
           - cd ingress-collector
       jobs:
-        - name: ingress-collector tests
+        - name: "Ingress collector: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Ingress collector: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: intrusion-detection-controller
+  - name: Intrusion detection controller
     run:
       when: "true"
     dependencies:
@@ -1693,10 +1696,10 @@ blocks:
           - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
           - cd intrusion-detection-controller
       jobs:
-        - name: intrusion-detection-controller tests
+        - name: "Intrusion detection controller: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Intrusion detection controller: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1785,10 +1788,10 @@ blocks:
         commands:
           - cd key-cert-provisioner
       jobs:
-        - name: key-cert-provisioner tests
+        - name: "key-cert-provisioner: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "key-cert-provisioner: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1811,7 +1814,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch images
+        - name: "Publish tigera/kibana images: Linux multi-arch"
           commands:
             - make -C third_party/kibana cd CONFIRM=true
   - name: Publish tigera/kibana multi-arch manifests
@@ -1826,10 +1829,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/kibana multi-arch manifests: Linux"
           commands:
             - make -C third_party/kibana push-manifest CONFIRM=true
-  - name: kibana
+  - name: Kibana
     run:
       when: "true"
     dependencies:
@@ -1842,10 +1845,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd kibana
       jobs:
-        - name: kibana tests
+        - name: "Kibana: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: l7-admission-controller
+  - name: L7 Admission Controller
     run:
       when: "true"
     dependencies:
@@ -1855,17 +1858,17 @@ blocks:
         commands:
           - cd l7-admission-controller
       jobs:
-        - name: make ci
+        - name: "L7 Admission Controller: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: build binary
+        - name: "L7 Admission Controller: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: l7-collector
+  - name: "L7 Collector"
     run:
       when: "true"
     dependencies:
@@ -1878,17 +1881,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd l7-collector
       jobs:
-        - name: l7-collector tests
+        - name: "L7 Collector: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "L7 Collector: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: license-agent
+  - name: License Agent
     run:
       when: "true"
     dependencies:
@@ -1898,17 +1901,17 @@ blocks:
         commands:
           - cd license-agent
       jobs:
-        - name: License Agent tests
+        - name: "License Agent: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "License Agent: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: licensing
+  - name: Licensing
     run:
       when: "true"
     dependencies:
@@ -1918,17 +1921,17 @@ blocks:
         commands:
           - cd licensing
       jobs:
-        - name: Licensing tests
+        - name: "Licensing: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Licensing: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: linseed
+  - name: Linseed
     run:
       when: "true"
     dependencies:
@@ -1938,17 +1941,17 @@ blocks:
         commands:
           - cd linseed
       jobs:
-        - name: linseed tests
+        - name: "Linseed: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Linseed: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: lma
+  - name: Logging/Monitoring/Alerting library (lma)
     run:
       when: "true"
     dependencies:
@@ -1958,10 +1961,10 @@ blocks:
         commands:
           - cd lma
       jobs:
-        - name: lma tests
+        - name: "lma: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: oiler
+  - name: Oiler
     run:
       when: "true"
     dependencies:
@@ -1971,17 +1974,17 @@ blocks:
         commands:
           - cd oiler
       jobs:
-        - name: oiler tests
+        - name: "Oiler: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Oiler: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: packetcapture
+  - name: Packet Capture
     run:
       when: "true"
     dependencies:
@@ -1991,17 +1994,17 @@ blocks:
         commands:
           - cd packetcapture
       jobs:
-        - name: packetcapture tests
+        - name: "Packet Capture: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Packet Capture: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: policy-recommendation
+  - name: Policy Recommendation
     run:
       when: "true"
     dependencies:
@@ -2011,17 +2014,17 @@ blocks:
         commands:
           - cd policy-recommendation
       jobs:
-        - name: policy-recommendation tests
+        - name: "Policy Recommendation: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Policy Recommendation: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: prometheus-service
+  - name: Prometheus Service
     run:
       when: "true"
     dependencies:
@@ -2031,17 +2034,17 @@ blocks:
         commands:
           - cd prometheus-service
       jobs:
-        - name: prometheus-service tests
+        - name: "Prometheus Service: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Prometheus Service: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: queryserver
+  - name: Query Server
     run:
       when: "true"
     dependencies:
@@ -2051,17 +2054,17 @@ blocks:
         commands:
           - cd queryserver
       jobs:
-        - name: queryserver tests
+        - name: "Query Server: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Query Server: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: ui-apis
+  - name: UI APIs
     run:
       when: "true"
     dependencies:
@@ -2076,17 +2079,17 @@ blocks:
         commands:
           - cd ui-apis
       jobs:
-        - name: ui-apis tests
+        - name: "UI APIs: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "UI APIs: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: voltron
+  - name: Voltron
     run:
       when: "true"
     dependencies:
@@ -2096,17 +2099,17 @@ blocks:
         commands:
           - cd voltron
       jobs:
-        - name: voltron tests
+        - name: "Voltron: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Voltron: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: webhooks-processor
+  - name: "Webhooks Processor"
     run:
       when: "true"
     dependencies:
@@ -2116,17 +2119,17 @@ blocks:
         commands:
           - cd webhooks-processor
       jobs:
-        - name: webhooks processor tests
+        - name: "Webhooks Processor: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Webhooks Processor: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: fluent-bit
+  - name: Fluent Bit
     run:
       when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2138,13 +2141,13 @@ blocks:
         commands:
           - cd fluent-bit
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=$(basename $(pwd))
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
       jobs:
-        - name: fluent-bit tests
+        - name: "Fluent Bit: CI"
           commands:
             - make ci
-  - name: selinux
+  - name: SELinux
     run:
       when: "true or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2156,20 +2159,20 @@ blocks:
         commands:
           - cd selinux
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=$(basename $(pwd))
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
           - export ZONE=us-east4-c
           - echo VM_PREFIX=${VM_PREFIX}
       jobs:
-        - name: SELinux FV tests
+        - name: "SELinux: CI"
           commands:
             - make ci
       epilogue:
         always:
           commands:
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
-  - name: alertmanager
+  - name: Alert Manager
     run:
       when: "true or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2180,17 +2183,17 @@ blocks:
           - sem-version go 1.25.3
           - cd third_party/alertmanager
       jobs:
-        - name: alertmanager tests
+        - name: "Alert Manager: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Alert Manager: build arm64 Image"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-  - name: dex
+  - name: Dex
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2200,17 +2203,17 @@ blocks:
         commands:
           - cd third_party/dex
       jobs:
-        - name: dex tests
+        - name: "Dex: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Dex: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: eck-operator
+  - name: ECK Operator
     run:
       when: "true or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2220,17 +2223,17 @@ blocks:
         commands:
           - cd third_party/eck-operator
       jobs:
-        - name: eck-operator tests
+        - name: "ECK Operator: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "ECK Operator: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: prometheus-operator
+  - name: Prometheus Operator
     run:
       when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2240,17 +2243,17 @@ blocks:
         commands:
           - cd third_party/prometheus-operator
       jobs:
-        - name: prometheus-operator tests
+        - name: "Prometheus Operator: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Prometheus Operator: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-  - name: prometheus
+  - name: Prometheus
     run:
       when: "true or change_in(['/third_party/prometheus/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2264,10 +2267,10 @@ blocks:
         commands:
           - cd third_party/prometheus
       jobs:
-        - name: prometheus tests
+        - name: "Prometheus: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Prometheus: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -2284,7 +2287,7 @@ blocks:
         commands:
           - cd test-tools/fake-guardian
       jobs:
-        - name: Fake guardian
+        - name: "Fake guardian: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
   - name: Fake log generator
@@ -2297,7 +2300,7 @@ blocks:
         commands:
           - cd test-tools/fake-log-generator
       jobs:
-        - name: Fake log generator
+        - name: "Fake log generator: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
   - name: Mock node
@@ -2310,10 +2313,10 @@ blocks:
         commands:
           - cd test-tools/mocknode
       jobs:
-        - name: Mock node
+        - name: "Mock node: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
-  - name: release tooling
+  - name: Release tooling
     run:
       when: "true"
     execution_time_limit:
@@ -2325,11 +2328,11 @@ blocks:
         commands:
           - cd release
       jobs:
-        - name: ci
+        - name: "Release tooling: CI"
           commands:
             - ../.semaphore/run-and-monitor release-ci.log make ci
-            - test-results publish --name "release-tool-ut-tests" ./report/*.xml || true
-        - name: build binary
+            - 'test-results publish --name "Release tool: UT" ./report/*.xml || true'
+        - name: "Release tooling: build"
           commands:
             - ../.semaphore/run-and-monitor release-build.log make build
             - cache store release-${SEMAPHORE_GIT_SHA} bin

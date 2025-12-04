@@ -1,4 +1,4 @@
-- name: l7-admission-controller
+- name: L7 Admission Controller
   run:
     when: "${CHANGE_IN(l7-admission-controller)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd l7-admission-controller
     jobs:
-      - name: make ci
+      - name: "L7 Admission Controller: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: build binary
+      - name: "L7 Admission Controller: build arm64"
         matrix:
           - env_var: ARCH
             values:

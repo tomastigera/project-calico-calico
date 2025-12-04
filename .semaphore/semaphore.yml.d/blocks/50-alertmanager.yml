@@ -1,4 +1,4 @@
-- name: alertmanager
+- name: Alert Manager
   run:
     when: "${FORCE_RUN} or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -9,10 +9,10 @@
         - sem-version go 1.25.3
         - cd third_party/alertmanager
     jobs:
-      - name: alertmanager tests
+      - name: "Alert Manager: CI"
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: "Alert Manager: build arm64 Image"
         matrix:
           - env_var: ARCH
             values:

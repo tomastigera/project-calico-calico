@@ -23,5 +23,5 @@ func init() {
 func TestPrometheus(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/prom_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Prometheus logs Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/collector/prometheus", []Reporter{junitReporter})
 }

@@ -19,5 +19,5 @@ func init() {
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/dnsdeniedpacket.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "DNSDeniedPacket Test Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/nfqueue/dnsdeniedpacket", []Reporter{junitReporter})
 }

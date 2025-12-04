@@ -14,7 +14,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux amd64
+      - name: "Publish tigera/elasticsearch images: Linux amd64"
         commands:
           - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/elasticsearch images - native arm64 runner
@@ -32,7 +32,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux arm64
+      - name: "Publish tigera/elasticsearch images: Linux arm64"
         commands:
           - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/elasticsearch multi-arch manifests
@@ -48,11 +48,11 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux multi-arch manifests
+      - name: "Publish tigera/elasticsearch multi-arch manifests: Linux multi-arch"
         commands:
           - make -C third_party/elasticsearch push-manifest CONFIRM=true
 
-- name: elasticsearch
+- name: Elasticsearch
   run:
     when: "${CHANGE_IN(elasticsearch)}"
   dependencies:
@@ -65,10 +65,10 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd elasticsearch
     jobs:
-      - name: elasticsearch tests
+      - name: "Elasticsearch: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Elasticsearch: build arm64"
         matrix:
           - env_var: ARCH
             values:

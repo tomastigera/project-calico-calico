@@ -1,4 +1,4 @@
-- name: policy-recommendation
+- name: Policy Recommendation
   run:
     when: "${CHANGE_IN(policy-recommendation)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd policy-recommendation
     jobs:
-      - name: policy-recommendation tests
+      - name: "Policy Recommendation: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Policy Recommendation: build arm64"
         matrix:
           - env_var: ARCH
             values:

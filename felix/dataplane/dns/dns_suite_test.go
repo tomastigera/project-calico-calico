@@ -31,5 +31,5 @@ func init() {
 func TestDNS(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/dns_ut_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "DNS Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/dataplane/dns", []Reporter{junitReporter})
 }

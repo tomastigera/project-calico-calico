@@ -41,8 +41,15 @@ func init() {
 	flag.StringVar(&codeLevel, "code-level", "", "")
 }
 
-func TestMain(t *testing.T) {
+func TestK8sFV(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/k8sfv_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Felix/KDD FV tests", []Reporter{junitReporter})
+	// The run-test script runs this file from k8sfv/output.
+	nameTypha := ""
+	fileTypha := ""
+	if os.Getenv("USE_TYPHA") == "true" {
+		nameTypha = " (typha)"
+		fileTypha = "typha_"
+	}
+	junitReporter := reporters.NewJUnitReporter("../../report/felix_k8sfv_" + fileTypha + "suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "k8sfv tests"+nameTypha, []Reporter{junitReporter})
 }
