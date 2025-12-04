@@ -466,11 +466,8 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 })
 
 var _ = describe("Update certificates", func(clusterNamespace string) {
-
-	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	clusters := &clusters{
 		clusters:              make(map[string]*cluster),
-		k8sCLI:                k8sAPI,
 		voltronCfg:            &vcfg.Config{},
 		clientCertificatePool: x509.NewCertPool(),
 		statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},

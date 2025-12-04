@@ -31,7 +31,6 @@ import (
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/logutils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
@@ -66,7 +65,6 @@ type cluster struct {
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
 
 	// Kubernetes client used for querying and watching ManagedCluster resources.
-	k8sCLI bootstrap.K8sClient
 	client ctrlclient.WithWatch
 
 	// outboundTLSProxy is a reverse outboundTLSProxy for handling connections to Voltron from the management cluster
@@ -116,7 +114,6 @@ type clusters struct {
 	sync.RWMutex
 	clusters      map[string]*cluster
 	sniServiceMap map[string]string
-	k8sCLI        bootstrap.K8sClient
 	client        ctrlclient.WithWatch
 
 	// parameters for forwarding guardian requests to a default server
@@ -176,7 +173,6 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 		ActiveFingerprint: mc.Annotations[AnnotationActiveCertificateFingerprint],
 		Certificate:       mc.Spec.Certificate,
 		tunnelManager:     tunnel.NewManager(),
-		k8sCLI:            cs.k8sCLI,
 		client:            cs.client,
 		voltronCfg:        cs.voltronCfg,
 		statusUpdateFunc:  cs.statusUpdateFunc,
