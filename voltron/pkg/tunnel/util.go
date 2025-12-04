@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
-package tunnelmgr
+package tunnel
 
 import (
 	"context"

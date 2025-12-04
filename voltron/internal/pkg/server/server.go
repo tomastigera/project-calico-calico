@@ -42,7 +42,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 const (
@@ -336,7 +335,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		}
 
 		if err := c.assignTunnel(t); err != nil {
-			if errors.Is(err, tunnelmgr.ErrTunnelSet) {
+			if errors.Is(err, tunnel.ErrTunnelSet) {
 				logrus.Errorf("opening a second tunnel ID %s rejected", t.ClusterID())
 			} else {
 				logrus.WithError(err).Errorf("failed to open the tunnel for cluster %s", t.ClusterID())
