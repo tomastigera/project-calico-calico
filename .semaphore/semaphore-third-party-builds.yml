@@ -55,6 +55,64 @@ blocks:
         - name: Pre-flight checks
           commands:
             - make ci-preflight-checks
+  - name: Refresh GeoIP cache
+    run:
+      when: "true"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cache delete app-policy-geoip
+      epilogue:
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: "Application Layer Policy: Refresh GeoIP cache"
+          commands:
+            - make -C app-policy geoip/dbip-city-lite.mmdb
+  - name: Application Layer Policy
+    run:
+      when: "true"
+    dependencies:
+      - Refresh GeoIP cache
+    task:
+      prologue:
+        commands:
+          - cache restore app-policy-geoip
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report --name "App policy"
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: "Application Layer Policy: CI"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: 'Application Layer Policy: native arm64 runner'
+    run:
+      when: "true"
+    dependencies:
+      - Application Layer Policy
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      prologue:
+        commands:
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report --name "App policy" --suite-prefix=(arm64)
+      jobs:
+        - name: "Application Layer Policy: build arm64"
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
   - name: Publish tigera/snort3 images
     run:
       when: "true or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
