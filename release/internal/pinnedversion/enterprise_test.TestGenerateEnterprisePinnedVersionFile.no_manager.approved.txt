@@ -99,6 +99,10 @@
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     intrusion-detection-controller:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
+    istio-install-cni:
+      version: v3.22.1-calient-0.dev-741-gde13c547862d
+    istio-pilot:
+      version: v3.22.1-calient-0.dev-741-gde13c547862d
     istio-ztunnel:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     key-cert-provisioner:

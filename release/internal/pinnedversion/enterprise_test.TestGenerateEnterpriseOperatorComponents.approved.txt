@@ -117,6 +117,12 @@ components:
   intrusion-detection-controller:
     version: v3.22.0
     image: intrusion-detection-controller
+  istio-install-cni:
+    version: v3.22.0
+    image: istio-install-cni
+  istio-pilot:
+    version: v3.22.0
+    image: istio-pilot
   istio-ztunnel:
     version: v3.22.0
     image: istio-ztunnel

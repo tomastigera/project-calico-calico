@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish third-party istio-ztunnel images
+name: Publish istio images
 agent:
   machine:
     type: f1-standard-2
@@ -28,21 +28,12 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish istio-ztunnel images and multi-arch manifests
+  - name: Publish istio images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
     task:
       jobs:
         - name: Linux multi-arch
-          env_vars:
-            - name: THIRD_PARTY_IMAGES
-              value: istio-ztunnel
-            - name: BUILD_IMAGES
-              value: istio-ztunnel
           commands:
-            - |
-              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
-                make -C third_party/istio-ztunnel cd-third-party-common CONFIRM=true;
-                make push-manifests-with-tag CONFIRM=true;
-              fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C istio cd push-manifests-with-tag CONFIRM=true; fi
