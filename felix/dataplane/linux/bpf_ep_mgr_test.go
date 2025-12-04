@@ -1997,17 +1997,17 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			val123 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key123)]))
 			val124 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key124)]))
 
-			tcIDsSeenFH := set.New[int]()
-			tcIDsSeenTH := set.New[int]()
+			tcIDsSeenIngress := set.New[int]()
+			tcIDsSeenEgress := set.New[int]()
 			for _, v := range []ifstate.Value{val123, val124} {
 				Expect(v.XDPPolicyV4()).To(Equal(-1), "WEPs shouldn't get XDP IDs")
 				Expect(v.IngressPolicyV4()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV4())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV4())
 
 				Expect(v.EgressPolicyV4()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV4())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV4())
 
 				Expect(v.XDPPolicyV6()).To(Equal(-1), "WEPs shouldn't get XDP IPv6 ID")
 				Expect(v.IngressPolicyV6()).To(Equal(-1), "WEPs shouldn't get IPv6 ingress pol")
@@ -2065,20 +2065,20 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			val124 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key124)]))
 
 			xdpIDsSeen := set.New[int]()
-			tcIDsSeenFH := set.New[int]()
-			tcIDsSeenTH := set.New[int]()
+			tcIDsSeenIngress := set.New[int]()
+			tcIDsSeenEgress := set.New[int]()
 			for _, v := range []ifstate.Value{val123, val124} {
 				Expect(v.XDPPolicyV4()).NotTo(Equal(-1), "WEPs shouldn't get XDP IDs")
 				Expect(xdpIDsSeen.Contains(v.XDPPolicyV4())).To(BeFalse(), fmt.Sprintf("Saw same jump XDP map ID %d more than once", v.XDPPolicyV4()))
 				xdpIDsSeen.Add(v.XDPPolicyV4())
 
 				Expect(v.IngressPolicyV4()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV4())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV4())
 
 				Expect(v.EgressPolicyV4()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV4())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV4())
 
 				Expect(v.XDPPolicyV6()).To(Equal(-1), "WEPs shouldn't get XDP IPv6 ID")
 				Expect(v.IngressPolicyV6()).To(Equal(-1), "WEPs shouldn't get IPv6 ingress pol")
@@ -2474,25 +2474,25 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			val123 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key123)]))
 			val124 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key124)]))
 
-			tcIDsSeenFH := set.New[int]()
-			tcIDsSeenTH := set.New[int]()
+			tcIDsSeenIngress := set.New[int]()
+			tcIDsSeenEgress := set.New[int]()
 			for _, v := range []ifstate.Value{val123, val124} {
 				Expect(v.IngressPolicyV6()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV6())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV6())
 
 				Expect(v.EgressPolicyV6()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV6())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV6())
 
 				Expect(v.XDPPolicyV4()).To(Equal(-1), "WEPs shouldn't get XDP IDs")
 				Expect(v.IngressPolicyV4()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV4())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV4())
 
 				Expect(v.EgressPolicyV4()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV4())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV4())
 
 				Expect(v.TcIngressFilter()).To(Equal(-1), "should be no filters in use")
 				Expect(v.TcEgressFilter()).To(Equal(-1), "should be no filters in use")
@@ -2547,28 +2547,28 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			val124 := ifstate.ValueFromBytes([]byte(ifStateMap.Contents[string(key124)]))
 
 			xdpIDsSeen := set.New[int]()
-			tcIDsSeenFH := set.New[int]()
-			tcIDsSeenTH := set.New[int]()
+			tcIDsSeenIngress := set.New[int]()
+			tcIDsSeenEgress := set.New[int]()
 			for _, v := range []ifstate.Value{val123, val124} {
 				Expect(v.IngressPolicyV6()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV6())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV6())
 
 				Expect(v.EgressPolicyV6()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV6())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV6())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV6())
 
 				Expect(v.XDPPolicyV4()).NotTo(Equal(-1), "WEPs shouldn't get XDP IDs")
 				Expect(xdpIDsSeen.Contains(v.XDPPolicyV4())).To(BeFalse(), fmt.Sprintf("Saw same jump XDP map ID %d more than once", v.XDPPolicyV4()))
 				xdpIDsSeen.Add(v.XDPPolicyV4())
 
 				Expect(v.IngressPolicyV4()).NotTo(Equal(-1), "WEPs should have ingress pol")
-				Expect(tcIDsSeenFH.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenFH.Add(v.IngressPolicyV4())
+				Expect(tcIDsSeenIngress.Contains(v.IngressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenIngress.Add(v.IngressPolicyV4())
 
 				Expect(v.EgressPolicyV4()).NotTo(Equal(-1), "WEPs should have egress pol")
-				Expect(tcIDsSeenTH.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
-				tcIDsSeenTH.Add(v.EgressPolicyV4())
+				Expect(tcIDsSeenEgress.Contains(v.EgressPolicyV4())).To(BeFalse(), "Saw same jump map ID more than once")
+				tcIDsSeenEgress.Add(v.EgressPolicyV4())
 
 				Expect(v.TcIngressFilter()).To(Equal(-1), "should be no filters in use")
 				Expect(v.TcEgressFilter()).To(Equal(-1), "should be no filters in use")
