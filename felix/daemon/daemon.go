@@ -518,6 +518,8 @@ configRetry:
 		debugserver.StartDebugPprofServer(configParams.DebugHost, configParams.DebugPort)
 	}
 
+	configParams.NonClusterHost = nonClusterHost
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dp.DataplaneDriver

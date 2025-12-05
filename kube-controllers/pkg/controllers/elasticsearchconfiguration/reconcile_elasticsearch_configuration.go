@@ -112,7 +112,7 @@ func (c *reconciler) reconcileRoles() error {
 // presented by servers in the management cluster. The following secrets are copied:
 //
 // - tigera-secure-es-gateway-http-certs-public: for clients verifying the authenticity of es-gateway
-// - tigera-secure-voltron-linseed-http-certs-public: for clients verifying the authenticity of Voltron when talking to Linseed.
+// - calico-voltron-linseed-certs-public: for clients verifying the authenticity of Voltron when talking to Linseed.
 func (c *reconciler) reconcileCASecrets() error {
 	// Handle the es-gateway secret.
 	secret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
@@ -137,12 +137,23 @@ func (c *reconciler) reconcileCASecrets() error {
 		return err
 	}
 
-	// Copy the Voltron secret through as well.
+	// Copy the Voltron secret through as well. We need both the legacy named and newer versions so that we don't break older managed clusters
 	secret, err = c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.VoltronLinseedPublicCert, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
+
 	secret.Namespace = c.managedOperatorNamespace
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+		return err
+	}
+
+	// The name of the voltron linseed cert has changed in newer releases (after Calico Enterprise v3.23). To not
+	// break functionality on older managed clusters that still expect to find the secret with the old name we need
+	// to copy both the newly named cert and the legacy named cert into the managed cluster. This logic can be removed
+	// in v3.26 when we no longer support versions that use the legacy named cert. The standard cert copy happens above
+	// while we handle the additional legacy copy here as a special case
+	secret.Name = resource.LegacyVoltronLinseedPublicCert
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}

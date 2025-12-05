@@ -8,6 +8,7 @@ import (
 
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // This file implements a RuleSelector cache. This is a pseudo-resource, implemented to allow rule selectors to be
@@ -55,8 +56,8 @@ type CacheEntryNetworkPolicyRuleSelector struct {
 	NetworkSetFlags CacheEntryFlags
 
 	// Internally managed references.
-	NetworkSets resources.Set
-	Policies    resources.Set
+	NetworkSets set.Typed[apiv3.ResourceID]
+	Policies    set.Typed[apiv3.ResourceID]
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -110,8 +111,8 @@ func (c *networkPolicyRuleSelectorsEngine) kinds() []metav1.TypeMeta {
 // newCacheEntry implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicyRuleSelector{
-		NetworkSets: resources.NewSet(),
-		Policies:    resources.NewSet(),
+		NetworkSets: set.New[apiv3.ResourceID](),
+		Policies:    set.New[apiv3.ResourceID](),
 	}
 }
 

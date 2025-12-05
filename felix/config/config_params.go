@@ -692,6 +692,9 @@ type Config struct {
 	// BPFMaglevMaxServices is the maximum number of expected Maglev-enabled
 	// services that Felix will allocate lookup-tables for.
 	BPFMaglevMaxServices int `config:"int(1:3000);100"`
+
+	// Is running as a non-cluster host
+	NonClusterHost bool
 }
 
 func (config *Config) FilterAllowAction() string {
@@ -886,7 +889,8 @@ func (c *Config) ExternalNetworkCheckEnabled() bool {
 }
 
 func (c *Config) EgressIPCheckEnabled() bool {
-	return c.EgressIPSupport == "EnabledPerNamespace" || c.EgressIPSupport == "EnabledPerNamespaceOrPerPod"
+	return !c.NonClusterHost &&
+		(c.EgressIPSupport == "EnabledPerNamespace" || c.EgressIPSupport == "EnabledPerNamespaceOrPerPod")
 }
 
 func (c *Config) TPROXYModeEnabledAllServices() bool {

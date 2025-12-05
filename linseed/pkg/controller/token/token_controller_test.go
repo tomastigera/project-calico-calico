@@ -1095,6 +1095,12 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			return err == nil
 		}
 		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+
+		legacySecretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.LegacyVoltronLinseedPublicCert, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, legacySecretCreated, 5*time.Second, 100*time.Millisecond)
 	})
 
 	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode, func(t *testing.T) {
@@ -1178,6 +1184,12 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		}
 		require.Eventually(t, originalSecretCreated, 5*time.Second, 100*time.Millisecond)
 
+		originalLegacySecretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.LegacyVoltronLinseedPublicCert, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, originalLegacySecretCreated, 5*time.Second, 100*time.Millisecond)
+
 		// Update voltronLinseedSecret to trigger copy process
 		updatedVoltronLinseedSecretData := "updated-data"
 		updatedVoltronLinseedSecret := voltronLinseedSecret.DeepCopy()
@@ -1192,6 +1204,13 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
+
+		// Now verify that LegacyVoltronLinseedSecret has been copied with updated data
+		legacySecretUpdated := func() bool {
+			updatedSecret, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.LegacyVoltronLinseedPublicCert, v1.GetOptions{})
+			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
+		}
+		require.Eventually(t, legacySecretUpdated, 5*time.Second, 100*time.Millisecond)
 	})
 
 	t.Run("update token for service if it contains outdated subject"+tenantMode, func(t *testing.T) {

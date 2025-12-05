@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lma "github.com/projectcalico/calico/lma/pkg/api"
 )
@@ -190,8 +191,8 @@ var _ = Describe("Report tests", func() {
 			inScopeEndpoints: make(map[v3.ResourceID]*reportEndpoint),
 			services:         make(map[v3.ResourceID]xrefcache.CacheEntryFlags),
 			namespaces:       make(map[v3.ResourceID]xrefcache.CacheEntryFlags),
-			serviceAccounts:  resources.NewSet(),
-			policies:         resources.NewSet(),
+			serviceAccounts:  set.New[v3.ResourceID](),
+			policies:         set.New[v3.ResourceID](),
 			data: &v3.ReportData{
 				ReportName:     "report",
 				ReportTypeName: "report-type",

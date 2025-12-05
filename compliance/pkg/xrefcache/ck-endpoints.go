@@ -63,10 +63,10 @@ type CacheEntryEndpoint struct {
 	Flags CacheEntryFlags
 
 	// Policies applied to this pod.
-	AppliedPolicies resources.Set
+	AppliedPolicies set.Typed[apiv3.ResourceID]
 
 	// Services whose endpoints include this endpoint
-	Services resources.Set
+	Services set.Typed[apiv3.ResourceID]
 
 	// Service account associated with this endpoint.
 	ServiceAccount *apiv3.ResourceID
@@ -335,8 +335,8 @@ func (c *endpointHandler) register(cache CacheAccessor) {
 // newCacheEntry implements the resourceHandler interface.
 func (c *endpointHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryEndpoint{
-		AppliedPolicies: resources.NewSet(),
-		Services:        resources.NewSet(),
+		AppliedPolicies: set.New[apiv3.ResourceID](),
+		Services:        set.New[apiv3.ResourceID](),
 		policySorter:    c.PolicySorter(),
 	}
 }
@@ -547,7 +547,7 @@ func (c *endpointHandler) recalculate(podId apiv3.ResourceID, epEntry CacheEntry
 
 		// If all flags that the policy can set in the x are now set then exit without checking the other Policies.
 		if x.Flags&CacheEntryEndpointAndNetworkPolicy == CacheEntryEndpointAndNetworkPolicy {
-			return resources.StopIteration
+			return set.StopIteration
 		}
 
 		return nil

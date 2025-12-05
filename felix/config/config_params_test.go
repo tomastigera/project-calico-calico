@@ -77,6 +77,9 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 
 		// Temporary field to implement and test IPv6 in BPF dataplane
 		"BpfIpv6Support",
+
+		// Used internally by Felix to determine if running as a non-cluster host. Is not user settable.
+		"NonClusterHost",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",

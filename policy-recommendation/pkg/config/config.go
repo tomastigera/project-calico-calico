@@ -30,7 +30,7 @@ type Config struct {
 	// This setting is required for es proxy that performs the authentication and authorization for a user.
 	EnableMultiClusterClient       bool   `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
 	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/etc/pki/tls/certs/ca.crt"`
-	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
+	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://calico-manager.calico-system.svc:9443"`
 
 	TenantNamespace    string `envconfig:"TENANT_NAMESPACE" default:""`
 	ManagedClusterType string `envconfig:"MANAGED_CLUSTER_TYPE" default:"enterprise"`
