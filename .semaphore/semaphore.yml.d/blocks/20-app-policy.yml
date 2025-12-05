@@ -1,8 +1,26 @@
+- name: Refresh GeoIP cache
+  run:
+    when: "${WEEKLY_RUN}"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cache delete app-policy-geoip
+    epilogue:
+      on_pass:
+        commands:
+          - cache store app-policy-geoip app-policy/geoip
+    jobs:
+      - name: "Application Layer Policy: Refresh GeoIP cache"
+        commands:
+          - make -C app-policy geoip/dbip-city-lite.mmdb
+
 - name: Application Layer Policy
   run:
     when: "${CHANGE_IN(app-policy)}"
   dependencies:
-    - Prerequisites
+    - Refresh GeoIP cache
   task:
     prologue:
       commands:
