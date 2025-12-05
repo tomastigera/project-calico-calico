@@ -19,7 +19,6 @@ import (
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
@@ -43,7 +42,6 @@ type reconciler struct {
 	managementK8sCLI            kubernetes.Interface
 	managementOperatorNamespace string
 	managedK8sCLI               kubernetes.Interface
-	managedClientSetFactory     k8s.ClientSetFactory
 	managedOperatorNamespace    string
 	esK8sCLI                    relasticsearch.RESTClient
 	esHash                      string
@@ -139,22 +137,23 @@ func (c *reconciler) reconcileCASecrets() error {
 		return err
 	}
 
-	// Copy the Voltron secret through as well.
+	// Copy the Voltron secret through as well. We need both the legacy named and newer versions so that we don't break older managed clusters
 	secret, err = c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.VoltronLinseedPublicCert, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	managedClient, err := c.managedClientSetFactory.NewClientSetForApplication(c.clusterName)
-	if err != nil {
-		return fmt.Errorf("failed to generate clientset for managed cluster %v from factory: %v", c.clusterName, err)
-	}
-
-	secret.Name, err = utils.FetchVersionedVoltronLinseedPublicCertName(managedClient)
-	if err != nil {
+	secret.Namespace = c.managedOperatorNamespace
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
-	secret.Namespace = c.managedOperatorNamespace
+
+	// The name of the voltron linseed cert has changed in newer releases (after Calico Enterprise v3.23). To not
+	// break functionality on older managed clusters that still expect to find the secret with the old name we need
+	// to copy both the newly named cert and the legacy named cert into the managed cluster. This logic can be removed
+	// in v3.26 when we no longer support versions that use the legacy named cert. The standard cert copy happens above
+	// while we handle the additional legacy copy here as a special case
+	secret.Name = resource.LegacyVoltronLinseedPublicCert
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}

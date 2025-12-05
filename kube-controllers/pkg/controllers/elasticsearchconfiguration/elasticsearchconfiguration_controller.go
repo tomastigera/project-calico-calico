@@ -20,7 +20,6 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
@@ -83,15 +82,14 @@ func New(
 ) controller.Controller {
 	logCtx := log.WithField("cluster", clusterName)
 	r := &reconciler{
-		clusterName:             clusterName,
-		ownerReference:          ownerReference,
-		managementK8sCLI:        managementK8sCLI,
-		managedK8sCLI:           managedK8sCLI,
-		managedClientSetFactory: k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint),
-		esK8sCLI:                esK8sCLI,
-		esClientBuilder:         esClientBuilder,
-		management:              management,
-		restartChan:             restartChan,
+		clusterName:      clusterName,
+		ownerReference:   ownerReference,
+		managementK8sCLI: managementK8sCLI,
+		managedK8sCLI:    managedK8sCLI,
+		esK8sCLI:         esK8sCLI,
+		esClientBuilder:  esClientBuilder,
+		management:       management,
+		restartChan:      restartChan,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a

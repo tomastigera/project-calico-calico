@@ -3,10 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/coreos/go-semver/semver"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +13,6 @@ import (
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
@@ -49,38 +45,4 @@ func AddWatchForActiveOperator(w worker.Worker, c kubernetes.Interface) {
 		&corev1.ConfigMap{},
 		worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 	)
-}
-
-func FetchVersionedVoltronLinseedPublicCertName(c k8s.ClientSet) (string, error) {
-	mgdClusterInfo, err := c.ProjectcalicoV3().ClusterInformations().Get(context.Background(), "default", metav1.GetOptions{})
-	if err != nil {
-		log.WithError(err).Warn("Error retrieving managed cluster information, treating as older managed cluster")
-
-		return resource.VoltronLinseedPublicCertOld, nil
-	}
-
-	calicoEnterpriseVersion := mgdClusterInfo.Spec.CalicoEnterpriseVersion
-	if calicoEnterpriseVersion == "" {
-		calicoEnterpriseVersion = mgdClusterInfo.Spec.CNXVersion
-	}
-
-	// ignore the prerelease version for semver compare
-	version := strings.Split(calicoEnterpriseVersion, "-")
-	if len(version) == 0 {
-		err = fmt.Errorf("managed cluster version length is zero")
-		return "", err
-	}
-
-	clusterVersion, err := semver.NewVersion(strings.TrimPrefix(version[0], "v"))
-	if err != nil {
-		err = fmt.Errorf("failed to parse semantic version %v", version[0])
-		return "", err
-	}
-
-	featureVersion, _ := semver.NewVersion("3.23.0")
-	if clusterVersion.LessThan(*featureVersion) {
-		return resource.VoltronLinseedPublicCertOld, nil
-	}
-
-	return resource.VoltronLinseedPublicCert, nil
 }

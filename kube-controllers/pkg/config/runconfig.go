@@ -91,10 +91,8 @@ type NodeControllerConfig struct {
 }
 
 type ElasticsearchCfgControllerCfg struct {
-	NumberOfWorkers                int
-	Kubeconfig                     string
-	MultiClusterForwardingEndpoint string
-	MultiClusterForwardingCA       string
+	NumberOfWorkers int
+	Kubeconfig      string
 }
 
 type AuthorizationControllerCfg struct {
@@ -456,8 +454,6 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	if rc.ElasticsearchConfiguration != nil {
 		rc.ElasticsearchConfiguration.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ElasticsearchConfiguration.Kubeconfig = envCfg.Kubeconfig
-		rc.ElasticsearchConfiguration.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
-		rc.ElasticsearchConfiguration.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 	}
 
 	if rc.ManagedCluster != nil {
