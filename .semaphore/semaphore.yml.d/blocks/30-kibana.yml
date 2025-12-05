@@ -14,7 +14,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux multi-arch images
+      - name: "Publish tigera/kibana images: Linux multi-arch"
         commands:
           - make -C third_party/kibana cd CONFIRM=true
 - name: Publish tigera/kibana multi-arch manifests
@@ -29,11 +29,11 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux multi-arch manifests
+      - name: "Publish tigera/kibana multi-arch manifests: Linux"
         commands:
           - make -C third_party/kibana push-manifest CONFIRM=true
 
-- name: kibana
+- name: Kibana
   run:
     when: "${CHANGE_IN(kibana)}"
   dependencies:
@@ -46,6 +46,6 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd kibana
     jobs:
-      - name: kibana tests
+      - name: "Kibana: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci

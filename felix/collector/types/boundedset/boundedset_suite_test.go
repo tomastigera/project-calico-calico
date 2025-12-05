@@ -21,5 +21,5 @@ func init() {
 func TestBoundedSet(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../../report/boundedset_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Bounded Set Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/collector/boundedset", []Reporter{junitReporter})
 }

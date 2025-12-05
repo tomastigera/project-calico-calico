@@ -16,7 +16,6 @@ import (
 	"github.com/projectcalico/calico/test-tools/fake-guardian/pkg/voltron/proxy"
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // Client is the voltron client. It is used by Guardian to establish a secure tunnel connection to the Voltron server and
@@ -38,7 +37,7 @@ type Client struct {
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
-	tunnelManager tunnelmgr.Manager
+	tunnelManager tunnel.Manager
 	tunnelDialer  tunnel.Dialer
 
 	tunnelDialRetryAttempts int
@@ -123,7 +122,7 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 		)
 	}
 
-	client.tunnelManager = tunnelmgr.NewManagerWithDialer(client.tunnelDialer)
+	client.tunnelManager = tunnel.NewManagerWithDialer(client.tunnelDialer)
 
 	for _, target := range client.targets {
 		log.Infof("Will route traffic to %s for requests matching %s", target.Dest, target.Path)
@@ -151,7 +150,7 @@ func (c *Client) ServeTunnelHTTP() error {
 
 	for i := 1; i <= c.connRetryAttempts; i++ {
 		listener, err = c.tunnelManager.Listener()
-		if err == nil || err != tunnelmgr.ErrStillDialing {
+		if err == nil || err != tunnel.ErrStillDialing {
 			break
 		}
 
@@ -193,7 +192,7 @@ func (c *Client) AcceptAndProxy(listener net.Listener) error {
 
 		for i := 1; i <= c.connRetryAttempts; i++ {
 			dstConn, err = c.tunnelManager.Open()
-			if err == nil || err != tunnelmgr.ErrStillDialing {
+			if err == nil || err != tunnel.ErrStillDialing {
 				break
 			}
 

@@ -1,4 +1,4 @@
-- name: ui-apis
+- name: UI APIs
   run:
     when: "${CHANGE_IN(ui-apis)}"
   dependencies:
@@ -13,10 +13,10 @@
       commands:
         - cd ui-apis
     jobs:
-      - name: ui-apis tests
+      - name: "UI APIs: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "UI APIs: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -31,12 +31,10 @@ import (
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/logutils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -62,12 +60,11 @@ type cluster struct {
 
 	sync.RWMutex
 
-	tunnelManager tunnelmgr.Manager
+	tunnelManager tunnel.Manager
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
 
 	// Kubernetes client used for querying and watching ManagedCluster resources.
-	k8sCLI bootstrap.K8sClient
 	client ctrlclient.WithWatch
 
 	// outboundTLSProxy is a reverse outboundTLSProxy for handling connections to Voltron from the management cluster
@@ -117,7 +114,6 @@ type clusters struct {
 	sync.RWMutex
 	clusters      map[string]*cluster
 	sniServiceMap map[string]string
-	k8sCLI        bootstrap.K8sClient
 	client        ctrlclient.WithWatch
 
 	// parameters for forwarding guardian requests to a default server
@@ -176,8 +172,7 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 		ID:                mc.Name,
 		ActiveFingerprint: mc.Annotations[AnnotationActiveCertificateFingerprint],
 		Certificate:       mc.Spec.Certificate,
-		tunnelManager:     tunnelmgr.NewManager(),
-		k8sCLI:            cs.k8sCLI,
+		tunnelManager:     tunnel.NewManager(),
 		client:            cs.client,
 		voltronCfg:        cs.voltronCfg,
 		statusUpdateFunc:  cs.statusUpdateFunc,
@@ -580,7 +575,7 @@ func (c *cluster) assignTunnel(t tunnel.Tunnel) error {
 				func() {
 					listener, err := c.tunnelManager.Listener()
 					if err != nil {
-						if err == tunnel.ErrTunnelClosed || err == tunnelmgr.ErrManagerClosed {
+						if err == tunnel.ErrTunnelClosed || err == tunnel.ErrManagerClosed {
 							shouldStop = true
 							return
 						}

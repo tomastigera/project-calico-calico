@@ -19,5 +19,5 @@ func init() {
 func TestK8sUtilsGinkgo(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../report/k8sutils_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "k8sutils Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/k8sutils", []Reporter{junitReporter})
 }

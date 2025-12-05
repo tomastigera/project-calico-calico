@@ -1,4 +1,4 @@
-- name: prometheus
+- name: Prometheus
   run:
     when: "${FORCE_RUN} or change_in(['/third_party/prometheus/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -12,10 +12,10 @@
       commands:
         - cd third_party/prometheus
     jobs:
-      - name: prometheus tests
+      - name: "Prometheus: CI"
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: "Prometheus: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -55,6 +55,7 @@ var (
 		"gateway",
 		"ingress-collector",
 		"intrusion-detection-controller",
+		"istio",
 		"key-cert-provisioner",
 		"kibana",
 		"l7-admission-controller",

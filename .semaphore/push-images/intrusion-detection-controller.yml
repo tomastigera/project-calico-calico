@@ -28,7 +28,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish intrusion-detection-controller images
+  - name: Publish intrusion-detection-controller images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -40,14 +40,4 @@ blocks:
           commands:
             - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
             - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller cd CONFIRM=true; fi
-  - name: Publish intrusion-detection-controller multi-arch manifests
-    dependencies:
-      - Publish intrusion-detection-controller images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller cd push-manifests-with-tag CONFIRM=true; fi

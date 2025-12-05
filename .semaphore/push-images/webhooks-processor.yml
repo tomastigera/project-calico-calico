@@ -28,7 +28,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish webhooks-processor images
+  - name: Publish webhooks-processor images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -36,14 +36,4 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C webhooks-processor cd CONFIRM=true; fi
-  - name: Publish webhooks-processor multi-arch manifests
-    dependencies:
-      - Publish webhooks-processor images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C webhooks-processor push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C webhooks-processor cd push-manifests-with-tag CONFIRM=true; fi

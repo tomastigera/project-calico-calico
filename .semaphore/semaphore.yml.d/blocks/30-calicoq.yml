@@ -10,10 +10,10 @@
       commands:
         - cd calicoq
     jobs:
-      - name: make ci
+      - name: "calicoq: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "calicoq: build arm64"
         matrix:
           - env_var: ARCH
             values:

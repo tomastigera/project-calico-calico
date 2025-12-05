@@ -1,4 +1,4 @@
-- name: license-agent
+- name: License Agent
   run:
     when: "${CHANGE_IN(license-agent)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd license-agent
     jobs:
-      - name: License Agent tests
+      - name: "License Agent: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "License Agent: build arm64"
         matrix:
           - env_var: ARCH
             values:

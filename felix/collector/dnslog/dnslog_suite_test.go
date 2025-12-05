@@ -23,5 +23,5 @@ func init() {
 func TestDNSLogs(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/dnslogs_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "DNS logs Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/collector/dnslog", []Reporter{junitReporter})
 }

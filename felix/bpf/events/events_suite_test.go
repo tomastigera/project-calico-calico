@@ -15,6 +15,6 @@ import (
 func TestEvents(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/events_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Events Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/felix_bpf_events_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/bpf/events", []Reporter{junitReporter})
 }

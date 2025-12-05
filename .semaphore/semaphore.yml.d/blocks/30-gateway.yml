@@ -1,4 +1,4 @@
-- name: gateway
+- name: Gateway
   run:
     when: "${CHANGE_IN(gateway)}"
   dependencies:
@@ -11,10 +11,10 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd gateway
     jobs:
-      - name: gateway tests
+      - name: "Gateway: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Gateway: build arm64"
         matrix:
           - env_var: ARCH
             values:

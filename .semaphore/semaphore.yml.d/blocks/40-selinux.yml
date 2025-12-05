@@ -1,4 +1,4 @@
-- name: selinux
+- name: SELinux
   run:
     when: "${FORCE_RUN} or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -10,13 +10,13 @@
       commands:
         - cd selinux
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export REPO_NAME=$(basename $(pwd))
+        - export COMPONENT=$(basename $(pwd))
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
         - export ZONE=us-east4-c
         - echo VM_PREFIX=${VM_PREFIX}
     jobs:
-      - name: SELinux FV tests
+      - name: "SELinux: CI"
         commands:
           - make ci
     epilogue:

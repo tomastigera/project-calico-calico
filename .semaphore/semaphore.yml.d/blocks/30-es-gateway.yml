@@ -8,10 +8,10 @@
       commands:
         - cd es-gateway
     jobs:
-      - name: es-gateway tests
+      - name: "es-gateway: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "es-gateway: build arm64"
         matrix:
           - env_var: ARCH
             values:
