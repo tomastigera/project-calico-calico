@@ -103,6 +103,8 @@
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     istio-pilot:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
+    istio-proxyv2:
+      version: v3.22.1-calient-0.dev-741-gde13c547862d
     istio-ztunnel:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     key-cert-provisioner:

@@ -123,6 +123,9 @@ components:
   istio-pilot:
     version: v3.22.0
     image: istio-pilot
+  istio-proxyv2:
+    version: v3.22.0
+    image: istio-proxyv2
   istio-ztunnel:
     version: v3.22.0
     image: istio-ztunnel
