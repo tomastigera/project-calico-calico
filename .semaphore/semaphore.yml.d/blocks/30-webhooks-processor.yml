@@ -1,4 +1,4 @@
-- name: webhooks-processor
+- name: "Webhooks Processor"
   run:
     when: "${CHANGE_IN(webhooks-processor)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd webhooks-processor
     jobs:
-      - name: webhooks processor tests
+      - name: "Webhooks Processor: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Webhooks Processor: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -33,7 +33,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish ui-apis images
+  - name: Publish ui-apis images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -41,14 +41,4 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C ui-apis cd CONFIRM=true; fi
-  - name: Publish ui-apis multi-arch manifests
-    dependencies:
-      - Publish ui-apis images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C ui-apis push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C ui-apis cd push-manifests-with-tag CONFIRM=true; fi

@@ -1,4 +1,4 @@
-- name: elasticsearch-metrics
+- name: Elasticsearch metrics
   run:
     when: "${CHANGE_IN(elasticsearch-metrics)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd elasticsearch-metrics
     jobs:
-      - name: elasticsearch-metrics tests
+      - name: "Elasticsearch metrics: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Elasticsearch metrics: build arm64"
         matrix:
           - env_var: ARCH
             values:

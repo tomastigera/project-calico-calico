@@ -202,11 +202,13 @@ func (pr *PolicyResolver) Flush() {
 		return
 	}
 	pr.sortedTierData = pr.policySorter.Sorted()
-	pr.dirtyEndpoints.Iter(pr.sendEndpointUpdate)
+	for endpointID := range pr.dirtyEndpoints.All() {
+		pr.sendEndpointUpdate(endpointID)
+	}
 	pr.dirtyEndpoints.Clear()
 }
 
-func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error {
+func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) {
 	log.Debugf("Sending tier update for endpoint %v", endpointID)
 	endpoint, ok := pr.endpoints[endpointID.(model.Key)]
 	if !ok {
@@ -214,7 +216,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 		for _, cb := range pr.Callbacks {
 			cb.OnEndpointTierUpdate(endpointID, nil, EndpointEgressData{}, nil, []TierInfo{})
 		}
-		return nil
+		return
 	}
 
 	applicableTiers := []TierInfo{}
@@ -264,7 +266,6 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 	for _, cb := range pr.Callbacks {
 		cb.OnEndpointTierUpdate(endpointID, endpoint, egressData, peerData, applicableTiers)
 	}
-	return nil
 }
 
 func findHealthPort(endpoint *model.WorkloadEndpoint) uint16 {

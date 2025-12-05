@@ -23,5 +23,5 @@ func init() {
 func TestL7logs(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/l7logs_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "L7 logs Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/collector/l7log", []Reporter{junitReporter})
 }

@@ -30,7 +30,8 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - export REPO_DIR="$(pwd)"
+      - export CALICO_DIR="$(pwd)"
+      - export CALICO_DIR_NAME="$(basename "$CALICO_DIR")"
       - mkdir artifacts
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
@@ -38,7 +39,7 @@ global_job_config:
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
   epilogue:
     commands:
-      - cd "$REPO_DIR"
+      - cd "$CALICO_DIR"
       - .semaphore/publish-artifacts
 promotions:
   # Manual promotion for publishing a hashrelease.
@@ -124,6 +125,10 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push intrusion-detection-controller images
     pipeline_file: push-images/intrusion-detection-controller.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push istio images
+    pipeline_file: push-images/istio.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push key-cert-provisioner images
@@ -227,11 +232,6 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
-  - name: Push third-party istio-ztunnel images
-    pipeline_file: push-images/third_party/istio-ztunnel.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
@@ -297,10 +297,10 @@ blocks:
         commands:
           - cd api
       jobs:
-        - name: make ci
+        - name: "API: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
-  - name: apiserver
+  - name: API Server
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-apiserver.yml','/apiserver/**','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/licensing/utils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     execution_time_limit:
@@ -312,21 +312,38 @@ blocks:
         commands:
           - cd apiserver
       jobs:
-        - name: make ci
+        - name: "API Server: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
-        - name: Build binary
+        - name: "API Server: Build"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: app-policy
+  - name: Refresh GeoIP cache
+    run:
+      when: "false"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cache delete app-policy-geoip
+      epilogue:
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: "Application Layer Policy: Refresh GeoIP cache"
+          commands:
+            - make -C app-policy geoip/dbip-city-lite.mmdb
+  - name: Application Layer Policy
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-app-policy.yml','/app-policy/**','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/uds/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
-      - Prerequisites
+      - Refresh GeoIP cache
     task:
       prologue:
         commands:
@@ -335,19 +352,19 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report
+            - test-results publish report --name "App policy"
         on_pass:
           commands:
             - cache store app-policy-geoip app-policy/geoip
       jobs:
-        - name: app-policy tests
+        - name: "Application Layer Policy: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: app-policy - native arm64 runner
+  - name: 'Application Layer Policy: native arm64 runner'
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-app-policy.yml','/app-policy/**','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/uds/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
-      - app-policy
+      - Application Layer Policy
     task:
       agent:
         machine:
@@ -358,9 +375,9 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report
+            - test-results publish report --name "App policy" --suite-prefix=(arm64)
       jobs:
-        - name: build binary
+        - name: "Application Layer Policy: build arm64"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
   - name: calicoctl
@@ -373,17 +390,17 @@ blocks:
         commands:
           - cd calicoctl
       jobs:
-        - name: calicoctl tests
+        - name: "calicoctl: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "calicoctl: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: cni-plugin
+  - name: CNI Plugin
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-cni-plugin.yml','/cni-plugin/**','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/cni/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -393,20 +410,20 @@ blocks:
         commands:
           - cd cni-plugin
       jobs:
-        - name: cni-plugin tests
+        - name: "CNI Plugin: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "CNI Plugin: build multi-arch"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-        - name: build windows cni-plugin images
+        - name: "CNI Plugin: build windows images"
           commands:
             - ../.semaphore/run-and-monitor ci.log make image-windows
-  - name: "cni-plugin: Windows"
+  - name: "CNI Plugin: Windows"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-cni-plugin.yml','/cni-plugin/**','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/cni/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -444,7 +461,7 @@ blocks:
         - name: KUBE_VERSION
           value: v1.29.7
       jobs:
-        - name: Containerd - Windows FV - overlay
+        - name: "CNI Plugin: Windows Containerd FV - overlay"
           execution_time_limit:
             minutes: 60
           commands:
@@ -452,7 +469,7 @@ blocks:
             - export AZURE_RESOURCE_GROUP=${RG_PREFIX}-${BACKEND}-rg
             - echo AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
             - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
-        - name: Containerd - Windows FV - l2bridge
+        - name: "CNI Plugin: Windows Containerd FV - l2bridge"
           execution_time_limit:
             minutes: 60
           commands:
@@ -475,7 +492,7 @@ blocks:
             minutes: 60
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: crypto
+  - name: Crypto
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-crypto.yml','/crypto/**','/hack/test/certs/','/lib.Makefile','/metadata.mk'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
     dependencies:
@@ -485,10 +502,10 @@ blocks:
         commands:
           - cd crypto
       jobs:
-        - name: "crypto tests"
+        - name: "Crypto: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: e2e script & pipeline validations
+  - name: E2E script & pipeline validations
     run:
       when: "false or change_in(['/.semaphore/end-to-end/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
@@ -497,10 +514,10 @@ blocks:
       - Prerequisites
     task:
       jobs:
-        - name: Test Pipeline files are valid yaml
+        - name: "E2E script & pipeline validations: validate yaml"
           commands:
             - ./.semaphore/end-to-end/scripts/test_scripts/e2e-validation.sh
-  - name: e2e tests
+  - name: E2E tests
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-e2e.yml','/apiserver/cmd/apiserver/*.go','/apiserver/cmd/apiserver/server/*.go','/apiserver/pkg/apiserver/*.go','/apiserver/pkg/helpers/*.go','/apiserver/pkg/printers/projectcalico/*.go','/apiserver/pkg/rbac/*.go','/apiserver/pkg/registry/projectcalico/alertexception/*.go','/apiserver/pkg/registry/projectcalico/authenticationreview/*.go','/apiserver/pkg/registry/projectcalico/authorizationreview/*.go','/apiserver/pkg/registry/projectcalico/authorizer/*.go','/apiserver/pkg/registry/projectcalico/bfdconfiguration/*.go','/apiserver/pkg/registry/projectcalico/bgpconfiguration/*.go','/apiserver/pkg/registry/projectcalico/bgpfilter/*.go','/apiserver/pkg/registry/projectcalico/bgppeer/*.go','/apiserver/pkg/registry/projectcalico/blockaffinity/*.go','/apiserver/pkg/registry/projectcalico/caliconodestatus/*.go','/apiserver/pkg/registry/projectcalico/clusterinformation/*.go','/apiserver/pkg/registry/projectcalico/deeppacketinspection/*.go','/apiserver/pkg/registry/projectcalico/egressgatewaypolicy/*.go','/apiserver/pkg/registry/projectcalico/externalnetwork/*.go','/apiserver/pkg/registry/projectcalico/felixconfig/*.go','/apiserver/pkg/registry/projectcalico/globalalert/*.go','/apiserver/pkg/registry/projectcalico/globalalerttemplate/*.go','/apiserver/pkg/registry/projectcalico/globalnetworkset/*.go','/apiserver/pkg/registry/projectcalico/globalpolicy/*.go','/apiserver/pkg/registry/projectcalico/globalreport/*.go','/apiserver/pkg/registry/projectcalico/globalreporttype/*.go','/apiserver/pkg/registry/projectcalico/globalthreatfeed/*.go','/apiserver/pkg/registry/projectcalico/hostendpoint/*.go','/apiserver/pkg/registry/projectcalico/ipamconfig/*.go','/apiserver/pkg/registry/projectcalico/ippool/*.go','/apiserver/pkg/registry/projectcalico/ipreservation/*.go','/apiserver/pkg/registry/projectcalico/kubecontrollersconfig/*.go','/apiserver/pkg/registry/projectcalico/licensekey/*.go','/apiserver/pkg/registry/projectcalico/managedcluster/*.go','/apiserver/pkg/registry/projectcalico/networkpolicy/*.go','/apiserver/pkg/registry/projectcalico/networkset/*.go','/apiserver/pkg/registry/projectcalico/packetcapture/*.go','/apiserver/pkg/registry/projectcalico/policyrecommendationscope/*.go','/apiserver/pkg/registry/projectcalico/profile/*.go','/apiserver/pkg/registry/projectcalico/remoteclusterconfig/*.go','/apiserver/pkg/registry/projectcalico/rest/*.go','/apiserver/pkg/registry/projectcalico/securityeventwebhook/*.go','/apiserver/pkg/registry/projectcalico/server/*.go','/apiserver/pkg/registry/projectcalico/stagedglobalnetworkpolicy/*.go','/apiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy/*.go','/apiserver/pkg/registry/projectcalico/stagednetworkpolicy/*.go','/apiserver/pkg/registry/projectcalico/tier/*.go','/apiserver/pkg/registry/projectcalico/uisettings/*.go','/apiserver/pkg/registry/projectcalico/uisettingsgroup/*.go','/apiserver/pkg/registry/projectcalico/util/*.go','/apiserver/pkg/storage/calico/*.go','/apiserver/pkg/storage/etcd/*.go','/app-policy/checker/*.go','/app-policy/policystore/*.go','/app-policy/statscache/*.go','/app-policy/types/*.go','/calicoctl/calicoctl/*.go','/calicoctl/calicoctl/commands/*.go','/calicoctl/calicoctl/commands/argutils/*.go','/calicoctl/calicoctl/commands/bgp/*.go','/calicoctl/calicoctl/commands/capture/*.go','/calicoctl/calicoctl/commands/clientmgr/*.go','/calicoctl/calicoctl/commands/cluster/*.go','/calicoctl/calicoctl/commands/common/*.go','/calicoctl/calicoctl/commands/constants/*.go','/calicoctl/calicoctl/commands/datastore/*.go','/calicoctl/calicoctl/commands/datastore/migrate/*.go','/calicoctl/calicoctl/commands/file/*.go','/calicoctl/calicoctl/commands/ipam/*.go','/calicoctl/calicoctl/commands/node/*.go','/calicoctl/calicoctl/commands/nonclusterhost/*.go','/calicoctl/calicoctl/commands/resourceloader/*.go','/calicoctl/calicoctl/resourcemgr/*.go','/calicoctl/calicoctl/util/*.go','/calicoctl/calicoctl/util/yaml/*.go','/calicoctl/tests/fv/helper/*.go','/cni-plugin/cmd/calico/*.go','/cni-plugin/cmd/install/*.go','/cni-plugin/internal/pkg/azure/*.go','/cni-plugin/internal/pkg/utils/*.go','/cni-plugin/internal/pkg/utils/cri/*.go','/cni-plugin/pkg/dataplane/*.go','/cni-plugin/pkg/dataplane/grpc/*.go','/cni-plugin/pkg/dataplane/grpc/proto/*.go','/cni-plugin/pkg/dataplane/linux/*.go','/cni-plugin/pkg/install/*.go','/cni-plugin/pkg/ipamplugin/*.go','/cni-plugin/pkg/k8s/*.go','/cni-plugin/pkg/plugin/*.go','/cni-plugin/pkg/types/*.go','/cni-plugin/pkg/upgrade/*.go','/cni-plugin/pkg/wait/*.go','/cni-plugin/tests/*.go','/compliance/pkg/hashutils/*.go','/confd/etc','/confd/pkg/backends/*.go','/confd/pkg/backends/calico/*.go','/confd/pkg/config/*.go','/confd/pkg/log/*.go','/confd/pkg/resource/template/*.go','/confd/pkg/run/*.go','/crypto/pkg/tls/*.go','/e2e/**','/felix/aws/*.go','/felix/bpf-apache','/felix/bpf-gpl','/felix/bpf/*.go','/felix/bpf/arp/*.go','/felix/bpf/asm/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/bpfmap/*.go','/felix/bpf/conntrack/*.go','/felix/bpf/conntrack/cleanupv1/*.go','/felix/bpf/conntrack/timeouts/*.go','/felix/bpf/conntrack/v2/*.go','/felix/bpf/conntrack/v3/*.go','/felix/bpf/conntrack/v4/*.go','/felix/bpf/consistenthash/*.go','/felix/bpf/counters/*.go','/felix/bpf/dnsresolver/*.go','/felix/bpf/events/*.go','/felix/bpf/failsafes/*.go','/felix/bpf/filter/*.go','/felix/bpf/hook/*.go','/felix/bpf/ifstate/*.go','/felix/bpf/ipsets/*.go','/felix/bpf/iptables/*.go','/felix/bpf/jump/*.go','/felix/bpf/kprobe/*.go','/felix/bpf/legacy/*.go','/felix/bpf/libbpf/*.go','/felix/bpf/maps/*.go','/felix/bpf/nat/*.go','/felix/bpf/perf/*.go','/felix/bpf/polprog/*.go','/felix/bpf/profiling/*.go','/felix/bpf/proxy/*.go','/felix/bpf/qos/*.go','/felix/bpf/routes/*.go','/felix/bpf/state/*.go','/felix/bpf/stats/*.go','/felix/bpf/tc/*.go','/felix/bpf/tc/defs/*.go','/felix/bpf/utils/*.go','/felix/bpf/xdp/*.go','/felix/cachingmap/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/capture/*.go','/felix/cmd/calico-bpf/commands/*.go','/felix/collector/*.go','/felix/collector/dnslog/*.go','/felix/collector/file/*.go','/felix/collector/flowlog/*.go','/felix/collector/goldmane/*.go','/felix/collector/l7log/*.go','/felix/collector/local/*.go','/felix/collector/prometheus/*.go','/felix/collector/syslog/*.go','/felix/collector/types/*.go','/felix/collector/types/boundedset/*.go','/felix/collector/types/counter/*.go','/felix/collector/types/endpoint/*.go','/felix/collector/types/metric/*.go','/felix/collector/types/tuple/*.go','/felix/collector/utils/*.go','/felix/collector/wafevents/*.go','/felix/config/*.go','/felix/conntrack/*.go','/felix/daemon/*.go','/felix/dataplane/*.go','/felix/dataplane/common/*.go','/felix/dataplane/dns/*.go','/felix/dataplane/external/*.go','/felix/dataplane/inactive/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/dataplane/linux/debugconsole/*.go','/felix/dataplane/linux/qos/*.go','/felix/dataplane/windows/ipsets/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/ethtool/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ifacemonitor/*.go','/felix/ip/*.go','/felix/ipsec/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/jitter/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/linkaddrs/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/netlinkshim/handlemgr/*.go','/felix/nfnetlink/*.go','/felix/nfnetlink/nfnl/*.go','/felix/nfnetlink/pkt/*.go','/felix/nfqueue/*.go','/felix/nfqueue/dnsdeniedpacket/*.go','/felix/nfqueue/dnsresponsepacket/*.go','/felix/nftables/*.go','/felix/policysync/*.go','/felix/proto/*.go','/felix/proto/protoconv/*.go','/felix/routerule/*.go','/felix/routetable/*.go','/felix/routetable/ownershippol/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/statusrep/*.go','/felix/stringutils/*.go','/felix/throttle/*.go','/felix/timeshim/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/felix/vxlanfdb/*.go','/felix/wireguard/*.go','/goldmane/cmd/*.go','/goldmane/cmd/flowgen/*.go','/goldmane/cmd/health/*.go','/goldmane/cmd/stream/*.go','/goldmane/pkg/client/*.go','/goldmane/pkg/daemon/*.go','/goldmane/pkg/emitter/*.go','/goldmane/pkg/flowgen/*.go','/goldmane/pkg/goldmane/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/internal/utils/*.go','/goldmane/pkg/server/*.go','/goldmane/pkg/storage/*.go','/goldmane/pkg/stream/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/kube-controllers/cmd/check-status/*.go','/kube-controllers/cmd/kube-controllers/*.go','/kube-controllers/cmd/wrapper/*.go','/kube-controllers/pkg/cache/*.go','/kube-controllers/pkg/config/*.go','/kube-controllers/pkg/config/configfactory/*.go','/kube-controllers/pkg/controllers/authorization/*.go','/kube-controllers/pkg/controllers/controller/*.go','/kube-controllers/pkg/controllers/elasticsearchconfiguration/*.go','/kube-controllers/pkg/controllers/federatedservices/*.go','/kube-controllers/pkg/controllers/flannelmigration/*.go','/kube-controllers/pkg/controllers/license/*.go','/kube-controllers/pkg/controllers/loadbalancer/*.go','/kube-controllers/pkg/controllers/managedcluster/*.go','/kube-controllers/pkg/controllers/namespace/*.go','/kube-controllers/pkg/controllers/networkpolicy/*.go','/kube-controllers/pkg/controllers/node/*.go','/kube-controllers/pkg/controllers/pod/*.go','/kube-controllers/pkg/controllers/service/*.go','/kube-controllers/pkg/controllers/serviceaccount/*.go','/kube-controllers/pkg/controllers/usage/*.go','/kube-controllers/pkg/controllers/utils/*.go','/kube-controllers/pkg/controllers/worker/*.go','/kube-controllers/pkg/converter/*.go','/kube-controllers/pkg/elasticsearch/*.go','/kube-controllers/pkg/elasticsearch/users/*.go','/kube-controllers/pkg/elasticsearch/userscache/*.go','/kube-controllers/pkg/rbaccache/*.go','/kube-controllers/pkg/resource/*.go','/kube-controllers/pkg/resource/elasticsearch/*.go','/kube-controllers/pkg/status/*.go','/kube-controllers/pkg/strutil/*.go','/kube-controllers/pkg/utils/*.go','/lib.Makefile','/lib/httpmachinery/pkg/apiutil/*.go','/lib/httpmachinery/pkg/codec/*.go','/lib/httpmachinery/pkg/context/*.go','/lib/httpmachinery/pkg/header/*.go','/lib/httpmachinery/pkg/server/*.go','/lib/httpmachinery/pkg/server/adaptors/gorilla/*.go','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/usage.tigera.io/v1/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/bgpsyncer/*.go','/libcalico-go/lib/backend/syncersv1/dedupebuffer/*.go','/libcalico-go/lib/backend/syncersv1/dpisyncer/*.go','/libcalico-go/lib/backend/syncersv1/federationsyncer/*.go','/libcalico-go/lib/backend/syncersv1/felixsyncer/*.go','/libcalico-go/lib/backend/syncersv1/nodestatussyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/tunnelipsyncer/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/debugserver/*.go','/libcalico-go/lib/dispatcher/*.go','/libcalico-go/lib/epstatusfile/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/multireadbuf/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/readlogger/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/upgrade/converters/*.go','/libcalico-go/lib/upgrade/migrator/*.go','/libcalico-go/lib/upgrade/migrator/clients/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/custom/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/resources/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/libcalico-go/lib/writelogger/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/cmd/calico-ipam/*.go','/node/cmd/calico-node/*.go','/node/cmd/calico-node/bpf/*.go','/node/cmd/calico-noncluster-host-init/*.go','/node/cmd/calico/*.go','/node/cmd/mountns/*.go','/node/pkg/allocateip/*.go','/node/pkg/bgp/*.go','/node/pkg/calicoclient/*.go','/node/pkg/cni/*.go','/node/pkg/earlynetworking/*.go','/node/pkg/flowlogs/*.go','/node/pkg/health/*.go','/node/pkg/hostpathinit/*.go','/node/pkg/lifecycle/shutdown/*.go','/node/pkg/lifecycle/startup/*.go','/node/pkg/lifecycle/startup/autodetection/*.go','/node/pkg/lifecycle/startup/autodetection/ipv4/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/node/pkg/nodeinit/*.go','/node/pkg/status/*.go','/node/pkg/status/populators/*.go','/node/tests/k8st/reliable-nc/*.go','/node/windows-packaging/tests/*.go','/pkg/buildinfo/*.go','/pkg/cmdwrapper/*.go','/pkg/nonclusterhost/*.go','/pod2daemon/binder/*.go','/pod2daemon/csidriver/*.go','/pod2daemon/csidriver/driver/*.go','/pod2daemon/flexvol/*.go','/pod2daemon/flexvol/creds/*.go','/pod2daemon/nodeagent/*.go','/pod2daemon/proto/*.go','/pod2daemon/workloadapi/*.go','/typha/cmd/calico-typha/*.go','/typha/cmd/typha-client/*.go','/typha/cmd/wrapper/*.go','/typha/pkg/calc/*.go','/typha/pkg/config/*.go','/typha/pkg/daemon/*.go','/typha/pkg/discovery/*.go','/typha/pkg/jitter/*.go','/typha/pkg/k8s/*.go','/typha/pkg/logutils/*.go','/typha/pkg/promutils/*.go','/typha/pkg/snapcache/*.go','/typha/pkg/syncclient/*.go','/typha/pkg/syncclientutils/*.go','/typha/pkg/syncproto/*.go','/typha/pkg/syncserver/*.go','/typha/pkg/tlsutils/*.go','/whisker','/whisker-backend/cmd/*.go','/whisker-backend/cmd/app/*.go','/whisker-backend/pkg/apis/v1/*.go','/whisker-backend/pkg/config/*.go','/whisker-backend/pkg/handlers/v1/*.go','apiserver/**/*Dockerfile*','apiserver/Makefile','apiserver/deps.txt','calicoctl/**/*Dockerfile*','calicoctl/Makefile','calicoctl/deps.txt','cni-plugin/**/*Dockerfile*','cni-plugin/Makefile','cni-plugin/deps.txt','goldmane/**/*Dockerfile*','goldmane/Makefile','goldmane/deps.txt','kube-controllers/**/*Dockerfile*','kube-controllers/Makefile','kube-controllers/deps.txt','node/**/*Dockerfile*','node/Makefile','node/deps.txt','pod2daemon/**/*Dockerfile*','pod2daemon/Makefile','pod2daemon/deps.txt','typha/**/*Dockerfile*','typha/Makefile','typha/deps.txt','whisker-backend/**/*Dockerfile*','whisker-backend/Makefile','whisker-backend/deps.txt','whisker/**/*Dockerfile*','whisker/Makefile','whisker/deps.txt'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/apiserver/**/*_test.go','/app-policy/**/*_test.go','/calicoctl/**/*_test.go','/cni-plugin/**/*_test.go','/compliance/**/*_test.go','/confd/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/kube-controllers/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/pod2daemon/**/*_test.go','/typha/**/*_test.go','/whisker-backend/**/*_test.go']})"
     dependencies:
@@ -522,12 +539,12 @@ blocks:
           type: f1-standard-4
           os_image: ubuntu2204
       jobs:
-        - name: Conformance e2e tests
+        - name: "E2E tests: Conformance"
           execution_time_limit:
             minutes: 60
           commands:
             - .semaphore/run-and-monitor e2e-test.log make e2e-test
-  - name: envoy-gateway
+  - name: Envoy Gateway
     run:
       when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
@@ -537,7 +554,7 @@ blocks:
         commands:
           - cd third_party/envoy-gateway
       jobs:
-        - name: Build binaries
+        - name: "Envoy Gateway: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
@@ -545,7 +562,7 @@ blocks:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: envoy-proxy
+  - name: Envoy Proxy
     run:
       when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     execution_time_limit:
@@ -557,17 +574,17 @@ blocks:
         commands:
           - cd third_party/envoy-proxy
       jobs:
-        - name: make ci
+        - name: "Envoy Proxy: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
-        - name: Build binary
+        - name: "Envoy Proxy: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
-  - name: envoy-ratelimit
+  - name: "Envoy Ratelimit"
     run:
       when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
     dependencies:
@@ -577,7 +594,7 @@ blocks:
         commands:
           - cd third_party/envoy-ratelimit
       jobs:
-        - name: Build binaries
+        - name: "Envoy Ratelimit: build multi-arch binaries"
           matrix:
             - env_var: ARCH
               values:
@@ -597,7 +614,7 @@ blocks:
           - cache restore go-pkg-cache
           - cache restore go-mod-cache
       jobs:
-        - name: Build and run UT, k8sfv
+        - name: "Felix: Build and run UT, k8sfv"
           execution_time_limit:
             minutes: 60
           commands:
@@ -617,11 +634,20 @@ blocks:
             - ../.semaphore/run-and-monitor ut.log make ut
             - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
             - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-        - name: Static checks
+        - name: "Felix: Static checks"
           execution_time_limit:
             minutes: 60
           commands:
             - ../.semaphore/run-and-monitor static-checks.log make static-checks
+      epilogue:
+        always:
+          commands:
+            - 'test-results compile --name "Felix: FV" ./report/*k8sfv*.xml ./report/k8sfv_sem.json || true'
+            - rm -f ./report/*k8sfv*.xml
+            - 'test-results compile --name "Felix: UT" ./report/*.xml ./report/ut_sem.json || true'
+            - test-results combine report/*_sem.json report/report.json
+            - artifact push job report/report.json -d test-results/junit.json || true
+            - artifact push workflow report/report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
   - name: "Felix: Build - native arm64 runner"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-felix.yml','/app-policy/checker/*.go','/app-policy/policystore/*.go','/app-policy/statscache/*.go','/app-policy/types/*.go','/cni-plugin/pkg/dataplane/linux/*.go','/cni-plugin/pkg/types/*.go','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/**','/goldmane/pkg/client/*.go','/goldmane/pkg/goldmane/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/server/*.go','/goldmane/pkg/storage/*.go','/goldmane/pkg/stream/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/dedupebuffer/*.go','/libcalico-go/lib/backend/syncersv1/felixsyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/debugserver/*.go','/libcalico-go/lib/dispatcher/*.go','/libcalico-go/lib/epstatusfile/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/readlogger/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/testutils/stacktrace/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/licensing/utils/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/pod2daemon/binder/*.go','/typha/pkg/discovery/*.go','/typha/pkg/syncclient/*.go','/typha/pkg/syncproto/*.go','/typha/pkg/tlsutils/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/app-policy/**/*_test.go','/cni-plugin/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/pod2daemon/**/*_test.go','/typha/**/*_test.go']})"
@@ -637,7 +663,7 @@ blocks:
           - cache restore go-pkg-cache
           - cache restore go-mod-cache
       jobs:
-        - name: Build binary
+        - name: "Felix: build arm64 binaries"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
   - name: "Felix: Build Windows binaries"
@@ -647,7 +673,7 @@ blocks:
       - Prerequisites
     task:
       jobs:
-        - name: Build Windows binaries
+        - name: "Felix: Build Windows binaries"
           commands:
             - cd felix
             - make bin/calico-felix.exe fv/win-fv.exe
@@ -688,7 +714,7 @@ blocks:
         - name: CONTAINERD_VERSION
           value: 1.7.22
       jobs:
-        - name: CAPZ - Windows FV
+        - name: "Felix: Windows FV - CAPZ"
           commands:
             - ./.semaphore/run-win-fv
   - name: "Felix: FV Tests"
@@ -742,14 +768,14 @@ blocks:
           # routing in that first felix container chooses different source IPs than the tests are expecting.
           - sudo modprobe ipip
       jobs:
-        - name: FV Test matrix
+        - name: "Felix: FV Tests (iptables)"
           execution_time_limit:
             minutes: 120
           commands:
             - make check-wireguard
             - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
           parallelism: 3
-        - name: nftables FV Test matrix
+        - name: "Felix: FV Tests (nftables)"
           execution_time_limit:
             minutes: 120
           env_vars:
@@ -762,10 +788,9 @@ blocks:
       epilogue:
         always:
           commands:
-            - .semaphore/vms/collect-artifacts
-            - .semaphore/vms/publish-artifacts
-            - test-results publish /home/semaphore/calico/felix/report/fv_suite.xml --name "felix-fv-${SEMAPHORE_JOB_INDEX}" || true
-            - test-results publish /home/semaphore/calico/felix/report/fv_nft_suite.xml --name "felix-fv-nft-${SEMAPHORE_JOB_INDEX}" || true
+            # We're still in the felix directory here.
+            - 'test-results publish report/*.xml --name "Felix: FV" || true'
+            - ../.semaphore/collect-artifacts
   - name: "Felix: BPF tests on Ubuntu 24.04"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-felix.yml','/app-policy/checker/*.go','/app-policy/policystore/*.go','/app-policy/statscache/*.go','/app-policy/types/*.go','/cni-plugin/pkg/dataplane/linux/*.go','/cni-plugin/pkg/types/*.go','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/**','/goldmane/pkg/client/*.go','/goldmane/pkg/goldmane/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/server/*.go','/goldmane/pkg/storage/*.go','/goldmane/pkg/stream/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/bgpsyncer/*.go','/libcalico-go/lib/backend/syncersv1/dedupebuffer/*.go','/libcalico-go/lib/backend/syncersv1/dpisyncer/*.go','/libcalico-go/lib/backend/syncersv1/felixsyncer/*.go','/libcalico-go/lib/backend/syncersv1/nodestatussyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/tunnelipsyncer/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/debugserver/*.go','/libcalico-go/lib/dispatcher/*.go','/libcalico-go/lib/epstatusfile/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/multireadbuf/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/readlogger/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/testutils/stacktrace/*.go','/libcalico-go/lib/upgrade/converters/*.go','/libcalico-go/lib/upgrade/migrator/*.go','/libcalico-go/lib/upgrade/migrator/clients/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/custom/*.go','/libcalico-go/lib/upgrade/migrator/clients/v1/k8s/resources/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/libcalico-go/lib/writelogger/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/licensing/utils/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/cmdwrapper/*.go','/pkg/nonclusterhost/*.go','/pod2daemon/binder/*.go','/typha/cmd/calico-typha/*.go','/typha/cmd/typha-client/*.go','/typha/cmd/wrapper/*.go','/typha/pkg/calc/*.go','/typha/pkg/config/*.go','/typha/pkg/daemon/*.go','/typha/pkg/discovery/*.go','/typha/pkg/jitter/*.go','/typha/pkg/k8s/*.go','/typha/pkg/logutils/*.go','/typha/pkg/promutils/*.go','/typha/pkg/snapcache/*.go','/typha/pkg/syncclient/*.go','/typha/pkg/syncproto/*.go','/typha/pkg/syncserver/*.go','/typha/pkg/tlsutils/*.go','typha/**/*Dockerfile*','typha/Makefile','typha/deps.txt'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/app-policy/**/*_test.go','/cni-plugin/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/pod2daemon/**/*_test.go','/typha/**/*_test.go']})"
@@ -780,9 +805,10 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-ipt-
+          - export JOB_TAG=felix-ipt
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export NUM_FV_BATCHES=8
           - export RUN_UT=true
           - export FV_FOCUS=BPF-SAFE
@@ -792,7 +818,7 @@ blocks:
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests on Ubuntu 24.04"
           execution_time_limit:
             minutes: 180
           commands:
@@ -800,9 +826,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-24.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -820,16 +845,17 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-nft-
+          - export JOB_TAG=felix-nft
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export NUM_FV_BATCHES=4
           - export RUN_UT=true
           - export FV_FOCUS='_BPF_.*ct=true'
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests on Ubuntu 22.04 (nftables)"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
@@ -842,9 +868,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-22.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -862,9 +887,10 @@ blocks:
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-2504-
+          - export JOB_TAG=felix-2504
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export IMAGE=ubuntu-2504-plucky-amd64-v20250805
           - export UBUNTU_VERSION=plucky
           - export DOCKER_VERSION=5:28.3.3-1~ubuntu.25.04~plucky
@@ -874,7 +900,7 @@ blocks:
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
-        - name: Load / verify precompiled BPF programs
+        - name: "Felix: BPF tests on Ubuntu 25.04, load/verify programs"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
@@ -887,9 +913,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-25.04/nftables"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
@@ -904,28 +929,31 @@ blocks:
           - cd $HOME
           - tar -czf calico-private.tar.gz calico-private
           - cd calico-private/felix
+          - mkdir -p ../artifacts
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export ZONE=europe-west3-c
-          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-jithard-
+          - export JOB_TAG=felix-jithard
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${JOB_TAG}-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=felix
           - export IMAGE=ubuntu-2504-plucky-amd64-v20250805
           - export UBUNTU_VERSION=plucky
           - export DOCKER_VERSION=5:28.3.3-1~ubuntu.25.04~plucky
           - export NUM_FV_BATCHES=2
           - export RUN_UT=true
           - export FV_FOCUS='_BPF_.*tcp.*ct=true'
-          - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
           - ../.semaphore/vms/run-on-vms ${VM_PREFIX} "sudo sysctl -w net.core.bpf_jit_harden=2"
       jobs:
-        - name: UT/FV tests
+        - name: "Felix: BPF tests with bpf_jit_harden=2"
           env_vars:
             - name: FELIX_FV_NFTABLES
               value: "Enabled"
             - name: FELIX_FV_BPFATTACHTYPE
               value: "tc"
+            - name: FV_EXTRA_REPORT_SUFFIX
+              value: "bpf_jit_harden=2"
           execution_time_limit:
             minutes: 180
           commands:
@@ -933,12 +961,83 @@ blocks:
       epilogue:
         always:
           commands:
-            - export REPO_NAME=$(basename $(pwd))
             - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
-            - ../.semaphore/vms/publish-artifacts
+            - '../.semaphore/vms/publish-reports "BPF/Ubuntu-25.04/nftables/bpf_jit_harden=2"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
         - name: google-service-account-for-gce
+  - name: Publish tigera/istio-ztunnel images
+    run:
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux amd64
+          commands:
+            - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
+  - name: Publish tigera/istio-ztunnel images - native arm64 runner
+    run:
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux arm64
+          commands:
+            - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
+  - name: Publish tigera/istio-ztunnel multi-arch manifests
+    run:
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/istio-ztunnel images
+      - Publish tigera/istio-ztunnel images - native arm64 runner
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - make -C third_party/istio-ztunnel push-manifest CONFIRM=true
+  - name: Istio
+    run:
+      when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-istio.yml','/hack/test/certs/','/istio/**','/lib.Makefile','/metadata.mk'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
+    dependencies:
+      - Publish tigera/istio-ztunnel multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd istio
+      jobs:
+        - name: "Istio: CI"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+        - name: "Istio: build arm64"
+          matrix:
+            - env_var: ARCH
+              values:
+                - arm64
+          commands:
+            - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: kube-controllers
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-kube-controllers.yml','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/fv/connectivity/*.go','/felix/fv/containers/*.go','/felix/fv/tcpdump/*.go','/felix/fv/utils/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/kube-controllers/**','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/usage.tigera.io/v1/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/federationsyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/debugserver/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/testutils/stacktrace/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/cmdwrapper/*.go','/typha/pkg/config/*.go','/typha/pkg/logutils/*.go','/typha/pkg/tlsutils/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/typha/**/*_test.go']})"
@@ -953,21 +1052,23 @@ blocks:
         commands:
           - cd kube-controllers
       jobs:
-        - name: "kube-controllers: tests"
+        - name: "kube-controllers: CI"
           commands:
+            - export TEST_SUITE_PREFIX=""
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "kube-controllers: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
+            - export TEST_SUITE_PREFIX="$ARCH"
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
       epilogue:
         always:
           commands:
-            - test-results publish report
-  - name: lib
+            - test-results publish report --name "kube-controllers" --suite-prefix="$TEST_SUITE_PREFIX"
+  - name: Libraries (lib)
     run:
       when: "false or change_in(['/lib/'], {pipeline_file: 'ignore'})"
     execution_time_limit:
@@ -979,7 +1080,7 @@ blocks:
         commands:
           - cd lib
       jobs:
-        - name: make ci
+        - name: "Libraries: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: libcalico-go
@@ -992,7 +1093,7 @@ blocks:
         commands:
           - cd libcalico-go
       jobs:
-        - name: "libcalico-go: tests"
+        - name: "libcalico-go: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: "Node: Build"
@@ -1036,10 +1137,10 @@ blocks:
         commands:
           - cd node
       jobs:
-        - name: Build Windows archive
+        - name: "Node: build Windows archive"
           commands:
             - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
-        - name: Build Windows image
+        - name: "Node: build Windows image"
           commands:
             - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
   - name: "Node: Build - native arm64 runner"
@@ -1057,7 +1158,7 @@ blocks:
         commands:
           - cd node
       jobs:
-        - name: Build image
+        - name: "Node: build arm64 image"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
   - name: "Node: kind-cluster tests"
@@ -1077,7 +1178,7 @@ blocks:
           - export ZONE=us-east4-c
           - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
           - echo VM_PREFIX=${VM_PREFIX}
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=node
           - export VM_DISK_SIZE=120GB
           - mkdir artifacts
           - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
@@ -1090,15 +1191,15 @@ blocks:
       epilogue:
         always:
           commands:
-            - ../.semaphore/vms/publish-artifacts
+            - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
+            - '../.semaphore/vms/publish-reports "Node: KinD STs"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
-            - test-results publish ./report/*.xml --name "node-kind-tests" || true
       secrets:
         - name: google-service-account-for-gcr
         - name: google-service-account-for-gce
         - name: tigera-dev-ci-pull-credentials
         - name: test-customer-license
-  - name: pkg
+  - name: 'Packaging (pkg)'
     run:
       when: "false or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
     dependencies:
@@ -1108,7 +1209,7 @@ blocks:
         commands:
           - cd pkg
       jobs:
-        - name: make ci
+        - name: 'Packaging (pkg): CI'
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: pod2daemon
@@ -1121,11 +1222,11 @@ blocks:
         commands:
           - cd pod2daemon
       jobs:
-        - name: pod2daemon tests
+        - name: "pod2daemon: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-            - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
-        - name: Build binary
+            - 'test-results publish ./report/*.xml --name "pod2daemon: UT" || true'
+        - name: "pod2daemon: Build multi-arch"
           matrix:
             - env_var: ARCH
               values:
@@ -1142,7 +1243,7 @@ blocks:
         commands:
           - cd hack
       jobs:
-        - name: "Tools (hack directory)"
+        - name: "Tools (hack directory): CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
   - name: Typha
@@ -1157,16 +1258,18 @@ blocks:
       jobs:
         - name: "Typha: UT and FV tests"
           commands:
-            - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
-        - name: Build binary
+            - export TEST_SUITE_PREFIX="calico/base"
+            - ../.semaphore/run-and-monitor make-ci.log make ci
+        - name: "Typha: build multi-arch"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-        - name: "Typha: UT and FV tests on UBI-minimal"
+        - name: "Typha: FV tests on UBI-minimal"
           commands:
+            - 'export TEST_SUITE_PREFIX="UBI-minimal"'
             - ../.semaphore/run-and-monitor make-fv-ubi.log make clean image fv
           env_vars:
             - name: USE_UBI_AS_CALICO_BASE
@@ -1174,19 +1277,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - |
-              for f in /home/semaphore/calico/typha/report/*; do
-                NAME=$(basename $f)
-                test-results compile --name typha-$NAME $f $NAME.json || true
-              done
-              for f in /home/semaphore/calico/typha/pkg/report/*; do
-                NAME=$(basename $f)
-                test-results compile --name typha-$NAME $f $NAME.json || true
-              done
-              test-results combine *.xml.json report.json || true
-              artifact push job report.json -d test-results/junit.json || true
-              artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
-            - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
+            - 'test-results publish --ignore-missing ./report/*.xml ../felix/report/*.xml --suite-prefix="$TEST_SUITE_PREFIX" --name "Typha" || true'
   - name: calicoq
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-calicoq.yml','/calicoq/**','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/felixsyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
@@ -1199,17 +1290,17 @@ blocks:
         commands:
           - cd calicoq
       jobs:
-        - name: make ci
+        - name: "calicoq: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "calicoq: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: compliance
+  - name: Compliance
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-compliance.yml','/compliance/**','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/felix/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1219,17 +1310,17 @@ blocks:
         commands:
           - cd compliance
       jobs:
-        - name: compliance tests
+        - name: "Compliance: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Compliance: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: dashboards
+  - name: Dashboards
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-dashboards.yml','/crypto/pkg/tls/*.go','/dashboards/**','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/linseed/pkg/metrics/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1239,10 +1330,10 @@ blocks:
         commands:
           - cd dashboards
       jobs:
-        - name: dashboards tests
+        - name: "Dashboards: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Dashboards: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1265,7 +1356,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/snort3 images: Linux amd64"
           commands:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
@@ -1283,7 +1374,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/snort3 images: Linux arm64"
           commands:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
@@ -1299,10 +1390,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/snort3 multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/snort3 push-manifest CONFIRM=true
-  - name: deep-packet-inspection
+  - name: Deep packet inspection
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-deep-packet-inspection.yml','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/deep-packet-inspection/**','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/dedupebuffer/*.go','/libcalico-go/lib/backend/syncersv1/dpisyncer/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/readlogger/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/third_party/snort3','/typha/pkg/discovery/*.go','/typha/pkg/syncclient/*.go','/typha/pkg/syncclientutils/*.go','/typha/pkg/syncproto/*.go','/typha/pkg/tlsutils/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/typha/**/*_test.go']})"
     dependencies:
@@ -1315,17 +1406,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd deep-packet-inspection
       jobs:
-        - name: deep-packet-inspection tests
+        - name: "Deep packet inspection: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Deep packet inspection: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: egress-gateway
+  - name: Egress gateway
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-egress-gateway.yml','/egress-gateway/**','/felix/jitter/*.go','/felix/proto/*.go','/hack/test/certs/','/lib.Makefile','/libcalico-go/lib/health/*.go','/libcalico-go/lib/logutils/*.go','/metadata.mk','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/felix/**/*_test.go','/libcalico-go/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1335,18 +1426,18 @@ blocks:
         commands:
           - cd egress-gateway
       jobs:
-        - name: make ci
+        - name: "Egress gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
       epilogue:
         always:
           commands:
             - ../.semaphore/publish-artifacts
-  - name: egress-gateway - native arm64 runner
+  - name: Egress gateway - native arm64 runner
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-egress-gateway.yml','/egress-gateway/**','/felix/jitter/*.go','/felix/proto/*.go','/hack/test/certs/','/lib.Makefile','/libcalico-go/lib/health/*.go','/libcalico-go/lib/logutils/*.go','/metadata.mk','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/felix/**/*_test.go','/libcalico-go/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
-      - egress-gateway
+      - Egress gateway
     task:
       agent:
         machine:
@@ -1359,14 +1450,14 @@ blocks:
           - touch felix/proto/felixbackend.pb.go
           - cd egress-gateway
       jobs:
-        - name: Build image
+        - name: "Egress gateway: build arm64"
           commands:
             - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
       epilogue:
         always:
           commands:
             - ../.semaphore/publish-artifacts
-  - name: elasticsearch-metrics
+  - name: Elasticsearch metrics
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-elasticsearch-metrics.yml','/elasticsearch-metrics/**','/hack/test/certs/','/lib.Makefile','/metadata.mk'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
     dependencies:
@@ -1376,10 +1467,10 @@ blocks:
         commands:
           - cd elasticsearch-metrics
       jobs:
-        - name: elasticsearch-metrics tests
+        - name: "Elasticsearch metrics: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Elasticsearch metrics: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1402,7 +1493,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/elasticsearch images: Linux amd64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/elasticsearch images - native arm64 runner
@@ -1420,7 +1511,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/elasticsearch images: Linux arm64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/elasticsearch multi-arch manifests
@@ -1436,10 +1527,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/elasticsearch multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/elasticsearch push-manifest CONFIRM=true
-  - name: elasticsearch
+  - name: Elasticsearch
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-elasticsearch.yml','/elasticsearch/**','/hack/test/certs/','/lib.Makefile','/metadata.mk','/third_party/elasticsearch'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
     dependencies:
@@ -1452,10 +1543,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd elasticsearch
       jobs:
-        - name: elasticsearch tests
+        - name: "Elasticsearch: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Elasticsearch: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1472,17 +1563,17 @@ blocks:
         commands:
           - cd es-gateway
       jobs:
-        - name: es-gateway tests
+        - name: "es-gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "es-gateway: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: firewall-integration
+  - name: Firewall integration
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-firewall-integration.yml','/compliance/pkg/config/*.go','/compliance/pkg/datastore/*.go','/compliance/pkg/dispatcher/*.go','/compliance/pkg/hashutils/*.go','/compliance/pkg/internet/*.go','/compliance/pkg/ips/*.go','/compliance/pkg/keyselector/*.go','/compliance/pkg/labelselector/*.go','/compliance/pkg/list/*.go','/compliance/pkg/syncer/*.go','/compliance/pkg/xrefcache/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/firewall-integration/**','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/kube-controllers/pkg/cache/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/key-cert-provisioner/**/*_test.go','/kube-controllers/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1492,10 +1583,10 @@ blocks:
         commands:
           - cd firewall-integration
       jobs:
-        - name: firewall-integration tests
+        - name: "Firewall integration: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Firewall integration: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1514,7 +1605,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/fluentd-base images: Linux amd64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/fluentd-base images - native arm64 runner
@@ -1532,7 +1623,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/fluentd-base images: Linux arm64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/fluentd-base multi-arch manifests
@@ -1548,7 +1639,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/fluentd-base multi-arch manifests: Linux multi-arch manifests"
           commands:
             - make -C third_party/fluentd-base push-manifest CONFIRM=true
   - name: fluentd
@@ -1564,10 +1655,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: fluentd tests
+        - name: "fluentd: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "fluentd: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1604,7 +1695,7 @@ blocks:
             - cd ~/process/testing/windows-instances
             - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
       jobs:
-        - name: Windows amd64
+        - name: "Publish tigera/fluentd-base Windows images"
           commands:
             - export PROCESS_REPO=~/process/testing/windows-instances
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
@@ -1620,7 +1711,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Windows multi-arch manifests
+        - name: "Publish tigera/fluentd-base Windows multi-arch manifests: Windows multi-arch"
           commands:
             - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
   - name: fluentd Windows
@@ -1636,10 +1727,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: build windows image
+        - name: "fluentd: build windows image"
           commands:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
-  - name: gateway
+  - name: Gateway
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-gateway.yml','/app-policy/checker/*.go','/app-policy/health/*.go','/app-policy/policystore/*.go','/app-policy/statscache/*.go','/app-policy/types/*.go','/app-policy/waf/*.go','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/collector/dnslog/*.go','/felix/collector/file/*.go','/felix/collector/flowlog/*.go','/felix/collector/l7log/*.go','/felix/collector/types/*.go','/felix/collector/types/boundedset/*.go','/felix/collector/types/counter/*.go','/felix/collector/types/endpoint/*.go','/felix/collector/types/metric/*.go','/felix/collector/types/tuple/*.go','/felix/collector/utils/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/jitter/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/gateway/**','/hack/test/certs/','/l7-collector/pkg/collector/*.go','/l7-collector/pkg/config/*.go','/l7-collector/pkg/felixclient/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/uds/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/app-policy/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/l7-collector/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1652,17 +1743,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd gateway
       jobs:
-        - name: gateway tests
+        - name: "Gateway: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Gateway: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: ingress-collector
+  - name: Ingress collector
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-ingress-collector.yml','/felix/proto/*.go','/hack/test/certs/','/ingress-collector/**','/lib.Makefile','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/uds/*.go','/metadata.mk','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/felix/**/*_test.go','/libcalico-go/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1672,17 +1763,17 @@ blocks:
         commands:
           - cd ingress-collector
       jobs:
-        - name: ingress-collector tests
+        - name: "Ingress collector: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Ingress collector: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: intrusion-detection-controller
+  - name: Intrusion detection controller
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-intrusion-detection-controller.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/intrusion-detection-controller/**','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1694,10 +1785,10 @@ blocks:
           - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
           - cd intrusion-detection-controller
       jobs:
-        - name: intrusion-detection-controller tests
+        - name: "Intrusion detection controller: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Intrusion detection controller: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1714,10 +1805,10 @@ blocks:
         commands:
           - cd key-cert-provisioner
       jobs:
-        - name: key-cert-provisioner tests
+        - name: "key-cert-provisioner: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "key-cert-provisioner: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -1740,7 +1831,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch images
+        - name: "Publish tigera/kibana images: Linux multi-arch"
           commands:
             - make -C third_party/kibana cd CONFIRM=true
   - name: Publish tigera/kibana multi-arch manifests
@@ -1755,10 +1846,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/kibana multi-arch manifests: Linux"
           commands:
             - make -C third_party/kibana push-manifest CONFIRM=true
-  - name: kibana
+  - name: Kibana
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-kibana.yml','/hack/test/certs/','/kibana/**','/lib.Makefile','/metadata.mk','/third_party/kibana'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
     dependencies:
@@ -1771,10 +1862,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd kibana
       jobs:
-        - name: kibana tests
+        - name: "Kibana: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: l7-admission-controller
+  - name: L7 Admission Controller
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-l7-admission-controller.yml','/hack/test/certs/','/l7-admission-controller/**','/lib.Makefile','/metadata.mk'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md']})"
     dependencies:
@@ -1784,17 +1875,17 @@ blocks:
         commands:
           - cd l7-admission-controller
       jobs:
-        - name: make ci
+        - name: "L7 Admission Controller: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: build binary
+        - name: "L7 Admission Controller: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: l7-collector
+  - name: "L7 Collector"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-l7-collector.yml','/crypto/pkg/tls/*.go','/felix/proto/*.go','/gateway/pkg/license/*.go','/hack/test/certs/','/l7-collector/**','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/uds/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/felix/**/*_test.go','/gateway/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1807,17 +1898,17 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd l7-collector
       jobs:
-        - name: l7-collector tests
+        - name: "L7 Collector: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "L7 Collector: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: license-agent
+  - name: License Agent
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-license-agent.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/license-agent/**','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1827,17 +1918,17 @@ blocks:
         commands:
           - cd license-agent
       jobs:
-        - name: License Agent tests
+        - name: "License Agent: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "License Agent: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: licensing
+  - name: Licensing
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-licensing.yml','/hack/test/certs/','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/set/*.go','/licensing/**','/metadata.mk','/pkg/buildinfo/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1847,17 +1938,17 @@ blocks:
         commands:
           - cd licensing
       jobs:
-        - name: Licensing tests
+        - name: "Licensing: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Licensing: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: linseed
+  - name: Linseed
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-linseed.yml','/crypto/pkg/tls/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/kube-controllers/pkg/controllers/utils/*.go','/kube-controllers/pkg/controllers/worker/*.go','/kube-controllers/pkg/resource/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/linseed/**','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/kube-controllers/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1867,17 +1958,17 @@ blocks:
         commands:
           - cd linseed
       jobs:
-        - name: linseed tests
+        - name: "Linseed: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Linseed: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: lma
+  - name: Logging/Monitoring/Alerting library (lma)
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-lma.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/set/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/**','/metadata.mk','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1887,10 +1978,10 @@ blocks:
         commands:
           - cd lma
       jobs:
-        - name: lma tests
+        - name: "lma: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-  - name: oiler
+  - name: Oiler
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-oiler.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/validator/v3/query/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/backend/*.go','/linseed/pkg/backend/api/*.go','/linseed/pkg/backend/legacy/audit/*.go','/linseed/pkg/backend/legacy/bgp/*.go','/linseed/pkg/backend/legacy/compliance/*.go','/linseed/pkg/backend/legacy/dns/*.go','/linseed/pkg/backend/legacy/events/*.go','/linseed/pkg/backend/legacy/flows/*.go','/linseed/pkg/backend/legacy/index/*.go','/linseed/pkg/backend/legacy/l7/*.go','/linseed/pkg/backend/legacy/logtools/*.go','/linseed/pkg/backend/legacy/runtime/*.go','/linseed/pkg/backend/legacy/templates/*.go','/linseed/pkg/backend/legacy/threatfeeds/*.go','/linseed/pkg/backend/legacy/waf/*.go','/linseed/pkg/config/*.go','/linseed/pkg/internal/lma/elastic/*.go','/linseed/pkg/internal/lma/elastic/index/*.go','/linseed/pkg/metrics/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/oiler/**','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1900,17 +1991,17 @@ blocks:
         commands:
           - cd oiler
       jobs:
-        - name: oiler tests
+        - name: "Oiler: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Oiler: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: packetcapture
+  - name: Packet Capture
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-packetcapture.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/k8s/*.go','/metadata.mk','/packetcapture/**','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1920,17 +2011,17 @@ blocks:
         commands:
           - cd packetcapture
       jobs:
-        - name: packetcapture tests
+        - name: "Packet Capture: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Packet Capture: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: policy-recommendation
+  - name: Policy Recommendation
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-policy-recommendation.yml','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/kube-controllers/pkg/cache/*.go','/kube-controllers/pkg/controllers/utils/*.go','/kube-controllers/pkg/controllers/worker/*.go','/kube-controllers/pkg/resource/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/backend/*.go','/linseed/pkg/backend/api/*.go','/linseed/pkg/backend/legacy/flows/*.go','/linseed/pkg/backend/legacy/index/*.go','/linseed/pkg/backend/legacy/logtools/*.go','/linseed/pkg/backend/testutils/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/linseed/pkg/config/*.go','/linseed/pkg/controller/token/*.go','/linseed/pkg/internal/lma/elastic/index/*.go','/linseed/pkg/metrics/*.go','/linseed/pkg/testutils/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/metrics/*.go','/pkg/nonclusterhost/*.go','/policy-recommendation/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/compliance/**/*_test.go','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/kube-controllers/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1940,17 +2031,17 @@ blocks:
         commands:
           - cd policy-recommendation
       jobs:
-        - name: policy-recommendation tests
+        - name: "Policy Recommendation: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Policy Recommendation: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: prometheus-service
+  - name: Prometheus Service
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-prometheus-service.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/k8s/*.go','/metadata.mk','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/prometheus-service/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1960,17 +2051,17 @@ blocks:
         commands:
           - cd prometheus-service
       jobs:
-        - name: prometheus-service tests
+        - name: "Prometheus Service: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Prometheus Service: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: queryserver
+  - name: Query Server
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-queryserver.yml','/apiserver/pkg/helpers/*.go','/apiserver/pkg/rbac/*.go','/apiserver/pkg/storage/calico/*.go','/calicoctl/calicoctl/commands/argutils/*.go','/calicoctl/calicoctl/resourcemgr/*.go','/calicoctl/calicoctl/util/yaml/*.go','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/kube-controllers/pkg/controllers/utils/*.go','/kube-controllers/pkg/controllers/worker/*.go','/kube-controllers/pkg/resource/*.go','/lib.Makefile','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/controller/token/*.go','/linseed/pkg/testutils/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/queryserver/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/apiserver/**/*_test.go','/calicoctl/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/key-cert-provisioner/**/*_test.go','/kube-controllers/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -1980,17 +2071,17 @@ blocks:
         commands:
           - cd queryserver
       jobs:
-        - name: queryserver tests
+        - name: "Query Server: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Query Server: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: ui-apis
+  - name: UI APIs
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-ui-apis.yml','/apiserver/pkg/helpers/*.go','/apiserver/pkg/rbac/*.go','/apiserver/pkg/storage/calico/*.go','/compliance/pkg/api/*.go','/compliance/pkg/config/*.go','/compliance/pkg/datastore/*.go','/compliance/pkg/dispatcher/*.go','/compliance/pkg/event/*.go','/compliance/pkg/hashutils/*.go','/compliance/pkg/internet/*.go','/compliance/pkg/ips/*.go','/compliance/pkg/keyselector/*.go','/compliance/pkg/labelselector/*.go','/compliance/pkg/list/*.go','/compliance/pkg/replay/*.go','/compliance/pkg/syncer/*.go','/compliance/pkg/xrefcache/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/goldmane/pkg/client/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/policyrec/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/queryserver/pkg/querycache/api/*.go','/queryserver/pkg/querycache/cache/*.go','/queryserver/pkg/querycache/client/*.go','/queryserver/pkg/querycache/dispatcherv1v3/*.go','/queryserver/pkg/querycache/envoptions/*.go','/queryserver/pkg/querycache/labelhandler/*.go','/queryserver/pkg/querycache/utils/*.go','/queryserver/queryserver/auth/*.go','/queryserver/queryserver/client/*.go','/queryserver/queryserver/config/*.go','/ui-apis/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/apiserver/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/queryserver/**/*_test.go']})"
     dependencies:
@@ -2005,17 +2096,17 @@ blocks:
         commands:
           - cd ui-apis
       jobs:
-        - name: ui-apis tests
+        - name: "UI APIs: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "UI APIs: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: voltron
+  - name: Voltron
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-voltron.yml','/apiserver/pkg/authentication/*.go','/crypto/pkg/tls/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/k8s/*.go','/lma/pkg/logutils/*.go','/metadata.mk','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/voltron/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/apiserver/**/*_test.go','/crypto/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/lma/**/*_test.go','/pkg/**/*_test.go']})"
     dependencies:
@@ -2025,17 +2116,17 @@ blocks:
         commands:
           - cd voltron
       jobs:
-        - name: voltron tests
+        - name: "Voltron: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Voltron: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: webhooks-processor
+  - name: "Webhooks Processor"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/30-webhooks-processor.yml','/apiserver/pkg/helpers/*.go','/apiserver/pkg/rbac/*.go','/apiserver/pkg/storage/calico/*.go','/compliance/pkg/api/*.go','/compliance/pkg/config/*.go','/compliance/pkg/datastore/*.go','/compliance/pkg/dispatcher/*.go','/compliance/pkg/event/*.go','/compliance/pkg/hashutils/*.go','/compliance/pkg/internet/*.go','/compliance/pkg/ips/*.go','/compliance/pkg/keyselector/*.go','/compliance/pkg/labelselector/*.go','/compliance/pkg/list/*.go','/compliance/pkg/replay/*.go','/compliance/pkg/syncer/*.go','/compliance/pkg/xrefcache/*.go','/crypto/pkg/tls/*.go','/felix/aws/*.go','/felix/bpf/bpfdefs/*.go','/felix/bpf/tc/defs/*.go','/felix/calc/*.go','/felix/calc/capture/*.go','/felix/config/*.go','/felix/dataplane/common/*.go','/felix/dataplane/ipsets/*.go','/felix/dataplane/linux/dataplanedefs/*.go','/felix/deltatracker/*.go','/felix/dispatcher/*.go','/felix/environment/*.go','/felix/generictables/*.go','/felix/hashutils/*.go','/felix/idalloc/*.go','/felix/ip/*.go','/felix/ipsets/*.go','/felix/iptables/*.go','/felix/iptables/cmdshim/*.go','/felix/k8sutils/*.go','/felix/labelindex/*.go','/felix/labelindex/ipsetmember/*.go','/felix/labelindex/labelnamevalueindex/*.go','/felix/labelindex/labelrestrictionindex/*.go','/felix/logutils/*.go','/felix/markbits/*.go','/felix/multidict/*.go','/felix/netlinkshim/*.go','/felix/nftables/*.go','/felix/proto/*.go','/felix/rules/*.go','/felix/serviceindex/*.go','/felix/stringutils/*.go','/felix/tproxydefs/*.go','/felix/types/*.go','/goldmane/pkg/client/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/k8s/scheme/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/linseed/pkg/apis/v1/*.go','/linseed/pkg/client/*.go','/linseed/pkg/client/rest/*.go','/lma/pkg/api/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/auth/*.go','/lma/pkg/cache/*.go','/lma/pkg/elastic/*.go','/lma/pkg/httputils/*.go','/lma/pkg/k8s/*.go','/lma/pkg/list/*.go','/lma/pkg/policyrec/*.go','/lma/pkg/rbac/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/nonclusterhost/*.go','/queryserver/pkg/querycache/api/*.go','/queryserver/pkg/querycache/cache/*.go','/queryserver/pkg/querycache/client/*.go','/queryserver/pkg/querycache/dispatcherv1v3/*.go','/queryserver/pkg/querycache/envoptions/*.go','/queryserver/pkg/querycache/labelhandler/*.go','/queryserver/pkg/querycache/utils/*.go','/queryserver/queryserver/auth/*.go','/queryserver/queryserver/client/*.go','/queryserver/queryserver/config/*.go','/ui-apis/pkg/apis/v1/*.go','/ui-apis/pkg/auth/*.go','/ui-apis/pkg/kibana/*.go','/ui-apis/pkg/math/*.go','/ui-apis/pkg/middleware/*.go','/ui-apis/pkg/middleware/search/*.go','/ui-apis/pkg/pip/*.go','/ui-apis/pkg/pip/config/*.go','/ui-apis/pkg/pip/policycalc/*.go','/ui-apis/pkg/user/*.go','/webhooks-processor/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/apiserver/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/felix/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/queryserver/**/*_test.go','/ui-apis/**/*_test.go']})"
     dependencies:
@@ -2045,17 +2136,17 @@ blocks:
         commands:
           - cd webhooks-processor
       jobs:
-        - name: webhooks processor tests
+        - name: "Webhooks Processor: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Webhooks Processor: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: fluent-bit
+  - name: Fluent Bit
     run:
       when: "false or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2067,13 +2158,13 @@ blocks:
         commands:
           - cd fluent-bit
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=$(basename $(pwd))
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
       jobs:
-        - name: fluent-bit tests
+        - name: "Fluent Bit: CI"
           commands:
             - make ci
-  - name: selinux
+  - name: SELinux
     run:
       when: "false or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2085,20 +2176,20 @@ blocks:
         commands:
           - cd selinux
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-          - export REPO_NAME=$(basename $(pwd))
+          - export COMPONENT=$(basename $(pwd))
           - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
           - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
           - export ZONE=us-east4-c
           - echo VM_PREFIX=${VM_PREFIX}
       jobs:
-        - name: SELinux FV tests
+        - name: "SELinux: CI"
           commands:
             - make ci
       epilogue:
         always:
           commands:
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
-  - name: alertmanager
+  - name: Alert Manager
     run:
       when: "false or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2109,17 +2200,17 @@ blocks:
           - sem-version go 1.25.3
           - cd third_party/alertmanager
       jobs:
-        - name: alertmanager tests
+        - name: "Alert Manager: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Alert Manager: build arm64 Image"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-  - name: dex
+  - name: Dex
     run:
       when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2129,17 +2220,17 @@ blocks:
         commands:
           - cd third_party/dex
       jobs:
-        - name: dex tests
+        - name: "Dex: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Dex: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: eck-operator
+  - name: ECK Operator
     run:
       when: "false or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2149,66 +2240,17 @@ blocks:
         commands:
           - cd third_party/eck-operator
       jobs:
-        - name: eck-operator tests
+        - name: "ECK Operator: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "ECK Operator: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: Publish istio-ztunnel images
-    run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Prerequisites
-    task:
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-      jobs:
-        - name: Linux amd64
-          commands:
-            - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
-  - name: Publish istio-ztunnel images - native arm64 runner
-    run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Prerequisites
-    task:
-      agent:
-        machine:
-          type: s1-aws-arm64-2
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-      jobs:
-        - name: Linux arm64
-          commands:
-            - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
-  - name: Publish istio-ztunnel multi-arch manifests
-    run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-    dependencies:
-      - Publish istio-ztunnel images
-      - Publish istio-ztunnel images - native arm64 runner
-    task:
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - make -C third_party/istio-ztunnel push-manifest CONFIRM=true
-  - name: prometheus-operator
+  - name: Prometheus Operator
     run:
       when: "false or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2218,17 +2260,17 @@ blocks:
         commands:
           - cd third_party/prometheus-operator
       jobs:
-        - name: prometheus-operator tests
+        - name: "Prometheus Operator: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Prometheus Operator: build arm64"
           matrix:
             - env_var: ARCH
               values:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
-  - name: prometheus
+  - name: Prometheus
     run:
       when: "false or change_in(['/third_party/prometheus/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
@@ -2242,10 +2284,10 @@ blocks:
         commands:
           - cd third_party/prometheus
       jobs:
-        - name: prometheus tests
+        - name: "Prometheus: CI"
           commands:
             - ../../.semaphore/run-and-monitor ci.log make ci
-        - name: Build image
+        - name: "Prometheus: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -2254,7 +2296,7 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: Fake guardian
     run:
-      when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/60-fake-guardian.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/logutils/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/test-tools/fake-guardian/**','/voltron/internal/pkg/utils/*.go','/voltron/pkg/bytes/*.go','/voltron/pkg/conn/*.go','/voltron/pkg/tunnel/*.go','/voltron/pkg/tunnelmgr/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/voltron/**/*_test.go']})"
+      when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/60-fake-guardian.yml','/crypto/pkg/tls/*.go','/hack/test/certs/','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/resources/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/logutils/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/test-tools/fake-guardian/**','/voltron/internal/pkg/utils/*.go','/voltron/pkg/bytes/*.go','/voltron/pkg/conn/*.go','/voltron/pkg/tunnel/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/crypto/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/voltron/**/*_test.go']})"
     dependencies:
       - Prerequisites
     task:
@@ -2262,7 +2304,7 @@ blocks:
         commands:
           - cd test-tools/fake-guardian
       jobs:
-        - name: Fake guardian
+        - name: "Fake guardian: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
   - name: Fake log generator
@@ -2275,7 +2317,7 @@ blocks:
         commands:
           - cd test-tools/fake-log-generator
       jobs:
-        - name: Fake log generator
+        - name: "Fake log generator: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
   - name: Mock node
@@ -2288,10 +2330,10 @@ blocks:
         commands:
           - cd test-tools/mocknode
       jobs:
-        - name: Mock node
+        - name: "Mock node: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
-  - name: release tooling
+  - name: Release tooling
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/90-release.yml','/hack/test/certs/','/lib.Makefile','/libcalico-go/lib/logutils/*.go','/metadata.mk','/release/**'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/libcalico-go/**/*_test.go']})"
     execution_time_limit:
@@ -2303,11 +2345,11 @@ blocks:
         commands:
           - cd release
       jobs:
-        - name: ci
+        - name: "Release tooling: CI"
           commands:
             - ../.semaphore/run-and-monitor release-ci.log make ci
-            - test-results publish --name "release-tool-ut-tests" ./report/*.xml || true
-        - name: build binary
+            - 'test-results publish --name "Release tool: UT" ./report/*.xml || true'
+        - name: "Release tooling: build"
           commands:
             - ../.semaphore/run-and-monitor release-build.log make build
             - cache store release-${SEMAPHORE_GIT_SHA} bin

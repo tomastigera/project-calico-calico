@@ -1,4 +1,4 @@
-- name: eck-operator
+- name: ECK Operator
   run:
     when: "${FORCE_RUN} or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd third_party/eck-operator
     jobs:
-      - name: eck-operator tests
+      - name: "ECK Operator: CI"
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "ECK Operator: build arm64"
         matrix:
           - env_var: ARCH
             values:

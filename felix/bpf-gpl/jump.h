@@ -58,18 +58,10 @@ CALI_MAP_V1(cali_jump_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 400, 0)
  * To avoid (further) confusion, we call the kernel's directions "to host" (ingress) and "from host" (egress).
 */
 
-#if CALI_F_HEP || CALI_F_PREAMBLE
-#if CALI_F_INGRESS
-#define cali_jump_map map_symbol(cali_progs_fh, 2)
+#ifdef CALI_HOOK_INGRESS
+#define cali_jump_map map_symbol(cali_progs_ing, 2)
 #else
-#define cali_jump_map map_symbol(cali_progs_th, 2)
-#endif
-#else
-#if CALI_F_INGRESS
-#define cali_jump_map map_symbol(cali_progs_th, 2)
-#else
-#define cali_jump_map map_symbol(cali_progs_fh, 2)
-#endif
+#define cali_jump_map map_symbol(cali_progs_egr, 2)
 #endif
 CALI_MAP_V1(cali_jump_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 400, 0)
 
@@ -122,7 +114,11 @@ CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 2400, 0)
 	bpf_tail_call((ctx)->xdp, &cali_jump_prog_map, (ctx)->xdp_globals->jumps[PROG_INDEX_POLICY])
 #else /* CALI_F_XDP */
 
-#define cali_jump_prog_map map_symbol(cali_jump, 3)
+#ifdef CALI_HOOK_INGRESS
+#define cali_jump_prog_map map_symbol(cali_jump_ing, 2)
+#else
+#define cali_jump_prog_map map_symbol(cali_jump_egr, 2)
+#endif
 
 CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 240000, 0)
 

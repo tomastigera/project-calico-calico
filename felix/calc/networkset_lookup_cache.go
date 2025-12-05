@@ -192,14 +192,12 @@ func (nc *NetworkSetLookupsCache) removeNetworkSet(key model.Key) {
 		// We don't know about this networkset. Nothing to do.
 		return
 	}
-	currentData.cidrs.Iter(func(oldCIDR ip.CIDR) error {
+	for oldCIDR := range currentData.cidrs.All() {
 		nc.ipTree.DeleteKey(oldCIDR, key)
-		return nil
-	})
-	currentData.allowedEgressDomains.Iter(func(oldDomain string) error {
+	}
+	for oldDomain := range currentData.allowedEgressDomains.All() {
 		nc.removeDomainMapping(oldDomain, key)
-		return nil
-	})
+	}
 	delete(nc.networkSets, key)
 
 	nc.reportNetworksetCacheMetrics()
@@ -366,10 +364,9 @@ func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 	lines = append(lines, "-------")
 	for key, ns := range nc.networkSets {
 		cidrStr := []string{}
-		ns.cidrs.Iter(func(cidr ip.CIDR) error {
+		for cidr := range ns.cidrs.All() {
 			cidrStr = append(cidrStr, cidr.String())
-			return nil
-		})
+		}
 		domainStr := []string{}
 		ns.allowedEgressDomains.Iter(func(domain string) error {
 			domainStr = append(domainStr, domain)

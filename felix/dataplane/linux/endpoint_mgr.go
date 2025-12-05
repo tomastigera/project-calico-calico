@@ -633,7 +633,7 @@ func (m *endpointManager) markEndpointStatusDirtyByIface(ifaceName string) {
 
 func (m *endpointManager) updateEndpointStatuses() {
 	log.WithField("dirtyEndpoints", m.epIDsToUpdateStatus).Debug("Reporting endpoint status.")
-	m.epIDsToUpdateStatus.Iter(func(item interface{}) error {
+	for item := range m.epIDsToUpdateStatus.All() {
 		switch id := item.(type) {
 		case types.WorkloadEndpointID:
 			status, endpoint := m.calculateWorkloadEndpointStatus(id)
@@ -643,8 +643,8 @@ func (m *endpointManager) updateEndpointStatuses() {
 			m.OnEndpointStatusUpdate(m.ipVersion, id, status, nil)
 		}
 
-		return set.RemoveItem
-	})
+		m.epIDsToUpdateStatus.Discard(item)
+	}
 }
 
 func (m *endpointManager) calculateWorkloadEndpointStatus(id types.WorkloadEndpointID) (string, *proto.WorkloadEndpoint) {
@@ -997,7 +997,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		}
 	}
 
-	m.wlIfaceNamesToReconfigure.Iter(func(ifaceName string) error {
+	for ifaceName := range m.wlIfaceNamesToReconfigure.All() {
 		err := m.configureInterface(ifaceName)
 		if err != nil {
 			if exists, err := m.interfaceExistsInProcSys(ifaceName); err == nil && !exists {
@@ -1006,10 +1006,10 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			} else {
 				log.WithError(err).Warn("Failed to configure interface, will retry")
 			}
-			return nil
+			continue
 		}
-		return set.RemoveItem
-	})
+		m.wlIfaceNamesToReconfigure.Discard(ifaceName)
+	}
 }
 
 func (m *endpointManager) updateWorkloadEndpointChains(

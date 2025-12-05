@@ -1,4 +1,4 @@
-- name: oiler
+- name: Oiler
   run:
     when: "${CHANGE_IN(oiler)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd oiler
     jobs:
-      - name: oiler tests
+      - name: "Oiler: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Oiler: build arm64"
         matrix:
           - env_var: ARCH
             values:

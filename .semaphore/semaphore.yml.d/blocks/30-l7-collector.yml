@@ -1,4 +1,4 @@
-- name: l7-collector
+- name: "L7 Collector"
   run:
     when: "${CHANGE_IN(l7-collector)}"
   dependencies:
@@ -11,10 +11,10 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd l7-collector
     jobs:
-      - name: l7-collector tests
+      - name: "L7 Collector: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "L7 Collector: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -255,7 +255,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 		}
 
 		// Instantiate a new fake client for each test.
-		k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 		scheme := kscheme.Scheme
 		err = v3.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
@@ -361,7 +360,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			})
 
 			voltron, err = server.New(
-				k8sAPI,
 				fakeClient,
 				&rest.Config{BearerToken: "manager-token"},
 				vcfg.Config{TenantNamespace: clusterNS},

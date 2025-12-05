@@ -1,4 +1,4 @@
-- name: dashboards
+- name: Dashboards
   run:
     when: "${CHANGE_IN(dashboards)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd dashboards
     jobs:
-      - name: dashboards tests
+      - name: "Dashboards: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Dashboards: build arm64"
         matrix:
           - env_var: ARCH
             values:

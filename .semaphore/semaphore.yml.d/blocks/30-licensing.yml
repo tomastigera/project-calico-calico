@@ -1,4 +1,4 @@
-- name: licensing
+- name: Licensing
   run:
     when: "${CHANGE_IN(licensing)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd licensing
     jobs:
-      - name: Licensing tests
+      - name: "Licensing: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Licensing: build arm64"
         matrix:
           - env_var: ARCH
             values:

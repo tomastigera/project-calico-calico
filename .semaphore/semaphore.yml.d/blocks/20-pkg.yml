@@ -1,4 +1,4 @@
-- name: pkg
+- name: 'Packaging (pkg)'
   run:
     when: "${FORCE_RUN} or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
   dependencies:
@@ -8,6 +8,6 @@
       commands:
         - cd pkg
     jobs:
-      - name: make ci
+      - name: 'Packaging (pkg): CI'
         commands:
           - ../.semaphore/run-and-monitor make-ci.log make ci

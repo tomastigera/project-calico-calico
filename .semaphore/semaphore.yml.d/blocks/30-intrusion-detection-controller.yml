@@ -1,4 +1,4 @@
-- name: intrusion-detection-controller
+- name: Intrusion detection controller
   run:
     when: "${CHANGE_IN(intrusion-detection-controller)}"
   dependencies:
@@ -10,10 +10,10 @@
         - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
         - cd intrusion-detection-controller
     jobs:
-      - name: intrusion-detection-controller tests
+      - name: "Intrusion detection controller: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Intrusion detection controller: build arm64"
         matrix:
           - env_var: ARCH
             values:
