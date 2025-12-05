@@ -295,7 +295,22 @@ init-package: $(NODE_CONTAINER_BINARY) $(NONCLUSTER_HOST_INIT_BINARY)
 	rm -f calico-node calico-noncluster-host-init
 
 .PHONY: package
-package: calico-node.rhel8 calico-node.rhel9
+package: calico-node.debian12 \
+         calico-node.debian13 \
+         calico-node.rhel8 \
+         calico-node.rhel9 \
+         calico-node.ubuntu22 \
+         calico-node.ubuntu24
+
+.PHONY: calico-node.debian12
+calico-node.debian12: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,debian12,calico-node,,bookworm,0)
+
+.PHONY: calico-node.debian13
+calico-node.debian13: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,debian13,calico-node,,trixie,0)
 
 .PHONY: calico-node.rhel8
 calico-node.rhel8: bin/yq host-native-build init-package rhel/calico-node.spec.in
@@ -304,6 +319,16 @@ calico-node.rhel8: bin/yq host-native-build init-package rhel/calico-node.spec.i
 .PHONY: calico-node.rhel9
 calico-node.rhel9: bin/yq host-native-build init-package rhel/calico-node.spec.in
 	$(call host_native_rpm_build,rhel9,calico-node,)
+
+.PHONY: calico-node.ubuntu22
+calico-node.ubuntu22: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/linux-tools-common/g' debian/control.in > debian/control
+	$(call host_native_deb_build,ubuntu22,calico-node,,jammy,0)
+
+.PHONY: calico-node.ubuntu24
+calico-node.ubuntu24: bin/yq host-native-build init-package debian/changelog.in debian/control.in
+	sed -e 's/@BPFTOOL_PACKAGE@/bpftool/g' debian/control.in > debian/control
+	$(call host_native_deb_build,ubuntu24,calico-node,,noble,0)
 
 ##########################################################################################
 # TESTING

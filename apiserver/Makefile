@@ -94,6 +94,38 @@ $(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH) bin/LICENSE
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
+run-image: stop-image
+	@echo "Starting Tigera API Server container..."
+	docker run --detach \
+		--net=host \
+		--name=tigera-$(API_SERVER_IMAGE) \
+		-v $(CERTS_PATH):/home/user/certs:ro \
+		-e KUBECONFIG=/home/user/certs/kubeconfig \
+		--tmpfs /certs:uid=10001,gid=10001 \
+		tigera/$(API_SERVER_IMAGE):latest \
+		--cert-dir=/certs \
+		--etcd-servers=http://127.0.0.1:2379 \
+		--secure-port=5443 \
+		--kubeconfig=/home/user/certs/kubeconfig \
+		--authentication-kubeconfig=/home/user/certs/kubeconfig \
+		--authorization-kubeconfig=/home/user/certs/kubeconfig
+	while ! curl -k -s -o /dev/null https://localhost:5443/readiness; do echo "Waiting for tigera-apiserver to come up..."; sleep 2; done
+
+register-apiservice:
+	# Render the yaml
+	export IFACE=$$(ip -j r s default | jq -r ".[0].dev") && \
+		export HOST_IP=$$(ip -j -4 a s dev $$IFACE | jq -r ".[0].addr_info[0].local") && \
+		envsubst < test/integration/apiservice.yaml.tpl > test/integration/apiservice.yaml
+	# Create the yaml
+	$(DOCKER_RUN) \
+		-v $(CERTS_PATH):/home/user/certs \
+		-e KUBECONFIG=/home/user/certs/kubeconfig \
+			$(CALICO_BUILD) sh -c 'kubectl create -f /go/src/$(PACKAGE_NAME)/test/integration/apiservice.yaml'
+
+.PHONY: stop-image
+stop-image:
+	-docker rm -f $$(docker ps -aq --filter "name=tigera-$(API_SERVER_IMAGE)")
+
 .PHONY: lint-cache-dir
 lint-cache-dir:
 	mkdir -p $(CURDIR)/.lint-cache
@@ -175,7 +207,7 @@ fv-kdd: run-kubernetes-server hack-lib
 		sh -c 'DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
-clean: clean-bin clean-hack-lib
+clean: clean-bin clean-hack-lib stop-image
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete

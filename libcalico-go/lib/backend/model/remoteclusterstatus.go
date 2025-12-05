@@ -23,6 +23,10 @@ type RemoteClusterStatusKey struct {
 	Name string `json:"-" validate:"required,name"`
 }
 
+func (key RemoteClusterStatusKey) parseValue(rawData []byte) (any, error) {
+	return parseJSONPointer[RemoteClusterStatus](key, rawData)
+}
+
 func (key RemoteClusterStatusKey) defaultPath() (string, error) {
 	if key.Name == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}

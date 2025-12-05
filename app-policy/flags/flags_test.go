@@ -165,3 +165,64 @@ func TestAcceptableArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestDataplaneEnvVar(t *testing.T) {
+	for _, testCase := range []struct {
+		name              string
+		envValue          string
+		envSet            bool
+		args              []string
+		expectedDataplane string
+	}{
+		{
+			name:              "default to iptables when env var not set",
+			envSet:            false,
+			args:              []string{"dikastes", "server"},
+			expectedDataplane: "iptables",
+		},
+		{
+			name:              "read nftables from DATAPLANE env var",
+			envValue:          "nftables",
+			envSet:            true,
+			args:              []string{"dikastes", "server"},
+			expectedDataplane: "nftables",
+		},
+		{
+			name:              "read iptables from DATAPLANE env var",
+			envValue:          "iptables",
+			envSet:            true,
+			args:              []string{"dikastes", "server"},
+			expectedDataplane: "iptables",
+		},
+		{
+			name:              "flag overrides DATAPLANE env var",
+			envValue:          "iptables",
+			envSet:            true,
+			args:              []string{"dikastes", "server", "-dataplane", "nftables"},
+			expectedDataplane: "nftables",
+		},
+		{
+			name:              "works with init-sidecar subcommand",
+			envValue:          "nftables",
+			envSet:            true,
+			args:              []string{"dikastes", "init-sidecar", "--sidecar-waf-enabled"},
+			expectedDataplane: "nftables",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			// t.Setenv handles both setting and cleanup automatically
+			if testCase.envSet {
+				t.Setenv("DATAPLANE", testCase.envValue)
+			}
+
+			config := flags.New()
+			if err := config.Parse(testCase.args); err != nil {
+				t.Errorf("error parsing args: %s", err)
+			}
+
+			if config.Dataplane != testCase.expectedDataplane {
+				t.Errorf("expected Dataplane=%q, got %q", testCase.expectedDataplane, config.Dataplane)
+			}
+		})
+	}
+}

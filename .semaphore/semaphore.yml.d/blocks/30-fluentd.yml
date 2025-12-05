@@ -10,7 +10,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux amd64
+      - name: "Publish tigera/fluentd-base images: Linux amd64"
         commands:
           - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/fluentd-base images - native arm64 runner
@@ -28,7 +28,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux arm64
+      - name: "Publish tigera/fluentd-base images: Linux arm64"
         commands:
           - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/fluentd-base multi-arch manifests
@@ -44,7 +44,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Linux multi-arch manifests
+      - name: "Publish tigera/fluentd-base multi-arch manifests: Linux multi-arch manifests"
         commands:
           - make -C third_party/fluentd-base push-manifest CONFIRM=true
 
@@ -61,10 +61,10 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd fluentd
     jobs:
-      - name: fluentd tests
+      - name: "fluentd: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "fluentd: build arm64"
         matrix:
           - env_var: ARCH
             values:
@@ -102,7 +102,7 @@
           - cd ~/process/testing/windows-instances
           - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
     jobs:
-      - name: Windows amd64
+      - name: "Publish tigera/fluentd-base Windows images"
         commands:
           - export PROCESS_REPO=~/process/testing/windows-instances
           - BASE=true CONFIRM=true .semaphore/windows-cd.sh
@@ -118,7 +118,7 @@
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
     jobs:
-      - name: Windows multi-arch manifests
+      - name: "Publish tigera/fluentd-base Windows multi-arch manifests: Windows multi-arch"
         commands:
           - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
 
@@ -135,6 +135,6 @@
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd fluentd
     jobs:
-      - name: build windows image
+      - name: "fluentd: build windows image"
         commands:
           - ../.semaphore/run-and-monitor build-windows.log make image-windows

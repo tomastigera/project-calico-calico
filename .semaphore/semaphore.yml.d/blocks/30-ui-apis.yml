@@ -1,17 +1,22 @@
-- name: ui-apis
+- name: UI APIs
   run:
     when: "${CHANGE_IN(ui-apis)}"
   dependencies:
     - Prerequisites
   task:
+    agent:
+      machine:
+        # ui-apis tests simulate a cluster with large flows, a high-memory runner is required.
+        type: f1-standard-4
+        os_image: ubuntu2204
     prologue:
       commands:
         - cd ui-apis
     jobs:
-      - name: ui-apis tests
+      - name: "UI APIs: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "UI APIs: build arm64"
         matrix:
           - env_var: ARCH
             values:

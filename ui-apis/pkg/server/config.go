@@ -97,6 +97,13 @@ type Config struct {
 	L7LogsEnabled  bool `envconfig:"L7_LOGS_ENABLED" default:"true"`
 	DNSLogsEnabled bool `envconfig:"DNS_LOGS_ENABLED" default:"true"`
 	EventsEnabled  bool `envconfig:"EVENTS_ENABLED" default:"true"`
+
+	ParallelGraphStatsFetch     bool  `envconfig:"PARALLEL_GRAPH_STATS_FETCH" default:"true"`
+	GraphStatsRequestLogging    bool  `envconfig:"GRAPH_STATS_REQUEST_LOGGING" default:"false"`
+	XLargeFlowLogScaleThreshold int64 `envconfig:"XLARGE_FLOW_LOG_SCALE_THRESHOLD" default:"10000000"`
+	LargeFlowLogScaleThreshold  int64 `envconfig:"LARGE_FLOW_LOG_SCALE_THRESHOLD" default:"1000000"`
+	LargeL3FlowScaleThreshold   int64 `envconfig:"LARGE_L3_FLOW_SCALE_THRESHOLD" default:"2000"`
+	GlobalStatsTimeoutSeconds   int   `envconfig:"GLOBAL_STATS_TIMEOUT_SECONDS" default:"3"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

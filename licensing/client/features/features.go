@@ -46,17 +46,9 @@ const (
 // PackageNames defines the name of the license packages available
 var PackageNames = set{Enterprise: true}
 
-// AddonNames defines the names addons available.
-var AddonNames = set{IngressGateway: true}
-
 // IsValidPackageName return true if a package name matches the one defined in PackageNames
 func IsValidPackageName(value string) bool {
 	return PackageNames[value]
-}
-
-// IsValidAddonName return true if a package name matches the one defined in PackageNames
-func IsValidAddonName(value string) bool {
-	return AddonNames[value]
 }
 
 // OpenSourceAPIs maps calico open source APIs
@@ -107,8 +99,4 @@ var EnterpriseAPIsToFeatureName = map[string]string{
 var ManagementAPIs = set{
 	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():     true,
 	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String(): true,
-}
-
-var AddOnFeatures = set{
-	IngressGateway: true,
 }

@@ -81,16 +81,37 @@ ut:
 		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
-.PHONY: fv
-fv: image run-k8s-apiserver stop-elastic run-elastic
+.PHONY: build-linseed-image build-apiserver-image run-linseed run-tigera-apiserver k8s-auth
+build-linseed-image:
+	$(MAKE) -C ../linseed image
+
+build-apiserver-image:
+	$(MAKE) -C ../apiserver image
+
+run-linseed:
+	$(MAKE) -C ../linseed run-image
+
+run-tigera-apiserver:
+	$(MAKE) -C ../apiserver run-image register-apiservice
+
+k8s-auth:
 	APISERVER_NAME=$(APISERVER_NAME) \
 	PACKAGE_NAME=${PACKAGE_NAME} \
 	test/setup_k8s_auth.sh
 
-	PACKAGE_NAME=${PACKAGE_NAME} \
-		test/setup_elasticsearch_index.sh
+.PHONY: fv fv-images fv-fast
+# run-linseed creates our kube-apiserver
+fv: fv-images run-linseed run-tigera-apiserver k8s-auth fv-fast
 
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r test/'
+fv-images: build-linseed-image build-apiserver-image
+
+fv-fast:
+	$(DOCKER_RUN) \
+		-v $(CERTS_PATH):/home/user/certs \
+		-v $(SECRETS_PATH):/home/user/secrets \
+		-e KUBECONFIG=/home/user/certs/kubeconfig \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) ginkgo -r test/'
 
 # Copy certificate from the Elasticsearch container
 .PHONY: copy-es-cacert

@@ -13,6 +13,7 @@ import (
 // FlowBackend defines the interface for interacting with L3 flows
 type FlowBackend interface {
 	List(context.Context, ClusterInfo, *v1.L3FlowParams) (*v1.List[v1.L3Flow], error)
+	Count(context.Context, ClusterInfo, *v1.L3FlowCountParams) (*v1.CountResponse, error)
 }
 
 // FlowLogBackend defines the interface for interacting with L3 flow logs
@@ -25,6 +26,9 @@ type FlowLogBackend interface {
 
 	// Gets flow log aggregations
 	Aggregations(context.Context, ClusterInfo, *v1.FlowLogAggregationParams) (*elastic.Aggregations, error)
+
+	// Count returns count information for flow logs matching the query parameters.
+	Count(context.Context, ClusterInfo, *v1.FlowLogCountParams) (*v1.CountResponse, error)
 }
 
 // ProcessBackend defines the interface for interacting with process information.

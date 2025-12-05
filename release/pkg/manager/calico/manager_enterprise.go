@@ -1144,8 +1144,11 @@ func (m *EnterpriseManager) PrepareRelease() error {
 	}
 
 	// Create a new branch for the release and commit the changes.
+	// Use "switch -C" to force-create the branch in case it already exists.
+	// This allows re-running the preparation if needed.
+	// Also, force push the branch to remote to update any existing PR.
 	prepBranch := fmt.Sprintf("prep-%s", m.calicoVersion)
-	if _, err := m.git("checkout", "-b", prepBranch); err != nil {
+	if _, err := m.git("switch", "-C", prepBranch); err != nil {
 		return fmt.Errorf("failed to create branch %s: %s", prepBranch, err)
 	}
 	if _, err := m.git("add", filepath.Join(m.repoRoot, "calico"), filepath.Join(m.repoRoot, "charts"), filepath.Join(m.repoRoot, "manifests")); err != nil {

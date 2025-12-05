@@ -1,4 +1,4 @@
-- name: lma
+- name: Logging/Monitoring/Alerting library (lma)
   run:
     when: "${CHANGE_IN(lma)}"
   dependencies:
@@ -8,6 +8,6 @@
       commands:
         - cd lma
     jobs:
-      - name: lma tests
+      - name: "lma: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci

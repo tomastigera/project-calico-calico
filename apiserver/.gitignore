@@ -16,6 +16,7 @@ gen-execs
 config/
 test/integration/apiserver.local.config/certificates/apiserver.crt
 test/integration/apiserver.local.config/certificates/apiserver.key
+test/integration/apiservice.yaml
 .apiserver.created*
 .vscode
 *.log

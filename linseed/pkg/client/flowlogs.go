@@ -19,6 +19,7 @@ type FlowLogsInterface interface {
 	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, []v1.FlowLog) (*v1.BulkResponse, error)
 	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
+	Count(context.Context, v1.Params) (*v1.CountResponse, error)
 }
 
 // FlowLogs implements FlowLogsInterface.
@@ -104,4 +105,18 @@ func (f *flowLogs) Aggregations(ctx context.Context, params v1.Params) (elastic.
 		return nil, err
 	}
 	return aggs, nil
+}
+
+func (f *flowLogs) Count(ctx context.Context, params v1.Params) (*v1.CountResponse, error) {
+	resp := v1.CountResponse{}
+	err := f.restClient.Post().
+		Path("/flows/logs/count").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

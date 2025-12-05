@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE
+ARG CALICO_BASE_UBI10
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
@@ -46,10 +46,8 @@ COPY --from=kibana /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=kibana /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=kibana /lib64/libcap.so.2 /lib64/libcap.so.2
 COPY --from=kibana /lib64/libdl.so.2 /lib64/libdl.so.2
-COPY --from=kibana /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=kibana /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=kibana /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=kibana /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=kibana /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 
 # additional node dependencies
@@ -62,7 +60,7 @@ COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
 COPY --from=kibana /usr/share/fonts /usr/share/fonts/
 COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
-FROM ${CALICO_BASE}
+FROM ${CALICO_BASE_UBI10}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

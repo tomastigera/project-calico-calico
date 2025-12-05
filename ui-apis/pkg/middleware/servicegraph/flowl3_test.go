@@ -879,7 +879,7 @@ func TestGetL3FlowData(t *testing.T) {
 			// mock linseed client
 			lsc := client.NewMockClient("", results...)
 
-			gotFs, err := GetL3FlowData(context.TODO(), lsc, "any", v1.TimeRange{}, &FlowConfig{}, &Config{ServiceGraphCacheMaxAggregatedRecords: 5})
+			gotFs, err := GetL3FlowData(context.TODO(), lsc, "any", "", v1.TimeRange{}, &FlowConfig{}, &Config{ServiceGraphCacheMaxAggregatedRecords: 5})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetL3FlowData() error = %v, wantErr %v", err, tt.wantErr)
 				return

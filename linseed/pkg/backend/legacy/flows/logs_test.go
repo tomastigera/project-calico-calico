@@ -1061,3 +1061,760 @@ func TestPreserveIDs(t *testing.T) {
 		})
 	}
 }
+
+// TestFlowLogCount tests the Count() method for flow logs.
+func TestFlowLogCount(t *testing.T) {
+	RunAllModes(t, "should return correct count for basic query", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create 5 flow logs
+		f := v1.FlowLog{
+			StartTime:            time.Now().Unix(),
+			EndTime:              time.Now().Unix(),
+			DestType:             "wep",
+			DestNamespace:        "kube-system",
+			DestNameAggr:         "kube-dns-*",
+			DestServiceNamespace: "default",
+			DestServiceName:      "kube-dns",
+			DestServicePortNum:   testutils.Int64Ptr(53),
+			DestIP:               testutils.StringPtr("fe80::0"),
+			SourceIP:             testutils.StringPtr("fe80::1"),
+			Protocol:             "udp",
+			DestPort:             testutils.Int64Ptr(53),
+			SourceType:           "wep",
+			SourceNamespace:      "default",
+			SourceNameAggr:       "my-deployment",
+			ProcessName:          "-",
+			Reporter:             "src",
+			Action:               "allowed",
+		}
+
+		logs := []v1.FlowLog{f, f, f, f, f}
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Count the logs
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(5), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count with a different tenant ID - should return 0
+		countResp, err = flb.Count(ctx, bapi.ClusterInfo{Tenant: "dummy", Cluster: cluster1}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should return correct count with selector", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow logs with different source types
+		f1 := v1.FlowLog{
+			StartTime:       time.Now().Unix(),
+			EndTime:         time.Now().Unix(),
+			SourceType:      "wep",
+			DestType:        "wep",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("fe80::0"),
+			SourceIP:        testutils.StringPtr("fe80::1"),
+			Protocol:        "udp",
+			DestPort:        testutils.Int64Ptr(53),
+			SourceNamespace: "default",
+			SourceNameAggr:  "my-deployment",
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		f2 := v1.FlowLog{
+			StartTime:       time.Now().Unix(),
+			EndTime:         time.Now().Unix(),
+			SourceType:      "hep",
+			DestType:        "hep",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("fe80::0"),
+			SourceIP:        testutils.StringPtr("fe80::2"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(80),
+			SourceNamespace: "test",
+			SourceNameAggr:  "test-pod",
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		logs := []v1.FlowLog{f1, f1, f1, f2, f2}
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Count with selector filtering for wep
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "source_type = wep",
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(3), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count with selector filtering for hep
+		opts.Selector = "source_type = hep"
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should return correct count with IP matches", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow logs with different IPs
+		f1 := v1.FlowLog{
+			StartTime:       time.Now().Unix(),
+			EndTime:         time.Now().Unix(),
+			SourceType:      "wep",
+			DestType:        "wep",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("10.0.0.1"),
+			SourceIP:        testutils.StringPtr("192.168.1.1"),
+			Protocol:        "udp",
+			DestPort:        testutils.Int64Ptr(53),
+			SourceNamespace: "default",
+			SourceNameAggr:  "my-deployment",
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		f2 := v1.FlowLog{
+			StartTime:       time.Now().Unix(),
+			EndTime:         time.Now().Unix(),
+			SourceType:      "wep",
+			DestType:        "wep",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("10.0.0.2"),
+			SourceIP:        testutils.StringPtr("192.168.1.2"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(80),
+			SourceNamespace: "test",
+			SourceNameAggr:  "test-pod",
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		logs := []v1.FlowLog{f1, f1, f2}
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Count with source IP match
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				IPMatches: []v1.IPMatch{
+					{
+						Type: v1.MatchTypeSource,
+						IPs:  []string{"192.168.1.1"},
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count with destination IP match
+		opts.IPMatches = []v1.IPMatch{
+			{
+				Type: v1.MatchTypeDest,
+				IPs:  []string{"10.0.0.2"},
+			},
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should return correct count with policy matches", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow logs with different policies using simple struct
+		nowUnix := time.Now().Unix()
+		fl1 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "default",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("10.0.0.10"),
+			DestPort:        testutils.Int64Ptr(53),
+			Protocol:        "udp",
+			SourceNameAggr:  "my-deployment",
+			SourceIP:        testutils.StringPtr("192.168.1.1"),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+			Policies: &v1.FlowLogPolicy{
+				AllPolicies: []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+			},
+		}
+
+		fl2 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "test",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("10.0.0.10"),
+			DestPort:        testutils.Int64Ptr(53),
+			Protocol:        "tcp",
+			SourceNameAggr:  "test-pod",
+			SourceIP:        testutils.StringPtr("192.168.1.2"),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+			Policies: &v1.FlowLogPolicy{
+				AllPolicies: []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
+			},
+		}
+
+		logs := []v1.FlowLog{fl1, fl1, fl2}
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Count with tier match
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count with different tier match
+		opts.PolicyMatches = []v1.PolicyMatch{
+			{
+				Tier: "custom-tier",
+			},
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(1), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should return correct count across multiple clusters", func(t *testing.T) {
+		tenant := backendutils.RandomTenantName()
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
+
+		// Create flow logs in each cluster
+		f := v1.FlowLog{
+			StartTime:       time.Now().Unix(),
+			EndTime:         time.Now().Unix(),
+			SourceType:      "wep",
+			DestType:        "wep",
+			DestNamespace:   "kube-system",
+			DestNameAggr:    "kube-dns-*",
+			DestIP:          testutils.StringPtr("10.0.0.1"),
+			SourceIP:        testutils.StringPtr("192.168.1.1"),
+			Protocol:        "udp",
+			DestPort:        testutils.Int64Ptr(53),
+			SourceNamespace: "default",
+			SourceNameAggr:  "my-deployment",
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		// 2 logs in cluster1, 3 in cluster2, 1 in cluster3
+		for i, info := range []struct {
+			cluster bapi.ClusterInfo
+			num     int
+		}{
+			{cluster1Info, 2},
+			{cluster2Info, 3},
+			{cluster3Info, 1},
+		} {
+			logs := make([]v1.FlowLog, info.num)
+			for j := 0; j < info.num; j++ {
+				logs[j] = f
+			}
+			response, err := flb.Create(ctx, info.cluster, logs)
+			require.NoError(t, err, "cluster %d", i)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(info.cluster))
+			require.NoError(t, err)
+		}
+
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+
+		// Count single cluster
+		countResp, err := flb.Count(ctx, cluster1Info, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(2), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count multiple clusters
+		opts.SetClusters([]string{cluster2, cluster3})
+		countResp, err = flb.Count(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(4), *countResp.GlobalCount) // 3 + 1
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Count all clusters
+		opts.SetAllClusters(true)
+		countResp, err = flb.Count(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(6), *countResp.GlobalCount) // 2 + 3 + 1
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should correctly filter by time range", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow logs with specific timestamps spread across a 30-minute period
+		// Base time: 2024-01-01 12:00:00
+		timeFromHourMin := func(hour, min int) time.Time {
+			return time.Date(2025, 1, 1, hour, min, 0, 0, time.UTC)
+		}
+
+		// Create logs at: 12:00, 12:05, 12:10, 12:15, 12:20, 12:25, 12:30
+		logs := []v1.FlowLog{}
+		for i := 0; i < 7; i++ {
+			timestamp := timeFromHourMin(12, i*5)
+			logs = append(logs, v1.FlowLog{
+				StartTime:       timestamp.Unix(),
+				EndTime:         timestamp.Unix(),
+				SourceType:      "wep",
+				DestType:        "wep",
+				SourceNamespace: "default",
+				DestNamespace:   "kube-system",
+				DestNameAggr:    "test-pod",
+				DestIP:          testutils.StringPtr("10.0.0.1"),
+				SourceIP:        testutils.StringPtr("192.168.1.1"),
+				Protocol:        "tcp",
+				DestPort:        testutils.Int64Ptr(80),
+				SourceNameAggr:  "source-pod",
+				ProcessName:     "-",
+				Reporter:        "src",
+				Action:          "allowed",
+			})
+		}
+
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: timeFromHourMin(11, 0),
+						To:   timeFromHourMin(13, 0),
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(7), *countResp.GlobalCount, "should count all logs in a larger time range")
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		// Our time range queries are exclusive of the first time instant (> from, <= to)
+		opts.TimeRange = &lmav1.TimeRange{
+			From: timeFromHourMin(12, 0),
+			To:   timeFromHourMin(12, 30),
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(6), *countResp.GlobalCount, "should count all logs except first when using exact time range")
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		opts.TimeRange = &lmav1.TimeRange{
+			From: timeFromHourMin(12, 7),
+			To:   timeFromHourMin(12, 23),
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(3), *countResp.GlobalCount, "should count logs in middle portion")
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		opts.TimeRange = &lmav1.TimeRange{
+			From: timeFromHourMin(11, 0),
+			To:   timeFromHourMin(11, 30),
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount, "should count zero logs before time range")
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+
+		opts.TimeRange = &lmav1.TimeRange{
+			From: timeFromHourMin(13, 0),
+			To:   timeFromHourMin(13, 30),
+		}
+		countResp, err = flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount, "should count zero logs after time range")
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should handle empty result set", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Don't create any logs, just count
+		opts := v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.NotNil(t, countResp.GlobalCount)
+		require.Equal(t, int64(0), *countResp.GlobalCount)
+		require.Nil(t, countResp.NamespacedCounts)
+		require.False(t, countResp.GlobalCountTruncated)
+	})
+
+	RunAllModes(t, "should error with no cluster ID", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{}
+		opts := &v1.FlowLogCountParams{
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, opts)
+		require.Error(t, err)
+		require.Nil(t, countResp)
+	})
+
+	RunAllModes(t, "should error with invalid selector", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
+		opts := &v1.FlowLogCountParams{
+			FlowLogParams: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Minute),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "invalid selector syntax !!!",
+				},
+			},
+			CountType: v1.CountTypeGlobal,
+		}
+		countResp, err := flb.Count(ctx, clusterInfo, opts)
+		require.Error(t, err)
+		require.Nil(t, countResp)
+	})
+
+	RunAllModes(t, "should return namespaced counts with different CountTypes", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster1,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create flow logs with various namespace combinations to test namespace counting.
+		// This setup creates 5 logs with the following namespace distribution:
+		// Note: Namespace counting includes both source and dest (unless source==dest)
+		// - default: appears in 3 logs (3 as source: log1,log2,log5)
+		// - kube-system: appears in 4 logs (1 as source: log3; 3 as dest: log1,log2,log5)
+		// - production: appears in 2 logs (2 as source: log3,log4; 1 as dest: log3; log4 is intra-namespace)
+		nowUnix := time.Now().Unix()
+
+		log1 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "default",
+			DestNamespace:   "kube-system",
+			SourceNameAggr:  "app1",
+			DestNameAggr:    "app2",
+			DestIP:          testutils.StringPtr("10.0.0.1"),
+			SourceIP:        testutils.StringPtr("192.168.1.1"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(80),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		log2 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "default",
+			DestNamespace:   "kube-system",
+			SourceNameAggr:  "app1",
+			DestNameAggr:    "app3",
+			DestIP:          testutils.StringPtr("10.0.0.2"),
+			SourceIP:        testutils.StringPtr("192.168.1.2"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(443),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		log3 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "kube-system",
+			DestNamespace:   "production",
+			SourceNameAggr:  "dns",
+			DestNameAggr:    "database",
+			DestIP:          testutils.StringPtr("10.0.0.3"),
+			SourceIP:        testutils.StringPtr("192.168.1.3"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(5432),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		log4 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "production",
+			DestNamespace:   "production", // Intra-namespace communication
+			SourceNameAggr:  "api",
+			DestNameAggr:    "database",
+			DestIP:          testutils.StringPtr("10.0.0.4"),
+			SourceIP:        testutils.StringPtr("192.168.1.4"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(8080),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		log5 := v1.FlowLog{
+			StartTime:       nowUnix,
+			EndTime:         nowUnix,
+			SourceType:      "wep",
+			DestType:        "wep",
+			SourceNamespace: "default",
+			DestNamespace:   "kube-system",
+			SourceNameAggr:  "app4",
+			DestNameAggr:    "app5",
+			DestIP:          testutils.StringPtr("10.0.0.5"),
+			SourceIP:        testutils.StringPtr("192.168.1.5"),
+			Protocol:        "tcp",
+			DestPort:        testutils.Int64Ptr(9000),
+			ProcessName:     "-",
+			Reporter:        "src",
+			Action:          "allowed",
+		}
+
+		logs := []v1.FlowLog{log1, log2, log3, log4, log5}
+		response, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		flowLogParams := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Minute),
+					To:   time.Now().Add(5 * time.Minute),
+				},
+				// Set page size to 2 to ensure pagination occurs during namespace counting
+				MaxPageSize: 2,
+			},
+		}
+
+		t.Run("CountType=Namespaced should return only namespaced counts", func(t *testing.T) {
+			opts := v1.FlowLogCountParams{
+				FlowLogParams: flowLogParams,
+				CountType:     v1.CountTypeNamespaced,
+			}
+
+			countResp, err := flb.Count(ctx, clusterInfo, &opts)
+			require.NoError(t, err)
+
+			// GlobalCount should be nil when CountType is Namespaced
+			require.Nil(t, countResp.GlobalCount)
+			require.False(t, countResp.GlobalCountTruncated)
+
+			// Verify namespaced counts
+			require.NotNil(t, countResp.NamespacedCounts)
+			require.Equal(t, int64(3), countResp.NamespacedCounts["default"])
+			require.Equal(t, int64(4), countResp.NamespacedCounts["kube-system"])
+			require.Equal(t, int64(2), countResp.NamespacedCounts["production"])
+		})
+
+		t.Run("CountType=GlobalAndNamespaced should return both global and namespaced counts", func(t *testing.T) {
+			opts := v1.FlowLogCountParams{
+				FlowLogParams: flowLogParams,
+				CountType:     v1.CountTypeGlobalAndNamespaced,
+			}
+
+			countResp, err := flb.Count(ctx, clusterInfo, &opts)
+			require.NoError(t, err)
+
+			// GlobalCount should be set to the total number of flow logs
+			require.NotNil(t, countResp.GlobalCount)
+			require.Equal(t, int64(5), *countResp.GlobalCount)
+			require.False(t, countResp.GlobalCountTruncated)
+
+			// Verify namespaced counts match those from the Namespaced-only test
+			require.NotNil(t, countResp.NamespacedCounts)
+			require.Equal(t, int64(3), countResp.NamespacedCounts["default"])
+			require.Equal(t, int64(4), countResp.NamespacedCounts["kube-system"])
+			require.Equal(t, int64(2), countResp.NamespacedCounts["production"])
+		})
+	})
+}

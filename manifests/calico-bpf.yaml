@@ -1741,7 +1741,6 @@ spec:
                   enum:
                     - Disabled
                     - Enabled
-                    - Auto
                   type: string
                 nftablesRefreshInterval:
                   description:

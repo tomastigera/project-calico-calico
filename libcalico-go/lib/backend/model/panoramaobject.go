@@ -32,6 +32,10 @@ func (key PanoramaObjectKey) valueType() (reflect.Type, error) {
 	return reflect.TypeOf(PanoramaObjectKey{}), nil
 }
 
+func (key PanoramaObjectKey) parseValue(rawData []byte) (any, error) {
+	return parseJSONPointer[PanoramaObjectKey](key, rawData)
+}
+
 func (key PanoramaObjectKey) String() string {
 	return fmt.Sprintf("Object(name=%s)", key.Name)
 }

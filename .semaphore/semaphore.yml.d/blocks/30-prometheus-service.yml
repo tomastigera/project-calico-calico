@@ -1,4 +1,4 @@
-- name: prometheus-service
+- name: Prometheus Service
   run:
     when: "${CHANGE_IN(prometheus-service)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd prometheus-service
     jobs:
-      - name: prometheus-service tests
+      - name: "Prometheus Service: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Prometheus Service: build arm64"
         matrix:
           - env_var: ARCH
             values:

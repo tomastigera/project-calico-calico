@@ -30,6 +30,6 @@ func init() {
 
 func TestProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/bpf_proxy_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "BPF Proxy Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/felix_bpf_proxy_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/bpf/proxy", []Reporter{junitReporter})
 }

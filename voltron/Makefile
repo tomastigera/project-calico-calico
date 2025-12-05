@@ -139,9 +139,5 @@ ci: clean image ut fv static-checks
 ## Run all CD steps, normally pushing images out to registries.
 cd: image-all cd-common
 
-##########################################################################################
-# MOCKING
-##########################################################################################
-# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
-MOCKERY_FILE_PATHS=\
-	pkg/tunnel/Dialer
+gen-mocks:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'mockery'

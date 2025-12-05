@@ -1,4 +1,4 @@
-- name: linseed
+- name: Linseed
   run:
     when: "${CHANGE_IN(linseed)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd linseed
     jobs:
-      - name: linseed tests
+      - name: "Linseed: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Linseed: build arm64"
         matrix:
           - env_var: ARCH
             values:

@@ -204,7 +204,11 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, opt
 	workloadIdx++
 
 	wep := api.NewWorkloadEndpoint()
-	wep.Labels = map[string]string{"name": n}
+	wep.Labels = map[string]string{
+		"name":      n,
+		"namespace": profile,
+	}
+	wep.Namespace = profile
 	wep.Spec.Node = c.Hostname
 	wep.Spec.Orchestrator = "felixfv"
 	wep.Spec.Workload = n

@@ -283,7 +283,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 			Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-			Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+			Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 			Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 			containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -391,7 +391,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				log.Infof("Creating container")
@@ -459,7 +459,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -539,7 +539,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -642,7 +642,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -700,7 +700,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("20.0.0.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("20.0.0.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err = hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -813,7 +813,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -842,7 +842,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 				Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-				Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+				Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 				Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				containerEP, err = hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -1026,7 +1026,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(hostEP.GatewayAddress).Should(Equal("10.254.112.1"))
 					Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-					Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+					Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 					Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 					containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
@@ -1873,7 +1873,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			hostEP, err := hcsshim.GetHNSEndpointByName("calico-fv_ep")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
-			Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+			Expect(strings.EqualFold(hostEP.VirtualNetwork, hnsNetwork.Id)).To(BeTrue())
 			Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 			Expect(hostEP.MacAddress).Should(Equal(macAddr))
 

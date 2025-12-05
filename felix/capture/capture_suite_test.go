@@ -16,5 +16,5 @@ func TestCollector(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../report/capture_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Capture Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/capture", []Reporter{junitReporter})
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
@@ -28,33 +29,47 @@ type flowLogBackend struct {
 	singleIndex          bool
 	index                bapi.Index
 
+	// Fields for the composite aggregation that computes namespaced counts.
+	namespaceCountCompositeSources []lmaelastic.AggCompositeSourceInfo
+	namespaceCountFieldTracker     *backend.FieldTracker
+
 	// Migration knobs
 	migrationMode bool
 }
 
 func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.FlowLogBackend {
-	return &flowLogBackend{
-		client:               c.Backend(),
-		lmaclient:            c,
-		initializer:          cache,
-		queryHelper:          lmaindex.MultiIndexFlowLogs(),
-		deepPaginationCutOff: deepPaginationCutOff,
-		index:                index.FlowLogMultiIndex,
-		migrationMode:        migrationMode,
-	}
+	return newFlowLogBackend(c, false, cache, deepPaginationCutOff, migrationMode)
 }
 
 // NewSingleIndexFlowLogBackend returns a new flow log backend that writes to a single index.
 func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.FlowLogBackend {
+	return newFlowLogBackend(c, true, cache, deepPaginationCutOff, migrationMode, options...)
+}
+
+func newFlowLogBackend(c lmaelastic.Client, singleIndex bool, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.FlowLogBackend {
+	namespaceCountCompositeSources := []lmaelastic.AggCompositeSourceInfo{
+		{Name: "source_ns", Field: "source_namespace"},
+		{Name: "dest_ns", Field: "dest_namespace"},
+	}
+
+	indexTemplate := index.FlowLogIndex(options...)
+	helper := lmaindex.SingleIndexFlowLogs()
+	if !singleIndex {
+		indexTemplate = index.FlowLogMultiIndex
+		helper = lmaindex.MultiIndexFlowLogs()
+	}
+
 	return &flowLogBackend{
-		client:               c.Backend(),
-		lmaclient:            c,
-		initializer:          cache,
-		queryHelper:          lmaindex.SingleIndexFlowLogs(),
-		deepPaginationCutOff: deepPaginationCutOff,
-		singleIndex:          true,
-		index:                index.FlowLogIndex(options...),
-		migrationMode:        migrationMode,
+		client:                         c.Backend(),
+		lmaclient:                      c,
+		initializer:                    cache,
+		deepPaginationCutOff:           deepPaginationCutOff,
+		singleIndex:                    singleIndex,
+		index:                          indexTemplate,
+		queryHelper:                    helper,
+		migrationMode:                  migrationMode,
+		namespaceCountCompositeSources: namespaceCountCompositeSources,
+		namespaceCountFieldTracker:     backend.NewFieldTracker(namespaceCountCompositeSources),
 	}
 }
 
@@ -244,6 +259,108 @@ func (b *flowLogBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, o
 	}
 
 	return &results.Aggregations, nil
+}
+
+// Count returns count information for flow logs matching the query parameters.
+func (b *flowLogBackend) Count(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogCountParams) (*v1.CountResponse, error) {
+	log := bapi.ContextLogger(i)
+
+	if err := i.Valid(); err != nil {
+		return nil, err
+	}
+
+	if i.Cluster == "" {
+		return nil, fmt.Errorf("no cluster ID on request")
+	}
+
+	var globalCount *int64
+	if opts.CountType == v1.CountTypeGlobal || opts.CountType == v1.CountTypeGlobalAndNamespaced {
+		q, err := b.buildQuery(i, &opts.FlowLogParams)
+		if err != nil {
+			return nil, err
+		}
+
+		c, err := b.client.Count(b.index.Index(i)).
+			Query(q).
+			Do(ctx)
+		if err != nil {
+			log.WithError(err).Error("Error performing global count query")
+			return nil, fmt.Errorf("failed to count flow logs: %s", err)
+		}
+		globalCount = &c
+	}
+
+	var namespacedCount map[string]int64
+	var err error
+	if opts.CountType == v1.CountTypeNamespaced || opts.CountType == v1.CountTypeGlobalAndNamespaced {
+		namespacedCount, err = b.namespacedCount(ctx, i, opts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &v1.CountResponse{
+		GlobalCount:      globalCount,
+		NamespacedCounts: namespacedCount,
+
+		// The global count is never truncated since it is not computed with pagination.
+		GlobalCountTruncated: false,
+	}, nil
+}
+
+func (b *flowLogBackend) countQuery() *lmaelastic.CompositeAggregationQuery {
+	/*
+		"sources": [
+			{"source_ns": {"terms": {"field": "source_namespace"}}},
+			{"dest_ns": {"terms": {"field": "dest_namespace"}}}
+		],
+	*/
+	return &lmaelastic.CompositeAggregationQuery{
+		Name:                    "buckets",
+		AggCompositeSourceInfos: b.namespaceCountCompositeSources,
+	}
+}
+
+func (b *flowLogBackend) namespacedCount(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogCountParams) (map[string]int64, error) {
+	log := bapi.ContextLogger(i)
+	err := i.Valid()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the aggregation request.
+	query := b.countQuery()
+	query.Query, err = b.buildQuery(i, &opts.FlowLogParams)
+	if err != nil {
+		return nil, err
+	}
+	query.DocumentIndex = b.index.Index(i)
+	query.MaxBucketsPerQuery = opts.GetMaxPageSize()
+
+	// Build the bucket handler that we will pass to PagedCount. This handler will compute our namespace counts as each bucket is processed.
+	namespacedCounts := make(map[string]int64)
+	flowLogHandler := func(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) {
+		key := bucket.CompositeAggregationKey
+		docCount := bucket.DocCount
+		sourceNs := b.namespaceCountFieldTracker.ValueString(key, "source_namespace")
+		destNs := b.namespaceCountFieldTracker.ValueString(key, "dest_namespace")
+
+		if sourceNs != "" {
+			namespacedCounts[sourceNs] += docCount
+		}
+
+		if destNs != "" && destNs != sourceNs {
+			namespacedCounts[destNs] += docCount
+		}
+	}
+
+	// Perform the request.
+	_, _, err = lmaelastic.PagedCount(ctx, b.lmaclient, query, log, nil, flowLogHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	return namespacedCounts, nil
 }
 
 func (b *flowLogBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {

@@ -5,12 +5,10 @@ package file
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
-	"os"
 	"path"
 
+	"github.com/DeRuina/timberjack"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
@@ -44,17 +42,12 @@ func (f *FileReporter) Start() error {
 		// Already initialized; no-op
 		return nil
 	}
-	// Create the log directory before creating the logger.  If the logger creates it, it will do so
-	// with permission 0744, meaning that non-root users won't be able to "see" files in the
-	// directory, since "execute" permission on a directory needs to be granted.
-	err := os.MkdirAll(f.directory, 0o755)
-	if err != nil {
-		return fmt.Errorf("can't make directories for new logfile: %s", err)
-	}
-	logger := &lumberjack.Logger{
-		Filename:   path.Join(f.directory, f.fileName),
-		MaxSize:    f.maxMB,
-		MaxBackups: f.numFiles,
+	logger := &timberjack.Logger{
+		Filename:    path.Join(f.directory, f.fileName),
+		FileMode:    0o644,
+		Compression: "zstd",
+		MaxSize:     f.maxMB,
+		MaxBackups:  f.numFiles,
 	}
 	f.logger = bufio.NewWriterSize(logger, 1<<16)
 	return nil

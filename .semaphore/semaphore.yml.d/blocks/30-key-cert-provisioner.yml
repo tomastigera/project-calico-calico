@@ -8,10 +8,10 @@
       commands:
         - cd key-cert-provisioner
     jobs:
-      - name: key-cert-provisioner tests
+      - name: "key-cert-provisioner: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "key-cert-provisioner: build arm64"
         matrix:
           - env_var: ARCH
             values:

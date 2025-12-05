@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_install:
+	patchelf --replace-needed libpcap.so.1 libpcap.so.0.8 calico-node
+	install -D calico-node debian/calico-node/usr/bin/calico-node
+
+	install -D calico-noncluster-host-init debian/calico-node/usr/bin/calico-noncluster-host-init
+
+	mv filesystem/usr/lib debian/calico-node/usr/
+
+	mkdir -p debian/calico-node/etc/calico/calico-node/ debian/calico-node/var/lib/calico
+	install -m 644 -D debian/calico-node.env debian/calico-node/etc/calico/calico-node/calico-node.env
+	install -m 644 -D debian/calico-node.conf debian/calico-node/etc/calico/calico-node/calico-node.conf
+	install -m 644 -D debian/calico-node-module.conf debian/calico-node/etc/modules-load.d/calico-node.conf
+
+# Don't strip the binary after running patchelf, that corrupts it
+override_dh_strip:
+override_dh_shlibdeps:
+override_dh_makeshlibs:
+override_dh_dwz:
+
+# Don't start it immediately, the user needs to configure it first anyway
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start

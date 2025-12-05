@@ -12,6 +12,7 @@ import (
 // L3FlowsInterface has methods related to flows.
 type L3FlowsInterface interface {
 	List(ctx context.Context, params v1.Params) (*v1.List[v1.L3Flow], error)
+	Count(ctx context.Context, params v1.Params) (*v1.CountResponse, error)
 }
 
 // L3Flows implements L3FlowsInterface.
@@ -38,4 +39,19 @@ func (f *l3Flows) List(ctx context.Context, params v1.Params) (*v1.List[v1.L3Flo
 		return nil, err
 	}
 	return &flows, nil
+}
+
+// Count gets the count information for L3 flows matching the given params.
+func (f *l3Flows) Count(ctx context.Context, params v1.Params) (*v1.CountResponse, error) {
+	resp := v1.CountResponse{}
+	err := f.restClient.Post().
+		Path("/flows/count").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

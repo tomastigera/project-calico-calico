@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: fluent-bit
+Source: https://github.com/fluent/fluent-bit
+
+Files: *
+Copyright: 2015-2025 The Fluent Bit Authors
+License: Apache-2.0

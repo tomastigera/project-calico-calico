@@ -1,4 +1,4 @@
-- name: packetcapture
+- name: Packet Capture
   run:
     when: "${CHANGE_IN(packetcapture)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd packetcapture
     jobs:
-      - name: packetcapture tests
+      - name: "Packet Capture: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Packet Capture: build arm64"
         matrix:
           - env_var: ARCH
             values:

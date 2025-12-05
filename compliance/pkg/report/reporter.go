@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -94,8 +95,8 @@ func Run(ctx context.Context, cfg *config.Config, healthy func(), store capi.Com
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
 		namespaces:       make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
-		serviceAccounts:  resources.NewSet(),
-		policies:         resources.NewSet(),
+		serviceAccounts:  set.New[apiv3.ResourceID](),
+		policies:         set.New[apiv3.ResourceID](),
 		data: &apiv3.ReportData{
 			ReportName:     reportCfg.Report.Name,
 			ReportTypeName: reportCfg.ReportType.Name,
@@ -128,8 +129,8 @@ type reporter struct {
 	inScopeEndpoints map[apiv3.ResourceID]*reportEndpoint
 	services         map[apiv3.ResourceID]xrefcache.CacheEntryFlags
 	namespaces       map[apiv3.ResourceID]xrefcache.CacheEntryFlags
-	serviceAccounts  resources.Set
-	policies         resources.Set
+	serviceAccounts  set.Typed[apiv3.ResourceID]
+	policies         set.Typed[apiv3.ResourceID]
 	data             *apiv3.ReportData
 
 	// Flow logs tracking information.
@@ -141,8 +142,8 @@ type reporter struct {
 
 type reportEndpoint struct {
 	zeroTrustFlags xrefcache.CacheEntryFlags
-	policies       resources.Set
-	services       resources.Set
+	policies       set.Typed[apiv3.ResourceID]
+	services       set.Typed[apiv3.ResourceID]
 	flowAggrName   string
 }
 
@@ -307,8 +308,8 @@ func (r *reporter) getEndpoint(id apiv3.ResourceID) *reportEndpoint {
 	re := r.inScopeEndpoints[id]
 	if re == nil {
 		re = &reportEndpoint{
-			policies: resources.NewSet(),
-			services: resources.NewSet(),
+			policies: set.New[apiv3.ResourceID](),
+			services: set.New[apiv3.ResourceID](),
 		}
 		r.inScopeEndpoints[id] = re
 	}
@@ -442,8 +443,8 @@ func (r *reporter) transferAggregatedData() {
 			IngressFromOtherNamespace: ep.zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedIngress != 0,
 			EgressToOtherNamespace:    ep.zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedEgress != 0,
 			EnvoyEnabled:              ep.zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
-			AppliedPolicies:           ep.policies.ToSlice(),
-			Services:                  ep.services.ToSlice(),
+			AppliedPolicies:           ep.policies.Slice(),
+			Services:                  ep.services.Slice(),
 			FlowLogAggregationName:    ep.flowAggrName,
 		})
 

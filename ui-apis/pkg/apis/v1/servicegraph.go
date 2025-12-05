@@ -22,6 +22,11 @@ type ServiceGraphRequest struct {
 
 	// Force a refresh of the data. Generally this should not be required.
 	ForceRefresh bool `json:"force_refresh" validate:"omitempty"`
+
+	// If set, the backend will fill the cache with only the data required for the specified focus.
+	// This should be set to true for UI modes that show focused graphs at the highest level and
+	// set to false for UI modes that show the unfocused graph at the highest level.
+	CacheByFocus bool `json:"cache_by_focus" validate:"omitempty"`
 }
 
 type ServiceGraphResponse struct {

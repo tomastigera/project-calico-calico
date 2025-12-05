@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -591,21 +592,32 @@ func (s *serviceGraphCache) prefetchRawData(ctx context.Context, client ctrlclie
 	}
 }
 
-// calculateKey calculates the cache data key for the reqeust.
+// calculateKey calculates the cache data key for the request.
 func (s *serviceGraphCache) calculateKey(rd *RequestData) (cacheKey, error) {
+	var namespaces string
+	if rd.ServiceGraphRequest.CacheByFocus {
+		namespacesSlice, err := ParseNamespacesFromFocus(rd.ServiceGraphRequest.SelectedView)
+		if err != nil {
+			return cacheKey{}, err
+		}
+		namespaces = strings.Join(namespacesSlice, ",")
+	}
+
 	if rd.ServiceGraphRequest.TimeRange.Now == nil {
 		return cacheKey{
-			relative: false,
-			start:    rd.ServiceGraphRequest.TimeRange.From.Unix(),
-			end:      rd.ServiceGraphRequest.TimeRange.To.Unix(),
-			cluster:  rd.ServiceGraphRequest.Cluster,
+			relative:   false,
+			start:      rd.ServiceGraphRequest.TimeRange.From.Unix(),
+			end:        rd.ServiceGraphRequest.TimeRange.To.Unix(),
+			cluster:    rd.ServiceGraphRequest.Cluster,
+			namespaces: namespaces,
 		}, nil
 	}
 	return cacheKey{
-		relative: true,
-		start:    int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.From) / time.Second),
-		end:      int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.To) / time.Second),
-		cluster:  rd.ServiceGraphRequest.Cluster,
+		relative:   true,
+		start:      int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.From) / time.Second),
+		end:        int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.To) / time.Second),
+		cluster:    rd.ServiceGraphRequest.Cluster,
+		namespaces: namespaces,
 	}, nil
 }
 
@@ -643,7 +655,7 @@ func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, d.timeRange, flowConfig)
+		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, e.namespaces, d.timeRange, flowConfig)
 	}()
 	if s.cfg.ServiceGraphCacheFetchL7 {
 		wg.Add(1)
@@ -942,6 +954,11 @@ func (q *cacheEntryQueue) remove(d *cacheEntry) {
 type cacheKey struct {
 	// Whether the time is absolute or relative to now.
 	relative bool
+
+	// The namespaces of this cache key.
+	// Set if the originating request specified caching by focus, and the focus yielded a subset of all namespaces that
+	// contains the entirety of the data required for the focus.
+	namespaces string
 
 	// If "relative" is true these are the start and end Unix time in seconds.
 	// If "relative" is false, these are the offsets from "now" in seconds.

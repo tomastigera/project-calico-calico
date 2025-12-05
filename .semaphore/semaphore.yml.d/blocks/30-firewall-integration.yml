@@ -1,4 +1,4 @@
-- name: firewall-integration
+- name: Firewall integration
   run:
     when: "${CHANGE_IN(firewall-integration)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd firewall-integration
     jobs:
-      - name: firewall-integration tests
+      - name: "Firewall integration: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Firewall integration: build arm64"
         matrix:
           - env_var: ARCH
             values:

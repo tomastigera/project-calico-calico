@@ -30,7 +30,8 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - export REPO_DIR="$(pwd)"
+      - export CALICO_DIR="$(pwd)"
+      - export CALICO_DIR_NAME="$(basename "$CALICO_DIR")"
       - mkdir artifacts
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
@@ -38,7 +39,7 @@ global_job_config:
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
   epilogue:
     commands:
-      - cd "$REPO_DIR"
+      - cd "$CALICO_DIR"
       - .semaphore/publish-artifacts
 blocks:
   - name: Prerequisites
@@ -54,6 +55,64 @@ blocks:
         - name: Pre-flight checks
           commands:
             - make ci-preflight-checks
+  - name: Refresh GeoIP cache
+    run:
+      when: "true"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cache delete app-policy-geoip
+      epilogue:
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: "Application Layer Policy: Refresh GeoIP cache"
+          commands:
+            - make -C app-policy geoip/dbip-city-lite.mmdb
+  - name: Application Layer Policy
+    run:
+      when: "true"
+    dependencies:
+      - Refresh GeoIP cache
+    task:
+      prologue:
+        commands:
+          - cache restore app-policy-geoip
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report --name "App policy"
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: "Application Layer Policy: CI"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci
+  - name: 'Application Layer Policy: native arm64 runner'
+    run:
+      when: "true"
+    dependencies:
+      - Application Layer Policy
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      prologue:
+        commands:
+          - cd app-policy
+      epilogue:
+        always:
+          commands:
+            - test-results publish report --name "App policy" --suite-prefix=(arm64)
+      jobs:
+        - name: "Application Layer Policy: build arm64"
+          commands:
+            - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
   - name: Publish tigera/snort3 images
     run:
       when: "true or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -70,7 +129,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/snort3 images: Linux amd64"
           commands:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
@@ -88,7 +147,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/snort3 images: Linux arm64"
           commands:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
@@ -104,10 +163,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/snort3 multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/snort3 push-manifest CONFIRM=true
-  - name: deep-packet-inspection
+  - name: Deep packet inspection
     run:
       when: "true"
     dependencies:
@@ -120,10 +179,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd deep-packet-inspection
       jobs:
-        - name: deep-packet-inspection tests
+        - name: "Deep packet inspection: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Deep packet inspection: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -146,7 +205,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/elasticsearch images: Linux amd64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/elasticsearch images - native arm64 runner
@@ -164,7 +223,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/elasticsearch images: Linux arm64"
           commands:
             - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/elasticsearch multi-arch manifests
@@ -180,10 +239,10 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/elasticsearch multi-arch manifests: Linux multi-arch"
           commands:
             - make -C third_party/elasticsearch push-manifest CONFIRM=true
-  - name: elasticsearch
+  - name: Elasticsearch
     run:
       when: "true"
     dependencies:
@@ -196,10 +255,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd elasticsearch
       jobs:
-        - name: elasticsearch tests
+        - name: "Elasticsearch: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "Elasticsearch: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -218,7 +277,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux amd64
+        - name: "Publish tigera/fluentd-base images: Linux amd64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/fluentd-base images - native arm64 runner
@@ -236,7 +295,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux arm64
+        - name: "Publish tigera/fluentd-base images: Linux arm64"
           commands:
             - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/fluentd-base multi-arch manifests
@@ -252,7 +311,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Linux multi-arch manifests
+        - name: "Publish tigera/fluentd-base multi-arch manifests: Linux multi-arch manifests"
           commands:
             - make -C third_party/fluentd-base push-manifest CONFIRM=true
   - name: fluentd
@@ -268,10 +327,10 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: fluentd tests
+        - name: "fluentd: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-        - name: Build binary
+        - name: "fluentd: build arm64"
           matrix:
             - env_var: ARCH
               values:
@@ -308,7 +367,7 @@ blocks:
             - cd ~/process/testing/windows-instances
             - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
       jobs:
-        - name: Windows amd64
+        - name: "Publish tigera/fluentd-base Windows images"
           commands:
             - export PROCESS_REPO=~/process/testing/windows-instances
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
@@ -324,7 +383,7 @@ blocks:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
-        - name: Windows multi-arch manifests
+        - name: "Publish tigera/fluentd-base Windows multi-arch manifests: Windows multi-arch"
           commands:
             - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
   - name: fluentd Windows
@@ -340,6 +399,56 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - cd fluentd
       jobs:
-        - name: build windows image
+        - name: "fluentd: build windows image"
           commands:
             - ../.semaphore/run-and-monitor build-windows.log make image-windows
+  - name: Publish tigera/kibana images
+    run:
+      when: "true or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Prerequisites
+    task:
+      agent:
+        machine:
+          type: f1-standard-4
+          os_image: ubuntu2204
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: "Publish tigera/kibana images: Linux multi-arch"
+          commands:
+            - make -C third_party/kibana cd CONFIRM=true
+  - name: Publish tigera/kibana multi-arch manifests
+    run:
+      when: "true or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    dependencies:
+      - Publish tigera/kibana images
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: "Publish tigera/kibana multi-arch manifests: Linux"
+          commands:
+            - make -C third_party/kibana push-manifest CONFIRM=true
+  - name: Kibana
+    run:
+      when: "true"
+    dependencies:
+      - Publish tigera/kibana multi-arch manifests
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - cd kibana
+      jobs:
+        - name: "Kibana: CI"
+          commands:
+            - ../.semaphore/run-and-monitor ci.log make ci

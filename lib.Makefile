@@ -179,6 +179,9 @@ endif
 GO_BUILD_IMAGE ?= calico/go-build
 CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 
+RUST_BUILD_IMAGE ?= calico/rust-build
+CALICO_RUST_BUILD = $(RUST_BUILD_IMAGE):$(RUST_BUILD_VER)
+
 # Build a binary with boring crypto support.
 # This function expects you to pass in two arguments:
 #   1st arg: path/to/input/package(s)
@@ -212,6 +215,13 @@ define build_binary
 		-e CGO_ENABLED=0 \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
+endef
+
+define build_binary_dir
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=0 \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -C $(1) -o $(3) $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(2)'
 endef
 
 # GOEXPERIMENT=nodwarf5 is required to disable DWARF5 debug format which is incompatible
@@ -386,6 +396,15 @@ DOCKER_RUN := $(DOCKER_RUN_PRIV_NET) --net=host
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
+DOCKER_RUST_BUILD := mkdir -p bin && \
+	docker run --rm \
+		--init \
+		--user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+		$(EXTRA_DOCKER_ARGS) \
+		-v $(REPO_ROOT):/rust/src/github.com/projectcalico/calico:rw \
+		-w /rust/src/$(PACKAGE_NAME) \
+		$(CALICO_RUST_BUILD)
+
 # Host native build images
 HOST_NATIVE_BUILD_IMAGE ?= calico/host-native-build
 
@@ -405,7 +424,7 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 
 # This function replaces the version string in the spec template and builds the rpm package.
 define host_native_rpm_build
-	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(3)))
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) rpm "" $(3)))
 
 	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
 
@@ -415,6 +434,44 @@ define host_native_rpm_build
 				--define "_topdir $$PWD/package/$(1)" \
 				--define "_sourcedir $$PWD" \
 				-ba rhel/$(2).spec'
+endef
+
+define host_native_deb_build
+	$(eval version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) deb $(4) $(3)))
+
+	$(eval timestamp := $(shell date -u '+%a, %d %b %Y %H:%M:%S +0000'))
+
+	mkdir -p package/$(1)/$(2)/debian/patches package/$(1)/$(2)/debian/source
+
+	sed -e 's/@VERSION@/$(version)/g' \
+	    -e 's/@DISTRIBUTION@/$(4)/g' \
+	    -e 's/@PACKAGE_NAME@/$(2)/g' \
+	    -e 's/@TIMESTAMP@/$(timestamp)/g' \
+		debian/changelog.in > package/$(1)/$(2)/debian/changelog
+
+	cp *.patch package/$(1)/$(2)/debian/patches/ || true
+	ls *.patch 2>/dev/null > package/$(1)/$(2)/debian/patches/series || echo -n "" > package/$(1)/$(2)/debian/patches/series
+
+	echo "3.0 (quilt)" > package/$(1)/$(2)/debian/source/format
+
+	cp \
+	   debian/control \
+	   debian/copyright \
+	   debian/rules \
+	   debian/$(2).postinst \
+		package/$(1)/$(2)/debian/
+
+	cp \
+	   *.conf \
+	   $(2).env \
+	   $(2).service \
+		package/$(1)/$(2)/debian/
+
+	tar --strip-components=$(5) -C package/$(1)/$(2) -xf $(2).tar.gz
+
+	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
+		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
+			sh -c 'cd package/$(1)/$(2) && debuild -us -uc -b'
 endef
 
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
@@ -1084,8 +1141,8 @@ push-manifests-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANC
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGE,
-# and BRANCH_NAME env variables to figure out what to tag and where to push it to.
+# cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGES,
+# and BRANCH_NAME env variables to figure out what to tag and where to push them to.
 cd-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
@@ -1365,7 +1422,7 @@ check-dirty:
 
 .PHONY: bin/crane
 
-# This setup is used to download and install the `crane` binary into $(REPOROOT)/bin/crane (or crane.exe for Windows).
+# This setup is used to download and install the `crane` binary into $(REPO_ROOT)/bin/crane (or crane.exe for Windows).
 
 .PHONY: bin/crane
 CRANE_URL = https://github.com/google/go-containerregistry/releases/download/$(CRANE_VERSION)/go-containerregistry_$(CRANE_OS)_$(CRANE_ARCH).tar.gz
@@ -1421,7 +1478,15 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 		--tls-private-key-file=/home/user/certs/kubernetes-key.pem \
 		--enable-priority-and-fairness=false \
 		--max-mutating-requests-inflight=0 \
-		--max-requests-inflight=0
+		--max-requests-inflight=0 \
+		--enable-aggregator-routing \
+		--requestheader-client-ca-file=/home/user/certs/ca.pem \
+		--requestheader-username-headers=X-Remote-User \
+		--requestheader-group-headers=X-Remote-Group \
+		--requestheader-extra-headers-prefix=X-Remote-Extra- \
+		--proxy-client-cert-file=/home/user/certs/kubernetes.pem \
+		--proxy-client-key-file=/home/user/certs/kubernetes-key.pem
+
 
 	# Wait until the apiserver is accepting requests.
 	while ! docker exec $(APISERVER_NAME) kubectl get namespace default; do echo "Waiting for apiserver to come up..."; sleep 2; done

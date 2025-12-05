@@ -141,7 +141,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(ctx, &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -182,7 +181,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -210,7 +208,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -238,7 +235,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -266,7 +262,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -311,7 +306,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 3)
 			go func() {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -320,7 +314,6 @@ var _ = Describe("Service graph cache tests", func() {
 			}()
 			go func() {
 				q2, err2 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr2,
 					},
@@ -329,7 +322,6 @@ var _ = Describe("Service graph cache tests", func() {
 			}()
 			go func() {
 				q3, err3 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr3,
 					},
@@ -394,7 +386,6 @@ var _ = Describe("Service graph cache tests", func() {
 				To:   now3.Add(-5 * time.Hour),
 			}
 			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					TimeRange: trNonRelative,
 				},
@@ -407,7 +398,6 @@ var _ = Describe("Service graph cache tests", func() {
 			timeRanges := make(map[int64]int)
 			for i := 0; i < 10; i++ {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
 					},
@@ -439,7 +429,6 @@ var _ = Describe("Service graph cache tests", func() {
 					Now:  &now3,
 				}
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tri,
 					},
@@ -457,7 +446,6 @@ var _ = Describe("Service graph cache tests", func() {
 			By("Checking force refresh forces a refresh")
 			current := backend.GetNumCallsL3()
 			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					TimeRange: tr1,
 				},
@@ -468,7 +456,6 @@ var _ = Describe("Service graph cache tests", func() {
 			Expect(backend.GetNumCallsL3()).To(Equal(current + 1))
 
 			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					TimeRange:    tr1,
 					ForceRefresh: true,
@@ -485,7 +472,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 2)
 			go func() {
 				_, _ = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange:    tr2,
 						ForceRefresh: true,
@@ -495,7 +481,6 @@ var _ = Describe("Service graph cache tests", func() {
 			}()
 			go func() {
 				_, _ = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange:    tr2,
 						ForceRefresh: true,
@@ -519,7 +504,6 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, 1)
 			go func() {
 				_, _ = cache.GetFilteredServiceGraphData(thisctx, &RequestData{
-					HTTPRequest: nil,
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr3,
 					},
@@ -532,6 +516,59 @@ var _ = Describe("Service graph cache tests", func() {
 			thiscancel()
 			Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }).Should(BeZero())
 			backend.SetUnblockLinseed()
+		})
+
+		It("creates separate cache entries for namespace-scoped requests", func() {
+			now := time.Now().UTC()
+			tr := &lmav1.TimeRange{
+				From: now.Add(-15 * time.Minute),
+				To:   now,
+				Now:  &now,
+			}
+
+			// Make requests with same time range but different namespace focus
+			namespaces := []string{"storefront", "default", "kube-system"}
+
+			for _, ns := range namespaces {
+				_, err := cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+					ServiceGraphRequest: &v1.ServiceGraphRequest{
+						TimeRange: tr,
+						Cluster:   "cluster",
+						SelectedView: v1.GraphView{
+							Focus: []v1.GraphNodeID{v1.GraphNodeID("namespace/" + ns)},
+						},
+						CacheByFocus: true,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Request without namespace focus
+			_, err := cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr,
+					Cluster:   "cluster",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify 4 separate cache entries (3 namespaced + 1 unfocused)
+			Expect(cache.GetCacheSize()).To(Equal(4))
+			Expect(backend.GetNumCallsL3()).To(Equal(4))
+
+			// Verify re-requesting same namespace focus reuses cache
+			initial := backend.GetNumCallsL3()
+			_, err = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr,
+					Cluster:   "cluster",
+					SelectedView: v1.GraphView{
+						Focus: []v1.GraphNodeID{"namespace/storefront"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(backend.GetNumCallsL3()).To(Equal(initial))
 		})
 	})
 
@@ -591,7 +628,6 @@ var _ = Describe("Service graph cache tests", func() {
 
 			// request "managed-1" data which should be in cache already
 			_, err := cache.GetFilteredServiceGraphData(ctx, &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					Cluster:   "managed-1",
 					TimeRange: timeRange,
@@ -662,7 +698,6 @@ var _ = Describe("Service graph cache tests", func() {
 
 			// request "cluster" data which should be in cache already
 			_, err := cache.GetFilteredServiceGraphData(ctx, &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					Cluster:   "cluster",
 					TimeRange: timeRange,
@@ -677,7 +712,6 @@ var _ = Describe("Service graph cache tests", func() {
 
 			// request "managed-1" data which should be in cache already
 			_, err = cache.GetFilteredServiceGraphData(ctx, &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					Cluster:   "managed-1",
 					TimeRange: timeRange,
@@ -692,7 +726,6 @@ var _ = Describe("Service graph cache tests", func() {
 
 			// request "managed-2" data which should be in cache already
 			_, err = cache.GetFilteredServiceGraphData(ctx, &RequestData{
-				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
 					Cluster:   "managed-2",
 					TimeRange: timeRange,

@@ -4,11 +4,8 @@ package server
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -37,7 +34,6 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
@@ -45,7 +41,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 const (
@@ -81,7 +76,6 @@ type Server struct {
 	// internalHTTP only created & started if the lazily initialized internalMux is not nil
 	internalHTTP *http.Server
 
-	k8s bootstrap.K8sClient
 	// When impersonating a user we use the tigera-manager sa bearer token from this config.
 	config        *rest.Config
 	authenticator auth.JWTAuth
@@ -107,7 +101,7 @@ type Server struct {
 	clusters *clusters
 	health   *health
 
-	tunSrv *tunnel.Server
+	tunSrv tunnel.Server
 
 	externalCert tls.Certificate
 	internalCert tls.Certificate
@@ -138,20 +132,19 @@ type Server struct {
 
 	// The token that Voltron uses has an exp of 1h by default and is periodically refreshed in the rest config
 	// BearerTokenFile location by the kubelet (k8s 1.22+). This token source uses client-go's tokenSource.
-	tokenSource oauth2.TokenSource
+	tokenSource               oauth2.TokenSource
+	waitForStatusManagerClose func()
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
+func New(client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
 	srv := &Server{
-		k8s:           k8s,
 		config:        config,
 		authenticator: authenticator,
 		clusters: &clusters{
 			clusters:   make(map[string]*cluster),
 			voltronCfg: &vcfg,
-			k8sCLI:     k8s,
 			client:     client,
 			// Dummy function that will be overwritten if voltron is accepting
 			// managed cluster connections.
@@ -233,7 +226,7 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 
 		x := NewStatusUpdater(srv.ctx, client, vcfg, nil)
 		srv.clusters.statusUpdateFunc = x.SetStatus
-
+		srv.waitForStatusManagerClose = x.WaitForClose
 		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
 
@@ -283,6 +276,10 @@ func (s *Server) Close() error {
 		internalCloseErr = s.internalHTTP.Close()
 	}
 
+	if s.waitForStatusManagerClose != nil {
+		s.waitForStatusManagerClose()
+	}
+
 	if publicCloseErr := s.http.Close(); publicCloseErr != nil {
 		return publicCloseErr
 	}
@@ -326,113 +323,27 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		}
 		logrus.Debugf("tunnel accepted")
 
-		clusterID, fingerprint, tunnelCert := s.extractIdentity(t)
-
-		c := s.clusters.get(clusterID)
+		c := s.clusters.get(t.ClusterID())
 		if c == nil {
-			logrus.Errorf("cluster %q does not exist", clusterID)
+			logrus.Errorf("cluster %q does not exist", t.ClusterID())
 			_ = t.Close()
 			continue
 		}
-		managedCertificate := c.Certificate
 
-		// Needs a lock for both reading and writing (if assignTunnel is called).
-		c.Lock()
-
-		// we call this function so that we can return and unlock on any failed
-		// check
-		func() {
-			defer c.Unlock()
-
-			if len(managedCertificate) != 0 {
-				if err := validateCertificate(tunnelCert, managedCertificate); err != nil {
-					logrus.WithError(err).Errorf("failed to verify certificate for cluster %s", clusterID)
-					closeTunnel(t)
-					return
-				}
+		if err := c.assignTunnel(t); err != nil {
+			if errors.Is(err, tunnel.ErrTunnelSet) {
+				logrus.Errorf("opening a second tunnel ID %s rejected", t.ClusterID())
 			} else {
-				if len(c.ActiveFingerprint) == 0 {
-					logrus.Error("no fingerprint has been stored against the current connection")
-					closeTunnel(t)
-					return
-				}
-				// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
-				// certificate fingerprint. md5 is known to cause collisions and it is not approved in
-				// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
-				if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
-					if fingerprint != c.ActiveFingerprint {
-						logrus.Error("stored fingerprint does not match provided fingerprint")
-						closeTunnel(t)
-						return
-					}
-				} else {
-					// check pre-v3.15 fingerprint (md5)
-					if s.extractMD5Identity(t) != c.ActiveFingerprint {
-						logrus.Error("stored fingerprint does not match provided fingerprint")
-						closeTunnel(t)
-						return
-					}
-
-					// update to v3.15 fingerprint hash (sha256) when matched
-					if err := c.updateActiveFingerprint(fingerprint); err != nil {
-						logrus.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
-						closeTunnel(t)
-						return
-					}
-
-					logrus.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
-				}
+				logrus.WithError(err).Errorf("failed to open the tunnel for cluster %s", t.ClusterID())
 			}
 
-			if err := c.assignTunnel(t); err != nil {
-				if err == tunnelmgr.ErrTunnelSet {
-					logrus.Errorf("opening a second tunnel ID %s rejected", clusterID)
-				} else {
-					logrus.WithError(err).Errorf("failed to open the tunnel for cluster %s", clusterID)
-				}
-
-				if err := t.Close(); err != nil {
-					logrus.WithError(err).Errorf("failed closed tunnel after failing to assign it to cluster %s", clusterID)
-				}
+			if err := t.Close(); err != nil {
+				logrus.WithError(err).Errorf("failed closed tunnel after failing to assign it to cluster %s", t.ClusterID())
 			}
+		}
 
-			logrus.Debugf("Accepted a new tunnel from %s", clusterID)
-		}()
+		logrus.Debugf("Accepted a new tunnel from %s", t.ClusterID())
 	}
-}
-
-func closeTunnel(t *tunnel.Tunnel) {
-	err := t.Close()
-	if err != nil {
-		logrus.WithError(err).Error("Could not close tunnel")
-	}
-}
-
-func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string, certificate *x509.Certificate) {
-	switch id := t.Identity().(type) {
-	case *x509.Certificate:
-		// N.B. By now, we know that we signed this certificate as these checks
-		// are performed during TLS handshake. We need to extract the common name
-		// and fingerprint of the certificate to check against our internal records
-		// We expect to have a cluster registered with this ID and matching fingerprint
-		// for the cert.
-		clusterID = id.Subject.CommonName
-		fingerprint = utils.GenerateFingerprint(id)
-		certificate = id
-	default:
-		logrus.Errorf("unknown tunnel identity type %T", id)
-	}
-	return
-}
-
-func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
-	switch id := t.Identity().(type) {
-	case *x509.Certificate:
-		fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
-	default:
-		logrus.Errorf("unknown tunnel identity type %T", id)
-	}
-	return
 }
 
 // validateCertificate validates the certificate of the tunnel against the certificate of the
@@ -584,7 +495,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	removeAuthHeaders(r)
 
 	if shouldUseTunnel {
-
 		tunnelCluster := s.clusters.get(tunnelClusterID)
 
 		if tunnelCluster == nil {
@@ -756,20 +666,14 @@ func addImpersonationHeaders(r *http.Request, user user.Info) {
 
 // WatchK8s starts watching k8s resources, always exits with an error
 func (s *Server) WatchK8s() error {
-	return s.WatchK8sWithSync(nil)
-}
-
-// WatchK8sWithSync is a variant of WatchK8s for testing. Every time a watch
-// event is handled its result is posted on the syncC channel
-func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	logrus.Debug("WatchK8sWithSync")
 	defer logrus.Debug("WatchK8sWithSync done")
 
-	if s.k8s == nil {
+	if s.clusters.client == nil {
 		return errors.New("no k8s interface")
 	}
 
-	return s.clusters.watchK8s(s.ctx, syncC)
+	return s.clusters.watchK8s(s.ctx)
 }
 
 // FlushAccessLogs exposed for testing

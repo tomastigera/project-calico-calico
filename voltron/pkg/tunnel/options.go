@@ -5,11 +5,11 @@ import (
 )
 
 // Option is a common format for New() options
-type Option func(*Tunnel) error
+type Option func(*tunnel) error
 
 // WithKeepAliveSettings sets the Keep Alive settings for the tunnel.
 func WithKeepAliveSettings(enable bool, intervalDuration time.Duration) Option {
-	return func(t *Tunnel) error {
+	return func(t *tunnel) error {
 		t.keepAliveEnable = enable
 		t.keepAliveInterval = intervalDuration
 		return nil
@@ -18,8 +18,8 @@ func WithKeepAliveSettings(enable bool, intervalDuration time.Duration) Option {
 
 // WithDialTimeout sets the dial timeout for the tunnel.
 func WithDialTimeout(dialTimeout time.Duration) Option {
-	return func(t *Tunnel) error {
-		t.DialTimeout = dialTimeout
+	return func(t *tunnel) error {
+		t.dialTimeout = dialTimeout
 		return nil
 	}
 }
