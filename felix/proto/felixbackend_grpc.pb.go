@@ -164,7 +164,7 @@ func (UnimplementedPolicySyncServer) Report(context.Context, *DataplaneStats) (*
 	return nil, status.Error(codes.Unimplemented, "method Report not implemented")
 }
 func (UnimplementedPolicySyncServer) ReportWAF(grpc.ClientStreamingServer[WAFEvent, WAFEventResult]) error {
-	return status.Errorf(codes.Unimplemented, "method ReportWAF not implemented")
+	return status.Error(codes.Unimplemented, "method ReportWAF not implemented")
 }
 func (UnimplementedPolicySyncServer) mustEmbedUnimplementedPolicySyncServer() {}
 func (UnimplementedPolicySyncServer) testEmbeddedByValue()                    {}
