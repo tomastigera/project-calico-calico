@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/flow"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -246,8 +246,8 @@ var _ = Describe("CIS report tests", func() {
 			inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 			services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
 			namespaces:       make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
-			serviceAccounts:  resources.NewSet(),
-			policies:         resources.NewSet(),
+			serviceAccounts:  set.New[apiv3.ResourceID](),
+			policies:         set.New[apiv3.ResourceID](),
 			data: &apiv3.ReportData{
 				ReportName:     "report",
 				ReportTypeName: "report-type",
