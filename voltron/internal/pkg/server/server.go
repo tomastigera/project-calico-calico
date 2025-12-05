@@ -527,10 +527,13 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		// Apply the impersonation header only to non–free-tier clusters that support impersonation;
 		// free-tier clusters do not support impersonation.
 		if isOlderCluster && s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
-			if userName == "system:serviceaccount:calico-system:tigera-policy-recommendation" {
+			switch userName {
+			case "system:serviceaccount:calico-system:tigera-policy-recommendation":
 				r.Header.Set(authnv1.ImpersonateUserHeader, "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation")
 				r.Header.Add(authnv1.ImpersonateGroupHeader, "system:serviceaccount:tigera-policy-recommendation")
-
+			case "system:serviceaccount:calico-system:calico-manager":
+				r.Header.Set(authnv1.ImpersonateUserHeader, "system:serviceaccount:tigera-manager:tigera-manager")
+				r.Header.Add(authnv1.ImpersonateGroupHeader, "system:serviceaccount:tigera-manager")
 			}
 		}
 

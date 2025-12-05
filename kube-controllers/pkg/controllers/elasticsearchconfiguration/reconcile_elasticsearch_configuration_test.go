@@ -597,6 +597,24 @@ var _ = Describe("Reconcile", func() {
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 		})
+
+		It("propagates both new and legacy named voltron secrets", func() {
+			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
+				func(r *reconciler) {
+					r.clusterName = "managed-1"
+					r.management = false
+				})
+
+			err := r.Reconcile(types.NamespacedName{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ctx := context.Background()
+			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.VoltronLinseedPublicCert, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.LegacyVoltronLinseedPublicCert, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+		})
 	})
 
 	Context("Managed cluster configuration successfully created with alternate operator namespace", func() {
@@ -768,6 +786,25 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
+		})
+
+		It("propagates both new and legacy named voltron secrets", func() {
+			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
+				func(r *reconciler) {
+					r.clusterName = "managed-1"
+					r.management = false
+					r.managedOperatorNamespace = altOperatorNamespace
+				})
+
+			err := r.Reconcile(types.NamespacedName{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ctx := context.Background()
+			_, err = managedK8sCli.CoreV1().Secrets(altOperatorNamespace).Get(ctx, resource.VoltronLinseedPublicCert, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = managedK8sCli.CoreV1().Secrets(altOperatorNamespace).Get(ctx, resource.LegacyVoltronLinseedPublicCert, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })

@@ -299,7 +299,7 @@ LINSEED_TOKEN:              /var/run/secrets/tigera.io/linseed/token
 ## Configuration and permissions
 
 | ENV                                       |                  Default value                   |                                                                                                                          Description |
-| ----------------------------------------- | :----------------------------------------------: | -----------------------------------------------------------------------------------------------------------------------------------: |
+| ----------------------------------------- |:------------------------------------------------:| -----------------------------------------------------------------------------------------------------------------------------------: |
 | LINSEED_PORT                              |                      `443`                       |                                                                                                      Local Port to start the service |
 | LINSEED_HOST                              |                     <empty>                      |                                                                                                                 Host for the service |
 | LINSEED_LOG_LEVEL                         |                      `Info`                      |                                                                                                             Log Level across service |
@@ -316,7 +316,7 @@ LINSEED_TOKEN:              /var/run/secrets/tigera.io/linseed/token
 | TENANT_NAMESPACE                          |                        -                         |                                                                         Tenant namespace will populated only in a multi-tenant setup |
 | MANAGEMENT_OPERATOR_NS                    |                `tigera-operator`                 |                                                      The namespace in which tigera-operator is running inside the management cluster |
 | TOKEN_CONTROLLER_ENABLED                  |                     `false`                      |                                     Enabling Token controller. Will provision tokens for components running inside a managed cluster |
-| LINSEED_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://tigera-manager.tigera-manager.svc:9443` |                                  Tigera Manager Endpoint used to override K8S API Endpoint to make requests inside a managed cluster |
+| LINSEED_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://calico-manager.calico-system.svc:9443`  |                                  Tigera Manager Endpoint used to override K8S API Endpoint to make requests inside a managed cluster |
 | LINSEED_MULTI_CLUSTER_FORWARDING_CA       |           `/etc/pki/tls/certs/ca.crt`            |                                                        Path to the CA that trust the certificate provided by tigera manager endpoint |
 | LINSEED_HEALTH_PORT                       |                      `8080`                      |                                                                                   Health port used for readiness and liveness probes |
 | ELASTIC_HOST                              | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                                                    Elastic Host; For local development use localhost |
