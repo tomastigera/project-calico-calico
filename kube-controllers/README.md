@@ -44,13 +44,13 @@ To add code that only targets one of the variants include the following at the t
 Cloud/Tesla only:
 
 ```go
-// +build tesla
+//go:build tesla
 ```
 
 Enterprise only:
 
 ```go
-// +build !tesla
+//go:build !tesla
 ```
 
 Note that this only works at the file-level, meaning you can only include or exclude entire files.
