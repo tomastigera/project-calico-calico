@@ -47,8 +47,6 @@ type Config struct {
 	FwTimeout                   int           `envconfig:"FW_TIMEOUT" default:"10" json:"timeout"`
 	FwInsecureSkipVerify        bool          `envconfig:"FW_INSECURE_SKIP_VERIFY" required:"true" default:"false" json:"fwInsecureSkipVerify"`
 	FwAdom                      string        `envconfig:"FW_ADOM" json:"adom"`
-	FwPanoramaTags              string        `envconfig:"FW_PANORAMA_TAGS" json:"panorama_tags"`
-	FwPanoramaFilterTags        string        `envconfig:"FW_PANORAMA_FILTER_TAGS" json:"panorama_filter_tags"`
 	FwPolicyControllerNamespace string        `envconfig:"FW_POLICY_CONTROLLER_NAMESPACE_SELECTOR" default:"tigera-firewall-integration" json:"fwPolicyControllerNamespace"`
 	FwPolicyNamespaceSelector   string        `envconfig:"FW_POLICY_NAMESPACE_SELECTOR" default:"global()" json:"fwPolicyNamespaceSelector"`
 	FwPolicySelectorExpression  string        `envconfig:"FW_POLICY_SELECTOR_EXPRESSION" default:"projectcalico.org/tier == 'default'" json:"fwPolicySelectorExpression"`

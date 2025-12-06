@@ -6,7 +6,6 @@ go 1.25.5
 github.com/Masterminds/goutils v1.1.1
 github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/sprig v2.22.0+incompatible
-github.com/PaloAltoNetworks/pango v0.10.2
 github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 github.com/alecthomas/participle v0.7.1
 github.com/aws/aws-sdk-go v1.55.8
@@ -152,7 +151,6 @@ k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
 k8s.io/kube-aggregator v0.34.2
 k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
-k8s.io/kubectl v0.34.2
 k8s.io/kubernetes v1.34.2
 k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
