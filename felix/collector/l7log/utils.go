@@ -40,10 +40,10 @@ func newMetaSpecFromUpdate(update Update, ak AggregationKind) (L7Meta, L7Spec, e
 		GatewayListenerFullName: update.GatewayListenerFullName,
 		GatewayListenerHostname: update.GatewayListenerHostname,
 
-		// Route resource identification
-		RouteNamespace:    update.RouteNamespace,
-		RouteResourceName: update.RouteResourceName,
-		RouteType:         update.RouteType,
+		// Collector identification fields
+		CollectorName: update.CollectorName,
+		CollectorType: update.CollectorType,
+		Host:          update.Host,
 
 		// Gateway route context fields
 		GatewayRouteType:          update.GatewayRouteType,

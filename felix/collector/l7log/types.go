@@ -41,9 +41,9 @@ type Update struct {
 	Protocol     string
 
 	// Gateway API enrichment fields
-	GatewayNamespace    string
-	GatewayClass        string
-	GatewayStatus       string
+	GatewayNamespace     string
+	GatewayClass         string
+	GatewayStatus        string
 	GatewayStatusMessage string
 
 	// Gateway listener context fields
@@ -53,10 +53,10 @@ type Update struct {
 	GatewayListenerFullName string
 	GatewayListenerHostname string
 
-	// Route resource identification
-	RouteNamespace    string
-	RouteResourceName string
-	RouteType         string
+	// Collector identification fields
+	CollectorName string
+	CollectorType string
+	Host          string
 
 	// Gateway route context fields
 	GatewayRouteType          string
@@ -118,10 +118,10 @@ type L7Log struct {
 	GatewayListenerFullName string `json:"gateway_listener_full_name,omitempty"`
 	GatewayListenerHostname string `json:"gateway_listener_hostname,omitempty"`
 
-	// Route resource identification
-	RouteNamespace    string `json:"route_namespace,omitempty"`
-	RouteResourceName string `json:"route_resource_name,omitempty"`
-	RouteType         string `json:"route_type,omitempty"`
+	// Collector identification fields
+	Host          string `json:"host,omitempty"`
+	CollectorName string `json:"collector_name,omitempty"`
+	CollectorType string `json:"collector_type,omitempty"`
 
 	// Gateway route context fields
 	GatewayRouteType          string `json:"gateway_route_type,omitempty"`
@@ -172,10 +172,10 @@ type L7Meta struct {
 	GatewayListenerFullName string
 	GatewayListenerHostname string
 
-	// Route resource identification
-	RouteNamespace    string
-	RouteResourceName string
-	RouteType         string
+	// Collector identification fields
+	CollectorName string
+	CollectorType string
+	Host          string
 
 	// Gateway route context fields
 	GatewayRouteType          string
@@ -260,10 +260,10 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 		GatewayListenerFullName: ld.GatewayListenerFullName,
 		GatewayListenerHostname: ld.GatewayListenerHostname,
 
-		// Route resource identification
-		RouteNamespace:    ld.RouteNamespace,
-		RouteResourceName: ld.RouteResourceName,
-		RouteType:         ld.RouteType,
+		// Collector identification fields
+		Host:          ld.Host,
+		CollectorName: ld.CollectorName,
+		CollectorType: ld.CollectorType,
 
 		// Gateway route context fields
 		GatewayRouteType:          ld.GatewayRouteType,

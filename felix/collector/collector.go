@@ -1495,10 +1495,10 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		GatewayListenerFullName: hd.GatewayListenerFullName,
 		GatewayListenerHostname: hd.GatewayListenerHostname,
 
-		// Route resource identification
-		RouteNamespace:    hd.RouteNamespace,
-		RouteResourceName: hd.RouteResourceName,
-		RouteType:         hd.RouteType,
+		// Collector identification fields
+		CollectorName: hd.CollectorName,
+		CollectorType: hd.CollectorType,
+		Host:          hd.Host,
 
 		// Gateway route context fields
 		GatewayRouteType:          hd.GatewayRouteType,
