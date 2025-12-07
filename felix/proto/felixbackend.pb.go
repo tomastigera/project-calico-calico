@@ -6671,10 +6671,10 @@ type HTTPData struct {
 	GatewayListenerProtocol string `protobuf:"bytes,24,opt,name=gateway_listener_protocol,json=gatewayListenerProtocol,proto3" json:"gateway_listener_protocol,omitempty"`
 	GatewayListenerFullName string `protobuf:"bytes,25,opt,name=gateway_listener_full_name,json=gatewayListenerFullName,proto3" json:"gateway_listener_full_name,omitempty"`
 	GatewayListenerHostname string `protobuf:"bytes,26,opt,name=gateway_listener_hostname,json=gatewayListenerHostname,proto3" json:"gateway_listener_hostname,omitempty"`
-	// Route resource identification (parsed from route_name)
-	RouteNamespace    string `protobuf:"bytes,27,opt,name=route_namespace,json=routeNamespace,proto3" json:"route_namespace,omitempty"`
-	RouteResourceName string `protobuf:"bytes,28,opt,name=route_resource_name,json=routeResourceName,proto3" json:"route_resource_name,omitempty"` // HTTPRoute or GRPCRoute name
-	RouteType         string `protobuf:"bytes,29,opt,name=route_type,json=routeType,proto3" json:"route_type,omitempty"`                           // "http" or "grpc"
+	// Collector identification fields
+	CollectorName string `protobuf:"bytes,27,opt,name=collector_name,json=collectorName,proto3" json:"collector_name,omitempty"` // e.g., "gateway"
+	CollectorType string `protobuf:"bytes,28,opt,name=collector_type,json=collectorType,proto3" json:"collector_type,omitempty"` // e.g., "log-file"
+	Host          string `protobuf:"bytes,29,opt,name=host,proto3" json:"host,omitempty"`                                        // hostname of the collector node
 	// Gateway route context fields (unified)
 	GatewayRouteType          string `protobuf:"bytes,30,opt,name=gateway_route_type,json=gatewayRouteType,proto3" json:"gateway_route_type,omitempty"`
 	GatewayRouteName          string `protobuf:"bytes,31,opt,name=gateway_route_name,json=gatewayRouteName,proto3" json:"gateway_route_name,omitempty"`
@@ -6898,23 +6898,23 @@ func (x *HTTPData) GetGatewayListenerHostname() string {
 	return ""
 }
 
-func (x *HTTPData) GetRouteNamespace() string {
+func (x *HTTPData) GetCollectorName() string {
 	if x != nil {
-		return x.RouteNamespace
+		return x.CollectorName
 	}
 	return ""
 }
 
-func (x *HTTPData) GetRouteResourceName() string {
+func (x *HTTPData) GetCollectorType() string {
 	if x != nil {
-		return x.RouteResourceName
+		return x.CollectorType
 	}
 	return ""
 }
 
-func (x *HTTPData) GetRouteType() string {
+func (x *HTTPData) GetHost() string {
 	if x != nil {
-		return x.RouteType
+		return x.Host
 	}
 	return ""
 }
@@ -9119,7 +9119,7 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\tDirection\x12\v\n" +
 	"\aINBOUND\x10\x00\x12\f\n" +
 	"\bOUTBOUND\x10\x01B\x04\n" +
-	"\x02id\"\x9c\v\n" +
+	"\x02id\"\x86\v\n" +
 	"\bHTTPData\x12&\n" +
 	"\x0fx_forwarded_for\x18\x01 \x01(\tR\rxForwardedFor\x12\x1a\n" +
 	"\tx_real_ip\x18\x02 \x01(\tR\axRealIp\x12\x1a\n" +
@@ -9150,11 +9150,10 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\x15gateway_listener_port\x18\x17 \x01(\x05R\x13gatewayListenerPort\x12:\n" +
 	"\x19gateway_listener_protocol\x18\x18 \x01(\tR\x17gatewayListenerProtocol\x12;\n" +
 	"\x1agateway_listener_full_name\x18\x19 \x01(\tR\x17gatewayListenerFullName\x12:\n" +
-	"\x19gateway_listener_hostname\x18\x1a \x01(\tR\x17gatewayListenerHostname\x12'\n" +
-	"\x0froute_namespace\x18\x1b \x01(\tR\x0erouteNamespace\x12.\n" +
-	"\x13route_resource_name\x18\x1c \x01(\tR\x11routeResourceName\x12\x1d\n" +
-	"\n" +
-	"route_type\x18\x1d \x01(\tR\trouteType\x12,\n" +
+	"\x19gateway_listener_hostname\x18\x1a \x01(\tR\x17gatewayListenerHostname\x12%\n" +
+	"\x0ecollector_name\x18\x1b \x01(\tR\rcollectorName\x12%\n" +
+	"\x0ecollector_type\x18\x1c \x01(\tR\rcollectorType\x12\x12\n" +
+	"\x04host\x18\x1d \x01(\tR\x04host\x12,\n" +
 	"\x12gateway_route_type\x18\x1e \x01(\tR\x10gatewayRouteType\x12,\n" +
 	"\x12gateway_route_name\x18\x1f \x01(\tR\x10gatewayRouteName\x126\n" +
 	"\x17gateway_route_namespace\x18  \x01(\tR\x15gatewayRouteNamespace\x124\n" +

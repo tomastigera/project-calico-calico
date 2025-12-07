@@ -935,10 +935,10 @@ message HTTPData {
   string gateway_listener_full_name = 25;
   string gateway_listener_hostname = 26;
 
-  // Route resource identification (parsed from route_name)
-  string route_namespace = 27;
-  string route_resource_name = 28;        // HTTPRoute or GRPCRoute name
-  string route_type = 29;                 // "http" or "grpc"
+  // Collector identification fields
+  string collector_name = 27;             // e.g., "gateway"
+  string collector_type = 28;             // e.g., "log-file"
+  string host = 29;                       // hostname of the collector node
 
   // Gateway route context fields (unified)
   string gateway_route_type = 30;
