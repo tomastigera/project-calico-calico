@@ -921,6 +921,32 @@ message HTTPData {
   string route_name = 15;
   string gateway_name = 16;
   string protocol = 17;
+
+  // Gateway API enrichment fields
+  string gateway_namespace = 18;
+  string gateway_class = 19;
+  string gateway_status = 20;             // "active", "accepted", "not-accepted", "unknown"
+  string gateway_status_message = 21;
+
+  // Gateway listener context fields
+  string gateway_listener_name = 22;
+  int32 gateway_listener_port = 23;
+  string gateway_listener_protocol = 24;
+  string gateway_listener_full_name = 25;
+  string gateway_listener_hostname = 26;
+
+  // Route resource identification (parsed from route_name)
+  string route_namespace = 27;
+  string route_resource_name = 28;        // HTTPRoute or GRPCRoute name
+  string route_type = 29;                 // "http" or "grpc"
+
+  // Gateway route context fields (unified)
+  string gateway_route_type = 30;
+  string gateway_route_name = 31;
+  string gateway_route_namespace = 32;
+  string gateway_route_hostname = 33;
+  string gateway_route_status = 34;
+  string gateway_route_status_message = 35;
 }
 
 message WireguardEndpointUpdate {
