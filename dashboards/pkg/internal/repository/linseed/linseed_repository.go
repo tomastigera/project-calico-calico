@@ -33,6 +33,7 @@ type LinseedRepository struct {
 var (
 	_ repository.Repository = &LinseedRepository{}
 
+	reForbiddenErr               = `[status 500] server error: Forbidden`
 	reUnauthorizedErr            = `[status 401] server error: Unauthorized`
 	reInvalidSelectorValueErr    = regexp.MustCompile(`Invalid selector .*in request: (invalid value for.*)`)
 	reUnexpectedSelectorTokenErr = regexp.MustCompile(`Invalid selector (.*) in request:.* unexpected token.*`)
@@ -71,7 +72,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 		return result.QueryResult{}, httpreply.ToBadRequest(fmt.Sprintf("unknown collection name '%s", req.CollectionName))
 	}
 
-	linseedQueryParams, err := newQueryParams(req.MaxDocuments, req.PageNum, string(req.SortFieldName), slices.ToStrings(req.ClusterIDs))
+	linseedQueryParams, err := newQueryParams(req.MaxDocuments, req.PageNum, string(req.SortFieldName), slices.ToStrings(req.ClusterIDs), req.Permissions)
 	if err != nil {
 		return result.QueryResult{}, httpreply.ToBadRequest(err.Error())
 	}
@@ -177,7 +178,7 @@ func (r *LinseedRepository) Query(ctx context.Context, req query.QueryRequest) (
 }
 
 func handleQueryResultError(err error) error {
-	if err.Error() == reUnauthorizedErr {
+	if err.Error() == reUnauthorizedErr || err.Error() == reForbiddenErr {
 		return httpreply.ReplyAccessDenied
 	} else if m := reInvalidSelectorValueErr.FindStringSubmatch(err.Error()); len(m) == 2 {
 		// Handle invalid selector value errors as a Bad Request

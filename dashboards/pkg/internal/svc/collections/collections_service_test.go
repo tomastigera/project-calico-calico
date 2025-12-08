@@ -1,35 +1,76 @@
 package collections
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 )
 
 func TestCollectionsService(t *testing.T) {
 	logger := logging.New("TestCollectionsService")
 
 	newSecurityContext := func(authorized bool) security.Context {
+		authorizer, err := security.NewAuthorizer(
+			t.Context(),
+			logger,
+			time.Second,
+			security.AuthorizerConfig{
+				Namespace:                             "default",
+				EnableNamespacedRBAC:                  false,
+				AuthorizedVerbsCacheHardTTL:           time.Second,
+				AuthorizedVerbsCacheSoftTTL:           time.Second,
+				AuthorizedVerbsCacheReviewsTimeout:    time.Second,
+				AuthorizedVerbsCacheRevalidateTimeout: time.Second,
+			},
+		)
+		require.NoError(t, err)
+
+		k8sClient := k8sfake.NewClientset()
+		k8sClient.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+
+			createAction, ok := action.(k8stesting.CreateAction)
+			if !ok {
+				return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
+			}
+
+			object := createAction.GetObject().DeepCopyObject()
+			selfSubjectRulesReview, ok := object.(*authzv1.SelfSubjectRulesReview)
+			if !ok {
+				return false, nil, fmt.Errorf("invalid reactor object, expecting *SelfSubjectRulesReview but got %v (%T)", object, object)
+			}
+
+			selfSubjectRulesReview.Status.ResourceRules = nil
+			if authorized {
+				selfSubjectRulesReview.Status.ResourceRules = []authzv1.ResourceRule{
+					{Verbs: []string{"get"}, APIGroups: []string{security.APIGroupLMATigera}, ResourceNames: []string{"flows", "dns", "l7", "waf"}, Resources: []string{"*"}},
+				}
+			}
+			return true, selfSubjectRulesReview, nil
+		})
+
 		return security.NewUserAuthContext(
-			context.Background(),
+			t.Context(),
 			&user.DefaultInfo{Name: "fake-user"},
-			fake.NewAuthorizer(authorized),
-			k8sfake.NewSimpleClientset(),
+			authorizer,
+			k8sClient,
 			"Bearer fake-token",
+			nil,
 		)
 	}
 
@@ -53,6 +94,7 @@ func TestCollectionsService(t *testing.T) {
 		testCases := []struct {
 			name                    string
 			collections             []collections.Collection
+			expectedError           error
 			expectedCollectionNames []collections.CollectionName
 		}{
 			{
@@ -64,6 +106,7 @@ func TestCollectionsService(t *testing.T) {
 					collections.CollectionNameL7,
 					collections.CollectionNameWAF,
 				},
+				expectedError: nil,
 			},
 			{
 				name:        "with a collection disabled",
@@ -73,6 +116,7 @@ func TestCollectionsService(t *testing.T) {
 					collections.CollectionNameFlows,
 					collections.CollectionNameWAF,
 				},
+				expectedError: nil,
 			},
 			{
 				name: "with all collections disabled",
@@ -83,6 +127,7 @@ func TestCollectionsService(t *testing.T) {
 					collections.CollectionNameWAF,
 				}),
 				expectedCollectionNames: []collections.CollectionName{},
+				expectedError:           httpreply.ReplyAccessDenied,
 			},
 		}
 
@@ -92,7 +137,7 @@ func TestCollectionsService(t *testing.T) {
 				subject := NewCollectionsService(logger, tc.collections)
 
 				collectionsResponse, err := subject.Collections(newSecurityContext(true))
-				require.NoError(t, err)
+				require.Equal(t, tc.expectedError, err)
 
 				collectionNames := slices.Map(collectionsResponse, func(collection client.Collection) collections.CollectionName {
 					return collections.CollectionName(collection.Name)

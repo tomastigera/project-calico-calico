@@ -9,6 +9,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 
@@ -105,6 +106,55 @@ func TestLinseedRepository(t *testing.T) {
 				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
 			})
 			require.Equal(t, err, httpreply.ReplyAccessDenied)
+		})
+
+		t.Run("returns unauthorized on access forbidden", func(t *testing.T) {
+			// This test case covers a scenario in which:
+			// The namespaced RBAC feature is enabled
+			// The user has management plane RBAC to view collections from the lma.tigera.io apiGroup
+			// The user does not have managed plane RBAC to view logs
+			mockClient.SetResults(rest.MockResult{
+				StatusCode: 500,
+				Err:        errors.New(`[status 500] server error: Forbidden`),
+			})
+
+			_, err := subject.Query(ctx, query.QueryRequest{
+				CollectionName: collections.CollectionNameDNS,
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
+			})
+			require.Equal(t, err, httpreply.ReplyAccessDenied)
+		})
+
+		t.Run("permissions are set", func(t *testing.T) {
+			expectedPermissions := []v3.AuthorizedResourceVerbs{{
+				APIGroup: "fake-group",
+				Resource: "fake-resource",
+				Verbs: []v3.AuthorizedResourceVerb{{
+					Verb: "get",
+					ResourceGroups: []v3.AuthorizedResourceGroup{
+						{ManagedCluster: "fake-cluster", Namespace: "fake-namespace"},
+					},
+				}},
+			}}
+
+			mockClient := lsclient.NewMockClient(tenantID)
+			subject := NewLinseedRepositoryWithClient(logger, "", mockClient)
+
+			mockClient.SetResults(rest.MockResult{})
+
+			_, err := subject.Query(ctx, query.QueryRequest{
+				CollectionName: collections.CollectionNameDNS,
+				ClusterIDs:     []query.ManagedClusterName{"fake-cluster"},
+				Permissions:    expectedPermissions,
+			})
+
+			require.NoError(t, err)
+			requests := mockClient.Requests()
+			require.Len(t, requests, 1)
+
+			dnsLogParams, ok := requests[0].GetParams().(*lsv1.DNSLogParams)
+			require.True(t, ok)
+			require.Equal(t, expectedPermissions, dnsLogParams.Permissions)
 		})
 	})
 

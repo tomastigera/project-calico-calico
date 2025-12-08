@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/slices"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
@@ -29,15 +30,15 @@ var (
 )
 
 type queryParams struct {
-	linseedQueryParams     lsv1.QueryParams
-	linseedQuerySortParams lsv1.QuerySortParams
+	linseedQueryParams        lsv1.QueryParams
+	linseedQuerySortParams    lsv1.QuerySortParams
+	linseedLogSelectionParams lsv1.LogSelectionParams
 
-	selector        string
 	domainMatches   map[lsv1.DomainMatchType][]string
 	requestedPeriod time.Duration
 }
 
-func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs []string) (*queryParams, error) {
+func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs []string, permissions []v3.AuthorizedResourceVerbs) (*queryParams, error) {
 	params := &queryParams{
 		linseedQueryParams: lsv1.QueryParams{
 			MaxPageSize: maxDocuments,
@@ -57,6 +58,9 @@ func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs 
 				{Field: sortFieldName, Descending: true},
 			},
 		},
+		linseedLogSelectionParams: lsv1.LogSelectionParams{
+			Permissions: permissions,
+		},
 	}
 
 	return params, nil
@@ -68,7 +72,7 @@ func (p *queryParams) setCriteria(criteria filters.Criteria, now time.Time) erro
 		return err
 	}
 
-	p.selector = strings.Join(selectors, " AND ")
+	p.linseedLogSelectionParams.Selector = strings.Join(selectors, " AND ")
 	return nil
 }
 

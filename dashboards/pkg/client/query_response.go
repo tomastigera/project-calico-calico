@@ -20,6 +20,8 @@ type QueryResponse struct {
 	Documents    []QueryResponseDocument   `json:"documents,omitempty"`
 	Aggregations QueryResponseAggregations `json:"aggregations,omitempty"`
 	GroupValues  []QueryResponseGroupValue `json:"groupValues,omitempty"`
+
+	ClusterErrors map[string][]error `json:"clusterErrors,omitempty"`
 }
 
 type QueryResponseDocument map[string]any

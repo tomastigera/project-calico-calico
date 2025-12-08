@@ -31,7 +31,7 @@ func newLinseedCollectionClientWAF(logger logging.Logger, client lsclient.Client
 func (c *collectionClientWAF) Params(params *queryParams, aggregations map[string]json.RawMessage) (lsv1.Params, error) {
 	wafLogsLogParams := &lsv1.WAFLogParams{
 		QueryParams:     params.linseedQueryParams,
-		Selector:        params.selector,
+		Selector:        params.linseedLogSelectionParams.Selector,
 		QuerySortParams: params.linseedQuerySortParams,
 	}
 

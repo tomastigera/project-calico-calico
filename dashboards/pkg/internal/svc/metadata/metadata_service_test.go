@@ -9,18 +9,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/types"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 )
 
 func TestMetadataService(t *testing.T) {
@@ -112,13 +115,50 @@ func TestMetadataService(t *testing.T) {
 
 	subject := NewRemoteMetadataService(logger, httpServer.URL+"/server-path", collections.Collections(nil))
 
-	ctx := security.NewUserAuthContext(
-		context.Background(),
-		&user.DefaultInfo{Name: "fake-user"},
-		fake.NewAuthorizer(true),
-		k8sfake.NewSimpleClientset(),
-		"Bearer fake-token",
-	)
+	newUserAuthContextWithResourceRules := func(t *testing.T, resourceRules []authzv1.ResourceRule) security.Context {
+		authorizer, err := security.NewAuthorizer(
+			t.Context(),
+			logger,
+			time.Second,
+			security.AuthorizerConfig{
+				Namespace:                             "default",
+				EnableNamespacedRBAC:                  false,
+				AuthorizedVerbsCacheHardTTL:           time.Second,
+				AuthorizedVerbsCacheSoftTTL:           time.Second,
+				AuthorizedVerbsCacheReviewsTimeout:    time.Second,
+				AuthorizedVerbsCacheRevalidateTimeout: time.Second,
+			},
+		)
+		require.NoError(t, err)
+
+		k8sClient := k8sfake.NewClientset()
+		k8sClient.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+
+			createAction, ok := action.(k8stesting.CreateAction)
+			require.True(t, ok, "invalid reactor action, expecting k8stesting.CreateAction but got", action)
+
+			object := createAction.GetObject().DeepCopyObject()
+			selfSubjectRulesReview, ok := object.(*authzv1.SelfSubjectRulesReview)
+			require.True(t, ok, "invalid reactor object, expecting *SelfSubjectRulesReview but got", object)
+
+			selfSubjectRulesReview.Status.ResourceRules = resourceRules
+
+			return true, selfSubjectRulesReview, nil
+		})
+
+		return security.NewUserAuthContext(
+			context.Background(),
+			&user.DefaultInfo{Name: "fake-user"},
+			authorizer,
+			k8sClient,
+			"Bearer fake-token",
+			nil,
+		)
+	}
+
+	ctx := newUserAuthContextWithResourceRules(t, []authzv1.ResourceRule{
+		{Verbs: []string{"get"}, APIGroups: []string{security.APIGroupLMATigera}, ResourceNames: []string{"flows"}, Resources: []string{"dashboards"}},
+	})
 
 	t.Run("authorization", func(t *testing.T) {
 		t.Run("success", func(t *testing.T) {
@@ -129,13 +169,7 @@ func TestMetadataService(t *testing.T) {
 		})
 
 		t.Run("unauthorized", func(t *testing.T) {
-			ctx := security.NewUserAuthContext(
-				context.Background(),
-				&user.DefaultInfo{Name: "fake-user"},
-				fake.NewAuthorizer(false),
-				k8sfake.NewSimpleClientset(),
-				"Bearer fake-token",
-			)
+			ctx := newUserAuthContextWithResourceRules(t, nil) // no rbac rules
 
 			_, err := subject.List(ctx, types.ProjectIDDefault)
 			require.Equal(t, httpreply.ReplyAccessDenied, err)

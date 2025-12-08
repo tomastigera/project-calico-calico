@@ -9,13 +9,13 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/logging"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func TestLinseedCollectionClientDNS(t *testing.T) {
@@ -27,99 +27,22 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 	mockClient := lsclient.NewMockClient(tenantID)
 	subject := newLinseedCollectionClientDNS(logger, mockClient)
 
-	t.Run("list", func(t *testing.T) {
-		t.Run("params", func(t *testing.T) {
-			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
-			require.NoError(t, err)
+	t.Run("params", func(t *testing.T) {
+		now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
 
-			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
-				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
-				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
-				Now:  &now,
-			}
-			repositoryQueryParams.selector = "sel1 = sel1"
-			repositoryQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
-
-			params, err := subject.Params(repositoryQueryParams, nil)
-			require.NoError(t, err)
-			require.Equal(t, &lsv1.DNSLogParams{
-				QueryParams: repositoryQueryParams.linseedQueryParams,
-				DomainMatches: []lsv1.DomainMatch{
-					{Type: lsv1.DomainMatchQname, Domains: []string{"test-domain1.com", "test-domain2.com"}},
-				},
-				LogSelectionParams: lsv1.LogSelectionParams{
-					Selector: "sel1 = sel1",
-				},
-				QuerySortParams: lsv1.QuerySortParams{
-					Sort: []lsv1.SearchRequestSortBy{
-						{Field: "start_time", Descending: true},
-					},
-				},
-			}, params)
-		})
-
-		t.Run("query result", func(t *testing.T) {
-			ip := net.ParseIP("1.2.3.4")
-			dnsLogs := []lsv1.DNSLog{
-				{QName: "test-domain1.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-				{QName: "test-domain2.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC), ClientIP: &ip},
-			}
-
-			mockClient.SetResults(rest.MockResult{
-				Body: lsv1.List[lsv1.DNSLog]{
-					Items:     dnsLogs,
-					TotalHits: 22,
-				},
-			})
-			queryResult, err := subject.List(ctx, &lsv1.QueryParams{})
-			require.NoError(t, err)
-			require.Equal(t, result.QueryResult{
-				Hits: 22,
-				Documents: []result.QueryResultDocument{
-					{Content: dnsLogDocument{ClientIP: "0.0.0.0", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-					{Content: dnsLogDocument{ClientIP: "1.2.3.4", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
-				},
-			}, queryResult)
-		})
-	})
-
-	t.Run("aggregations", func(t *testing.T) {
-		t.Run("params", func(t *testing.T) {
-			agg0, err := elasticAggregationToJSON(elastic.NewTermsAggregation().Field("f1").
-				SubAggregation("a_0", elastic.NewTermsAggregation().Field("fa1")).
-				SubAggregation("g1",
-					elastic.NewTermsAggregation().Field("f2").
-						SubAggregation("a_0", elastic.NewTermsAggregation().Field("fa1"))))
-			require.NoError(t, err)
-
-			agg1, err := elasticAggregationToJSON(elastic.NewTermsAggregation().Field("fa1"))
-			require.NoError(t, err)
-
-			aggregations := map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
-
-			now := time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC)
-			repositoryQueryParams, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"})
-			require.NoError(t, err)
-
-			repositoryQueryParams.linseedQueryParams.TimeRange = &lmav1.TimeRange{
-				From: time.Date(2023, 1, 2, 3, 4, 5, 6, time.UTC),
-				To:   time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC),
-				Now:  &now,
-			}
-			repositoryQueryParams.selector = "sel2 = sel2"
-			repositoryQueryParams.domainMatches[lsv1.DomainMatchQname] = []string{"test-domain1.com", "test-domain2.com"}
-
-			params, err := subject.Params(repositoryQueryParams, aggregations)
-			require.NoError(t, err)
-			require.Equal(t, &lsv1.DNSAggregationParams{
-				DNSLogParams: lsv1.DNSLogParams{
-					QueryParams: repositoryQueryParams.linseedQueryParams,
-					DomainMatches: []lsv1.DomainMatch{
-						{Type: lsv1.DomainMatchQname, Domains: []string{"test-domain1.com", "test-domain2.com"}},
-					},
+		testCases := []struct {
+			name         string
+			params       *queryParams
+			aggregations map[string]json.RawMessage
+			expected     lsv1.Params
+		}{
+			{
+				name:   "default",
+				params: newQueryParamsHelper(t, &now, "start_time", "sel1 = sel1", nil, nil),
+				expected: &lsv1.DNSLogParams{
+					QueryParams: expectedQueryParams(&now),
 					LogSelectionParams: lsv1.LogSelectionParams{
-						Selector: "sel2 = sel2",
+						Selector: "sel1 = sel1",
 					},
 					QuerySortParams: lsv1.QuerySortParams{
 						Sort: []lsv1.SearchRequestSortBy{
@@ -127,29 +50,143 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 						},
 					},
 				},
-				Aggregations: map[string]json.RawMessage{
-					"g0":  json.RawMessage(`{"aggregations":{"a_0":{"terms":{"field":"fa1"}},"g1":{"aggregations":{"a_0":{"terms":{"field":"fa1"}}},"terms":{"field":"f2"}}},"terms":{"field":"f1"}}`),
-					"a_0": json.RawMessage(`{"terms":{"field":"fa1"}}`),
+			},
+			{
+				name:   "with aggregation",
+				params: newQueryParamsHelper(t, &now, "start_time", "sel2 = sel2", nil, nil),
+				aggregations: func(t *testing.T) map[string]json.RawMessage {
+					agg0, err := elasticAggregationToJSON(elastic.NewTermsAggregation().Field("f1").
+						SubAggregation("a_0", elastic.NewTermsAggregation().Field("fa1")).
+						SubAggregation("g1",
+							elastic.NewTermsAggregation().Field("f2").
+								SubAggregation("a_0", elastic.NewTermsAggregation().Field("fa1"))))
+					require.NoError(t, err)
+
+					agg1, err := elasticAggregationToJSON(elastic.NewTermsAggregation().Field("fa1"))
+					require.NoError(t, err)
+
+					return map[string]json.RawMessage{"g0": agg0, "a_0": agg1}
+				}(t),
+				expected: &lsv1.DNSAggregationParams{
+					DNSLogParams: lsv1.DNSLogParams{
+						QueryParams: expectedQueryParams(&now),
+						LogSelectionParams: lsv1.LogSelectionParams{
+							Selector: "sel2 = sel2",
+						},
+						QuerySortParams: lsv1.QuerySortParams{
+							Sort: []lsv1.SearchRequestSortBy{
+								{Field: "start_time", Descending: true},
+							},
+						},
+					},
+					Aggregations: map[string]json.RawMessage{
+						"g0":  json.RawMessage(`{"aggregations":{"a_0":{"terms":{"field":"fa1"}},"g1":{"aggregations":{"a_0":{"terms":{"field":"fa1"}}},"terms":{"field":"f2"}}},"terms":{"field":"f1"}}`),
+						"a_0": json.RawMessage(`{"terms":{"field":"fa1"}}`),
+					},
 				},
-			}, params)
-		})
+			},
+			{
+				name:   "with domain matches",
+				params: newQueryParamsHelper(t, &now, "start_time", "sel3 = sel3", []string{"test-domain1.com", "test-domain2.com"}, nil),
+				expected: &lsv1.DNSLogParams{
+					QueryParams: expectedQueryParams(&now),
+					LogSelectionParams: lsv1.LogSelectionParams{
+						Selector: "sel3 = sel3",
+					},
+					DomainMatches: []lsv1.DomainMatch{{Type: lsv1.DomainMatchQname, Domains: []string{"test-domain1.com", "test-domain2.com"}}},
+					QuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "start_time", Descending: true},
+						},
+					},
+				},
+			},
+			{
+				name: "with permissions",
+				params: newQueryParamsHelper(t, &now, "start_time", "sel4 = sel4", nil, []v3.AuthorizedResourceVerbs{
+					{
+						APIGroup: "lma.tigera.io", Resource: "pods", Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list", ResourceGroups: []v3.AuthorizedResourceGroup{
+								{Namespace: "namespace1", ManagedCluster: "cluster1"},
+								{Namespace: "namespace2"},
+							},
+						}},
+					}}),
+				expected: &lsv1.DNSLogParams{
+					QueryParams: expectedQueryParams(&now),
+					LogSelectionParams: lsv1.LogSelectionParams{
+						Selector: "sel4 = sel4",
+						Permissions: []v3.AuthorizedResourceVerbs{
+							{
+								APIGroup: "lma.tigera.io", Resource: "pods", Verbs: []v3.AuthorizedResourceVerb{{
+									Verb: "list", ResourceGroups: []v3.AuthorizedResourceGroup{
+										{Namespace: "namespace1", ManagedCluster: "cluster1"},
+										{Namespace: "namespace2"},
+									},
+								}},
+							}},
+					},
+					QuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "start_time", Descending: true},
+						},
+					},
+				},
+			},
+		}
 
-		t.Run("query result", func(t *testing.T) {
-
-			expectedAggregations := elastic.Aggregations{
-				"agg1": json.RawMessage(`{"buckets":[]}`),
-				"agg2": json.RawMessage(`{"buckets":[]}`),
-			}
-
-			mockClient.SetResults(rest.MockResult{
-				Body: map[string]json.RawMessage{
-					"agg1": json.RawMessage(`{"buckets":[]}`),
-					"agg2": json.RawMessage(`{"buckets":[]}`)},
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				params, err := subject.Params(tc.params, tc.aggregations)
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, params)
 			})
+		}
+	})
 
-			aggrResult, err := subject.Aggregations(ctx, &lsv1.QueryParams{})
-			require.NoError(t, err)
-			require.Equal(t, expectedAggregations, aggrResult)
+	t.Run("list", func(t *testing.T) {
+		ip := net.ParseIP("1.2.3.4")
+		dnsLogs := []lsv1.DNSLog{
+			{QName: "test-domain1.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+			{QName: "test-domain2.com", Cluster: "fake-cluster", RRSets: make(lsv1.DNSRRSets), StartTime: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC), ClientIP: &ip},
+		}
+
+		mockClient.SetResults(rest.MockResult{
+			Body: lsv1.List[lsv1.DNSLog]{
+				Items:     dnsLogs,
+				TotalHits: 22,
+			},
 		})
+		queryResult, err := subject.List(ctx, &lsv1.QueryParams{})
+		require.NoError(t, err)
+		require.Equal(t, result.QueryResult{
+			Hits: 22,
+			Documents: []result.QueryResultDocument{
+				{Content: dnsLogDocument{ClientIP: "0.0.0.0", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+				{Content: dnsLogDocument{ClientIP: "1.2.3.4", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
+			},
+		}, queryResult)
+	})
+
+	t.Run("aggregations", func(t *testing.T) {
+		expectedAggregations := elastic.Aggregations{
+			"agg1": json.RawMessage(`{"buckets":[]}`),
+			"agg2": json.RawMessage(`{"buckets":[]}`),
+		}
+
+		mockClient.SetResults(rest.MockResult{
+			Body: map[string]json.RawMessage{
+				"agg1": json.RawMessage(`{"buckets":[]}`),
+				"agg2": json.RawMessage(`{"buckets":[]}`)},
+		})
+
+		aggrResult, err := subject.Aggregations(ctx, &lsv1.DNSAggregationParams{
+			Aggregations: elastic.Aggregations{
+				"agg1": json.RawMessage(`{"terms":{"field":"f1"}}`),
+				"agg2": json.RawMessage(`{"terms":{"field":"f2"}}`),
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, expectedAggregations, aggrResult)
 	})
 }

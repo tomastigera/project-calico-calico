@@ -91,8 +91,15 @@ func main() {
 	authorizer, err := security.NewAuthorizer(
 		ctx,
 		logger,
-		cfg.TenantNamespace,
 		cfg.LMAAuthorizationCacheTTL,
+		security.AuthorizerConfig{
+			Namespace:                             cfg.TenantNamespace,
+			EnableNamespacedRBAC:                  cfg.NamespacedRBAC,
+			AuthorizedVerbsCacheHardTTL:           cfg.AuthorizedVerbsCacheHardTTL,
+			AuthorizedVerbsCacheSoftTTL:           cfg.AuthorizedVerbsCacheSoftTTL,
+			AuthorizedVerbsCacheReviewsTimeout:    cfg.AuthorizedVerbsCacheReviewsTimeout,
+			AuthorizedVerbsCacheRevalidateTimeout: cfg.AuthorizedVerbsCacheRevalidateTimeout,
+		},
 	)
 	if err != nil {
 		logger.Error("failed to create authorizer", logging.Error(err))
