@@ -1479,6 +1479,34 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		Type:          hd.Type,
 		Domain:        hd.Domain,
 		RouteName:     hd.RouteName,
+		GatewayName:   hd.GatewayName,
+		Protocol:      hd.Protocol,
+
+		// Gateway API enrichment fields
+		GatewayNamespace:     hd.GatewayNamespace,
+		GatewayClass:         hd.GatewayClass,
+		GatewayStatus:        hd.GatewayStatus,
+		GatewayStatusMessage: hd.GatewayStatusMessage,
+
+		// Gateway listener context fields
+		GatewayListenerName:     hd.GatewayListenerName,
+		GatewayListenerPort:     int(hd.GatewayListenerPort),
+		GatewayListenerProtocol: hd.GatewayListenerProtocol,
+		GatewayListenerFullName: hd.GatewayListenerFullName,
+		GatewayListenerHostname: hd.GatewayListenerHostname,
+
+		// Collector identification fields
+		CollectorName: hd.CollectorName,
+		CollectorType: hd.CollectorType,
+		Host:          hd.Host,
+
+		// Gateway route context fields
+		GatewayRouteType:          hd.GatewayRouteType,
+		GatewayRouteName:          hd.GatewayRouteName,
+		GatewayRouteNamespace:     hd.GatewayRouteNamespace,
+		GatewayRouteHostname:      hd.GatewayRouteHostname,
+		GatewayRouteStatus:        hd.GatewayRouteStatus,
+		GatewayRouteStatusMessage: hd.GatewayRouteStatusMessage,
 	}
 
 	// If there is no endpoint data for the supplied tuple, skip logging this info.

@@ -6660,8 +6660,30 @@ type HTTPData struct {
 	RouteName     string `protobuf:"bytes,15,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
 	GatewayName   string `protobuf:"bytes,16,opt,name=gateway_name,json=gatewayName,proto3" json:"gateway_name,omitempty"`
 	Protocol      string `protobuf:"bytes,17,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Gateway API enrichment fields
+	GatewayNamespace     string `protobuf:"bytes,18,opt,name=gateway_namespace,json=gatewayNamespace,proto3" json:"gateway_namespace,omitempty"`
+	GatewayClass         string `protobuf:"bytes,19,opt,name=gateway_class,json=gatewayClass,proto3" json:"gateway_class,omitempty"`
+	GatewayStatus        string `protobuf:"bytes,20,opt,name=gateway_status,json=gatewayStatus,proto3" json:"gateway_status,omitempty"` // "active", "accepted", "not-accepted", "unknown"
+	GatewayStatusMessage string `protobuf:"bytes,21,opt,name=gateway_status_message,json=gatewayStatusMessage,proto3" json:"gateway_status_message,omitempty"`
+	// Gateway listener context fields
+	GatewayListenerName     string `protobuf:"bytes,22,opt,name=gateway_listener_name,json=gatewayListenerName,proto3" json:"gateway_listener_name,omitempty"`
+	GatewayListenerPort     int32  `protobuf:"varint,23,opt,name=gateway_listener_port,json=gatewayListenerPort,proto3" json:"gateway_listener_port,omitempty"`
+	GatewayListenerProtocol string `protobuf:"bytes,24,opt,name=gateway_listener_protocol,json=gatewayListenerProtocol,proto3" json:"gateway_listener_protocol,omitempty"`
+	GatewayListenerFullName string `protobuf:"bytes,25,opt,name=gateway_listener_full_name,json=gatewayListenerFullName,proto3" json:"gateway_listener_full_name,omitempty"`
+	GatewayListenerHostname string `protobuf:"bytes,26,opt,name=gateway_listener_hostname,json=gatewayListenerHostname,proto3" json:"gateway_listener_hostname,omitempty"`
+	// Collector identification fields
+	CollectorName string `protobuf:"bytes,27,opt,name=collector_name,json=collectorName,proto3" json:"collector_name,omitempty"` // e.g., "gateway"
+	CollectorType string `protobuf:"bytes,28,opt,name=collector_type,json=collectorType,proto3" json:"collector_type,omitempty"` // e.g., "log-file"
+	Host          string `protobuf:"bytes,29,opt,name=host,proto3" json:"host,omitempty"`                                        // hostname of the collector node
+	// Gateway route context fields (unified)
+	GatewayRouteType          string `protobuf:"bytes,30,opt,name=gateway_route_type,json=gatewayRouteType,proto3" json:"gateway_route_type,omitempty"`
+	GatewayRouteName          string `protobuf:"bytes,31,opt,name=gateway_route_name,json=gatewayRouteName,proto3" json:"gateway_route_name,omitempty"`
+	GatewayRouteNamespace     string `protobuf:"bytes,32,opt,name=gateway_route_namespace,json=gatewayRouteNamespace,proto3" json:"gateway_route_namespace,omitempty"`
+	GatewayRouteHostname      string `protobuf:"bytes,33,opt,name=gateway_route_hostname,json=gatewayRouteHostname,proto3" json:"gateway_route_hostname,omitempty"`
+	GatewayRouteStatus        string `protobuf:"bytes,34,opt,name=gateway_route_status,json=gatewayRouteStatus,proto3" json:"gateway_route_status,omitempty"`
+	GatewayRouteStatusMessage string `protobuf:"bytes,35,opt,name=gateway_route_status_message,json=gatewayRouteStatusMessage,proto3" json:"gateway_route_status_message,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *HTTPData) Reset() {
@@ -6809,6 +6831,132 @@ func (x *HTTPData) GetGatewayName() string {
 func (x *HTTPData) GetProtocol() string {
 	if x != nil {
 		return x.Protocol
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayNamespace() string {
+	if x != nil {
+		return x.GatewayNamespace
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayClass() string {
+	if x != nil {
+		return x.GatewayClass
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayStatus() string {
+	if x != nil {
+		return x.GatewayStatus
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayStatusMessage() string {
+	if x != nil {
+		return x.GatewayStatusMessage
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayListenerName() string {
+	if x != nil {
+		return x.GatewayListenerName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayListenerPort() int32 {
+	if x != nil {
+		return x.GatewayListenerPort
+	}
+	return 0
+}
+
+func (x *HTTPData) GetGatewayListenerProtocol() string {
+	if x != nil {
+		return x.GatewayListenerProtocol
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayListenerFullName() string {
+	if x != nil {
+		return x.GatewayListenerFullName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayListenerHostname() string {
+	if x != nil {
+		return x.GatewayListenerHostname
+	}
+	return ""
+}
+
+func (x *HTTPData) GetCollectorName() string {
+	if x != nil {
+		return x.CollectorName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetCollectorType() string {
+	if x != nil {
+		return x.CollectorType
+	}
+	return ""
+}
+
+func (x *HTTPData) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteType() string {
+	if x != nil {
+		return x.GatewayRouteType
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteName() string {
+	if x != nil {
+		return x.GatewayRouteName
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteNamespace() string {
+	if x != nil {
+		return x.GatewayRouteNamespace
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteHostname() string {
+	if x != nil {
+		return x.GatewayRouteHostname
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteStatus() string {
+	if x != nil {
+		return x.GatewayRouteStatus
+	}
+	return ""
+}
+
+func (x *HTTPData) GetGatewayRouteStatusMessage() string {
+	if x != nil {
+		return x.GatewayRouteStatusMessage
 	}
 	return ""
 }
@@ -8971,7 +9119,7 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\tDirection\x12\v\n" +
 	"\aINBOUND\x10\x00\x12\f\n" +
 	"\bOUTBOUND\x10\x01B\x04\n" +
-	"\x02id\"\x9b\x04\n" +
+	"\x02id\"\x86\v\n" +
 	"\bHTTPData\x12&\n" +
 	"\x0fx_forwarded_for\x18\x01 \x01(\tR\rxForwardedFor\x12\x1a\n" +
 	"\tx_real_ip\x18\x02 \x01(\tR\axRealIp\x12\x1a\n" +
@@ -8993,7 +9141,25 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\n" +
 	"route_name\x18\x0f \x01(\tR\trouteName\x12!\n" +
 	"\fgateway_name\x18\x10 \x01(\tR\vgatewayName\x12\x1a\n" +
-	"\bprotocol\x18\x11 \x01(\tR\bprotocol\"\x84\x01\n" +
+	"\bprotocol\x18\x11 \x01(\tR\bprotocol\x12+\n" +
+	"\x11gateway_namespace\x18\x12 \x01(\tR\x10gatewayNamespace\x12#\n" +
+	"\rgateway_class\x18\x13 \x01(\tR\fgatewayClass\x12%\n" +
+	"\x0egateway_status\x18\x14 \x01(\tR\rgatewayStatus\x124\n" +
+	"\x16gateway_status_message\x18\x15 \x01(\tR\x14gatewayStatusMessage\x122\n" +
+	"\x15gateway_listener_name\x18\x16 \x01(\tR\x13gatewayListenerName\x122\n" +
+	"\x15gateway_listener_port\x18\x17 \x01(\x05R\x13gatewayListenerPort\x12:\n" +
+	"\x19gateway_listener_protocol\x18\x18 \x01(\tR\x17gatewayListenerProtocol\x12;\n" +
+	"\x1agateway_listener_full_name\x18\x19 \x01(\tR\x17gatewayListenerFullName\x12:\n" +
+	"\x19gateway_listener_hostname\x18\x1a \x01(\tR\x17gatewayListenerHostname\x12%\n" +
+	"\x0ecollector_name\x18\x1b \x01(\tR\rcollectorName\x12%\n" +
+	"\x0ecollector_type\x18\x1c \x01(\tR\rcollectorType\x12\x12\n" +
+	"\x04host\x18\x1d \x01(\tR\x04host\x12,\n" +
+	"\x12gateway_route_type\x18\x1e \x01(\tR\x10gatewayRouteType\x12,\n" +
+	"\x12gateway_route_name\x18\x1f \x01(\tR\x10gatewayRouteName\x126\n" +
+	"\x17gateway_route_namespace\x18  \x01(\tR\x15gatewayRouteNamespace\x124\n" +
+	"\x16gateway_route_hostname\x18! \x01(\tR\x14gatewayRouteHostname\x120\n" +
+	"\x14gateway_route_status\x18\" \x01(\tR\x12gatewayRouteStatus\x12?\n" +
+	"\x1cgateway_route_status_message\x18# \x01(\tR\x19gatewayRouteStatusMessage\"\x84\x01\n" +
 	"\x17WireguardEndpointUpdate\x12\x1a\n" +
 	"\bhostname\x18\x01 \x01(\tR\bhostname\x12\x1d\n" +
 	"\n" +
