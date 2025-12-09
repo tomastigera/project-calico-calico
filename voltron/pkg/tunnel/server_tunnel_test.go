@@ -79,11 +79,11 @@ func TestServerSideTunnel(t *testing.T) {
 
 			t.Run("open connections from both sides", func(t *testing.T) {
 				t.Log("should be able to send data s -> c")
-				clnS, err := cliT.OpenStream()
+				clnS, err := cliT.Open()
 				Expect(err).ToNot(HaveOccurred())
 				defer func() { _ = clnS.Close() }()
 
-				srvS, err := srvT.AcceptStream()
+				srvS, err := srvT.Accept()
 				Expect(err).ToNot(HaveOccurred())
 				defer func() { _ = srvS.Close() }()
 
@@ -96,11 +96,11 @@ func TestServerSideTunnel(t *testing.T) {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(recvMsg)).To(Equal("WORLD"))
 
-				srvS2, err := srvT.OpenStream()
+				srvS2, err := srvT.Open()
 				Expect(err).ToNot(HaveOccurred())
 				defer func() { _ = srvS2.Close() }()
 
-				clnS2, err := cliT.AcceptStream()
+				clnS2, err := cliT.Accept()
 				Expect(err).ToNot(HaveOccurred())
 				defer func() { _ = clnS2.Close() }()
 
@@ -151,7 +151,7 @@ func TestServerSideTunnel(t *testing.T) {
 				_, err := cliT.Accept()
 				Expect(err).Should(HaveOccurred())
 
-				_, err = cliT.OpenStream()
+				_, err = cliT.Open()
 				Expect(err).Should(HaveOccurred())
 			})
 		})

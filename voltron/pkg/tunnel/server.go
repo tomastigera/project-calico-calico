@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -21,7 +20,7 @@ import (
 )
 
 type Server interface {
-	Accept() (io.ReadWriteCloser, error)
+	Accept() (*tls.Conn, error)
 	AcceptTunnel(opts ...Option) (Tunnel, error)
 	ServeTLS(lis net.Listener) error
 	GetClientCertificatePool() *x509.CertPool
@@ -34,7 +33,7 @@ type server struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-	streamC chan *ServerStream
+	streamC chan *tls.Conn
 
 	// serverCerts contains the certificate chains voltron should present to connecting guardians.
 	serverCerts []tls.Certificate
@@ -100,7 +99,7 @@ func WithTLSHandshakeTimeout(to time.Duration) ServerOption {
 // NewServer returns a new server
 func NewServer(opts ...ServerOption) (Server, error) {
 	s := &server{
-		streamC:             make(chan *ServerStream),
+		streamC:             make(chan *tls.Conn),
 		clientCertPool:      x509.NewCertPool(),
 		tlsHandshakeTimeout: time.Second,
 	}
@@ -151,17 +150,15 @@ func (s *server) ServeTLS(lis net.Listener) error {
 
 		log.Debugf("tunnel.Server: new connection from %s", tlsConn.RemoteAddr().String())
 
-		ss := &ServerStream{Conn: tlsConn}
-		ss.ctx, ss.cancel = context.WithCancel(s.ctx)
-
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			ss.watchServerStop()
+			<-s.ctx.Done()
+			_ = tlsConn.Close()
 		}()
 
 		select {
-		case s.streamC <- ss:
+		case s.streamC <- tlsConn:
 		case <-s.ctx.Done():
 			return errors.New("server stopped")
 		}
@@ -169,7 +166,7 @@ func (s *server) ServeTLS(lis net.Listener) error {
 }
 
 // Accept returns the next available stream or returns an error
-func (s *server) Accept() (io.ReadWriteCloser, error) {
+func (s *server) Accept() (*tls.Conn, error) {
 	select {
 	case ss := <-s.streamC:
 		ctyp := ""
@@ -216,90 +213,4 @@ func (s *server) GetClientCertificatePool() *x509.CertPool {
 func (s *server) Stop() {
 	s.cancel()
 	s.wg.Wait()
-}
-
-type atomicBool struct {
-	sync.RWMutex
-	v bool
-}
-
-func (b *atomicBool) set(v bool) {
-	b.Lock()
-	defer b.Unlock()
-	b.v = v
-}
-
-func (b *atomicBool) get() bool {
-	b.RLock()
-	defer b.RUnlock()
-	return b.v
-}
-
-// ServerStream represents the server side of the tcp stream
-type ServerStream struct {
-	*tls.Conn
-
-	closed        atomicBool
-	closeConnOnce sync.Once
-	ctx           context.Context
-	cancel        context.CancelFunc
-}
-
-// Identity returns net.Addr of the remote end
-func (ss *ServerStream) Identity() any {
-	if len(ss.Conn.ConnectionState().PeerCertificates) > 0 {
-		return ss.Conn.ConnectionState().PeerCertificates[0]
-	}
-
-	return ss.RemoteAddr()
-}
-
-// Read blocks until some bytes are received or an error happens. It is OK to
-// call Read and Write from different threads, but it is in general not ok to
-// call Read simultaneously from different threads.
-func (ss *ServerStream) Read(dst []byte) (int, error) {
-	if ss.closed.get() {
-		return 0, errors.New("read on a closed stream")
-	}
-
-	return ss.Conn.Read(dst)
-}
-
-// Write sends data unless an error happens.
-//
-// It is OK to call Read and Write from different threads, but it is in general
-// not ok to call Write simultaneously from different threads.
-func (ss *ServerStream) Write(data []byte) (int, error) {
-	if ss.closed.get() {
-		return 0, errors.New("write on a closed stream")
-	}
-
-	return ss.Conn.Write(data)
-}
-
-// Close terminates the connection
-func (ss *ServerStream) Close() error {
-	log.Debugf("ServerStream: Close")
-	ss.cancel()
-	return ss.closeConn()
-}
-
-// watchServerStop monitors the server and if it stops, it closes the
-// ServerStream
-func (ss *ServerStream) watchServerStop() {
-	<-ss.ctx.Done()
-	log.Debugf("ServerStream: watchServerStop fired")
-	ss.closed.set(true)
-	_ = ss.closeConn()
-}
-
-// closeConn makes sure that the ServerStream is closed only once
-func (ss *ServerStream) closeConn() error {
-	var err error
-	ss.closeConnOnce.Do(func() {
-		err = ss.Conn.Close()
-		log.Debugf("ServerStream: closing connection")
-	})
-
-	return err
 }
