@@ -67,7 +67,7 @@ var _ = describe.EnterpriseDescribe(
 		)
 
 		BeforeEach(func() {
-			// We read flow logs from ES, and access Kibana via tigera-manager. We start port forward so we can query the flows.
+			// We read flow logs from ES, and access Kibana via Manager. We start port forward so we can query the flows.
 			cancelForward = elasticsearch.PortForward()
 
 			// initialize esclient
