@@ -11,6 +11,59 @@ FROM ${UBI_IMAGE} AS ubi
 RUN microdnf upgrade -y && \
   microdnf install -y iptables nftables
 
+# Prepare a rootfs for necessary files from UBI.
+# Symbolic links are preserved.
+RUN mkdir -p /rootfs/lib64 /rootfs/usr/sbin && \
+    # required binaries
+    cp -L /usr/sbin/xtables-nft-multi /rootfs/usr/sbin/xtables-nft-multi && \
+    cp -L /usr/sbin/nft /rootfs/usr/sbin/nft && \
+
+    # required libraries
+    cp -L /lib64/libxtables.so.12 /rootfs/lib64/libxtables.so.12 && \
+    cp -L /lib64/libxtables.so.12.7.0 /rootfs/lib64/libxtables.so.12.7.0 && \
+    cp -L /lib64/libmnl.so.0 /rootfs/lib64/libmnl.so.0 && \
+    cp -L /lib64/libnftnl.so.11 /rootfs/lib64/libnftnl.so.11 && \
+    cp -L /lib64/libc.so.6 /rootfs/lib64/libc.so.6 && \
+    cp -L /lib64/ld-linux-x86-64.so.2 /rootfs/lib64/ld-linux-x86-64.so.2 && \
+    cp -L /lib64/libnftables.so.1 /rootfs/lib64/libnftables.so.1 && \
+    cp -L /lib64/libreadline.so.8 /rootfs/lib64/libreadline.so.8 && \
+    cp -L /lib64/libjansson.so.4 /rootfs/lib64/libjansson.so.4 && \
+    cp -L /lib64/libgmp.so.10 /rootfs/lib64/libgmp.so.10 && \
+    cp -L /lib64/libtinfo.so.6 /rootfs/lib64/libtinfo.so.6 && \
+
+    # create symlinks to xtables-nft-multi 
+    cd /rootfs/usr/sbin && \
+    ln -s xtables-nft-multi arptables && \
+    ln -s xtables-nft-multi arptables-nft && \
+    ln -s xtables-nft-multi arptables-nft-restore && \
+    ln -s xtables-nft-multi arptables-nft-save && \
+    ln -s xtables-nft-multi arptables-restore && \
+    ln -s xtables-nft-multi arptables-save && \
+    ln -s xtables-nft-multi ebtables && \
+    ln -s xtables-nft-multi ebtables-nft && \
+    ln -s xtables-nft-multi ebtables-nft-restore && \
+    ln -s xtables-nft-multi ebtables-nft-save && \
+    ln -s xtables-nft-multi ebtables-restore && \
+    ln -s xtables-nft-multi ebtables-save && \
+    ln -s xtables-nft-multi ebtables-translate && \
+    ln -s xtables-nft-multi ip6tables && \
+    ln -s xtables-nft-multi ip6tables-nft && \
+    ln -s xtables-nft-multi ip6tables-nft-restore && \
+    ln -s xtables-nft-multi ip6tables-nft-save && \
+    ln -s xtables-nft-multi ip6tables-restore && \
+    ln -s xtables-nft-multi ip6tables-restore-translate && \
+    ln -s xtables-nft-multi ip6tables-save && \
+    ln -s xtables-nft-multi ip6tables-translate && \
+    ln -s xtables-nft-multi iptables && \
+    ln -s xtables-nft-multi iptables-nft && \
+    ln -s xtables-nft-multi iptables-nft-restore && \
+    ln -s xtables-nft-multi iptables-nft-save && \
+    ln -s xtables-nft-multi iptables-restore && \
+    ln -s xtables-nft-multi iptables-restore-translate && \
+    ln -s xtables-nft-multi iptables-save && \
+    ln -s xtables-nft-multi iptables-translate && \
+    ln -s xtables-nft-multi xtables-monitor
+
 FROM scratch AS source
 
 ARG TARGETARCH
@@ -18,27 +71,7 @@ ARG TARGETARCH
 COPY bin/install-cni-${TARGETARCH} /usr/bin/install-cni
 COPY bin/LICENSE /LICENSE
 
-# xtables-nft-multi is the actual binary - copy it to standard iptables/ip6tables names
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/xtables-nft-multi
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/iptables
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/iptables-restore
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/iptables-save
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/ip6tables
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/ip6tables-restore
-COPY --from=ubi /usr/sbin/xtables-nft-multi /usr/sbin/ip6tables-save
-
-# nftables
-COPY --from=ubi /usr/sbin/nft /usr/sbin/nft
-
-# xtables plugins directory
-COPY --from=ubi /usr/lib64/xtables /lib64/xtables
-
-# required libraries (ldd shows they're expected in /lib64)
-COPY --from=ubi /usr/lib64/libxtables.so.12 /lib64/libxtables.so.12
-COPY --from=ubi /usr/lib64/libxtables.so.12.7.0 /lib64/libxtables.so.12.7.0
-COPY --from=ubi /lib64/libmnl.so.0 /lib64/libmnl.so.0
-COPY --from=ubi /lib64/libnftnl.so.11 /lib64/libnftnl.so.11
-COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
+COPY --from=ubi /rootfs /
 
 FROM ${CALICO_BASE}
 
