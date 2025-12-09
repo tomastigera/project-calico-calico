@@ -74,7 +74,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(BUILD_IMAGES)
+image: register $(BUILD_IMAGES)
 
 # istio-install-cni image
 $(ISTIO_CNI_IMAGE): $(ISTIO_CNI_IMAGE_CREATED)
