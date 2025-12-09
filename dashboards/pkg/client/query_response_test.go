@@ -14,7 +14,7 @@ func TestQueryResponse(t *testing.T) {
 			subject := QueryResponse{}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, nil)
+			err := subject.WriteCSV(w, nil, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "\n", w.String())
@@ -29,7 +29,7 @@ func TestQueryResponse(t *testing.T) {
 			}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, nil)
+			err := subject.WriteCSV(w, nil, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "\n\n\n", w.String())
@@ -73,7 +73,7 @@ func TestQueryResponse(t *testing.T) {
 
 				t.Run(tc.name, func(t *testing.T) {
 					w := &bytes.Buffer{}
-					err := subject.WriteCSV(w, tc.columns)
+					err := subject.WriteCSV(w, tc.columns, 0)
 					require.NoError(t, err)
 
 					require.Equal(t, tc.expected, w.String())
@@ -102,7 +102,7 @@ func TestQueryResponse(t *testing.T) {
 			}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)"})
+			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)"}, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg1)\n"+
@@ -180,12 +180,48 @@ func TestQueryResponse(t *testing.T) {
 
 				t.Run(tc.name, func(t *testing.T) {
 					w := &bytes.Buffer{}
-					err := subject.WriteCSV(w, tc.columns)
+					err := subject.WriteCSV(w, tc.columns, 0)
 					require.NoError(t, err)
 
 					require.Equal(t, tc.expected, w.String())
 				})
 			}
+		})
+
+		t.Run("limit rows", func(t *testing.T) {
+			subject := QueryResponse{
+				Documents: []QueryResponseDocument{
+					{"col1": "val1"},
+					{"col1": "val2"},
+					{"col1": "val3"},
+				},
+			}
+
+			w := &bytes.Buffer{}
+			err := subject.WriteCSV(w, []string{"col1"}, 2)
+			require.NoError(t, err)
+
+			require.Equal(t, "col1\nval1\nval2\n", w.String())
+		})
+
+		t.Run("limit rows with groups", func(t *testing.T) {
+			subject := QueryResponse{
+				GroupValues: []QueryResponseGroupValue{
+					{Key: "g1", NestedValues: []QueryResponseGroupValue{
+						{Key: "g1-1", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "1"}}},
+						{Key: "g1-2", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "2"}}},
+					}},
+					{Key: "g2", NestedValues: []QueryResponseGroupValue{
+						{Key: "g2-1", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "3"}}},
+					}},
+				},
+			}
+
+			w := &bytes.Buffer{}
+			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg)"}, 2)
+			require.NoError(t, err)
+
+			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg)\ng1,g1-1,1\ng1,g1-2,2\n", w.String())
 		})
 	})
 }

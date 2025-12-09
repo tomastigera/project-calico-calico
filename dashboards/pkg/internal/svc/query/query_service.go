@@ -45,6 +45,7 @@ type Config struct {
 
 const (
 	MaxQueryDocumentsLimit   = 500
+	MaxExportDocumentsLimit  = 10000
 	MaxQueryDocumentsDefault = 10
 )
 
@@ -76,9 +77,14 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 	)
 
 	maxDocuments := MaxQueryDocumentsDefault
+	limit := MaxQueryDocumentsLimit
+
+	if req.IsExport {
+		limit = MaxExportDocumentsLimit
+	}
 
 	if req.MaxDocs != nil && *req.MaxDocs >= 0 {
-		maxDocuments = min(*req.MaxDocs, MaxQueryDocumentsLimit)
+		maxDocuments = min(*req.MaxDocs, limit)
 	}
 
 	pageNum := 0

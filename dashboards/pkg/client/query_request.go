@@ -26,6 +26,9 @@ type QueryRequest struct {
 
 	// Aggregations Subaggregations for each group in GroupBys
 	Aggregations QueryRequestAggregations `json:"aggregations"`
+
+	// IsExport indicates if the request is for an export
+	IsExport bool `json:"-"`
 }
 
 // QueryRequestFilter A document filter

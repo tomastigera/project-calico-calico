@@ -63,7 +63,7 @@ func (q *QueryResponseGroupValue) Append(value QueryResponseGroupValue) {
 // columnsDef is must contain a slice of fields which will have their values written to csv. If a field is suffixed
 // by :<alias>, then the corresponding field column in the 1st line of the CSV export will be set to <alias> instead
 // of the field name
-func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string) error {
+func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string, limit int) error {
 	csvWriter := csv.NewWriter(w)
 
 	var fields []string
@@ -98,7 +98,10 @@ func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string) error {
 			return m, nil
 		}
 
-		for _, doc := range q.Documents {
+		for i, doc := range q.Documents {
+			if limit > 0 && i >= limit {
+				break
+			}
 			docMap, err := docToMap(doc)
 			if err != nil {
 				return err
@@ -115,7 +118,8 @@ func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string) error {
 			}
 		}
 	} else if len(q.GroupValues) > 0 {
-		err := q.convertGroupValuesToCSV(csvWriter, fields, nil, 0, q.GroupValues)
+		rowsWritten := 0
+		err := q.convertGroupValuesToCSV(csvWriter, fields, nil, 0, q.GroupValues, &rowsWritten, limit)
 		if err != nil {
 			return err
 		}
@@ -136,6 +140,8 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 	csvEntryMap map[string]any,
 	groupIndex int,
 	groupValues []QueryResponseGroupValue,
+	rowsWritten *int,
+	limit int,
 ) error {
 	// each GroupValue.Key is identified by the pseudo field groupBys(index)
 	keyColumn := fmt.Sprintf("groupBys(%d)", groupIndex)
@@ -143,6 +149,9 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 		return field == keyColumn
 	})
 	for _, groupValue := range groupValues {
+		if limit > 0 && *rowsWritten >= limit {
+			return nil
+		}
 		if groupIndex == 0 {
 			// Process groupValues and aggregations to csv
 			csvEntryMap = make(map[string]any)
@@ -155,7 +164,7 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 		var err error
 		if len(groupValue.NestedValues) > 0 {
 			// process subgroup values
-			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, groupValue.NestedValues)
+			err = q.convertGroupValuesToCSV(csvWriter, fields, csvEntryMap, groupIndex+1, groupValue.NestedValues, rowsWritten, limit)
 		} else {
 			// process aggregations if no subgroup values are available
 			err = q.writeCSVRecord(csvWriter, fields, func(field string) any {
@@ -170,6 +179,9 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 				}
 				return ""
 			})
+			if err == nil {
+				*rowsWritten++
+			}
 		}
 		if err != nil {
 			return err
