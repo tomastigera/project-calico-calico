@@ -67,6 +67,8 @@ COPY --from=ubi /lib64/libreadline.so.8 /lib64/libreadline.so.8
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 COPY --from=ubi /lib64/libxtables.so.12 /lib64/libxtables.so.12
 
+COPY --from=ubi /lib64/xtables/ /lib64/xtables/
+
 COPY bin/install-cni-${TARGETARCH} /usr/bin/install-cni
 COPY bin/LICENSE /LICENSE
 
