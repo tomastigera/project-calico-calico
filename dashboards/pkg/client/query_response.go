@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -60,7 +61,7 @@ func (q *QueryResponseGroupValue) Append(value QueryResponseGroupValue) {
 }
 
 // WriteCSV Writes QueryResponse in the CSV format to w, with the 1st line containing field names in the columnsDef slice
-// columnsDef is must contain a slice of fields which will have their values written to csv. If a field is suffixed
+// columnsDef must contain a slice of fields which will have their values written to csv. If a field is suffixed
 // by :<alias>, then the corresponding field column in the 1st line of the CSV export will be set to <alias> instead
 // of the field name
 func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string, limit int) error {
@@ -143,11 +144,16 @@ func (q *QueryResponse) convertGroupValuesToCSV(
 	rowsWritten *int,
 	limit int,
 ) error {
+	if rowsWritten == nil {
+		return errors.New("rowsWritten pointer must be provided")
+	}
+
 	// each GroupValue.Key is identified by the pseudo field groupBys(index)
 	keyColumn := fmt.Sprintf("groupBys(%d)", groupIndex)
 	containsKey := slices.AnyMatch(fields, func(field string) bool {
 		return field == keyColumn
 	})
+
 	for _, groupValue := range groupValues {
 		if limit > 0 && *rowsWritten >= limit {
 			return nil
