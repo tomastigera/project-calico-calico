@@ -67,9 +67,9 @@
         commands:
           - cd felix
           - make bin/calico-felix.exe fv/win-fv.exe
-- name: "Felix: Windows FV capz"
+- name: "Felix: Windows FV"
   run:
-    when: "${CHANGE_IN(felix)}"
+    when: "false or ${CHANGE_IN(felix,non-go:/process/testing/aso,non-go:/process/testing/utils,non-go:/process/testing/winfv-felix)}"
   dependencies: ["Felix: Build Windows binaries"]
   task:
     secrets:
@@ -95,16 +95,14 @@
         commands:
           - artifact push job ${REPORT_DIR} --destination test-results || true
     env_vars:
-      - name: FV_PROVISIONER
-        value: "capz"
       - name: FV_TYPE
-        value: "calico-felix"
+        value: "tigera-felix"
       - name: SEMAPHORE_ARTIFACT_EXPIRY
         value: 2w
       - name: CONTAINERD_VERSION
         value: 1.7.22
     jobs:
-      - name: "Felix: Windows FV - CAPZ"
+      - name: "Felix: Windows FV"
         commands:
           - ./.semaphore/run-win-fv
 - name: "Felix: iptables tests on Ubuntu 22.04"
