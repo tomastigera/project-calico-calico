@@ -84,6 +84,7 @@ const (
 	IPSetIDThisHostIPs        = "this-host"
 	IPSetIDAllTunnelNets      = "all-tunnel-net"
 	IPSetIDAllEGWHealthPorts  = "egw-health-ports"
+	IPSetIDAllIstioWEPs       = "all-istio-weps"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
@@ -537,9 +538,11 @@ type Config struct {
 
 	DNSTrustedServers []config.ServerPort
 
-	TPROXYMode             string
-	TPROXYPort             int
-	TPROXYUpstreamConnMark uint32
+	TPROXYMode              string
+	TPROXYPort              int
+	TPROXYUpstreamConnMark  uint32
+	IstioAmbientModeEnabled bool
+	IstioDSCPMark           uint8
 }
 
 var unusedBitsInBPFMode = map[string]bool{

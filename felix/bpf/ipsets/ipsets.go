@@ -52,6 +52,9 @@ const (
 
 	// IP set ID for Egress gateway health ports.
 	EgressGWHealthPortsID uint64 = ReservedIPSetBase + 2
+
+	// IP set ID for All Istio WEPs.
+	AllIstioWEPsID = ReservedIPSetBase + 3
 )
 
 func init() {

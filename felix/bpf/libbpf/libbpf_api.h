@@ -303,6 +303,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			uint *jumps,
 			uint *jumps6,
 			short dscp,
+			short istio_dscp,
 			uint maglev_lut_size)
 {
 	struct cali_tc_global_data v4 = {
@@ -322,6 +323,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
 		.dscp = dscp,
+		.istio_dscp = istio_dscp,
 		.maglev_lut_size = maglev_lut_size,
 	};
 

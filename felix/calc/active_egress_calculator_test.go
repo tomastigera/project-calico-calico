@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/proto"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -138,11 +139,12 @@ var _ = Describe("ActiveEgressCalculator", func() {
 	}
 
 	BeforeEach(func() {
-		aec = NewActiveEgressCalculator("EnabledPerNamespaceOrPerPod")
+		aec = NewActiveEgressCalculator("EnabledPerNamespaceOrPerPod", &EgressSelectorPool{})
 		cbs = &testCallbacks{}
 		aec.OnIPSetActive = cbs.OnIPSetActive
 		aec.OnIPSetInactive = cbs.OnIPSetInactive
-		aec.OnEndpointEgressDataUpdate = cbs.OnEndpointEgressDataUpdate
+		aec.OnEndpointComputedDataUpdate = cbs.OnEndpointComputedDataUpdate
+		aec.OnDatamodelStatus(api.InSync)
 	})
 
 	It("generates expected callbacks for a single WorkloadEndpoint", func() {
@@ -155,10 +157,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		})
+		aec.Flush()
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
 		ipSetID1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID1}})
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID1}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("changing WorkloadEndpoint's egress selector")
@@ -169,13 +174,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
+		aec.Flush()
 
 		// Expect IPSetInactive for old selector.
 		cbs.ExpectInactive(ipSetID1)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID2}})
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID2}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID2).NotTo(Equal(ipSetID1))
 
@@ -187,10 +195,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
+		aec.Flush()
 
 		// Expect IPSetInactive for old selector.
 		cbs.ExpectInactive(ipSetID2)
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 	})
 
@@ -216,12 +225,17 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -242,16 +256,21 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID1)
 		cbs.ExpectInactive(ipSetID2)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID3 := cbs.ExpectActive()
 		ipSetID4 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: ipSetID3, CIDR: "111.0.0.0/8"},
-			{IpSetID: "", CIDR: "110.0.0.0/8"},
-			{IpSetID: ipSetID4, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: ipSetID3, CIDR: "111.0.0.0/8"},
+				{IpSetID: "", CIDR: "110.0.0.0/8"},
+				{IpSetID: ipSetID4, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID3).NotTo(Equal(ipSetID1))
@@ -273,10 +292,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: ipSetID3, CIDR: "111.0.0.0/8", PreferLocalGW: true},
-			{IpSetID: "", CIDR: "110.0.0.0/8"},
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: ipSetID3, CIDR: "111.0.0.0/8", PreferLocalGW: true},
+				{IpSetID: "", CIDR: "110.0.0.0/8"},
+			},
 		})
+
 		cbs.ExpectInactive(ipSetID4)
 		cbs.ExpectNoMoreCallbacks()
 
@@ -298,10 +322,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID3)
 
 		blockIPSet := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint")
@@ -313,8 +342,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet)
-		cbs.ExpectEgressUpdate(we1Key, nil)
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 	})
 
@@ -334,7 +366,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		blockIPSet := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("creating the egress gateway policy")
@@ -346,15 +382,20 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
 		ipSetID2 := cbs.ExpectActive()
 		ipSetID3 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID3, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID3, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -368,11 +409,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID2)
 		cbs.ExpectInactive(ipSetID3)
 
 		blockIPSet1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet1}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet1}},
+		})
 		Expect(blockIPSet1).To(Equal(blockIPSet))
 		cbs.ExpectNoMoreCallbacks()
 
@@ -388,10 +434,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet1)
 
 		ipSetID4 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID4}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID4}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint")
@@ -404,8 +455,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID4)
-		cbs.ExpectEgressUpdate(we1Key, nil)
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 	})
 
@@ -428,9 +482,17 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect 1 IPSetActive and 2 EgressIPSetIDUpdates.
+		aec.Flush()
+
 		ipSetID := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID}})
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{{IpSetID: ipSetID}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID}},
+		})
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #1")
@@ -443,7 +505,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect EgressUpdate for that endpoint.
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -456,7 +520,10 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
-		cbs.ExpectEgressUpdate(we2Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, nil)
+
 		cbs.ExpectInactive(ipSetID)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -490,17 +557,26 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect 2 IPSetActive and 2 EgressIPSetIDUpdates.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
+
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -514,7 +590,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect EgressUpdate for that endpoint.
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -527,8 +605,12 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
-		cbs.ExpectEgressUpdate(we2Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, nil)
+
 		cbs.ExpectInactive(ipSetID1)
+
 		cbs.ExpectInactive(ipSetID2)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -562,17 +644,26 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect 2 IPSetActive and 2 EgressIPSetIDUpdates.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
+
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -586,10 +677,21 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		blockIPSet := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{{IpSetID: blockIPSet}})
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID1)
+
 		cbs.ExpectInactive(ipSetID2)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -628,8 +730,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID1}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID1}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating Profile with different selector")
@@ -650,11 +757,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID1)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID2}})
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID2}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID2).NotTo(Equal(ipSetID1))
 
@@ -672,11 +783,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID2)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new WE selector.
 		ipSetID3 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID3}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID3}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID3).NotTo(Equal(ipSetID1))
 		Expect(ipSetID3).NotTo(Equal(ipSetID2))
@@ -694,11 +810,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old (WE) selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID3)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new (profile) selector.
 		Expect(cbs.ExpectActive()).To(Equal(ipSetID2))
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID2}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID2}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating Profile with no egress selector")
@@ -713,10 +834,12 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old (profile) selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID2)
 
 		// Expect EgressIPSetIDUpdate with IP set ID "".
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the WorkloadEndpoint")
@@ -773,8 +896,14 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID1}})
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID1}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating Profile with non-existing egress gateway policy selector")
@@ -796,11 +925,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID1)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		blockIPSet := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("removing non-existing egress gateway policy from profile")
@@ -821,11 +954,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID2}})
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID2}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID2).NotTo(Equal(ipSetID1))
 
@@ -843,11 +980,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID2)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new WE selector.
 		ipSetID3 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID3}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID3}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID3).NotTo(Equal(ipSetID1))
 		Expect(ipSetID3).NotTo(Equal(ipSetID2))
@@ -867,11 +1009,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID3)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		blockIPSet1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet1}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet1}},
+		})
 		Expect(blockIPSet1).To(Equal(blockIPSet))
 		cbs.ExpectNoMoreCallbacks()
 
@@ -904,15 +1051,20 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet1)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID4 := cbs.ExpectActive()
 		ipSetID5 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: ipSetID4, CIDR: "111.0.0.0/8"},
-			{IpSetID: "", CIDR: "110.0.0.0/8"},
-			{IpSetID: ipSetID5, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: ipSetID4, CIDR: "111.0.0.0/8"},
+				{IpSetID: "", CIDR: "110.0.0.0/8"},
+				{IpSetID: ipSetID5, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -925,16 +1077,22 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID4)
+
 		cbs.ExpectInactive(ipSetID5)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
 		ipSetID6 := cbs.ExpectActive()
 		ipSetID7 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID6, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID7, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID6, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID7, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -948,16 +1106,22 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID6)
+
 		cbs.ExpectInactive(ipSetID7)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID8 := cbs.ExpectActive()
 		ipSetID9 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: ipSetID8, CIDR: "111.0.0.0/8"},
-			{IpSetID: "", CIDR: "110.0.0.0/8"},
-			{IpSetID: ipSetID9, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: ipSetID8, CIDR: "111.0.0.0/8"},
+				{IpSetID: "", CIDR: "110.0.0.0/8"},
+				{IpSetID: ipSetID9, CIDR: ""},
+			},
 		})
 		Expect(ipSetID8).To(Equal(ipSetID4))
 		Expect(ipSetID9).To(Equal(ipSetID5))
@@ -975,12 +1139,18 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetID8)
+
 		cbs.ExpectInactive(ipSetID9)
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new WE selector.
 		blockIPSet2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet2}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet2}},
+		})
 		Expect(blockIPSet2).To(Equal(blockIPSet1))
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1031,8 +1201,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVDeleted,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet2)
-		cbs.ExpectEgressUpdate(we1Key, nil)
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 	})
@@ -1073,12 +1246,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		})
+		aec.Flush()
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
 		ipSetA := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{{IpSetID: ipSetA}})
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{{IpSetID: ipSetA}},
+			})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1100,11 +1276,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Inactive for old, Active for new, EgressIPSetIDUpdate for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetA)
 		ipSetAPrime := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{{IpSetID: ipSetAPrime}})
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{{IpSetID: ipSetAPrime}},
+			})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1124,12 +1304,15 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		})
+		aec.Flush()
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
 		ipSetB := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-b", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{{IpSetID: ipSetB}})
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{{IpSetID: ipSetB}},
+			})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1143,10 +1326,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Inactive for its selector and EgressIPSetIDUpdate ““ for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetAPrime)
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, nil)
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1176,10 +1362,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		}
 
 		// Expect Inactive for its selector and EgressIPSetIDUpdate ““ for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetB)
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-b", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, nil)
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
 		}
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -1236,14 +1425,19 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
+		aec.Flush()
+
 		ipSetIDA1 := cbs.ExpectActive()
 		ipSetIDA2 := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{
-				{IpSetID: "", CIDR: "10.0.0.0/8"},
-				{IpSetID: ipSetIDA1, CIDR: "11.0.0.0/8"},
-				{IpSetID: ipSetIDA2, CIDR: ""},
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{
+					{IpSetID: "", CIDR: "10.0.0.0/8"},
+					{IpSetID: ipSetIDA1, CIDR: "11.0.0.0/8"},
+					{IpSetID: ipSetIDA2, CIDR: ""},
+				},
 			})
 		}
 		cbs.ExpectNoMoreCallbacks()
@@ -1264,16 +1458,21 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Inactive for old, Active for new, EgressIPSetIDUpdate for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetIDA1)
 		cbs.ExpectInactive(ipSetIDA2)
+
 		ipSetIDA3 := cbs.ExpectActive()
 		ipSetIDA4 := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{
-				{IpSetID: ipSetIDA3, CIDR: "111.0.0.0/8"},
-				{IpSetID: "", CIDR: "110.0.0.0/8"},
-				{IpSetID: ipSetIDA4, CIDR: ""},
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{
+					{IpSetID: ipSetIDA3, CIDR: "111.0.0.0/8"},
+					{IpSetID: "", CIDR: "110.0.0.0/8"},
+					{IpSetID: ipSetIDA4, CIDR: ""},
+				},
 			})
 
 		}
@@ -1295,14 +1494,19 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
+		aec.Flush()
+
 		ipSetIDB1 := cbs.ExpectActive()
 		ipSetIDB2 := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-b", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, []EpEgressData{
-				{IpSetID: "", CIDR: "10.0.0.0/8"},
-				{IpSetID: ipSetIDB1, CIDR: "11.0.0.0/8"},
-				{IpSetID: ipSetIDB2, CIDR: ""},
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+				Rules: []EpEgressData{
+					{IpSetID: "", CIDR: "10.0.0.0/8"},
+					{IpSetID: ipSetIDB1, CIDR: "11.0.0.0/8"},
+					{IpSetID: ipSetIDB2, CIDR: ""},
+				},
 			})
 		}
 		cbs.ExpectNoMoreCallbacks()
@@ -1317,11 +1521,14 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect Inactive for its selector and EgressIPSetIDUpdate ““ for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetIDA3)
 		cbs.ExpectInactive(ipSetIDA4)
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, nil)
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1351,11 +1558,14 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		}
 
 		// Expect Inactive for its selector and EgressIPSetIDUpdate ““ for the 5 using WEs.
+		aec.Flush()
+
 		cbs.ExpectInactive(ipSetIDB1)
 		cbs.ExpectInactive(ipSetIDB2)
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-b", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, nil)
+
+			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
 		}
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -1416,8 +1626,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		})
+		aec.Flush()
+
 		ipSetID := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, []EpEgressData{{IpSetID: ipSetID}})
+
+		cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating profile with same selector")
@@ -1477,12 +1692,17 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		})
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1520,7 +1740,11 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		ipSetWE := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetWE}})
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetWE}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("adding Profile with egress selector")
@@ -1608,8 +1832,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
+		aec.Flush()
+
 		blockIPSet := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: blockIPSet}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("creating the egress gateway policy")
@@ -1621,14 +1850,19 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
+		aec.Flush()
+
 		cbs.ExpectInactive(blockIPSet)
 
 		ipSetID1 := cbs.ExpectActive()
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1735,9 +1969,17 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect 1 IPSetActive and 2 EgressIPSetIDUpdates.
+		aec.Flush()
+
 		ipSetID := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: ipSetID}})
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{{IpSetID: ipSetID}})
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID}},
+		})
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{{IpSetID: ipSetID}},
+		})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #1")
@@ -1750,7 +1992,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect EgressUpdate for that endpoint.
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -1763,7 +2007,10 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
-		cbs.ExpectEgressUpdate(we2Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, nil)
+
 		cbs.ExpectInactive(ipSetID)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -1803,17 +2050,26 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect 2 IPSetActive and 2 EgressIPSetIDUpdates.
+		aec.Flush()
+
 		ipSetID1 := cbs.ExpectActive()
+
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
-		cbs.ExpectEgressUpdate(we2Key, []EpEgressData{
-			{IpSetID: "", CIDR: "10.0.0.0/8"},
-			{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
-			{IpSetID: ipSetID2, CIDR: ""},
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+			Rules: []EpEgressData{
+				{IpSetID: "", CIDR: "10.0.0.0/8"},
+				{IpSetID: ipSetID1, CIDR: "11.0.0.0/8"},
+				{IpSetID: ipSetID2, CIDR: ""},
+			},
 		})
 		cbs.ExpectNoMoreCallbacks()
 
@@ -1827,7 +2083,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect EgressUpdate for that endpoint.
-		cbs.ExpectEgressUpdate(we1Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -1840,18 +2098,23 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
-		cbs.ExpectEgressUpdate(we2Key, nil)
+		aec.Flush()
+
+		cbs.ExpectComputedUpdate(we2Key, EPCompDataKindEgressGateway, nil)
+
 		cbs.ExpectInactive(ipSetID1)
+
 		cbs.ExpectInactive(ipSetID2)
 		cbs.ExpectNoMoreCallbacks()
 	})
 })
 
 type testCallbacks struct {
-	activeCalls      []*IPSetData
-	inactiveCalls    []*IPSetData
-	egressUpdateKeys []model.WorkloadEndpointKey
-	egressDatas      [][]EpEgressData
+	activeCalls         []*IPSetData
+	inactiveCalls       []*IPSetData
+	computedUpdateKeys  []model.WorkloadEndpointKey
+	computedUpdateKinds []EndpointComputedDataKind
+	computedUpdateDatas []EndpointComputedData
 }
 
 func (tc *testCallbacks) OnIPSetActive(ipSet *IPSetData) {
@@ -1862,9 +2125,10 @@ func (tc *testCallbacks) OnIPSetInactive(ipSet *IPSetData) {
 	tc.inactiveCalls = append(tc.inactiveCalls, ipSet)
 }
 
-func (tc *testCallbacks) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData []EpEgressData) {
-	tc.egressUpdateKeys = append(tc.egressUpdateKeys, key)
-	tc.egressDatas = append(tc.egressDatas, egressData)
+func (tc *testCallbacks) OnEndpointComputedDataUpdate(key model.WorkloadEndpointKey, kind EndpointComputedDataKind, computedData EndpointComputedData) {
+	tc.computedUpdateKeys = append(tc.computedUpdateKeys, key)
+	tc.computedUpdateKinds = append(tc.computedUpdateKinds, kind)
+	tc.computedUpdateDatas = append(tc.computedUpdateDatas, computedData)
 }
 
 func (tc *testCallbacks) ExpectActive() string {
@@ -1883,24 +2147,196 @@ func (tc *testCallbacks) ExpectInactive(id string) {
 	tc.inactiveCalls = tc.inactiveCalls[1:]
 }
 
-func (tc *testCallbacks) ExpectEgressUpdate(key model.WorkloadEndpointKey, egressData []EpEgressData) {
-	ExpectWithOffset(1, tc.egressUpdateKeys).To(ContainElement(key), "Expected OnEndpointEgressDataUpdate call")
+func (tc *testCallbacks) ExpectComputedUpdate(key model.WorkloadEndpointKey, kind EndpointComputedDataKind, computedData EndpointComputedData) {
+	ExpectWithOffset(1, tc.computedUpdateKeys).To(ContainElement(key), "Expected OnEndpointComputedDataUpdate call")
 	keyPos := -1
-	for i, uk := range tc.egressUpdateKeys {
+	for i, uk := range tc.computedUpdateKeys {
 		if uk == key {
-			ExpectWithOffset(1, tc.egressDatas[i]).To(Equal(egressData))
+			ExpectWithOffset(1, tc.computedUpdateKinds[i]).To(Equal(kind))
+			if computedData == nil {
+				ExpectWithOffset(1, tc.computedUpdateDatas[i]).To(BeNil())
+			} else {
+				ExpectWithOffset(1, tc.computedUpdateDatas[i]).To(Equal(computedData))
+			}
 			keyPos = i
 			break
 		}
 	}
 	Expect(keyPos).NotTo(Equal(-1))
-	tc.egressUpdateKeys = append(tc.egressUpdateKeys[:keyPos], tc.egressUpdateKeys[keyPos+1:]...)
-	tc.egressDatas = append(tc.egressDatas[:keyPos], tc.egressDatas[keyPos+1:]...)
+	tc.computedUpdateKeys = append(tc.computedUpdateKeys[:keyPos], tc.computedUpdateKeys[keyPos+1:]...)
+	tc.computedUpdateKinds = append(tc.computedUpdateKinds[:keyPos], tc.computedUpdateKinds[keyPos+1:]...)
+	tc.computedUpdateDatas = append(tc.computedUpdateDatas[:keyPos], tc.computedUpdateDatas[keyPos+1:]...)
 }
 
 func (tc *testCallbacks) ExpectNoMoreCallbacks() {
 	ExpectWithOffset(1, len(tc.activeCalls)).To(BeZero(), "Expected no more OnIPSetActive calls")
 	ExpectWithOffset(1, len(tc.inactiveCalls)).To(BeZero(), "Expected no more OnIPSetInactive calls")
-	ExpectWithOffset(1, len(tc.egressUpdateKeys)).To(BeZero(), "Expected no more OnEndpointEgressDataUpdate calls")
-	ExpectWithOffset(1, len(tc.egressDatas)).To(BeZero(), "Expected no more OnEndpointEgressDataUpdate calls")
+	ExpectWithOffset(1, len(tc.computedUpdateKeys)).To(BeZero(), "Expected no more OnEndpointComputedDataUpdate calls")
+	ExpectWithOffset(1, len(tc.computedUpdateKinds)).To(BeZero(), "Expected no more OnEndpointComputedDataUpdate calls")
+	ExpectWithOffset(1, len(tc.computedUpdateDatas)).To(BeZero(), "Expected no more OnEndpointComputedDataUpdate calls")
 }
+
+var _ = Describe("ComputedEgressEP.ApplyTo", func() {
+	var wep *proto.WorkloadEndpoint
+
+	BeforeEach(func() {
+		wep = &proto.WorkloadEndpoint{
+			Name: "test-wep",
+		}
+	})
+
+	It("should set IsEgressGateway to true when workload is an egress gateway", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: true,
+			HealthPort:      8080,
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.IsEgressGateway).To(BeTrue())
+		Expect(wep.EgressGatewayHealthPort).To(Equal(int32(8080)))
+		Expect(wep.EgressGatewayRules).To(BeEmpty())
+	})
+
+	It("should not add egress gateway rules when workload is an egress gateway", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: true,
+			HealthPort:      8080,
+			Rules: []EpEgressData{
+				{IpSetID: "ipset1", MaxNextHops: 5, CIDR: "10.0.0.0/8"},
+			},
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.IsEgressGateway).To(BeTrue())
+		Expect(wep.EgressGatewayHealthPort).To(Equal(int32(8080)))
+		Expect(wep.EgressGatewayRules).To(BeEmpty(), "Rules should not be added when IsEgressGateway is true")
+	})
+
+	It("should add egress gateway rules when workload is not an egress gateway", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules: []EpEgressData{
+				{IpSetID: "ipset1", MaxNextHops: 5, CIDR: "10.0.0.0/8", PreferLocalGW: false},
+				{IpSetID: "ipset2", MaxNextHops: 10, CIDR: "192.168.0.0/16", PreferLocalGW: true},
+			},
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.IsEgressGateway).To(BeFalse())
+		Expect(wep.EgressGatewayHealthPort).To(Equal(int32(0)))
+		Expect(wep.EgressGatewayRules).To(HaveLen(2))
+
+		Expect(wep.EgressGatewayRules[0].IpSetId).To(Equal("ipset1"))
+		Expect(wep.EgressGatewayRules[0].MaxNextHops).To(Equal(int32(5)))
+		Expect(wep.EgressGatewayRules[0].Destination).To(Equal("10.0.0.0/8"))
+		Expect(wep.EgressGatewayRules[0].PreferLocalEgressGateway).To(BeFalse())
+
+		Expect(wep.EgressGatewayRules[1].IpSetId).To(Equal("ipset2"))
+		Expect(wep.EgressGatewayRules[1].MaxNextHops).To(Equal(int32(10)))
+		Expect(wep.EgressGatewayRules[1].Destination).To(Equal("192.168.0.0/16"))
+		Expect(wep.EgressGatewayRules[1].PreferLocalEgressGateway).To(BeTrue())
+	})
+
+	It("should handle rules with empty IpSetID and CIDR", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules: []EpEgressData{
+				{IpSetID: "", MaxNextHops: 0, CIDR: "10.0.0.0/8"},
+				{IpSetID: "ipset1", MaxNextHops: 3, CIDR: ""},
+			},
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.EgressGatewayRules).To(HaveLen(2))
+
+		Expect(wep.EgressGatewayRules[0].IpSetId).To(Equal(""))
+		Expect(wep.EgressGatewayRules[0].MaxNextHops).To(Equal(int32(0)))
+		Expect(wep.EgressGatewayRules[0].Destination).To(Equal("10.0.0.0/8"))
+
+		Expect(wep.EgressGatewayRules[1].IpSetId).To(Equal("ipset1"))
+		Expect(wep.EgressGatewayRules[1].MaxNextHops).To(Equal(int32(3)))
+		Expect(wep.EgressGatewayRules[1].Destination).To(Equal(""))
+	})
+
+	It("should handle empty Rules slice", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules:           []EpEgressData{},
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.IsEgressGateway).To(BeFalse())
+		Expect(wep.EgressGatewayRules).To(BeEmpty())
+	})
+
+	It("should handle nil Rules slice", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules:           nil,
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.IsEgressGateway).To(BeFalse())
+		Expect(wep.EgressGatewayRules).To(BeNil())
+	})
+
+	It("should set health port correctly when workload is egress gateway", func() {
+		computed := &ComputedEgressEP{
+			IsEgressGateway: true,
+			HealthPort:      uint16(9090),
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.EgressGatewayHealthPort).To(Equal(int32(9090)))
+	})
+
+	It("should preserve existing workload endpoint fields", func() {
+		wep.Name = "test-wep"
+		wep.ProfileIds = []string{"profile1", "profile2"}
+		wep.Ipv4Nets = []string{"192.168.1.10/32"}
+
+		computed := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules: []EpEgressData{
+				{IpSetID: "ipset1", MaxNextHops: 5, CIDR: "10.0.0.0/8"},
+			},
+		}
+
+		computed.ApplyTo(wep)
+
+		Expect(wep.Name).To(Equal("test-wep"))
+		Expect(wep.ProfileIds).To(Equal([]string{"profile1", "profile2"}))
+		Expect(wep.Ipv4Nets).To(Equal([]string{"192.168.1.10/32"}))
+		Expect(wep.EgressGatewayRules).To(HaveLen(1))
+	})
+
+	It("should handle multiple ApplyTo calls (appending rules)", func() {
+		computed1 := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules: []EpEgressData{
+				{IpSetID: "ipset1", MaxNextHops: 5, CIDR: "10.0.0.0/8"},
+			},
+		}
+
+		computed2 := &ComputedEgressEP{
+			IsEgressGateway: false,
+			Rules: []EpEgressData{
+				{IpSetID: "ipset2", MaxNextHops: 10, CIDR: "192.168.0.0/16"},
+			},
+		}
+
+		computed1.ApplyTo(wep)
+		computed2.ApplyTo(wep)
+
+		Expect(wep.EgressGatewayRules).To(HaveLen(2))
+		Expect(wep.EgressGatewayRules[0].IpSetId).To(Equal("ipset1"))
+		Expect(wep.EgressGatewayRules[1].IpSetId).To(Equal("ipset2"))
+	})
+})

@@ -78,6 +78,7 @@ type AttachPoint struct {
 	IngressPacketRateConfigured bool
 	EgressPacketRateConfigured  bool
 	DSCP                        int8
+	IstioDSCP                   int8
 	MaglevLUTSize               uint32
 
 	// EE only
@@ -519,6 +520,7 @@ func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 		VethNS:        ap.VethNS,
 		DSCP:          ap.DSCP,
+		IstioDSCP:     ap.IstioDSCP,
 	}
 
 	if ap.Profiling == "Enabled" {

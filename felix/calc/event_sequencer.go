@@ -42,37 +42,19 @@ type configInterface interface {
 	ToConfigUpdate() *proto.ConfigUpdate
 }
 
-// Struct for additional data that feeds into proto.WorkloadEndpoint but is computed rather than
-// taken directly from model.WorkloadEndpoint.  Currently this is all related to egress IP function.
-// (It could be generalised in future, and so perhaps renamed EndpointComputedData.)
-type EndpointEgressData struct {
-	// The egress IP set for this endpoint. This is non-empty when an active local endpoint is
-	// configured to use egress gateways.
-	EgressGatewayRules []EpEgressData
-
-	// Whether this endpoint _is_ an egress gateway.
-	IsEgressGateway bool
-
-	// Health port of the EGW or 0 if EGW has none.
-	HealthPort uint16
-}
-
-func (e EndpointEgressData) IsEmpty() bool {
-	if e.IsEgressGateway || e.HealthPort != 0 {
-		return false
-	}
-	if len(e.EgressGatewayRules) != 0 {
-		return false
-	}
-	return true
+// Struct for additional data that feeds into proto.WorkloadEndpoint but is computed rather
+// than stored on resource's database.
+type EndpointComputedDataKind string
+type EndpointComputedData interface {
+	ApplyTo(*proto.WorkloadEndpoint)
 }
 
 // EndpointUpdate contains information about updates applied to the endpoint.
 type endpointUpdate struct {
-	endpoint   interface{}
-	peerData   *EndpointBGPPeer
-	egressData EndpointEgressData
-	tierInfo   []TierInfo
+	endpoint     interface{}
+	peerData     *EndpointBGPPeer
+	computedData []EndpointComputedData
+	tierInfo     []TierInfo
 }
 
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
@@ -465,7 +447,12 @@ func (buf *EventSequencer) flushProfileDeletes() {
 	}
 }
 
-func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, tiers []*proto.TierInfo) *proto.WorkloadEndpoint {
+func ModelWorkloadEndpointToProto(
+	ep *model.WorkloadEndpoint,
+	computedData []EndpointComputedData,
+	peerData *EndpointBGPPeer,
+	tiers []*proto.TierInfo,
+) *proto.WorkloadEndpoint {
 	mac := ""
 	if ep.Mac != nil {
 		mac = ep.Mac.String()
@@ -499,23 +486,6 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		}
 	}
 
-	var egressGatewayRules []*proto.EgressGatewayRule
-	egressGatewayHealthPort := int32(egressData.HealthPort)
-	isEgressGateway := egressData.IsEgressGateway
-	// To break gatewaying loops, we do not allow a workload to route
-	// via egress gateways if it is _itself_ an egress gateway.
-	if !isEgressGateway {
-		for _, r := range egressData.EgressGatewayRules {
-			egressRule := proto.EgressGatewayRule{
-				IpSetId:                  r.IpSetID,
-				MaxNextHops:              int32(r.MaxNextHops),
-				Destination:              r.CIDR,
-				PreferLocalEgressGateway: r.PreferLocalGW,
-			}
-			egressGatewayRules = append(egressGatewayRules, &egressRule)
-		}
-	}
-
 	var localBGPPeer *proto.LocalBGPPeer
 	if peerData != nil {
 		localBGPPeer = &proto.LocalBGPPeer{
@@ -535,7 +505,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		skipRedir.Egress = true
 	}
 
-	return &proto.WorkloadEndpoint{
+	wep := &proto.WorkloadEndpoint{
 		State:                      ep.State,
 		Name:                       ep.Name,
 		Mac:                        mac,
@@ -554,13 +524,13 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, egressData Endpoin
 		LocalBgpPeer:               localBGPPeer,
 		SkipRedir:                  skipRedir,
 		QosPolicies:                qosPolicies,
-
-		// Enterprise-only flags
-
-		IsEgressGateway:         isEgressGateway,
-		EgressGatewayHealthPort: egressGatewayHealthPort,
-		EgressGatewayRules:      egressGatewayRules,
 	}
+
+	for _, cd := range computedData {
+		cd.ApplyTo(wep)
+	}
+
+	return wep
 }
 
 func ModelHostEndpointToProto(ep *model.HostEndpoint, tiers, untrackedTiers, preDNATTiers []*proto.TierInfo, forwardTiers []*proto.TierInfo) *proto.HostEndpoint {
@@ -586,7 +556,7 @@ func ModelHostEndpointToProto(ep *model.HostEndpoint, tiers, untrackedTiers, pre
 func (buf *EventSequencer) OnEndpointTierUpdate(
 	endpointKey model.EndpointKey,
 	endpoint model.Endpoint,
-	egressData EndpointEgressData,
+	computedData []EndpointComputedData,
 	peerData *EndpointBGPPeer,
 	filteredTiers []TierInfo,
 ) {
@@ -601,10 +571,10 @@ func (buf *EventSequencer) OnEndpointTierUpdate(
 		// Update.
 		buf.pendingEndpointDeletes.Discard(endpointKey)
 		buf.pendingEndpointUpdates[endpointKey] = endpointUpdate{
-			endpoint:   endpoint,
-			peerData:   peerData,
-			egressData: egressData,
-			tierInfo:   filteredTiers,
+			endpoint:     endpoint,
+			peerData:     peerData,
+			computedData: computedData,
+			tierInfo:     filteredTiers,
 		}
 	}
 }
@@ -619,7 +589,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
 
-			protoEp := ModelWorkloadEndpointToProto(wlep, endpointUpdate.egressData, endpointUpdate.peerData, tiers)
+			protoEp := ModelWorkloadEndpointToProto(wlep, endpointUpdate.computedData, endpointUpdate.peerData, tiers)
 
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{

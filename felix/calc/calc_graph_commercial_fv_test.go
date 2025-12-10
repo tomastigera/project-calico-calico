@@ -931,6 +931,13 @@ var commercialTests = []StateList{
 		multipleTunnelEndpointsDisjointWithoutPoolsBetweenLocalAndRemoteA,
 	},
 
+	// Istio tests - verify that the all-istio-weps IPSet is populated correctly
+	{
+		istioWithAmbientPod,
+		istioWithMixedPods,
+		istioSelectorEdgeCases,
+	},
+
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints
 	// TODO(smc): Test mutation of host endpoints
@@ -1169,11 +1176,10 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
-				{
-					IpSetID: egressSelectorID(egressSelector),
-				},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
+				{IpSetID: egressSelectorID(egressSelector)},
 			},
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
@@ -1201,8 +1207,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID("!all()"),
 				},
@@ -1244,8 +1251,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1302,8 +1310,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
@@ -1355,16 +1364,16 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withEndpoint(
 		"orch/wep1o/ep1",
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressSelector),
 				},
@@ -1414,9 +1423,8 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withEndpoint(
 		"orch/wep1o/ep1",
 		[]mock.TierInfo{},
@@ -1424,8 +1432,9 @@ var (
 		calc.CalculateRemoteEndpoint(gatewayKey3, gatewayEndpoint3),
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1484,8 +1493,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressProfileSelector),
 				},
@@ -1521,8 +1531,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID("!all()"),
 				},
@@ -1565,8 +1576,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1610,16 +1622,16 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withEndpoint(
 		"orch/wep1p/ep1",
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressProfileSelector),
 				},
@@ -1670,16 +1682,16 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withEndpoint(
 		"orch/wep1p/ep1",
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1783,8 +1795,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressSelector),
 				},
@@ -1795,8 +1808,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o2/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressSelector),
 				},
@@ -1807,9 +1821,8 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withIPSet(egressSelectorID(egressSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
@@ -1869,8 +1882,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1888,8 +1902,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o2/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
@@ -1907,9 +1922,8 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
@@ -1958,8 +1972,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressSelectorSim),
 				},
@@ -1970,8 +1985,9 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/wep1o2/ep1",
-		calc.EndpointEgressData{
-			EgressGatewayRules: []calc.EpEgressData{
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{
+			Rules: []calc.EpEgressData{
 				{
 					IpSetID: egressSelectorID(egressSelector),
 				},
@@ -1982,9 +1998,8 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw1/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withIPSet(egressSelectorID(egressSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
@@ -2020,9 +2035,8 @@ var (
 		[]mock.TierInfo{},
 	).withEndpointEgressData(
 		"orch/gw2/ep1",
-		calc.EndpointEgressData{
-			IsEgressGateway: true,
-		},
+		calc.EPCompDataKindEgressGateway,
+		&calc.ComputedEgressEP{IsEgressGateway: true},
 	).withRoutes(
 		felixtypes.RouteUpdate{
 			Types:         proto.RouteType_LOCAL_WORKLOAD,
@@ -2091,8 +2105,9 @@ var (
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
-			calc.EndpointEgressData{
-				EgressGatewayRules: []calc.EpEgressData{
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{
+				Rules: []calc.EpEgressData{
 					{
 						IpSetID: egressSelectorID(egressSelector),
 					},
@@ -2128,7 +2143,8 @@ var (
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/gw1/ep1",
-			calc.EndpointEgressData{
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{
 				IsEgressGateway: true,
 				HealthPort:      healthPort,
 			},
@@ -2137,8 +2153,9 @@ var (
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
-			calc.EndpointEgressData{
-				EgressGatewayRules: []calc.EpEgressData{
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{
+				Rules: []calc.EpEgressData{
 					{
 						IpSetID: egressSelectorID(egressSelector),
 					},
@@ -2206,16 +2223,16 @@ var (
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/gw1/ep1",
-			calc.EndpointEgressData{
-				IsEgressGateway: true,
-			},
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{IsEgressGateway: true},
 		).withEndpoint(
 			"orch/wep1o/ep1",
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
-			calc.EndpointEgressData{
-				EgressGatewayRules: []calc.EpEgressData{
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{
+				Rules: []calc.EpEgressData{
 					{
 						IpSetID:     egressSelectorID(egressSelector),
 						MaxNextHops: maxNextHops,
@@ -2270,16 +2287,16 @@ var (
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/gw1/ep1",
-			calc.EndpointEgressData{
-				IsEgressGateway: true,
-			},
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{IsEgressGateway: true},
 		).withEndpoint(
 			"orch/wep1p/ep1",
 			[]mock.TierInfo{},
 		).withEndpointEgressData(
 			"orch/wep1p/ep1",
-			calc.EndpointEgressData{
-				EgressGatewayRules: []calc.EpEgressData{
+			calc.EPCompDataKindEgressGateway,
+			&calc.ComputedEgressEP{
+				Rules: []calc.EpEgressData{
 					{
 						IpSetID:     egressSelectorID(egressProfileSelector),
 						MaxNextHops: maxNextHops,
@@ -2355,3 +2372,158 @@ func namespaceToProfile(ns *kapiv1.Namespace) *apiv3.Profile {
 	}
 	return profile
 }
+
+// Test states for Istio functionality
+var (
+	// Base state with Istio enabled but no endpoints
+	istioBaseState = initialisedStore.withIPSet("all-istio-weps", []string{}).withName("istio base state")
+
+	// State with Istio ambient namespace and pod
+	// Note: all-istio-weps IPSet should contain WEPs from ambient namespaces
+	istioWithAmbientPod = istioBaseState.withKVUpdates(
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: istioWepAmbientKey, Value: &istioWepAmbient},
+	).withEndpoint(
+		"orch/istio-wep-ambient/ep1",
+		[]mock.TierInfo{},
+	).withActiveProfiles(
+		felixtypes.ProfileID{Name: "istio-ambient"},
+	).withRoutes(
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.1.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "fc00:fe10::1/128",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withIPSet("all-istio-weps", []string{
+		"10.10.1.1/32",
+		"fc00:fe10::1/128",
+	}).withName("istio with ambient pod")
+
+	// State with multiple pods - mixed scenarios
+	// Note: all-istio-weps IPSet should contain only ambient and direct-ambient WEPs
+	istioWithMixedPods = istioBaseState.withKVUpdates(
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: ResourceKey{Name: "istio-none", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceNone)},
+		KVPair{Key: ResourceKey{Name: "regular", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&regularNamespace)},
+		KVPair{Key: istioWepAmbientKey, Value: &istioWepAmbient},
+		KVPair{Key: istioWepNoneKey, Value: &istioWepNone},
+		KVPair{Key: regularWepKey, Value: &regularWep},
+		KVPair{Key: istioWepDirectAmbientKey, Value: &istioWepDirectAmbient},
+	).withEndpoint(
+		"orch/istio-wep-ambient/ep1",
+		[]mock.TierInfo{},
+	).withEndpoint(
+		"orch/istio-wep-none/ep1",
+		[]mock.TierInfo{},
+	).withEndpoint(
+		"orch/regular-wep/ep1",
+		[]mock.TierInfo{},
+	).withEndpoint(
+		"orch/istio-wep-direct-ambient/ep1",
+		[]mock.TierInfo{},
+	).withActiveProfiles(
+		felixtypes.ProfileID{Name: "istio-ambient"},
+		felixtypes.ProfileID{Name: "istio-none"},
+		felixtypes.ProfileID{Name: "regular"},
+	).withRoutes(
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.1.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "fc00:fe10::1/128",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.3.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "fc00:fe10::3/128",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.4.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "fc00:fe10::4/128",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.5.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "fc00:fe10::5/128",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withIPSet("all-istio-weps", []string{
+		"10.10.1.1/32",     // ambient namespace WEP
+		"fc00:fe10::1/128", // ambient namespace WEP
+		"10.10.5.1/32",     // direct ambient label WEP
+		"fc00:fe10::5/128", // direct ambient label WEP
+	}).withName("istio with mixed pods")
+
+	// Edge case: Pod in ambient namespace but with explicit istio.io/dataplane-mode=none label
+	// Original selector: Should be EXCLUDED (namespace ambient but pod has explicit none)
+	// Your selector: Should be EXCLUDED (pod doesn't have ambient label)
+	// This test should FAIL with your change because the pod should NOT be in the IPSet
+	istioSelectorEdgeCases = istioBaseState.withKVUpdates(
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: WorkloadEndpointKey{
+			Hostname:       localHostname,
+			OrchestratorID: "orch",
+			WorkloadID:     "ambient-ns-but-pod-none",
+			EndpointID:     "ep1",
+		}, Value: &WorkloadEndpoint{
+			State: "active",
+			Name:  "ambient-ns-but-pod-none",
+			IPv4Nets: []calinet.IPNet{
+				mustParseNet("10.10.9.1/32"),
+			},
+			Labels: uniquelabels.Make(map[string]string{
+				"projectcalico.org/namespace": "istio-ambient",
+				apiv3.LabelIstioDataplaneMode: apiv3.LabelIstioDataplaneModeNone, // Explicit none on pod
+			}),
+			ProfileIDs: []string{"istio-ambient"},
+		}},
+	).withEndpoint(
+		"orch/ambient-ns-but-pod-none/ep1",
+		[]mock.TierInfo{},
+	).withActiveProfiles(
+		felixtypes.ProfileID{Name: "istio-ambient"},
+	).withRoutes(
+		felixtypes.RouteUpdate{
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "10.10.9.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withIPSet("all-istio-weps", []string{
+		// Should be EMPTY - this pod should be excluded by both selectors
+	}).withName("istio selector edge cases")
+)

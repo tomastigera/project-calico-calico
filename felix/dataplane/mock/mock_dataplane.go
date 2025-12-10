@@ -51,7 +51,7 @@ type MockDataplane struct {
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
-	endpointEgressData             map[string]calc.EndpointEgressData
+	endpointComputedData           map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData
 	endpointToAllPolicyIDs         map[string][]types.PolicyID
 	endpointToProfiles             map[string][]string
 	serviceAccounts                map[types.ServiceAccountID]*proto.ServiceAccountUpdate
@@ -228,14 +228,18 @@ func (d *MockDataplane) EndpointToPreDNATPolicyOrder() map[string][]TierInfo {
 	return copyPolOrder(d.endpointToPreDNATPolicyOrder)
 }
 
-func (d *MockDataplane) EndpointEgressData() map[string]calc.EndpointEgressData {
+func (d *MockDataplane) EndpointEgressData() map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData {
 	d.Lock()
 	defer d.Unlock()
 
-	localCopy := map[string]calc.EndpointEgressData{}
-	for k, v := range d.endpointEgressData {
-		if !v.IsEmpty() {
-			localCopy[k] = v
+	localCopy := map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData{}
+	for k, v := range d.endpointComputedData {
+		if len(v) == 0 {
+			continue
+		}
+		localCopy[k] = map[calc.EndpointComputedDataKind]calc.EndpointComputedData{}
+		for mk, mv := range v {
+			localCopy[k][mk] = mv
 		}
 	}
 	return localCopy
@@ -323,7 +327,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
-		endpointEgressData:             make(map[string]calc.EndpointEgressData),
+		endpointComputedData:           make(map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData),
 		endpointToProfiles:             make(map[string][]string),
 		endpointToAllPolicyIDs:         make(map[string][]types.PolicyID),
 		serviceAccounts:                make(map[types.ServiceAccountID]*proto.ServiceAccountUpdate),
@@ -452,18 +456,26 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		d.endpointToPolicyOrder[id.String()] = tierInfos
 		d.endpointToUntrackedPolicyOrder[id.String()] = []TierInfo{}
 		d.endpointToPreDNATPolicyOrder[id.String()] = []TierInfo{}
-		endpointEgressData := calc.EndpointEgressData{
-			IsEgressGateway: event.Endpoint.IsEgressGateway,
-			HealthPort:      uint16(event.Endpoint.EgressGatewayHealthPort),
+		// Clean up Computed EGW first
+		delete(d.endpointComputedData, id.String())
+		// Only create computed data if there's meaningful egress content
+		if event.Endpoint.IsEgressGateway || len(event.Endpoint.EgressGatewayRules) > 0 {
+			endpointEgressData := &calc.ComputedEgressEP{
+				IsEgressGateway: event.Endpoint.IsEgressGateway,
+				HealthPort:      uint16(event.Endpoint.EgressGatewayHealthPort),
+			}
+			for _, r := range event.Endpoint.EgressGatewayRules {
+				endpointEgressData.Rules = append(endpointEgressData.Rules, calc.EpEgressData{
+					IpSetID:     r.IpSetId,
+					MaxNextHops: int(r.MaxNextHops),
+					CIDR:        r.Destination,
+				})
+			}
+			cdMap := map[calc.EndpointComputedDataKind]calc.EndpointComputedData{
+				calc.EPCompDataKindEgressGateway: endpointEgressData,
+			}
+			d.endpointComputedData[id.String()] = cdMap
 		}
-		for _, r := range event.Endpoint.EgressGatewayRules {
-			endpointEgressData.EgressGatewayRules = append(endpointEgressData.EgressGatewayRules, calc.EpEgressData{
-				IpSetID:     r.IpSetId,
-				MaxNextHops: int(r.MaxNextHops),
-				CIDR:        r.Destination,
-			})
-		}
-		d.endpointEgressData[id.String()] = endpointEgressData
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 
 		// Check that all the profiles referenced by the endpoint are already present, which
@@ -480,7 +492,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		delete(d.endpointToPolicyOrder, id.String())
 		delete(d.endpointToUntrackedPolicyOrder, id.String())
 		delete(d.endpointToPreDNATPolicyOrder, id.String())
-		delete(d.endpointEgressData, id.String())
+		delete(d.endpointComputedData, id.String())
 		delete(d.endpointToProfiles, id.String())
 		delete(d.endpointToAllPolicyIDs, id.String())
 	case *proto.HostEndpointUpdate:

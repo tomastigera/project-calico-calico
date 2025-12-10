@@ -379,11 +379,13 @@ func StartDataplaneDriver(
 				BPFForceTrackPacketsFromIfaces:     replaceWildcards(configParams.NFTablesMode == "Enabled", configParams.BPFForceTrackPacketsFromIfaces),
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
-				TPROXYMode:             configParams.TPROXYMode,
-				TPROXYPort:             configParams.TPROXYPort,
-				TPROXYUpstreamConnMark: configParams.TPROXYUpstreamConnMark,
-				MarkProxy:              markProxy,
-				KubeMasqueradeMark:     k8sMasqMark,
+				TPROXYMode:              configParams.TPROXYMode,
+				TPROXYPort:              configParams.TPROXYPort,
+				TPROXYUpstreamConnMark:  configParams.TPROXYUpstreamConnMark,
+				MarkProxy:               markProxy,
+				KubeMasqueradeMark:      k8sMasqMark,
+				IstioAmbientModeEnabled: configParams.IsIstioAmbientModeEnabled(),
+				IstioDSCPMark:           configParams.IstioDSCPMark.ToUint8(),
 			},
 
 			Wireguard: wireguard.Config{

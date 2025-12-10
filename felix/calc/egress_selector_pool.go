@@ -29,8 +29,8 @@ type EgressSelectorPool struct {
 	selectorRefCount map[string]int
 
 	// Callbacks.
-	OnEgressSelectorAdded   func(selector string)
-	OnEgressSelectorRemoved func(selector string)
+	OnEgressSelectorActive   func(selector string)
+	OnEgressSelectorInactive func(selector string)
 }
 
 func NewEgressSelectorPool(supportLevel string) *EgressSelectorPool {
@@ -185,7 +185,7 @@ func (esp *EgressSelectorPool) incRefSelector(selector string) {
 	}
 	esp.selectorRefCount[selector]++
 	if esp.selectorRefCount[selector] == 1 {
-		esp.OnEgressSelectorAdded(selector)
+		esp.OnEgressSelectorActive(selector)
 	}
 }
 
@@ -195,7 +195,12 @@ func (esp *EgressSelectorPool) decRefSelector(selector string) {
 	}
 	esp.selectorRefCount[selector]--
 	if esp.selectorRefCount[selector] == 0 {
-		esp.OnEgressSelectorRemoved(selector)
+		esp.OnEgressSelectorInactive(selector)
 		delete(esp.selectorRefCount, selector)
 	}
+}
+
+func (esp *EgressSelectorPool) HasSelector(selector string) bool {
+	_, ok := esp.selectorRefCount[selector]
+	return ok
 }
