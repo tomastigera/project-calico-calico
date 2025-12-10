@@ -125,7 +125,9 @@ func logStats() {
 	// averaged over 1/5/15 min.
 	la, err := procFS.LoadAvg()
 	var buf bytes.Buffer
-	buf.WriteString("\nSTATS: ")
+	buf.WriteString("\n")
+	buf.WriteString(time.Now().UTC().Format("15:04:05"))
+	buf.WriteString("STATS: ")
 	if err == nil {
 		_, _ = p.Fprintf(&buf, "LoadAvg=%.2f/%.2f/%.2f ", la.Load1, la.Load5, la.Load15)
 	} else {

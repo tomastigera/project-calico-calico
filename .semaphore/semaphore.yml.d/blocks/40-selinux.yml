@@ -13,7 +13,7 @@
         - export COMPONENT=$(basename $(pwd))
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
-        - export ZONE=us-east4-c
+        - export ZONE=europe-west3-c
         - echo VM_PREFIX=${VM_PREFIX}
     jobs:
       - name: "SELinux: CI"

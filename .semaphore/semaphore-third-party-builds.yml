@@ -21,6 +21,8 @@ global_job_config:
     - name: private-repo
   prologue:
     commands:
+      - export GCS_BUILD_CACHE_BUCKET=calico-transient-build-artifacts-europe-west3
+      - export GCS_WORKFLOW_DIR=gs://$GCS_BUILD_CACHE_BUCKET/workflow/${SEMAPHORE_WORKFLOW_ID}
       # Correct permissions since they are too open by default:
       - chmod 0600 ~/.keys/*
       # Remove all keys from the ssh agent so that only the ones from our

@@ -409,7 +409,13 @@ func StartNNodeTopology(
 		if w != nil {
 			// Wait for any expected Felix restart...
 			log.Info("Wait for Felix to restart")
-			Eventually(w, "10s").Should(BeClosed(),
+			restartTimeout := "10s"
+			if BPFMode() {
+				// In BPF mode, the first process may be blocked updating the
+				// dataplane and take a much longer time to restart.
+				restartTimeout = "40s"
+			}
+			Eventually(w, restartTimeout).Should(BeClosed(),
 				fmt.Sprintf("Timed out waiting for %s to restart", felix.Name))
 		}
 

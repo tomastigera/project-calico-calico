@@ -68,21 +68,24 @@
     # KinD tests also build and run all the other images.
     when: "${CHANGE_IN(node,typha,apiserver,cni-plugin,pod2daemon,calicoctl,kube-controllers,non-go:/.semaphore/vms/)}"
   dependencies:
-    - Prerequisites
+    - "Prerequisites"
   task:
     prologue:
       commands:
-        - cd $HOME
-        - tar -czf calico-private.tar.gz calico-private
-        - cd calico-private/node
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+        # Set up access to GCP buckets.
+        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+        - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+        - gcloud config set project unique-caldron-775
+        - cd node
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export ZONE=us-east4-c
+        - export ZONE=europe-west3-c
         - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
         - echo VM_PREFIX=${VM_PREFIX}
         - export COMPONENT=node
         - export VM_DISK_SIZE=120GB
         - mkdir artifacts
+        - ./.semaphore/cache-test-artifacts
         - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
     jobs:
       - name: "Node: kind-cluster tests"
