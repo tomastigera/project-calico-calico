@@ -318,7 +318,7 @@ function show_all_instances() {
 
   echo "Linux node: ubuntu@${LINUX_EIP}"
   echo "Windows node: ${WINDOWS_EIP}"
-  echo "For credentials and other info, attach into the running job and go to ~/calico/process/testing/winfv-felix and `cat connect`"
+  echo "For credentials and other info, attach into the running job and go to ~/calico-private/process/testing/aso and `cat connect`"
 
   CONNECT_FILE="connect"
   echo
