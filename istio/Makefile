@@ -46,8 +46,8 @@ $(ISTIO_DOWNLOADED):
 .PHONY: build
 build: bin/pilot-discovery-$(ARCH) bin/install-cni-$(ARCH) bin/istio-cni-$(ARCH)
 
-bin/istio-cni-$(ARCH): BUILD_TAGS=agent,disable_pgv,grpcnotrace,retrynotrace
 bin/install-cni-$(ARCH): BUILD_TAGS=agent,disable_pgv,grpcnotrace,retrynotrace
+bin/istio-cni-$(ARCH): BUILD_TAGS=agent,disable_pgv,grpcnotrace,retrynotrace
 bin/pilot-discovery-$(ARCH): BUILD_TAGS=disable_pgv,vtprotobuf
 
 bin/pilot-discovery-$(ARCH): $(ISTIO_DOWNLOADED)
@@ -82,7 +82,7 @@ image: $(BUILD_IMAGES)
 
 # istio-install-cni image
 $(ISTIO_CNI_IMAGE): $(ISTIO_CNI_IMAGE_CREATED)
-$(ISTIO_CNI_IMAGE_CREATED): register Dockerfile-install-cni bin/install-cni-$(ARCH) bin/LICENSE
+$(ISTIO_CNI_IMAGE_CREATED): register Dockerfile-install-cni bin/install-cni-$(ARCH) bin/istio-cni-$(ARCH) bin/LICENSE
 	$(DOCKER_BUILD) -t $(ISTIO_CNI_IMAGE):latest-$(ARCH) -f Dockerfile-install-cni .
 	$(MAKE) retag-build-images-with-registries BUILD_IMAGES=$(ISTIO_CNI_IMAGE) VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
