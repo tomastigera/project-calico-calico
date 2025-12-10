@@ -5,7 +5,7 @@ Param(
   [parameter(Mandatory = $false)] $WinFvExecutable="win-fv.exe"
 )
 
-$Root="c:\\CalicoWindows"
+$Root="c:\\TigeraCalico"
 
 # Set HPC environment variable (ASO provisioner default)
 Set-Item -Path env:HPC -Value "true"
@@ -58,8 +58,8 @@ cd C:\\k
 & .\win-fv.exe --ginkgo.focus "Windows" --ginkgo.v > C:\k\report\fv-test.log 2>&1
 if ( $LastExitCode -ne 0 ){
   echo $LastExitCode > c:\k\report\error-codes
-  if (Test-Path C:\CalicoWindows\logs) {
-    cp c:\CalicoWindows\logs\*.log c:\k\report
+  if (Test-Path C:\TigeraCalico\logs) {
+    cp c:\TigeraCalico\logs\*.log c:\k\report
   }
 }
 
