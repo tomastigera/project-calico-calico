@@ -44,8 +44,9 @@ $(ISTIO_DOWNLOADED):
 # Build
 ###############################################################################
 .PHONY: build
-build: bin/pilot-discovery-$(ARCH) bin/install-cni-$(ARCH)
+build: bin/pilot-discovery-$(ARCH) bin/install-cni-$(ARCH) bin/istio-cni-$(ARCH)
 
+bin/istio-cni-$(ARCH): BUILD_TAGS=agent,disable_pgv,grpcnotrace,retrynotrace
 bin/install-cni-$(ARCH): BUILD_TAGS=agent,disable_pgv,grpcnotrace,retrynotrace
 bin/pilot-discovery-$(ARCH): BUILD_TAGS=disable_pgv,vtprotobuf
 
@@ -54,6 +55,9 @@ bin/pilot-discovery-$(ARCH): $(ISTIO_DOWNLOADED)
 
 bin/install-cni-$(ARCH): $(ISTIO_DOWNLOADED)
 	$(call build_binary_dir,istio,./cni/cmd/install-cni,../$@)
+
+bin/istio-cni-$(ARCH): $(ISTIO_DOWNLOADED)
+	$(call build_binary_dir,istio,./cni/cmd/istio-cni,../$@)
 
 ###############################################################################
 # Image
