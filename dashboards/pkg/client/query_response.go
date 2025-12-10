@@ -112,6 +112,23 @@ func (q *QueryResponse) WriteCSV(w io.Writer, columnsDef []string, limit int) er
 				if value, found := docMap[field]; found {
 					return value
 				}
+				// Try nested lookup
+				if strings.Contains(field, ".") {
+					parts := strings.Split(field, ".")
+					var current any = docMap
+					for _, part := range parts {
+						if m, ok := current.(map[string]any); ok {
+							if v, exists := m[part]; exists {
+								current = v
+							} else {
+								return ""
+							}
+						} else {
+							return ""
+						}
+					}
+					return current
+				}
 				return ""
 			})
 			if err != nil {
@@ -205,6 +222,17 @@ func (q *QueryResponse) writeCSVRecord(csvWriter *csv.Writer, fields []string, c
 		value := columnValueMapper(f)
 		if valueStr, ok := value.(string); ok {
 			csvValue = valueStr
+		} else if valueSlice, ok := value.([]interface{}); ok {
+			var strs []string
+			for _, v := range valueSlice {
+				if s, ok := v.(string); ok {
+					strs = append(strs, s)
+				} else {
+					b, _ := json.Marshal(v)
+					strs = append(strs, string(b))
+				}
+			}
+			csvValue = strings.Join(strs, ";")
 		} else {
 			// non-string values are converted to json
 			valueBytes, err := json.Marshal(value)
