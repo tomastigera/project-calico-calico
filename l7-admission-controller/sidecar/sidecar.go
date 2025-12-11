@@ -178,6 +178,9 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 		"securityContext": map[string]interface{}{
 			"runAsGroup": 0,
 			"runAsUser":  0,
+			"capabilities": map[string]interface{}{
+				"add": []string{"NET_ADMIN"},
+			},
 		},
 		"volumeMounts": []map[string]interface{}{
 			{
