@@ -89,7 +89,10 @@ build-apiserver-image:
 	$(MAKE) -C ../apiserver image
 
 run-linseed:
-	$(MAKE) -C ../linseed run-image
+	$(MAKE) -C ../linseed run-image \
+		LOG_LEVEL_ENV='-e LINSEED_LOG_LEVEL="info"' \
+		ELASTIC_MEMORY=6GB \
+		ELASTIC_EXTRA_DOCKER_ARGS='-e "indexing_pressure.memory.limit=20%" -e "ES_JAVA_OPTS=-Xms5g -Xmx5g"'
 
 run-tigera-apiserver:
 	$(MAKE) -C ../apiserver run-image register-apiservice

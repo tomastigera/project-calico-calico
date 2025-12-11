@@ -3375,30 +3375,9 @@ func createCASecret(t *testing.T) {
 		t.Fail()
 	}
 
-	caPem, caKeyPem, err := CreateCAKeyPair("tigera-voltron", []string{"voltron"})
+	_, err = SetupManagedClusterCreateRequirements(k8sClient)
 	if err != nil {
-		t.Errorf("failed to create CA %s", err.Error())
-		t.Fail()
-	}
-	secret := ToSecret("tigera-management-cluster-connection", "calico-system", caPem, caKeyPem)
-	namespace := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "calico-system",
-		},
-	}
-
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancelFunc()
-
-	_, err = k8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
-	if err != nil {
-		t.Errorf("Failed to create secrets %s", err)
-		t.Fail()
-	}
-	_, err = k8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
-	if err != nil {
-		t.Errorf("Failed to create secrets %s", err)
+		t.Errorf("failed to setup managed cluster create requirements %s", err.Error())
 		t.Fail()
 	}
 }

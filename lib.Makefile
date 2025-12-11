@@ -1692,6 +1692,8 @@ BOOTSTRAP_PASSWORD := $(shell cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | h
 ELASTIC_PASSWORD := $(BOOTSTRAP_PASSWORD)
 
 ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(shell grep -o '^ELASTIC_VERSION=[0-9\.]*' $(REPO_ROOT)/third_party/elasticsearch/Makefile | cut -d "=" -f 2)
+ELASTIC_EXTRA_DOCKER_ARGS ?=
+ELASTIC_MEMORY ?= 2GB
 
 ## Run elasticsearch as a container (tigera-elastic)
 .PHONY: run-elastic
@@ -1699,11 +1701,12 @@ run-elastic: $(REPO_ROOT)/.elasticsearch.created
 $(REPO_ROOT)/.elasticsearch.created:
 	# Run ES on Docker.
 	docker run --detach \
-	-m 2GB \
+	-m $(ELASTIC_MEMORY) \
 	--net=host \
 	--name=tigera-elastic \
 	-e "discovery.type=single-node" \
 	-e "xpack.security.enabled=false" \
+	$(ELASTIC_EXTRA_DOCKER_ARGS) \
 	$(ELASTIC_IMAGE)
 
 	# Wait until ES is accepting requests.

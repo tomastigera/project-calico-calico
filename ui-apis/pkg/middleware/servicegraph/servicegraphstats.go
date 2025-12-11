@@ -12,9 +12,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
+	"k8s.io/client-go/tools/cache"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
@@ -24,11 +27,13 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/pkg/managedcluster"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 
 func NewServiceGraphStatsHandler(
+	client ctrlclient.WithWatch,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cache ServiceGraphCache,
@@ -36,21 +41,34 @@ func NewServiceGraphStatsHandler(
 ) http.Handler {
 	emptyServiceGroups := NewServiceGroups()
 	emptyServiceGroups.FinishMappings()
-	return &serviceGraphStats{
+	handler := serviceGraphStats{
+		ctrlClient:         client,
 		linseed:            linseed,
 		clientSetFactory:   clientSetFactory,
 		serviceGraphCache:  cache,
 		emptyServiceGroups: emptyServiceGroups,
 		config:             config,
+		cachedStats:        make(map[string]*cachedStats),
 	}
+	go handler.cachedStatsUpdateLoop()
+	return &handler
 }
 
 type serviceGraphStats struct {
+	ctrlClient         ctrlclient.WithWatch
 	linseed            lsclient.Client
 	clientSetFactory   k8s.ClientSetFactory
 	serviceGraphCache  ServiceGraphCache
 	emptyServiceGroups ServiceGroups
 	config             *Config
+	cachedStats        map[string]*cachedStats
+	cachedStatsMutex   sync.RWMutex
+}
+
+type cachedStats struct {
+	l3FlowTotalCount        int64
+	flowLogNamespacedCounts map[string]int64
+	l3FlowNamespacedCounts  map[string]int64
 }
 
 func (s *serviceGraphStats) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -98,7 +116,7 @@ func (s *serviceGraphStats) getServiceGraphStatsRequest(w http.ResponseWriter, r
 }
 
 // getGraphStatistics is responsible for computing whether, for a given time range, the service graph will take too long to load.
-// The service graph will take too long to load if:
+// The service graph takes too long to load if:
 // - the count of flow logs is too high, OR
 // - the count of L3 flows is too high for the time range
 //
@@ -114,9 +132,14 @@ func (s *serviceGraphStats) getServiceGraphStatsRequest(w http.ResponseWriter, r
 // To complete its work as soon as possible, this function launches its queries in parallel.
 // If we detect that the scale of flow logs is too high, we selectively cancel namespace-scoped queries.
 //
-// This means that namespace-scoped computations are optional in the response.
-// The global computation is always set in the response, as is the list of namespaces themselves.
-// If we can't compute either of these (due to some unexpected failure or timeout), we will return an error.
+// A per-cluster cache of namespace counts over the last 3 days is maintained to provide an approximation of the namespace
+// scale if namespace-scoped queries are canceled.
+//
+// The global computation is always set in the response, as is the list of namespaces themselves - if we can't compute
+// either of these (due to some unexpected failure or timeout), we will return an error.
+// Namespace-scoped computations are virtually always set on the response, either from a namespaced-scoped query or
+// from an approximation using the cache as described above. It is possible for namespace computations to be omitted if
+// the namespace-scoped query is cancelled and the cache has not been filled.
 //
 // This function is comprehensively tested in servicegraph_fv_test.go.
 func (s *serviceGraphStats) getGraphStatistics(req *http.Request, r *v1.ServiceGraphStatsRequest) (*v1.ServiceGraphStatsResponse, error) {
@@ -141,7 +164,7 @@ func (s *serviceGraphStats) getGraphStatistics(req *http.Request, r *v1.ServiceG
 	go s.getFlowLogCount(baseCtx, cluster, r.TimeRange, w, c.flowLogCountsChan)
 	go s.getNamespaces(baseCtx, cluster, s.clientSetFactory, c.namespacesChan)
 	go s.getFlowLogNamespaceCounts(flowLogNsCtx, cluster, r.TimeRange, w, c.flowLogNamespacedCountsChan)
-	go s.getL3FlowNamespaceCounts(l3FlowCtx, cluster, r.TimeRange, w, c.l3FlowNamespacedCountsChan)
+	go s.getL3FlowNamespaceCounts(l3FlowCtx, cluster, r.TimeRange, &s.config.LargeL3FlowScaleThreshold, w, c.l3FlowNamespacedCountsChan)
 
 	// Collect the flow log count result.
 	flowLogCountRes := <-c.flowLogCountsChan
@@ -186,11 +209,17 @@ func (s *serviceGraphStats) getGraphStatistics(req *http.Request, r *v1.ServiceG
 
 	// Start building the response.
 	response := v1.ServiceGraphStatsResponse{}
+	if r.IncludeDeveloperStats {
+		response.DeveloperStatistics = initializeDeveloperStatistics()
+	}
 
 	// Perform the global computation.
 	response.TopologyStatistics.HighVolume = flowLogCountRes.totalCount >= s.config.LargeFlowLogScaleThreshold || l3FlowNamespaceCountsRes.totalCount >= s.config.LargeL3FlowScaleThreshold
 
-	// Determine the namespaces to include in the response, and perform namespace computations where possible.
+	// Determine the namespaces to include in the response, and provide namespace-scoped scale determinations.
+	// Utilize the fetched namespace-scoped data to provide scale determinations, otherwise approximate using our namespace count cache.
+	approximated := true
+	notApproximated := false
 	responseNamespaces := s.calculateResponseNamespaces(namespacesRes, flowLogNamespaceCountsRes, l3FlowNamespaceCountsRes)
 	for _, ns := range responseNamespaces {
 		namespaceStat := v1.NamespaceStatistics{Namespace: ns}
@@ -203,20 +232,37 @@ func (s *serviceGraphStats) getGraphStatistics(req *http.Request, r *v1.ServiceG
 			// We have both pieces of information, we can use our full boolean expression to compute.
 			highVol := namespacedFlowCount >= s.config.LargeFlowLogScaleThreshold || namespacedL3FlowCount >= s.config.LargeL3FlowScaleThreshold
 			namespaceStat.HighVolume = &highVol
+			namespaceStat.Approximated = &notApproximated
 		}
 
 		if namespacedFlowCountExists && !namespacedL3FlowCountExists && namespacedFlowCount >= s.config.LargeFlowLogScaleThreshold {
 			// We only have the flow log count, but it's high, so it short-circuits the full boolean expression.
 			highVol := true
 			namespaceStat.HighVolume = &highVol
+			namespaceStat.Approximated = &notApproximated
 		}
 
 		if !namespacedFlowCountExists && namespacedL3FlowCountExists && namespacedL3FlowCount >= s.config.LargeL3FlowScaleThreshold {
 			// We only have the L3 flow count, but it's high, so it short-circuits the full boolean expression.
 			highVol := true
 			namespaceStat.HighVolume = &highVol
+			namespaceStat.Approximated = &notApproximated
 		}
 
+		// If we've been unable to compute the high volume flag for a namespace based on the exact counts, we'll approximate it.
+		if namespaceStat.HighVolume == nil {
+			approximateHighVolume, nsCache, err := s.getApproximateNamespaceScale(r.Cluster, r.TimeRange, ns)
+			if err != nil {
+				log.Debugf("Failed to compute approximate high volume flag for namespace %s: %v", ns, err)
+			} else {
+				namespaceStat.HighVolume = &approximateHighVolume
+				namespaceStat.Approximated = &approximated
+				if r.IncludeDeveloperStats {
+					response.DeveloperStatistics.NamespaceCacheCounts.NumFlowLogs[ns] = nsCache.flowLogNamespacedCounts[ns]
+					response.DeveloperStatistics.NamespaceCacheCounts.NumL3Flows[ns] = nsCache.l3FlowNamespacedCounts[ns]
+				}
+			}
+		}
 		response.NamespacesStatistics = append(response.NamespacesStatistics, namespaceStat)
 	}
 
@@ -234,25 +280,14 @@ func (s *serviceGraphStats) getGraphStatistics(req *http.Request, r *v1.ServiceG
 	}
 
 	if r.IncludeDeveloperStats {
-		developerStats := &v1.DeveloperStatistics{
-			Counts: v1.TopologyCounts{
-				NumFlowLogs: flowLogCountRes.totalCount,
-				NumL3Flows:  l3FlowNamespaceCountsRes.totalCount,
-			},
-			NamespaceCounts: v1.NamespaceCounts{
-				NumFlowLogs: flowLogNamespaceCountsRes.namespacedCounts,
-				NumL3Flows:  l3FlowNamespaceCountsRes.namespacedCounts,
-			},
-			Cancellations: v1.Operations{
-				NamespacedFlowLogCounts: cancelNamespacedFlowLogCall,
-				L3FlowCounts:            cancelNamespacedL3FlowCall,
-			},
-			Truncations: v1.Operations{
-				NamespacedFlowLogCounts: flowLogNamespaceCountsRes.truncated,
-				L3FlowCounts:            l3FlowNamespaceCountsRes.truncated,
-			},
-		}
-		response.DeveloperStatistics = developerStats
+		response.DeveloperStatistics.Counts.NumFlowLogs = flowLogCountRes.totalCount
+		response.DeveloperStatistics.Counts.NumL3Flows = l3FlowNamespaceCountsRes.totalCount
+		response.DeveloperStatistics.NamespaceCounts.NumFlowLogs = flowLogNamespaceCountsRes.namespacedCounts
+		response.DeveloperStatistics.NamespaceCounts.NumL3Flows = l3FlowNamespaceCountsRes.namespacedCounts
+		response.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts = cancelNamespacedFlowLogCall
+		response.DeveloperStatistics.Cancellations.L3FlowCounts = cancelNamespacedL3FlowCall
+		response.DeveloperStatistics.Truncations.NamespacedFlowLogCounts = flowLogNamespaceCountsRes.truncated
+		response.DeveloperStatistics.Truncations.L3FlowCounts = l3FlowNamespaceCountsRes.truncated
 	}
 
 	if s.config.GraphStatsRequestLogging {
@@ -328,6 +363,8 @@ func (s *serviceGraphStats) getFlowLogNamespaceCounts(ctx context.Context, clust
 			QueryParams: lsv1.QueryParams{
 				TimeRange:   timeRange,
 				MaxPageSize: 10000,
+				// Give Linseed a large timeout - let the user of this function cancel context to end the request early.
+				Timeout: &metav1.Duration{Duration: 1 * time.Hour},
 			},
 		},
 		CountType: lsv1.CountTypeNamespaced,
@@ -342,7 +379,7 @@ func (s *serviceGraphStats) getFlowLogNamespaceCounts(ctx context.Context, clust
 	resultChan <- flowLogNamespacedCountResult{namespacedCounts: countResp.NamespacedCounts, truncated: countResp.GlobalCountTruncated, duration: time.Since(start)}
 }
 
-func (s *serviceGraphStats) getL3FlowNamespaceCounts(ctx context.Context, cluster string, timeRange *lmav1.TimeRange, wgs statsWaitgroups, resultChan chan<- l3FlowNamespacedCountResult) {
+func (s *serviceGraphStats) getL3FlowNamespaceCounts(ctx context.Context, cluster string, timeRange *lmav1.TimeRange, maxGlobalCount *int64, wgs statsWaitgroups, resultChan chan<- l3FlowNamespacedCountResult) {
 	if !wgs.parallel {
 		wgs.flowLogNsCount.Wait()
 		defer wgs.l3FlowNsCount.Done()
@@ -355,9 +392,11 @@ func (s *serviceGraphStats) getL3FlowNamespaceCounts(ctx context.Context, cluste
 			QueryParams: lsv1.QueryParams{
 				TimeRange:   timeRange,
 				MaxPageSize: 1000,
+				// Give Linseed a large timeout - let the user of this function cancel context to end the request early.
+				Timeout: &metav1.Duration{Duration: 1 * time.Hour},
 			},
 		},
-		MaxGlobalCount: &s.config.LargeL3FlowScaleThreshold,
+		MaxGlobalCount: maxGlobalCount,
 	}
 
 	countResp, err := s.linseed.L3Flows(cluster).Count(ctx, params)
@@ -405,6 +444,142 @@ func (s *serviceGraphStats) getNamespaces(ctx context.Context, cluster string, c
 	}
 
 	resultChan <- namespacesResult{authorizedAPIServerNamespaces: authorizedAPIServerNamespaces, globalAccess: globalAccess, numTotal: len(apiServerNamespaces.Items), numFiltered: numFiltered, duration: time.Since(start)}
+}
+
+func (s *serviceGraphStats) getApproximateNamespaceScale(cluster string, timeRange *lmav1.TimeRange, namespace string) (bool, *cachedStats, error) {
+	cacheDuration := s.config.GraphStatsCacheDuration
+	durationRatio := float64(timeRange.Duration()) / float64(cacheDuration)
+
+	s.cachedStatsMutex.RLock()
+	defer s.cachedStatsMutex.RUnlock()
+	if s.cachedStats[cluster] == nil {
+		return false, nil, fmt.Errorf("cached stats not set for cluster %s", cluster)
+	}
+
+	flowLogNamespacedCount, flowLogNamespacedCountExists := s.cachedStats[cluster].flowLogNamespacedCounts[namespace]
+	l3FlowNamespacedCount, l3FlowNamespacedCountExists := s.cachedStats[cluster].l3FlowNamespacedCounts[namespace]
+
+	if !flowLogNamespacedCountExists || !l3FlowNamespacedCountExists {
+		return false, nil, fmt.Errorf("cached stats missing namespace %s for cluster %s", namespace, cluster)
+	}
+
+	// Flow log volume scales with time, so we scale the count based on how large the time range of the request is relative
+	// to the time range of the cache.
+	scaledFlowLogNamespaceCount := float64(flowLogNamespacedCount) * durationRatio
+
+	// L3 flows do not scale with time: they represent the shape of traffic, not the volume.
+	scaledL3FlowNamespaceCount := l3FlowNamespacedCount
+
+	return int64(scaledFlowLogNamespaceCount) >= s.config.LargeFlowLogScaleThreshold || int64(scaledL3FlowNamespaceCount) >= s.config.LargeL3FlowScaleThreshold, s.cachedStats[cluster], nil
+}
+
+func (s *serviceGraphStats) getCachedStats(ctx context.Context, cluster string, timeRange *lmav1.TimeRange) (*cachedStats, error) {
+	c := newStatsChannels()
+	w := newStatsWaitgroups(true)
+	go s.getFlowLogNamespaceCounts(ctx, cluster, timeRange, w, c.flowLogNamespacedCountsChan)
+	go s.getL3FlowNamespaceCounts(ctx, cluster, timeRange, nil, w, c.l3FlowNamespacedCountsChan)
+
+	flowLogNamespaceCountsRes := <-c.flowLogNamespacedCountsChan
+	if flowLogNamespaceCountsRes.err != nil {
+		return nil, flowLogNamespaceCountsRes.err
+	}
+	l3FlowNamespaceCountsRes := <-c.l3FlowNamespacedCountsChan
+	if l3FlowNamespaceCountsRes.err != nil {
+		return nil, l3FlowNamespaceCountsRes.err
+	}
+
+	return &cachedStats{
+		flowLogNamespacedCounts: flowLogNamespaceCountsRes.namespacedCounts,
+		l3FlowNamespacedCounts:  l3FlowNamespaceCountsRes.namespacedCounts,
+		l3FlowTotalCount:        l3FlowNamespaceCountsRes.totalCount,
+	}, nil
+}
+
+func (s *serviceGraphStats) cachedStatsUpdateLoop() {
+	log.Infof("Starting cached stats update loop")
+	// Refresh stats for the default cluster as soon as we start the loop.
+	s.refreshCachedStats(k8s.DefaultCluster)
+
+	// Establish our watches for managed clusters. This will trigger stats refreshing for managed clusters as they are discovered.
+	s.establishManagedClusterWatches()
+
+	// Then, refresh based on the set interval.
+	ticker := time.NewTicker(s.config.GraphStatsCacheUpdateInterval)
+	for range ticker.C {
+		for cluster := range s.cachedStats {
+			s.refreshCachedStats(cluster)
+		}
+	}
+}
+
+func (s *serviceGraphStats) refreshCachedStats(cluster string) {
+	log.Infof("Refreshing cached stats for cluster=%s", cluster)
+
+	// Check if cluster has been initialized in the cached stats map.
+	s.cachedStatsMutex.RLock()
+	_, clusterInitialized := s.cachedStats[cluster]
+	s.cachedStatsMutex.RUnlock()
+
+	// Initialize it if it hasn't been initialized. This way the cached stats map serves as a record of discovered
+	// clusters, independent of whether the stats for each discovered cluster have been fetched yet.
+	if !clusterInitialized {
+		s.cachedStatsMutex.Lock()
+		s.cachedStats[cluster] = nil
+		s.cachedStatsMutex.Unlock()
+	}
+
+	// Fetch the stats. We don't need to hold the lock while we fetch.
+	start := time.Now()
+	cs, err := s.getCachedStats(context.Background(), cluster, &lmav1.TimeRange{
+		From: time.Now().Add(-s.config.GraphStatsCacheDuration),
+		To:   time.Now(),
+	})
+	log.Infof("Completed fetch of cached stats for cluster=%s in %v", cluster, time.Since(start))
+	if err != nil {
+		log.Warnf("Failed to update cached stats: %v", err)
+		return
+	}
+
+	// Set the stats.
+	s.cachedStatsMutex.Lock()
+	s.cachedStats[cluster] = cs
+	s.cachedStatsMutex.Unlock()
+}
+
+func (s *serviceGraphStats) deleteCachedStats(cluster string) {
+	s.cachedStatsMutex.Lock()
+	delete(s.cachedStats, cluster)
+	s.cachedStatsMutex.Unlock()
+}
+
+func (s *serviceGraphStats) establishManagedClusterWatches() {
+	managedClusterHandler := cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+			if mc, ok := obj.(*v3.ManagedCluster); ok {
+				log.Infof("Received managed cluster deletion for cluster=%s", mc.Name)
+				s.deleteCachedStats(mc.Name)
+			}
+		},
+		AddFunc: func(obj interface{}) {
+			if mc, ok := obj.(*v3.ManagedCluster); ok {
+				log.Infof("Received managed cluster add for cluster=%s", mc.Name)
+				s.refreshCachedStats(mc.Name)
+			}
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			if mc, ok := obj.(*v3.ManagedCluster); ok {
+				log.Infof("Received managed cluster update for cluster=%s", mc.Name)
+				s.refreshCachedStats(mc.Name)
+			}
+		},
+	}
+	listWatcher := managedcluster.NewManagedClusterListWatcher(context.Background(), s.ctrlClient, s.config.TenantNamespace)
+	mcInformer := cache.NewSharedIndexInformer(listWatcher, &v3.ManagedCluster{}, 0, cache.Indexers{})
+	_, err := mcInformer.AddEventHandler(managedClusterHandler)
+	if err != nil {
+		log.Fatalf("Failed to watch managed clusters: %v", err)
+	}
+	go mcInformer.Run(nil)
 }
 
 func (s *serviceGraphStats) fetchServiceGraphResponse(ctx context.Context, cluster string, timeRange *lmav1.TimeRange, timeout metav1.Duration) (*v1.ServiceGraphResponse, error) {
@@ -488,6 +663,19 @@ func authorizedNamespacesFromNamespacedEndpoints(
 	}
 
 	return union, false, nil
+}
+
+func initializeDeveloperStatistics() *v1.DeveloperStatistics {
+	return &v1.DeveloperStatistics{
+		NamespaceCounts: v1.NamespaceCounts{
+			NumFlowLogs: make(map[string]int64),
+			NumL3Flows:  make(map[string]int64),
+		},
+		NamespaceCacheCounts: v1.NamespaceCounts{
+			NumFlowLogs: make(map[string]int64),
+			NumL3Flows:  make(map[string]int64),
+		},
+	}
 }
 
 type flowLogCountResult struct {

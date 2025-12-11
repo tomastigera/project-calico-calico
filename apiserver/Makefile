@@ -108,7 +108,8 @@ run-image: stop-image
 		--secure-port=5443 \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		--authentication-kubeconfig=/home/user/certs/kubeconfig \
-		--authorization-kubeconfig=/home/user/certs/kubeconfig
+		--authorization-kubeconfig=/home/user/certs/kubeconfig \
+		--enable-managed-clusters-create-api=true
 	while ! curl -k -s -o /dev/null https://localhost:5443/readiness; do echo "Waiting for tigera-apiserver to come up..."; sleep 2; done
 
 register-apiservice:

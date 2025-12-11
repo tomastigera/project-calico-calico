@@ -8,14 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/tools/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/pkg/managedcluster"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
 	rscope "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/recommendation_scope"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
@@ -67,7 +65,7 @@ func NewManagedClusterController(
 			newManagedClusterReconciler(
 				ctx, client, clientFactory, linseed, managedClusters,
 				rscope.NewRecommendationScopeController, tenantNamespace, minPollInterval, recScopeWatcherCfg),
-			newManagedClusterListWatcher(ctx, client, tenantNamespace),
+			managedcluster.NewManagedClusterListWatcher(ctx, client, tenantNamespace),
 			&v3.ManagedCluster{},
 		),
 	}, nil
@@ -101,23 +99,5 @@ func (c *managedClusterController) stopControllers() {
 	for key, mc := range c.managedClusters {
 		close(mc.stopChan)
 		delete(c.managedClusters, key)
-	}
-}
-
-// newManagedClusterListWatcher returns an implementation of the ListWatch interface capable of being used to
-// build an informer based on a controller-runtime client. Using the controller-runtime client allows us to build
-// an Informer that works for both namespaced and cluster-scoped ManagedCluster resources regardless of whether
-// it is a multi-tenant cluster or not.
-func newManagedClusterListWatcher(ctx context.Context, c ctrlclient.WithWatch, namespace string) *cache.ListWatch {
-	return &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			list := &v3.ManagedClusterList{}
-			err := c.List(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
-			return list, err
-		},
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			list := &v3.ManagedClusterList{}
-			return c.Watch(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
-		},
 	}
 }

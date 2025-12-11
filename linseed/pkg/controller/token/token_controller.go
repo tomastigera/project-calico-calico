@@ -17,8 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -29,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/pkg/managedcluster"
 )
 
 const (
@@ -380,7 +379,7 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	listWatcher := newManagedClusterListWatcher(ctx, c.client, c.namespace)
+	listWatcher := managedcluster.NewManagedClusterListWatcher(ctx, c.client, c.namespace)
 	mcInformer := cache.NewSharedIndexInformer(listWatcher, &v3.ManagedCluster{}, 0, cache.Indexers{})
 	_, err := mcInformer.AddEventHandler(managedClusterHandler)
 	if err != nil {
@@ -1000,24 +999,6 @@ func ParseClaimsLinseed(claims jwt.Claims) (*user.DefaultInfo, error) {
 		return nil, err
 	}
 	return &user.DefaultInfo{Name: fmt.Sprintf("system:serviceaccount:%s:%s", namespace, name)}, nil
-}
-
-// newManagedClusterListWatcher returns an implementation of the ListWatch interface capable of being used to
-// build an informer based on a controller-runtime client. Using the controller-runtime client allows us to build
-// an Informer that works for both namespaced and cluster-scoped ManagedCluster resources regardless of whether
-// it is a multi-tenant cluster or not.
-func newManagedClusterListWatcher(ctx context.Context, c ctrlclient.WithWatch, namespace string) *cache.ListWatch {
-	return &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			list := &v3.ManagedClusterList{}
-			err := c.List(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
-			return list, err
-		},
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			list := &v3.ManagedClusterList{}
-			return c.Watch(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
-		},
-	}
 }
 
 func namespaceExists(c kubernetes.Interface, namespace string) (bool, error) {
