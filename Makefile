@@ -348,11 +348,20 @@ ADMINPOLICY_UNSUPPORTED_FEATURES ?= ""
 e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
+	$(MAKE) e2e-run-test
+	$(MAKE) e2e-run-anp-test
 
 e2e-test-adminpolicy:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
+	$(MAKE) e2e-run-anp-test
+
+## Run the general e2e tests against a pre-existing kind cluster.
+e2e-run-test:
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
+
+## Run the AdminNetworkPolicy specific e2e tests against a pre-existing kind cluster.
+e2e-run-anp-test:
 	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test \
 	  -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) \
 	  -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)
