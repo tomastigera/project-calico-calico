@@ -116,6 +116,10 @@ var defaultVolumes = []map[string]interface{}{
 }
 
 func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]interface{} {
+	capabilites := []string{"NET_ADMIN", "NET_RAW"}
+	if dataplane == "nftables" {
+		capabilites = append(capabilites, "SYS_ADMIN", "NET_BIND_SERVICE")
+	}
 	return []map[string]interface{}{
 		{
 			"name":    "tigera-dikastes-init",
@@ -146,7 +150,7 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 				"runAsGroup": 0,
 				"runAsUser":  0,
 				"capabilities": map[string]interface{}{
-					"add": []string{"NET_ADMIN", "NET_RAW"},
+					"add": capabilites,
 				},
 			},
 		},
