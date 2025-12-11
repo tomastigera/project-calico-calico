@@ -98,9 +98,9 @@ for pullnumber in "${PULLS[@]}"; do
     merge_sha_short="${merge_sha:0:10}"
   fi
 
-  orig_pr_ids+=( "\`${pullnumber}\`" )
+  orig_pr_ids+=( "${pullnumber}" )
   if [[ -n "${merge_sha_short}" ]]; then
-    orig_commit_shas+=( "\`${merge_sha_short}\`" )
+    orig_commit_shas+=( "${merge_sha_short}" )
   fi
 done
 
@@ -110,9 +110,9 @@ source_repo="${SRC_MAIN_REPO_ORG}/${SRC_MAIN_REPO_NAME}"
 target_repo="${DST_MAIN_REPO_ORG}/${DST_MAIN_REPO_NAME}"
 target_branch="$(basename "${BRANCH}")"
 
-orig_prs_joined=$(IFS=', '; echo "${orig_pr_ids[*]}")
+orig_prs_joined="${orig_pr_ids[*]}"
 if [[ ${#orig_commit_shas[@]} -gt 0 ]]; then
-  orig_shas_joined=$(IFS=', '; echo "${orig_commit_shas[*]}")
+  orig_shas_joined="${orig_commit_shas[*]}"
 else
   orig_shas_joined="(n/a)"
 fi
@@ -123,8 +123,8 @@ meta_block=$'## Automated Cherry-Pick PR\n\n'
 meta_block+=$'This pull request was automatically created by the '
 meta_block+=$'[cherry-pick script](https://github.com/tigera/calico-private/blob/'"${current_commit_hash}"'/hack/pick-oss-pr)'
 meta_block+=$' to synchronize the changes detailed below.\n\n'
-meta_block+=$'- **Original PR ID**: `'"${orig_prs_joined}"$'`\n'
-meta_block+=$'- **Original Commit SHA**: `'"${orig_shas_joined}"$'`\n'
+meta_block+=$'- **Original PR ID**: '"${orig_prs_joined}"$'\n'
+meta_block+=$'- **Original Commit SHA**: '"${orig_shas_joined}"$'\n'
 meta_block+=$'- **Source Repo**: `'"${source_repo}"$'`\n'
 meta_block+=$'- **Target Repo**: `'"${target_repo}"$'`\n'
 meta_block+=$'- **Target Branch**: `'"${target_branch}"$'`\n\n'
