@@ -25,7 +25,7 @@
             "source_type": "hep"
           },
           "policies": {
-            "by_tiered_policy": {
+            "by_tiered_transit_policy": {
               "buckets": []
             },
             "doc_count": 5065
@@ -88,7 +88,7 @@
             "source_type": "hep"
           },
           "policies": {
-            "by_tiered_policy": {
+            "by_tiered_transit_policy": {
               "buckets": []
             },
             "doc_count": 5065
