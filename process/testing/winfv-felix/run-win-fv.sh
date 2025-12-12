@@ -52,10 +52,10 @@ ${ASO_DIR}/scp-from-windows.sh 0 'c:/k/report' ./report || true
 pause-for-debug
 
 # Get results and logs
-ls -ltr ./report
-mkdir -p /home/semaphore/fv.log
-cp setupfv.log /home/semaphore/fv.log/ || true
-cp ./report/*.log /home/semaphore/fv.log/ || true
+# ls -ltr ./report
+# mkdir -p /home/semaphore/fv.log
+# cp setupfv.log /home/semaphore/fv.log/ || true
+# cp ./report/*.log /home/semaphore/fv.log/ || true
 
 # Print relevant snippets from logs
 log_regexps='(?<!Decode)Failure|SUCCESS|FV-TEST-START'
@@ -72,12 +72,12 @@ then
     exit 1
 fi
 
-popd
-echo "Windows Felix FV test completed."
-
 # Search for error code file
 if [ -f ./report/error-codes ] || [ "$EXIT_CODE" != 0 ];
 then
     echo "Windows FV returned error(s)."
     exit 1
 fi
+
+popd
+echo "Windows Felix FV test completed."
