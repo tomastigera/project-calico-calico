@@ -5,7 +5,7 @@ Param(
   [parameter(Mandatory = $false)] $WinFvExecutable="win-fv.exe"
 )
 
-$Root="c:\\TigeraCalico"
+$Root="c:\\CalicoWindows"
 
 # Set HPC environment variable (ASO provisioner default)
 Set-Item -Path env:HPC -Value "true"

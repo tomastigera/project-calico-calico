@@ -52,10 +52,10 @@ ${ASO_DIR}/scp-from-windows.sh 0 'c:/k/report' ./report || true
 pause-for-debug
 
 # Get results and logs
-# ls -ltr ./report
-# mkdir -p /home/semaphore/fv.log
-# cp setupfv.log /home/semaphore/fv.log/ || true
-# cp ./report/*.log /home/semaphore/fv.log/ || true
+ls -ltr ./report
+mkdir -p /home/semaphore/fv.log
+cp setupfv.log /home/semaphore/fv.log/ || true
+cp ./report/*.log /home/semaphore/fv.log/ || true
 
 # Print relevant snippets from logs
 log_regexps='(?<!Decode)Failure|SUCCESS|FV-TEST-START'
