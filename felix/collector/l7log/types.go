@@ -39,6 +39,32 @@ type Update struct {
 	RouteName    string
 	GatewayName  string
 	Protocol     string
+
+	// Gateway API enrichment fields
+	GatewayNamespace     string
+	GatewayClass         string
+	GatewayStatus        string
+	GatewayStatusMessage string
+
+	// Gateway listener context fields
+	GatewayListenerName     string
+	GatewayListenerPort     int
+	GatewayListenerProtocol string
+	GatewayListenerFullName string
+	GatewayListenerHostname string
+
+	// Collector identification fields
+	CollectorName string
+	CollectorType string
+	Host          string
+
+	// Gateway route context fields
+	GatewayRouteType          string
+	GatewayRouteName          string
+	GatewayRouteNamespace     string
+	GatewayRouteHostname      string
+	GatewayRouteStatus        string
+	GatewayRouteStatusMessage string
 }
 
 // L7Log represents the JSON representation of a L7Log we are pushing to fluentd/elastic.
@@ -78,6 +104,32 @@ type L7Log struct {
 	Type         string `json:"type"`
 	GatewayName  string `json:"gateway_name"`
 	Protocol     string `json:"protocol"`
+
+	// Gateway API enrichment fields
+	GatewayNamespace     string `json:"gateway_namespace,omitempty"`
+	GatewayClass         string `json:"gateway_class,omitempty"`
+	GatewayStatus        string `json:"gateway_status,omitempty"`
+	GatewayStatusMessage string `json:"gateway_status_message,omitempty"`
+
+	// Gateway listener context fields
+	GatewayListenerName     string `json:"gateway_listener_name,omitempty"`
+	GatewayListenerPort     int    `json:"gateway_listener_port,omitempty"`
+	GatewayListenerProtocol string `json:"gateway_listener_protocol,omitempty"`
+	GatewayListenerFullName string `json:"gateway_listener_full_name,omitempty"`
+	GatewayListenerHostname string `json:"gateway_listener_hostname,omitempty"`
+
+	// Collector identification fields
+	Host          string `json:"host,omitempty"`
+	CollectorName string `json:"collector_name,omitempty"`
+	CollectorType string `json:"collector_type,omitempty"`
+
+	// Gateway route context fields
+	GatewayRouteType          string `json:"gateway_route_type,omitempty"`
+	GatewayRouteName          string `json:"gateway_route_name,omitempty"`
+	GatewayRouteNamespace     string `json:"gateway_route_namespace,omitempty"`
+	GatewayRouteHostname      string `json:"gateway_route_hostname,omitempty"`
+	GatewayRouteStatus        string `json:"gateway_route_status,omitempty"`
+	GatewayRouteStatusMessage string `json:"gateway_route_status_message,omitempty"`
 }
 
 // L7Meta represents the identifiable information for an L7 log.
@@ -106,6 +158,32 @@ type L7Meta struct {
 	Path         string
 	UserAgent    string
 	Type         string
+
+	// Gateway API enrichment fields
+	GatewayNamespace     string
+	GatewayClass         string
+	GatewayStatus        string
+	GatewayStatusMessage string
+
+	// Gateway listener context fields
+	GatewayListenerName     string
+	GatewayListenerPort     int
+	GatewayListenerProtocol string
+	GatewayListenerFullName string
+	GatewayListenerHostname string
+
+	// Collector identification fields
+	CollectorName string
+	CollectorType string
+	Host          string
+
+	// Gateway route context fields
+	GatewayRouteType          string
+	GatewayRouteName          string
+	GatewayRouteNamespace     string
+	GatewayRouteHostname      string
+	GatewayRouteStatus        string
+	GatewayRouteStatusMessage string
 }
 
 // L7Spec represents the stats and collections of L7 data
@@ -168,6 +246,32 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 		GatewayName:  ld.GatewayName,
 		Protocol:     ld.Protocol,
 		Type:         ld.Type,
+
+		// Gateway API enrichment fields
+		GatewayNamespace:     ld.GatewayNamespace,
+		GatewayClass:         ld.GatewayClass,
+		GatewayStatus:        ld.GatewayStatus,
+		GatewayStatusMessage: ld.GatewayStatusMessage,
+
+		// Gateway listener context fields
+		GatewayListenerName:     ld.GatewayListenerName,
+		GatewayListenerPort:     ld.GatewayListenerPort,
+		GatewayListenerProtocol: ld.GatewayListenerProtocol,
+		GatewayListenerFullName: ld.GatewayListenerFullName,
+		GatewayListenerHostname: ld.GatewayListenerHostname,
+
+		// Collector identification fields
+		Host:          ld.Host,
+		CollectorName: ld.CollectorName,
+		CollectorType: ld.CollectorType,
+
+		// Gateway route context fields
+		GatewayRouteType:          ld.GatewayRouteType,
+		GatewayRouteName:          ld.GatewayRouteName,
+		GatewayRouteNamespace:     ld.GatewayRouteNamespace,
+		GatewayRouteHostname:      ld.GatewayRouteHostname,
+		GatewayRouteStatus:        ld.GatewayRouteStatus,
+		GatewayRouteStatusMessage: ld.GatewayRouteStatusMessage,
 	}
 
 	// Calculate and convert durations

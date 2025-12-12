@@ -68,14 +68,14 @@ type CacheEntryNetworkPolicy struct {
 	Flags CacheEntryFlags
 
 	// The matching rules.
-	AllowRuleSelectors resources.Set
+	AllowRuleSelectors set.Typed[v3.ResourceID]
 
 	// The pods matching this policy selector.
 	SelectedPods          set.Set[v3.ResourceID]
-	SelectedHostEndpoints resources.Set
+	SelectedHostEndpoints set.Typed[v3.ResourceID]
 
 	// The Kubernetes Nodes that a Pod is running on.
-	ScheduledNodes map[string]resources.Set
+	ScheduledNodes map[string]set.Typed[v3.ResourceID]
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -454,10 +454,10 @@ func (c *networkPolicyHandler) kinds() []metav1.TypeMeta {
 // newCacheEntry implements the resourceHandler interface.
 func (c *networkPolicyHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicy{
-		AllowRuleSelectors:    resources.NewSet(),
+		AllowRuleSelectors:    set.New[v3.ResourceID](),
 		SelectedPods:          set.New[v3.ResourceID](),
-		SelectedHostEndpoints: resources.NewSet(),
-		ScheduledNodes:        make(map[string]resources.Set),
+		SelectedHostEndpoints: set.New[v3.ResourceID](),
+		ScheduledNodes:        make(map[string]set.Typed[v3.ResourceID]),
 	}
 }
 
@@ -713,7 +713,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 // across all rules and all Policies (so there is a little book keeping required here).
 func (c *networkPolicyHandler) updateRuleSelectors(id v3.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
-	newSelectors := resources.NewSet()
+	newSelectors := set.New[v3.ResourceID]()
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace newSelectors have been specified.
@@ -961,10 +961,10 @@ func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId v3.Reso
 		nodeName := thePod.Spec.NodeName
 		x.clog.Debugf("Tracking Node %+v for Pod %+v", nodeName, thePod)
 
-		var scheduledNodesRef resources.Set
+		var scheduledNodesRef set.Typed[v3.ResourceID]
 		scheduledNodesRef, ok = x.ScheduledNodes[nodeName]
 		if !ok {
-			scheduledNodesRef = resources.NewSet()
+			scheduledNodesRef = set.New[v3.ResourceID]()
 			// If we are seeing this node for the first time
 			// then we queue an update.
 			c.QueueUpdate(policyId, x, EventNodeAssigned)

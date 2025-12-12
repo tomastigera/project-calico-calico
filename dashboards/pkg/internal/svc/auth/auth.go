@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 type AuthService struct {
@@ -158,7 +159,13 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		return nil, err
 	}
 
-	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient, authHeader), nil
+	clientSetFactory := k8s.NewClientSetFactoryWithConfig(
+		k8sRestConfig,
+		s.multiClusterForwardingCA,
+		s.multiClusterForwardingEndpoint,
+	)
+
+	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient, authHeader, clientSetFactory), nil
 }
 
 func p[T any](v T) *T { return &v }

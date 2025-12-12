@@ -1274,6 +1274,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ipSetIDAllocatorV4 = idalloc.New()
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
+		if config.RulesConfig.IstioAmbientModeEnabled {
+			ipSetIDAllocatorV4.ReserveWellKnownID(rules.IPSetIDAllIstioWEPs, bpfipsets.AllIstioWEPsID)
+		}
 
 		// Start IPv4 BPF dataplane components
 		conntrackScannerV4, bpfIPSetsV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, &config, ipsetsManager, dp)
@@ -1281,6 +1284,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			// Start IPv6 BPF dataplane components
 			ipSetIDAllocatorV6 = idalloc.New()
 			ipSetIDAllocatorV6.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
+			if config.RulesConfig.IstioAmbientModeEnabled {
+				ipSetIDAllocatorV6.ReserveWellKnownID(rules.IPSetIDAllIstioWEPs, bpfipsets.AllIstioWEPsID)
+			}
 			conntrackScannerV6, _ = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, &config, ipsetsManagerV6, dp)
 		}
 
@@ -1359,7 +1365,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 			// Activate the connect-time load balancer.
 			err = bpfnat.InstallConnectTimeLoadBalancer(true, config.BPFIpv6Enabled,
-				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMap)
+				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP, bpfMaps.CommonMaps.CTLBProgramsMaps)
 			if err != nil {
 				logrus.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -3612,6 +3618,11 @@ func startBPFDataplaneComponents(
 			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
 			trustedDNSServers,
 		)
+		if config.RulesConfig.IstioAmbientModeEnabled {
+			ipSets.AddOrReplaceIPSet(
+				ipsets.IPSetMetadata{SetID: rules.IPSetIDAllIstioWEPs, Type: ipsets.IPSetTypeHashIP},
+				nil)
+		}
 	}
 
 	failsafeMgr := failsafes.NewManager(

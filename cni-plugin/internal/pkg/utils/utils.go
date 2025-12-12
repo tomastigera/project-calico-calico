@@ -22,17 +22,16 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/azure"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
@@ -800,18 +799,14 @@ func ConfigureLogging(conf types.NetConf) {
 	writers := []io.Writer{os.Stderr}
 	// Set the log output to write to a log file if specified.
 	if conf.LogFilePath != "" {
-		// Create the path for the log file if it does not exist
-		err := os.MkdirAll(filepath.Dir(conf.LogFilePath), 0755)
-		if err != nil {
-			logrus.WithError(err).Errorf("Failed to create path for CNI log file: %v", filepath.Dir(conf.LogFilePath))
-		}
-
 		// Create file logger with log file rotation.
-		fileLogger := &lumberjack.Logger{
-			Filename:   conf.LogFilePath,
-			MaxSize:    100,
-			MaxAge:     30,
-			MaxBackups: 10,
+		fileLogger := &timberjack.Logger{
+			Filename:    conf.LogFilePath,
+			FileMode:    0o644,
+			Compression: "zstd",
+			MaxSize:     100,
+			MaxAge:      30,
+			MaxBackups:  10,
 		}
 
 		// Set the max size if exists. Defaults to 100 MB.

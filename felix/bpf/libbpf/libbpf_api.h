@@ -303,6 +303,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			uint *jumps,
 			uint *jumps6,
 			short dscp,
+			short istio_dscp,
 			uint maglev_lut_size)
 {
 	struct cali_tc_global_data v4 = {
@@ -322,6 +323,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
 		.dscp = dscp,
+		.istio_dscp = istio_dscp,
 		.maglev_lut_size = maglev_lut_size,
 	};
 
@@ -560,4 +562,17 @@ int create_bpf_map(enum bpf_map_type type, unsigned int key_size, unsigned int v
 		printf("libbpf warn: Error in bpf_map_create(%s):%s(%d).\n", name, cp, err);
 	}
 	return fd;
+}
+
+void bpf_set_program_autoload(struct bpf_object *obj, const char *progName, bool autoload)
+{
+	struct bpf_program *prog = bpf_object__find_program_by_name(obj, progName);
+	if (prog == NULL) {
+		errno = ENOENT;
+		return;
+	}
+	int ret = bpf_program__set_autoload(prog, autoload);
+	if (ret) {
+		set_errno(ret);
+	}
 }

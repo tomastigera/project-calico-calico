@@ -1,4 +1,4 @@
-- name: voltron
+- name: Voltron
   run:
     when: "${CHANGE_IN(voltron)}"
   dependencies:
@@ -8,10 +8,10 @@
       commands:
         - cd voltron
     jobs:
-      - name: voltron tests
+      - name: "Voltron: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "Voltron: build arm64"
         matrix:
           - env_var: ARCH
             values:

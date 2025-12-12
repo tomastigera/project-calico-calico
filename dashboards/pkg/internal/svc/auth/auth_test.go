@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -17,7 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmatesting "github.com/projectcalico/calico/lma/pkg/auth/testing"
 )
@@ -26,7 +27,11 @@ func TestAuthService(t *testing.T) {
 
 	logger := logging.New("TestAuthService")
 
-	newSubject := func(cfg *config.Config, dexOptions ...lmaauth.DexOption) (*AuthService, *rsa.PrivateKey, *k8sfake.Clientset) {
+	newSubject := func(t *testing.T, cfg *config.Config, dexOptions ...lmaauth.DexOption) (*AuthService, *rsa.PrivateKey, *k8sfake.Clientset) {
+		// k8sfake.NewSimpleClientset() is deprecated but its replacement (k8sfake.NewClientSet) does not include all
+		// required scheme for authentication.
+		// A test here fails with: schema error: no type found matching: io.k8s.api.authentication.v1.TokenReview
+		// TODO: Replace this with k8sfake.NewClientSet once https://github.com/kubernetes/kubernetes/issues/126850 gets fixed
 		fakeClient := k8sfake.NewSimpleClientset()
 
 		jwtToken, err := jwt.NewBuilder().Issuer("fake-issuer").Build()
@@ -38,11 +43,26 @@ func TestAuthService(t *testing.T) {
 		bearerToken, err := jwt.Sign(jwtToken, jwt.WithKey(jwa.RS256, key))
 		require.NoError(t, err)
 
+		authorizer, err := security.NewAuthorizer(
+			t.Context(),
+			logger,
+			time.Second,
+			security.AuthorizerConfig{
+				Namespace:                             "",
+				EnableNamespacedRBAC:                  cfg.NamespacedRBAC,
+				AuthorizedVerbsCacheHardTTL:           time.Second,
+				AuthorizedVerbsCacheSoftTTL:           time.Second,
+				AuthorizedVerbsCacheReviewsTimeout:    time.Second,
+				AuthorizedVerbsCacheRevalidateTimeout: time.Second,
+			},
+		)
+		require.NoError(t, err)
+
 		subject, err := NewAuthService(
 			cfg,
 			logger,
 			"fake-tenant",
-			fake.NewAuthorizer(true),
+			authorizer,
 			fakeClient,
 			&rest.Config{
 				BearerToken: string(bearerToken),
@@ -55,13 +75,13 @@ func TestAuthService(t *testing.T) {
 
 	t.Run("authenticate", func(t *testing.T) {
 		t.Run("missing auth header", func(t *testing.T) {
-			subject, _, _ := newSubject(&config.Config{})
+			subject, _, _ := newSubject(t, &config.Config{})
 			_, err := subject.authenticateRequest(&http.Request{})
 			require.ErrorContains(t, err, "no auth header")
 		})
 
 		t.Run("missing bearer auth", func(t *testing.T) {
-			subject, _, _ := newSubject(&config.Config{})
+			subject, _, _ := newSubject(t, &config.Config{})
 			_, err := subject.authenticateRequest(&http.Request{
 				Header: http.Header{
 					"Authorization": []string{"hello world"},
@@ -71,7 +91,8 @@ func TestAuthService(t *testing.T) {
 		})
 
 		t.Run("not authenticated", func(t *testing.T) {
-			subject, key, _ := newSubject(&config.Config{})
+			subject, key, _ := newSubject(t, &config.Config{})
+
 			jwtToken, err := jwt.NewBuilder().Issuer("fake-issuer").Build()
 			require.NoError(t, err)
 
@@ -88,7 +109,7 @@ func TestAuthService(t *testing.T) {
 
 		t.Run("invalid tenantID claim", func(t *testing.T) {
 			keySet := &testKeySet{}
-			subject, _, _ := newSubject(&config.Config{OIDCAuthIssuer: "fake-issuer", OIDCAuthClientID: "fake-client-id"}, lmaauth.WithKeySet(keySet))
+			subject, _, _ := newSubject(t, &config.Config{OIDCAuthIssuer: "fake-issuer", OIDCAuthClientID: "fake-client-id"}, lmaauth.WithKeySet(keySet))
 
 			fakeJWT := lmatesting.NewFakeJWT("fake-issuer", "fake-user").
 				WithClaim(lmaauth.ClaimNameAud, "fake-client-id").
@@ -106,7 +127,7 @@ func TestAuthService(t *testing.T) {
 
 		t.Run("authenticated", func(t *testing.T) {
 			keySet := &testKeySet{}
-			subject, _, _ := newSubject(&config.Config{
+			subject, _, _ := newSubject(t, &config.Config{
 				OIDCAuthIssuer:   "fake-issuer",
 				OIDCAuthClientID: "fake-client-id",
 				ProductMode:      config.ProductModeCloud,

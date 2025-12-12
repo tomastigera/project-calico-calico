@@ -46,8 +46,8 @@ type FelixSender interface {
 type PolicyMatchListener interface {
 	OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.EndpointKey)
 	OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey model.EndpointKey)
-	OnEgressSelectorMatch(es string, endpointKey model.EndpointKey)
-	OnEgressSelectorMatchStopped(es string, endpointKey model.EndpointKey)
+	OnComputedSelectorMatch(cs string, endpointKey model.EndpointKey)
+	OnComputedSelectorMatchStopped(cs string, endpointKey model.EndpointKey)
 }
 
 // ActiveRulesCalculator calculates the set of policies and profiles (i.e. the rules) that
@@ -100,7 +100,7 @@ type ActiveRulesCalculator struct {
 	OnAlive               func()
 }
 
-type egressSelector string
+type computedSelector string
 
 func NewActiveRulesCalculator() *ActiveRulesCalculator {
 	arc := &ActiveRulesCalculator{
@@ -295,16 +295,19 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 	return
 }
 
-func (arc *ActiveRulesCalculator) OnEgressSelectorAdded(es string) {
-	sel, err := selector.Parse(es)
+// AddExtraComputedSelector adds an extra non-policy selector to the label index and gives OnComputedSelectorActive
+// and OnComputedSelectorInactive callbacks when that selector matches/stops matching local endpoints.  Allows for
+// sharing the expensive selector index.
+func (arc *ActiveRulesCalculator) AddExtraComputedSelector(cs string) {
+	sel, err := selector.Parse(cs)
 	if err != nil {
-		log.WithError(err).Panicf("Failed to parse egress selector %#v", es)
+		log.WithError(err).Panicf("Failed to parse computed selector %#v", cs)
 	}
-	arc.labelIndex.UpdateSelector(egressSelector(es), sel)
+	arc.labelIndex.UpdateSelector(computedSelector(cs), sel)
 }
 
-func (arc *ActiveRulesCalculator) OnEgressSelectorRemoved(es string) {
-	arc.labelIndex.DeleteSelector(egressSelector(es))
+func (arc *ActiveRulesCalculator) RemoveExtraComputedSelector(cs string) {
+	arc.labelIndex.DeleteSelector(computedSelector(cs))
 }
 
 func policyForceProgrammed(policy *model.Policy) bool {
@@ -342,13 +345,13 @@ func (arc *ActiveRulesCalculator) OnStatusUpdate(status api.SyncStatus) {
 		if arc.missingProfiles.Len() > 0 {
 			// Log out any profiles that were missing during the resync.  We defer
 			// this until now because we may hear about profiles or endpoints first.
-			arc.missingProfiles.Iter(func(profileID string) error {
+			for profileID := range arc.missingProfiles.All() {
 				log.WithField("profileID", profileID).Warning(
 					"End of resync: local endpoints refer to missing " +
 						"or invalid profile, profile's rules replaced " +
 						"with drop rules.")
-				return set.RemoveItem
-			})
+				arc.missingProfiles.Discard(profileID)
+			}
 		}
 	}
 }
@@ -384,10 +387,10 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 }
 
 func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
-	if es, ok := selID.(egressSelector); ok {
+	if cs, ok := selID.(computedSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			if labelId, ok := labelId.(model.EndpointKey); ok {
-				l.OnEgressSelectorMatch(string(es), labelId)
+				l.OnComputedSelectorMatch(string(cs), labelId)
 			}
 		}
 		return
@@ -414,10 +417,10 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 }
 
 func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
-	if es, ok := selID.(egressSelector); ok {
+	if cs, ok := selID.(computedSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			if labelId, ok := labelId.(model.EndpointKey); ok {
-				l.OnEgressSelectorMatchStopped(string(es), labelId)
+				l.OnComputedSelectorMatchStopped(string(cs), labelId)
 			}
 		}
 		return

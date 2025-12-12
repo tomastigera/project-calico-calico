@@ -12,17 +12,19 @@
       commands:
         - cd kube-controllers
     jobs:
-      - name: "kube-controllers: tests"
+      - name: "kube-controllers: CI"
         commands:
+          - export TEST_SUITE_PREFIX=""
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: "kube-controllers: build arm64"
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
+          - export TEST_SUITE_PREFIX="$ARCH"
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
     epilogue:
       always:
         commands:
-          - test-results publish report
+          - test-results publish report --name "kube-controllers" --suite-prefix="$TEST_SUITE_PREFIX"

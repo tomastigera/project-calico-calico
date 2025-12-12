@@ -458,7 +458,6 @@ func main() {
 	opts = append(opts, server.WithAuthAttributesMap(authorizationDetailsByPath))
 
 	srv, err := server.New(
-		k8s,
 		client,
 		k8sConfig,
 		*cfg,

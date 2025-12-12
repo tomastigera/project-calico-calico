@@ -3,26 +3,47 @@ package security
 import (
 	"context"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
+
+type PermissionsResult struct {
+	Errors                  map[string][]error
+	AuthorizedResourceVerbs []v3.AuthorizedResourceVerbs
+}
 
 type Context interface {
 	context.Context
+
 	UserInfo() user.Info
 	Authorization() string
 
-	KubernetesClient() kubernetes.Interface
+	// IsAnyPermitted Verify if the user has lma.tigera.io authorization for any resource
 	IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error)
+
+	// IsResourcePermitted Verify if the user has lma.tigera.io authorization for a particular resource
 	IsResourcePermitted(apiGroup, resourceName, resource string) (bool, error)
+
+	// GetPermissions Returns AuthorizedResourceVerbs permissions for namespaced RBAC
+	GetPermissions(managedClusterNames []string) (PermissionsResult, error)
+
+	// KubernetesClient Returns a client for the management cluster k8s API
+	KubernetesClient() kubernetes.Interface
+
+	// ClientSetFactory Returns a ClientSetFactory for managed cluster k8s API
+	ClientSetFactory() k8s.ClientSetFactory
 }
 
 type userAuthContext struct {
 	context.Context
-	userInfo      user.Info
-	k8sClient     kubernetes.Interface
-	authorizer    Authorizer
-	authorization string
+	userInfo         user.Info
+	k8sClient        kubernetes.Interface
+	authorizer       Authorizer
+	authorization    string
+	clientSetFactory k8s.ClientSetFactory
 }
 
 func NewUserAuthContext(
@@ -31,14 +52,16 @@ func NewUserAuthContext(
 	authorizer Authorizer,
 	k8sClient kubernetes.Interface,
 	authorization string,
+	clientSetFactory k8s.ClientSetFactory,
 ) Context {
 
 	return &userAuthContext{
-		Context:       parent,
-		userInfo:      userInfo,
-		k8sClient:     k8sClient,
-		authorizer:    authorizer,
-		authorization: authorization,
+		Context:          parent,
+		userInfo:         userInfo,
+		k8sClient:        k8sClient,
+		authorizer:       authorizer,
+		authorization:    authorization,
+		clientSetFactory: clientSetFactory,
 	}
 }
 
@@ -48,6 +71,10 @@ func (u *userAuthContext) UserInfo() user.Info {
 
 func (u *userAuthContext) KubernetesClient() kubernetes.Interface {
 	return u.k8sClient
+}
+
+func (u *userAuthContext) ClientSetFactory() k8s.ClientSetFactory {
+	return u.clientSetFactory
 }
 
 func (u *userAuthContext) Authorization() string {
@@ -60,4 +87,8 @@ func (u *userAuthContext) IsAnyPermitted(apiGroup string, resourceNames []string
 
 func (u *userAuthContext) IsResourcePermitted(apiGroup, resourceName, resource string) (bool, error) {
 	return u.authorizer.Authorize(u, apiGroup, []string{resourceName}, &resource)
+}
+
+func (u *userAuthContext) GetPermissions(managedClusterNames []string) (PermissionsResult, error) {
+	return u.authorizer.GetAuthorizedResourceVerbs(u, managedClusterNames)
 }

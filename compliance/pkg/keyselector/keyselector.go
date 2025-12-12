@@ -5,7 +5,6 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -39,8 +38,8 @@ func New() KeySelector {
 	keym := &keySelector{
 		keysByOwner:       make(map[apiv3.ResourceID]set.Set[string]),
 		keysByClient:      make(map[apiv3.ResourceID]set.Set[string]),
-		clientsByKey:      make(map[string]resources.Set),
-		ownersByKey:       make(map[string]resources.Set),
+		clientsByKey:      make(map[string]set.Typed[apiv3.ResourceID]),
+		ownersByKey:       make(map[string]set.Typed[apiv3.ResourceID]),
 		keysByOwnerClient: make(map[ownerClient]set.Set[string]),
 	}
 	return keym
@@ -51,8 +50,8 @@ type keySelector struct {
 	// The cross referencing.
 	keysByOwner       map[apiv3.ResourceID]set.Set[string]
 	keysByClient      map[apiv3.ResourceID]set.Set[string]
-	ownersByKey       map[string]resources.Set
-	clientsByKey      map[string]resources.Set
+	ownersByKey       map[string]set.Typed[apiv3.ResourceID]
+	clientsByKey      map[string]set.Typed[apiv3.ResourceID]
 	keysByOwnerClient map[ownerClient]set.Set[string]
 
 	// Callbacks
@@ -121,7 +120,7 @@ func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set[string])
 			// Update the ownersByKey set.
 			owners := m.ownersByKey[key]
 			if owners == nil {
-				owners = resources.NewSet()
+				owners = set.New[apiv3.ResourceID]()
 				m.ownersByKey[key] = owners
 			}
 			owners.Add(owner)
@@ -180,7 +179,7 @@ func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set[string
 			// Update the clientsByKey set.
 			clients := m.clientsByKey[key]
 			if clients == nil {
-				clients = resources.NewSet()
+				clients = set.New[apiv3.ResourceID]()
 				m.clientsByKey[key] = clients
 			}
 			clients.Add(client)

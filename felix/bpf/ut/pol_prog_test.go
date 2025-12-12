@@ -32,6 +32,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/asm"
+	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/maps"
@@ -126,7 +127,7 @@ func TestPolicyLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), policyJumpMap.MapFD(), 0,
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), policyJumpMap[hook.Ingress].MapFD(), 0,
 		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
@@ -2685,167 +2686,10 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "staged policies recorded",
-			test: testFlowLog{
-				policy: polprog.Rules{
-					NoProfileMatchID: 666,
-					Tiers: []polprog.Tier{
-						{
-							Name: "pass",
-							Policies: []polprog.Policy{{
-								Name:  "pass rule",
-								Rules: []polprog.Rule{{Rule: &proto.Rule{Action: "Pass"}, MatchID: 1234}},
-							}},
-						},
-						{
-							Name:      "staged only",
-							EndRuleID: 0x7455,
-							EndAction: polprog.TierEndPass,
-							Policies: []polprog.Policy{
-								{
-									Name:   "staged deny",
-									Staged: true,
-									Rules:  []polprog.Rule{{Rule: &proto.Rule{Action: "Deny"}, MatchID: 0xdead}},
-								},
-								{
-									Name:   "staged allow",
-									Staged: true,
-									Rules:  []polprog.Rule{{Rule: &proto.Rule{Action: "Allow"}, MatchID: 0x600d}},
-								},
-							},
-						},
-						{
-							Name: "protocols",
-							Policies: []polprog.Policy{
-								{
-									Name:      "TCP allow - staged",
-									Staged:    true,
-									NoMatchID: 0x66,
-									Rules: []polprog.Rule{{
-										MatchID: 0x6,
-										Rule: &proto.Rule{
-											Action: "Allow",
-											Protocol: &proto.Protocol{
-												NumberOrName: &proto.Protocol_Name{Name: "tcp"},
-											},
-										},
-									}},
-								},
-								{
-									Name:      "UDP allow - staged",
-									Staged:    true,
-									NoMatchID: 0x1717,
-									Rules: []polprog.Rule{{
-										MatchID: 0x17,
-										Rule: &proto.Rule{
-											Action: "Allow",
-											Protocol: &proto.Protocol{
-												NumberOrName: &proto.Protocol_Name{Name: "udp"},
-											},
-										},
-									}},
-								},
-								{
-									Name:  "allow all",
-									Rules: []polprog.Rule{{Rule: &proto.Rule{Action: "Allow"}, MatchID: 1}},
-								},
-							},
-						},
-					},
-				},
-				allowedPackets: []testFlowLogCase{
-					{
-						packet:  udpPkt("10.0.0.1:31245", "10.0.0.2:80"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x66, 0x17, 1},
-					},
-					{
-						packet:  tcpPkt("10.0.0.2:80", "10.0.0.1:31245"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x6, 0x1717, 1},
-					},
-					{
-						packet:  icmpPkt("10.0.0.1", "10.0.0.2"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x66, 0x1717, 1},
-					},
-				},
-			},
-		},
 	}
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("name=%s", test.name), func(t *testing.T) { runTest(t, test.test, polprog.WithFlowLogs()) })
-	}
-}
-
-func TestPolicyProgramsWithStagedPolicy(t *testing.T) {
-	for i, p := range polProgramTests {
-		if p.ForIPv6 {
-			// XXX skip for now
-			continue
-		}
-		if len(p.Policy.Tiers) > 0 {
-
-			// Make a copy of the tiers
-			tiers := p.Policy.Tiers
-			p.Policy.Tiers = make([]polprog.Tier, len(tiers))
-			copy(p.Policy.Tiers, tiers)
-
-			p.Policy.Tiers[0].Policies = append(
-				[]polprog.Policy{{
-					Name: "staged allow all",
-					Rules: []polprog.Rule{{
-						Rule: &proto.Rule{
-							Action: "Allow",
-						},
-						MatchID: 0x600d,
-					}},
-					Staged:    true,
-					NoMatchID: 0x666,
-				}},
-				p.Policy.Tiers[0].Policies...)
-
-			if len(p.Policy.Tiers[0].Policies) == 1 {
-				p.Policy.Tiers[0].EndAction = polprog.TierEndPass
-			}
-			t.Run(fmt.Sprintf("Staged policy first in first tier %d:Policy=%s", i, p.PolicyName),
-				func(t *testing.T) { runTest(t, wrap(p)) },
-			)
-		}
-	}
-
-	for i, p := range polProgramTests {
-		if p.ForIPv6 {
-			// XXX skip for now
-			continue
-		}
-		if len(p.Policy.Tiers) < 2 {
-			continue
-		}
-		stagedTier := polprog.Tier{
-			Name: "staged tier",
-			Policies: []polprog.Policy{{
-				Name: "staged allow all",
-				Rules: []polprog.Rule{{
-					Rule: &proto.Rule{
-						Action: "Allow",
-					},
-					MatchID: 0x600d600d,
-				}},
-				Staged:    true,
-				NoMatchID: 0x666,
-			}},
-			EndAction: polprog.TierEndPass,
-		}
-
-		tiers := p.Policy.Tiers
-
-		p.Policy.Tiers = tiers[:1:1] // force a copy on the next append
-		p.Policy.Tiers = append(p.Policy.Tiers, stagedTier)
-		p.Policy.Tiers = append(p.Policy.Tiers, tiers[1:]...)
-
-		t.Run(fmt.Sprintf("Staged only tier between tiers %d:Policy=%s", i, p.PolicyName),
-			func(t *testing.T) { runTest(t, wrap(p)) },
-		)
 	}
 }
 
@@ -3097,13 +2941,18 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 	}
 
-	if policyJumpMap != nil {
-		_ = policyJumpMap.Close()
+	for _, polJumpMap := range policyJumpMap {
+		if polJumpMap != nil {
+			_ = polJumpMap.Close()
+		}
 	}
-	policyJumpMap = jump.Map()
-	_ = unix.Unlink(policyJumpMap.Path())
-	err = policyJumpMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
+
+	policyJumpMap = jump.Maps()
+	for _, hk := range []hook.Hook{hook.Egress, hook.Ingress} {
+		_ = unix.Unlink(policyJumpMap[hk].Path())
+		err = policyJumpMap[hk].EnsureExists()
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	allowIdx := tcdefs.ProgIndexAllowed
 	denyIdx := tcdefs.ProgIndexDrop
@@ -3141,7 +2990,7 @@ retry:
 		ipsfd,
 		testStateMap.MapFD(),
 		staticProgsMap.MapFD(),
-		policyJumpMap.MapFD(),
+		policyJumpMap[hook.Ingress].MapFD(),
 		polprogOpts...,
 	)
 	insns, err := pg.Instructions(tp.Policy())
@@ -3168,7 +3017,7 @@ retry:
 		Expect(err).NotTo(HaveOccurred(), "failed to load program into the kernel")
 		Expect(polProgFD).NotTo(BeZero())
 		polProgFDs = append(polProgFDs, polProgFD)
-		err = policyJumpMap.Update(
+		err = policyJumpMap[hook.Ingress].Update(
 			jump.Key(polprog.SubProgramJumpIdx(polProgIdx, i, stride)),
 			jump.Value(polProgFD.FD()),
 		)

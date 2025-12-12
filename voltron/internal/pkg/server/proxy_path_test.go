@@ -17,16 +17,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"k8s.io/apiserver/pkg/authentication/user"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
@@ -35,7 +32,6 @@ import (
 
 var _ = Describe("Server supports unauthenticated targets", func() {
 	var (
-		k8sAPI     bootstrap.K8sClient
 		fakeClient ctrlclient.WithWatch
 
 		voltronExtHttpsCert    *x509.Certificate
@@ -47,11 +43,6 @@ var _ = Describe("Server supports unauthenticated targets", func() {
 
 	BeforeEach(func() {
 		var err error
-
-		k8sAPI = &k8sClient{
-			Interface:                k8sfake.NewSimpleClientset(),
-			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
-		}
 
 		scheme := kscheme.Scheme
 		err = v3.AddToScheme(scheme)
@@ -117,7 +108,7 @@ var _ = Describe("Server supports unauthenticated targets", func() {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, _, srvWg = createAndStartServer(k8sAPI, fakeClient,
+			srv, httpsAddr, _, _, srvWg = createAndStartServer(fakeClient,
 				config,
 				mockAuthenticator,
 				"",

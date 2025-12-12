@@ -25,7 +25,7 @@ func (h *HTTPSBin) Close() {
 
 // NewHTTPSBin starts a new HTTPSBin. Its parameters can be used to inspect
 // the requests and make assertion on it. HTTPSBin will return 200 OK for every request
-func NewHTTPSBin(t *tunnel.Tunnel, xCert tls.Certificate,
+func NewHTTPSBin(t tunnel.Tunnel, xCert tls.Certificate,
 	inspectRequest func(r *http.Request)) *HTTPSBin {
 
 	mux := http.NewServeMux()

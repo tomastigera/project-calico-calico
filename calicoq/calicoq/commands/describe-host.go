@@ -457,11 +457,11 @@ func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpoint
 	// Matt: Maybe we should remove something here, but it's an edge case
 }
 
-func (cbs *describeCmd) OnEgressSelectorMatch(es string, endpointKey model.EndpointKey) {
+func (cbs *describeCmd) OnComputedSelectorMatch(_ string, _ model.EndpointKey) {
 	// We don't currently analyze egress selectors.
 }
 
-func (cbs *describeCmd) OnEgressSelectorMatchStopped(es string, endpointKey model.EndpointKey) {
+func (cbs *describeCmd) OnComputedSelectorMatchStopped(_ string, _ model.EndpointKey) {
 	// We don't currently analyze egress selectors.
 }
 

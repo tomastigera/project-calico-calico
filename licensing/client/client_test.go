@@ -53,6 +53,7 @@ var (
 		features.KibanaDashboard:        true,
 		features.FileOutputL7Logs:       true,
 		features.PacketCapture:          true,
+		features.IngressGateway:         true,
 	}
 )
 
@@ -385,42 +386,6 @@ func TestFeatureFlags(t *testing.T) {
 		claims := sampleClaims
 		claims.Features = []string{features.AWSCloudwatchMetrics}
 		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
-	})
-
-	t.Run("a license with 'cnx|all' package states ingress is disabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cnx", "all"}
-
-		for f := range BaseFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
-		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeFalse())
-	})
-
-	t.Run("a license with 'cnx|all|ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cnx", "all", features.IngressGateway}
-
-		for f := range BaseFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeTrue())
-		}
-		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
-	})
-
-	t.Run("a license with 'ingress-access-control' package states ingress is enabled.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{features.IngressGateway}
-
-		for f := range BaseFeatures {
-			Expect(claims.ValidateFeature(f)).To(BeFalse())
-		}
-		Expect(claims.ValidateFeature(features.IngressGateway)).To(BeTrue())
 	})
 
 	t.Run("validate a new base feature", func(t *testing.T) {

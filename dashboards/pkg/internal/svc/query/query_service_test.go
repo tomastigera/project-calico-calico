@@ -10,26 +10,32 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakeprojectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query"
+	fakerepository "github.com/projectcalico/calico/dashboards/pkg/internal/repository/fake"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository/linseed"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
-	"github.com/projectcalico/calico/dashboards/pkg/internal/security/fake"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead
@@ -41,21 +47,70 @@ type bucketItems struct {
 
 func TestQueryService(t *testing.T) {
 
-	newAuthContext := func(t *testing.T, matchRules bool, clusterID string) security.Context {
+	newLMAResource := func(verb string, resources ...string) authzv1.ResourceRule {
+		return authzv1.ResourceRule{
+			Verbs:         []string{verb},
+			APIGroups:     []string{security.APIGroupLMATigera},
+			ResourceNames: []string{"flows", "dns"},
+			Resources:     resources,
+		}
+	}
+
+	newAuthContext := func(
+		t *testing.T,
+		logger logging.Logger,
+		namespacedRBAC bool,
+		resourceRules ...authzv1.ResourceRule,
+	) (security.Context, *k8s.MockClientSetFactory) {
 		t.Helper()
+
+		authorizer, err := security.NewAuthorizer(
+			t.Context(),
+			logger,
+			3*time.Second,
+			security.AuthorizerConfig{
+				Namespace:                             "default",
+				EnableNamespacedRBAC:                  namespacedRBAC,
+				AuthorizedVerbsCacheHardTTL:           3 * time.Second,
+				AuthorizedVerbsCacheSoftTTL:           3 * time.Second,
+				AuthorizedVerbsCacheReviewsTimeout:    3 * time.Second,
+				AuthorizedVerbsCacheRevalidateTimeout: 3 * time.Second,
+			},
+		)
+		require.NoError(t, err)
+
+		k8sClient := k8sfake.NewClientset()
+		k8sClient.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+
+			createAction, ok := action.(k8stesting.CreateAction)
+			require.True(t, ok, "invalid reactor action, expecting k8stesting.CreateAction but got", action)
+
+			object := createAction.GetObject().DeepCopyObject()
+			selfSubjectRulesReview, ok := object.(*authzv1.SelfSubjectRulesReview)
+			require.True(t, ok, "invalid reactor object, expecting *SelfSubjectRulesReview but got", object)
+
+			selfSubjectRulesReview.Status.ResourceRules = resourceRules
+
+			return true, selfSubjectRulesReview, nil
+		})
+
+		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
 
 		return security.NewUserAuthContext(
 			context.Background(),
 			&user.DefaultInfo{Name: "fake-user"},
-			fake.NewAuthorizer(matchRules),
-			k8sfake.NewSimpleClientset(),
+			authorizer,
+			k8sClient,
 			"Bearer fake-token",
-		)
+			mockClientSetFactory,
+		), mockClientSetFactory
 	}
 
-	ctx := newAuthContext(t, true, "cluster1")
-
 	logger := logging.New("TestQueryService")
+
+	ctx, _ := newAuthContext(t, logger, false,
+		newLMAResource("get", "cluster1", "cluster2", "cluster3"),
+	)
 
 	tenantID := "fake-tenant"
 
@@ -66,123 +121,274 @@ func TestQueryService(t *testing.T) {
 		return []query.ManagedClusterName{"cluster1", "cluster2", "cluster3"}, nil
 	})
 
+	testConfig := Config{
+		QueryTimeout:           time.Duration(2) * time.Minute,
+		MaxRequestFilters:      10,
+		MaxRequestAggregations: 5,
+	}
+
 	allCollections := collections.Collections(nil)
 
-	subject := NewQueryService(
-		logger,
-		repository,
-		allCollections,
-		managedClusterLister,
-		Config{
-			QueryTimeout:           time.Duration(2) * time.Minute,
-			MaxRequestFilters:      10,
-			MaxRequestAggregations: 5,
-		},
-	)
+	subject := NewQueryService(logger, repository, allCollections, managedClusterLister, testConfig)
 
 	t.Run("authorization", func(t *testing.T) {
 		t.Run("unauthorized", func(t *testing.T) {
-			ctx := newAuthContext(t, false, "cluster1")
-
-			_, err := subject.Query(ctx, client.QueryRequest{
-				CollectionName: "flows",
-				Filters: []client.QueryRequestFilter{
-					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
-				},
-			})
-
-			require.Equal(t, httpreply.ReplyAccessDenied, err)
-		})
-
-		t.Run("authorized", func(t *testing.T) {
 
 			testCases := []struct {
-				name                string
-				clusterFilter       []client.ManagedClusterName
-				authorizedResources []string
-				expectSuccess       bool
-				expectedErrMessage  string
+				name               string
+				authorizedResource authzv1.ResourceRule
 			}{
 				{
-					name:          "partial for cluster1",
-					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
-					authorizedResources: []string{
-						"cluster1",
-					},
-					expectSuccess:      false,
-					expectedErrMessage: "access denied to cluster cluster2",
-				},
-				{
-					name:          "partial for cluster2",
-					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
-					authorizedResources: []string{
-						"cluster2",
-					},
-					expectSuccess:      false,
-					expectedErrMessage: "access denied to cluster cluster1",
-				},
-				{
-					name:          "all requested clusters",
-					clusterFilter: []client.ManagedClusterName{"cluster1", "cluster2"},
-					authorizedResources: []string{
-						"cluster1",
-						"cluster2",
-					},
-					expectSuccess: true,
-				},
-				{
-					name:          "all clusters",
-					clusterFilter: nil,
-					authorizedResources: []string{
-						"cluster1",
-						"cluster2",
-					},
-					expectSuccess: true,
+					name:               "no permissions",
+					authorizedResource: authzv1.ResourceRule{},
 				},
 			}
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx := security.NewUserAuthContext(
-						context.Background(),
-						&user.DefaultInfo{Name: "fake-user"},
-						fake.NewAuthorizerForMatchingResources(slices.Map(tc.authorizedResources, func(resource string) fake.MatchingResource {
-							return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
-						})),
-						k8sfake.NewSimpleClientset(),
-						"Bearer fake-token",
-					)
-
-					mockClient.SetResults(
-						lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})},
-					)
+					ctx, _ := newAuthContext(t, logger, false, tc.authorizedResource)
 
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
-						ClusterFilter:  []client.ManagedClusterName{"cluster1", "cluster2"},
 						Filters: []client.QueryRequestFilter{
 							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
 						},
 					})
 
-					if tc.expectSuccess {
-						require.NoError(t, err)
-					} else {
-						require.Equal(t, httpreply.Reply{
-							Key:     httpreply.AccessDenied,
-							Status:  httpreply.ReplyAccessDenied.Status,
-							Message: tc.expectedErrMessage,
-						}, err)
-					}
+					require.Equal(t, httpreply.ReplyAccessDenied, err)
+				})
+			}
+		})
+
+		t.Run("authorized", func(t *testing.T) {
+
+			testCases := []struct {
+				name               string
+				config             Config
+				clusterFilter      []client.ManagedClusterName
+				namespacedRBAC     bool
+				authorizedResource authzv1.ResourceRule
+				expected           error
+			}{
+				{
+					name:               "partial for cluster1",
+					config:             testConfig,
+					clusterFilter:      []client.ManagedClusterName{"cluster1", "cluster2"},
+					namespacedRBAC:     false,
+					authorizedResource: newLMAResource("get", "cluster1"),
+					expected: httpreply.Reply{
+						Key:     httpreply.AccessDenied,
+						Status:  httpreply.ReplyAccessDenied.Status,
+						Message: "access denied to cluster cluster2",
+					},
+				},
+				{
+					name:               "partial for cluster2",
+					clusterFilter:      []client.ManagedClusterName{"cluster1", "cluster2"},
+					namespacedRBAC:     false,
+					authorizedResource: newLMAResource("get", "cluster2"),
+					expected: httpreply.Reply{
+						Key:     httpreply.AccessDenied,
+						Status:  httpreply.ReplyAccessDenied.Status,
+						Message: "access denied to cluster cluster1",
+					},
+				},
+				{
+					name:               "all requested clusters",
+					clusterFilter:      []client.ManagedClusterName{"cluster1", "cluster2"},
+					namespacedRBAC:     false,
+					authorizedResource: newLMAResource("get", "cluster1", "cluster2"),
+					expected:           nil,
+				},
+				{
+					name:               "all clusters",
+					clusterFilter:      nil,
+					namespacedRBAC:     false,
+					authorizedResource: newLMAResource("get", "cluster1", "cluster2"),
+					expected:           nil,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					ctx, _ := newAuthContext(t, logger, tc.namespacedRBAC, tc.authorizedResource)
+
+					mockClient.SetResults(lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})})
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: "flows",
+						ClusterFilter:  tc.clusterFilter,
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+						},
+					})
+
+					require.Equal(t, tc.expected, err)
 				})
 			}
 		})
 	})
 
+	t.Run("permissions", func(t *testing.T) {
+		t.Run("namespaced RBAC disabled", func(t *testing.T) {
+			ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "cluster1", "cluster2", "cluster3"))
+
+			fakeRepository := fakerepository.NewFakeRepository()
+			subject := NewQueryService(logger, fakeRepository, allCollections, managedClusterLister, testConfig)
+
+			_, err := subject.Query(ctx, client.QueryRequest{
+				CollectionName: "flows",
+				ClusterFilter:  nil,
+				Filters: []client.QueryRequestFilter{
+					{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+				},
+			})
+			require.NoError(t, err)
+
+			queries := fakeRepository.Queries()
+			require.Len(t, queries, 1)
+			require.Len(t, queries[0].Permissions, 0)
+		})
+
+		testCases := []struct {
+			name                                    string
+			authReviewError                         map[string]error
+			authReviewStatusAuthorizedResourceVerbs map[string][]v3.AuthorizedResourceVerbs
+			expectedAuthorizedResourceVerbs         []v3.AuthorizedResourceVerbs
+			expected                                client.QueryResponse
+		}{
+			{
+				name: "namespaced RBAC enabled",
+				expected: client.QueryResponse{
+					Documents:     []client.QueryResponseDocument{},
+					GroupValues:   []client.QueryResponseGroupValue{},
+					Aggregations:  client.QueryResponseAggregations{},
+					ClusterErrors: map[string][]error{},
+				},
+				expectedAuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{{
+					APIGroup: "projectcalico.org",
+				}},
+			},
+			{
+				name: "namespaced RBAC enabled with partial results",
+				authReviewError: map[string]error{
+					"cluster2": fmt.Errorf("an expected error"),
+				},
+				expected: client.QueryResponse{
+					Documents:    []client.QueryResponseDocument{},
+					GroupValues:  []client.QueryResponseGroupValue{},
+					Aggregations: client.QueryResponseAggregations{},
+					ClusterErrors: map[string][]error{
+						"cluster2": {fmt.Errorf("an expected error")},
+					},
+				},
+				authReviewStatusAuthorizedResourceVerbs: map[string][]v3.AuthorizedResourceVerbs{
+					"cluster1": {{
+						APIGroup: "projectcalico.org",
+						Resource: "fake-resource",
+						Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list",
+							ResourceGroups: []v3.AuthorizedResourceGroup{{
+								Namespace: "fake-namespace1",
+							}},
+						}},
+					}},
+					"cluster3": {{
+						APIGroup: "projectcalico.org",
+						Resource: "fake-resource",
+						Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list",
+							ResourceGroups: []v3.AuthorizedResourceGroup{{
+								Namespace: "fake-namespace3",
+							}},
+						}},
+					}},
+				},
+				expectedAuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{
+					{
+						APIGroup: "projectcalico.org",
+						Resource: "fake-resource",
+						Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list",
+							ResourceGroups: []v3.AuthorizedResourceGroup{{
+								Namespace:      "fake-namespace1",
+								ManagedCluster: "cluster1",
+							}},
+						}},
+					},
+					{
+						APIGroup: "projectcalico.org",
+						Resource: "fake-resource",
+						Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list",
+							ResourceGroups: []v3.AuthorizedResourceGroup{{
+								Namespace:      "fake-namespace3",
+								ManagedCluster: "cluster3",
+							}},
+						}},
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				resources := []string{"cluster1", "cluster2", "cluster3"}
+
+				ctx, mockClientSetFactory := newAuthContext(t, logger, true, newLMAResource("get", resources...))
+
+				for _, resource := range resources {
+					fakeClient := k8sfake.NewClientset()
+					fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &fakeClient.Fake}
+					fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+						createAction, ok := action.(k8stesting.CreateAction)
+						if !ok {
+							return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
+						}
+
+						object := createAction.GetObject().DeepCopyObject()
+						authReview, ok := object.(*v3.AuthorizationReview)
+						if !ok {
+							return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
+						}
+
+						authReview.Status.AuthorizedResourceVerbs = tc.authReviewStatusAuthorizedResourceVerbs[resource]
+
+						return true, authReview, tc.authReviewError[resource]
+					})
+
+					mockClientSet := k8s.NewMockClientSet(t)
+					mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Once()
+					mockClientSetFactory.
+						On("NewClientSetForApplication", resource).
+						Return(mockClientSet, nil).
+						Once()
+				}
+
+				fakeRepository := fakerepository.NewFakeRepository()
+				subject := NewQueryService(logger, fakeRepository, allCollections, managedClusterLister, testConfig)
+
+				queryResponse, err := subject.Query(ctx, client.QueryRequest{
+					CollectionName: "flows",
+					ClusterFilter:  nil,
+					Filters: []client.QueryRequestFilter{
+						{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+					},
+				})
+				require.NoError(t, err)
+
+				queries := fakeRepository.Queries()
+				require.Len(t, queries, 1)
+				require.ElementsMatch(t, tc.expectedAuthorizedResourceVerbs, queries[0].Permissions)
+				require.Equal(t, tc.expected, queryResponse)
+			})
+		}
+	})
+
 	t.Run("validation", func(t *testing.T) {
 		t.Run("cluster", func(t *testing.T) {
 			t.Run("unknown", func(t *testing.T) {
-				ctx := newAuthContext(t, true, "cluster1")
+				ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "cluster1"))
 
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
@@ -237,15 +443,7 @@ func TestQueryService(t *testing.T) {
 
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
-						ctx := security.NewUserAuthContext(
-							context.Background(),
-							&user.DefaultInfo{Name: "fake-user"},
-							fake.NewAuthorizerForMatchingResources(slices.Map(tc.authorizedResources, func(resource string) fake.MatchingResource {
-								return fake.MatchingResource{APIGroup: "lma.tigera.io", ResourceNames: []string{"flows"}, Resource: stringp(resource)}
-							})),
-							k8sfake.NewSimpleClientset(),
-							"Bearer fake-token",
-						)
+						ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", tc.authorizedResources...))
 
 						if tc.expectedErr == nil {
 							mockClient.SetResults(
@@ -301,9 +499,9 @@ func TestQueryService(t *testing.T) {
 				allCollections,
 				managedClusterLister,
 				Config{
-					QueryTimeout:           time.Duration(2) * time.Minute,
+					QueryTimeout:           testConfig.QueryTimeout,
 					MaxRequestFilters:      1,
-					MaxRequestAggregations: 5,
+					MaxRequestAggregations: testConfig.MaxRequestAggregations,
 				},
 			)
 
@@ -323,8 +521,8 @@ func TestQueryService(t *testing.T) {
 				allCollections,
 				managedClusterLister,
 				Config{
-					QueryTimeout:           time.Duration(2) * time.Minute,
-					MaxRequestFilters:      10,
+					QueryTimeout:           testConfig.QueryTimeout,
+					MaxRequestFilters:      testConfig.MaxRequestFilters,
 					MaxRequestAggregations: 1,
 				},
 			)
@@ -1413,5 +1611,3 @@ func jsonMarshal(t *testing.T, v interface{}) []byte {
 func intp(i int) *int {
 	return &i
 }
-
-func stringp(s string) *string { return &s }

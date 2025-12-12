@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 // Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
@@ -35,6 +34,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/dataplane/linux/qos"
 )
@@ -78,6 +78,7 @@ type AttachPoint struct {
 	IngressPacketRateConfigured bool
 	EgressPacketRateConfigured  bool
 	DSCP                        int8
+	IstioDSCP                   int8
 	MaglevLUTSize               uint32
 
 	// EE only
@@ -90,6 +91,7 @@ type AttachPoint struct {
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
 	DNSInlineProcessing     bool
+	ProgramsMap             maps.Map
 }
 
 var ErrDeviceNotFound = errors.New("device not found")
@@ -172,7 +174,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	// only need to load and configure the preamble that will pass the
 	// configuration further to the selected set of programs.
 
-	binaryToLoad := path.Join(bpfdefs.ObjectDir, "tc_preamble.o")
+	binaryToLoad := path.Join(bpfdefs.ObjectDir, fmt.Sprintf("tc_preamble_%s.o", ap.Hook))
 	if ap.AttachType == apiv3.BPFAttachOptionTCX {
 		err := ap.attachTCXProgram(binaryToLoad)
 		if err != nil {
@@ -518,6 +520,7 @@ func (ap *AttachPoint) Configure() *libbpf.TcGlobalData {
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 		VethNS:        ap.VethNS,
 		DSCP:          ap.DSCP,
+		IstioDSCP:     ap.IstioDSCP,
 	}
 
 	if ap.Profiling == "Enabled" {

@@ -361,6 +361,9 @@ components:
         aggregations:
           additionalProperties: {}
           type: object
+        clusterErrors:
+          additionalProperties: {}
+          type: object
         documents:
           items:
             additionalProperties: {}

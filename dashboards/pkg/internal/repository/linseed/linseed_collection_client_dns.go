@@ -36,11 +36,9 @@ func newLinseedCollectionClientDNS(logger logging.Logger, client lsclient.Client
 func (c *collectionClientDNS) Params(params *queryParams, aggregations map[string]json.RawMessage) (lsv1.Params, error) {
 
 	dnsLogParams := &lsv1.DNSLogParams{
-		QueryParams: params.linseedQueryParams,
-		LogSelectionParams: lsv1.LogSelectionParams{
-			Selector: params.selector,
-		},
-		QuerySortParams: params.linseedQuerySortParams,
+		QueryParams:        params.linseedQueryParams,
+		QuerySortParams:    params.linseedQuerySortParams,
+		LogSelectionParams: params.linseedLogSelectionParams,
 	}
 
 	// Set linseed dns fields that have a particular domain match

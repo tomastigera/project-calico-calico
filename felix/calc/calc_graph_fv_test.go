@@ -792,6 +792,7 @@ func describeAsyncTests(baseTests []StateList) {
 					conf.IPSecPSKFile = "/proc/1/cmdline"
 					conf.IPSecIKEAlgorithm = "somealgo"
 					conf.TPROXYMode = "Enabled"
+					conf.IstioAmbientMode = "Enabled"
 					conf.IPSecESPAlgorithm = "somealgo"
 					conf.SetUseNodeResourceUpdates(test.UsesNodeResources())
 					conf.RouteSource = test.RouteSource()
@@ -813,6 +814,7 @@ func describeAsyncTests(baseTests []StateList) {
 					go func() {
 						log.Info("Input injector thread started")
 						lastState := empty
+
 						for _, state := range test {
 							log.WithField("state", state).Info("Injecting next state")
 							_, _ = fmt.Fprintf(GinkgoWriter, "       -> Injecting state (single update): %v\n", state)
@@ -925,7 +927,7 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
 		"Pre-DNAT endpoint policy order incorrect after moving to state: %v",
 		state.Name)
-	Expect(mockDataplane.EndpointEgressData()).To(Equal(state.ExpectedEndpointEgressData),
+	Expect(mockDataplane.EndpointEgressData()).To(Equal(state.ExpectedEndpointComputedData),
 		"Endpoint egress data incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
@@ -952,10 +954,9 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 
 func stringifyRoutes(routes set.Set[types.RouteUpdate]) []string {
 	out := make([]string, 0, routes.Len())
-	routes.Iter(func(item types.RouteUpdate) error {
+	for item := range routes.All() {
 		out = append(out, fmt.Sprintf("%+v", item))
-		return nil
-	})
+	}
 	sort.Strings(out)
 	return out
 }
@@ -1013,6 +1014,8 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		conf.RouteSource = expandedTest.RouteSource()
 		conf.EgressIPSupport = "EnabledPerNamespaceOrPerPod"
 		conf.TPROXYMode = "Enabled"
+		conf.IstioAmbientMode = "Enabled"
+
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)

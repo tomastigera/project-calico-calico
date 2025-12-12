@@ -135,7 +135,6 @@ ${kubectl} exec -i -n kube-system calicoctl -- calicoctl --allow-version-mismatc
 # Wait for the full Calico Enterprise system to be running.
 wait_pod_ready -n tigera-fluentd -l k8s-app
 wait_pod_ready -n tigera-elasticsearch -l k8s-app
-wait_pod_ready -n tigera-manager -l k8s-app
 
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
 ${kubectl} create ns metallb-system || true

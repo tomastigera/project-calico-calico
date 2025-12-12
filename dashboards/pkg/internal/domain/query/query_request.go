@@ -1,6 +1,8 @@
 package query
 
 import (
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/aggregations"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
@@ -18,4 +20,5 @@ type QueryRequest struct {
 	PageNum        int
 	CollectionName collections.CollectionName
 	SortFieldName  collections.FieldName
+	Permissions    []v3.AuthorizedResourceVerbs
 }

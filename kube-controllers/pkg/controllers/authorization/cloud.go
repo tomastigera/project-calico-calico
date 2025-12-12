@@ -1,7 +1,6 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 //go:build tesla
-// +build tesla
 
 package authorization
 

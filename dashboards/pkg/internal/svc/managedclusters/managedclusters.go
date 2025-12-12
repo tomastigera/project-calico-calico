@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,9 +35,10 @@ func NewNameLister(ctx context.Context, logger logging.Logger, dynamicClient dyn
 	// NewSharedInformerFactoryWithOptions did not work on multi-tenant clusters
 
 	informerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, time.Hour, tenantNamespace, nil)
-	// TODO: could use transforms to minimize mem usage
+	// Improvement: WithTransform could be used to minimize memory usage
+	// see https://pkg.go.dev/k8s.io/client-go@v0.34.1/tools/cache#TransformFunc
 
-	managedClusterInformer := informerFactory.ForResource(calicov3.SchemeGroupVersion.WithResource("managedclusters"))
+	managedClusterInformer := informerFactory.ForResource(v3.SchemeGroupVersion.WithResource("managedclusters"))
 
 	informerFactory.Start(ctx.Done())
 	informerFactory.WaitForCacheSync(ctx.Done())

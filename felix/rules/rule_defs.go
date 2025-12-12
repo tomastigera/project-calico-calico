@@ -84,6 +84,7 @@ const (
 	IPSetIDThisHostIPs        = "this-host"
 	IPSetIDAllTunnelNets      = "all-tunnel-net"
 	IPSetIDAllEGWHealthPorts  = "egw-health-ports"
+	IPSetIDAllIstioWEPs       = "all-istio-weps"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
@@ -348,7 +349,7 @@ type RuleRenderer interface {
 
 	PolicyToIptablesChains(policyID *types.PolicyID, policy *proto.Policy, ipVersion uint8) []*generictables.Chain
 	ProfileToIptablesChains(profileID *types.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *generictables.Chain)
-	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []generictables.Rule
+	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked bool) []generictables.Rule
 	PolicyGroupToIptablesChains(group *PolicyGroup) []*generictables.Chain
 
 	NATOutgoingChain(active bool, ipVersion uint8) *generictables.Chain
@@ -537,9 +538,11 @@ type Config struct {
 
 	DNSTrustedServers []config.ServerPort
 
-	TPROXYMode             string
-	TPROXYPort             int
-	TPROXYUpstreamConnMark uint32
+	TPROXYMode              string
+	TPROXYPort              int
+	TPROXYUpstreamConnMark  uint32
+	IstioAmbientModeEnabled bool
+	IstioDSCPMark           uint8
 }
 
 var unusedBitsInBPFMode = map[string]bool{

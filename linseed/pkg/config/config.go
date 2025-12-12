@@ -61,7 +61,7 @@ type Config struct {
 	TokenControllerEnabled bool `envconfig:"TOKEN_CONTROLLER_ENABLED" default:"false"`
 
 	// Configuration for Voltron access.
-	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingEndpoint string `default:"https://calico-manager.calico-system.svc:9443" split_words:"true"`
 	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/ca.crt" split_words:"true"`
 
 	// Configuration for health port.

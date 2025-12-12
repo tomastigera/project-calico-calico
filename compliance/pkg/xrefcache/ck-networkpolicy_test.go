@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var _ = Describe("Basic CRUD of network policies with no other resources present", func() {
@@ -847,7 +848,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("creating a pod and hack the applied policies to contain some in tier1 and default tier")
 		res := tester.SetPod(Name1, Namespace1, NoLabels, IP1, Name1, 0)
 		ep := tester.Get(resources.GetResourceID(res)).(*xrefcache.CacheEntryEndpoint)
-		ep.AppliedPolicies = resources.NewSet()
+		ep.AppliedPolicies = set.New[apiv3.ResourceID]()
 		ep.AppliedPolicies.Add(resources.GetResourceID(gnp1Tier1))
 		ep.AppliedPolicies.Add(resources.GetResourceID(knp1Default))
 		ep.AppliedPolicies.Add(resources.GetResourceID(np1Default))

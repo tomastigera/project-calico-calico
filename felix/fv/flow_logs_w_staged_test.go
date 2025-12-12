@@ -316,9 +316,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "APE0|default.ep1-1-allow-all"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:default.np3-4"), "10s", "1s").Should(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default.ep1-1-allow-all"), "10s", "1s").Should(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:default.np3-4"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
 			checkNat := func() bool {
 				for _, f := range tc.Felixes {
@@ -331,10 +332,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 			Eventually(checkNat, "10s", "1s").Should(BeTrue(), "Expected NAT to be programmed")
 
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default.ep1-1-allow-all", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_2.InterfaceName,
-				"ingress", "default/staged:default.np3-4", `action:"allow"`)
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default.ep1-1-allow-all")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_2.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 
 		if !bpfEnabled {
@@ -592,8 +598,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 						Reporter:   "dst",
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|default/tier2.staged:np2-3|deny|1": {},
-						"1|tier2|default/tier2.np2-4|deny|0":        {},
+						"0|tier2|default/tier2.np2-4|deny|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier2|default/tier2.np2-4|deny|0": {},
@@ -683,10 +688,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 						Reporter:   "dst",
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|1":             {},
-						"1|tier2|default/tier2.staged:np2-3|allow|0":     {},
-						"2|default|default/default.staged:np3-2|allow|0": {},
-						"3|default|default/default.np3-3|allow|0":        {},
+						"0|tier1|default/tier1.np1-1|pass|1":      {},
+						"1|default|default/default.np3-3|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|1":      {},
@@ -748,18 +751,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 						Reporter:   "src",
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":                   {},
-						"1|tier2|default/tier2.staged:np2-1|allow|0":           {},
-						"2|default|default/staged:knp.default.knp3-1|deny|-1":  {},
-						"3|default|default/staged:knp.default.knp3-2|deny|-1":  {},
-						"4|default|default/staged:knp.default.knp3-3|deny|-1":  {},
-						"5|default|default/staged:knp.default.knp3-4|deny|-1":  {},
-						"6|default|default/staged:knp.default.knp3-5|deny|-1":  {},
-						"7|default|default/staged:knp.default.knp3-6|deny|-1":  {},
-						"8|default|default/staged:knp.default.knp3-7|deny|-1":  {},
-						"9|default|default/staged:knp.default.knp3-8|deny|-1":  {},
-						"10|default|default/staged:knp.default.knp3-9|deny|-1": {},
-						"11|__PROFILE__|__PROFILE__.kns.default|allow|0":       {},
+						"0|tier1|default/tier1.np1-1|pass|0":            {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -916,22 +909,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		if !bpfEnabled {
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 	})
 
@@ -950,22 +946,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
 		}
 	}
 
@@ -981,22 +972,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 
 		time.Sleep(3 * time.Second)
@@ -1014,22 +1008,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"deny"`)
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"deny"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"deny"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"deny"`)
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 	}
 
@@ -1091,7 +1088,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
 		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
@@ -1100,34 +1096,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_1_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "src",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -1140,8 +1108,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1149,9 +1116,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
+							PacketsIn:       6,
+							PacketsOut:      6,
+							NumFlowsStarted: 6,
 						},
 					},
 				},
@@ -1169,34 +1136,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
-						SrcMeta:    ep1_1_Meta,
-						DstService: flowlog.EmptyService,
-						DstMeta:    ep2_1_Meta,
-						Action:     "allow",
-						Reporter:   "dst",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstService: flowlog.EmptyService,
@@ -1206,8 +1145,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1215,9 +1153,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
+							PacketsIn:       6,
+							PacketsOut:      6,
+							NumFlowsStarted: 6,
 						},
 					},
 				},
@@ -1293,7 +1231,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
@@ -1314,8 +1252,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1344,8 +1281,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|pass|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1385,8 +1321,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1415,8 +1350,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|pass|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1504,8 +1438,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1513,34 +1446,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
-						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_1_Meta,
-						DstService: flowlog.EmptyService,
-						Action:     "allow",
-						Reporter:   "src",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -1553,8 +1458,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1562,9 +1466,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
+							PacketsIn:       6,
+							PacketsOut:      6,
+							NumFlowsStarted: 6,
 						},
 					},
 				},
@@ -1582,34 +1486,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
-						SrcMeta:    ep1_1_Meta,
-						DstService: flowlog.EmptyService,
-						DstMeta:    ep2_1_Meta,
-						Action:     "allow",
-						Reporter:   "dst",
-					},
-					FlowAllPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-					},
-					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
-						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
-						},
-					},
-				},
-			)
-			flowTester.CheckFlow(
-				flowlog.FlowLog{
-					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
 						SrcMeta:    ep1_1_Meta,
 						DstService: flowlog.EmptyService,
@@ -1619,8 +1495,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -1628,9 +1503,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
-							PacketsIn:       3,
-							PacketsOut:      3,
-							NumFlowsStarted: 3,
+							PacketsIn:       6,
+							PacketsOut:      6,
+							NumFlowsStarted: 6,
 						},
 					},
 				},
@@ -1769,22 +1644,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		if !bpfEnabled {
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 	})
 
@@ -1875,28 +1753,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "APE1|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "APE2|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "API1|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "API2|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "APE1|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "APE2|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
-			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/tier1.np1-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 
 		time.Sleep(5 * time.Second)
@@ -1940,22 +1815,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(tc.Felixes[0], "PPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(getRuleFunc(tc.Felixes[0], "staged"), "5s", "1s").Should(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[1], "staged"), "5s", "1s").Should(HaveOccurred())
 		} else {
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"egress", "default/staged:tier2.np2-1")
+				"egress", "default/tier1.np1-1")
 			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
-				"ingress", "default/staged:tier2.np2-1")
+				"ingress", "default/tier1.np1-1")
+			// When policies are programmed, make sure no staged policy is programmed. Staged policies must be skipped.
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 		}
 
 		time.Sleep(5 * time.Second)
@@ -2017,7 +1895,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
 		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
@@ -2029,7 +1906,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
+						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
 						DstService: flowlog.EmptyService,
@@ -2038,8 +1915,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2056,6 +1932,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 				},
 			)
+
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -2068,8 +1945,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|2":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2099,17 +1975,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
+						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_1_Meta,
 						DstService: flowlog.EmptyService,
+						DstMeta:    ep2_1_Meta,
 						Action:     "allow",
 						Reporter:   "dst",
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2126,6 +2001,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 				},
 			)
+
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -2138,8 +2014,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|allow|1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2221,7 +2096,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
 		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
@@ -2233,7 +2107,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
+						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
 						DstService: flowlog.EmptyService,
@@ -2242,8 +2116,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2260,6 +2133,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 				},
 			)
+
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -2272,8 +2146,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|pass|0":     {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2304,17 +2177,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
-						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
+						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
-						DstMeta:    ep2_1_Meta,
 						DstService: flowlog.EmptyService,
+						DstMeta:    ep2_1_Meta,
 						Action:     "allow",
 						Reporter:   "dst",
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2331,6 +2203,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 				},
 			)
+
 			flowTester.CheckFlow(
 				flowlog.FlowLog{
 					FlowMeta: flowlog.FlowMeta{
@@ -2343,8 +2216,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 					},
 					FlowAllPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|tier2|default/tier2.staged:np2-1|pass|0":     {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
@@ -2372,10 +2244,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		for _, felix := range tc.Felixes {
 			if bpfEnabled {
-				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
-				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")
+				// FIXME
+				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
 		}
 	})

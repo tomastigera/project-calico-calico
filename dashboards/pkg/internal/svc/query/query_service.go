@@ -75,32 +75,53 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		logging.Any("aggregations", req.Aggregations),
 	)
 
+	maxDocuments := MaxQueryDocumentsDefault
+
+	if req.MaxDocs != nil && *req.MaxDocs >= 0 {
+		maxDocuments = min(*req.MaxDocs, MaxQueryDocumentsLimit)
+	}
+
+	pageNum := 0
+	if req.PageNum != nil && *req.PageNum >= 0 {
+		pageNum = *req.PageNum
+	}
+
 	queryCollection, err := s.validateRequest(req)
 	if err != nil {
 		return client.QueryResponse{}, err
 	}
 
-	clusterIDs := slices.Map(req.ClusterFilter, func(c client.ManagedClusterName) domain.ManagedClusterName {
-		return domain.ManagedClusterName(c)
-	})
+	repositoryRequest := domain.QueryRequest{
+		MaxDocuments:   maxDocuments,
+		PageNum:        pageNum,
+		CollectionName: queryCollection.Name(),
+		SortFieldName:  queryCollection.DefaultTimeFieldName(),
+		ClusterIDs: slices.Map(req.ClusterFilter, func(c client.ManagedClusterName) domain.ManagedClusterName {
+			return domain.ManagedClusterName(c)
+		}),
+	}
 
 	managedClusterNames, err := s.managedClusterNameLister.List(ctx)
 	if err != nil {
 		return client.QueryResponse{}, err
 	}
 
-	// find if any request clusterIDs do not match existing ManagedCluster names
-	if slices.AnyMatch(clusterIDs, func(clusterID domain.ManagedClusterName) bool {
+	// deny access if any request clusterIDs do not match ManagedCluster names
+	if slices.AnyMatch(repositoryRequest.ClusterIDs, func(clusterID domain.ManagedClusterName) bool {
 		return !slices.Contains(managedClusterNames, clusterID)
 	}) {
 		return client.QueryResponse{}, httpreply.ReplyAccessDenied
 	}
 
-	if len(clusterIDs) == 0 {
+	authorizedManagedClusterNames := repositoryRequest.ClusterIDs
+	if len(repositoryRequest.ClusterIDs) == 0 {
 		authorized, err := ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), "*")
 		if err != nil {
 			return client.QueryResponse{}, err
-		} else if !authorized {
+		} else if authorized {
+			// authorized to access all managed clusters
+			authorizedManagedClusterNames = managedClusterNames
+		} else {
 			// "all managed clusters" query should select the authorized subset of managed clusters for custom roles
 			for _, clusterID := range managedClusterNames {
 				authorized, err = ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), string(clusterID))
@@ -109,18 +130,20 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 				}
 
 				if authorized {
-					clusterIDs = append(clusterIDs, clusterID)
+					repositoryRequest.ClusterIDs = append(repositoryRequest.ClusterIDs, clusterID)
 				}
 			}
 
-			if len(clusterIDs) == 0 {
+			if len(repositoryRequest.ClusterIDs) == 0 {
 				// user is unauthorized for all managed clusters
 				return client.QueryResponse{}, httpreply.ReplyAccessDenied
 			}
+
+			authorizedManagedClusterNames = repositoryRequest.ClusterIDs
 		}
 	} else {
 
-		for _, clusterID := range clusterIDs {
+		for _, clusterID := range repositoryRequest.ClusterIDs {
 			authorized, err := ctx.IsResourcePermitted(security.APIGroupLMATigera, queryCollection.LmaResourceName(), string(clusterID))
 			if err != nil {
 				return client.QueryResponse{}, err
@@ -135,24 +158,16 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		}
 	}
 
-	maxDocuments := MaxQueryDocumentsDefault
-
-	if req.MaxDocs != nil && *req.MaxDocs >= 0 {
-		maxDocuments = min(*req.MaxDocs, MaxQueryDocumentsLimit)
+	// Set query permissions for namespaced RBAC
+	permissionsResult, err := ctx.GetPermissions(slices.ToStrings(authorizedManagedClusterNames))
+	if err != nil {
+		return client.QueryResponse{}, err
 	}
 
-	pageNum := 0
-	if req.PageNum != nil && *req.PageNum >= 0 {
-		pageNum = *req.PageNum
-	}
-
-	repositoryRequest := domain.QueryRequest{
-		ClusterIDs:     clusterIDs,
-		MaxDocuments:   maxDocuments,
-		PageNum:        pageNum,
-		CollectionName: queryCollection.Name(),
-		SortFieldName:  queryCollection.DefaultTimeFieldName(),
-	}
+	repositoryRequest.Permissions = permissionsResult.AuthorizedResourceVerbs
+	s.logger.DebugC(ctx, "Query permissions",
+		logging.Any("permissions", repositoryRequest.Permissions),
+		logging.Any("permissionsErrors", permissionsResult.Errors))
 
 	repositoryRequest.Filters, err = slices.MapOrError(req.Filters, func(from client.QueryRequestFilter) (filters.Criterion, error) {
 		return s.mapClientCriterion(ctx, from.Criterion, from.Negate, queryCollection)
@@ -194,8 +209,9 @@ func (s *QueryService) Query(ctx security.Context, req client.QueryRequest) (cli
 		Totals: client.QueryResponseTotals{
 			Value: queryResult.Hits,
 		},
-		GroupValues:  mapResultGroupValues(0, repositoryRequest.Groups, queryResult.GroupValues),
-		Aggregations: mapResultAggregations(queryResult.Aggregations),
+		GroupValues:   mapResultGroupValues(0, repositoryRequest.Groups, queryResult.GroupValues),
+		Aggregations:  mapResultAggregations(queryResult.Aggregations),
+		ClusterErrors: permissionsResult.Errors,
 	}
 
 	if len(req.GroupBys) == 0 {

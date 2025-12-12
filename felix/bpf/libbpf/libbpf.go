@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 // Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 //
@@ -48,6 +47,11 @@ func (o *Obj) Filename() string {
 type Map struct {
 	bpfMap *C.struct_bpf_map
 	bpfObj *C.struct_bpf_object
+}
+
+type Program struct {
+	bpfProg *C.struct_bpf_program
+	bpfObj  *C.struct_bpf_object
 }
 
 type QdiskHook string
@@ -154,6 +158,14 @@ func (o *Obj) Load() error {
 	return nil
 }
 
+// SetProgramAutoload sets whether a program should be automatically loaded.
+// When set to false, the program will not be loaded when Load() is called.
+func (o *Obj) SetProgramAutoload(progName string, autoload bool) {
+	cProgName := C.CString(progName)
+	defer C.free(unsafe.Pointer(cProgName))
+	C.bpf_set_program_autoload(o.obj, cProgName, C.bool(autoload))
+}
+
 // FirstMap returns first bpf map of the object.
 // Returns error if the map is nil.
 func (o *Obj) FirstMap() (*Map, error) {
@@ -175,6 +187,35 @@ func (m *Map) NextMap() (*Map, error) {
 		return nil, nil
 	}
 	return &Map{bpfMap: bpfMap, bpfObj: m.bpfObj}, nil
+}
+
+func (o *Obj) FirstProgram() (*Program, error) {
+	bpfProg, err := C.bpf_object__next_program(o.obj, nil)
+	if bpfProg == nil || err != nil {
+		return nil, fmt.Errorf("error getting first program %w", err)
+	}
+	return &Program{bpfProg: bpfProg, bpfObj: o.obj}, nil
+}
+
+func (p *Program) NextProgram() (*Program, error) {
+	{
+		bpfProg, err := C.bpf_object__next_program(p.bpfObj, p.bpfProg)
+		if err != nil {
+			return nil, fmt.Errorf("error getting next program %w", err)
+		}
+		if bpfProg == nil {
+			return nil, nil
+		}
+		return &Program{bpfProg: bpfProg, bpfObj: p.bpfObj}, nil
+	}
+}
+
+func (p *Program) Name() string {
+	name := C.bpf_program__name(p.bpfProg)
+	if name == nil {
+		return ""
+	}
+	return C.GoString(name)
 }
 
 func (o *Obj) ProgramFD(secname string) (int, error) {
@@ -630,6 +671,7 @@ func (t *TcGlobalData) Set(m *Map) error {
 		&cJumps[0], // it is safe because we hold the reference here until we return.
 		&cJumpsV6[0],
 		C.short(t.DSCP),
+		C.short(t.IstioDSCP),
 		C.uint(t.MaglevLUTSize),
 	)
 

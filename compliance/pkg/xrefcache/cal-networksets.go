@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var (
@@ -40,7 +41,7 @@ type CacheEntryNetworkSet struct {
 	Flags CacheEntryFlags
 
 	// The set of policy (allow) rule selectors that match this network set.
-	PolicyRuleSelectors resources.Set
+	PolicyRuleSelectors set.Typed[apiv3.ResourceID]
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -145,7 +146,7 @@ func (c *networkSetHandler) kinds() []metav1.TypeMeta {
 // newCacheEntry implements the resourceHandler interface.
 func (c *networkSetHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkSet{
-		PolicyRuleSelectors: resources.NewSet(),
+		PolicyRuleSelectors: set.New[apiv3.ResourceID](),
 	}
 }
 

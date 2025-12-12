@@ -213,8 +213,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 
 		// client to be used to interact with voltron (mimic UI)
 		ui *testClient
-
-		watchSync chan error
 	)
 
 	clusterID := "external-cluster"
@@ -239,7 +237,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			Expect(proxiedRequestCount).ToNot(BeZero(), "No requests were received by the proxy - expected traffic to route through it")
 			proxiedRequestCount = 0
 		}
-		close(watchSync)
 
 		wgSrvCnlt.Wait()
 	})
@@ -257,10 +254,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			},
 		}
 
-		watchSync = make(chan error)
-
 		// Instantiate a new fake client for each test.
-		k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 		scheme := kscheme.Scheme
 		err = v3.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
@@ -366,7 +360,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			})
 
 			voltron, err = server.New(
-				k8sAPI,
 				fakeClient,
 				&rest.Config{BearerToken: "manager-token"},
 				vcfg.Config{TenantNamespace: clusterNS},
@@ -403,7 +396,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			}()
 
 			go func() {
-				_ = voltron.WatchK8sWithSync(watchSync)
+				_ = voltron.WatchK8s()
 			}()
 
 			ui.voltronHTTPS = lisHTTP2.Addr().String()
@@ -430,7 +423,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				},
 			})
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(<-watchSync).NotTo(HaveOccurred())
 
 			certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
 			Expect(err).NotTo(HaveOccurred())
@@ -448,7 +440,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				},
 			})
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
 		// It should also start Guardian.
@@ -535,31 +526,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 		By("indicating that before each is complete", func() {
 			logrus.Info("[TEST] BeforeEach complete")
 		})
-	})
-
-	It("should pickup refreshed token", func() {
-		var err error
-		Eventually(func() string {
-			_, err = ui.doRequest(clusterID)
-			if err != nil {
-				return ""
-			}
-			return ts.authHeader
-		}, "10s", "1s").Should(Equal("Bearer initialToken"))
-
-		guardianTokenFile, err = os.OpenFile(guardianTokenFile.Name(), os.O_RDWR, 0644)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = guardianTokenFile.WriteString("updatedToken")
-		Expect(err).NotTo(HaveOccurred())
-		err = guardianTokenFile.Close()
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(func() string {
-			_, err = ui.doRequest(clusterID)
-			if err != nil {
-				return ""
-			}
-			return ts.authHeader
-		}, "1m", "1s").Should(Equal("Bearer updatedToken"))
 	})
 
 	It("should not be possible to reach the test server on http", func() {

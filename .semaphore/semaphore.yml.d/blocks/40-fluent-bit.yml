@@ -1,4 +1,4 @@
-- name: fluent-bit
+- name: Fluent Bit
   run:
     when: "${FORCE_RUN} or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
@@ -10,9 +10,9 @@
       commands:
         - cd fluent-bit
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
-        - export REPO_NAME=$(basename $(pwd))
+        - export COMPONENT=$(basename $(pwd))
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
     jobs:
-      - name: fluent-bit tests
+      - name: "Fluent Bit: CI"
         commands:
           - make ci

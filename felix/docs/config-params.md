@@ -983,6 +983,34 @@ Controls whether Felix enables support for IPv6 (if supported by the in-use data
 | `FelixConfiguration` schema | Boolean. |
 | Default value (YAML) | `true` |
 
+### `IstioAmbientMode` (config file) / `istioAmbientMode` (YAML)
+
+Configures Felix to work together with Tigera's Istio distribution.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_IstioAmbientMode` |
+| Encoding (env var/config file) | One of: <code>Disabled</code>, <code>Enabled</code> (case insensitive) |
+| Default value (above encoding) | `Disabled` |
+| `FelixConfiguration` field | `istioAmbientMode` (YAML) `IstioAmbientMode` (Go API) |
+| `FelixConfiguration` schema | One of: <code>"Disabled"</code>, <code>"Enabled"</code>. |
+| Default value (YAML) | `Disabled` |
+
+### `IstioDSCPMark` (config file) / `istioDSCPMark` (YAML)
+
+Sets the value to use when directing traffic to Istio ZTunnel, when Istio is enabled. The mark is set only on
+SYN packets at the final hop to avoid interference with other protocols. This value is reserved by Calico and must not be used
+with other Istio installation.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_IstioDSCPMark` |
+| Encoding (env var/config file) | Numeric value: An integer from 0 to 63, representing the 6-bit DSCP code directly; Named value: A case-insensitive string corresponding to a standardized DSCP name (e.g., "CS0", "AF11", "AF21", "EF", etc.) as defined in the IANA registry for Differentiated Services Field Codepoints. |
+| Default value (above encoding) | `23` |
+| `FelixConfiguration` field | `istioDSCPMark` (YAML) `IstioDSCPMark` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | none |
+
 ### `KubeMasqueradeBit` (config file) / `kubeMasqueradeBit` (YAML)
 
 Should be set to the same value as --iptables-masquerade-bit of kube-proxy
@@ -1999,21 +2027,6 @@ Felix will not modify the JIT hardening setting.
 | `FelixConfiguration` schema | `string` |
 | Default value (YAML) | `Auto` |
 | Notes | Required. | 
-
-### `BPFKubeProxyEndpointSlicesEnabled` (config file) / `bpfKubeProxyEndpointSlicesEnabled` (YAML)
-
-Deprecated and has no effect. BPF
-kube-proxy always accepts endpoint slices. This option will be removed in
-the next release.
-
-| Detail |   |
-| --- | --- |
-| Environment variable | `FELIX_BPFKubeProxyEndpointSlicesEnabled` |
-| Encoding (env var/config file) | Boolean: <code>true</code>, <code>1</code>, <code>yes</code>, <code>y</code>, <code>t</code> accepted as True; <code>false</code>, <code>0</code>, <code>no</code>, <code>n</code>, <code>f</code> accepted (case insensitively) as False. |
-| Default value (above encoding) | `true` |
-| `FelixConfiguration` field | `bpfKubeProxyEndpointSlicesEnabled` (YAML) `BPFKubeProxyEndpointSlicesEnabled` (Go API) |
-| `FelixConfiguration` schema | Boolean. |
-| Default value (YAML) | `true` |
 
 ### `BPFKubeProxyHealthzPort` (config file) / `bpfKubeProxyHealthzPort` (YAML)
 

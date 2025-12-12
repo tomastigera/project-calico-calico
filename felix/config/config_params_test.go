@@ -77,6 +77,9 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 
 		// Temporary field to implement and test IPv6 in BPF dataplane
 		"BpfIpv6Support",
+
+		// Used internally by Felix to determine if running as a non-cluster host. Is not user settable.
+		"NonClusterHost",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
@@ -934,6 +937,12 @@ var _ = DescribeTable("Config validation",
 	// exceeds max allowed number of individual tables
 	Entry("excessive RouteTableRanges", map[string]string{
 		"RouteTableRanges": "1-100000000",
+	}, false),
+	Entry("excessive RouteTableRanges off-by-one", map[string]string{
+		"RouteTableRanges": "1-65535,99999-99999",
+	}, false),
+	Entry("RouteTableRanges 32-bit wrap-around", map[string]string{
+		"RouteTableRanges": "1-65535,1-2147483647",
 	}, false),
 	Entry("invalid RouteTableRanges", map[string]string{
 		"RouteTableRanges": "abcde",

@@ -145,6 +145,11 @@ type Config struct {
 	PolicyStoreManager policystore.PolicyStoreManager
 }
 
+// namespacedEpKey is an interface for keys that have namespace information.
+type namespacedEpKey interface {
+	GetNamespace() string
+}
+
 // A collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the
@@ -429,13 +434,9 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, pktInfo *types.Pack
 		return data
 	}
 
-	// Get the source endpoint. Set the clientIP to an empty value, as it is not used for to get
-	// the source endpoint.
-	srcEp := c.lookupEndpoint([16]byte{}, t.Src, false)
+	// Get the source and destination endpoints
+	srcEp, dstEp := c.findEndpointBestMatch(t)
 	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal()
-
-	// Get the destination endpoint. If the source is local then we can use egress domain lookups if required.
-	dstEp := c.lookupEndpoint(t.Src, t.Dst, !srcEpIsNotLocal)
 	dstEpIsNotLocal := dstEp == nil || !dstEp.IsLocal()
 
 	// Get the node endpoint
@@ -448,8 +449,9 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, pktInfo *types.Pack
 
 	if !okData {
 		if srcEpIsNotLocal && dstEpIsNotLocal && nodeEp == nil {
-			// The source and destination endpoints are not local and the node endpoint is nil and no node endpoint
-			// was found in the lookups cache. This means that we don't have any data for this entry. We can return nil.
+			// The source and destination endpoints are not local and the node endpoint is nil and
+			// no node endpoint was found in the lookups cache. This means that we don't have any
+			// data for this entry. We can return nil.
 			return nil
 		}
 
@@ -555,36 +557,74 @@ func (c *collector) getNodeIP() [16]byte {
 	return ipv6FormattedNodeIP
 }
 
-func (c *collector) lookupEndpoint(clientIPBytes, ip [16]byte, canCheckEgressDomains bool) calc.EndpointData {
-	// Get the endpoint data for this entry.
-	if ep, ok := c.luc.GetEndpoint(ip); ok {
+// lookupNetworkSetWithNamespace looks up NetworkSets for the given IP address.
+// If canCheckEgressDomains is true, then egress domain lookups will be performed if no
+// NetworkSet is found for the IP. If preferredNamespace is set, then it will be used for
+// namespace-aware NetworkSet resolution.
+func (c *collector) lookupNetworkSetWithNamespace(clientIPBytes, ip [16]byte, canCheckEgressDomains bool, preferredNamespace string) calc.EndpointData {
+	if !c.config.EnableNetworkSets {
+		return nil
+	}
+
+	// Check if the IP matches a NetworkSet
+	if ep, ok := c.luc.GetNetworkSetWithNamespace(ip, preferredNamespace); ok {
 		return ep
 	}
-	// No matching endpoint. If NetworkSets are enabled for flows then check if the IP matches a NetworkSet and
-	// return that.
-	if c.config.EnableNetworkSets {
-		if ep, ok := c.luc.GetNetworkSet(ip); ok {
-			return ep
-		}
 
-		// NetworkSets endpoint types are enabled, but no NetworkSet matches the IP.
-		// If canCheckEgressDomains is true, then we can also check for egress domain and lookup
-		// NetworkSet from that.
-		if canCheckEgressDomains && c.domainLookup != nil {
-			var ep calc.EndpointData
-			var ok bool
-			clientIP := c.getClientIP(clientIPBytes)
-			c.domainLookup.IterWatchedDomainsForIP(clientIP, ip, func(domain string) bool {
-				ep, ok = c.luc.GetNetworkSetFromEgressDomain(domain)
-				// Returning true stops the iteration, so stop as soon as we locate a network set.
-				return ok
-			})
-			if ok {
-				return ep
-			}
-		}
+	if !canCheckEgressDomains || c.domainLookup == nil {
+		return nil
 	}
-	return nil
+
+	// No NetworkSet matches the IP, if canCheckEgressDomains is true, then check for egress domain
+	// and lookup NetworkSet from that
+	var ep calc.EndpointData
+	var ok bool
+	clientIP := c.getClientIP(clientIPBytes)
+	c.domainLookup.IterWatchedDomainsForIP(clientIP, ip, func(domain string) bool {
+		ep, ok = c.luc.GetNetworkSetFromEgressDomainWithNamespace(domain, preferredNamespace)
+		// Returning true stops the iteration, so stop as soon as we locate a network set
+		return ok
+	})
+
+	return ep
+}
+
+// findEndpointBestMatch performs endpoint lookups for both source and destination. It first tries
+// direct endpoint lookups, and only falls back to NetworkSet lookups if needed, using namespace
+// context from the other endpoint when available.
+func (c *collector) findEndpointBestMatch(t tuple.Tuple) (srcEp, dstEp calc.EndpointData) {
+	var ep calc.EndpointData
+	var srcEpFound, dstEpFound bool
+	if ep, srcEpFound = c.luc.GetEndpoint(t.Src); srcEpFound {
+		// Only set srcEp if lookup succeeded (to avoid storing a typed nil).
+		srcEp = ep
+	}
+
+	if ep, dstEpFound = c.luc.GetEndpoint(t.Dst); dstEpFound {
+		// Only set dstEp if lookup succeeded (to avoid storing a typed nil).
+		dstEp = ep
+	}
+
+	if (srcEpFound && dstEpFound) || !c.config.EnableNetworkSets {
+		// If both endpoints were found directly, or if NetworkSets are not enabled, return what we
+		// found from direct lookups
+		return srcEp, dstEp
+	}
+
+	if !srcEpFound {
+		dstNamespace := getNamespaceFromEp(dstEp)
+		srcEp = c.lookupNetworkSetWithNamespace([16]byte{}, t.Src, false, dstNamespace)
+	}
+
+	if !dstEpFound {
+		srcNamespace := getNamespaceFromEp(srcEp)
+		// This controls whether egress-domain lookups should be performed when resolving the
+		// destination NetworkSet. Only local source endpoints can trigger egress-domain resolution.
+		srcEpLocal := srcEp != nil && srcEp.IsLocal()
+		dstEp = c.lookupNetworkSetWithNamespace(t.Src, t.Dst, srcEpLocal, srcNamespace)
+	}
+
+	return srcEp, dstEp
 }
 
 // lookupHostEndpoint returns the node endpoint data for this host.
@@ -1228,9 +1268,7 @@ func (c *collector) updatePendingRuleTraces() {
 func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
 	flow := TupleAsFlow(data.Tuple)
 
-	srcEp := c.lookupEndpoint([16]byte{}, data.Tuple.Src, false)
-	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal()
-	dstEp := c.lookupEndpoint(data.Tuple.Src, data.Tuple.Dst, !srcEpIsNotLocal)
+	srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
 
 	// If endpoints have changed compared to what Data currently holds, skip evaluation.
 	if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
@@ -1441,6 +1479,34 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		Type:          hd.Type,
 		Domain:        hd.Domain,
 		RouteName:     hd.RouteName,
+		GatewayName:   hd.GatewayName,
+		Protocol:      hd.Protocol,
+
+		// Gateway API enrichment fields
+		GatewayNamespace:     hd.GatewayNamespace,
+		GatewayClass:         hd.GatewayClass,
+		GatewayStatus:        hd.GatewayStatus,
+		GatewayStatusMessage: hd.GatewayStatusMessage,
+
+		// Gateway listener context fields
+		GatewayListenerName:     hd.GatewayListenerName,
+		GatewayListenerPort:     int(hd.GatewayListenerPort),
+		GatewayListenerProtocol: hd.GatewayListenerProtocol,
+		GatewayListenerFullName: hd.GatewayListenerFullName,
+		GatewayListenerHostname: hd.GatewayListenerHostname,
+
+		// Collector identification fields
+		CollectorName: hd.CollectorName,
+		CollectorType: hd.CollectorType,
+		Host:          hd.Host,
+
+		// Gateway route context fields
+		GatewayRouteType:          hd.GatewayRouteType,
+		GatewayRouteName:          hd.GatewayRouteName,
+		GatewayRouteNamespace:     hd.GatewayRouteNamespace,
+		GatewayRouteHostname:      hd.GatewayRouteHostname,
+		GatewayRouteStatus:        hd.GatewayRouteStatus,
+		GatewayRouteStatusMessage: hd.GatewayRouteStatusMessage,
 	}
 
 	// If there is no endpoint data for the supplied tuple, skip logging this info.
@@ -1599,6 +1665,21 @@ func (c *collector) LogWAFEvents(events []*proto.WAFEvent) {
 			log.WithError(err).WithField("report", report).Error("Error reporting WAFEvent")
 		}
 	}
+}
+
+// getNamespaceFromEp extracts the namespace from the endpoint. Returns an empty string if
+// the namespace cannot be determined.
+func getNamespaceFromEp(ep calc.EndpointData) (namespace string) {
+	if ep == nil {
+		return
+	}
+	if key := ep.Key(); key != nil {
+		if nk, ok := key.(namespacedEpKey); ok {
+			namespace = nk.GetNamespace()
+		}
+	}
+
+	return
 }
 
 // equal returns true if the rule IDs are equal. The order of the content should also the same for

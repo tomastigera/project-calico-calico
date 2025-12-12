@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create group if it doesn't exist
+        if ! getent group calico >/dev/null; then
+            addgroup --system calico
+        fi
+
+        # Create user if it doesn't exist
+        if ! getent passwd calico >/dev/null; then
+            adduser --system --home /var/lib/calico --no-create-home \
+                    --ingroup calico --shell /usr/sbin/nologin \
+                    --gecos "Calico user" calico
+        fi
+
+        mkdir -p /var/log/calico
+        chown calico:calico /var/log/calico
+        chmod 755 /var/log/calico
+
+        modprobe nf_conntrack || echo "Warning: Failed to load nf_conntrack module" >&2
+
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

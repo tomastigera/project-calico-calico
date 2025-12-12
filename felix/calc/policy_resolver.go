@@ -15,6 +15,9 @@
 package calc
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
@@ -56,8 +59,7 @@ type PolicyResolver struct {
 	sortedTierData        []*TierInfo
 	endpoints             map[model.Key]model.Endpoint // Local WEPs/HEPs only.
 	dirtyEndpoints        set.Set[model.EndpointKey]
-	endpointEgressData    map[model.WorkloadEndpointKey][]EpEgressData
-	endpointGatewayUsage  map[model.WorkloadEndpointKey]int
+	endpointComputedData  map[model.WorkloadEndpointKey]map[EndpointComputedDataKind]EndpointComputedData
 	policySorter          *PolicySorter
 	Callbacks             []PolicyResolverCallbacks
 	InSync                bool
@@ -65,8 +67,10 @@ type PolicyResolver struct {
 }
 
 type PolicyResolverCallbacks interface {
-	OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, filteredTiers []TierInfo)
+	OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, computedData []EndpointComputedData, peerData *EndpointBGPPeer, filteredTiers []TierInfo)
 }
+
+type EndpointComputedDataUpdater func(model.WorkloadEndpointKey, EndpointComputedDataKind, EndpointComputedData)
 
 func NewPolicyResolver() *PolicyResolver {
 	return &PolicyResolver{
@@ -74,8 +78,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpointIDToPolicyIDs: multidict.New[model.EndpointKey, model.PolicyKey](),
 		allPolicies:           map[model.PolicyKey]PolicyMetadata{},
 		endpoints:             make(map[model.Key]model.Endpoint),
-		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
-		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
+		endpointComputedData:  make(map[model.WorkloadEndpointKey]map[EndpointComputedDataKind]EndpointComputedData),
 		dirtyEndpoints:        set.New[model.EndpointKey](),
 		endpointBGPPeerData:   map[model.WorkloadEndpointKey]EndpointBGPPeer{},
 		policySorter:          NewPolicySorter(),
@@ -103,7 +106,7 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 		} else {
 			delete(pr.endpoints, key)
 			if wlKey, ok := key.(model.WorkloadEndpointKey); ok {
-				delete(pr.endpointEgressData, wlKey)
+				delete(pr.endpointComputedData, wlKey)
 			}
 		}
 		pr.dirtyEndpoints.Add(key)
@@ -177,24 +180,8 @@ func (pr *PolicyResolver) OnPolicyMatchStopped(policyKey model.PolicyKey, endpoi
 	pr.dirtyEndpoints.Add(endpointKey)
 }
 
-func (pr *PolicyResolver) OnEgressSelectorMatch(es string, endpointKey model.EndpointKey) {
-	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
-		log.Debugf("Egress selector match %v -> %v", es, key)
-		pr.endpointGatewayUsage[key]++
-		pr.dirtyEndpoints.Add(key)
-	}
-}
-
-func (pr *PolicyResolver) OnEgressSelectorMatchStopped(es string, endpointKey model.EndpointKey) {
-	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
-		log.Debugf("Delete egress selector match %v -> %v", es, key)
-		pr.endpointGatewayUsage[key]--
-		if pr.endpointGatewayUsage[key] == 0 {
-			delete(pr.endpointGatewayUsage, key)
-		}
-		pr.dirtyEndpoints.Add(key)
-	}
-}
+func (pr *PolicyResolver) OnComputedSelectorMatch(_ string, _ model.EndpointKey)        {}
+func (pr *PolicyResolver) OnComputedSelectorMatchStopped(_ string, _ model.EndpointKey) {}
 
 func (pr *PolicyResolver) Flush() {
 	if !pr.InSync {
@@ -202,19 +189,21 @@ func (pr *PolicyResolver) Flush() {
 		return
 	}
 	pr.sortedTierData = pr.policySorter.Sorted()
-	pr.dirtyEndpoints.Iter(pr.sendEndpointUpdate)
+	for endpointID := range pr.dirtyEndpoints.All() {
+		pr.sendEndpointUpdate(endpointID)
+	}
 	pr.dirtyEndpoints.Clear()
 }
 
-func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error {
+func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) {
 	log.Debugf("Sending tier update for endpoint %v", endpointID)
 	endpoint, ok := pr.endpoints[endpointID.(model.Key)]
 	if !ok {
 		log.Debugf("Endpoint is unknown, sending nil update")
 		for _, cb := range pr.Callbacks {
-			cb.OnEndpointTierUpdate(endpointID, nil, EndpointEgressData{}, nil, []TierInfo{})
+			cb.OnEndpointTierUpdate(endpointID, nil, nil, nil, []TierInfo{})
 		}
-		return nil
+		return
 	}
 
 	applicableTiers := []TierInfo{}
@@ -244,11 +233,9 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 		}
 	}
 
-	var egressData EndpointEgressData
+	var computedData []EndpointComputedData
 	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
-		egressData.EgressGatewayRules = pr.endpointEgressData[key]
-		egressData.IsEgressGateway = pr.endpointGatewayUsage[key] > 0
-		egressData.HealthPort = findHealthPort(endpoint.(*model.WorkloadEndpoint))
+		computedData = slices.Collect(maps.Values(pr.endpointComputedData[key]))
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
@@ -262,9 +249,8 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID model.EndpointKey) error
 	}
 
 	for _, cb := range pr.Callbacks {
-		cb.OnEndpointTierUpdate(endpointID, endpoint, egressData, peerData, applicableTiers)
+		cb.OnEndpointTierUpdate(endpointID, endpoint, computedData, peerData, applicableTiers)
 	}
-	return nil
 }
 
 func findHealthPort(endpoint *model.WorkloadEndpoint) uint16 {
@@ -276,11 +262,34 @@ func findHealthPort(endpoint *model.WorkloadEndpoint) uint16 {
 	return 0
 }
 
-func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData []EpEgressData) {
-	if len(egressData) != 0 {
-		pr.endpointEgressData[key] = egressData
+func (pr *PolicyResolver) OnEndpointComputedDataUpdate(
+	key model.WorkloadEndpointKey,
+	kind EndpointComputedDataKind,
+	computedData EndpointComputedData,
+) {
+	epComputedData, exists := pr.endpointComputedData[key]
+	if !exists {
+		if computedData == nil {
+			return
+		}
+		epComputedData = map[EndpointComputedDataKind]EndpointComputedData{}
+		pr.endpointComputedData[key] = epComputedData
+	}
+
+	// We can skip a nil -> nil no-op update, but we can't otherwise compare the passed value
+	// easily since it may be a pointer type or have unexported fields.
+	if computedData == nil && epComputedData[kind] == nil {
+		return
+	}
+
+	// update
+	if computedData != nil {
+		epComputedData[kind] = computedData
 	} else {
-		delete(pr.endpointEgressData, key)
+		delete(epComputedData, kind)
+		if len(epComputedData) == 0 {
+			delete(pr.endpointComputedData, key)
+		}
 	}
 	pr.dirtyEndpoints.Add(key)
 }

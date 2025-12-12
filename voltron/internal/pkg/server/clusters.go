@@ -4,8 +4,10 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -13,7 +15,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -30,13 +31,10 @@ import (
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/logutils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
-	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -47,16 +45,26 @@ const (
 )
 
 type cluster struct {
-	jclust.ManagedCluster
+	// ID is intended to store the unique resource name for a ManagedCluster resource
+	// We have chosen to use the resource name instead of the UID for a resource
+	// because (1) we use the resource name to identify the cluster specific ElasticSearch
+	// indexes (2) to be consistent we want to use the same cluster identifier across
+	// all use cases (i.e. avoid creating overhead of mapping UID to resource name)
+	ID string `json:"id"`
+	// ActiveFingerprint stores the a hash extracted from the generated client certificate
+	// assigned to a managed cluster. Only connections that present the certificate that matches the
+	// active fingerprint will be accepted
+	ActiveFingerprint string `json:"activeFingerprint,omitempty"`
+	// Certificate stores managed cluster certificate.
+	Certificate []byte `json:"certificate,omitempty"`
 
 	sync.RWMutex
 
-	tunnelManager tunnelmgr.Manager
+	tunnelManager tunnel.Manager
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
 
 	// Kubernetes client used for querying and watching ManagedCluster resources.
-	k8sCLI bootstrap.K8sClient
 	client ctrlclient.WithWatch
 
 	// outboundTLSProxy is a reverse outboundTLSProxy for handling connections to Voltron from the management cluster
@@ -106,7 +114,6 @@ type clusters struct {
 	sync.RWMutex
 	clusters      map[string]*cluster
 	sniServiceMap map[string]string
-	k8sCLI        bootstrap.K8sClient
 	client        ctrlclient.WithWatch
 
 	// parameters for forwarding guardian requests to a default server
@@ -156,29 +163,30 @@ func (cs *clusters) makeInnerTLSConfig() error {
 	return nil
 }
 
-func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
-	if cs.clusters[mc.ID] != nil {
-		return nil, fmt.Errorf("cluster id %q already exists", mc.ID)
+func (cs *clusters) add(mc v3.ManagedCluster) error {
+	if cs.clusters[mc.Name] != nil {
+		return fmt.Errorf("cluster id %q already exists", mc.Name)
 	}
 
 	c := &cluster{
-		ManagedCluster:   *mc,
-		tunnelManager:    tunnelmgr.NewManager(),
-		k8sCLI:           cs.k8sCLI,
-		client:           cs.client,
-		voltronCfg:       cs.voltronCfg,
-		statusUpdateFunc: cs.statusUpdateFunc,
+		ID:                mc.Name,
+		ActiveFingerprint: mc.Annotations[AnnotationActiveCertificateFingerprint],
+		Certificate:       mc.Spec.Certificate,
+		tunnelManager:     tunnel.NewManager(),
+		client:            cs.client,
+		voltronCfg:        cs.voltronCfg,
+		statusUpdateFunc:  cs.statusUpdateFunc,
 	}
 
 	var err error
 	c.managedClusterQuerier, err = cs.managedClusterQuerierFactory.New(c.DialTLS2)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create managed cluster querier for cluster %s: %w", c.ID, err)
+		return fmt.Errorf("failed to create managed cluster querier for cluster %s: %w", c.ID, err)
 	}
 
 	// Append the new certificate to the client certificate pool.
-	cs.clientCertificatePool.AppendCertsFromPEM(mc.Certificate)
-	logrus.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
+	cs.clientCertificatePool.AppendCertsFromPEM(c.Certificate)
+	logrus.Infof("Appended certificate for cluster %s to client certificate pool", c.ID)
 
 	if cs.forwardingEnabled {
 		var opts []InnerHandlerOption
@@ -199,7 +207,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		// This handler will only be used for requests from managed clusters over the mTLS tunnel
 		// with a server name of "tigera-linseed.tigera-elasticsearch".
 		innerServer := &http.Server{
-			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy, opts...).Handler(),
+			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc.Name, cs.innerProxy, opts...).Handler(),
 			TLSConfig:   cs.tlsConfig,
 			ReadTimeout: DefaultReadTimeout,
 			ErrorLog:    log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),
@@ -214,75 +222,33 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 			vtls.WithInnerServer(innerServer),
 		)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		c.inboundTLSProxy = inboundProxy
 	}
 
-	cs.clusters[mc.ID] = c
-	return c, nil
-}
-
-// List all clusters in sorted order by ID field (which is the resource name)
-func (cs *clusters) List() []jclust.ManagedCluster {
-	cs.RLock()
-	defer cs.RUnlock()
-
-	clusterList := make([]jclust.ManagedCluster, 0, len(cs.clusters))
-	for _, c := range cs.clusters {
-		// Only include non-sensitive fields
-
-		c.RLock()
-		clusterList = append(clusterList, c.ManagedCluster)
-		c.RUnlock()
-	}
-
-	sort.Slice(clusterList, func(i, j int) bool {
-		return clusterList[i].ID < clusterList[j].ID
-	})
-
-	logrus.Debugf("Listing current %d clusters.", len(clusterList))
-	for _, cluster := range clusterList {
-		logrus.Debugf("ID = %s", cluster.ID)
-	}
-	return clusterList
-}
-
-func (cs *clusters) addNew(mc *jclust.ManagedCluster) error {
-	logrus.Infof("Adding cluster ID: %q", mc.ID)
-
-	_, err := cs.add(mc)
-	if err != nil {
-		return err
-	}
-
+	cs.clusters[mc.Name] = c
 	return nil
 }
 
-func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
-	logrus.Infof("Recovering cluster ID: %q", mc.ID)
-
-	_, err := cs.add(mc)
-	return err
-}
-
-func (cs *clusters) update(mc *jclust.ManagedCluster) error {
+func (cs *clusters) update(mc v3.ManagedCluster) error {
 	cs.Lock()
 	defer cs.Unlock()
-	return cs.updateLocked(mc, false)
+	return cs.updateLocked(mc)
 }
 
-func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error {
-	if c, ok := cs.clusters[mc.ID]; ok {
+func (cs *clusters) updateLocked(mc v3.ManagedCluster) error {
+	if c, ok := cs.clusters[mc.Name]; ok {
 		c.Lock()
 		clog := logrus.WithField("cluster", c.ID)
 		clog.Info("Updating the managed cluster")
 
 		oldCert := c.Certificate
-		newCert := mc.Certificate
+		newCert := mc.Spec.Certificate
 
 		// Update the managed cluster
-		c.ManagedCluster = *mc
+		c.Certificate = newCert
+		c.ActiveFingerprint = mc.Annotations[AnnotationActiveCertificateFingerprint]
 
 		// Update the certificate pool if the certificate has changed
 		err, updated := cs.updateCertPool(newCert, oldCert)
@@ -315,30 +281,26 @@ func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error
 		return nil
 	}
 
-	if recovery {
-		return cs.addRecovered(mc)
-	}
-
-	return cs.addNew(mc)
+	return cs.add(mc)
 }
 
-func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
+func (cs *clusters) remove(mc v3.ManagedCluster) error {
 	cs.Lock()
 
-	c, ok := cs.clusters[mc.ID]
+	c, ok := cs.clusters[mc.Name]
 	if !ok {
 		cs.Unlock()
-		msg := fmt.Sprintf("Cluster id %q does not exist", mc.ID)
+		msg := fmt.Sprintf("Cluster id %q does not exist", mc.Name)
 		logrus.Debug(msg)
 		return errors.New(msg)
 	}
 
 	// remove from the map so nobody can get it, but whoever uses it can
 	// keep doing so
-	delete(cs.clusters, mc.ID)
+	delete(cs.clusters, mc.Name)
 	cs.Unlock()
 	c.stop()
-	logrus.Infof("Cluster id %q removed", mc.ID)
+	logrus.Infof("Cluster id %q removed", mc.Name)
 
 	return nil
 }
@@ -350,7 +312,7 @@ func (cs *clusters) get(id string) *cluster {
 	return cs.clusters[id]
 }
 
-func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
+func (cs *clusters) watchK8sFrom(ctx context.Context, last string) error {
 	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{},
 		&ctrlclient.ListOptions{
 			Namespace: cs.voltronCfg.TenantNamespace,
@@ -369,44 +331,29 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			if !ok {
 				return fmt.Errorf("watcher stopped unexpectedly")
 			}
-			mcResource, ok := r.Object.(*v3.ManagedCluster)
+			mc, ok := r.Object.(*v3.ManagedCluster)
 			if !ok {
 				logrus.Debugf("Unexpected object type %T", r.Object)
 				continue
 			}
 
-			mc := &jclust.ManagedCluster{
-				ID:                mcResource.Name,
-				ActiveFingerprint: mcResource.Annotations[AnnotationActiveCertificateFingerprint],
-				Certificate:       mcResource.Spec.Certificate,
-			}
-
-			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
+			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.Name)
 
 			var err error
 
 			switch r.Type {
 			case watch.Added, watch.Modified:
-				logrus.Infof("Adding/Updating %s", mc.ID)
-				err = cs.update(mc)
+				logrus.Infof("Adding/Updating %s", mc.Name)
+				err = cs.update(*mc)
 			case watch.Deleted:
-				logrus.Infof("Deleting %s", mc.ID)
-				err = cs.remove(mc)
+				logrus.Infof("Deleting %s", mc.Name)
+				err = cs.remove(*mc)
 			default:
 				err = fmt.Errorf("watch event %s unsupported", r.Type)
 			}
 
 			if err != nil {
 				logrus.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
-			}
-
-			if syncC != nil {
-				select {
-				case syncC <- err:
-				case <-ctx.Done():
-					watcher.Stop()
-					return fmt.Errorf("watcher exiting: %s", ctx.Err())
-				}
 			}
 		case <-ctx.Done():
 			watcher.Stop()
@@ -427,25 +374,17 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	cs.Lock()
 	defer cs.Unlock()
 
-	for _, managedCluster := range list.Items {
-		id := managedCluster.Name
+	for _, mc := range list.Items {
+		known[mc.Name] = struct{}{}
 
-		mc := &jclust.ManagedCluster{
-			ID:                id,
-			ActiveFingerprint: managedCluster.Annotations[AnnotationActiveCertificateFingerprint],
-			Certificate:       managedCluster.Spec.Certificate,
-		}
-
-		known[id] = struct{}{}
-
-		logrus.Debugf("Sync K8s watch for cluster : %s", mc.ID)
-		err = cs.updateLocked(mc, true)
+		logrus.Debugf("Sync K8s watch for cluster : %s", mc.Name)
+		err = cs.updateLocked(mc)
 		if err != nil {
 			logrus.Errorf("ManagedClusters listing failed: %s", err)
 		}
 
-		if startupSync && isConnectedStatus(&managedCluster, v3.ManagedClusterStatusValueTrue) {
-			if c, ok := cs.clusters[id]; ok {
+		if startupSync && isConnectedStatus(mc, v3.ManagedClusterStatusValueTrue) {
+			if c, ok := cs.clusters[mc.Name]; ok {
 				c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse)
 			}
 		}
@@ -465,14 +404,14 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	return list.ResourceVersion, nil
 }
 
-func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
+func (cs *clusters) watchK8s(ctx context.Context) error {
 	// Initial sync for new server
 	startupSync := true
 	for {
 		last, err := cs.resyncWithK8s(ctx, startupSync)
 		if err == nil {
 			startupSync = false
-			err = cs.watchK8sFrom(ctx, syncC, last)
+			err = cs.watchK8sFrom(ctx, last)
 			if err != nil {
 				err = errors.WithMessage(err, "k8s watch failed")
 			}
@@ -567,12 +506,49 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // assignTunnel may read and write state, so it must be called with c.Lock called.
-func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
+func (c *cluster) assignTunnel(t tunnel.Tunnel) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if len(c.Certificate) != 0 {
+		if err := validateCertificate(t.Certificate(), c.Certificate); err != nil {
+			closeTunnel(t)
+			return fmt.Errorf("failed to verify certificate for cluster %s: %w", t.ClusterID(), err)
+		}
+	} else {
+		if len(c.ActiveFingerprint) == 0 {
+			closeTunnel(t)
+			return fmt.Errorf("no fingerprint has been stored against the current connection")
+		}
+		// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+		// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+		// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+		if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+			if t.Fingerprint() != c.ActiveFingerprint {
+				closeTunnel(t)
+				return fmt.Errorf("stored fingerprint does not match provided fingerprint")
+			}
+		} else {
+			// check pre-v3.15 fingerprint (md5)
+			if t.MD5Fingerprint() != c.ActiveFingerprint {
+				closeTunnel(t)
+				return fmt.Errorf("stored fingerprint does not match provided fingerprint")
+			}
+
+			// update to v3.15 fingerprint hash (sha256) when matched
+			if err := c.updateActiveFingerprint(t.Fingerprint()); err != nil {
+				closeTunnel(t)
+				return fmt.Errorf("failed to update cluster %s stored fingerprint: %w", t.ClusterID(), err)
+			}
+
+			logrus.Infof("Cluster %s stored fingerprint is successfully updated", t.ClusterID())
+		}
+	}
 	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
 	}
 
-	// Set up the outbound proxy, which handles traffic from the management cluster desinted
+	// Set up the outbound proxy, which handles traffic from the management cluster designated.
 	// to the managed cluster over the tunnel.
 	outboundTLSConfig, err := calicotls.NewTLSConfig()
 	if err != nil {
@@ -599,7 +575,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 				func() {
 					listener, err := c.tunnelManager.Listener()
 					if err != nil {
-						if err == tunnel.ErrTunnelClosed || err == tunnelmgr.ErrManagerClosed {
+						if err == tunnel.ErrTunnelClosed || err == tunnel.ErrManagerClosed {
 							shouldStop = true
 							return
 						}
@@ -651,6 +627,13 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	go c.checkTunnelState()
 
 	return nil
+}
+
+func closeTunnel(t tunnel.Tunnel) {
+	err := t.Close()
+	if err != nil {
+		logrus.WithError(err).Error("Could not close tunnel")
+	}
 }
 
 func (c *cluster) sendStatusUpdate(status v3.ManagedClusterStatusValue) {
@@ -705,10 +688,7 @@ func parseCertificatePEMBlock(certPEM []byte) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func isConnectedStatus(mc *v3.ManagedCluster, status v3.ManagedClusterStatusValue) bool {
-	if mc == nil {
-		return false
-	}
+func isConnectedStatus(mc v3.ManagedCluster, status v3.ManagedClusterStatusValue) bool {
 	for _, c := range mc.Status.Conditions {
 		if c.Type == v3.ManagedClusterStatusTypeConnected {
 			return c.Status == status

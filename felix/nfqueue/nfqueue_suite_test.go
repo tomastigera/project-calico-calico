@@ -18,6 +18,6 @@ func init() {
 
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/nfqueue.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Nfqueue Test Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../report/nfqueue.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/nfqueue", []Reporter{junitReporter})
 }

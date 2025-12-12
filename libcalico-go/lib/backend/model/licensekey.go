@@ -33,6 +33,10 @@ type LicenseKeyKey struct {
 	Name string `json:"-" validate:"required,name"`
 }
 
+func (key LicenseKeyKey) parseValue(rawData []byte) (any, error) {
+	return parseJSONPointer[LicenseKey](key, rawData)
+}
+
 func (key LicenseKeyKey) defaultPath() (string, error) {
 	if key.Name == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}

@@ -326,12 +326,6 @@ spec:
                     if it detects the current value is 2 (strict mode that hurts performance). When set to "Strict",
                     Felix will not modify the JIT hardening setting. [Default: Auto]
                   type: string
-                bpfKubeProxyEndpointSlicesEnabled:
-                  description: |-
-                    BPFKubeProxyEndpointSlicesEnabled is deprecated and has no effect. BPF
-                    kube-proxy always accepts endpoint slices. This option will be removed in
-                    the next release.
-                  type: boolean
                 bpfKubeProxyHealthzPort:
                   description: |-
                     BPFKubeProxyHealthzPort, in BPF mode, controls the port that Felix's embedded kube-proxy health check server binds to.
@@ -1336,6 +1330,22 @@ spec:
                     IPv6Support controls whether Felix enables support for
                     IPv6 (if supported by the in-use dataplane).
                   type: boolean
+                istioAmbientMode:
+                  description: |-
+                    IstioAmbientMode configures Felix to work together with Tigera's Istio distribution.
+                    [Default: Disabled]
+                  enum:
+                    - Enabled
+                    - Disabled
+                  type: string
+                istioDSCPMark:
+                  description: |-
+                    IstioDSCPMark sets the value to use when directing traffic to Istio ZTunnel, when Istio is enabled. The mark is set only on
+                    SYN packets at the final hop to avoid interference with other protocols. This value is reserved by Calico and must not be used
+                    with other Istio installation. [Default: 23]
+                  pattern: ^.*
+                  type: integer
+                  x-kubernetes-int-or-string: true
                 kubeMasqueradeBit:
                   description: |-
                     KubeMasqueradeBit should be set to the same value as --iptables-masquerade-bit of kube-proxy

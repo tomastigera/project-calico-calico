@@ -24,6 +24,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/felix/types"
 	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -52,7 +53,8 @@ var tier1_order20 = Tier{
 var empty = NewState().withName("<empty>").
 	withIPSet(tproxydefs.ServiceIPsIPSet, []string{}).
 	withIPSet(tproxydefs.ApplicationLayerPolicyIPSet, []string{}).
-	withIPSet(tproxydefs.NodePortsIPSet, []string{})
+	withIPSet(tproxydefs.NodePortsIPSet, []string{}).
+	withIPSet(rules.IPSetIDAllIstioWEPs, []string{})
 
 // initialisedStore builds on empty, adding in the ready flag and global config.
 var initialisedStore = empty.withKVUpdates(

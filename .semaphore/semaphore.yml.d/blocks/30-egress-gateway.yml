@@ -1,4 +1,4 @@
-- name: egress-gateway
+- name: Egress gateway
   run:
     when: "${CHANGE_IN(egress-gateway)}"
   dependencies:
@@ -8,7 +8,7 @@
       commands:
         - cd egress-gateway
     jobs:
-      - name: make ci
+      - name: "Egress gateway: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
     epilogue:
@@ -16,11 +16,11 @@
         commands:
           - ../.semaphore/publish-artifacts
 
-- name: egress-gateway - native arm64 runner
+- name: Egress gateway - native arm64 runner
   run:
     when: "${CHANGE_IN(egress-gateway)}"
   dependencies:
-    - egress-gateway
+    - Egress gateway
   task:
     agent:
       machine:
@@ -33,7 +33,7 @@
         - touch felix/proto/felixbackend.pb.go
         - cd egress-gateway
     jobs:
-      - name: Build image
+      - name: "Egress gateway: build arm64"
         commands:
           - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
     epilogue:

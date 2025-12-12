@@ -20,6 +20,6 @@ func init() {
 
 func TestCalculationCapture(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/capture_calc_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "PacketCapture Calculation Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/capture_calc_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/calc/capture", []Reporter{junitReporter})
 }

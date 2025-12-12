@@ -46,7 +46,24 @@ $(FLUENT_BIT_DOWNLOADED):
 	touch $@
 
 .PHONY: package
-package: calico-fluent-bit.rhel8 calico-fluent-bit.rhel9
+package: calico-fluent-bit.debian12 \
+         calico-fluent-bit.debian13 \
+         calico-fluent-bit.rhel8 \
+         calico-fluent-bit.rhel9 \
+         calico-fluent-bit.ubuntu22 \
+         calico-fluent-bit.ubuntu24
+
+.PHONY: calico-fluent-bit.debian12
+calico-fluent-bit.debian12:  bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build debian/changelog.in out_linseed.so
+	mkdir -p package/debian12/calico-fluent-bit/debian
+	cp out_linseed.so plugins.conf.debian record_transformer.lua package/debian12/calico-fluent-bit/debian
+	$(call host_native_deb_build,debian12,calico-fluent-bit,$(FLUENT_BIT_VERSION),bookworm,1)
+
+.PHONY: calico-fluent-bit.debian13
+calico-fluent-bit.debian13: bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build debian/changelog.in out_linseed.so
+	mkdir -p package/debian13/calico-fluent-bit/debian
+	cp out_linseed.so plugins.conf.debian record_transformer.lua package/debian13/calico-fluent-bit/debian
+	$(call host_native_deb_build,debian13,calico-fluent-bit,$(FLUENT_BIT_VERSION),trixie,1)
 
 .PHONY: calico-fluent-bit.rhel8
 calico-fluent-bit.rhel8:  bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
@@ -55,6 +72,18 @@ calico-fluent-bit.rhel8:  bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build rhel
 .PHONY: calico-fluent-bit.rhel9
 calico-fluent-bit.rhel9: bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
 	$(call host_native_rpm_build,rhel9,calico-fluent-bit,$(FLUENT_BIT_VERSION))
+
+.PHONY: calico-fluent-bit.ubuntu22
+calico-fluent-bit.ubuntu22: bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build debian/changelog.in out_linseed.so
+	mkdir -p package/ubuntu22/calico-fluent-bit/debian
+	cp out_linseed.so plugins.conf.debian record_transformer.lua package/ubuntu22/calico-fluent-bit/debian
+	$(call host_native_deb_build,ubuntu22,calico-fluent-bit,$(FLUENT_BIT_VERSION),jammy,1)
+
+.PHONY: calico-fluent-bit.ubuntu24
+calico-fluent-bit.ubuntu24: bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build debian/changelog.in out_linseed.so
+	mkdir -p package/ubuntu24/calico-fluent-bit/debian
+	cp out_linseed.so plugins.conf.debian record_transformer.lua package/ubuntu24/calico-fluent-bit/debian
+	$(call host_native_deb_build,ubuntu24,calico-fluent-bit,$(FLUENT_BIT_VERSION),noble,1)
 
 ###############################################################################
 # Clean
@@ -77,12 +106,26 @@ ut:
 
 .PHONY: fv
 fv: package
-	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(FLUENT_BIT_VERSION)))
+	$(eval rpm_version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) rpm "" $(FLUENT_BIT_VERSION)))
+	$(eval deb_version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) deb trixie $(FLUENT_BIT_VERSION)))
+	$(eval ubuntu_version := $(shell $(REPO_ROOT)/hack/generate-package-version.sh $(REPO_ROOT) deb noble $(FLUENT_BIT_VERSION)))
 
 	docker run --rm \
-		-v ./package/rhel9/RPMS/x86_64/calico-fluent-bit-$(version)-1.el9.x86_64.rpm:/package/calico-fluent-bit.rpm \
+		-v ./package/rhel9/RPMS/x86_64/calico-fluent-bit-$(rpm_version)-1.el9.x86_64.rpm:/package/calico-fluent-bit.rpm \
 		-v ./fv:/fv \
 		almalinux:9 \
+		/fv/run-tests.sh
+
+	docker run --rm \
+		-v ./package/debian13/calico-fluent-bit_$(deb_version)_amd64.deb:/package/calico-fluent-bit.deb \
+		-v ./fv:/fv \
+		debian:13 \
+		/fv/run-tests.sh
+
+	docker run --rm \
+		-v ./package/ubuntu24/calico-fluent-bit_$(ubuntu_version)_amd64.deb:/package/calico-fluent-bit.deb \
+		-v ./fv:/fv \
+		ubuntu:noble \
 		/fv/run-tests.sh
 
 ###############################################################################

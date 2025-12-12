@@ -28,7 +28,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish kibana images
+  - name: Publish kibana images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -41,19 +41,4 @@ blocks:
                 - "false"
                 - "true"
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C kibana cd CONFIRM=true; fi
-  - name: Publish kibana multi-arch manifests
-    dependencies:
-      - Publish kibana images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          matrix:
-            - env_var: TESLA
-              values:
-                - "false"
-                - "true"
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C kibana push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C kibana cd push-manifests-with-tag CONFIRM=true; fi

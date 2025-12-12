@@ -8,11 +8,11 @@
       commands:
         - cd pod2daemon
     jobs:
-      - name: pod2daemon tests
+      - name: "pod2daemon: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-          - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
-      - name: Build binary
+          - 'test-results publish ./report/*.xml --name "pod2daemon: UT" || true'
+      - name: "pod2daemon: Build multi-arch"
         matrix:
           - env_var: ARCH
             values:

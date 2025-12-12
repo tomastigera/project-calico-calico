@@ -12,6 +12,7 @@ install_package() {
     case "$package_file" in
         *.deb)
             echo "Installing DEB package: $(basename "$package_file")"
+            apt update
             apt install -y "$package_file"
             ;;
         *.rpm)
@@ -24,6 +25,13 @@ install_package() {
 assert_file_exists() {
     if [ ! -f "$1" ]; then
         echo "file $1 doesn't exist"
+        exit 1
+    fi
+}
+
+assert_either_file_exists() {
+    if [ ! -f "$1" ] && [ ! -f "$2" ]; then
+        echo "neither file $1 nor $2 exists"
         exit 1
     fi
 }
@@ -83,6 +91,6 @@ assert_file_exists /etc/calico/calico-fluent-bit/plugins.conf
 assert_file_exists /etc/calico/calico-fluent-bit/record_transformer.lua
 assert_file_exists /usr/bin/calico-fluent-bit
 assert_file_exists /usr/lib/systemd/system/calico-fluent-bit.service
-assert_file_exists /usr/lib64/calico-fluent-bit/out_linseed.so
+assert_either_file_exists /usr/lib64/calico-fluent-bit/out_linseed.so "/usr/lib/$(uname -m)-linux-gnu/calico-fluent-bit/out_linseed.so"
 
 echo "Fluent Bit FV tests completed successfully."

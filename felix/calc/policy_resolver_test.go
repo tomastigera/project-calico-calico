@@ -57,22 +57,22 @@ func createPolicyResolver() (*PolicyResolver, *policyResolverRecorder) {
 }
 
 type policyResolverUpdate struct {
-	Key        model.Key
-	Endpoint   interface{}
-	Tiers      []TierInfo
-	EgressData EndpointEgressData
+	Key          model.Key
+	Endpoint     interface{}
+	Tiers        []TierInfo
+	ComputedData []EndpointComputedData
 }
 
 type policyResolverRecorder struct {
 	updates []policyResolverUpdate
 }
 
-func (p *policyResolverRecorder) OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, filteredTiers []TierInfo) {
+func (p *policyResolverRecorder) OnEndpointTierUpdate(endpointKey model.EndpointKey, endpoint model.Endpoint, computedData []EndpointComputedData, peerData *EndpointBGPPeer, filteredTiers []TierInfo) {
 	p.updates = append(p.updates, policyResolverUpdate{
-		Key:        endpointKey,
-		Endpoint:   endpoint,
-		Tiers:      filteredTiers,
-		EgressData: egressData,
+		Key:          endpointKey,
+		Endpoint:     endpoint,
+		Tiers:        filteredTiers,
+		ComputedData: computedData,
 	})
 }
 
@@ -237,7 +237,9 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 		t.Error("Incorrect update:", d)
 	}
 
-	pr.OnEndpointEgressDataUpdate(we1Key, []EpEgressData{{IpSetID: "e:abcdef"}})
+	pr.OnEndpointComputedDataUpdate(we1Key, EPCompDataKindEgressGateway, &ComputedEgressEP{
+		Rules: []EpEgressData{{IpSetID: "e:abcdef"}},
+	})
 	pr.Flush()
 
 	// Expect OnEndpointTierUpdate with that egress IP set ID.
@@ -250,9 +252,9 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 			Key:      we1Key,
 			Endpoint: wep,
 			Tiers:    []TierInfo{},
-			EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
-				{IpSetID: "e:abcdef"},
-			}},
+			ComputedData: []EndpointComputedData{
+				&ComputedEgressEP{Rules: []EpEgressData{{IpSetID: "e:abcdef"}}},
+			},
 		},
 		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
 	); d != "" {
@@ -277,15 +279,17 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 			Key:      we1Key,
 			Endpoint: wep,
 			Tiers:    []TierInfo{},
-			EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
-				{IpSetID: "e:abcdef"},
-			}},
+			ComputedData: []EndpointComputedData{
+				&ComputedEgressEP{Rules: []EpEgressData{{IpSetID: "e:abcdef"}}},
+			},
 		},
-		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) })); d != "" {
+		cmp.Comparer(func(a, b uniquelabels.Map) bool { return a.Equals(b) }),
+	); d != "" {
+
 		t.Error("Incorrect update:", d)
 	}
 
-	pr.OnEndpointEgressDataUpdate(we1Key, nil)
+	pr.OnEndpointComputedDataUpdate(we1Key, EPCompDataKindEgressGateway, nil)
 	pr.Flush()
 
 	// Expect OnEndpointTierUpdate with no egress info.

@@ -38,7 +38,7 @@ var (
 
 var _ = DescribeTable("ModelWorkloadEndpointToProto",
 	func(in model.WorkloadEndpoint, expected *proto.WorkloadEndpoint) {
-		out := calc.ModelWorkloadEndpointToProto(&in, calc.EndpointEgressData{}, nil, []*proto.TierInfo{})
+		out := calc.ModelWorkloadEndpointToProto(&in, nil, nil, []*proto.TierInfo{})
 		Expect(out).To(Equal(expected))
 	},
 	Entry("workload endpoint with NAT", model.WorkloadEndpoint{
@@ -159,6 +159,119 @@ var _ = DescribeTable("ModelWorkloadEndpointToProto",
 		SkipRedir: &proto.WorkloadBpfSkipRedir{Ingress: true, Egress: true},
 	}),
 )
+
+var _ = Describe("ModelWorkloadEndpointToProto with computed data", func() {
+	var (
+		baseEndpoint model.WorkloadEndpoint
+		baseTiers    []*proto.TierInfo
+	)
+
+	BeforeEach(func() {
+		baseEndpoint = model.WorkloadEndpoint{
+			State:      "up",
+			Name:       "test-endpoint",
+			Mac:        mustParseMac("01:02:03:04:05:06"),
+			ProfileIDs: []string{"profile1"},
+			IPv4Nets:   []net.IPNet{mustParseNet("10.0.0.1/32")},
+			IPv6Nets:   []net.IPNet{},
+			IPv4NAT:    []model.IPNAT{},
+			IPv6NAT:    []model.IPNAT{},
+		}
+		baseTiers = []*proto.TierInfo{}
+	})
+
+	It("should apply Istio computed data correctly", func() {
+		computedData := []calc.EndpointComputedData{&calc.ComputedIstioEndpoint{}}
+
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, computedData, nil, baseTiers)
+
+		Expect(out.IsIstioAmbient).To(BeTrue())
+		Expect(out.Name).To(Equal("test-endpoint"))
+		Expect(out.State).To(Equal("up"))
+	})
+
+	It("should apply egress gateway computed data correctly", func() {
+		egressComputed := &calc.ComputedEgressEP{
+			IsEgressGateway: false,
+			HealthPort:      0,
+			Rules: []calc.EpEgressData{
+				{
+					IpSetID:     "test-ipset",
+					MaxNextHops: 2,
+					CIDR:        "10.0.0.0/8",
+				},
+			},
+		}
+		computedData := []calc.EndpointComputedData{egressComputed}
+
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, computedData, nil, baseTiers)
+
+		Expect(out.IsEgressGateway).To(BeFalse())
+		Expect(out.EgressGatewayRules).To(HaveLen(1))
+		Expect(out.EgressGatewayRules[0].IpSetId).To(Equal("test-ipset"))
+		Expect(out.EgressGatewayRules[0].MaxNextHops).To(Equal(int32(2)))
+		Expect(out.EgressGatewayRules[0].Destination).To(Equal("10.0.0.0/8"))
+	})
+
+	It("should apply multiple computed data types", func() {
+		egressComputed := &calc.ComputedEgressEP{
+			IsEgressGateway: false,
+			HealthPort:      8080,
+			Rules: []calc.EpEgressData{
+				{
+					IpSetID:       "test-ipset-1",
+					MaxNextHops:   3,
+					CIDR:          "192.168.0.0/16",
+					PreferLocalGW: true,
+				},
+			},
+		}
+		computedData := []calc.EndpointComputedData{&calc.ComputedIstioEndpoint{}, egressComputed}
+
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, computedData, nil, baseTiers)
+
+		// Both computed data should be applied
+		Expect(out.IsIstioAmbient).To(BeTrue())
+		Expect(out.IsEgressGateway).To(BeFalse())
+		Expect(out.EgressGatewayHealthPort).To(Equal(int32(8080)))
+		Expect(out.EgressGatewayRules).To(HaveLen(1))
+		Expect(out.EgressGatewayRules[0].IpSetId).To(Equal("test-ipset-1"))
+		Expect(out.EgressGatewayRules[0].PreferLocalEgressGateway).To(BeTrue())
+	})
+
+	It("should handle nil computed data", func() {
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, nil, nil, baseTiers)
+
+		Expect(out.IsIstioAmbient).To(BeFalse())
+		Expect(out.IsEgressGateway).To(BeFalse())
+		Expect(out.EgressGatewayRules).To(BeNil())
+		Expect(out.Name).To(Equal("test-endpoint"))
+	})
+
+	It("should handle empty computed data slice", func() {
+		computedData := []calc.EndpointComputedData{}
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, computedData, nil, baseTiers)
+
+		Expect(out.IsIstioAmbient).To(BeFalse())
+		Expect(out.IsEgressGateway).To(BeFalse())
+		Expect(out.EgressGatewayRules).To(BeNil())
+	})
+
+	It("should apply egress gateway endpoint computed data", func() {
+		egressGateway := &calc.ComputedEgressEP{
+			IsEgressGateway: true,
+			HealthPort:      9090,
+			Rules:           []calc.EpEgressData{}, // Rules should be ignored for gateways
+		}
+		computedData := []calc.EndpointComputedData{egressGateway}
+
+		out := calc.ModelWorkloadEndpointToProto(&baseEndpoint, computedData, nil, baseTiers)
+
+		Expect(out.IsEgressGateway).To(BeTrue())
+		Expect(out.EgressGatewayHealthPort).To(Equal(int32(9090)))
+		Expect(out.EgressGatewayRules).To(BeNil())
+	})
+})
 
 var _ = Describe("ParsedRulesToActivePolicyUpdate", func() {
 	var (
@@ -490,10 +603,12 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			calc.EndpointEgressData{
-				EgressGatewayRules: []calc.EpEgressData{
-					{
-						IpSetID: "e:abcdef", MaxNextHops: 3,
+			[]calc.EndpointComputedData{
+				&calc.ComputedEgressEP{
+					Rules: []calc.EpEgressData{
+						{
+							IpSetID: "e:abcdef", MaxNextHops: 3,
+						},
 					},
 				},
 			},
@@ -525,7 +640,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			calc.EndpointEgressData{},
+			nil,
 			nil,
 			nil,
 		)

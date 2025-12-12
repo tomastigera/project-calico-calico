@@ -140,8 +140,8 @@ func (w *L7WorkloadIPSetCalculator) OnPolicyMatchStopped(policyKey model.PolicyK
 	w.flush()
 }
 
-func (w *L7WorkloadIPSetCalculator) OnEgressSelectorMatch(_ string, _ model.EndpointKey)        {} // Not needed.
-func (w *L7WorkloadIPSetCalculator) OnEgressSelectorMatchStopped(_ string, _ model.EndpointKey) {} // Not needed.
+func (w *L7WorkloadIPSetCalculator) OnComputedSelectorMatch(_ string, _ model.EndpointKey)        {} // Not needed.
+func (w *L7WorkloadIPSetCalculator) OnComputedSelectorMatchStopped(_ string, _ model.EndpointKey) {} // Not needed.
 
 func (w *L7WorkloadIPSetCalculator) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {

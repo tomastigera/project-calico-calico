@@ -843,7 +843,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should delegate to GetEndpoint", func() {
 			// Setup - add a single endpoint
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, nil, nil, nil)
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
@@ -860,7 +860,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return endpoint with matching interface name", func() {
 			// Setup - add an endpoint with a specific interface name
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, nil, nil, nil)
 
 			// Test
 			addr := ipToAddr("192.168.1.1")
@@ -877,7 +877,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return endpoint with matching IP regardless of interface name", func() {
 			// Setup - add an endpoint with a specific interface name
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "*", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, nil, nil, nil)
 
 			// Test with wildcard interface name
 			addr := ipToAddr("192.168.1.1")
@@ -896,8 +896,8 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			hepKey1, hep1 := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
 			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*hepKey1, hep1, calc.EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey2, hep2, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, nil, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, nil, nil, nil)
 
 			// Test for exact match on eth1
 			addr := ipToAddr("192.168.1.1")
@@ -917,9 +917,9 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			hepKey2, hep2 := createHostEndpoint("test-host", "k8s", "eth1", "192.168.1.1")
 			hepNoInterface, hep3 := createHostEndpoint("test-host", "k8s", "", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*hepKey1, hep1, calc.EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey2, hep2, calc.EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepNoInterface, hep3, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey1, hep1, nil, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey2, hep2, nil, nil, nil)
+			cache.OnEndpointTierUpdate(*hepNoInterface, hep3, nil, nil, nil)
 
 			// Test with non-matching interface name
 			addr := ipToAddr("192.168.1.1")
@@ -936,7 +936,7 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		It("should return nil and false", func() {
 			// Setup - add endpoint with different IP
 			hepKey, hep := createHostEndpoint("test-host", "k8s", "eth0", "192.168.1.1")
-			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, nil, nil, nil)
 
 			// Test with IP that doesn't match any endpoint
 			addr := ipToAddr("192.168.1.2")
@@ -954,8 +954,8 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 			wepKey, wep := createWorkloadEndpoint("test-host", "k8s", "pod-1", "wep-eth0", "wep-eth0", "192.168.1.1")
 			hepKey, hep := createHostEndpoint("test-host", "host-ep", "host-eth0", "192.168.1.1")
 
-			cache.OnEndpointTierUpdate(*wepKey, wep, calc.EndpointEgressData{}, nil, nil)
-			cache.OnEndpointTierUpdate(*hepKey, hep, calc.EndpointEgressData{}, nil, nil)
+			cache.OnEndpointTierUpdate(*wepKey, wep, nil, nil, nil)
+			cache.OnEndpointTierUpdate(*hepKey, hep, nil, nil, nil)
 
 			// Test looking for host endpoint
 			addr := ipToAddr("192.168.1.1")

@@ -30,8 +30,8 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
-func getClientFromConn(conn net.Conn, tunnelCreator func(stream io.ReadWriteCloser, opts ...tunnel.Option) (*tunnel.Tunnel, error)) *http.Client {
-	var t *tunnel.Tunnel
+func getClientFromConn(conn net.Conn, tunnelCreator func(stream io.ReadWriteCloser, opts ...tunnel.Option) (tunnel.Tunnel, error)) *http.Client {
+	var t tunnel.Tunnel
 	var err error
 	if tunnelCreator != nil {
 		t, err = tunnelCreator(conn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
@@ -108,7 +108,7 @@ var _ = Describe("Client", func() {
 
 			By("creating a http client with the client side of the pipe")
 			cli, err := client.New("http://example.com", "voltron",
-				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
+				client.WithTunnelDialer(tunnel.NewDialer(func() (tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				}, 1, 0, 5*time.Second)),
 				client.WithProxyTargets([]proxy.Target{{Path: "/test", Dest: url, Token: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "some-token"})}}),
@@ -142,7 +142,7 @@ var _ = Describe("Client", func() {
 
 			By("creating a http client with the client side of the pipe")
 			cli, err := client.New("http://example.com", "voltron",
-				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
+				client.WithTunnelDialer(tunnel.NewDialer(func() (tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				}, 1, 0, 5*time.Second)),
 			)

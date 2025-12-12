@@ -149,7 +149,7 @@ func PortForward() func() {
 	stopCh := make(chan time.Time, 1)
 	kubectl := utils.Kubectl{}
 	kubectl.PortForward("tigera-elasticsearch", "svc/tigera-secure-es-http", "9200", "", stopCh)
-	kubectl.PortForward("tigera-manager", "svc/tigera-manager", "9443", "", stopCh)
+	kubectl.PortForward("calico-system", "svc/calico-manager", "9443", "", stopCh)
 
 	return func() {
 		stopCh <- time.Now()

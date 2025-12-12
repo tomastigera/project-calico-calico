@@ -53,7 +53,7 @@ type State struct {
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
 	ExpectedHostMetadataV4V6             map[string]*proto.HostMetadataV4V6Update
-	ExpectedEndpointEgressData           map[string]calc.EndpointEgressData
+	ExpectedEndpointComputedData         map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
@@ -88,7 +88,7 @@ func NewState() State {
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
 		ExpectedHostMetadataV4V6:             make(map[string]*proto.HostMetadataV4V6Update),
-		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
+		ExpectedEndpointComputedData:         make(map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
 		ExpectedCaptureUpdates:               set.New[types.PacketCaptureUpdate](),
@@ -116,8 +116,8 @@ func (s State) Copy() State {
 	for k, v := range s.ExpectedHostMetadataV4V6 {
 		cpy.ExpectedHostMetadataV4V6[k] = v
 	}
-	for k, v := range s.ExpectedEndpointEgressData {
-		cpy.ExpectedEndpointEgressData[k] = v
+	for k, v := range s.ExpectedEndpointComputedData {
+		cpy.ExpectedEndpointComputedData[k] = v
 	}
 
 	cpy.ExpectedPolicyIDs = s.ExpectedPolicyIDs.Copy()
@@ -224,12 +224,20 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 	return newState
 }
 
-func (s State) withEndpointEgressData(id string, egressData calc.EndpointEgressData) State {
+func (s State) withEndpointEgressData(id string, kind calc.EndpointComputedDataKind, computedData calc.EndpointComputedData) State {
 	newState := s.Copy()
-	if !egressData.IsEmpty() {
-		newState.ExpectedEndpointEgressData[id] = egressData
-	} else {
-		delete(newState.ExpectedEndpointEgressData, id)
+	cdMap, exists := newState.ExpectedEndpointComputedData[id]
+	if computedData != nil {
+		if !exists {
+			cdMap = map[calc.EndpointComputedDataKind]calc.EndpointComputedData{}
+			newState.ExpectedEndpointComputedData[id] = cdMap
+		}
+		cdMap[kind] = computedData
+	} else if exists {
+		delete(cdMap, kind)
+		if len(cdMap) == 0 {
+			delete(newState.ExpectedEndpointComputedData, id)
+		}
 	}
 	return newState
 }

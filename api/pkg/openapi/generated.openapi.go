@@ -6290,13 +6290,6 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
-					"bpfKubeProxyEndpointSlicesEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "BPFKubeProxyEndpointSlicesEnabled is deprecated and has no effect. BPF kube-proxy always accepts endpoint slices. This option will be removed in the next release.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"bpfPSNATPorts": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFPSNATPorts sets the range from which we randomly pick a port if there is a source port collision. This should be within the ephemeral range as defined by RFC 6056 (1024–65535) and preferably outside the  ephemeral ranges used by common operating systems. Linux uses 32768–60999, while others mostly use the IANA defined range 49152–65535. It is not necessarily a problem if this range overlaps with the operating systems. Both ends of the range are inclusive. [Default: 20000:29999]",
@@ -6436,6 +6429,19 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Description: "BPFExportBufferSizeMB in BPF mode, controls the buffer size used for sending BPF events to felix. [Default: 1]",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"istioAmbientMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IstioAmbientMode configures Felix to work together with Tigera's Istio distribution. [Default: Disabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"istioDSCPMark": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IstioDSCPMark sets the value to use when directing traffic to Istio ZTunnel, when Istio is enabled. The mark is set only on SYN packets at the final hop to avoid interference with other protocols. This value is reserved by Calico and must not be used with other Istio installation. [Default: 23]",
+							Ref:         ref("github.com/tigera/api/pkg/lib/numorstring.DSCP"),
 						},
 					},
 					"cgroupV2Path": {
@@ -7417,7 +7423,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.BPFConntrackTimeouts", "github.com/tigera/api/pkg/apis/projectcalico/v3.HealthTimeoutOverride", "github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BPFConntrackTimeouts", "github.com/tigera/api/pkg/apis/projectcalico/v3.HealthTimeoutOverride", "github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.DSCP", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -30498,15 +30504,12 @@ func schema_pkg_apis_meta_v1_InternalEvent(ref common.ReferenceCallback) common.
 					"Object": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Object is:\n * If Type is Added or Modified: the new state of the object.\n * If Type is Deleted: the state of the object immediately before deletion.\n * If Type is Bookmark: the object (instance of a type being watched) where\n   only ResourceVersion field is set. On successful restart of watch from a\n   bookmark resourceVersion, client is guaranteed to not get repeat event\n   nor miss any events.\n * If Type is Error: *api.Status is recommended; other types may make sense\n   depending on context.",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.Object"),
 						},
 					},
 				},
 				Required: []string{"Type", "Object"},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.Object"},
 	}
 }
 

@@ -1,0 +1,13 @@
+Source: calico-fluent-bit
+Maintainer: Tigera Inc <maintainers@tigera.io>
+Section: devel
+Priority: optional
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config
+
+Package: calico-fluent-bit
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
+Description: Fluent Bit is a fast Log Processor and Forwarder.
+ It's part of the Fluentd Ecosystem and a CNCF sub-project.

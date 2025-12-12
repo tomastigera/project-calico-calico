@@ -206,7 +206,6 @@ type Config struct {
 	BPFKubeProxyIptablesCleanupEnabled bool              `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration     `config:"seconds;1"`
 	BPFKubeProxyHealthzPort            int               `config:"int;10256;non-zero"`
-	BPFKubeProxyEndpointSlicesEnabled  bool              `config:"bool;true"`
 	BPFExtToServiceConnmark            int               `config:"int;0"`
 	BPFPSNATPorts                      numorstring.Port  `config:"portrange;20000:29999"`
 	BPFMapSizeNATFrontend              int               `config:"int;65536;non-zero"`
@@ -229,6 +228,10 @@ type Config struct {
 	BPFAttachType                      string            `config:"oneof(TCX,TC);TCX;non-zero"`
 	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
 	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
+
+	// Istio config fields
+	IstioAmbientMode string           `config:"oneof(Disabled,Enabled);Disabled"`
+	IstioDSCPMark    numorstring.DSCP `config:"dscp;23"`
 
 	// CgroupV2Path is not used by Felix, but its init container
 	CgroupV2Path string `config:"string;;"`
@@ -693,6 +696,9 @@ type Config struct {
 	// BPFMaglevMaxServices is the maximum number of expected Maglev-enabled
 	// services that Felix will allocate lookup-tables for.
 	BPFMaglevMaxServices int `config:"int(1:3000);100"`
+
+	// Is running as a non-cluster host
+	NonClusterHost bool
 }
 
 func (config *Config) FilterAllowAction() string {
@@ -887,7 +893,8 @@ func (c *Config) ExternalNetworkCheckEnabled() bool {
 }
 
 func (c *Config) EgressIPCheckEnabled() bool {
-	return c.EgressIPSupport == "EnabledPerNamespace" || c.EgressIPSupport == "EnabledPerNamespaceOrPerPod"
+	return !c.NonClusterHost &&
+		(c.EgressIPSupport == "EnabledPerNamespace" || c.EgressIPSupport == "EnabledPerNamespaceOrPerPod")
 }
 
 func (c *Config) TPROXYModeEnabledAllServices() bool {
@@ -1436,6 +1443,8 @@ func loadParams() {
 			param = &KeyValueListParam{}
 		case "keydurationlist":
 			param = &KeyDurationListParam{}
+		case "dscp":
+			param = &DSCPParam{}
 		default:
 			log.Panicf("Unknown type of parameter: %v", kind)
 			panic("Unknown type of parameter") // Unreachable, keep the linter happy.
@@ -1540,6 +1549,10 @@ func (config *Config) RouteTableIndices() []idalloc.IndexRange {
 
 func (config *Config) GetBPFAttachType() v3.BPFAttachOption {
 	return v3.BPFAttachOption(config.BPFAttachType)
+}
+
+func (config *Config) IsIstioAmbientModeEnabled() bool {
+	return config.IstioAmbientMode == "Enabled"
 }
 
 func New() *Config {

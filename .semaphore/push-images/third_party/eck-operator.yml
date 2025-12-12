@@ -28,7 +28,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish eck-operator images
+  - name: Publish eck-operator images and multi-arch manifests
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -36,14 +36,4 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/eck-operator cd CONFIRM=true; fi
-  - name: Publish eck-operator multi-arch manifests
-    dependencies:
-      - Publish eck-operator images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Linux multi-arch manifests
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/eck-operator push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/eck-operator cd push-manifests-with-tag CONFIRM=true; fi

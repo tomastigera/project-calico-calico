@@ -53,6 +53,7 @@ rules:
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
       - whiskers.operator.tigera.io
+      - istios.operator.tigera.io
         # Enterprise/Cloud Resources
       - alertexceptions.crd.projectcalico.org
       - bfdconfigurations.crd.projectcalico.org
@@ -279,6 +280,9 @@ rules:
       - whiskers
       - whiskers/finalizers
       - whiskers/status
+      - istios
+      - istios/finalizers
+      - istios/status
     verbs:
       - get
       - list
@@ -800,3 +804,20 @@ rules:
       - update
     resourceNames:
       - tigera-gateway-api-gateway-helm-certgen
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - update
+    resourceNames:
+      - istiod

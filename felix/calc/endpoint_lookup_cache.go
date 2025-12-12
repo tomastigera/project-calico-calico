@@ -189,7 +189,7 @@ func (ec *EndpointLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // and corresponding IP address relationship. The difference between this handler and the OnUpdate
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
-func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.EndpointKey, ep model.Endpoint, egressData EndpointEgressData, peerData *EndpointBGPPeer, filteredTiers []TierInfo) {
+func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.EndpointKey, ep model.Endpoint, _ []EndpointComputedData, _ *EndpointBGPPeer, filteredTiers []TierInfo) {
 	if ep == nil {
 		log.Debugf("Queueing deletion of local endpoint data %v", key)
 		ec.removeEndpointWithDelay(key)
@@ -421,16 +421,14 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.EndpointKey, incom
 	ec.storeEndpoint(key, incomingEndpointData)
 
 	// update endpoint data lookup by ips
-	ipsToUpdate.Iter(func(newIP [16]byte) error {
+	for newIP := range ipsToUpdate.All() {
 		ec.updateIPToEndpointMapping(newIP, incomingEndpointData)
-		return nil
-	})
+	}
 
-	ipsToRemove.Iter(
-		func(ip [16]byte) error {
-			ec.removeEndpointDataIpMapping(key, ip)
-			return set.RemoveItem
-		})
+	for ip := range ipsToRemove.All() {
+		ec.removeEndpointDataIpMapping(key, ip)
+		ipsToRemove.Discard(ip)
+	}
 
 	ec.reportEndpointCacheMetrics()
 }
@@ -569,10 +567,9 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.EndpointKey) {
 
 	// Collect the IPs of this endpoint as we will need to remove it from the IP mapping.
 	ipsMarkedAsDeleted := set.From(currentEndpointData.allIPs()...)
-	ipsMarkedAsDeleted.Iter(func(ip [16]byte) error {
+	for ip := range ipsMarkedAsDeleted.All() {
 		ec.removeEndpointDataIpMapping(key, ip)
-		return nil
-	})
+	}
 
 	delete(ec.localEndpointData, key)
 	delete(ec.remoteEndpointData, key)
@@ -832,10 +829,9 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 			deleted = ""
 		}
 
-		ips.Iter(func(ip [16]byte) error {
+		for ip := range ips.All() {
 			ipStr = append(ipStr, net.IP(ip[:16]).String())
-			return nil
-		})
+		}
 		lines = append(lines, endpointName(key)+": "+strings.Join(ipStr, ",")+deleted)
 	}
 

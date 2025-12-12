@@ -46,11 +46,40 @@ type Config struct {
 	OIDCAuthUsernamePrefix string `split_words:"true"`
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
-	// LMAAuthorizationCacheTTL when >0 this will cache the lma authorization results
+	// LMAAuthorizationCacheTTL controls the TTL of the LMA authorization results cache
 	LMAAuthorizationCacheTTL time.Duration `default:"10s" split_words:"true"`
 
+	// AuthorizedVerbsCacheHardTTL controls the hard TTL of the authorization review cache.
+	// Data will be removed from the cache after this TTL if it has not been revalidated.
+	AuthorizedVerbsCacheHardTTL time.Duration `default:"30m" split_words:"true"`
+
+	// AuthorizedVerbsCacheSoftTTL controls the soft TTL of namespaced RBAC authorization review cache.
+	// A new AuthorizationReview will be performed on the next authorization request after this TTL in an attempt to
+	// revalidate the cache entry
+	// The stale cache entry may be returned instead of the validated cache entry (see AuthorizedVerbsCacheRevalidateTimeout)
+	AuthorizedVerbsCacheSoftTTL time.Duration `default:"30s" split_words:"true"`
+
+	// AuthorizedVerbsCacheRevalidateTimeout controls the timeout to revalidate a namespaced RBAC authorization
+	// review cache entry. The stale cache entry will be returned if it takes longer than AuthorizedVerbsCacheSoftTTL
+	// to revalidated it
+	//
+	// Note that an AuthorizationReview taking longer than AuthorizedVerbsCacheSoftTTL continues execution on a
+	// background goroutine and will eventually have its corresponding cache entry permissions revalidated if successful
+	AuthorizedVerbsCacheRevalidateTimeout time.Duration `default:"15s" split_words:"true"`
+
+	// AuthorizedVerbsCacheReviewsTimeout controls the timeout of the set of namespaced RBAC AuthorizationReviews for
+	// a query (at most 1 AuthorizationReview at a time for each combination of user and managed cluster).
+	//
+	// AuthorizationReview results returned within AuthorizedVerbsCacheReviewsTimeout will be used for query permissions
+	// AuthorizationReview results taking longer than AuthorizedVerbsCacheReviewsTimeout will be excluded from query
+	// permissions (i.e. effectively denying access to view logs from its associated managed cluster)
+	//
+	// Note that AuthorizationReviews taking longer than AuthorizedVerbsCacheReviewsTimeout continue execution on
+	// a background goroutine and will eventually have its corresponding cache entry permissions updated if successful
+	AuthorizedVerbsCacheReviewsTimeout time.Duration `default:"10s" split_words:"true"`
+
 	// Endpoint for authorization requests
-	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingEndpoint string `default:"https://calico-manager.calico-system.svc:9443" split_words:"true"`
 	// CA used to verify the forwarding endpoint when contacting voltron (Cloud mode)
 	MultiClusterForwardingCA string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
@@ -75,6 +104,11 @@ type Config struct {
 	// DisabledCollections is a comma separated list of collections to be disabled e.g.: waf,dns
 	DisabledCollections string `split_words:"true"`
 
+	// NamespacedRBAC enable support for namespaced resource authorization for the query API. It requires the
+	// AuthorizationReview api on managed clusters
+	NamespacedRBAC bool `default:"false" split_words:"true"`
+
+	// ProductMode determines whether the product is running in "enterprise" or "cloud" mode.
 	ProductMode string `default:"enterprise" split_words:"true"`
 }
 

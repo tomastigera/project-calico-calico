@@ -162,24 +162,19 @@ spec:
 EOF
 """)
 
-        # Remove node-2's route-reflector config.
-        def restore_node():
-            json_str = calicoctl("get node %s -o json" % self.nodes[2])
-            node_dict = json.loads(json_str)
-            update_needed = False
-            if 'i-am-a-route-reflector' in node_dict['metadata']['labels']:
-                node_dict['metadata']['labels'].pop('i-am-a-route-reflector', '')
-                update_needed = True
-            if 'routeReflectorClusterID' in node_dict['spec']['bgp']:
-                node_dict['spec']['bgp'].pop('routeReflectorClusterID', '')
-                update_needed = True
-            if update_needed:
-                calicoctl("""apply -f - << EOF
+        # Remove node-2's route-reflector config, using a retry to avoid
+        # transient conflict errors.
+        retry_until_success(lambda: self.clear_rr_config(self.nodes[2]))
+
+    def clear_rr_config(self, node):
+        json_str = calicoctl("get node %s -o json" % node)
+        node_dict = json.loads(json_str)
+        node_dict['metadata']['labels'].pop('i-am-a-route-reflector', '')
+        node_dict['spec']['bgp'].pop('routeReflectorClusterID', '')
+        calicoctl("""apply -f - << EOF
 %s
 EOF
 """ % json.dumps(node_dict))
-
-        retry_until_success(restore_node)
 
     def get_svc_cluster_ip(self, svc, ns):
         return kubectl("get svc %s -n %s -o json | jq -r .spec.clusterIP" %

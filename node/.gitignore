@@ -21,3 +21,4 @@ nosetests.xml
 package/
 rhel/calico-node.spec
 testfile.yaml
+debian/control

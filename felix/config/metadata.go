@@ -39,6 +39,8 @@ import (
 var fieldsToIgnore = set.From(
 	// The rekey time is used by the IPsec tests, but it isn't exposed in FelixConfiguration.
 	"IPSecRekeyTime",
+	// Used internally by Felix to determine if running as a non-cluster host. Is not user settable.
+	"NonClusterHost",
 )
 
 var clusterInfoFields = set.From(

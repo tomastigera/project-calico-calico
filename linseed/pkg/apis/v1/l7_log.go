@@ -65,6 +65,31 @@ type L7Log struct {
 
 	Host string `json:"host"`
 
+	// Collector identification fields
+	CollectorName string `json:"collector_name,omitempty"`
+	CollectorType string `json:"collector_type,omitempty"`
+
+	// Gateway context fields
+	GatewayNamespace     string `json:"gateway_namespace,omitempty"`
+	GatewayClass         string `json:"gateway_class,omitempty"`
+	GatewayStatus        string `json:"gateway_status,omitempty"`
+	GatewayStatusMessage string `json:"gateway_status_message,omitempty"`
+
+	// Gateway listener context fields
+	GatewayListenerName     string `json:"gateway_listener_name,omitempty"`
+	GatewayListenerPort     int64  `json:"gateway_listener_port,omitempty"`
+	GatewayListenerProtocol string `json:"gateway_listener_protocol,omitempty"`
+	GatewayListenerFullName string `json:"gateway_listener_full_name,omitempty"` // format: <gateway-name>-<listener-name>-<listener-port>
+	GatewayListenerHostname string `json:"gateway_listener_hostname,omitempty"`  // from listener spec hostname
+
+	// Gateway route context fields (unified for HTTP, GRPC, TCP routes)
+	GatewayRouteType          string `json:"gateway_route_type,omitempty"` // http, grpc, or tcp
+	GatewayRouteName          string `json:"gateway_route_name,omitempty"`
+	GatewayRouteNamespace     string `json:"gateway_route_namespace,omitempty"`
+	GatewayRouteHostname      string `json:"gateway_route_hostname,omitempty"` // from route spec rules.hostname
+	GatewayRouteStatus        string `json:"gateway_route_status,omitempty"`
+	GatewayRouteStatusMessage string `json:"gateway_route_status_message,omitempty"`
+
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
 	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch

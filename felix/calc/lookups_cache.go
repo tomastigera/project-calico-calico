@@ -78,10 +78,23 @@ func (lc *LookupsCache) GetNetworkSet(addr [16]byte) (EndpointData, bool) {
 	return lc.nsCache.GetNetworkSetFromIP(addr)
 }
 
+// GetNetworkSetWithNamespace returns the NetworkSet information for an address with namespace
+// precedence. If preferredNamespace is provided, NetworkSets in that namespace are prioritized.
+func (lc *LookupsCache) GetNetworkSetWithNamespace(addr [16]byte, preferredNamespace string) (EndpointData, bool) {
+	return lc.nsCache.GetNetworkSetFromIPWithNamespace(addr, preferredNamespace)
+}
+
 // GetNetworkSetFromEgressDomain returns the networkset information for an egress domain.
 // It returns the first networkset it finds that contains the given domain.
 func (lc *LookupsCache) GetNetworkSetFromEgressDomain(domain string) (EndpointData, bool) {
 	return lc.nsCache.GetNetworkSetFromEgressDomain(domain)
+}
+
+// GetNetworkSetFromEgressDomainWithNamespace returns the networkset information for an egress domain with namespace precedence.
+// It prioritizes NetworkSets in the preferredNamespace, falling back to global NetworkSets if none found in the preferred namespace.
+// If no preferred namespace is provided, it prioritizes global NetworkSets.
+func (lc *LookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (EndpointData, bool) {
+	return lc.nsCache.GetNetworkSetFromEgressDomainWithNamespace(domain, preferredNamespace)
 }
 
 // GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.

@@ -3100,11 +3100,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.BPFKubeProxyEndpointSlicesEnabled != nil {
-		in, out := &in.BPFKubeProxyEndpointSlicesEnabled, &out.BPFKubeProxyEndpointSlicesEnabled
-		*out = new(bool)
-		**out = **in
-	}
 	if in.BPFPSNATPorts != nil {
 		in, out := &in.BPFPSNATPorts, &out.BPFPSNATPorts
 		*out = new(numorstring.Port)
@@ -3186,6 +3181,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.BPFExportBufferSizeMB != nil {
 		in, out := &in.BPFExportBufferSizeMB, &out.BPFExportBufferSizeMB
 		*out = new(int)
+		**out = **in
+	}
+	if in.IstioAmbientMode != nil {
+		in, out := &in.IstioAmbientMode, &out.IstioAmbientMode
+		*out = new(IstioAmbientMode)
+		**out = **in
+	}
+	if in.IstioDSCPMark != nil {
+		in, out := &in.IstioDSCPMark, &out.IstioDSCPMark
+		*out = new(numorstring.DSCP)
 		**out = **in
 	}
 	if in.SyslogReporterEnabled != nil {

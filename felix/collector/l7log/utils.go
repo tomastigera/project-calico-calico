@@ -26,6 +26,32 @@ func newMetaSpecFromUpdate(update Update, ak AggregationKind) (L7Meta, L7Spec, e
 		ServiceNamespace: update.ServiceNamespace,
 		ServicePortName:  update.ServicePortName,
 		ServicePortNum:   update.ServicePortNum,
+
+		// Gateway API enrichment fields
+		GatewayNamespace:     update.GatewayNamespace,
+		GatewayClass:         update.GatewayClass,
+		GatewayStatus:        update.GatewayStatus,
+		GatewayStatusMessage: update.GatewayStatusMessage,
+
+		// Gateway listener context fields
+		GatewayListenerName:     update.GatewayListenerName,
+		GatewayListenerPort:     update.GatewayListenerPort,
+		GatewayListenerProtocol: update.GatewayListenerProtocol,
+		GatewayListenerFullName: update.GatewayListenerFullName,
+		GatewayListenerHostname: update.GatewayListenerHostname,
+
+		// Collector identification fields
+		CollectorName: update.CollectorName,
+		CollectorType: update.CollectorType,
+		Host:          update.Host,
+
+		// Gateway route context fields
+		GatewayRouteType:          update.GatewayRouteType,
+		GatewayRouteName:          update.GatewayRouteName,
+		GatewayRouteNamespace:     update.GatewayRouteNamespace,
+		GatewayRouteHostname:      update.GatewayRouteHostname,
+		GatewayRouteStatus:        update.GatewayRouteStatus,
+		GatewayRouteStatusMessage: update.GatewayRouteStatusMessage,
 	}
 
 	// Get source endpoint metadata

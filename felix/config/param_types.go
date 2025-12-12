@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/bits"
 	"net"
 	"net/url"
 	"os"
@@ -196,7 +197,7 @@ func intSchema(ranges []MinMax) string {
 }
 
 func formatInt(m int) string {
-	switch m {
+	switch int64(m) {
 	case math.MaxInt64:
 		return "2^63-1"
 	case math.MinInt64:
@@ -901,7 +902,7 @@ func (r *RegionParam) SchemaDescription() string {
 
 // linux can support route-table indices up to 0xFFFFFFFF
 // however, using 0xFFFFFFFF tables would require too much computation, so the total number of designated tables is capped at 0xFFFF
-const routeTableMaxLinux = 0xffffffff
+const routeTableMaxLinux uint32 = 0xffffffff
 const routeTableRangeMaxTables = 0xffff
 
 type RouteTableRangeParam struct {
@@ -947,7 +948,7 @@ func (p *RouteTableRangesParam) Parse(raw string) (result interface{}, err error
 		return
 	}
 
-	tablesTargeted := 0
+	var tablesTargeted uint
 	ranges := make([]idalloc.IndexRange, 0)
 	for _, r := range match {
 		// first match is the whole matching string - we only care about submatches
@@ -972,8 +973,12 @@ func (p *RouteTableRangesParam) Parse(raw string) (result interface{}, err error
 			return
 		}
 
-		tablesTargeted += max - min
-		if tablesTargeted > routeTableRangeMaxTables {
+		// The number of route table IDs in the current range.
+		rangeLen := uint(max - min + 1)
+
+		// Overflow-safe addition
+		var carry uint
+		if tablesTargeted, carry = bits.Add(tablesTargeted, rangeLen, 0); carry != 0 || tablesTargeted > routeTableRangeMaxTables {
 			err = p.parseFailed(raw, "targets too many tables")
 			return
 		}
@@ -1066,4 +1071,28 @@ func (p *StringSliceParam) SchemaDescription() string {
 		return "Comma-delimited list of strings"
 	}
 	return fmt.Sprintf("Comma-delimited list of strings, each matching the regex `%s`", p.ValidationRegex.String())
+}
+
+type DSCPParam struct {
+	Metadata
+}
+
+func (p *DSCPParam) Parse(raw string) (result interface{}, err error) {
+	log.WithField("DSCPParam raw", raw).Info("DSCPParam")
+	var intVal uint64
+	intVal, err = strconv.ParseUint(raw, 10, 6)
+	if err == nil {
+		// No need to validate because we used bitsize 6 before
+		result = numorstring.DSCPFromInt(uint8(intVal))
+		return
+	}
+
+	// try string
+	dscp := numorstring.DSCPFromString(raw)
+	err = dscp.Validate()
+	return dscp, err
+}
+
+func (p *DSCPParam) SchemaDescription() string {
+	return `Numeric value: An integer from 0 to 63, representing the 6-bit DSCP code directly; Named value: A case-insensitive string corresponding to a standardized DSCP name (e.g., "CS0", "AF11", "AF21", "EF", etc.) as defined in the IANA registry for Differentiated Services Field Codepoints.`
 }

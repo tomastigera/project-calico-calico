@@ -5,8 +5,10 @@ package calc
 import (
 	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
+	"unique"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -78,10 +80,13 @@ var _ EndpointData = &networkSetData{}
 
 // Networkset data is stored in the EndpointData object for easier type processing for flow logs.
 type NetworkSetLookupsCache struct {
-	nsMutex                  sync.RWMutex
-	networkSets              map[model.Key]*networkSetData
-	ipTree                   *IpTrie
-	egressDomainToNetworkset map[string]set.Set[model.Key]
+	nsMutex sync.RWMutex
+
+	networkSets map[model.Key]*networkSetData
+	ipTree      *IpTrie
+
+	// Maps domain -> list of NetworkSetKey handles
+	domainToNetworksets map[string][]unique.Handle[model.NetworkSetKey]
 }
 
 func NewNetworkSetLookupsCache() *NetworkSetLookupsCache {
@@ -92,8 +97,8 @@ func NewNetworkSetLookupsCache() *NetworkSetLookupsCache {
 		networkSets: make(map[model.Key]*networkSetData),
 
 		// Reverse lookups by CIDR and egress domain.
-		ipTree:                   NewIpTrie(),
-		egressDomainToNetworkset: make(map[string]set.Set[model.Key]),
+		ipTree:              NewIpTrie(),
+		domainToNetworksets: make(map[string][]unique.Handle[model.NetworkSetKey]),
 	}
 
 	return nc
@@ -104,7 +109,7 @@ func (nc *NetworkSetLookupsCache) RegisterWith(allUpdateDispatcher *dispatcher.D
 }
 
 // OnUpdate is the callback method registered with the AllUpdatesDispatcher for
-// the model.NetworkSet type. This method updates the mapping between networkSets
+// the NetworkSet type. This method updates the mapping between networkSets
 // and the corresponding CIDRs that they contain.
 func (nc *NetworkSetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 	switch k := nsUpdate.Key.(type) {
@@ -187,80 +192,169 @@ func (nc *NetworkSetLookupsCache) removeNetworkSet(key model.Key) {
 		// We don't know about this networkset. Nothing to do.
 		return
 	}
-	currentData.cidrs.Iter(func(oldCIDR ip.CIDR) error {
+	for oldCIDR := range currentData.cidrs.All() {
 		nc.ipTree.DeleteKey(oldCIDR, key)
-		return nil
-	})
-	currentData.allowedEgressDomains.Iter(func(oldDomain string) error {
+	}
+	for oldDomain := range currentData.allowedEgressDomains.All() {
 		nc.removeDomainMapping(oldDomain, key)
-		return nil
-	})
+	}
 	delete(nc.networkSets, key)
+
 	nc.reportNetworksetCacheMetrics()
 }
 
 func (nc *NetworkSetLookupsCache) addDomainMapping(domain string, key model.Key) {
-	// Add the networkset key to the set specific to this domain, creating a new set if this is the first.
-	current := nc.egressDomainToNetworkset[domain]
-	if current == nil {
-		current = set.New[model.Key]()
-		nc.egressDomainToNetworkset[domain] = current
+	nsKey, ok := key.(model.NetworkSetKey)
+	if !ok {
+		return
 	}
-	current.Add(key)
+
+	h := unique.Make(nsKey)
+
+	// Update main map
+	handles := nc.domainToNetworksets[domain]
+
+	// Insert handle in sorted order to maintain lexicographic ordering
+	idx, found := slices.BinarySearchFunc(handles, nsKey, compareNetworkSetKeys)
+
+	if found {
+		return
+	}
+
+	// Insert at the correct position
+	handles = slices.Insert(handles, idx, h)
+	nc.domainToNetworksets[domain] = handles
 }
 
 func (nc *NetworkSetLookupsCache) removeDomainMapping(domain string, key model.Key) {
-	current := nc.egressDomainToNetworkset[domain]
-	if current == nil {
+	nsKey, ok := key.(model.NetworkSetKey)
+	if !ok {
 		return
 	}
-	// Remove the networkset key from the set specific to this domain, and remove the domain if no longer in any
-	// networkSets.
-	current.Discard(key)
-	if current.Len() == 0 {
-		delete(nc.egressDomainToNetworkset, domain)
+
+	handles := nc.domainToNetworksets[domain]
+	if len(handles) == 0 {
+		return
 	}
+
+	idx, found := slices.BinarySearchFunc(handles, nsKey, compareNetworkSetKeys)
+	if !found {
+		return
+	}
+
+	handles = slices.Delete(handles, idx, idx+1)
+
+	if len(handles) == 0 {
+		delete(nc.domainToNetworksets, domain)
+		return
+	}
+
+	nc.domainToNetworksets[domain] = handles
+}
+
+func compareNetworkSetKeys(h unique.Handle[model.NetworkSetKey], target model.NetworkSetKey) int {
+	val := h.Value()
+	nsVal := val.Namespace()
+	nsTarget := target.Namespace()
+	if c := strings.Compare(nsVal, nsTarget); c != 0 {
+		return c
+	}
+	return strings.Compare(val.Name, target.Name)
 }
 
 // GetNetworkSetFromIP finds Longest Prefix Match CIDR from given IP ADDR and return last observed
 // Networkset for that CIDR
 func (nc *NetworkSetLookupsCache) GetNetworkSetFromIP(addr [16]byte) (ed EndpointData, ok bool) {
+	return nc.GetNetworkSetFromIPWithNamespace(addr, "")
+}
+
+// GetNetworkSetFromIPWithNamespace finds NetworkSet for the Given IP with namespace precedence.
+// It prioritizes NetworkSets in the preferredNamespace, falling back to longest prefix match of
+// the global networkSets if none found, then the first lexicographically ordered matching
+// NetworkSet if no other matches are found. If no preferred namespace is provided, it prioritizes
+// global NetworkSets.
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromIPWithNamespace(ipAddr [16]byte, preferredNamespace string) (ed EndpointData, ok bool) {
+	netIP := net.IP(ipAddr[:])
+	addr := ip.FromNetIP(netIP)
+
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 
-	// Find the first cidr that contains the ip address to use for the lookup.
-	ipAddr := ip.FromNetIP(net.IP(addr[:]))
-	if key, _ := nc.ipTree.GetLongestPrefixCidr(ipAddr); key != nil {
-		if ns := nc.networkSets[key]; ns != nil {
-			// Found a NetworkSet, so set the return variables.
-			ed = ns
-			ok = true
-		}
+	// Use the namespace isolation lookup from IpTrie for collector use case
+	key, found := nc.ipTree.GetLongestPrefixCidrWithNamespaceIsolation(addr, preferredNamespace)
+	if !found {
+		return nil, false
 	}
-	return
+
+	// Get the NetworkSet data for the key
+	if ns := nc.networkSets[key]; ns != nil {
+		return ns, true
+	}
+
+	return nil, false
 }
 
 // GetNetworkSetFromEgressDomain returns an arbitrary NetworkSet that contains the suppled egress domain. This does not do
 // any pattern matching as it is assumed the domain will be in the format configured in either a networkset or a policy.
 func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (ed EndpointData, ok bool) {
+	return nc.GetNetworkSetFromEgressDomainWithNamespace(domain, "")
+}
+
+// GetNetworkSetFromEgressDomainWithNamespace returns a NetworkSet that contains the supplied
+// egress domain with namespace precedence. It follows a three-tier priority:
+// 1. NetworkSets in the preferredNamespace
+// 2. Global NetworkSets (if no preferred namespace match)
+// 3. NetworkSets in any other namespace (if no global match)
+// Returning the lexicographically lowest matching NetworkSet.
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (ed EndpointData, ok bool) {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 
-	keys := nc.egressDomainToNetworkset[domain]
-	if keys == nil {
-		return
+	handles := nc.domainToNetworksets[domain]
+	if len(handles) == 0 {
+		return nil, false
 	}
-	keys.Iter(func(key model.Key) error {
-		// If we locate the networkset (we should unless our data is corrupt) then update the return values and stop
-		// further iteration
-		if ns := nc.networkSets[key]; ns != nil {
-			ed, ok = ns, true
-			return set.StopIteration
-		}
-		return nil
-	})
 
-	return
+	// Helper to check a specific namespace for the best match among candidates
+	checkNamespace := func(ns string) (EndpointData, bool) {
+		// The handles are already sorted, so use binary search to find the start of the namespace block.
+		start, _ := slices.BinarySearchFunc(handles, ns, func(h unique.Handle[model.NetworkSetKey], targetNs string) int {
+			return strings.Compare(h.Value().Namespace(), targetNs)
+		})
+
+		if start < len(handles) {
+			key := handles[start].Value()
+			if key.Namespace() == ns {
+				// Since handles are sorted, the first match is the lexicographically first one.
+				if nsData := nc.networkSets[key]; nsData != nil {
+					return nsData, true
+				}
+			}
+		}
+		return nil, false
+	}
+
+	// Match against preferred namespace first
+	if ed, ok := checkNamespace(preferredNamespace); ok {
+		return ed, true
+	}
+
+	// Match against global namespace, if no preferred namespace match found
+	if preferredNamespace != "" {
+		if ed, ok := checkNamespace(""); ok {
+			return ed, true
+		}
+	}
+
+	// Fallback and return the lexicographically first NetworkSet. Since the list is sorted and
+	// Global sets were already checked, the first element is the deterministic default.
+	lowestHandle := handles[0]
+	lowestKey := model.NetworkSetKey(lowestHandle.Value())
+	if nsData := nc.networkSets[lowestKey]; nsData != nil {
+		return nsData, true
+	}
+
+	return nil, false
 }
 
 func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
@@ -270,10 +364,9 @@ func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 	lines = append(lines, "-------")
 	for key, ns := range nc.networkSets {
 		cidrStr := []string{}
-		ns.cidrs.Iter(func(cidr ip.CIDR) error {
+		for cidr := range ns.cidrs.All() {
 			cidrStr = append(cidrStr, cidr.String())
-			return nil
-		})
+		}
 		domainStr := []string{}
 		ns.allowedEgressDomains.Iter(func(domain string) error {
 			domainStr = append(domainStr, domain)

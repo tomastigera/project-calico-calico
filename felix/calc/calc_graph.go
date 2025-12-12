@@ -61,7 +61,7 @@ type endpointCallbacks interface {
 	OnEndpointTierUpdate(
 		endpointKey model.EndpointKey,
 		endpoint model.Endpoint,
-		egressData EndpointEgressData,
+		computedData []EndpointComputedData,
 		peerData *EndpointBGPPeer,
 		filteredTiers []TierInfo,
 	)
@@ -167,6 +167,7 @@ type CalcGraph struct {
 	profileDecoder          *ProfileDecoder
 	encapsulationResolver   *EncapsulationResolver
 	policyResolver          *PolicyResolver
+	activeEgressCalculator  *ActiveEgressCalculator
 }
 
 func (g *CalcGraph) OnUpdates(updates []api.Update) {
@@ -178,6 +179,7 @@ func (g *CalcGraph) OnStatusUpdated(update api.SyncStatus) {
 }
 
 func (g *CalcGraph) Flush() {
+	g.activeEgressCalculator.Flush()
 	g.policyResolver.Flush()
 }
 
@@ -414,19 +416,25 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	polResolver.RegisterCallback(callbacks)
 	cg.policyResolver = polResolver
 
-	if conf.EgressIPCheckEnabled() {
-		// Create and hook up the active egress calculator.
-		activeEgressCalc := NewActiveEgressCalculator(conf.EgressIPSupport)
-		activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
-		activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
-		activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
-		activeEgressCalc.OnEndpointEgressDataUpdate = polResolver.OnEndpointEgressDataUpdate
+	if conf.IsIstioAmbientModeEnabled() {
+		_ = NewIstioCalculator(activeRulesCalc, ruleScanner, callbacks, ipsetMemberIndex, polResolver.OnEndpointComputedDataUpdate)
+	}
 
+	if conf.EgressIPCheckEnabled() {
 		// Create and hook up the egress selector pool.
 		egressSelectorPool := NewEgressSelectorPool(conf.EgressIPSupport)
 		egressSelectorPool.RegisterWith(allUpdDispatcher)
-		egressSelectorPool.OnEgressSelectorAdded = activeRulesCalc.OnEgressSelectorAdded
-		egressSelectorPool.OnEgressSelectorRemoved = activeRulesCalc.OnEgressSelectorRemoved
+		egressSelectorPool.OnEgressSelectorActive = activeRulesCalc.AddExtraComputedSelector
+		egressSelectorPool.OnEgressSelectorInactive = activeRulesCalc.RemoveExtraComputedSelector
+
+		// Create and hook up the active egress calculator.
+		activeEgressCalc := NewActiveEgressCalculator(conf.EgressIPSupport, egressSelectorPool)
+		activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+		activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
+		activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
+		activeEgressCalc.OnEndpointComputedDataUpdate = polResolver.OnEndpointComputedDataUpdate
+		activeRulesCalc.RegisterPolicyMatchListener(activeEgressCalc)
+		cg.activeEgressCalculator = activeEgressCalc
 	}
 
 	// The packet capture calculator matches local endpoints against packet captures and profiles to figure

@@ -341,6 +341,10 @@
   - filterDisabled: true
     name: cluster
     type: text
+  - aggregationFunctionTypes:
+    - sum
+    name: count
+    type: number
   - name: dest_name
     type: text
   - name: dest_name_aggr
@@ -365,15 +369,35 @@
     - avg
     name: duration_mean
     type: number
+  - name: gateway_class
+    type: text
+  - name: gateway_listener_full_name
+    type: text
+  - name: gateway_name
+    type: text
+  - name: gateway_namespace
+    type: text
+  - name: gateway_route_name
+    type: text
+  - name: gateway_route_namespace
+    type: text
+  - name: gateway_route_status
+    type: text
+  - name: gateway_status
+    type: text
   - name: host
     type: text
+  - aggregationFunctionTypes:
+    - avg
+    name: latency
+    type: number
   - name: method
     type: text
   - name: response_code
     type: text
   - name: route_name
     type: text
-  - name: gateway_name
+  - name: type
     type: text
   - name: url
     type: text
@@ -387,11 +411,51 @@
   - field: start_time
     nested:
     - field: dest_service_name
+    - field: gateway_route_name
   - field: route_name
   - field: cluster
   - field: response_code
   - field: method
   - field: url
+  - field: gateway_namespace
+    nested:
+    - field: gateway_name
+      nested:
+      - field: gateway_listener_full_name
+        nested:
+        - field: host
+          nested:
+          - field: gateway_class
+            nested:
+            - field: gateway_status
+        - field: type
+          nested:
+          - field: gateway_route_namespace
+            nested:
+            - field: gateway_route_name
+              nested:
+              - field: dest_service_name
+                nested:
+                - field: dest_port_num
+                  nested:
+                  - field: response_code
+  - field: gateway_route_name
+    nested:
+    - field: gateway_route_namespace
+      nested:
+      - field: gateway_namespace
+        nested:
+        - field: gateway_name
+          nested:
+          - field: gateway_listener_full_name
+            nested:
+            - field: dest_service_name
+              nested:
+              - field: dest_port_num
+                nested:
+                - field: type
+                  nested:
+                  - field: gateway_route_status
   name: l7
 - defaultTimeFieldName: '@timestamp'
   fields:

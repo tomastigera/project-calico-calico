@@ -19,6 +19,11 @@ var dnsLogs string
 //go:embed testdata/backend/l7_logs_legacy.txt
 var l7Logs string
 
+// l7LogsGatewayCollector is a sample l7 logs with gateway collector fields for testing purposes
+//
+//go:embed testdata/backend/l7_logs_gateway_collector.txt
+var l7LogsGatewayCollector string
+
 // eeAuditLogs is a sample ee audit logs to be ingested for testing purposes
 //
 //go:embed testdata/backend/ee_audit_logs_legacy.txt

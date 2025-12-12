@@ -10,12 +10,16 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	sel "github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
+
+const EPCompDataKindEgressGateway = EndpointComputedDataKind("EGW")
 
 // ActiveEgressCalculator tracks and reference counts the egress selectors that are used by active
 // local endpoints. It generates an egress IP set ID for each unique egress selector. It calls the
@@ -23,15 +27,23 @@ import (
 // for each selector; and the PolicyResolver to tell it to include the egress IP set ID on the
 // WorkloadEndpoint data that is passed to the dataplane implementation.
 type ActiveEgressCalculator struct {
+	inSync bool
+
 	// "EnabledPerNamespaceOrPerPod" or "EnabledPerNamespace".
 	supportLevel string
+
+	// EgressSelectorPool that has extra selectors references
+	esp *EgressSelectorPool
 
 	// Active egress selectors. These are normalized to a standard format in the syncer before
 	// they get to Felix, so we can safely use them as keys in the map without fear of duplicates.
 	selectors map[string]*esData
 
+	endpointGatewayUsage map[model.WorkloadEndpointKey]int
+	dirtyEndpoints       set.Set[model.WorkloadEndpointKey]
+
 	// Active local endpoints.
-	endpoints map[model.WorkloadEndpointKey]*epData
+	endpoints map[model.WorkloadEndpointKey]*egressCalcEP
 
 	// Known profile egress data.
 	profiles map[string]epEgressConfig
@@ -40,9 +52,9 @@ type ActiveEgressCalculator struct {
 	policies map[string][]egressPolicyRule
 
 	// Callbacks.
-	OnIPSetActive              func(ipSet *IPSetData)
-	OnIPSetInactive            func(ipSet *IPSetData)
-	OnEndpointEgressDataUpdate func(key model.WorkloadEndpointKey, egressData []EpEgressData)
+	OnIPSetActive                func(ipSet *IPSetData)
+	OnIPSetInactive              func(ipSet *IPSetData)
+	OnEndpointComputedDataUpdate func(model.WorkloadEndpointKey, EndpointComputedDataKind, EndpointComputedData)
 }
 
 // Combines the egress selector, maxNextHops and egress policy name.
@@ -68,7 +80,7 @@ type egressPolicyRule struct {
 }
 
 // Information that we track for each active local endpoint.
-type epData struct {
+type egressCalcEP struct {
 	// The egress data, if any, configured directly on this endpoint.
 	localEpEgressData epEgressConfig
 
@@ -81,6 +93,30 @@ type epData struct {
 
 	// Active egress gateway rules for each endpoint
 	activeRules []egressPolicyRule
+
+	rules      []EpEgressData
+	healthPort uint16
+}
+
+type ComputedEgressEP struct {
+	IsEgressGateway bool
+	HealthPort      uint16
+	Rules           []EpEgressData
+}
+
+func (c *ComputedEgressEP) ApplyTo(wep *proto.WorkloadEndpoint) {
+	wep.IsEgressGateway = c.IsEgressGateway
+	wep.EgressGatewayHealthPort = int32(c.HealthPort)
+	if !c.IsEgressGateway {
+		for _, r := range c.Rules {
+			wep.EgressGatewayRules = append(wep.EgressGatewayRules, &proto.EgressGatewayRule{
+				IpSetId:                  r.IpSetID,
+				MaxNextHops:              int32(r.MaxNextHops),
+				Destination:              r.CIDR,
+				PreferLocalEgressGateway: r.PreferLocalGW,
+			})
+		}
+	}
 }
 
 // Information that we track for each active egress selector.
@@ -92,13 +128,16 @@ type esData struct {
 	refCount int
 }
 
-func NewActiveEgressCalculator(supportLevel string) *ActiveEgressCalculator {
+func NewActiveEgressCalculator(supportLevel string, esp *EgressSelectorPool) *ActiveEgressCalculator {
 	aec := &ActiveEgressCalculator{
-		supportLevel: supportLevel,
-		selectors:    map[string]*esData{},
-		endpoints:    map[model.WorkloadEndpointKey]*epData{},
-		profiles:     map[string]epEgressConfig{},
-		policies:     map[string][]egressPolicyRule{},
+		supportLevel:         supportLevel,
+		esp:                  esp,
+		selectors:            map[string]*esData{},
+		endpointGatewayUsage: map[model.WorkloadEndpointKey]int{},
+		dirtyEndpoints:       set.New[model.WorkloadEndpointKey](),
+		endpoints:            map[model.WorkloadEndpointKey]*egressCalcEP{},
+		profiles:             map[string]epEgressConfig{},
+		policies:             map[string][]egressPolicyRule{},
 	}
 	return aec
 }
@@ -106,6 +145,7 @@ func NewActiveEgressCalculator(supportLevel string) *ActiveEgressCalculator {
 func (aec *ActiveEgressCalculator) RegisterWith(localEndpointDispatcher, allUpdDispatcher *dispatcher.Dispatcher) {
 	// It needs local workload endpoints
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, aec.OnUpdate)
+	localEndpointDispatcher.RegisterStatusHandler(aec.OnDatamodelStatus)
 	// ...and profiles, and EgressPolicies.
 	allUpdDispatcher.Register(model.ResourceKey{}, aec.OnUpdate)
 }
@@ -118,14 +158,14 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 			endpoint := update.Value.(*model.WorkloadEndpoint)
 			if aec.supportLevel == "EnabledPerNamespaceOrPerPod" {
 				// Endpoint-level selectors are supported.
-				aec.updateEndpoint(key, endpoint.ProfileIDs, epEgressConfig{
+				aec.updateEndpoint(key, endpoint.ProfileIDs, findHealthPort(endpoint), epEgressConfig{
 					selector:    endpoint.EgressSelector,
 					maxNextHops: endpoint.EgressMaxNextHops,
 					policy:      endpoint.EgressGatewayPolicy,
 				})
 			} else {
 				// Endpoint-level selectors are not supported.
-				aec.updateEndpoint(key, endpoint.ProfileIDs, epEgressConfig{})
+				aec.updateEndpoint(key, endpoint.ProfileIDs, findHealthPort(endpoint), epEgressConfig{})
 			}
 		} else {
 			log.Debugf("Deleting endpoint %v from AEC", key)
@@ -213,7 +253,7 @@ func (aec *ActiveEgressCalculator) egressPolicyIsValid(name string) bool {
 	return exists
 }
 
-func (aec *ActiveEgressCalculator) calculateEgressConfig(epData *epData) epEgressConfig {
+func (aec *ActiveEgressCalculator) calculateEgressConfig(epData *egressCalcEP) epEgressConfig {
 	var egressGatewayPolicyIsUsed bool
 	// Endpoint specifies its own egress policy, so profiles aren't relevant.
 	if epData.localEpEgressData.policy != "" {
@@ -359,7 +399,7 @@ func (aec *ActiveEgressCalculator) calculateEgressRules(config epEgressConfig) [
 	return nil
 }
 
-func (aec *ActiveEgressCalculator) policyRulesToEgressData(sourceRules []egressPolicyRule) []EpEgressData {
+func (aec *ActiveEgressCalculator) policyRulesToComputedData(sourceRules []egressPolicyRule) []EpEgressData {
 	var out []EpEgressData
 	for _, s := range sourceRules {
 		newEgressData := EpEgressData{
@@ -394,16 +434,20 @@ func (aec *ActiveEgressCalculator) updateEndpointEgressData(key model.WorkloadEn
 	aec.incRefEgressRules(new)
 	aec.decRefEgressRules(old)
 
-	aec.OnEndpointEgressDataUpdate(key, aec.policyRulesToEgressData(new))
+	aec.endpoints[key].rules = aec.policyRulesToComputedData(new)
+	aec.dirtyEndpoints.Add(key)
 }
 
-func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, egressData epEgressConfig) {
+func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, healthPort uint16, egressData epEgressConfig) {
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
-		ep = &epData{}
+		ep = &egressCalcEP{}
 		aec.endpoints[key] = ep
 	}
+
+	oldHealthPort := ep.healthPort
+	ep.healthPort = healthPort
 
 	// Note the existing active selector, which may be about to be overwritten.
 	oldEpEgressData := ep.activeEpEgressData
@@ -413,14 +457,22 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	ep.profileIDs = profileIDs
 	ep.activeEpEgressData = aec.calculateEgressConfig(ep)
 
-	if ep.activeEpEgressData == oldEpEgressData {
+	egressDataChanged := ep.activeEpEgressData != oldEpEgressData
+	healthPortChanged := oldHealthPort != healthPort
+
+	if !egressDataChanged && !healthPortChanged {
 		// Nothing has changed for this endpoint.
 		return
 	}
 
-	// Push selector change to IP set member index and policy resolver.
-	aec.updateEndpointEgressData(key,
-		aec.calculateEgressRules(oldEpEgressData), aec.calculateEgressRules(ep.activeEpEgressData))
+	if egressDataChanged {
+		// Push selector change to IP set member index and policy resolver.
+		aec.updateEndpointEgressData(key,
+			aec.calculateEgressRules(oldEpEgressData), aec.calculateEgressRules(ep.activeEpEgressData))
+	} else if healthPortChanged {
+		// Only health port changed, still need to mark endpoint dirty
+		aec.dirtyEndpoints.Add(key)
+	}
 }
 
 func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey) {
@@ -437,7 +489,7 @@ func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey)
 	if aec.egressPolicyIsValid(ep.activeEpEgressData.policy) || ep.activeEpEgressData.selector != "" {
 		// Ensure downstream components clear any egress IP set ID data for this endpoint
 		// key.
-		aec.OnEndpointEgressDataUpdate(key, nil)
+		aec.dirtyEndpoints.Add(key)
 	}
 }
 
@@ -495,4 +547,74 @@ func (aec *ActiveEgressCalculator) decRefSelector(selector string) {
 		aec.OnIPSetInactive(esData.ipSet)
 		delete(aec.selectors, sel.String())
 	}
+}
+
+func (aec *ActiveEgressCalculator) OnPolicyMatch(_ model.PolicyKey, _ model.EndpointKey)        {}
+func (aec *ActiveEgressCalculator) OnPolicyMatchStopped(_ model.PolicyKey, _ model.EndpointKey) {}
+
+func (aec *ActiveEgressCalculator) OnComputedSelectorMatch(cs string, endpointKey model.EndpointKey) {
+	if !aec.esp.HasSelector(cs) {
+		// not egress selector
+		return
+	}
+
+	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
+		log.Debugf("Egress selector match %v -> %v", cs, key)
+		aec.endpointGatewayUsage[key]++
+		aec.dirtyEndpoints.Add(key)
+	}
+}
+
+func (aec *ActiveEgressCalculator) OnComputedSelectorMatchStopped(cs string, endpointKey model.EndpointKey) {
+	if aec.esp.HasSelector(cs) {
+		// not egress selector
+		return
+	}
+
+	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
+		log.Debugf("Delete selector match %v -> %v", cs, key)
+		aec.endpointGatewayUsage[key]--
+		if aec.endpointGatewayUsage[key] == 0 {
+			delete(aec.endpointGatewayUsage, key)
+		}
+		aec.dirtyEndpoints.Add(key)
+	}
+}
+
+func (aec *ActiveEgressCalculator) OnDatamodelStatus(status api.SyncStatus) {
+	if status == api.InSync {
+		aec.inSync = true
+	}
+}
+
+func (aec *ActiveEgressCalculator) Flush() {
+	if aec == nil {
+		return
+	}
+	if !aec.inSync {
+		log.Debugf("Not in sync, skipping flush")
+		return
+	}
+	for endpointID := range aec.dirtyEndpoints.All() {
+		ep := aec.endpoints[endpointID]
+		if ep != nil {
+			isEgressGateway := aec.endpointGatewayUsage[endpointID] > 0
+			// Send nil if there are no egress gateway rules and it's not an egress gateway
+			if len(ep.rules) == 0 && !isEgressGateway {
+				aec.OnEndpointComputedDataUpdate(endpointID, EPCompDataKindEgressGateway, nil)
+			} else {
+				// Always pass a newly created or cloned `computedData` instance to the handler.
+				// This ensures the dataplane never receives a mutable object shared elsewhere.
+				aec.OnEndpointComputedDataUpdate(endpointID, EPCompDataKindEgressGateway, &ComputedEgressEP{
+					IsEgressGateway: isEgressGateway,
+					HealthPort:      ep.healthPort,
+					Rules:           ep.rules,
+				})
+			}
+		} else {
+			// Endpoint was deleted, send nil update
+			aec.OnEndpointComputedDataUpdate(endpointID, EPCompDataKindEgressGateway, nil)
+		}
+	}
+	aec.dirtyEndpoints.Clear()
 }

@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 )
@@ -96,7 +95,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -120,7 +119,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() int { return len(myClusters.List()) }, "3s").Should(Equal(1))
+				Eventually(func() int { return len(myClusters.clusters) }, "3s").Should(Equal(1))
 			})
 
 			By("should be able to update cluster active fingerprint", func() {
@@ -153,7 +152,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 						Namespace: clusterNamespace,
 					},
 				})).ShouldNot(HaveOccurred())
-				Eventually(func() int { return len(myClusters.List()) }).Should(Equal(0))
+				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(0))
 			})
 		})
 	})
@@ -177,14 +176,14 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
 			cancel()
 		})
 		It("should cluster added should be seen after watch restarts", func() {
-			Expect(len(myClusters.List())).To(Equal(0))
+			Expect(len(myClusters.clusters)).To(Equal(0))
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       v3.KindManagedCluster,
@@ -196,9 +195,9 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				},
 			})).NotTo(HaveOccurred())
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
-			Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
+			Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 		})
 	})
 
@@ -224,7 +223,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -236,9 +235,9 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			watch, err := fakeClient.Watch(context.Background(), mcList, &runtimeClient.ListOptions{})
 			watch.Stop()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(myClusters.List())).To(Equal(0))
+			Expect(len(myClusters.clusters)).To(Equal(0))
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
@@ -250,7 +249,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					Namespace: clusterNamespace,
 				},
 			})).NotTo(HaveOccurred())
-			Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
+			Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 		})
 
 		It("should delete a cluster deleted while watch was down", func() {
@@ -270,7 +269,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
+				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 			})
 
 			By("Closing the watch", func() {
@@ -278,7 +277,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			})
 
 			By("Deleting a managed cluster while the watch is down", func() {
-				Expect(len(myClusters.List())).To(Equal(1))
+				Expect(len(myClusters.clusters)).To(Equal(1))
 				Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       v3.KindManagedCluster,
@@ -291,9 +290,9 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				})).ShouldNot(HaveOccurred())
 				ctx, cancel = context.WithCancel(context.Background())
 				go func() {
-					_ = myClusters.watchK8s(ctx, nil)
+					_ = myClusters.watchK8s(ctx)
 				}()
-				Eventually(func() int { return len(myClusters.List()) }).Should(Equal(0))
+				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(0))
 			})
 		})
 	})
@@ -315,7 +314,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			}
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 		})
 		AfterEach(func() {
@@ -382,7 +381,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					Namespace: clusterNamespace,
 				},
 			})).ShouldNot(HaveOccurred())
-			Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
+			Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 		})
 	})
 
@@ -448,7 +447,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			})).NotTo(HaveOccurred())
 
 			go func() {
-				_ = myClusters.watchK8s(ctx, nil)
+				_ = myClusters.watchK8s(ctx)
 			}()
 			Eventually(func() v3.ManagedClusterStatusValue {
 				mc := &v3.ManagedCluster{}
@@ -461,17 +460,14 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				Expect(request.ManagedClusterName).NotTo(Equal(clusterNameNeverConnected))
 			}
 
-			Expect(len(myClusters.List())).To(Equal(2))
+			Expect(len(myClusters.clusters)).To(Equal(2))
 		})
 	})
 })
 
 var _ = describe("Update certificates", func(clusterNamespace string) {
-
-	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	clusters := &clusters{
 		clusters:              make(map[string]*cluster),
-		k8sCLI:                k8sAPI,
 		voltronCfg:            &vcfg.Config{},
 		clientCertificatePool: x509.NewCertPool(),
 		statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},
@@ -511,20 +507,29 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 		_, cluster2Cert, err = test.CreateCertPair(cluster2CertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Add a cluster
-		mc := &jclust.ManagedCluster{
-			ID:          cluster1ID,
-			Certificate: test.CertToPemBytes(cluster1Cert),
+		mc := v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: cluster1ID,
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(cluster1Cert),
+			},
 		}
 
-		_, err = clusters.add(mc)
+		err = clusters.add(mc)
 		Expect(err).NotTo(HaveOccurred())
 		// Add a second cluster
-		mc = &jclust.ManagedCluster{
-			ID:          cluster2ID,
-			Certificate: test.CertToPemBytes(cluster2Cert),
+
+		mc = v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: cluster2ID,
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(cluster2Cert),
+			},
 		}
-		_, err = clusters.add(mc)
+
+		err = clusters.add(mc)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Validate the certificates are in the map
@@ -548,9 +553,14 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Update the certificate for cluster-1
-		mc := &jclust.ManagedCluster{
-			ID:          cluster1ID,
-			Certificate: test.CertToPemBytes(cluster1Cert),
+
+		mc := v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: cluster1ID,
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(cluster1Cert),
+			},
 		}
 
 		err = clusters.update(mc)
