@@ -473,7 +473,7 @@ func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
 
 	// Call into the handlers while we are not holding the lock.  This is important because the handlers will call back
 	// into the DomainInfoStore to obtain domain->IP mapping info.
-	changedNames.Iter(func(name string) error {
+	for name := range changedNames.All() {
 		for ii := range s.handlers {
 			if s.handlers[ii].OnDomainChange(name) {
 				// Track in member data that the dataplane needs a sync. It is not sufficient to just use a local
@@ -483,8 +483,7 @@ func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
 				s.needsDataplaneSync = true
 			}
 		}
-		return nil
-	})
+	}
 
 	if !s.needsDataplaneSync {
 		// Dataplane does not need any updates, so just call through immediately to UpdatesApplied so that we don't wait
@@ -1534,21 +1533,19 @@ func (s *DomainInfoStore) IterWatchedDomainsForIP(clientIP string, ip [16]byte, 
 	clk := s.dnsLookup[clientIP]
 	if clk != nil {
 		if ipData := s.dnsLookup[clientIP].reverse[ip]; ipData != nil {
-			ipData.nameDatas.Iter(func(nd *nameData) error {
+			for nd := range ipData.nameDatas.All() {
 				// Just return the first domain name we find. This should cover the most general case where the user adds
 				// a single entry for a particular domain. Return the first "name to notify" that we find.
-				nd.namesToNotify.Iter(func(itemWatchedName string) error {
+				for itemWatchedName := range nd.namesToNotify.All() {
 					stop = cb(itemWatchedName)
 					if stop {
-						return set.StopIteration
+						break
 					}
-					return nil
-				})
-				if stop {
-					return set.StopIteration
 				}
-				return nil
-			})
+				if stop {
+					break
+				}
+			}
 		}
 	}
 }
@@ -1590,11 +1587,10 @@ func (s *DomainInfoStore) compileChangedNames(clientIP, name string) {
 	clk := s.dnsLookup[clientIP]
 	if clk != nil {
 		if nameData := s.dnsLookup[clientIP].mappings[name]; nameData != nil {
-			nameData.namesToNotify.Iter(func(ancestor string) error {
+			for ancestor := range nameData.namesToNotify.All() {
 				s.changedNames.Add(ancestor)
 				delete(s.resultsCache, ancestor)
-				return nil
-			})
+			}
 		}
 	}
 }

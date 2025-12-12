@@ -262,7 +262,13 @@ func (d *npParentData) IterEndpointIDs(f func(id any) error) {
 	if d.endpointIDs == nil {
 		return
 	}
-	d.endpointIDs.Iter(f)
+	for id := range d.endpointIDs.All() {
+		if err := f(id); err != nil {
+			// Note: with the old Iter API, returning set.StopIteration would stop iteration.
+			// This is now handled by the caller using break statements.
+			break
+		}
+	}
 }
 
 type NamedPortMatchCallback func(ipSetID string, member ipsetmember.IPSetMember)

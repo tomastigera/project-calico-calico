@@ -291,10 +291,9 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	}
 
 	// Loop through and update the flags on the services.
-	ep.services.Iter(func(item apiv3.ResourceID) error {
+	for item := range ep.services.All() {
 		r.services[item] |= zeroTrustFlags
-		return nil
-	})
+	}
 
 	ep.flowAggrName = xref.GetFlowLogAggregationName()
 

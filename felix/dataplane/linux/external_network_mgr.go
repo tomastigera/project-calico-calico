@@ -209,13 +209,12 @@ func (m *externalNetworkManager) CompleteDeferredWork() error {
 // Return nil if no active Rule exists.
 func (m *externalNetworkManager) getActiveRule(rule *routerule.Rule) *routerule.Rule {
 	var active *routerule.Rule
-	m.activeRules.Iter(func(p *routerule.Rule) error {
+	for p := range m.activeRules.All() {
 		if routerule.RulesMatchSrcFWMarkTable(p, rule) {
 			active = p
-			return set.StopIteration
+			break
 		}
-		return nil
-	})
+	}
 
 	return active
 }
@@ -226,7 +225,7 @@ func (m *externalNetworkManager) PopulateActiveRules() {
 	// Walk through our cache, set up each rule.
 	for _, info := range m.externalNetworksInfoByID {
 		for _, srcIP := range info.IPv4 {
-			info.Networks.Iter(func(name string) error {
+			for name := range info.Networks.All() {
 				if network, ok := m.activeNetworks[name]; ok {
 					rule := newRouteRule(m.dpConfig.ExternalNetworkRoutingRulePriority,
 						m.dpConfig.RulesConfig.MarkEgress,
@@ -234,8 +233,7 @@ func (m *externalNetworkManager) PopulateActiveRules() {
 
 					m.activeRules.Add(rule)
 				}
-				return nil
-			})
+			}
 		}
 	}
 }
@@ -261,17 +259,15 @@ func (m *externalNetworkManager) ProgramRouteRules() {
 		}
 	}
 
-	toRemove.Iter(func(rule *routerule.Rule) error {
+	for rule := range toRemove.All() {
 		m.routeRules.RemoveRule(rule)
 		rule.LogCxt().Debugf("Rule removed from routerule dataplane.")
-		return nil
-	})
+	}
 
-	toAdd.Iter(func(rule *routerule.Rule) error {
+	for rule := range toAdd.All() {
 		m.routeRules.SetRule(rule)
 		rule.LogCxt().Debugf("Rule added to routerule dataplane.")
-		return nil
-	})
+	}
 }
 
 func (m *externalNetworkManager) GetRouteRules() []routeRules {

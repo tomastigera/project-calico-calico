@@ -160,10 +160,9 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 // Return all active Rules.
 func (r *RouteRules) GetAllActiveRules() []*Rule {
 	var active []*Rule
-	r.activeRules.Iter(func(item *Rule) error {
+	for item := range r.activeRules.All() {
 		active = append(active, item)
-		return nil
-	})
+	}
 	return active
 }
 

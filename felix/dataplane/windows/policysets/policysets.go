@@ -750,10 +750,9 @@ func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 		}
 	}
 
-	ips.Iter(func(ip string) error {
+	for ip := range ips.All() {
 		addresses = append(addresses, ip)
-		return nil
-	})
+	}
 
 	if len(addresses) == 0 {
 		log.WithField("ipsetIds", setIds).Info("No IP found in IPSets")

@@ -23,7 +23,6 @@ import (
 type Server interface {
 	Accept() (io.ReadWriteCloser, error)
 	AcceptTunnel(opts ...Option) (Tunnel, error)
-	Serve(lis net.Listener) error
 	ServeTLS(lis net.Listener) error
 	GetClientCertificatePool() *x509.CertPool
 	Stop()
@@ -118,8 +117,17 @@ func NewServer(opts ...ServerOption) (Server, error) {
 	return s, nil
 }
 
-// Serve starts serving connections on the given Listener
-func (s *server) Serve(lis net.Listener) error {
+// ServeTLS starts serving TLS connections using the provided listener and the
+// configured certs
+func (s *server) ServeTLS(lis net.Listener) error {
+	config, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return err
+	}
+	config.Certificates = s.serverCerts
+	config.ClientAuth = tls.RequireAndVerifyClientCert
+	config.ClientCAs = s.clientCertPool
+
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -127,16 +135,23 @@ func (s *server) Serve(lis net.Listener) error {
 		_ = lis.Close()
 	}()
 
+	tlsLis := tls.NewListener(lis, config)
 	for {
-		c, err := lis.Accept()
+		conn, err := tlsLis.Accept()
 		if err != nil {
 			s.cancel()
 			return errors.WithMessage(err, "lis.Accept")
 		}
 
-		log.Debugf("tunnel.Server: new connection from %s", c.RemoteAddr().String())
+		tlsConn, ok := conn.(*tls.Conn)
+		if !ok {
+			log.Errorf("tlsConn is not a tls.Conn")
+			continue
+		}
 
-		ss := &ServerStream{Conn: c}
+		log.Debugf("tunnel.Server: new connection from %s", tlsConn.RemoteAddr().String())
+
+		ss := &ServerStream{Conn: tlsConn}
 		ss.ctx, ss.cancel = context.WithCancel(s.ctx)
 
 		s.wg.Add(1)
@@ -153,46 +168,30 @@ func (s *server) Serve(lis net.Listener) error {
 	}
 }
 
-// ServeTLS starts serving TLS connections using the provided listener and the
-// configured certs
-func (s *server) ServeTLS(lis net.Listener) error {
-	config, err := calicotls.NewTLSConfig()
-	if err != nil {
-		return err
-	}
-	config.Certificates = s.serverCerts
-	config.ClientAuth = tls.RequireAndVerifyClientCert
-	config.ClientCAs = s.clientCertPool
-
-	return s.Serve(tls.NewListener(lis, config))
-}
-
 // Accept returns the next available stream or returns an error
 func (s *server) Accept() (io.ReadWriteCloser, error) {
 	select {
 	case ss := <-s.streamC:
 		ctyp := ""
-		if tlsc, ok := ss.Conn.(*tls.Conn); ok {
-			if !tlsc.ConnectionState().HandshakeComplete {
-				// Set timeout not to hang for ever
-				_ = tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
-				err := tlsc.Handshake()
-				if err != nil {
-					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
-						tlsc.RemoteAddr().String(), err)
-					_ = ss.Close()
-					return nil, errors.New(msg)
-				}
-				// reset the deadline to no timeout
-				_ = tlsc.SetReadDeadline(time.Time{})
-				log.Debugf("TLS HandshakeComplete %t certs %d",
-					tlsc.ConnectionState().HandshakeComplete,
-					len(tlsc.ConnectionState().PeerCertificates))
+		if !ss.ConnectionState().HandshakeComplete {
+			// Set timeout not to hang for ever
+			_ = ss.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
+			err := ss.Handshake()
+			if err != nil {
+				msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
+					ss.RemoteAddr().String(), err)
+				_ = ss.Close()
+				return nil, errors.New(msg)
 			}
-			ctyp = "tls "
+			// reset the deadline to no timeout
+			_ = ss.SetReadDeadline(time.Time{})
+			log.Debugf("TLS HandshakeComplete %t certs %d",
+				ss.ConnectionState().HandshakeComplete,
+				len(ss.ConnectionState().PeerCertificates))
 		}
+		ctyp = "tls "
 
-		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.Conn.RemoteAddr().String())
+		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.RemoteAddr().String())
 		return ss, nil
 	case <-s.ctx.Done():
 		return nil, errors.New("server is exiting")
@@ -238,7 +237,7 @@ func (b *atomicBool) get() bool {
 
 // ServerStream represents the server side of the tcp stream
 type ServerStream struct {
-	net.Conn
+	*tls.Conn
 
 	closed        atomicBool
 	closeConnOnce sync.Once
@@ -248,11 +247,10 @@ type ServerStream struct {
 
 // Identity returns net.Addr of the remote end
 func (ss *ServerStream) Identity() any {
-	if tlsc, ok := ss.Conn.(*tls.Conn); ok {
-		if len(tlsc.ConnectionState().PeerCertificates) > 0 {
-			return tlsc.ConnectionState().PeerCertificates[0]
-		}
+	if len(ss.Conn.ConnectionState().PeerCertificates) > 0 {
+		return ss.Conn.ConnectionState().PeerCertificates[0]
 	}
+
 	return ss.RemoteAddr()
 }
 

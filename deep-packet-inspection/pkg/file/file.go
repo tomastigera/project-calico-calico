@@ -57,13 +57,13 @@ func (f fileMaintainer) run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			f.filePaths.Iter(func(path string) error {
+			for path := range f.filePaths.All() {
 				// loop through all files in this path and delete files if there are more than 5
 				// Delete all older files if there are more than maxAllowedAlertFiles files
 				files, err := os.ReadDir(path)
 				if err != nil {
 					log.WithError(err).Errorf("Failed to read alert files from %s", path)
-					return nil
+					continue
 				}
 
 				sort.Sort(fileutils.SortFile(files))
@@ -78,8 +78,7 @@ func (f fileMaintainer) run(ctx context.Context) {
 						}
 					}
 				}
-				return nil
-			})
+			}
 		case <-ctx.Done():
 			return
 		}

@@ -462,7 +462,7 @@ func (p *PolicyTable) tryUpdates() (err error) {
 		log.WithField("numUpdates", p.pendingDeletions.Len()).Info("Applying IPsec policy deletions")
 	}
 	var lastErr error
-	p.pendingDeletions.Iter(func(sel PolicySelector) error {
+	for sel := range p.pendingDeletions.All() {
 		xPol := netlink.XfrmPolicy{}
 		sel.Populate(&xPol)
 		p.selectorToRule[sel].Populate(&xPol, p.ourReqID)
@@ -474,11 +474,11 @@ func (p *PolicyTable) tryUpdates() (err error) {
 			log.WithError(err).WithField("policy", xPol).Error("Failed to remove IPsec xfrm policy")
 			lastErr = err
 			p.closeNL()
-			return nil
+			continue
 		}
 		delete(p.selectorToRule, sel)
-		return set.RemoveItem
-	})
+		p.pendingDeletions.Discard(sel)
+	}
 
 	if len(p.pendingRuleUpdates) > 0 {
 		log.WithField("numUpdates", len(p.pendingRuleUpdates)).Info("Applying IPsec policy updates")
@@ -513,10 +513,9 @@ func (p *PolicyTable) DumpStateToLog() {
 	for sel, pol := range p.pendingRuleUpdates {
 		log.Infof("Pending policy update: %v %v", sel, pol)
 	}
-	p.pendingDeletions.Iter(func(sel PolicySelector) error {
+	for sel := range p.pendingDeletions.All() {
 		log.Infof("Pending deletion: %v", sel)
-		return nil
-	})
+	}
 	pols, err := p.nl().XfrmPolicyList(netlink.FAMILY_V4)
 	if err != nil {
 		log.WithError(err).Error("Failed to read XFRM policies from kernel")

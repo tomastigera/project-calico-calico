@@ -290,23 +290,21 @@ func combineInSelectors(op v1.GraphSelectorOperator, sel1, sel2 *GraphSelectorCo
 	switch op {
 	case v1.OpAnd:
 		// Only include values in both sel1 and sel2
-		vals1.Iter(func(item string) error {
+		for item := range vals1.All() {
 			if vals2.Contains(item) {
 				combined = append(combined, item)
 			}
-			return nil
-		})
+		}
 	case v1.OpOr:
 		// Take a copy of the selector 2 values.
 		combined = append([]string(nil), sel2.value.([]string)...)
 
 		// Add any value from sel1 that was not in selector 2.
-		vals1.Iter(func(item string) error {
+		for item := range vals1.All() {
 			if !vals2.Contains(item) {
 				combined = append(combined, item)
 			}
-			return nil
-		})
+		}
 	}
 	return NewGraphSelectorConstructor(v1.OpIn, sel1.key, combined)
 }

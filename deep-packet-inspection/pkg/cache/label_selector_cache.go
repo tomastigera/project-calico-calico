@@ -102,11 +102,10 @@ func (cache *selectorAndLabelCache) DeleteSelector(dpiKey interface{}) {
 	log.Debugf("Deleting selector for %v", dpiKey)
 	matchSet := cache.wepKeysByDPIKey[dpiKey]
 	if matchSet != nil {
-		matchSet.Iter(func(wepKey interface{}) error {
+		for wepKey := range matchSet.All() {
 			// This modifies the set we're iterating over, but that's safe in Go.
 			cache.deleteMatch(dpiKey, wepKey)
-			return nil
-		})
+		}
 	}
 	delete(cache.dpiKeyToSelector, dpiKey)
 }
@@ -115,23 +114,22 @@ func (cache *selectorAndLabelCache) DeleteSelector(dpiKey interface{}) {
 // if wepKey doesn't exist in wepKeyToLabel, get the selectors that were previously mapped to wepKey and delete them,
 // else re-evaluate labels.
 func (cache *selectorAndLabelCache) flushUpdates() {
-	cache.dirtyWEPKeys.Iter(func(wepKey interface{}) error {
+	for wepKey := range cache.dirtyWEPKeys.All() {
 		if _, ok := cache.wepKeyToLabel[wepKey]; !ok {
 			// Item deleted.
 			matchSet := cache.dpiKeysByWEPKey[wepKey]
 			if matchSet != nil {
-				matchSet.Iter(func(dpiKey interface{}) error {
+				for dpiKey := range matchSet.All() {
 					// This modifies the set we're iterating over, but that's safe in Go.
 					cache.deleteMatch(dpiKey, wepKey)
-					return nil
-				})
+				}
 			}
 		} else {
 			// Item updated/created, re-evaluate labels.
 			cache.scanAllSelectors(wepKey)
 		}
-		return set.RemoveItem
-	})
+		cache.dirtyWEPKeys.Discard(wepKey)
+	}
 }
 
 // scanAllLabels for each cached label

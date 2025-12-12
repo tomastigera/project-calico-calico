@@ -422,10 +422,9 @@ func (ere *recommendationEngine) rulesFromTraffic(
 
 		// Try to also collect all ports together for same selectors.
 		if dedupedRule, ok := dedupedRules[key]; ok {
-			dedupedRule.ports.Iter(func(item numorstring.Port) error {
+			for item := range dedupedRule.ports.All() {
 				erule.ports.Add(item)
-				return nil
-			})
+			}
 		}
 		dedupedRules[key] = erule
 	}
@@ -434,10 +433,9 @@ func (ere *recommendationEngine) rulesFromTraffic(
 
 	for key, dprule := range dedupedRules {
 		ports := []numorstring.Port{}
-		dprule.ports.Iter(func(item numorstring.Port) error {
+		for item := range dprule.ports.All() {
 			ports = append(ports, item)
-			return nil
-		})
+		}
 		protocol := key.protocol
 
 		rule := newRule(key.endpointSelector, key.namespaceSelector, policyType, ports, protocol)

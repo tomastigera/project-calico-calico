@@ -226,7 +226,7 @@ func (e *recommendationEngine) Run(stopChan chan struct{}) {
 			}
 
 			e.clog.Debugf("Iterating through namespaces, using selector: %s", e.scope.selector.String())
-			e.filteredNamespaces.Iter(func(namespace string) error {
+			for namespace := range e.filteredNamespaces.All() {
 				rec := e.getRecommendation(namespace)
 				if rec != nil && e.update(rec) {
 					// The recommendation contains new rules, or status metadata has been updated so add to
@@ -234,9 +234,7 @@ func (e *recommendationEngine) Run(stopChan chan struct{}) {
 					e.cache.Set(namespace, *rec)
 					e.clog.WithField("namespace", namespace).Debug("Updated cache item")
 				}
-
-				return nil
-			})
+			}
 		case <-stopChan:
 			e.clog.Info("Received stop signal, stopping engine")
 			return
@@ -305,7 +303,7 @@ func (e *recommendationEngine) filterNamespaces(selector string) {
 	parsedSelector, _ := libcselector.Parse(selector)
 	e.filteredNamespaces = set.New[string]() // Reset the filtered namespaces set.
 
-	e.namespaces.Iter(func(ns string) error {
+	for ns := range e.namespaces.All() {
 		_, exists := e.cache.Get(ns)
 		if parsedSelector.String() == "" || parsedSelector.Evaluate(map[string]string{v3.LabelName: ns}) {
 			e.filteredNamespaces.Add(ns)
@@ -315,8 +313,7 @@ func (e *recommendationEngine) filterNamespaces(selector string) {
 			e.cache.Delete(ns)
 			e.clog.WithField("namespace", ns).Info("Deleted namespace from cache")
 		}
-		return nil
-	})
+	}
 }
 
 // getRecommendation returns the recommendation for the namespace. If the recommendation does not

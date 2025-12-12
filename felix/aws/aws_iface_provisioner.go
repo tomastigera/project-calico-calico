@@ -1022,11 +1022,10 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set[ip.Ad
 
 	// Batch up the IPs by ENI; the AWS API lets us release multiple IPs from the same ENI in one shot.
 	ipsToReleaseByENIID := map[string][]string{}
-	awsIPsToRelease.Iter(func(addr ip.Addr) error {
+	for addr := range awsIPsToRelease.All() {
 		eniID := awsState.eniIDBySecondaryIP[addr]
 		ipsToReleaseByENIID[eniID] = append(ipsToReleaseByENIID[eniID], addr.String())
-		return nil
-	})
+	}
 
 	var finalErr error
 	for eniID, ipsToRelease := range ipsToReleaseByENIID {
@@ -1058,7 +1057,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string]
 	m.resetRecheckInterval("release-eni")
 
 	// Detach any ENIs that we want to delete.  They must be detached first.
-	enisToRelease.Iter(func(eniID string) error {
+	for eniID := range enisToRelease.All() {
 		ctx, cancel := m.newContext()
 		defer cancel()
 		attachID := awsState.attachmentIDByENIID[eniID]
@@ -1075,8 +1074,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string]
 		}
 		awsState.OnCalicoENIDetached(eniID)
 		m.reportMainLoopLive()
-		return nil
-	})
+	}
 
 	// Initially, we just had a retry loop here.  However, it almost always takes at least 10s before we can delete
 	// an ENI so (only) retrying in a loop produces spammy warnings and consumes precious AWS API quota.  Better to
@@ -1089,7 +1087,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string]
 
 	var finalErr error
 	for i := 0; i < 5; i++ {
-		enisToRelease.Iter(func(eniID string) error {
+		for eniID := range enisToRelease.All() {
 			// Worth trying this even if detach fails.  Possible the failure was caused by it already
 			// being detached.
 			ctx, cancel := m.newContext()
@@ -1103,10 +1101,9 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string]
 				finalErr = err // Trigger retry/backoff unless we succeed on a retry.
 			} else {
 				logrus.WithField("eniID", eniID).Info("Successfully deleted ENI.")
-				return set.RemoveItem
+				enisToRelease.Discard(eniID)
 			}
-			return nil
-		})
+		}
 		if enisToRelease.Len() == 0 {
 			logrus.Info("Successfully deleted all unwanted ENIs.")
 			finalErr = nil
@@ -1148,10 +1145,9 @@ func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsState *awsState, loca
 	// If the IP pools only name one then that is preferred.  If there's more than one in the IP pools but we've
 	// already got a local ENI, that one is preferred.  If there's a tie, pick the one with the most routes.
 	subnetScores := map[string]int{}
-	localIPPoolSubnetIDs.Iter(func(subnetID string) error {
+	for subnetID := range localIPPoolSubnetIDs.All() {
 		subnetScores[subnetID] += 1000000
-		return nil
-	})
+	}
 	for subnet, eniIDs := range awsState.calicoENIIDsBySubnet {
 		subnetScores[subnet] += 10000 * len(eniIDs)
 	}
@@ -1334,9 +1330,9 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 // and then frees those IPs.
 func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) error {
 	var finalErr error
-	m.ourHostIPs.Iter(func(addr ip.Addr) error {
+	for addr := range m.ourHostIPs.All() {
 		if _, ok := awsState.eniIDByPrimaryIP[addr]; ok {
-			return nil
+			continue
 		}
 		// IP is not assigned to any of our local ENIs and, if we got this far, we've already attached
 		// any orphaned ENIs or deleted them.  Clean up the IP.
@@ -1349,10 +1345,10 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) 
 			logrus.WithError(err).WithField("ip", addr).Error(
 				"Failed to free host IP that we no longer need.")
 			finalErr = err
-			return nil
+			continue
 		}
-		return set.RemoveItem // Freed the IP so update the cache.
-	})
+		m.ourHostIPs.Discard(addr) // Freed the IP so update the cache.
+	}
 	return finalErr
 }
 

@@ -62,22 +62,6 @@ clean:
 	rm -rf _release_archive
 	rm -f manifests/ocp.tgz
 
-ci-preflight-checks:
-	$(MAKE) check-go-mod
-	$(MAKE) verify-go-mods
-	$(MAKE) check-dockerfiles
-	$(MAKE) check-gotchas
-	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
-	$(MAKE) check-release-cut-promotions
-	$(MAKE) generate SKIP_FIX_CHANGED=true
-	$(MAKE) fix-all
-	$(MAKE) -C networking-calico fmtpy
-	$(MAKE) check-ocp-no-crds
-	$(MAKE) yaml-lint
-	$(MAKE) check-dirty
-	$(MAKE) go-vet
-	$(MAKE) -C networking-calico flake8
-
 check-gotchas:
 	@if grep github.com/projectcalico/api go.mod; then \
 	  echo; \
@@ -348,11 +332,20 @@ ADMINPOLICY_UNSUPPORTED_FEATURES ?= ""
 e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
+	$(MAKE) e2e-run-test
+	$(MAKE) e2e-run-anp-test
 
 e2e-test-adminpolicy:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
+	$(MAKE) e2e-run-anp-test
+
+## Run the general e2e tests against a pre-existing kind cluster.
+e2e-run-test:
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
+
+## Run the AdminNetworkPolicy specific e2e tests against a pre-existing kind cluster.
+e2e-run-anp-test:
 	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test \
 	  -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) \
 	  -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)

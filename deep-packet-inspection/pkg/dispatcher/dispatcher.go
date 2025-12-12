@@ -244,15 +244,13 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 			// stop and remove all old WEP interfaces
 			prcs, ok := h.wepKeyToDPIs[i.wepKey]
 			if ok {
-				prcs.Iter(func(dpi DPI) error {
+				for dpi := range prcs.All() {
 					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
-					return nil
-				})
+				}
 				// add the updated WEP interfaces
-				prcs.Iter(func(dpi DPI) error {
+				for dpi := range prcs.All() {
 					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
-					return nil
-				})
+				}
 			}
 		case ifaceDeleted:
 			log.Debugf("Deleting the cached WEP interface %s for WEP %v", i.ifaceName, i.wepKey)

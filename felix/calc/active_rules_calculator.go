@@ -329,12 +329,11 @@ func (arc *ActiveRulesCalculator) updateStats() {
 
 	// Get the set of all endpoints matching ALP Policy
 	endpoints := set.New[model.WorkloadEndpointKey]()
-	arc.allALPPolicies.Iter(func(polID model.PolicyKey) error {
+	for polID := range arc.allALPPolicies.All() {
 		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
 			endpoints.Add(epKey.(model.WorkloadEndpointKey))
 		})
-		return nil
-	})
+	}
 
 	arc.OnPolicyCountsChanged(len(arc.allTiers), arc.allPolicies.Len(), arc.allProfileRules.Len(), arc.allALPPolicies.Len(), endpoints.Len())
 }

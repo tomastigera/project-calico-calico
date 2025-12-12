@@ -877,15 +877,14 @@ func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string,
 	// Iterate over all the selectors and join the sets
 	for _, selector := range selectors {
 		matching := c.policies.GetPolicyKeySetByRuleSelector(selector)
-		matching.Iter(func(k model.Key) error {
+		for k := range matching.All() {
 			// Only filter policies in if they are in the supplied set (if supplied).
 			if filterIn != nil && !filterIn.Contains(k) {
-				return nil
+				continue
 			}
 
 			results.Add(k)
-			return nil
-		})
+		}
 	}
 	log.WithField("NumResults", results.Len()).Info("Returning policies from label query against rule selectors")
 	return results
