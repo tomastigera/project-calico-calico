@@ -62,22 +62,6 @@ clean:
 	rm -rf _release_archive
 	rm -f manifests/ocp.tgz
 
-ci-preflight-checks:
-	$(MAKE) check-go-mod
-	$(MAKE) verify-go-mods
-	$(MAKE) check-dockerfiles
-	$(MAKE) check-gotchas
-	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
-	$(MAKE) check-release-cut-promotions
-	$(MAKE) generate SKIP_FIX_CHANGED=true
-	$(MAKE) fix-all
-	$(MAKE) -C networking-calico fmtpy
-	$(MAKE) check-ocp-no-crds
-	$(MAKE) yaml-lint
-	$(MAKE) check-dirty
-	$(MAKE) go-vet
-	$(MAKE) -C networking-calico flake8
-
 check-gotchas:
 	@if grep github.com/projectcalico/api go.mod; then \
 	  echo; \
