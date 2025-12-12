@@ -103,14 +103,12 @@ func (sgs *serviceGroups) String() string {
 }
 
 func (sgs *serviceGroups) Iter(cb func(*ServiceGroup) error) error {
-	var err error
-	sgs.serviceGroups.Iter(func(item *ServiceGroup) error {
-		if err = cb(item); err != nil {
-			return set.StopIteration
+	for item := range sgs.serviceGroups.All() {
+		if err := cb(item); err != nil {
+			return err
 		}
-		return nil
-	})
-	return err
+	}
+	return nil
 }
 
 func (sgs *serviceGroups) GetByService(svc v1.NamespacedName) *ServiceGroup {
@@ -146,7 +144,7 @@ func (sd *serviceGroups) FinishMappings() {
 	sd.finished = true
 
 	// Calculate the service groups name and namespace.
-	sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
+	for sg := range sd.serviceGroups.All() {
 		names := &nameCalculator{names: make(map[string]bool)}
 		namespaces := &nameCalculator{names: make(map[string]bool)}
 		for svcKey := range sg.ServicePorts {
@@ -155,14 +153,12 @@ func (sd *serviceGroups) FinishMappings() {
 		}
 		sg.Name = names.combined()
 		sg.Namespace = namespaces.uniq()
-
-		return nil
-	})
+	}
 
 	// Trace out the service groups if the log level is debug.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug("=== Service groups ===")
-		sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
+		for sg := range sd.serviceGroups.All() {
 			log.Debugf("%s ->", sg)
 			for sk, svc := range sg.ServicePorts {
 				log.Debugf("  %s ->", sk)
@@ -170,8 +166,7 @@ func (sd *serviceGroups) FinishMappings() {
 					log.Debugf("    o %s", ep)
 				}
 			}
-			return nil
-		})
+		}
 		log.Debug("=== Endpoint key to service group ===")
 		for ep, sg := range sd.serviceGroupsByEndpointKey {
 			log.Debugf("%s -> %s", ep, sg)
@@ -190,7 +185,7 @@ func (sd *serviceGroups) FinishMappings() {
 
 	// Update the ID for each group, and simplify the groups to use the aggregated name instead of the full name if the
 	// port is common across replicas.
-	sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
+	for sg := range sd.serviceGroups.All() {
 		// Sort the services for easier testing.
 		sort.Sort(v1.SortableNamespacedNames(sg.Services))
 
@@ -234,9 +229,7 @@ func (sd *serviceGroups) FinishMappings() {
 				sg.ServicePorts[sp][aep] = struct{}{}
 			}
 		}
-
-		return nil
-	})
+	}
 }
 
 // AddMapping adds a service port <-> endpoint mapping to the cache.  When all mappings have been added, the caller

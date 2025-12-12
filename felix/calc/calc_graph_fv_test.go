@@ -963,20 +963,18 @@ func stringifyRoutes(routes set.Set[types.RouteUpdate]) []string {
 
 func stringifyPacketCapture(pc set.Set[types.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
-	pc.Iter(func(update types.PacketCaptureUpdate) error {
+	for update := range pc.All() {
 		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
-		return nil
-	})
+	}
 	sort.Strings(out)
 	return out
 }
 
 func toSlice(s set.Set[string]) []string {
 	out := make([]string, 0, s.Len())
-	s.Iter(func(pc string) error {
+	for pc := range s.All() {
 		out = append(out, pc)
-		return nil
-	})
+	}
 	sort.Strings(out)
 	return out
 }

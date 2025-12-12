@@ -531,14 +531,14 @@ func (c *endpointHandler) recalculate(podId apiv3.ResourceID, epEntry CacheEntry
 
 	// Iterate through the applied network Policies and recalculate the flags that the network policy applies to the
 	// x.
-	x.AppliedPolicies.Iter(func(polId apiv3.ResourceID) error {
+	for polId := range x.AppliedPolicies.All() {
 		policy, ok := c.GetFromXrefCache(polId).(*CacheEntryNetworkPolicy)
 
 		if !ok {
 			// The applied Policies should always be in the cache since deletion of the underlying policy should remove
 			// the reference from the set.
 			log.Errorf("%s applied policy is missing from cache: %s", podId, polId)
-			return nil
+			continue
 		}
 
 		// The x flags are the combined set of flags from the applied Policies filtered by the allowed set of
@@ -547,11 +547,9 @@ func (c *endpointHandler) recalculate(podId apiv3.ResourceID, epEntry CacheEntry
 
 		// If all flags that the policy can set in the x are now set then exit without checking the other Policies.
 		if x.Flags&CacheEntryEndpointAndNetworkPolicy == CacheEntryEndpointAndNetworkPolicy {
-			return set.StopIteration
+			break
 		}
-
-		return nil
-	})
+	}
 
 	// Determine if envoy is enabled and set the flag appropriately.
 	if x.getEnvoyEnabled(c) {
@@ -569,14 +567,12 @@ func (c *endpointHandler) recalculate(podId apiv3.ResourceID, epEntry CacheEntry
 
 func (c *endpointHandler) queueEndpointsForRecalculation(update syncer.Update) {
 	x := update.Resource.(*CacheEntryNetworkPolicy)
-	x.SelectedPods.Iter(func(podId apiv3.ResourceID) error {
+	for podId := range x.SelectedPods.All() {
 		c.QueueUpdate(podId, nil, update.Type)
-		return nil
-	})
-	x.SelectedHostEndpoints.Iter(func(hepId apiv3.ResourceID) error {
+	}
+	for hepId := range x.SelectedHostEndpoints.All() {
 		c.QueueUpdate(hepId, nil, update.Type)
-		return nil
-	})
+	}
 }
 
 // policyMatchStarted is called synchronously from the policy or pod resource update methods when a policy<->pod match

@@ -134,10 +134,9 @@ func (m *networkPolicyRuleSelectorManager) DeletePolicy(policy apiv3.ResourceID)
 		return
 	}
 
-	currentSelectors.Iter(func(selector apiv3.ResourceID) error {
+	for selector := range currentSelectors.All() {
 		m.matchStopped(policy, selector)
-		return nil
-	})
+	}
 
 	delete(m.selectorsByPolicy, policy)
 }

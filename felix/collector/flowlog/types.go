@@ -1028,10 +1028,10 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			pid = FieldNotIncluded
 		case 1:
 			// Get the first and only PID.
-			stats.processIDs.Iter(func(p string) error {
+			for p := range stats.processIDs.All() {
 				pid = p
-				return set.StopIteration
-			})
+				break
+			}
 		default:
 			pid = fieldAggregated
 		}
@@ -1050,30 +1050,28 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				// and other flow has args read from /proc/pid/cmdline. In this
 				// we just show a single arg which is longest, with numProcessArgs
 				// set to 1.
-				stats.processArgs.Iter(func(item string) error {
+				for item := range stats.processArgs.All() {
 					if len(item) > len(tempStr) {
 						tempStr = item
 					}
-					return nil
-				})
+				}
 				numProcessArgs = 1
 				return []string{tempStr}
 			}
 			if numProcessArgs == 1 || numAllowedArgs == 1 {
-				stats.processArgs.Iter(func(item string) error {
+				for item := range stats.processArgs.All() {
 					aList = append(aList, item)
-					return set.StopIteration
-				})
+					break
+				}
 			} else {
 				argCount := 0
-				stats.processArgs.Iter(func(item string) error {
+				for item := range stats.processArgs.All() {
 					aList = append(aList, item)
 					argCount = argCount + 1
 					if argCount == numAllowedArgs {
-						return set.StopIteration
+						break
 					}
-					return nil
-				})
+				}
 			}
 			return aList
 		}

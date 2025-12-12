@@ -138,10 +138,9 @@ func (s State) Copy() State {
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 	if s.ExpectedCaptureUpdates != nil {
-		s.ExpectedCaptureUpdates.Iter(func(item types.PacketCaptureUpdate) error {
+		for item := range s.ExpectedCaptureUpdates.All() {
 			cpy.ExpectedCaptureUpdates.Add(item)
-			return nil
-		})
+		}
 	}
 	cpy.ExpectedEncapsulation = googleproto.Clone(s.ExpectedEncapsulation).(*proto.Encapsulation)
 

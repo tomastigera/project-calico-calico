@@ -199,19 +199,18 @@ func (c *L7ServiceIPSetsCalculator) resolveRegularEndpoints() (added []ipPortPro
 	}
 	esaiIPPortProtos := c.esai.IPPortProtosByService(allSvcKeys...)
 
-	c.activeEndpoints.Iter(func(ipPortProto ipPortProtoKey) error {
+	for ipPortProto := range c.activeEndpoints.All() {
 		// if member key exists in up-to-date list, else add to removed
 		_, ok := c.sai.ipPortProtoToServices[ipPortProto]
 		if ok {
-			return nil
+			continue
 		}
 
 		if esaiIPPortProtos.Contains(ipPortProto) {
-			return nil
+			continue
 		}
 		removed = append(removed, ipPortProto)
-		return nil
-	})
+	}
 
 	// add new items to tproxy from updated list of annotated endpoints
 	for ipPortProto := range c.sai.ipPortProtoToServices {
@@ -226,18 +225,17 @@ func (c *L7ServiceIPSetsCalculator) resolveRegularEndpoints() (added []ipPortPro
 		added = append(added, ipPortProto)
 	}
 
-	esaiIPPortProtos.Iter(func(ipPortProto ipPortProtoKey) error {
+	for ipPortProto := range esaiIPPortProtos.All() {
 		// if it already exists in active endpoints skip it
 		if c.activeEndpoints.Contains(ipPortProto) {
-			return nil
+			continue
 		}
 		// if protocol is not TCP skip it for now
 		if !isTCP(ipPortProto) {
-			return nil
+			continue
 		}
 		added = append(added, ipPortProto)
-		return nil
-	})
+	}
 
 	return added, removed
 }
@@ -278,14 +276,13 @@ func (c *L7ServiceIPSetsCalculator) resolveNodePorts() ([]portProtoKey, []portPr
 
 	var added, removed []portProtoKey
 
-	c.activeNodePorts.Iter(func(portProto portProtoKey) error {
+	for portProto := range c.activeNodePorts.All() {
 		// if member key exists in up-to-date list, update the value to latest in active node ports and continue to next
 		if _, ok := c.sai.nodePortServices[portProto]; ok {
-			return nil
+			continue
 		}
 		removed = append(removed, portProto)
-		return nil
-	})
+	}
 
 	for portProto := range c.sai.nodePortServices {
 		// if it already exists in active node ports skip it

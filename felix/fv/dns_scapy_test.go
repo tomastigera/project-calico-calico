@@ -71,29 +71,26 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
-				mset.Iter(func(m mapping) error {
+				for m := range mset.All() {
 					if mappingMatchesLine(&m, line) {
-						return set.RemoveItem
+						mset.Discard(m)
 					}
-					return nil
-				})
-				notset.Iter(func(m mapping) error {
+				}
+				for m := range notset.All() {
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
 						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
 					}
-					return nil
-				})
+				}
 			}
 			if mset.Len() == 0 {
 				log.Info("All expected mappings found")
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
-				mset.Iter(func(m mapping) error {
+				for m := range mset.All() {
 					log.Infof("Missed mapping: %v", m)
 					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
-					return nil
-				})
+				}
 			}
 			if len(problems) > 0 {
 				return errors.New(strings.Join(problems, "\n"))

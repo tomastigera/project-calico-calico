@@ -914,10 +914,9 @@ func (c *networkPolicyHandler) queuePoliciesForRecalculation(update syncer.Updat
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
-	x.Policies.Iter(func(id v3.ResourceID) error {
+	for id := range x.Policies.All() {
 		c.QueueUpdate(id, nil, update.Type)
-		return nil
-	})
+	}
 }
 
 func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId v3.ResourceID) {

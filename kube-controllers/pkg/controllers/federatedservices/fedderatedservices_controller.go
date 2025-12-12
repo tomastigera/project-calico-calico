@@ -463,11 +463,10 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 			// service.
 			if changed {
 				clog.Debug("Endpoints entry updated")
-				entry.federatedServices.Iter(func(item serviceID) error {
+				for item := range entry.federatedServices.All() {
 					clog.Debugf("Marking service as dirty: %#v", item)
 					c.dirtyServices.Add(item)
-					return nil
-				})
+				}
 			}
 
 		case model.KindKubernetesService:
@@ -548,7 +547,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 // endpoint list has changed, or that the associated service has been deleted.
 func (c *federatedServicesController) handleDirtyServices() {
 	log.Debug("Processing modified services")
-	c.dirtyServices.Iter(func(fsid serviceID) error {
+	for fsid := range c.dirtyServices.All() {
 		log.Debugf("Processing dirty service: %#v", fsid)
 
 		k := fsid.namespace + "/" + fsid.name
@@ -565,7 +564,7 @@ func (c *federatedServicesController) handleDirtyServices() {
 				c.cache.Delete(k)
 			}
 
-			return nil
+			continue
 		}
 
 		// The service is federated, if the required endpoints differs from the reconciler cache then update
@@ -576,9 +575,7 @@ func (c *federatedServicesController) handleDirtyServices() {
 			clog.Debugf("Service Endpoints added or modified, setting in cache: %#v", endpoints)
 			c.cache.Set(k, endpoints)
 		}
-
-		return nil
-	})
+	}
 
 	log.Debug("Finished processing modified services")
 	c.dirtyServices.Clear()
@@ -603,10 +600,10 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 	// ports.  Order the services to avoid overly large deltas to the endpoints data, and to ensure a non-changing
 	// update doesn't cause any unnecessary update churn.
 	var subsets []v1.EndpointSubset //nolint:staticcheck
-	serviceInfo.backingServices.Iter(func(sid serviceID) error {
+	for sid := range serviceInfo.backingServices.All() {
 		if c.allServices[sid].endpoints == nil {
 			// The endpoints data is missing, so nothing to include.
-			return nil
+			continue
 		}
 		for i, ss := range c.allServices[sid].endpoints.Subsets {
 			var filteredPorts []v1.EndpointPort
@@ -632,8 +629,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 				})
 			}
 		}
-		return nil
-	})
+	}
 
 	// Return an Endpoints object, with deduplicated, ordered and expanded Subsets.
 	return &v1.Endpoints{ //nolint:staticcheck

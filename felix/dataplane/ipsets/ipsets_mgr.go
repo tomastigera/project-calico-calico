@@ -266,7 +266,7 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 				}
 			}
 		}
-		m.handleDomainIPSetDeltaUpdate(msg.Id, setToSlice(domainsToRemove), setToSlice(domainsToAdd))
+		m.handleDomainIPSetDeltaUpdate(msg.Id, domainsToRemove.Slice(), domainsToAdd.Slice())
 		return
 	}
 
@@ -311,15 +311,6 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 
 	// Record the programming that we've asked the dataplane for.
 	m.domainSetProgramming[msg.Id] = ipToDomains
-}
-
-func setToSlice(setOfThings set.Set[string]) []string {
-	slice := make([]string, 0, setOfThings.Len())
-	setOfThings.Iter(func(item string) error {
-		slice = append(slice, item)
-		return nil
-	})
-	return slice
 }
 
 func (m *IPSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemoved []string, domainsAdded []string) {
@@ -384,19 +375,18 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 
 	// If there are any IPs that are now in both ipsToRemove and ipsToAdd, we don't need either
 	// to add or remove those IPs.
-	ipsToRemove.Iter(func(item string) error {
+	for item := range ipsToRemove.All() {
 		if ipsToAdd.Contains(item) {
 			ipsToAdd.Discard(item)
-			return set.RemoveItem
+			ipsToRemove.Discard(item)
 		}
-		return nil
-	})
+	}
 
 	// Pass IP deltas onto the ipsets dataplane layer.  Note: no XDP Callbacks here
 	// because XDP is for ingress policy only and domain IP sets are egress only.
 	for _, dp := range m.dataplanes {
-		dp.RemoveMembers(ipSetId, setToSlice(ipsToRemove))
-		dp.AddMembers(ipSetId, setToSlice(ipsToAdd))
+		dp.RemoveMembers(ipSetId, ipsToRemove.Slice())
+		dp.AddMembers(ipSetId, ipsToAdd.Slice())
 	}
 }
 
@@ -421,11 +411,10 @@ func (m *IPSetsManager) OnDomainChange(domain string) (dataplaneSyncNeeded bool)
 
 		// Tell each domain set that includes this domain name to requery the IPs for the
 		// domain name and adjust its overall IP set accordingly.
-		domainSetIds.Iter(func(item string) error {
+		for item := range domainSetIds.All() {
 			// Handle as a delta update where the same domain name is removed and then re-added.
 			m.handleDomainIPSetDeltaUpdateNoLog(item, []string{domain}, []string{domain})
-			return nil
-		})
+		}
 	}
 
 	return

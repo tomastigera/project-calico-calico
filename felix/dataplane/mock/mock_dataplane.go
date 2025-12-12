@@ -608,24 +608,21 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 			b := IPSecBinding{event.TunnelAddr, addr}
 			Expect(d.activeIPSecBindings.Contains(b)).To(BeFalse(),
 				fmt.Sprintf("IPsec binding duplicate added: %v (all bindings: %v)", b, d.activeIPSecBindings))
-			d.activeIPSecBlacklist.Iter(func(a string) error {
+			for a := range d.activeIPSecBlacklist.All() {
 				Expect(addr).NotTo(Equal(a), "Binding added but still have an active blacklist")
-				return nil
-			})
-			d.activeIPSecBindings.Iter(func(b IPSecBinding) error {
+			}
+			for b := range d.activeIPSecBindings.All() {
 				Expect(addr).NotTo(Equal(b.EndpointAddr), "already have a binding for this IP")
-				return nil
-			})
+			}
 			d.activeIPSecBindings.Add(b)
 		}
 	case *proto.IPSecBlacklistAdd:
 		for _, addr := range event.AddedAddrs {
 			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
 				fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
-			d.activeIPSecBindings.Iter(func(b IPSecBinding) error {
+			for b := range d.activeIPSecBindings.All() {
 				Expect(b.EndpointAddr).NotTo(Equal(addr), "Blacklist added but still have an active binding")
-				return nil
-			})
+			}
 			d.activeIPSecBlacklist.Add(addr)
 		}
 	case *proto.IPSecBlacklistRemove:

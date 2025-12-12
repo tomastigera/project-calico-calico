@@ -86,13 +86,12 @@ func (m *nodeLocalDNSManager) CompleteDeferredWork() error {
 	}
 
 	var dnsServerPorts []config.ServerPort
-	m.nodeLocalAddrs.Iter(func(addr string) error {
+	for addr := range m.nodeLocalAddrs.All() {
 		dnsServerPorts = append(dnsServerPorts, config.ServerPort{
 			IP:   addr,
 			Port: PortDNS,
 		})
-		return nil
-	})
+	}
 	log.WithField("addrs", dnsServerPorts).Info("Node-local DNS cache enabled, enabling iptables rules.")
 	m.updateCaliRawChainsWithNodelocalDNSRules(dnsServerPorts)
 	return nil

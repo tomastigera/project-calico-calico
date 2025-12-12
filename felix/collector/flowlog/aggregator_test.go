@@ -548,16 +548,15 @@ var _ = Describe("Flow log aggregator tests", func() {
 			fpi.processArgs = []string{"-"}
 		} else {
 			argCount := 0
-			procArgs.Iter(func(item string) error {
+			for item := range procArgs.All() {
 				if item != "" {
 					fpi.processArgs = append(fpi.processArgs, item)
 					argCount = argCount + 1
 					if argCount == 5 {
-						return set.StopIteration
+						break
 					}
 				}
-				return nil
-			})
+			}
 		}
 		return fpi
 	}

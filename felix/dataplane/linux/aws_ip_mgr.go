@@ -342,17 +342,16 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 		logrus.WithField("update", msg).Debug("Secondary ENI addrs changed.")
 		seenExpected := false
 		seenUnexpected := false
-		msg.Addrs.Iter(func(addrStr string) error {
+		for addrStr := range msg.Addrs.All() {
 			if strings.Contains(addrStr, ":") {
-				return nil // Ignore IPv6
+				continue // Ignore IPv6
 			}
 			if expAddr == addrStr {
 				seenExpected = true
 			} else {
 				seenUnexpected = true
 			}
-			return nil
-		})
+		}
 		if !seenExpected || seenUnexpected {
 			a.queueDataplaneResync("IPs out of sync on a secondary interface " + msg.Name)
 		}
@@ -456,7 +455,7 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
 	// pods sharing the IP.
 	var elasticIPs set.Set[ip.Addr]
-	weps.Iter(func(wepID types.WorkloadEndpointID) error {
+	for wepID := range weps.All() {
 		wep := a.workloadEndpointsByID[wepID]
 		elasticIPsThisWEP := set.New[ip.Addr]()
 		for _, eip := range wep.ElasticIPs {
@@ -471,15 +470,13 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 			elasticIPsThisWEP.Add(eip)
 		}
 		elasticIPs = elasticIPsThisWEP
-		return nil
-	})
+	}
 
 	// Convert back to slice.
 	var elasticIPsSlice []ip.Addr
-	elasticIPs.Iter(func(addr ip.Addr) error {
+	for addr := range elasticIPs.All() {
 		elasticIPsSlice = append(elasticIPsSlice, addr)
-		return nil
-	})
+	}
 
 	// Sort for determinism in tests.
 	sort.Slice(elasticIPsSlice, func(i, j int) bool {
@@ -880,9 +877,9 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 		a.routeRules.RemoveRule(r)
 		delete(a.routeRulesInDataplane, k)
 	}
-	activeRuleKeys.Iter(func(k awsRuleKey) error {
+	for k := range activeRuleKeys.All() {
 		if _, ok := a.routeRulesInDataplane[k]; ok {
-			return nil // Route already present.  Nothing to do.
+			continue // Route already present.  Nothing to do.
 		}
 		rule := routerule.
 			NewRule(4, a.dpConfig.AWSSecondaryIPRoutingRulePriority).
@@ -890,8 +887,7 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 			GoToTable(k.routingTableID)
 		a.routeRules.SetRule(rule)
 		a.routeRulesInDataplane[k] = rule
-		return nil
-	})
+	}
 }
 
 func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.Interface {

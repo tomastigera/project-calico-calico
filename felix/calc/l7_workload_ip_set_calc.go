@@ -222,13 +222,12 @@ func (w *L7WorkloadIPSetCalculator) handleWEPRemoval(k model.WorkloadEndpointKey
 
 func (w *L7WorkloadIPSetCalculator) recalculateALPWorkloadIPs() set.Set[ip.Addr] {
 	res := set.New[ip.Addr]()
-	w.wepsWithALP.Iter(func(k model.WorkloadEndpointKey) error {
+	for k := range w.wepsWithALP.All() {
 		for _, ip4Net := range w.localWorkloadIPv4s[k] {
 			ip4 := ip.CIDRFromCalicoNet(ip4Net)
 			res.Add(ip4.Addr())
 		}
-		return nil
-	})
+	}
 	return res
 }
 
@@ -249,25 +248,23 @@ func (w *L7WorkloadIPSetCalculator) flush() {
 	log.Debugf("Updated set of local WEP IPs with ALP: %v", updatedAddrs)
 
 	// find removals by looking at active ips, see if it's in the new list
-	w.sentAddrs.Iter(func(addr ip.Addr) error {
+	for addr := range w.sentAddrs.All() {
 		if !updatedAddrs.Contains(addr) {
 			log.Debugf("Local WEP IP no longer active for ALP policy: %v", addr)
 			w.callbacks.OnIPSetMemberRemoved(tproxydefs.ApplicationLayerPolicyIPSet, ipsetmember.MakeCIDROrIPOnly(addr.AsCIDR()))
-			return set.RemoveItem
+			w.sentAddrs.Discard(addr)
 		}
-		return nil
-	})
+	}
 
 	// find additions by iterating list of possible incoming members then
 	// see if it's already in the ipset
-	updatedAddrs.Iter(func(addr ip.Addr) error {
+	for addr := range updatedAddrs.All() {
 		if !w.sentAddrs.Contains(addr) {
 			log.Debugf("Local WEP IP now active for ALP policy: %v", addr)
 			w.callbacks.OnIPSetMemberAdded(tproxydefs.ApplicationLayerPolicyIPSet, ipsetmember.MakeCIDROrIPOnly(addr.AsCIDR()))
 			w.sentAddrs.Add(addr)
 		}
-		return nil
-	})
+	}
 }
 
 // recalculateWEPWithALP recalculates the w.wepsWithALP set, which contains the keys of all the endpoints that
@@ -305,13 +302,12 @@ func (w *L7WorkloadIPSetCalculator) recalculateWEPHasALP(k model.WorkloadEndpoin
 	if polKeys == nil {
 		return false
 	}
-	polKeys.Iter(func(k model.PolicyKey) error {
+	for k := range polKeys.All() {
 		if w.policiesWithALP.Contains(k) {
 			hasALP = true
-			return set.StopIteration
+			break
 		}
-		return nil
-	})
+	}
 	return
 }
 

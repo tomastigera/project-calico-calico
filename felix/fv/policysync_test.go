@@ -1071,11 +1071,10 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 })
 
 func setToSlice(s set.Set[types.RouteUpdate]) []types.RouteUpdate {
-	r := make([]types.RouteUpdate, s.Len())
-	s.Iter(func(item types.RouteUpdate) error {
+	r := make([]types.RouteUpdate, 0, s.Len())
+	for item := range s.All() {
 		r = append(r, item)
-		return nil
-	})
+	}
 	return r
 }
 

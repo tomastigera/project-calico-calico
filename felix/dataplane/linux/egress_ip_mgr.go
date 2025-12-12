@@ -681,19 +681,18 @@ func (m *egressIPManager) readInitialKernelState() error {
 
 	// Read routing tables referenced by a routing rule from the kernel.
 	reservedTables := set.New[int]()
-	ruleTableIndices.Iter(func(index int) error {
+	for index := range ruleTableIndices.All() {
 		t, err := m.getTableFromKernel(index)
 		if err != nil {
 			log.WithError(err).WithField("table", index).Error("failed to get route table targets")
-			return nil
+			continue
 		}
 		if len(t.routes) > 0 {
 			// Ensure table index isn't in the tableIndexStack, so it won't be used by another workload
 			reservedTables.Add(index)
 			m.initialKernelState.tables[t.index] = t
 		}
-		return nil
-	})
+	}
 	m.removeIndicesFromTableStack(reservedTables)
 
 	log.WithFields(log.Fields{
@@ -1844,10 +1843,9 @@ func workloadNumHops(egressMaxNextHops int, ipSetSize int) int {
 func usageMap(workloadID types.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], tableMap map[int]*egressTable) map[int][]ip.Addr {
 	// calculate the number of wl pods referencing each gw pod.
 	gwPodRefs := make(map[ip.Addr]int)
-	gatewayIPs.Iter(func(ipAddr ip.Addr) error {
+	for ipAddr := range gatewayIPs.All() {
 		gwPodRefs[ipAddr] = 0
-		return nil
-	})
+	}
 
 	for _, t := range tableMap {
 		for _, r := range t.routes {
@@ -1855,13 +1853,12 @@ func usageMap(workloadID types.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], 
 				// Throw routes do not use any gateway
 				continue
 			}
-			r.nextHops.Iter(func(hop ip.Addr) error {
+			for hop := range r.nextHops.All() {
 				_, exists := gwPodRefs[hop]
 				if exists {
 					gwPodRefs[hop]++
 				}
-				return nil
-			})
+			}
 		}
 	}
 	// calculate the reverse-mapping, i.e. the mapping from reference count to the gw pods with that number of refs.
@@ -1940,11 +1937,9 @@ func parseNameAndNamespace(wlId string) (string, string, error) {
 
 func sortIntSet(s set.Set[int]) []int {
 	var sorted []int
-	s.Iter(func(item int) error {
+	for item := range s.All() {
 		sorted = append(sorted, item)
-
-		return nil
-	})
+	}
 	sort.Slice(sorted, func(p, q int) bool {
 		return sorted[p] < sorted[q]
 	})

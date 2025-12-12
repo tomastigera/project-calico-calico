@@ -259,14 +259,13 @@ func getNamespacesFromLinseed(params *FlowLogNamespaceParams, lsclient client.Cl
 
 	// Convert the set to the namespace slice
 	i := 0
-	nsSet.Iter(func(item string) error {
+	for item := range nsSet.All() {
 		// Only add items up to the limit
 		if i < int(params.Limit) {
 			namespaces = append(namespaces, Namespace{Name: item})
 			i++
 		}
-		return nil
-	})
+	}
 
 	// Sort the namespaces for nice display purposes
 	sort.Slice(namespaces, func(i, j int) bool {

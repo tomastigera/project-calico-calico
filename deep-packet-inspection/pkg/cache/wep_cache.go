@@ -80,14 +80,13 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			if ok {
 				// Remove the old IPs that are no longer in the WEP
 				oldIPList := data.(wepData).ipList
-				oldIPList.Iter(func(item string) error {
+				for item := range oldIPList.All() {
 					for i := range newIPs {
 						if !reflect.DeepEqual(newIPs[i], item) {
 							r.ipToWEPKey.Delete(item)
 						}
 					}
-					return nil
-				})
+				}
 			} else {
 				data = wepData{
 					ns:      ns,
@@ -112,10 +111,9 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			oldWEPData, ok := r.wepKeyToWEPData.Load(wepKey)
 			if ok {
 				if oldWEPData.(wepData).ipList != nil {
-					oldWEPData.(wepData).ipList.Iter(func(item string) error {
+					for item := range oldWEPData.(wepData).ipList.All() {
 						r.ipToWEPKey.Delete(item)
-						return nil
-					})
+					}
 				}
 				r.ipToWEPKey.Delete(wepKey)
 			}
