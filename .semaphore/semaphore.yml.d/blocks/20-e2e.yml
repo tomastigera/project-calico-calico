@@ -4,6 +4,9 @@
   dependencies:
     - Prerequisites
   task:
+    env_vars:
+      - name: BUILD_CACHE_GROUP
+        value: "e2e-tests"
     secrets:
       # Since we create a local kind cluster, we need the test license.
       - name: test-customer-license
@@ -25,3 +28,6 @@
           minutes: 60
         commands:
           - .semaphore/run-and-monitor e2e-test.log make e2e-test
+        env_vars:
+          - name: STORE_BUILD_CACHE
+            value: "true"
