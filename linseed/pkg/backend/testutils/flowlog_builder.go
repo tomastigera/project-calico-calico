@@ -162,17 +162,21 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 		f.HTTPStats.DeniedIn += log.HTTPRequestsDeniedIn
 
 		// Update trackers with label information.
-		for _, l := range log.SourceLabels.Labels {
-			labelParts := strings.Split(l, "=")
-			key := labelParts[0]
-			value := labelParts[1]
-			slt.Add(key, value, log.NumFlows)
+		if log.SourceLabels != nil {
+			for _, l := range log.SourceLabels.Labels {
+				labelParts := strings.Split(l, "=")
+				key := labelParts[0]
+				value := labelParts[1]
+				slt.Add(key, value, log.NumFlows)
+			}
 		}
-		for _, l := range log.DestLabels.Labels {
-			labelParts := strings.Split(l, "=")
-			key := labelParts[0]
-			value := labelParts[1]
-			dlt.Add(key, value, log.NumFlows)
+		if log.DestLabels != nil {
+			for _, l := range log.DestLabels.Labels {
+				labelParts := strings.Split(l, "=")
+				key := labelParts[0]
+				value := labelParts[1]
+				dlt.Add(key, value, log.NumFlows)
+			}
 		}
 
 		if log.SourceIP != nil {
@@ -367,6 +371,21 @@ func (b *FlowLogBuilder) WithAction(a string) *FlowLogBuilder {
 
 func (b *FlowLogBuilder) WithPolicies(p ...string) *FlowLogBuilder {
 	b.activeLog.Policies = &v1.FlowLogPolicy{AllPolicies: p}
+	return b
+}
+
+func (b *FlowLogBuilder) WithEnforcedPolicies(p ...string) *FlowLogBuilder {
+	b.activeLog.Policies = &v1.FlowLogPolicy{EnforcedPolicies: p}
+	return b
+}
+
+func (b *FlowLogBuilder) WithPendingPolicies(p ...string) *FlowLogBuilder {
+	b.activeLog.Policies = &v1.FlowLogPolicy{PendingPolicies: p}
+	return b
+}
+
+func (b *FlowLogBuilder) WithTransitPolicies(p ...string) *FlowLogBuilder {
+	b.activeLog.Policies = &v1.FlowLogPolicy{TransitPolicies: p}
 	return b
 }
 
