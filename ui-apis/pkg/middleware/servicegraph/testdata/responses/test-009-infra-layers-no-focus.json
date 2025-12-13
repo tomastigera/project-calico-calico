@@ -322,7 +322,7 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "queryserver",
+                "name": "jwhuang-process-1",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,
@@ -331,7 +331,7 @@
                 "max_num_ids_per_flow": 1
               },
               {
-                "name": "jwhuang-process-1",
+                "name": "queryserver",
                 "source": "",
                 "destination": "",
                 "min_num_names_per_flow": 1,
@@ -525,7 +525,7 @@
               {
                 "code": "NXDOMAIN",
                 "count": 1170,
-                "mean_request_latency": 575725.5123287671,
+                "mean_request_latency": 575725.5123287672,
                 "max_request_latency": 11819000,
                 "min_request_latency": 310946,
                 "latency_count": 1095
