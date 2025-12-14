@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM almalinux:9 AS builder
+FROM almalinux:10 AS builder
 
 ARG DAQ_VERSION=3.0.22
 ARG SNORT3_VERSION

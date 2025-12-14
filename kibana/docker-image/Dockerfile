@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI10
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
@@ -60,7 +60,7 @@ COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
 COPY --from=kibana /usr/share/fonts /usr/share/fonts/
 COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
-FROM ${CALICO_BASE_UBI10}
+FROM ${CALICO_BASE}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
