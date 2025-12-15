@@ -116,9 +116,14 @@ var defaultVolumes = []map[string]interface{}{
 }
 
 func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]interface{} {
-	capabilites := []string{"NET_ADMIN", "NET_RAW"}
+	securityContext := map[string]interface{}{
+		"runAsGroup": 0,
+		"runAsUser":  0,
+	}
 	if dataplane == "nftables" {
-		capabilites = append(capabilites, "SYS_ADMIN", "NET_BIND_SERVICE")
+		securityContext["privileged"] = true
+	} else {
+		securityContext["capabilities"] = []string{"NET_ADMIN", "NET_RAW"}
 	}
 	return []map[string]interface{}{
 		{
@@ -146,13 +151,7 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 					"mountPath": "/etc/tigera",
 				},
 			},
-			"securityContext": map[string]interface{}{
-				"runAsGroup": 0,
-				"runAsUser":  0,
-				"capabilities": map[string]interface{}{
-					"add": capabilites,
-				},
-			},
+			"securityContext": securityContext,
 		},
 	}
 }
