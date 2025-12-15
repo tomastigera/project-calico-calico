@@ -547,6 +547,7 @@
           { "field": "dest_name_aggr", "label": "Dst Name" },
           { "field": "action", "label": "Action" },
           { "field": "reporter", "label": "Reporter" },
+          { "field": "policies.enforced_policies", "label": "Enforced Policies"},
           { "field": "cluster", "label": "Cluster" }
         ],
         "fieldHrefs": {
