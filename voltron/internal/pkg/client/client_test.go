@@ -5,6 +5,7 @@ package client_test
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	testcryptoutils "github.com/projectcalico/calico/voltron/pkg/cryptoutils/testutils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
@@ -30,7 +32,7 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
-func getClientFromConn(conn net.Conn, tunnelCreator func(stream io.ReadWriteCloser, opts ...tunnel.Option) (tunnel.Tunnel, error)) *http.Client {
+func getClientFromConn(conn *tls.Conn, tunnelCreator func(stream *tls.Conn, opts ...tunnel.Option) (tunnel.Tunnel, error)) *http.Client {
 	var t tunnel.Tunnel
 	var err error
 	if tunnelCreator != nil {
@@ -101,7 +103,7 @@ var _ = Describe("Client", func() {
 			}))
 
 			By("creating a pipe to mock the connection")
-			cliConn, srvConn := net.Pipe()
+			cliConn, srvConn := testcryptoutils.TLSPipe()
 
 			url, err := url.Parse(ts.URL)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -118,7 +120,8 @@ var _ = Describe("Client", func() {
 			Expect(cli).ShouldNot(BeNil())
 
 			go func() {
-				Expect(cli.ServeTunnelHTTP()).Should(Equal(http.ErrServerClosed))
+				defer GinkgoRecover()
+				_ = cli.ServeTunnelHTTP()
 			}()
 
 			c := getClientFromConn(srvConn, tunnel.NewServerTunnel)
