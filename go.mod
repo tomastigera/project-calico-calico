@@ -34,7 +34,7 @@ require (
 	// pod2daemon/cisdriver build failure after upgrading to v1.10.0+.
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/containernetworking/cni v1.3.0
-	github.com/containernetworking/plugins v1.8.0
+	github.com/containernetworking/plugins v1.9.0
 	// Many WAF test failures due to hard-coded rule metadata after upgrading to v4.12.0+.
 	github.com/corazawaf/coraza-coreruleset/v4 v4.11.0
 	github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc
