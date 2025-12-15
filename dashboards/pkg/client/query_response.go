@@ -228,7 +228,10 @@ func (q *QueryResponse) writeCSVRecord(csvWriter *csv.Writer, fields []string, c
 				if s, ok := v.(string); ok {
 					strs = append(strs, s)
 				} else {
-					b, _ := json.Marshal(v)
+					b, err := json.Marshal(v)
+					if err != nil {
+						return err
+					}
 					strs = append(strs, string(b))
 				}
 			}
