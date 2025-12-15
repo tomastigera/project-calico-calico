@@ -56,7 +56,7 @@ func (m queryResponseWriterBodyMapper[T]) Map(resp client.QueryResponse, w http.
 
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.csv"`, matchFilename[1]))
-		err := resp.WriteCSV(w, columns)
+		err := resp.WriteCSV(w, columns, 0)
 		if err != nil {
 			m.logger.ErrorC(r.Context(), "failed to write CSV response", logging.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)

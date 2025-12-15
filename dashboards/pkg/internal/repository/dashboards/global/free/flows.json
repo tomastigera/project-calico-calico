@@ -262,6 +262,15 @@
       "isResizable": true
     },
     {
+      "i": "ba2dc2d7-7153-48cc-aa1a-10a29b02cb55",
+      "x": 0,
+      "y": 4,
+      "w": 4,
+      "h": 2,
+      "minH": 2,
+      "isResizable": true
+    },
+    {
       "i": "904c86bd-f496-40ea-9316-3460b5e2def7",
       "x": 2,
       "y": 6,
@@ -280,18 +289,9 @@
       "isResizable": true
     },
     {
-      "i": "ba2dc2d7-7153-48cc-aa1a-10a29b02cb55",
-      "x": 0,
-      "y": 10,
-      "w": 4,
-      "h": 2,
-      "minH": 2,
-      "isResizable": true
-    },
-    {
       "i": "ece2f229-b72c-4443-abdd-ce32b1550e53",
       "x": 0,
-      "y": 12,
+      "y": 10,
       "w": 4,
       "h": 4,
       "minH": 2,
