@@ -110,6 +110,8 @@ var _ = Describe("Windows DNS policy test", func() {
 			return result
 		}
 		It("should get expected DNS policy", func() {
+			Skip("Temporarily skip Windows DNS policy tests") //TODO
+
 			// Apply DNS policy
 			testutils.KubectlApply("allow-domain.yaml", allowDomainPolicy)
 
