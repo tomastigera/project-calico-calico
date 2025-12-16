@@ -88,8 +88,8 @@ var _ = Describe("Windows DNS policy test", func() {
 
 			testutils.KubectlApply("allow-dns.yaml", allowDnsPolicy)
 
-			curlWithError("www.google.com")
-			curlWithError("gobyexample.com")
+			Eventually(retryCurlUntilFailure("www.google.com"), "30s", "1s").Should(BeTrue())
+			Eventually(retryCurlUntilFailure("gobyexample.com"), "30s", "1s").Should(BeTrue())
 		})
 
 		AfterEach(func() {
@@ -110,17 +110,15 @@ var _ = Describe("Windows DNS policy test", func() {
 			return result
 		}
 		It("should get expected DNS policy", func() {
-			Skip("Temporarily skip Windows DNS policy tests") //TODO
-
 			// Apply DNS policy
 			testutils.KubectlApply("allow-domain.yaml", allowDomainPolicy)
 
 			// curl in Powershell will retransmit SYN packet if there are drops.
 			// So we should see packets to go through after the DNS policy is in place.
 			t1 := time.Now()
-			curl("www.google.com")
+			Eventually(retryCurlUntilSuccess("www.google.com"), "30s", "1s").Should(BeTrue())
 			t2 := time.Now()
-			curl("gobyexample.com")
+			Eventually(retryCurlUntilSuccess("gobyexample.com"), "30s", "1s").Should(BeTrue())
 
 			log.Printf("-----\nhttp www.google.com took %v seconds \n-----", t2.Sub(t1).Seconds())
 
@@ -133,6 +131,7 @@ var _ = Describe("Windows DNS policy test", func() {
 			// We should initiate the traffic again before checking DNS cache file.
 
 			checkCache := func(domain string) error {
+				Eventually(retryCurlUntilSuccess(domain), "10s", "1s").Should(BeTrue())
 				// Get IPs from DNS cache file
 				dnsMap, err = fv.ReadDnsCacheFile()
 				if err != nil {
@@ -157,11 +156,9 @@ var _ = Describe("Windows DNS policy test", func() {
 				}
 			}
 
-			curl("gobyexample.com")
 			// Make sure we see domain ips in DNS Cache file
 			Eventually(checkCacheFunc("gobyexample.com"), "30s", "1s").Should(BeNil())
 
-			curl("www.google.com")
 			// Make sure we see domain ips in DNS Cache file
 			Eventually(checkCacheFunc("www.google.com"), "30s", "1s").Should(BeNil())
 		})
@@ -190,21 +187,27 @@ var _ = Describe("Windows DNS policy test", func() {
 	})
 })
 
-func curl(target string) {
-	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config exec -t porter -n demo -- powershell.exe "curl %s -UseBasicParsing -TimeoutSec 10"`,
-		target)
-	output, stderr := testutils.Powershell(cmd)
-	log.Printf("-----\n%s\n-----", output)
-	log.Printf("-----\n%s\n-----", stderr)
-	Expect(strings.Contains(output, "200")).To(BeTrue())
+func retryCurlUntilSuccess(domain string) func() bool {
+	return func() bool {
+		OK, err := curl(domain)
+		return err == nil && OK
+	}
 }
 
-func curlWithError(target string) {
+func retryCurlUntilFailure(domain string) func() bool {
+	return func() bool {
+		OK, err := curl(domain)
+		return err != nil || !OK
+	}
+}
+
+func curl(target string) (bool, error) {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config exec -t porter -n demo -- powershell.exe "curl %s -UseBasicParsing -TimeoutSec 10"`,
 		target)
-	output, stderr := testutils.PowershellWithError(cmd)
+	output, stderr, err := powershell(cmd)
 	log.Printf("-----\n%s\n-----", output)
 	log.Printf("-----\n%s\n-----", stderr)
+	return strings.Contains(output, "200"), err
 }
 
 func displayDNS() {
