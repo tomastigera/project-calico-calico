@@ -108,7 +108,7 @@ else
 endif
 
 .PHONY: bin/kube-bench-$(ARCH)
-bin/kube-bench-$(ARCH): check-kube-bench-update cmd/kube-bench/main.go
+bin/kube-bench-$(ARCH): cmd/kube-bench/main.go
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, cmd/kube-bench/main.go, $@)
 else
@@ -131,20 +131,6 @@ bin/kubectl-$(ARCH):
 		-X k8s.io/component-base/version.gitTreeState=$(clean) \
 		-X k8s.io/component-base/version.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ'))
 	$(call build_binary, cmd/kubectl/kubectl.go, $@)
-
-K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
-check-kube-bench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.34.1" ]; then \
-		echo "No need for kube-bench update"; \
-	else \
-		echo "************ \n"; \
-		echo "It looks like we have updated k8s client version.\n";\
-		echo "Please check if benchmarker needs to be updated with latest kube-bench version.\n"; \
-		echo "Instructions to update benchmarker can be found in README.md#Benchmarker \n"; \
-		echo "Once updated (or after verifying that it is not needed) update the check on K8S_CLIENT_VERSION and continue. \n"; \
-		echo "****** \n"; \
-        exit 1; \
-	fi;
 
 ###############################################################################
 # Building the report files
