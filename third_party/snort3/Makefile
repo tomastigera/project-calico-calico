@@ -63,4 +63,4 @@ push-manifest:
 .PHONY: release-retag-image
 release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
 	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):$(SNORT3_VERSION)-master \
-		$(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):$(SNORT3_VERSION)-$(RELEASE_BRANCH)$(double_quote)
+		$(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):$(SNORT3_VERSION)-$(RELEASE_BRANCH)
