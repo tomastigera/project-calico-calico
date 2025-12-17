@@ -66,13 +66,12 @@ type EnvoyLogEnricher interface {
 }
 
 type envoyCollector struct {
-	collectedLogs                chan EnvoyInfo
-	config                       *config.Config
-	batch                        *BatchEnvoyLog
-	connectionCounts             *ConnectionCounter
-	isActive                     bool
-	collectorName, collectorType string
-	enricher                     EnvoyLogEnricher // Optional enricher for log entries
+	collectedLogs    chan EnvoyInfo
+	config           *config.Config
+	batch            *BatchEnvoyLog
+	connectionCounts *ConnectionCounter
+	isActive         bool
+	enricher         EnvoyLogEnricher // Optional enricher for log entries
 }
 
 func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
