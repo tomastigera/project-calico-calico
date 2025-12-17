@@ -150,16 +150,10 @@ func (s *server) ServeTLS(lis net.Listener) error {
 
 		log.Debugf("tunnel.Server: new connection from %s", tlsConn.RemoteAddr().String())
 
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			<-s.ctx.Done()
-			_ = tlsConn.Close()
-		}()
-
 		select {
 		case s.streamC <- tlsConn:
 		case <-s.ctx.Done():
+			_ = tlsConn.Close()
 			return errors.New("server stopped")
 		}
 	}
@@ -169,26 +163,20 @@ func (s *server) ServeTLS(lis net.Listener) error {
 func (s *server) Accept() (*tls.Conn, error) {
 	select {
 	case ss := <-s.streamC:
-		ctyp := ""
 		if !ss.ConnectionState().HandshakeComplete {
 			// Set timeout not to hang for ever
 			_ = ss.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
 			err := ss.Handshake()
 			if err != nil {
-				msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
-					ss.RemoteAddr().String(), err)
 				_ = ss.Close()
-				return nil, errors.New(msg)
+				return nil, fmt.Errorf("tunnel.Server TLS handshake error from %s: %w", ss.RemoteAddr().String(), err)
 			}
 			// reset the deadline to no timeout
 			_ = ss.SetReadDeadline(time.Time{})
-			log.Debugf("TLS HandshakeComplete %t certs %d",
-				ss.ConnectionState().HandshakeComplete,
-				len(ss.ConnectionState().PeerCertificates))
+			log.Debugf("TLS HandshakeComplete %t certs %d", ss.ConnectionState().HandshakeComplete, len(ss.ConnectionState().PeerCertificates))
 		}
-		ctyp = "tls "
 
-		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.RemoteAddr().String())
+		log.Debugf("tunnel.Server accepted connection from %s", ss.RemoteAddr().String())
 		return ss, nil
 	case <-s.ctx.Done():
 		return nil, errors.New("server is exiting")
@@ -202,7 +190,22 @@ func (s *server) AcceptTunnel(opts ...Option) (Tunnel, error) {
 		return nil, err
 	}
 
-	return NewServerTunnel(c, opts...)
+	t, err := NewServerTunnel(c, opts...)
+	if err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+
+	// We want to signal that the tunnel is closed when either the tunnel itself has been closed or the server
+	// has been shutdown (in which case the context will be cancelled).
+	s.wg.Go(func() {
+		select {
+		case <-t.CloseChan():
+		case <-s.ctx.Done():
+			_ = t.Close()
+		}
+	})
+	return t, nil
 }
 
 func (s *server) GetClientCertificatePool() *x509.CertPool {
