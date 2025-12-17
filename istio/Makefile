@@ -38,6 +38,7 @@ $(ISTIO_DOWNLOADED):
 	curl -sfL https://github.com/istio/istio/archive/refs/tags/$(ISTIO_VERSION).tar.gz | tar xz --strip-components=1 -C istio
 	patch -d istio -p1 < patches/0001-feat-cni-DSCP-magic-mark-support-for-transparent-net.patch
 	patch -d istio -p1 < patches/0002-chore-deps-update-golang.org-x-crypto-and-quic-go.patch
+	patch -d istio -p1 < patches/0003-Update-go-mod-for-CVEs.patch
 	touch $@
 
 ###############################################################################
