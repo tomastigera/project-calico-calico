@@ -9,7 +9,6 @@ import (
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -26,10 +25,11 @@ type EnvoyCollector interface {
 	ReadLogs(context.Context)
 	Report() <-chan EnvoyInfo
 	ParseRawLogs(string) (EnvoyLog, error)
-	ReadAccessLogs(context.Context, license.GatewayLicense)
+	ReadAccessLogs(context.Context, LicenseChecker)
 	ParseAccessLogs(string) (EnvoyLog, error)
 	ReceiveLogs(*accesslogv3.HTTPAccessLogEntry)
 	Start(context.Context)
+	SetEnricher(EnvoyLogEnricher)
 }
 
 func NewEnvoyCollector(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
@@ -91,6 +91,32 @@ type EnvoyLog struct {
 	Count       int32
 	DurationMax int32
 	Latency     int32
+
+	// Gateway API enrichment fields (populated by gateway collector's enricher)
+	GatewayNamespace     string `json:"gateway_namespace,omitempty"`
+	GatewayClass         string `json:"gateway_class,omitempty"`
+	GatewayStatus        string `json:"gateway_status,omitempty"`
+	GatewayStatusMessage string `json:"gateway_status_message,omitempty"`
+
+	// Gateway listener context fields
+	GatewayListenerName     string `json:"gateway_listener_name,omitempty"`
+	GatewayListenerPort     int    `json:"gateway_listener_port,omitempty"`
+	GatewayListenerProtocol string `json:"gateway_listener_protocol,omitempty"`
+	GatewayListenerFullName string `json:"gateway_listener_full_name,omitempty"`
+	GatewayListenerHostname string `json:"gateway_listener_hostname,omitempty"`
+
+	// Collector identification fields
+	CollectorName string `json:"collector_name,omitempty"`
+	CollectorType string `json:"collector_type,omitempty"`
+	Host          string `json:"host,omitempty"`
+
+	// Gateway route context fields
+	GatewayRouteType          string `json:"gateway_route_type,omitempty"`
+	GatewayRouteName          string `json:"gateway_route_name,omitempty"`
+	GatewayRouteNamespace     string `json:"gateway_route_namespace,omitempty"`
+	GatewayRouteHostname      string `json:"gateway_route_hostname,omitempty"`
+	GatewayRouteStatus        string `json:"gateway_route_status,omitempty"`
+	GatewayRouteStatusMessage string `json:"gateway_route_status_message,omitempty"`
 }
 
 // TupleKey is an object just for holding the
