@@ -284,7 +284,7 @@ func (idx *StatusIndexer) handleGatewayAdd(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", gateway.ObjectMeta.Namespace, gateway.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name)
 	idx.gateways[key] = status
 
 	idx.logger.Debug("Indexed Gateway",
@@ -300,7 +300,7 @@ func (idx *StatusIndexer) handleGatewayUpdate(oldObj, newObj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", gateway.ObjectMeta.Namespace, gateway.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name)
 	idx.gateways[key] = status
 
 	idx.logger.Debug("Updated Gateway index",
@@ -314,7 +314,7 @@ func (idx *StatusIndexer) handleGatewayDelete(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", gateway.ObjectMeta.Namespace, gateway.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name)
 	delete(idx.gateways, key)
 	delete(idx.gatewayToRoutes, key)
 
@@ -330,11 +330,11 @@ func (idx *StatusIndexer) handleHTTPRouteAdd(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	idx.httpRoutes[key] = status
 
 	// Update reverse index (gateway -> routes)
-	idx.updateGatewayRouteIndex(route.ObjectMeta.Namespace, route.ObjectMeta.Name, status.ParentRefs)
+	idx.updateGatewayRouteIndex(route.Namespace, route.Name, status.ParentRefs)
 
 	idx.logger.Debug("Indexed HTTPRoute",
 		zap.String("key", key),
@@ -348,11 +348,11 @@ func (idx *StatusIndexer) handleHTTPRouteUpdate(oldObj, newObj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	idx.httpRoutes[key] = status
 
 	// Update reverse index
-	idx.updateGatewayRouteIndex(route.ObjectMeta.Namespace, route.ObjectMeta.Name, status.ParentRefs)
+	idx.updateGatewayRouteIndex(route.Namespace, route.Name, status.ParentRefs)
 
 	idx.logger.Debug("Updated HTTPRoute index", zap.String("key", key))
 }
@@ -363,7 +363,7 @@ func (idx *StatusIndexer) handleHTTPRouteDelete(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	delete(idx.httpRoutes, key)
 
 	// Remove from reverse index
@@ -381,11 +381,11 @@ func (idx *StatusIndexer) handleGRPCRouteAdd(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	idx.grpcRoutes[key] = status
 
 	// Update reverse index
-	idx.updateGatewayRouteIndex(route.ObjectMeta.Namespace, route.ObjectMeta.Name, status.ParentRefs)
+	idx.updateGatewayRouteIndex(route.Namespace, route.Name, status.ParentRefs)
 
 	idx.logger.Debug("Indexed GRPCRoute",
 		zap.String("key", key),
@@ -399,11 +399,11 @@ func (idx *StatusIndexer) handleGRPCRouteUpdate(oldObj, newObj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	idx.grpcRoutes[key] = status
 
 	// Update reverse index
-	idx.updateGatewayRouteIndex(route.ObjectMeta.Namespace, route.ObjectMeta.Name, status.ParentRefs)
+	idx.updateGatewayRouteIndex(route.Namespace, route.Name, status.ParentRefs)
 
 	idx.logger.Debug("Updated GRPCRoute index", zap.String("key", key))
 }
@@ -414,7 +414,7 @@ func (idx *StatusIndexer) handleGRPCRouteDelete(obj interface{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	key := fmt.Sprintf("%s/%s", route.ObjectMeta.Namespace, route.ObjectMeta.Name)
+	key := fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 	delete(idx.grpcRoutes, key)
 
 	// Remove from reverse index

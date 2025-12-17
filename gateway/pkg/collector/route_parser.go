@@ -47,9 +47,10 @@ func ParseEnvoyRouteName(routeName string) *RouteReference {
 	}
 
 	// Convert route type to our format
-	if routeType == "httproute" {
+	switch routeType {
+	case "httproute":
 		ref.RouteType = "http"
-	} else if routeType == "grpcroute" {
+	case "grpcroute":
 		ref.RouteType = "grpc"
 	}
 
