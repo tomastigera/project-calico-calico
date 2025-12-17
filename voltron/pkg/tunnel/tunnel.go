@@ -133,6 +133,7 @@ type ConnOrError struct {
 }
 
 type Tunnel interface {
+	CloseChan() <-chan struct{}
 	ErrChan() chan struct{}
 	Open() (net.Conn, error)
 	OpenTLS(*tls.Config) (net.Conn, error)
@@ -341,6 +342,10 @@ func (t *tunnel) OpenTLS(tlsCfg *tls.Config) (net.Conn, error) {
 	}
 
 	return tls.Client(conn, tlsCfg), nil
+}
+
+func (t *tunnel) CloseChan() <-chan struct{} {
+	return t.mux.CloseChan()
 }
 
 // ErrChan returns the channel that's notified when an error occurs
