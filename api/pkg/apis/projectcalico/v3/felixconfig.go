@@ -366,6 +366,7 @@ type FelixConfigurationSpec struct {
 	// - %n: Policy or profile name.
 	// - %p: Policy or profile name (namespace/name for namespaced kinds or just name for non namespaced kinds).
 	// [Default: calico-packet]
+	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9%: /_-])*$`
 	LogPrefix string `json:"logPrefix,omitempty"`
 
 	// LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.
