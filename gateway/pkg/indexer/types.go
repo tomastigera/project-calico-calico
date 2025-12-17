@@ -71,8 +71,8 @@ type ParentRefStatus struct {
 // extractGatewayStatus extracts status information from a Gateway resource
 func extractGatewayStatus(gateway *gwv1.Gateway) *GatewayStatus {
 	status := &GatewayStatus{
-		Namespace:    gateway.ObjectMeta.Namespace,
-		Name:         gateway.ObjectMeta.Name,
+		Namespace:    gateway.Namespace,
+		Name:         gateway.Name,
 		GatewayClass: string(gateway.Spec.GatewayClassName),
 		Addresses:    gateway.Status.Addresses,
 		Listeners:    make(map[string]*ListenerStatus),
@@ -141,8 +141,8 @@ func extractHTTPRouteStatus(route *gwv1.HTTPRoute) *HTTPRouteStatus {
 	}
 
 	status := &HTTPRouteStatus{
-		Namespace:   route.ObjectMeta.Namespace,
-		Name:        route.ObjectMeta.Name,
+		Namespace:   route.Namespace,
+		Name:        route.Name,
 		Hostnames:   hostnames,
 		ParentRefs:  make([]ParentRefStatus, 0, len(route.Status.Parents)),
 		LastUpdated: time.Now(),
@@ -160,7 +160,7 @@ func extractHTTPRouteStatus(route *gwv1.HTTPRoute) *HTTPRouteStatus {
 			parentStatus.ParentNamespace = string(*parent.ParentRef.Namespace)
 		} else {
 			// Default to route's namespace if not specified
-			parentStatus.ParentNamespace = route.ObjectMeta.Namespace
+			parentStatus.ParentNamespace = route.Namespace
 		}
 		parentStatus.ParentName = string(parent.ParentRef.Name)
 
@@ -193,8 +193,8 @@ func extractGRPCRouteStatus(route *gwv1.GRPCRoute) *GRPCRouteStatus {
 	}
 
 	status := &GRPCRouteStatus{
-		Namespace:   route.ObjectMeta.Namespace,
-		Name:        route.ObjectMeta.Name,
+		Namespace:   route.Namespace,
+		Name:        route.Name,
 		Hostnames:   hostnames,
 		ParentRefs:  make([]ParentRefStatus, 0, len(route.Status.Parents)),
 		LastUpdated: time.Now(),
@@ -210,7 +210,7 @@ func extractGRPCRouteStatus(route *gwv1.GRPCRoute) *GRPCRouteStatus {
 		if parent.ParentRef.Namespace != nil {
 			parentStatus.ParentNamespace = string(*parent.ParentRef.Namespace)
 		} else {
-			parentStatus.ParentNamespace = route.ObjectMeta.Namespace
+			parentStatus.ParentNamespace = route.Namespace
 		}
 		parentStatus.ParentName = string(parent.ParentRef.Name)
 

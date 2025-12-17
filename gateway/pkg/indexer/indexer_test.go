@@ -7,7 +7,6 @@ import (
 
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayfake "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/fake"
@@ -514,9 +513,4 @@ func TestStatusIndexer_MultipleStarts(t *testing.T) {
 	if indexer.started {
 		t.Error("expected indexer to be stopped")
 	}
-}
-
-// Helper to create objects with proper runtime.Object implementation
-func toRuntimeObject(obj interface{}) runtime.Object {
-	return obj.(runtime.Object)
 }
