@@ -115,3 +115,8 @@ release-publish: release-prereqs .release-$(VERSION).published
 .release-$(VERSION).published:
 	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
 	touch $@
+
+.PHONY: release-retag-image
+release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(ZTUNNEL_IMAGE):v$(ZTUNNEL_VERSION)-master \
+			$(THIRD_PARTY_REGISTRY_CD)/$(ZTUNNEL_IMAGE):v$(ZTUNNEL_VERSION)-$(RELEASE_BRANCH)
