@@ -516,9 +516,9 @@ func NewBPFEndpointManager(
 		// Note: the allocators only allocate a fraction of the map, the
 		// rest is reserved for sub-programs generated if a single program
 		// would be too large.
-		jumpMapAllocIngress: newJumpMapAlloc(jump.TCMaxEntryPoints),
-		jumpMapAllocEgress:  newJumpMapAlloc(jump.TCMaxEntryPoints),
-		xdpJumpMapAlloc:     newJumpMapAlloc(jump.XDPMaxEntryPoints),
+		jumpMapAllocIngress: newJumpMapAlloc("ingress", jump.TCMaxEntryPoints),
+		jumpMapAllocEgress:  newJumpMapAlloc("egress", jump.TCMaxEntryPoints),
+		xdpJumpMapAlloc:     newJumpMapAlloc("xdp", jump.XDPMaxEntryPoints),
 		ruleRenderer:        iptablesRuleRenderer,
 		onStillAlive:        livenessCallback,
 		lookupsCache:        lookupsCache,
@@ -1462,17 +1462,22 @@ func (m *bpfEndpointManager) markExistingWEPDirty(wlID types.WorkloadEndpointID,
 	}
 }
 
-func jumpMapDeleteEntry(m maps.Map, idx, stride int) error {
+func jumpMapDeleteSubProgs(m maps.Map, idx, stride int) error {
 	for subProg := 0; subProg < jump.MaxSubPrograms; subProg++ {
 		if err := m.Delete(jump.Key(polprog.SubProgramJumpIdx(idx, subProg, stride))); err != nil {
 			if maps.IsNotExists(err) {
-				logrus.WithError(err).WithField("idx", idx).Debug(
-					"Policy program already gone from map.")
+				if subProg == 0 {
+					logrus.WithField("idx", idx).Debug(
+						"First policy program already gone from map.")
+				} else {
+					logrus.WithField("idx", idx).Debug(
+						"Policy sub-program not present, stopping loop early.")
+				}
 				return nil
-			} else {
-				logrus.WithError(err).Warn("Failed to delete policy program from map; policy program may leak.")
-				return err
 			}
+
+			logrus.WithError(err).Warn("Failed to delete policy program from map; policy program may leak.")
+			return err
 		}
 	}
 
@@ -1504,7 +1509,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 					v.XDPPolicyV6,
 				} {
 					if idx := fn(); idx != -1 {
-						_ = jumpMapDeleteEntry(m.commonMaps.XDPJumpMap, idx, jump.XDPMaxEntryPoints)
+						_ = jumpMapDeleteSubProgs(m.commonMaps.XDPJumpMap, idx, jump.XDPMaxEntryPoints)
 					}
 				}
 				for _, fn := range []func() int{
@@ -1513,7 +1518,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 					v.TcIngressFilter,
 				} {
 					if idx := fn(); idx != -1 {
-						_ = jumpMapDeleteEntry(m.commonMaps.JumpMaps[hook.Ingress], idx, jump.TCMaxEntryPoints)
+						_ = jumpMapDeleteSubProgs(m.commonMaps.JumpMaps[hook.Ingress], idx, jump.TCMaxEntryPoints)
 					}
 				}
 				for _, fn := range []func() int{
@@ -1522,7 +1527,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 					v.TcEgressFilter,
 				} {
 					if idx := fn(); idx != -1 {
-						_ = jumpMapDeleteEntry(m.commonMaps.JumpMaps[hook.Egress], idx, jump.TCMaxEntryPoints)
+						_ = jumpMapDeleteSubProgs(m.commonMaps.JumpMaps[hook.Egress], idx, jump.TCMaxEntryPoints)
 					}
 				}
 			} else {
@@ -2788,7 +2793,7 @@ func (d *bpfEndpointManagerDataplane) wepApplyPolicyToDirection(readiness ifaceR
 	}
 
 	attachHook := hook.Ingress
-	if polDirection == PolDirnEgress {
+	if polDirection == PolDirnIngress {
 		attachHook = hook.Egress
 	}
 	policyIdx = indices.policyIdx[attachHook]
@@ -4270,6 +4275,14 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 	ipFamily proto.IPVersion,
 	opts ...polprog.Option,
 ) ([]asm.Insns, error) {
+	logCtx := logrus.WithFields(logrus.Fields{
+		"iface":    ap.IfaceName(),
+		"hook":     hk,
+		"progName": progName,
+		"mapIndex": polJumpMapIdx,
+		"ipFamily": ipFamily,
+	})
+	logCtx.Debug("Updating policy program...")
 	if m.bpfPolicyDebugEnabled {
 		opts = append(opts, polprog.WithPolicyDebugEnabled())
 	}
@@ -4327,7 +4340,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 					if tmp < int32(tstride) {
 						tstride = int(tmp)
 					}
-					logrus.Debugf("Reducing trampoline stride to %d and retrying", tstride)
+					logCtx.Debugf("Reducing trampoline stride to %d and retrying", tstride)
 					continue
 				} else {
 					return nil, fmt.Errorf("reducing trampoline stride below 1000 not practical")
@@ -4342,7 +4355,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 
 	for tstride < tstrideOrig {
 		if m.policyTrampolineStride.CompareAndSwap(int32(tstrideOrig), int32(tstride)) {
-			logrus.Warnf("Reducing policy program trampoline stride to %d", tstride)
+			logCtx.Warnf("Reducing policy program trampoline stride to %d", tstride)
 		} else {
 			tstrideOrig = int(m.policyTrampolineStride.Load())
 		}
@@ -4352,25 +4365,26 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 		for _, progFD := range progFDs {
 			// Once we've put the programs in the map, we don't need their FDs.
 			if err := progFD.Close(); err != nil {
-				logrus.WithError(err).Panic("Failed to close program FD.")
+				logCtx.WithError(err).Panic("Failed to close program FD.")
 			}
 		}
 	}()
 
 	for i, progFD := range progFDs {
 		subProgIdx := polprog.SubProgramJumpIdx(polJumpMapIdx, i, stride)
-		logrus.Debugf("Putting sub-program %d at position %d", i, subProgIdx)
+		logCtx.Debugf("Putting sub-program %d at position %d in map %s", i, subProgIdx, polProgsMap.GetName())
 		if err := polProgsMap.Update(jump.Key(subProgIdx), jump.Value(progFD.FD())); err != nil {
 			return nil, fmt.Errorf("failed to update %s policy jump map [%d]=%d: %w", hk, subProgIdx, progFD, err)
 		}
 	}
 	for i := len(progFDs); i < jump.MaxSubPrograms; i++ {
 		subProgIdx := polprog.SubProgramJumpIdx(polJumpMapIdx, i, stride)
+		logCtx.Debugf("Clearing sub-program %d at position %d in map %s", i, subProgIdx, polProgsMap.GetName())
 		if err := polProgsMap.Delete(jump.Key(subProgIdx)); err != nil {
 			if os.IsNotExist(err) {
 				break
 			}
-			logrus.WithError(err).Warn("Unexpected error while trying to clean up old policy programs.")
+			logCtx.WithError(err).Warn("Unexpected error while trying to clean up old policy programs.")
 		}
 	}
 
@@ -4381,7 +4395,7 @@ func (m *bpfEndpointManager) jumpMapDelete(h hook.Hook, idx int) error {
 	if idx < 0 {
 		return nil
 	}
-
+	logrus.WithFields(logrus.Fields{"hook": h, "index": idx}).Debug("Deleting jump map entry")
 	jumpMap := m.commonMaps.XDPJumpMap
 	stride := jump.XDPMaxEntryPoints
 	if h != hook.XDP {
@@ -4389,7 +4403,7 @@ func (m *bpfEndpointManager) jumpMapDelete(h hook.Hook, idx int) error {
 		stride = jump.TCMaxEntryPoints
 	}
 
-	return jumpMapDeleteEntry(jumpMap, idx, stride)
+	return jumpMapDeleteSubProgs(jumpMap, idx, stride)
 }
 
 func (m *bpfEndpointManager) removePolicyProgram(ap attachPoint, ipFamily proto.IPVersion) error {
@@ -4408,7 +4422,7 @@ func (m *bpfEndpointManager) removePolicyProgram(ap attachPoint, ipFamily proto.
 		pm = m.commonMaps.JumpMaps[ap.HookName()]
 	}
 
-	if err := jumpMapDeleteEntry(pm, idx, stride); err != nil {
+	if err := jumpMapDeleteSubProgs(pm, idx, stride); err != nil {
 		return fmt.Errorf("removing policy iface %s hook %s: %w", ap.IfaceName(), ap.HookName(), err)
 	}
 
@@ -4998,8 +5012,10 @@ func getLeafNodes(intf *bpfIfaceNode) []string {
 	return leaves
 }
 
-func newJumpMapAlloc(entryPoints int) *jumpMapAlloc {
+func newJumpMapAlloc(name string, entryPoints int) *jumpMapAlloc {
 	a := &jumpMapAlloc{
+		name:      name,
+		logCtx:    logrus.WithField("jumpMapAllocName", name),
 		max:       entryPoints,
 		free:      set.New[int](),
 		freeStack: make([]int, entryPoints),
@@ -5013,9 +5029,11 @@ func newJumpMapAlloc(entryPoints int) *jumpMapAlloc {
 }
 
 type jumpMapAlloc struct {
-	lock sync.Mutex
-	max  int
+	name   string
+	logCtx *logrus.Entry
 
+	lock      sync.Mutex
+	max       int
 	free      set.Set[int]
 	freeStack []int
 	inUse     map[int]string
@@ -5033,7 +5051,7 @@ func (pa *jumpMapAlloc) Get(owner string) (int, error) {
 	pa.free.Discard(idx)
 	pa.inUse[idx] = owner
 
-	logrus.WithFields(logrus.Fields{"owner": owner, "index": idx}).Debug("jumpMapAlloc: Allocated policy map index")
+	pa.logCtx.WithFields(logrus.Fields{"owner": owner, "index": idx}).Debug("Allocated jump map index")
 	pa.checkFreeLockHeld(idx)
 	return idx, nil
 }
@@ -5083,7 +5101,7 @@ func (pa *jumpMapAlloc) Put(idx int, owner string) error {
 		err := fmt.Errorf("jumpMapAlloc: %q trying to free index %d but it is owned by %q", owner, idx, recordedOwner)
 		return err
 	}
-	logrus.WithFields(logrus.Fields{"owner": owner, "index": idx}).Debug("jumpMapAlloc: Released policy map index")
+	pa.logCtx.WithFields(logrus.Fields{"owner": owner, "index": idx}).Debug("Released policy map index")
 	delete(pa.inUse, idx)
 	pa.free.Add(idx)
 	pa.freeStack = append(pa.freeStack, idx)
@@ -5093,10 +5111,10 @@ func (pa *jumpMapAlloc) Put(idx int, owner string) error {
 
 func (pa *jumpMapAlloc) checkFreeLockHeld(idx int) {
 	if len(pa.freeStack) != pa.free.Len() {
-		logrus.WithFields(logrus.Fields{
+		pa.logCtx.WithFields(logrus.Fields{
 			"assigning": idx,
 			"set":       pa.free,
 			"stack":     pa.freeStack,
-		}).Panic("jumpMapAlloc: Free set and free stack got out of sync")
+		}).Panic("Free set and free stack got out of sync")
 	}
 }
