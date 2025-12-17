@@ -2880,7 +2880,7 @@ var _ = Describe("jumpMapAlloc tests", func() {
 	var jma *jumpMapAlloc
 
 	BeforeEach(func() {
-		jma = newJumpMapAlloc(5)
+		jma = newJumpMapAlloc("test", 5)
 	})
 
 	It("should give initial values in order", func() {
