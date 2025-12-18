@@ -108,6 +108,9 @@ rm -rvf %{buildroot}%{_includedir}
 %exclude /usr/lib64/libluajit.a
 
 %changelog
+* Thu Dec 18 2025 Jiawei Huang <jiawei@tigera.io> - 4.2.1-1
+- Update version to 4.2.1
+
 * Mon Oct 13 2025 Jiawei Huang <jiawei@tigera.io> - 4.1.1-1
 - Update version to 4.1.1
 
