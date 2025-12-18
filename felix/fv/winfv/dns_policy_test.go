@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tigera/windows-networking/pkg/testutils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/projectcalico/calico/felix/fv/winfv"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
@@ -73,9 +74,11 @@ var _ = Describe("Windows DNS policy test", func() {
 				dnsCacheFile)
 			Expect(err).NotTo(HaveOccurred())
 
-			config := map[string]interface{}{
-				"WindowsDNSExtraTTL":   "10",
-				"DNSCacheSaveInterval": "10",
+			var tenSeconds metav1.Duration
+			tenSeconds.Duration = 10 * time.Second
+			config := map[string]any{
+				"WindowsDNSExtraTTL":   &tenSeconds,
+				"DNSCacheSaveInterval": &tenSeconds,
 			}
 
 			err := fv.AddConfigItems(config)
@@ -95,6 +98,8 @@ var _ = Describe("Windows DNS policy test", func() {
 		AfterEach(func() {
 			testutils.KubectlDelete("allow-domain.yaml")
 			testutils.KubectlDelete("allow-dns.yaml")
+			err := fv.RestoreConfig()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// The test code does not check or depend on this, but currently:

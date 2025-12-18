@@ -6,16 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/windows-networking/pkg/testutils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	. "github.com/projectcalico/calico/felix/fv/winfv"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 )
+
+func init() {
+	// Stop Gomega from chopping off diffs in logs.
+	format.MaxLength = 0
+}
 
 // Generate traffic flows to test flow logs on Windows nodes.
 // Common features which are not specific on Windows (e.g. cloudwatch)
@@ -55,7 +63,7 @@ var _ = Describe("Windows flow logs test", func() {
 	)
 
 	BeforeEach(func() {
-		Skip("Temporarily skip failing flow log tests on HPC")
+		Skip("Temporarily skip failing flow log tests on HPC") //TODO
 		fv, err = NewWinFV(winutils.GetHostPath("c:\\CalicoWindows"),
 			winutils.GetHostPath("c:\\TigeraCalico\\flowlogs"),
 			winutils.GetHostPath("c:\\TigeraCalico\\felix-dns-cache.txt"))
@@ -75,6 +83,11 @@ var _ = Describe("Windows flow logs test", func() {
 		Expect(clientB).NotTo(BeEmpty())
 		Expect(porter).NotTo(BeEmpty())
 		Expect(nginx).NotTo(BeEmpty())
+	})
+
+	AfterEach(func() {
+		err := fv.RestoreConfig()
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	checkFlowLogs := func() {
@@ -201,7 +214,7 @@ var _ = Describe("Windows flow logs test", func() {
 	}
 
 	Context("File flow logs only", func() {
-		setupAndRunFelix := func(config map[string]interface{}) {
+		setupAndRunFelix := func(config map[string]any) {
 			err := fv.AddConfigItems(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -217,10 +230,13 @@ var _ = Describe("Windows flow logs test", func() {
 			expectation.aggregationForAllowed = AggrNone
 			expectation.aggregationForDenied = AggrNone
 
-			config := map[string]interface{}{
-				"FlowLogsFileAggregationKindForAllowed": 0,
-				"FlowLogsFileAggregationKindForDenied":  0,
-				"FlowLogsFlushInterval":                 "10",
+			zero := 0
+			var tenSeconds metav1.Duration
+			tenSeconds.Duration = 10 * time.Second
+			config := map[string]any{
+				"FlowLogsFileAggregationKindForAllowed": &zero,
+				"FlowLogsFileAggregationKindForDenied":  &zero,
+				"FlowLogsFlushInterval":                 &tenSeconds,
 			}
 			setupAndRunFelix(config)
 
@@ -233,19 +249,18 @@ var _ = Describe("Windows flow logs test", func() {
 			expectation.aggregationForAllowed = AggrByPodPrefix
 			expectation.aggregationForDenied = AggrBySourcePort
 
-			config := map[string]interface{}{
-				"FlowLogsFileAggregationKindForAllowed": 2,
-				"FlowLogsFileAggregationKindForDenied":  1,
-				"FlowLogsFlushInterval":                 "10",
+			one := 1
+			two := 2
+			var tenSeconds metav1.Duration
+			tenSeconds.Duration = 10 * time.Second
+			config := map[string]any{
+				"FlowLogsFileAggregationKindForAllowed": &two,
+				"FlowLogsFileAggregationKindForDenied":  &one,
+				"FlowLogsFlushInterval":                 &tenSeconds,
 			}
 			setupAndRunFelix(config)
 
 			checkFlowLogs()
-		})
-
-		AfterEach(func() {
-			err := fv.RestoreConfig()
-			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
