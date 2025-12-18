@@ -2,7 +2,7 @@
 
 FROM almalinux:9 AS builder
 
-ARG DAQ_VERSION=3.0.22
+ARG DAQ_VERSION=3.0.23
 ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
