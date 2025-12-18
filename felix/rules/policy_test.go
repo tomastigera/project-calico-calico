@@ -393,14 +393,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
-			By("Rendering an explicit log prefix")
-			logRule.LogPrefix = "foobar"
-			rules = renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
+
+			// Enabling flow log must not have any effect
+			rrConfigNormal.FlowLogsEnabled = true
+			renderer = NewRenderer(rrConfigNormal)
+			rules2 := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
-			// For deny, should be one match rule that just does the DROP.
-			Expect(len(rules)).To(Equal(1))
-			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "foobar"}))
+			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
 	)
@@ -419,15 +418,14 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
-			By("Rendering an explicit log prefix")
-			logRule.LogPrefix = "foobar"
-			rules = renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
-			// For deny, should be one match rule that just does the DROP.
-			Expect(len(rules)).To(Equal(1))
-			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "foobar"}))
+
+			// Enabling flow log must not have any effect
+			rrConfigPrefix.FlowLogsEnabled = true
+			renderer = NewRenderer(rrConfigPrefix)
+			rules2 := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
+				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
 	)

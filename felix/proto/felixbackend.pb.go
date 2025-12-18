@@ -2533,7 +2533,6 @@ type Rule struct {
 	// Pass through of the v3 datamodel HTTP match criteria.
 	HttpMatch *HTTPMatch    `protobuf:"bytes,122,opt,name=http_match,json=httpMatch,proto3" json:"http_match,omitempty"`
 	Metadata  *RuleMetadata `protobuf:"bytes,123,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	LogPrefix string        `protobuf:"bytes,200,opt,name=log_prefix,json=logPrefix,proto3" json:"log_prefix,omitempty"`
 	// An opaque ID/hash for the rule.
 	RuleId        string `protobuf:"bytes,201,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2870,13 +2869,6 @@ func (x *Rule) GetMetadata() *RuleMetadata {
 		return x.Metadata
 	}
 	return nil
-}
-
-func (x *Rule) GetLogPrefix() string {
-	if x != nil {
-		return x.LogPrefix
-	}
-	return ""
 }
 
 func (x *Rule) GetRuleId() string {
@@ -8766,7 +8758,7 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\bpre_dnat\x18\x04 \x01(\bR\apreDnat\x12+\n" +
 	"\x11original_selector\x18\x06 \x01(\tR\x10originalSelector\x12\x1d\n" +
 	"\n" +
-	"perf_hints\x18\a \x03(\tR\tperfHints\"\xe8\x10\n" +
+	"perf_hints\x18\a \x03(\tR\tperfHints\"\xdc\x10\n" +
 	"\x04Rule\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12/\n" +
 	"\n" +
@@ -8810,13 +8802,12 @@ const file_felixbackend_proto_rawDesc = "" +
 	"\x19dst_service_account_match\x18y \x01(\v2\x1a.felix.ServiceAccountMatchR\x16dstServiceAccountMatch\x12/\n" +
 	"\n" +
 	"http_match\x18z \x01(\v2\x10.felix.HTTPMatchR\thttpMatch\x12/\n" +
-	"\bmetadata\x18{ \x01(\v2\x13.felix.RuleMetadataR\bmetadata\x12\x1e\n" +
-	"\n" +
-	"log_prefix\x18\xc8\x01 \x01(\tR\tlogPrefix\x12\x18\n" +
+	"\bmetadata\x18{ \x01(\v2\x13.felix.RuleMetadataR\bmetadata\x12\x18\n" +
 	"\arule_id\x18\xc9\x01 \x01(\tR\x06ruleIdB\x06\n" +
 	"\x04icmpB\n" +
 	"\n" +
-	"\bnot_icmp\"G\n" +
+	"\bnot_icmpJ\x06\b\xc8\x01\x10\xc9\x01R\n" +
+	"log_prefix\"G\n" +
 	"\x13ServiceAccountMatch\x12\x1a\n" +
 	"\bselector\x18\x01 \x01(\tR\bselector\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\"\xb9\x02\n" +

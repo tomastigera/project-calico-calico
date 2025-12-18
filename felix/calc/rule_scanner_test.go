@@ -117,7 +117,6 @@ var _ = DescribeTable("RuleScanner rule conversion should generate correct Parse
 	Entry("dest net", model.Rule{DstNet: &cidr}, ParsedRule{DstNets: []*net.IPNet{&cidr}}),
 	Entry("source Ports", model.Rule{SrcPorts: ports}, ParsedRule{SrcPorts: ports}),
 	Entry("dest Ports", model.Rule{DstPorts: ports}, ParsedRule{DstPorts: ports}),
-	Entry("log prefix", model.Rule{LogPrefix: "foo"}, ParsedRule{LogPrefix: "foo"}),
 	Entry("!protocol", model.Rule{NotProtocol: &protocol}, ParsedRule{NotProtocol: &protocol}),
 	Entry("!source net", model.Rule{NotSrcNet: &cidr}, ParsedRule{NotSrcNets: []*net.IPNet{&cidr}}),
 	Entry("!dest net", model.Rule{NotDstNet: &cidr}, ParsedRule{NotDstNets: []*net.IPNet{&cidr}}),

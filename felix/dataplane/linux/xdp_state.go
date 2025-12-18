@@ -1465,8 +1465,7 @@ func isValidRuleForXDP(rule *proto.Rule) bool {
 		// have no application layer policy stuff
 		rule.HttpMatch == nil &&
 		rule.SrcServiceAccountMatch == nil &&
-		rule.DstServiceAccountMatch == nil &&
-		rule.LogPrefix == ""
+		rule.DstServiceAccountMatch == nil
 
 	// Note that XDP doesn't support writing rule.Metadata to the dataplane
 	// (as we do using -m comment in iptables), but the rule still can be

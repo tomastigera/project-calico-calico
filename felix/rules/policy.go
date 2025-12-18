@@ -671,9 +671,9 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
 	markDNSPolicyRule := isDNSPolicyRule && r.IsDNSPolicyModeDelayDeniedPacket()
 
-	if pRule.LogPrefix != "" || pRule.Action == "log" {
+	if pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
-		logPrefix := pRule.LogPrefix
+		logPrefix := r.LogPrefix
 		if logPrefix == "" {
 			logPrefix = "calico-packet"
 		}
