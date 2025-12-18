@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
@@ -23,8 +24,9 @@ var (
 		IndexStr: "1",
 		PolicyID: calc.PolicyID{
 			Name: "P1",
-			Tier: "T1",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid0 = &calc.RuleID{
@@ -33,8 +35,9 @@ var (
 		IndexStr: "2",
 		PolicyID: calc.PolicyID{
 			Name: "P2",
-			Tier: "T2",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T2",
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid1 = &calc.RuleID{
@@ -43,8 +46,9 @@ var (
 		IndexStr: "1",
 		PolicyID: calc.PolicyID{
 			Name: "P1",
-			Tier: "T3",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T3",
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid1 = &calc.RuleID{
@@ -53,8 +57,9 @@ var (
 		IndexStr: "2",
 		PolicyID: calc.PolicyID{
 			Name: "P2",
-			Tier: "T4",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T4",
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid2 = &calc.RuleID{
@@ -63,8 +68,9 @@ var (
 		IndexStr: "1",
 		PolicyID: calc.PolicyID{
 			Name: "P2",
-			Tier: "T5",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T5",
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid0 = &calc.RuleID{
@@ -73,8 +79,9 @@ var (
 		IndexStr: "3",
 		PolicyID: calc.PolicyID{
 			Name: "P1",
-			Tier: "T6",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T6",
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid1 = &calc.RuleID{
@@ -83,8 +90,9 @@ var (
 		IndexStr: "4",
 		PolicyID: calc.PolicyID{
 			Name: "P2",
-			Tier: "T7",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T7",
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid11 = &calc.RuleID{
@@ -93,8 +101,9 @@ var (
 		IndexStr: "1",
 		PolicyID: calc.PolicyID{
 			Name: "P1",
-			Tier: "T8",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T8",
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid21 = &calc.RuleID{
@@ -103,8 +112,9 @@ var (
 		IndexStr: "1",
 		PolicyID: calc.PolicyID{
 			Name: "P1",
-			Tier: "T9",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T9",
 		Direction: rules.RuleDirIngress,
 	}
 
@@ -114,8 +124,8 @@ var (
 		IndexStr: "2",
 		PolicyID: calc.PolicyID{
 			Name: "P4",
-			Tier: "T10",
 		},
+		Tier:      "T10",
 		Direction: rules.RuleDirEgress,
 	}
 	allowEgressRid2 = &calc.RuleID{
@@ -124,8 +134,9 @@ var (
 		IndexStr: "3",
 		PolicyID: calc.PolicyID{
 			Name: "P3",
-			Tier: "T11",
+			Kind: v3.KindGlobalNetworkPolicy,
 		},
+		Tier:      "T11",
 		Direction: rules.RuleDirEgress,
 	}
 )
@@ -367,7 +378,6 @@ var _ = Describe("Rule Trace", func() {
 			It("should have not have action set", func() {
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionAllow))
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionDeny))
-				//Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionPass))
 			})
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {
@@ -511,6 +521,7 @@ var _ = Describe("Rule Trace", func() {
 			})
 		})
 	})
+
 	Describe("TransitRuleTraces with multiple tiers", func() {
 		BeforeEach(func() {
 			// Ingress
@@ -520,6 +531,7 @@ var _ = Describe("Rule Trace", func() {
 			Expect(rc).To(Equal(collector.RuleMatchSet))
 			rc = data.AddRuleID(allowIngressRid2, 2, 0, 0, true)
 			Expect(rc).To(Equal(collector.RuleMatchSet))
+
 			// Egress
 			rc = data.AddRuleID(nextTierEgressRid0, 0, 0, 0, true)
 			Expect(rc).To(Equal(collector.RuleMatchSet))
@@ -528,41 +540,50 @@ var _ = Describe("Rule Trace", func() {
 			rc = data.AddRuleID(allowEgressRid2, 2, 0, 0, true)
 			Expect(rc).To(Equal(collector.RuleMatchUnchanged))
 		})
+
 		It("should have ingress path length equal to 3", func() {
 			Expect(data.IngressTransitRuleTrace.Path()).To(HaveLen(3))
 		})
+
 		It("should have egress path length equal to 2 (path is contracted)", func() {
 			Expect(data.EgressTransitRuleTrace.Path()).To(HaveLen(2))
 		})
+
 		It("should have have ingress action set to allow", func() {
 			Expect(data.IngressTransitAction()).To(Equal(rules.RuleActionAllow))
 		})
+
 		It("should have have egress action set to allow", func() {
 			Expect(data.EgressTransitAction()).To(Equal(rules.RuleActionAllow))
 		})
+
 		Context("Adding an ingress rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
 				rm := data.AddRuleID(denyIngressRid1, 1, 0, 0, true)
 				Expect(rm).To(Equal(collector.RuleMatchIsDifferent))
 			})
+
 			It("should have path length unchanged and equal to 3", func() {
 				Expect(len(data.IngressTransitRuleTrace.Path())).To(Equal(3))
 			})
+
 			It("should have have action set to allow", func() {
 				Expect(data.IngressTransitAction()).To(Equal(rules.RuleActionAllow))
 			})
 		})
+
 		Context("Replacing an ingress rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
 				data.ReplaceRuleID(denyIngressRid1, 1, 0, 0, true)
 			})
+
 			It("should have path length unchanged and equal to 2", func() {
 				Expect(len(data.IngressTransitRuleTrace.Path())).To(Equal(2))
 			})
+
 			It("should have action set to allow", func() {
 				Expect(data.IngressTransitAction()).To(Equal(rules.RuleActionDeny))
 			})
 		})
 	})
-
 })

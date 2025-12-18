@@ -2,7 +2,6 @@ package pip
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -81,14 +80,10 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 		hit, err := api.PolicyHitFromFlowLogPolicyString(p, 1)
 		Expect(err).NotTo(HaveOccurred())
 
-		name := hit.Name()
-		if hit.IsProfile() {
-			name = fmt.Sprintf("kns.%s", name)
-		}
 		flow.Policies = append(flow.Policies, v1.Policy{
 			Tier:         hit.Tier(),
 			Namespace:    hit.Namespace(),
-			Name:         name,
+			Name:         hit.Name(),
 			Action:       string(hit.Action()),
 			IsStaged:     hit.IsStaged(),
 			IsKubernetes: hit.IsKubernetes(),

@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -21,7 +20,7 @@ import (
 )
 
 type Server interface {
-	Accept() (io.ReadWriteCloser, error)
+	Accept() (*tls.Conn, error)
 	AcceptTunnel(opts ...Option) (Tunnel, error)
 	ServeTLS(lis net.Listener) error
 	GetClientCertificatePool() *x509.CertPool
@@ -34,7 +33,7 @@ type server struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-	streamC chan *ServerStream
+	streamC chan *tls.Conn
 
 	// serverCerts contains the certificate chains voltron should present to connecting guardians.
 	serverCerts []tls.Certificate
@@ -100,7 +99,7 @@ func WithTLSHandshakeTimeout(to time.Duration) ServerOption {
 // NewServer returns a new server
 func NewServer(opts ...ServerOption) (Server, error) {
 	s := &server{
-		streamC:             make(chan *ServerStream),
+		streamC:             make(chan *tls.Conn),
 		clientCertPool:      x509.NewCertPool(),
 		tlsHandshakeTimeout: time.Second,
 	}
@@ -151,47 +150,33 @@ func (s *server) ServeTLS(lis net.Listener) error {
 
 		log.Debugf("tunnel.Server: new connection from %s", tlsConn.RemoteAddr().String())
 
-		ss := &ServerStream{Conn: tlsConn}
-		ss.ctx, ss.cancel = context.WithCancel(s.ctx)
-
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			ss.watchServerStop()
-		}()
-
 		select {
-		case s.streamC <- ss:
+		case s.streamC <- tlsConn:
 		case <-s.ctx.Done():
+			_ = tlsConn.Close()
 			return errors.New("server stopped")
 		}
 	}
 }
 
 // Accept returns the next available stream or returns an error
-func (s *server) Accept() (io.ReadWriteCloser, error) {
+func (s *server) Accept() (*tls.Conn, error) {
 	select {
 	case ss := <-s.streamC:
-		ctyp := ""
 		if !ss.ConnectionState().HandshakeComplete {
 			// Set timeout not to hang for ever
 			_ = ss.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
 			err := ss.Handshake()
 			if err != nil {
-				msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
-					ss.RemoteAddr().String(), err)
 				_ = ss.Close()
-				return nil, errors.New(msg)
+				return nil, fmt.Errorf("tunnel.Server TLS handshake error from %s: %w", ss.RemoteAddr().String(), err)
 			}
 			// reset the deadline to no timeout
 			_ = ss.SetReadDeadline(time.Time{})
-			log.Debugf("TLS HandshakeComplete %t certs %d",
-				ss.ConnectionState().HandshakeComplete,
-				len(ss.ConnectionState().PeerCertificates))
+			log.Debugf("TLS HandshakeComplete %t certs %d", ss.ConnectionState().HandshakeComplete, len(ss.ConnectionState().PeerCertificates))
 		}
-		ctyp = "tls "
 
-		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.RemoteAddr().String())
+		log.Debugf("tunnel.Server accepted connection from %s", ss.RemoteAddr().String())
 		return ss, nil
 	case <-s.ctx.Done():
 		return nil, errors.New("server is exiting")
@@ -205,7 +190,22 @@ func (s *server) AcceptTunnel(opts ...Option) (Tunnel, error) {
 		return nil, err
 	}
 
-	return NewServerTunnel(c, opts...)
+	t, err := NewServerTunnel(c, opts...)
+	if err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+
+	// We want to signal that the tunnel is closed when either the tunnel itself has been closed or the server
+	// has been shutdown (in which case the context will be cancelled).
+	s.wg.Go(func() {
+		select {
+		case <-t.CloseChan():
+		case <-s.ctx.Done():
+			_ = t.Close()
+		}
+	})
+	return t, nil
 }
 
 func (s *server) GetClientCertificatePool() *x509.CertPool {
@@ -216,90 +216,4 @@ func (s *server) GetClientCertificatePool() *x509.CertPool {
 func (s *server) Stop() {
 	s.cancel()
 	s.wg.Wait()
-}
-
-type atomicBool struct {
-	sync.RWMutex
-	v bool
-}
-
-func (b *atomicBool) set(v bool) {
-	b.Lock()
-	defer b.Unlock()
-	b.v = v
-}
-
-func (b *atomicBool) get() bool {
-	b.RLock()
-	defer b.RUnlock()
-	return b.v
-}
-
-// ServerStream represents the server side of the tcp stream
-type ServerStream struct {
-	*tls.Conn
-
-	closed        atomicBool
-	closeConnOnce sync.Once
-	ctx           context.Context
-	cancel        context.CancelFunc
-}
-
-// Identity returns net.Addr of the remote end
-func (ss *ServerStream) Identity() any {
-	if len(ss.Conn.ConnectionState().PeerCertificates) > 0 {
-		return ss.Conn.ConnectionState().PeerCertificates[0]
-	}
-
-	return ss.RemoteAddr()
-}
-
-// Read blocks until some bytes are received or an error happens. It is OK to
-// call Read and Write from different threads, but it is in general not ok to
-// call Read simultaneously from different threads.
-func (ss *ServerStream) Read(dst []byte) (int, error) {
-	if ss.closed.get() {
-		return 0, errors.New("read on a closed stream")
-	}
-
-	return ss.Conn.Read(dst)
-}
-
-// Write sends data unless an error happens.
-//
-// It is OK to call Read and Write from different threads, but it is in general
-// not ok to call Write simultaneously from different threads.
-func (ss *ServerStream) Write(data []byte) (int, error) {
-	if ss.closed.get() {
-		return 0, errors.New("write on a closed stream")
-	}
-
-	return ss.Conn.Write(data)
-}
-
-// Close terminates the connection
-func (ss *ServerStream) Close() error {
-	log.Debugf("ServerStream: Close")
-	ss.cancel()
-	return ss.closeConn()
-}
-
-// watchServerStop monitors the server and if it stops, it closes the
-// ServerStream
-func (ss *ServerStream) watchServerStop() {
-	<-ss.ctx.Done()
-	log.Debugf("ServerStream: watchServerStop fired")
-	ss.closed.set(true)
-	_ = ss.closeConn()
-}
-
-// closeConn makes sure that the ServerStream is closed only once
-func (ss *ServerStream) closeConn() error {
-	var err error
-	ss.closeConnOnce.Do(func() {
-		err = ss.Conn.Close()
-		log.Debugf("ServerStream: closing connection")
-	})
-
-	return err
 }

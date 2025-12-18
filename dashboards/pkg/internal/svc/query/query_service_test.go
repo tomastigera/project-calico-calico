@@ -45,66 +45,66 @@ type bucketItems struct {
 	Buckets []bucketItem `json:"buckets,omitempty"`
 }
 
+func newLMAResource(verb string, resources ...string) authzv1.ResourceRule {
+	return authzv1.ResourceRule{
+		Verbs:         []string{verb},
+		APIGroups:     []string{security.APIGroupLMATigera},
+		ResourceNames: []string{"flows", "dns"},
+		Resources:     resources,
+	}
+}
+
+func newAuthContext(
+	t *testing.T,
+	logger logging.Logger,
+	namespacedRBAC bool,
+	resourceRules ...authzv1.ResourceRule,
+) (security.Context, *k8s.MockClientSetFactory) {
+	t.Helper()
+
+	authorizer, err := security.NewAuthorizer(
+		t.Context(),
+		logger,
+		3*time.Second,
+		security.AuthorizerConfig{
+			Namespace:                             "default",
+			EnableNamespacedRBAC:                  namespacedRBAC,
+			AuthorizedVerbsCacheHardTTL:           3 * time.Second,
+			AuthorizedVerbsCacheSoftTTL:           3 * time.Second,
+			AuthorizedVerbsCacheReviewsTimeout:    3 * time.Second,
+			AuthorizedVerbsCacheRevalidateTimeout: 3 * time.Second,
+		},
+	)
+	require.NoError(t, err)
+
+	k8sClient := k8sfake.NewClientset()
+	k8sClient.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+
+		createAction, ok := action.(k8stesting.CreateAction)
+		require.True(t, ok, "invalid reactor action, expecting k8stesting.CreateAction but got", action)
+
+		object := createAction.GetObject().DeepCopyObject()
+		selfSubjectRulesReview, ok := object.(*authzv1.SelfSubjectRulesReview)
+		require.True(t, ok, "invalid reactor object, expecting *SelfSubjectRulesReview but got", object)
+
+		selfSubjectRulesReview.Status.ResourceRules = resourceRules
+
+		return true, selfSubjectRulesReview, nil
+	})
+
+	mockClientSetFactory := k8s.NewMockClientSetFactory(t)
+
+	return security.NewUserAuthContext(
+		context.Background(),
+		&user.DefaultInfo{Name: "fake-user"},
+		authorizer,
+		k8sClient,
+		"Bearer fake-token",
+		mockClientSetFactory,
+	), mockClientSetFactory
+}
+
 func TestQueryService(t *testing.T) {
-
-	newLMAResource := func(verb string, resources ...string) authzv1.ResourceRule {
-		return authzv1.ResourceRule{
-			Verbs:         []string{verb},
-			APIGroups:     []string{security.APIGroupLMATigera},
-			ResourceNames: []string{"flows", "dns"},
-			Resources:     resources,
-		}
-	}
-
-	newAuthContext := func(
-		t *testing.T,
-		logger logging.Logger,
-		namespacedRBAC bool,
-		resourceRules ...authzv1.ResourceRule,
-	) (security.Context, *k8s.MockClientSetFactory) {
-		t.Helper()
-
-		authorizer, err := security.NewAuthorizer(
-			t.Context(),
-			logger,
-			3*time.Second,
-			security.AuthorizerConfig{
-				Namespace:                             "default",
-				EnableNamespacedRBAC:                  namespacedRBAC,
-				AuthorizedVerbsCacheHardTTL:           3 * time.Second,
-				AuthorizedVerbsCacheSoftTTL:           3 * time.Second,
-				AuthorizedVerbsCacheReviewsTimeout:    3 * time.Second,
-				AuthorizedVerbsCacheRevalidateTimeout: 3 * time.Second,
-			},
-		)
-		require.NoError(t, err)
-
-		k8sClient := k8sfake.NewClientset()
-		k8sClient.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-
-			createAction, ok := action.(k8stesting.CreateAction)
-			require.True(t, ok, "invalid reactor action, expecting k8stesting.CreateAction but got", action)
-
-			object := createAction.GetObject().DeepCopyObject()
-			selfSubjectRulesReview, ok := object.(*authzv1.SelfSubjectRulesReview)
-			require.True(t, ok, "invalid reactor object, expecting *SelfSubjectRulesReview but got", object)
-
-			selfSubjectRulesReview.Status.ResourceRules = resourceRules
-
-			return true, selfSubjectRulesReview, nil
-		})
-
-		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
-
-		return security.NewUserAuthContext(
-			context.Background(),
-			&user.DefaultInfo{Name: "fake-user"},
-			authorizer,
-			k8sClient,
-			"Bearer fake-token",
-			mockClientSetFactory,
-		), mockClientSetFactory
-	}
 
 	logger := logging.New("TestQueryService")
 
@@ -1610,4 +1610,53 @@ func jsonMarshal(t *testing.T, v interface{}) []byte {
 
 func intp(i int) *int {
 	return &i
+}
+
+func TestQueryService_Query_ExportLimit(t *testing.T) {
+	logger := logging.New("TestQueryService_Query_ExportLimit")
+
+	mockRepo := fakerepository.NewFakeRepository()
+	mockLister := managedclusters.NameListerFunc(func(ctx context.Context) ([]query.ManagedClusterName, error) {
+		return []query.ManagedClusterName{"cluster1"}, nil
+	})
+
+	svc := NewQueryService(logger, mockRepo, collections.Collections(nil), mockLister, Config{
+		QueryTimeout:      time.Second,
+		MaxRequestFilters: 10,
+	})
+
+	ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "*"))
+
+	// Test normal query limit
+	req := client.QueryRequest{
+		CollectionName: "flows",
+		MaxDocs:        intp(20000),
+		Filters: []client.QueryRequestFilter{
+			{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+		},
+	}
+
+	_, err := svc.Query(ctx, req)
+	require.NoError(t, err)
+
+	queries := mockRepo.Queries()
+	require.Len(t, queries, 1)
+	require.Equal(t, 500, queries[0].MaxDocuments)
+
+	// Test export query limit
+	reqExport := client.QueryRequest{
+		CollectionName: "flows",
+		MaxDocs:        intp(20000),
+		IsExport:       true,
+		Filters: []client.QueryRequestFilter{
+			{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", LTE: "PT5M", Field: "start_time"}},
+		},
+	}
+
+	_, err = svc.Query(ctx, reqExport)
+	require.NoError(t, err)
+
+	queries = mockRepo.Queries()
+	require.Len(t, queries, 2)
+	require.Equal(t, 10000, queries[1].MaxDocuments)
 }

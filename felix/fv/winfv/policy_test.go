@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/windows-networking/pkg/testutils"
+	"github.com/tigera/windows-networking/pkg/utils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -117,8 +118,10 @@ func kubectlExec(command string) {
 
 func kubectlExecWithErrors(command string) {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config -n demo exec %v`, command)
-	out, err := testutils.PowershellWithError(cmd)
-	log.Infof("Output: %s, Error: %s", out, err)
+	stdOut, stdErr, err := utils.Powershell(cmd)
+	log.Infof("Output: %s, Error: %s", stdOut, stdErr)
+	msg := fmt.Sprintf("Expected error when executing command: %s\nStdOut: %s\nStdErr: %s", command, stdOut, stdErr)
+	ExpectWithOffset(1, err).To(HaveOccurred(), msg)
 }
 
 func newClient() clientv3.Interface {
@@ -240,8 +243,8 @@ var _ = Describe("Windows policy test", func() {
 			By("creating a network policy to allow traffic")
 			p := v3.NetworkPolicy{}
 			p.Name = "allow-nginx-b"
-
 			p.Namespace = "demo"
+			p.Spec.Tier = "default"
 			p.Spec.Selector = "all()"
 			p.Spec.Egress = []v3.Rule{
 				{

@@ -149,10 +149,9 @@ func (m *hostIPManager) deleteRoute(cidr ip.CIDR) {
 
 func (m *hostIPManager) getCurrentTunMembers() []string {
 	members := []string{}
-	m.routesByDest.Iter(func(cidr ip.CIDR) error {
+	for cidr := range m.routesByDest.All() {
 		members = append(members, cidr.Addr().String())
-		return nil
-	})
+	}
 	return members
 }
 

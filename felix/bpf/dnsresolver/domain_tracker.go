@@ -227,10 +227,9 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 			log.Debugf("Accumultating wildcard %s set %s to domain %s", pfx, i.sets, domain)
 			current.acc.AddSet(i.sets)
 
-			i.sets.Iter(func(setid uint64) error {
+			for setid := range i.sets.All() {
 				d.setsMap.Desired().Set(NewDNSSetKey(domainID, setid), DNSSetValueVoid)
-				return nil
-			})
+			}
 		}
 		return nil
 	})

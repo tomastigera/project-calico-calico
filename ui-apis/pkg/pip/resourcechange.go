@@ -2,8 +2,6 @@ package pip
 
 import (
 	"encoding/json"
-	"errors"
-	"strings"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,29 +38,22 @@ func (c *ResourceChange) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	// If this is a Calico tiered network policy, configure an empty tier to be default and verify the name matches
-	// the tier.
+	// If this is a Calico tiered network policy, configure an empty tier to be default.
 	var tier *string // Use a pointer so that we can set the defalt value in the policy resource if necessary.
-	var name string
 	switch np := c.Resource.(type) {
 	case *v3.NetworkPolicy:
 		tier = &np.Spec.Tier
-		name = np.Name
 	case *v3.GlobalNetworkPolicy:
 		tier = &np.Spec.Tier
-		name = np.Name
 	default:
 		// Not a calico tiered policy, so just exit now, no need to do the extra checks.
 		return nil
 	}
 
-	// Calico tiered policy. The tier in the spec should also be the prefix of the policy name.
+	// Calico tiered policy.
 	if *tier == "" {
 		// The tier is not set, so set it to be default.
 		*tier = "default"
-	}
-	if !strings.HasPrefix(name, *tier+".") {
-		return errors.New("policy name '" + name + "' is not correct for the configured tier '" + *tier + "'")
 	}
 	return nil
 }

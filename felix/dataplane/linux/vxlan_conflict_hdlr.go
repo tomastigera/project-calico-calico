@@ -87,13 +87,12 @@ func (m *VXLANConflictHandler) vtepConflicts(ip string, suffix string, mac strin
 func (m *VXLANConflictHandler) getPreferredNodeForVTEPMAC(mac string) string {
 	var programmableNodesForVTEPMAC []string
 
-	m.nodesByVTEPMAC[mac].Iter(func(node string) error {
+	for node := range m.nodesByVTEPMAC[mac].All() {
 		vtepIP, err := m.getVTEPIPForNode(node)
 		if err == nil && m.vtepIPRoutedByNode(vtepIP, node) {
 			programmableNodesForVTEPMAC = append(programmableNodesForVTEPMAC, node)
 		}
-		return nil
-	})
+	}
 
 	if len(programmableNodesForVTEPMAC) == 0 {
 		return ""

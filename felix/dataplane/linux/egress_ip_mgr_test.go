@@ -1917,10 +1917,9 @@ type mockRouteRules struct {
 
 func (r *mockRouteRules) GetAllActiveRules() []*routerule.Rule {
 	var active []*routerule.Rule
-	r.activeRules.Iter(func(p *routerule.Rule) error {
+	for p := range r.activeRules.All() {
 		active = append(active, p)
-		return nil
-	})
+	}
 
 	return active
 }
@@ -1930,13 +1929,12 @@ func (r *mockRouteRules) InitFromKernel() {
 
 func (r *mockRouteRules) getActiveRule(rule *routerule.Rule, f routerule.RulesMatchFunc) *routerule.Rule {
 	var active *routerule.Rule
-	r.activeRules.Iter(func(p *routerule.Rule) error {
+	for p := range r.activeRules.All() {
 		if f(p, rule) {
 			active = p
-			return set.StopIteration
+			break
 		}
-		return nil
-	})
+	}
 
 	return active
 }
@@ -1962,7 +1960,7 @@ func (r *mockRouteRules) Apply() error {
 
 func (r *mockRouteRules) hasRule(priority int, src string, mark uint32, table int) bool {
 	result := false
-	r.activeRules.Iter(func(rule *routerule.Rule) error {
+	for rule := range r.activeRules.All() {
 		nlRule := rule.NetLinkRule()
 		rule.LogCxt().Debug("checking rule")
 		if nlRule.Priority == priority &&
@@ -1973,14 +1971,13 @@ func (r *mockRouteRules) hasRule(priority int, src string, mark uint32, table in
 			nlRule.Invert == false {
 			result = true
 		}
-		return nil
-	})
+	}
 	return result
 }
 
 func (r *mockRouteRules) hasRuleWithSrc(priority int, src string, mark uint32) bool {
 	result := false
-	r.activeRules.Iter(func(rule *routerule.Rule) error {
+	for rule := range r.activeRules.All() {
 		nlRule := rule.NetLinkRule()
 		rule.LogCxt().Debug("checking rule")
 		if nlRule.Priority == priority &&
@@ -1990,8 +1987,7 @@ func (r *mockRouteRules) hasRuleWithSrc(priority int, src string, mark uint32) b
 			nlRule.Invert == false {
 			result = true
 		}
-		return nil
-	})
+	}
 	return result
 }
 

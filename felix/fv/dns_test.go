@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
@@ -118,9 +118,9 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 	msWildcards := []string{"fake-microsoft.*.com", "*.fake-microsoft.test"}
 	if zeroLatency {
 		msWildcards = []string{"*.fake-microsoft.test"}
-		dnsMode = string(api.BPFDNSPolicyModeInline)
+		dnsMode = string(v3.BPFDNSPolicyModeInline)
 		if !BPFMode() {
-			dnsMode = string(api.DNSPolicyModeInline)
+			dnsMode = string(v3.DNSPolicyModeInline)
 		}
 	}
 
@@ -289,7 +289,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with a preceding DNS request that went unresponded", func() {
 			JustBeforeEach(func() {
-				hep := api.NewHostEndpoint()
+				hep := v3.NewHostEndpoint()
 				hep.Name = "felix-eth0"
 				hep.Labels = map[string]string{"host-endpoint": "yes"}
 				hep.Spec.Node = tc.Felixes[0].Hostname
@@ -298,19 +298,19 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				Expect(err).NotTo(HaveOccurred())
 
 				udp := numorstring.ProtocolFromString("udp")
-				policy := api.NewGlobalNetworkPolicy()
+				policy := v3.NewGlobalNetworkPolicy()
 				policy.Name = "deny-dns"
 				policy.Spec.Selector = "host-endpoint == 'yes'"
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action:   api.Deny,
+						Action:   v3.Deny,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
 					{
-						Action: api.Allow,
+						Action: v3.Allow,
 					},
 				}
 				policy.Spec.ApplyOnForward = true
@@ -394,11 +394,11 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 	Context("with default-deny egress policy", func() {
 		JustBeforeEach(func() {
-			policy := api.NewGlobalNetworkPolicy()
+			policy := v3.NewGlobalNetworkPolicy()
 			policy.Name = "default-deny-egress"
 			policy.Spec.Selector = "all()"
-			policy.Spec.Egress = []api.Rule{{
-				Action: api.Deny,
+			policy.Spec.Egress = []v3.Rule{{
+				Action: v3.Deny,
 			}}
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
@@ -414,21 +414,21 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 		})
 
 		configureGNPAllowToMicrosoft := func() {
-			policy := api.NewGlobalNetworkPolicy()
+			policy := v3.NewGlobalNetworkPolicy()
 			policy.Name = "allow-microsoft"
 			order := float64(20)
 			policy.Spec.Order = &order
 			policy.Spec.Selector = "all()"
 			udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-			policy.Spec.Egress = []api.Rule{
+			policy.Spec.Egress = []v3.Rule{
 				{
-					Action:      api.Allow,
-					Destination: api.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
+					Action:      v3.Allow,
+					Destination: v3.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
 				},
 				{
-					Action:   api.Allow,
+					Action:   v3.Allow,
 					Protocol: &udp,
-					Destination: api.EntityRule{
+					Destination: v3.EntityRule{
 						Ports: []numorstring.Port{numorstring.SinglePort(53)},
 					},
 				},
@@ -450,7 +450,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with HostEndpoint", func() {
 			JustBeforeEach(func() {
-				hep := api.NewHostEndpoint()
+				hep := v3.NewHostEndpoint()
 				hep.Name = "hep-1"
 				hep.Spec.Node = tc.Felixes[0].Hostname
 				hep.Spec.InterfaceName = "eth0"
@@ -472,17 +472,17 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 		})
 
 		// For a smallish subset of tests try running using the different policy modes.
-		for _, m := range []api.DNSPolicyMode{
-			api.DNSPolicyModeNoDelay,
-			api.DNSPolicyModeDelayDNSResponse,
-			api.DNSPolicyModeDelayDeniedPacket,
+		for _, m := range []v3.DNSPolicyMode{
+			v3.DNSPolicyModeNoDelay,
+			v3.DNSPolicyModeDelayDNSResponse,
+			v3.DNSPolicyModeDelayDeniedPacket,
 		} {
 			localMode := m
 			Context("with DNSPolicyMode explicitly set to "+string(localMode), func() {
 				if zeroLatency {
 					return
 				}
-				if BPFMode() && localMode != api.DNSPolicyModeNoDelay {
+				if BPFMode() && localMode != v3.DNSPolicyModeNoDelay {
 					return
 				}
 				BeforeEach(func() {
@@ -557,7 +557,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 					}
 				}
 
-				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeNoDelay {
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == v3.DNSPolicyModeNoDelay {
 					It("has ingress and egress NFLOG DNS snooping rules and no NFQUEUE rules", func() {
 						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
 						// Should be no nfqueue rules.
@@ -565,7 +565,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 					})
 				}
 
-				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDNSResponse {
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == v3.DNSPolicyModeDelayDNSResponse {
 					It("has ingress NFLOG and egress NFQUEUE DNS snooping rules", func() {
 						// Should be 3 snooping NFLOG rules (egress for forward,output,input).
 						// Should be 3 snooping NFQUEUE 101 rules (ingress for forward,output,input).
@@ -574,7 +574,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 					})
 				}
 
-				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDeniedPacket {
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == v3.DNSPolicyModeDelayDeniedPacket {
 					It("has ingress and egress NFLOG rules and NFQUEUEd deny packets", func() {
 						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
 						// Should only be nfqueue 100 rules.
@@ -592,22 +592,22 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 				Context("with namespaced domain-allow egress policy", func() {
 					JustBeforeEach(func() {
-						policy := api.NewNetworkPolicy()
+						policy := v3.NewNetworkPolicy()
 						policy.Name = "allow-microsoft"
 						policy.Namespace = "fv"
 						order := float64(20)
 						policy.Spec.Order = &order
 						policy.Spec.Selector = "all()"
 						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
+						policy.Spec.Egress = []v3.Rule{
 							{
-								Action:      api.Allow,
-								Destination: api.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
+								Action:      v3.Allow,
+								Destination: v3.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
 							},
 							{
-								Action:   api.Allow,
+								Action:   v3.Allow,
 								Protocol: &udp,
-								Destination: api.EntityRule{
+								Destination: v3.EntityRule{
 									Ports: []numorstring.Port{numorstring.SinglePort(53)},
 								},
 							},
@@ -636,22 +636,22 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with namespaced domain-allow egress policy in wrong namespace", func() {
 			JustBeforeEach(func() {
-				policy := api.NewNetworkPolicy()
+				policy := v3.NewNetworkPolicy()
 				policy.Name = "allow-microsoft"
 				policy.Namespace = "wibbly-woo"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
+						Action:      v3.Allow,
+						Destination: v3.EntityRule{Domains: []string{"fake-microsoft.test", "www.fake-microsoft.test"}},
 					},
 					{
-						Action:   api.Allow,
+						Action:   v3.Allow,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
@@ -669,21 +669,21 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with wildcard domain-allow egress policy", func() {
 			JustBeforeEach(func() {
-				policy := api.NewGlobalNetworkPolicy()
+				policy := v3.NewGlobalNetworkPolicy()
 				policy.Name = "allow-microsoft-wild"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: msWildcards},
+						Action:      v3.Allow,
+						Destination: v3.EntityRule{Domains: msWildcards},
 					},
 					{
-						Action:   api.Allow,
+						Action:   v3.Allow,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
@@ -710,30 +710,30 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with global networkset with allowed egress wildcard domains", func() {
 			JustBeforeEach(func() {
-				gns := api.NewGlobalNetworkSet()
+				gns := v3.NewGlobalNetworkSet()
 				gns.Name = "allow-microsoft"
 				gns.Labels = map[string]string{"founder": "billg"}
 				gns.Spec.AllowedEgressDomains = msWildcards
 				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
-				policy := api.NewGlobalNetworkPolicy()
+				policy := v3.NewGlobalNetworkPolicy()
 				policy.Name = "allow-microsoft"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action: api.Allow,
-						Destination: api.EntityRule{
+						Action: v3.Allow,
+						Destination: v3.EntityRule{
 							Selector: "founder == 'billg'",
 						},
 					},
 					{
-						Action:   api.Allow,
+						Action:   v3.Allow,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
@@ -761,7 +761,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				// Create another GNS with same labels as the previous one, so that
 				// the destination selector will now match this one as well, and so
 				// the domain set membership will change.
-				gns := api.NewGlobalNetworkSet()
+				gns := v3.NewGlobalNetworkSet()
 				gns.Name = "allow-microsoft-2"
 				gns.Labels = map[string]string{"founder": "billg"}
 				gns.Spec.AllowedEgressDomains = []string{"port25.fake-microsoft.test"}
@@ -775,7 +775,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with networkset with allowed egress domains", func() {
 			JustBeforeEach(func() {
-				ns := api.NewNetworkSet()
+				ns := v3.NewNetworkSet()
 				ns.Name = "allow-microsoft"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
@@ -783,24 +783,24 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
-				policy := api.NewNetworkPolicy()
+				policy := v3.NewNetworkPolicy()
 				policy.Name = "allow-microsoft"
 				policy.Namespace = "fv"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action: api.Allow,
-						Destination: api.EntityRule{
+						Action: v3.Allow,
+						Destination: v3.EntityRule{
 							Selector: "founder == 'billg'",
 						},
 					},
 					{
-						Action:   api.Allow,
+						Action:   v3.Allow,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
@@ -828,7 +828,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				// Create another NetworkSet with same labels as the previous one, so that
 				// the destination selector will now match this one as well, and so
 				// the domain set membership will change.
-				ns := api.NewNetworkSet()
+				ns := v3.NewNetworkSet()
 				ns.Name = "allow-microsoft-2"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
@@ -843,7 +843,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 
 		Context("with networkset with allowed egress wildcard domains", func() {
 			JustBeforeEach(func() {
-				ns := api.NewNetworkSet()
+				ns := v3.NewNetworkSet()
 				ns.Name = "allow-microsoft"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
@@ -851,24 +851,24 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
-				policy := api.NewNetworkPolicy()
+				policy := v3.NewNetworkPolicy()
 				policy.Name = "allow-microsoft"
 				policy.Namespace = "fv"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
+				policy.Spec.Egress = []v3.Rule{
 					{
-						Action: api.Allow,
-						Destination: api.EntityRule{
+						Action: v3.Allow,
+						Destination: v3.EntityRule{
 							Selector: "founder == 'billg'",
 						},
 					},
 					{
-						Action:   api.Allow,
+						Action:   v3.Allow,
 						Protocol: &udp,
-						Destination: api.EntityRule{
+						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
@@ -896,7 +896,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 				// Create another NetworkSet with same labels as the previous one, so that
 				// the destination selector will now match this one as well, and so
 				// the domain set membership will change.
-				ns := api.NewNetworkSet()
+				ns := v3.NewNetworkSet()
 				ns.Name = "allow-microsoft-2"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
@@ -921,7 +921,7 @@ var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", [
 		workload2       *workload.Workload
 		workload3       *workload.Workload
 		workloads       []*workload.Workload
-		policy          *api.NetworkPolicy
+		policy          *v3.NetworkPolicy
 		policyChainName string
 		cc              *connectivity.Checker
 
@@ -977,35 +977,35 @@ var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", [
 
 		udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 
-		policy = api.NewNetworkPolicy()
+		policy = v3.NewNetworkPolicy()
 		policy.Name = "default.allow-foobar"
 		policy.Namespace = "default"
 		order := float64(20)
 		policy.Spec.Order = &order
 		policy.Spec.Selector = workload1.NameSelector()
-		policy.Spec.Egress = []api.Rule{
+		policy.Spec.Egress = []v3.Rule{
 			{
-				Metadata: &api.RuleMetadata{
+				Metadata: &v3.RuleMetadata{
 					Annotations: map[string]string{
 						"rule-name": "allow-foobar",
 					},
 				},
-				Action:      api.Allow,
-				Destination: api.EntityRule{Domains: []string{"foobar.com"}},
+				Action:      v3.Allow,
+				Destination: v3.EntityRule{Domains: []string{"foobar.com"}},
 			},
 			{
-				Metadata: &api.RuleMetadata{
+				Metadata: &v3.RuleMetadata{
 					Annotations: map[string]string{
 						"rule-name": "allow-bazbiff",
 					},
 				},
-				Action:      api.Allow,
-				Destination: api.EntityRule{Domains: []string{"bazbiff.com"}},
+				Action:      v3.Allow,
+				Destination: v3.EntityRule{Domains: []string{"bazbiff.com"}},
 			},
 			{
-				Action:   api.Allow,
+				Action:   v3.Allow,
 				Protocol: &udp,
-				Destination: api.EntityRule{
+				Destination: v3.EntityRule{
 					Ports: []numorstring.Port{numorstring.SinglePort(53)},
 				},
 			},
@@ -1014,8 +1014,9 @@ var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", [
 		policy, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &types.PolicyID{
-			Tier: "default",
-			Name: fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			Name:      policy.Name,
+			Namespace: policy.Namespace,
+			Kind:      v3.KindNetworkPolicy,
 		},
 			NFTMode(),
 		)
@@ -1079,14 +1080,14 @@ var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", [
 
 			// Now, to rule out a bug in our IPVS set-up, add the backing pod
 			// to the policy.
-			policy.Spec.Egress = append(policy.Spec.Egress, api.Rule{
-				Action: api.Allow,
-				Metadata: &api.RuleMetadata{
+			policy.Spec.Egress = append(policy.Spec.Egress, v3.Rule{
+				Action: v3.Allow,
+				Metadata: &v3.RuleMetadata{
 					Annotations: map[string]string{
 						"rule-name": "allow-wl2",
 					},
 				},
-				Destination: api.EntityRule{
+				Destination: v3.EntityRule{
 					Selector: workload2.NameSelector(),
 				},
 			})

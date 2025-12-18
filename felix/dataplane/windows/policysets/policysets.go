@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/iputils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -65,8 +66,8 @@ func NewPolicySets(hns HNSAPI, ipsetCaches []IPSetCache, reader StaticRulesReade
 
 // AddOrReplacePolicySet is responsible for the creation (or replacement) of a Policy set
 // and it is capable of processing either Profiles or Policies from the datastore.
-func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
-	log.WithField("setID", setId).Info("Processing add/replace of Policy set")
+func (s *PolicySets) AddOrReplacePolicySet(id types.IDMaker, policy interface{}) {
+	log.WithField("setID", id).Info("Processing add/replace of Policy set")
 
 	// Process the policy/profile from the datastore and convert it into
 	// equivalent rules which can be communicated to HNS for enforcement in the
@@ -78,20 +79,20 @@ func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
 	var policyIpSetIds set.Set[string]
 
 	setMetadata := PolicySetMetadata{
-		SetId: setId,
+		SetId: id,
 	}
 
 	switch p := policy.(type) {
 	case *proto.Policy:
 		// Incoming datastore object is a Policy
 		log.Debug("Policy set represents a Policy")
-		rules = s.convertPolicyToRules(setId, p.InboundRules, p.OutboundRules)
+		rules = s.convertPolicyToRules(id, p.InboundRules, p.OutboundRules)
 		policyIpSetIds = getReferencedIpSetIds(p.InboundRules, p.OutboundRules)
 		setMetadata.Type = PolicySetTypePolicy
 	case *proto.Profile:
 		// Incoming datastore object is a Profile
 		log.Debug("Policy set represents a Profile")
-		rules = s.convertPolicyToRules(setId, p.InboundRules, p.OutboundRules)
+		rules = s.convertPolicyToRules(id, p.InboundRules, p.OutboundRules)
 		policyIpSetIds = getReferencedIpSetIds(p.InboundRules, p.OutboundRules)
 		setMetadata.Type = PolicySetTypeProfile
 	default:
@@ -106,19 +107,19 @@ func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
 		Members:           rules,
 		IpSetIds:          policyIpSetIds,
 	}
-	s.policySetIdToPolicySet[setMetadata.SetId] = policySet
+	s.policySetIdToPolicySet[setMetadata.SetId.ID()] = policySet
 }
 
 // RemovePolicySet is responsible for the removal of a Policy set
-func (s *PolicySets) RemovePolicySet(setId string) {
+func (s *PolicySets) RemovePolicySet(setId types.IDMaker) {
 	log.WithField("setId", setId).Info("Processing removal of Policy set")
-	delete(s.policySetIdToPolicySet, setId)
+	delete(s.policySetIdToPolicySet, setId.ID())
 }
 
 // GetPolicySetRules receives a list of Policy set ids and it computes the complete
 // set of resultant HNS rules that are needed to enforce all of the Policy sets for the
 // specified direction.
-func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound, endOfTierDrop bool) (rules []*hns.ACLPolicy) {
+func (s *PolicySets) GetPolicySetRules(setIds []types.IDMaker, isInbound, endOfTierDrop bool) (rules []*hns.ACLPolicy) {
 	// Rules from the first set will receive the default rule priority
 	currentPriority := PolicyRuleBasePriority
 
@@ -132,7 +133,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound, endOfTierDrop
 	// Get total number of rules
 	totalNumberOfRules := 0
 	for _, setId := range setIds {
-		policySet := s.policySetIdToPolicySet[setId]
+		policySet := s.policySetIdToPolicySet[setId.ID()]
 		if policySet == nil {
 			continue
 		}
@@ -163,7 +164,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound, endOfTierDrop
 				"Gathering per-direction rules for policy set")
 		}
 
-		policySet := s.policySetIdToPolicySet[setId]
+		policySet := s.policySetIdToPolicySet[setId.ID()]
 		if policySet == nil {
 			log.WithField("setId", setId).Error("Unable to find Policy set, replacing with a deny rule")
 			break
@@ -215,7 +216,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound, endOfTierDrop
 // those Policy sets to be recomputed (to ensure any rule address conditions are using the latest
 // address values from the IP set). A list of the Policy sets which were found and recomputed are
 // is returned to the caller.
-func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []string {
+func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []types.IDMaker {
 	log.WithField("IPSetId", ipSetId).Info("IP set has changed, looking for associated policies")
 	stalePolicies := s.getPoliciesByIpSetId(ipSetId)
 	if len(stalePolicies) == 0 {
@@ -223,10 +224,10 @@ func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []string {
 	}
 
 	log.WithFields(log.Fields{"IPSetId": ipSetId, "Policies": stalePolicies}).Info("Associated policies need to be refreshed")
-	for _, policyId := range stalePolicies {
-		policySet := s.policySetIdToPolicySet[policyId]
+	for _, policyID := range stalePolicies {
+		policySet := s.policySetIdToPolicySet[policyID.ID()]
 		if policySet == nil {
-			log.WithFields(log.Fields{"IPSetId": ipSetId, "Policy": policyId}).Error("Unable to find Policy set, this set will be skipped")
+			log.WithFields(log.Fields{"IPSetId": ipSetId, "Policy": policyID}).Error("Unable to find Policy set, this set will be skipped")
 			continue
 		}
 		s.AddOrReplacePolicySet(policySet.SetId, policySet.Policy)
@@ -237,11 +238,11 @@ func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []string {
 }
 
 // getPoliciesByIpSetId locates any Policy set(s) which reference the provided IP set
-func (s *PolicySets) getPoliciesByIpSetId(ipSetId string) (policies []string) {
-	for policySetId, policySet := range s.policySetIdToPolicySet {
+func (s *PolicySets) getPoliciesByIpSetId(ipSetId string) (policies []types.IDMaker) {
+	for _, policySet := range s.policySetIdToPolicySet {
 		for id := range policySet.IpSetIds.All() {
 			if id == ipSetId {
-				policies = append(policies, policySetId)
+				policies = append(policies, policySet.SetId)
 			}
 		}
 	}
@@ -267,18 +268,18 @@ func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Ru
 }
 
 // convertPolicyToRules converts the provided inbound and outbound proto rules into hns rules.
-func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto.Rule, outboundRules []*proto.Rule) (hnsRules []*hns.ACLPolicy) {
-	log.WithField("policyId", policyId).Debug("Converting policy to HNS rules.")
+func (s *PolicySets) convertPolicyToRules(id types.IDMaker, inboundRules []*proto.Rule, outboundRules []*proto.Rule) (hnsRules []*hns.ACLPolicy) {
+	log.WithField("policyId", id).Debug("Converting policy to HNS rules.")
 
-	inbound := s.protoRulesToHnsRules(policyId, inboundRules, true)
+	inbound := s.protoRulesToHnsRules(id, inboundRules, true)
 	hnsRules = append(hnsRules, inbound...)
 
-	outbound := s.protoRulesToHnsRules(policyId, outboundRules, false)
+	outbound := s.protoRulesToHnsRules(id, outboundRules, false)
 	hnsRules = append(hnsRules, outbound...)
 
 	if log.GetLevel() >= log.DebugLevel {
 		for _, rule := range hnsRules {
-			log.WithFields(log.Fields{"policyId": policyId, "rule": rule}).Debug("ConvertPolicyToRules final rule output")
+			log.WithFields(log.Fields{"policyId": id, "rule": rule}).Debug("ConvertPolicyToRules final rule output")
 		}
 	}
 
@@ -286,11 +287,11 @@ func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto
 }
 
 // protoRulesToHnsRules converts a set of proto rules into HNS rules.
-func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.Rule, isInbound bool) (rules []*hns.ACLPolicy) {
-	log.WithField("policyId", policyId).Debug("protoRulesToHnsRules")
+func (s *PolicySets) protoRulesToHnsRules(id types.IDMaker, protoRules []*proto.Rule, isInbound bool) (rules []*hns.ACLPolicy) {
+	log.WithField("policyId", id).Debug("protoRulesToHnsRules")
 	const ipPortsPerRule = 4000
 	for ii, protoRule := range protoRules {
-		hnsRules, err := s.protoRuleToHnsRules(policyId, protoRule, ii, isInbound, ipPortsPerRule)
+		hnsRules, err := s.protoRuleToHnsRules(id, protoRule, ii, isInbound, ipPortsPerRule)
 		if err != nil {
 			switch err {
 			case ErrNotSupported:
@@ -311,20 +312,12 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 }
 
 // getRulePrefixStr calculates a prefix string for HNS rule ID.
-func getRulePrefixStr(policyId string, idx int, isInbound bool, action rules.RuleAction) string {
-	// Break policyId into prefix and policy name.
+func getRulePrefixStr(id types.IDMaker, idx int, isInbound bool, action rules.RuleAction) string {
 	owner := rules.RuleOwnerTypePolicy
-	policyName := strings.TrimPrefix(policyId, PolicyNamePrefix)
-	if policyId == policyName {
+	idStr := id.ID()
+	if strings.Split(idStr, "/")[0] == idStr {
 		// Prefix is not a policy prefix
 		owner = rules.RuleOwnerTypeProfile
-		policyName = strings.TrimPrefix(policyId, ProfileNamePrefix)
-		if policyId == policyName {
-			log.WithField("policyId", policyId).Panic("Policy id with unknown prefix")
-		}
-	}
-	if len(policyName) == 0 {
-		log.WithField("policyId", policyId).Panic("Invalid policy name")
 	}
 
 	var dir rules.RuleDir
@@ -334,7 +327,7 @@ func getRulePrefixStr(policyId string, idx int, isInbound bool, action rules.Rul
 		dir = rules.RuleDirEgress
 	}
 
-	prefixStr := rules.CalculateNFLOGPrefixStr(action, owner, dir, idx, policyName)
+	prefixStr := rules.CalculateNFLOGPrefixStr(action, owner, dir, idx, id)
 	return prefixStr
 }
 
@@ -351,8 +344,8 @@ func getHnsRuleID(prefix string, ruleName string, idx int) string {
 //
 // The following types of rules are not supported in this release and will be logged+skipped:
 // Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
-func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx int, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
-	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
+func (s *PolicySets) protoRuleToHnsRules(id types.IDMaker, pRule *proto.Rule, idx int, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
+	log.WithField("policyId", id).Debug("protoRuleToHnsRules")
 
 	// Check IpVersion
 	if pRule.IpVersion != 0 && pRule.IpVersion != proto.IPVersion(ipVersion) {
@@ -432,7 +425,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
 
-	prefixStr := getRulePrefixStr(policyId, idx, isInbound, action)
+	prefixStr := getRulePrefixStr(id, idx, isInbound, action)
 
 	//
 	// DstIpPort sets - these cannot co-exist with other fields, so do them first and short-circuit if set.
@@ -489,7 +482,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 			newPolicy.RemotePorts = m.port
 			newPolicy.Protocol = m.proto
 			if s.supportedFeatures.Acl.AclRuleId {
-				newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
+				newPolicy.Id = getHnsRuleID(prefixStr, ruleCopy.RuleId, i)
 			}
 			aclPolicies = append(aclPolicies, &newPolicy)
 		}
@@ -672,7 +665,6 @@ func protoPortToHCSPort(port *proto.PortRange) string {
 
 // This function will create chunks of ports/ports range with chunksize
 func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.PortRange) {
-
 	if len(ports) == 0 {
 		splits = append(splits, []*proto.PortRange{})
 	}
@@ -690,7 +682,6 @@ func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.P
 
 // This function will create chunks of IP addresses/Cidr with chunksize
 func SplitIPList(ipAddrs []string, chunkSize int) (splits [][]string) {
-
 	if len(ipAddrs) == 0 {
 		splits = append(splits, []string{})
 	}
@@ -750,10 +741,9 @@ func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 		}
 	}
 
-	ips.Iter(func(ip string) error {
+	for ip := range ips.All() {
 		addresses = append(addresses, ip)
-		return nil
-	})
+	}
 
 	if len(addresses) == 0 {
 		log.WithField("ipsetIds", setIds).Info("No IP found in IPSets")

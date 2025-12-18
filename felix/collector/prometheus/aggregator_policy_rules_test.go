@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -21,10 +22,10 @@ func TestRuleAggregator(t *testing.T) {
 	// Create a PolicyRulesAggregator
 	pa := NewPolicyRulesAggregator(retentionTime, "testHost")
 
-	enforcedIngressRule1 := calc.NewRuleID("tier1", "ns1/tier.policy1", "", 0, rules.RuleDirIngress, rules.RuleActionPass)
-	enforcedIngressRule3 := calc.NewRuleID("tier4", "ns4/tier.policy3", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
-	stagedIngressRule1 := calc.NewRuleID("tier2", "ns3/staged:tier.policy1", "", 0, rules.RuleDirIngress, rules.RuleActionPass)
-	stagedIngressRule2 := calc.NewRuleID("tier3", "ns5/staged:tier.policy2", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+	enforcedIngressRule1 := calc.NewRuleID(v3.KindNetworkPolicy, "tier1", "tier.policy1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionPass)
+	enforcedIngressRule3 := calc.NewRuleID(v3.KindNetworkPolicy, "tier4", "tier.policy3", "ns4", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+	stagedIngressRule1 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier2", "tier.policy1", "ns3", 0, rules.RuleDirIngress, rules.RuleActionPass)
+	stagedIngressRule2 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier3", "tier.policy2", "ns5", 0, rules.RuleDirIngress, rules.RuleActionAllow)
 
 	mu := metric.Update{
 		UpdateType:     metric.UpdateTypeReport,

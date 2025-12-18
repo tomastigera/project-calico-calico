@@ -8,7 +8,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy},
 ).withActiveProfiles(
 	felixtypes.ProfileID{Name: "prof-1"},
 	felixtypes.ProfileID{Name: "prof-2"},
@@ -54,9 +54,9 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	hostEpWithNameId,
 	[]mock.TierInfo{
 		{
-			Name:               "tier-1",
-			IngressPolicyNames: []string{"pol-1"},
-			EgressPolicyNames:  []string{"pol-1"},
+			Name:            "tier-1",
+			IngressPolicies: []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
 		},
 	},
 ).withName("host ep1, policy")
@@ -69,7 +69,7 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.3/32", // ep2
 	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
-	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy},
 ).withActiveProfiles(
 	felixtypes.ProfileID{Name: "prof-2"},
 	felixtypes.ProfileID{Name: "prof-3"},
@@ -77,9 +77,9 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	hostEpNoNameId,
 	[]mock.TierInfo{
 		{
-			Name:               "tier-1",
-			IngressPolicyNames: []string{"pol-1"},
-			EgressPolicyNames:  []string{"pol-1"},
+			Name:            "tier-1",
+			IngressPolicies: []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
 		},
 	},
 ).withName("host ep2, policy")
@@ -393,9 +393,9 @@ var localEp2AsEp1WithNode = localEp2WithNode.withKVUpdates(
 	localWlEp1Id,
 	[]mock.TierInfo{
 		{
-			Name:               "default",
-			IngressPolicyNames: []string{"pol-1"},
-			EgressPolicyNames:  []string{"pol-1"},
+			Name:            "default",
+			IngressPolicies: []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
 		},
 	},
 ).withEndpoint(localWlEp2Id, nil).withName("Local endpoint 2 (using key for ep 1) with a host IP")
@@ -632,7 +632,7 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy},
 ).withActiveProfiles(
 	felixtypes.ProfileID{Name: "prof-1"},
 	felixtypes.ProfileID{Name: "prof-2"},
@@ -641,9 +641,9 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	localWlEp1Id,
 	[]mock.TierInfo{
 		{
-			Name:               "tier-1",
-			IngressPolicyNames: []string{"pol-1"},
-			EgressPolicyNames:  []string{"pol-1"},
+			Name:            "tier-1",
+			IngressPolicies: []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []felixtypes.PolicyID{{Name: "pol-1", Kind: v3.KindGlobalNetworkPolicy}},
 		},
 	},
 ).withRemoteEndpoint(
@@ -966,18 +966,18 @@ var (
 	egwpSelector2 = "egress-provider == 'not-sure'"
 	egwpSelector3 = "egress-provider in {'true', 'not-sure'}"
 
-	egressProfileSelector = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
+	egressProfileSelector = calc.PreprocessEgressSelector(&v3.EgressSpec{
 		Selector: egressSelector,
 	}, "egress")
-	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
+	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&v3.EgressSpec{
 		Selector:          egwpSelector1,
 		NamespaceSelector: namespaceSelector,
 	}, "")
-	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
+	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&v3.EgressSpec{
 		Selector:          egwpSelector2,
 		NamespaceSelector: namespaceSelector,
 	}, "")
-	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&apiv3.EgressSpec{
+	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&v3.EgressSpec{
 		Selector:          egwpSelector3,
 		NamespaceSelector: namespaceSelector,
 	}, "")
@@ -1066,34 +1066,34 @@ var (
 		ProfileIDs: []string{"egress"},
 	}
 	egressGatewayPolicy1    = "egw-policy1"
-	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: apiv3.KindEgressGatewayPolicy}
-	preferenceNone          = apiv3.GatewayPreferenceNone
-	egressGatewayPolicyVal1 = &apiv3.EgressGatewayPolicy{
+	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: v3.KindEgressGatewayPolicy}
+	preferenceNone          = v3.GatewayPreferenceNone
+	egressGatewayPolicyVal1 = &v3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
 			UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
-		Spec: apiv3.EgressGatewayPolicySpec{
-			Rules: []apiv3.EgressGatewayRule{
+		Spec: v3.EgressGatewayPolicySpec{
+			Rules: []v3.EgressGatewayRule{
 				{
-					Gateway: &apiv3.EgressSpec{
+					Gateway: &v3.EgressSpec{
 						Selector:          egwpSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "10.0.0.0/8",
 					},
-					Gateway: &apiv3.EgressSpec{
+					Gateway: &v3.EgressSpec{
 						Selector:          egwpSelector2,
 						NamespaceSelector: namespaceSelector,
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "11.0.0.0/8",
 					},
 					GatewayPreference: &preferenceNone,
@@ -1101,48 +1101,48 @@ var (
 			},
 		},
 	}
-	egressGatewayPolicyVal2 = &apiv3.EgressGatewayPolicy{
+	egressGatewayPolicyVal2 = &v3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
 			UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
-		Spec: apiv3.EgressGatewayPolicySpec{
-			Rules: []apiv3.EgressGatewayRule{
+		Spec: v3.EgressGatewayPolicySpec{
+			Rules: []v3.EgressGatewayRule{
 				{
-					Gateway: &apiv3.EgressSpec{
+					Gateway: &v3.EgressSpec{
 						Selector:          egwpSelector2,
 						NamespaceSelector: namespaceSelector,
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "10.0.0.0/8",
 					},
-					Gateway: &apiv3.EgressSpec{
+					Gateway: &v3.EgressSpec{
 						Selector:          egwpSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "13.0.0.0/8",
 					},
-					Gateway: &apiv3.EgressSpec{
+					Gateway: &v3.EgressSpec{
 						Selector:          egwpSelector3,
 						NamespaceSelector: namespaceSelector,
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "11.0.0.0/8",
 					},
 					GatewayPreference: &preferenceNone,
 				},
 				{
-					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "12.0.0.0/8",
 					},
 					GatewayPreference: &preferenceNone,
@@ -1219,7 +1219,7 @@ var (
 
 	endpointWithDefinedEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
@@ -1278,7 +1278,7 @@ var (
 
 	endpointWithDifferentEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
@@ -1395,7 +1395,7 @@ var (
 
 	endpointWithOwnLocalEgressGatewayWithEGWPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
@@ -1472,7 +1472,7 @@ var (
 	}
 	endpointWithProfileEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
@@ -1510,7 +1510,7 @@ var (
 
 	endpointWithProfileWithNoneExistingEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
@@ -1545,7 +1545,7 @@ var (
 
 	endpointWithProfileWithEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
@@ -1603,7 +1603,7 @@ var (
 
 	endpointWithProfileLocalEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
@@ -1657,7 +1657,7 @@ var (
 			Value: egressGatewayPolicyVal1,
 		},
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
@@ -1741,7 +1741,7 @@ var (
 
 	endpointWithoutProfileEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsNoSelector),
 		},
 		KVPair{
@@ -1839,7 +1839,7 @@ var (
 
 	twoRemoteEpsSameEgressGatewayPolicyLocalGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Key:   ResourceKey{Name: "egress", Kind: v3.KindProfile},
 			Value: namespaceToProfile(&nsNoSelector),
 		},
 		KVPair{
@@ -2255,15 +2255,15 @@ var (
 	createEndpointWithMaxNextHopsOnNamespace = func(name string, maxNextHops int) State {
 		return initialisedStore.withKVUpdates(
 			KVPair{
-				Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-				Value: &apiv3.Profile{
+				Key: ResourceKey{Name: "egress", Kind: v3.KindProfile},
+				Value: &v3.Profile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "egress",
 						UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 					},
-					Spec: apiv3.ProfileSpec{
-						EgressGateway: &apiv3.EgressGatewaySpec{
-							Gateway: &apiv3.EgressSpec{
+					Spec: v3.ProfileSpec{
+						EgressGateway: &v3.EgressGatewaySpec{
+							Gateway: &v3.EgressSpec{
 								Selector:    "egress-provider == 'true'",
 								MaxNextHops: maxNextHops,
 							},
@@ -2360,13 +2360,13 @@ func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint1
 	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, startStr, finishStr, port, hostname)
 }
 
-func namespaceToProfile(ns *kapiv1.Namespace) *apiv3.Profile {
+func namespaceToProfile(ns *kapiv1.Namespace) *v3.Profile {
 	c := conversion.NewConverter()
 	kv, err := c.NamespaceToProfile(ns)
 	if err != nil {
 		panic(err)
 	}
-	profile, ok := kv.Value.(*apiv3.Profile)
+	profile, ok := kv.Value.(*v3.Profile)
 	if !ok {
 		panic(fmt.Errorf("Failed to convert namespace to profile.\nns: %v", ns))
 	}
@@ -2381,7 +2381,7 @@ var (
 	// State with Istio ambient namespace and pod
 	// Note: all-istio-weps IPSet should contain WEPs from ambient namespaces
 	istioWithAmbientPod = istioBaseState.withKVUpdates(
-		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: v3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
 		KVPair{Key: istioWepAmbientKey, Value: &istioWepAmbient},
 	).withEndpoint(
 		"orch/istio-wep-ambient/ep1",
@@ -2409,9 +2409,9 @@ var (
 	// State with multiple pods - mixed scenarios
 	// Note: all-istio-weps IPSet should contain only ambient and direct-ambient WEPs
 	istioWithMixedPods = istioBaseState.withKVUpdates(
-		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
-		KVPair{Key: ResourceKey{Name: "istio-none", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceNone)},
-		KVPair{Key: ResourceKey{Name: "regular", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&regularNamespace)},
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: v3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: ResourceKey{Name: "istio-none", Kind: v3.KindProfile}, Value: namespaceToProfile(&istioNamespaceNone)},
+		KVPair{Key: ResourceKey{Name: "regular", Kind: v3.KindProfile}, Value: namespaceToProfile(&regularNamespace)},
 		KVPair{Key: istioWepAmbientKey, Value: &istioWepAmbient},
 		KVPair{Key: istioWepNoneKey, Value: &istioWepNone},
 		KVPair{Key: regularWepKey, Value: &regularWep},
@@ -2493,7 +2493,7 @@ var (
 	// Your selector: Should be EXCLUDED (pod doesn't have ambient label)
 	// This test should FAIL with your change because the pod should NOT be in the IPSet
 	istioSelectorEdgeCases = istioBaseState.withKVUpdates(
-		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: apiv3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
+		KVPair{Key: ResourceKey{Name: "istio-ambient", Kind: v3.KindProfile}, Value: namespaceToProfile(&istioNamespaceAmbient)},
 		KVPair{Key: WorkloadEndpointKey{
 			Hostname:       localHostname,
 			OrchestratorID: "orch",
@@ -2507,7 +2507,7 @@ var (
 			},
 			Labels: uniquelabels.Make(map[string]string{
 				"projectcalico.org/namespace": "istio-ambient",
-				apiv3.LabelIstioDataplaneMode: apiv3.LabelIstioDataplaneModeNone, // Explicit none on pod
+				v3.LabelIstioDataplaneMode:    v3.LabelIstioDataplaneModeNone, // Explicit none on pod
 			}),
 			ProfileIDs: []string{"istio-ambient"},
 		}},

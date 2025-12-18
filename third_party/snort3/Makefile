@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 SNORT3_IMAGE ?= snort
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
-SNORT3_VERSION = 3.9.7.0
+SNORT3_VERSION = 3.10.0.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -62,5 +62,5 @@ push-manifest:
 
 .PHONY: release-retag-image
 release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
-	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):$(SNORT3_VERSION)-master \
-		$(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):$(SNORT3_VERSION)-$(RELEASE_BRANCH)$(double_quote)
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):v$(SNORT3_VERSION)-master \
+		$(THIRD_PARTY_REGISTRY_CD)/$(SNORT3_IMAGE):v$(SNORT3_VERSION)-$(RELEASE_BRANCH)

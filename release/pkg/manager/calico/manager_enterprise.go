@@ -1310,13 +1310,21 @@ func (m *EnterpriseManager) SetupReleaseBranch(branch string) error {
 		}
 	}
 
-	// Update release stream used for CAPZ - Windows FV tests.
+	// Update release stream used for ASO export-env script.
 	releaseStream := strings.TrimPrefix(branch, m.releaseBranchPrefix+"-")
-	logrus.WithField("releaseStream", releaseStream).Debug("Updating release stream in setup script for CAPZ Windows FV tests")
-	scriptFilePath := filepath.Join(m.repoRoot, "process", "testing", "winfv-felix", "setup-fv-capz.sh")
-	if out, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/RELEASE_STREAM=.*HASH_RELEASE/RELEASE_STREAM=%s HASH_RELEASE/g`, releaseStream), scriptFilePath}, nil); err != nil {
+	logrus.WithField("releaseStream", releaseStream).Debug("Updating release stream in export-env script for ASO tests")
+	envScriptFilePath := filepath.Join(m.repoRoot, "process", "testing", "aso", "export-env.sh")
+	if out, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/RELEASE_STREAM="master"/RELEASE_STREAM="%s"/`, releaseStream), envScriptFilePath}, nil); err != nil {
 		logrus.Error(out)
-		return fmt.Errorf("failed to update release stream in %s: %w", scriptFilePath, err)
+		return fmt.Errorf("failed to update release stream in %s: %w", envScriptFilePath, err)
+	}
+
+	// Update release stream used for ASO install-calico script.
+	logrus.WithField("releaseStream", releaseStream).Debug("Updating release stream in install-calico script for ASO tests")
+	installScriptFilePath := filepath.Join(m.repoRoot, "process", "testing", "aso", "install-calico.sh")
+	if out, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/RELEASE_STREAM:="master"/RELEASE_STREAM:="%s"/`, releaseStream), installScriptFilePath}, nil); err != nil {
+		logrus.Error(out)
+		return fmt.Errorf("failed to update release stream in %s: %w", installScriptFilePath, err)
 	}
 
 	// Run code generation.
@@ -1332,7 +1340,7 @@ func (m *EnterpriseManager) SetupReleaseBranch(branch string) error {
 		filepath.Join(m.repoRoot, "charts"),
 		filepath.Join(m.repoRoot, "manifests"),
 		filepath.Join(m.repoRoot, "metadata.mk"),
-		filepath.Join(m.repoRoot, "process", "testing", "winfv-felix", "setup-fv-capz.sh"),
+		filepath.Join(m.repoRoot, "process", "testing"),
 		filepath.Join(m.repoRoot, "test-tools", "mocknode"),
 	); err != nil {
 		logrus.Error(out)

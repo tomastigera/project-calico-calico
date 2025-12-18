@@ -758,7 +758,7 @@ func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) sync
 			continue
 		}
 
-		//TODO (rlb): Nets may contain "other namespace"
+		// TODO (rlb): Nets may contain "other namespace"
 		irV1 := ingressV1[i]
 
 		// Note that for ingress we don't care about the dest selector since that would simply further limit
@@ -832,7 +832,7 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 			continue
 		}
 
-		//TODO (rlb): Nets may contain "other namespace"
+		// TODO (rlb): Nets may contain "other namespace"
 		erV1 := egressV1[i]
 
 		// Note that for egress we don't care about the source selector since that would simply further limit
@@ -914,10 +914,9 @@ func (c *networkPolicyHandler) queuePoliciesForRecalculation(update syncer.Updat
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
-	x.Policies.Iter(func(id v3.ResourceID) error {
+	for id := range x.Policies.All() {
 		c.QueueUpdate(id, nil, update.Type)
-		return nil
-	})
+	}
 }
 
 func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId v3.ResourceID) {

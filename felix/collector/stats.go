@@ -124,7 +124,7 @@ func (t *RuleTrace) Path() []*calc.RuleID {
 			return t.verdictIdx
 		}
 
-		if model.PolicyIsStaged(r.Name) {
+		if model.KindIsStaged(r.Kind) {
 			// This is a staged policy. If the rule is an implicitly applied the tier action then we only include it if the end-of-tier
 			// pass action has also been hit.
 			if r.IsTierDefaultActionRule() {
@@ -245,7 +245,7 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int)
 	// Set as dirty and increment the match revision number for this tier.
 	t.dirty = true
 
-	if !model.PolicyIsStaged(rid.Name) && rid.Action != rules.RuleActionPass {
+	if !model.KindIsStaged(rid.Kind) && rid.Action != rules.RuleActionPass {
 		// This is a verdict action, so increment counters and set our verdict index.
 		t.pktsCtr.Increase(numPkts)
 		t.bytesCtr.Increase(numBytes)
@@ -273,7 +273,7 @@ func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes 
 	// Reset the reporting path so that we recalculate it next report.
 	t.rulesToReport = nil
 
-	if !model.PolicyIsStaged(rid.Name) && rid.Action != rules.RuleActionPass {
+	if !model.KindIsStaged(rid.Name) && rid.Action != rules.RuleActionPass {
 		// This is a verdict action, so reset and set counters and set our verdict index.
 		t.pktsCtr.ResetAndSet(numPkts)
 		t.bytesCtr.ResetAndSet(numBytes)
@@ -295,7 +295,7 @@ func (t *RuleTrace) maybeResizePath(matchIdx int) {
 }
 
 type tcpStatsData struct {
-	//TCP stats
+	// TCP stats
 	sendCongestionWnd int
 	smoothRtt         int
 	minRtt            int
@@ -577,7 +577,6 @@ func (d *Data) VerdictFound() bool {
 		// for local flows we require egress or ingress verdicts based on the whether source or destination is local
 		return (!srcIsLocal || d.EgressRuleTrace.FoundVerdict()) && (!dstIsLocal || d.IngressRuleTrace.FoundVerdict())
 	}
-
 }
 
 // Set In Counters' values to packets and bytes. Use the SetConntrackCounters* methods
@@ -860,7 +859,6 @@ func (d *Data) MetricUpdateEgressConn(ut metric.UpdateType) metric.Update {
 	}
 
 	return metricUpdate
-
 }
 
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
@@ -909,7 +907,6 @@ func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType, isTransit bool) m
 			DeltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
 		}
 	}
-
 	return metricUpdate
 }
 
@@ -962,7 +959,6 @@ func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType, isTransit bool) me
 	}
 
 	return metricUpdate
-
 }
 
 // metricUpdateOrigSourceIPs creates a metric update for HTTP Data (original source ips).
@@ -973,7 +969,7 @@ func (d *Data) MetricUpdateOrigSourceIPs(ut metric.UpdateType) metric.Update {
 	// extract action and direction.
 	var unknownRuleID *calc.RuleID
 	if !d.IngressRuleTrace.FoundVerdict() {
-		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
+		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 	}
 
 	metricDstServiceInfo := metric.ServiceInfo{

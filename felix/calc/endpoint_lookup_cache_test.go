@@ -6,16 +6,18 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	libcaliconet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -106,7 +108,6 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			endpoints = ec.GetAllEndpointData()
 			Expect(len(endpoints)).To(Equal(0))
 			Expect(endpoints).NotTo(ConsistOf(ed))
-
 		},
 		Entry("remote WEP1 IPv4", remoteWlEpKey1, &remoteWlEp1, remoteWlEp1.IPv4Nets[0].IP),
 		Entry("remote WEP1 IPv6", remoteWlEpKey1, &remoteWlEp1, remoteWlEp1.IPv6Nets[0].IP),
@@ -366,29 +367,32 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 
 	It("should process local endpoints correctly with no staged policies and one tier per ingress and egress", func() {
 		By("adding a host endpoint with ingress policies in tier1 and egress policies in tier default")
-		p1k := model.PolicyKey{Name: "tier1.pol1"}
+		p1k := model.PolicyKey{Name: "tier1.pol1", Kind: v3.KindGlobalNetworkPolicy}
 		p1 := &model.Policy{
+			Tier:         "tier1",
 			Order:        &float1_0,
 			Types:        []string{"ingress"},
 			InboundRules: []model.Rule{{Action: "next-tier"}, {Action: "allow"}, {Action: "deny"}},
 		}
-		p1id := calc.PolicyID{Name: "pol1", Tier: "tier1"}
+		p1id := calc.PolicyID{Name: "tier1.pol1", Kind: v3.KindGlobalNetworkPolicy}
 
-		p2k := model.PolicyKey{Name: "ns1/default.pol2"}
+		p2k := model.PolicyKey{Name: "pol2", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 		p2 := &model.Policy{
+			Tier:      "default",
 			Namespace: "ns1",
 			Order:     &float1_0,
 			Types:     []string{"egress"},
 		}
-		p2id := calc.PolicyID{Name: "pol2", Tier: "default", Namespace: "ns1"}
+		p2id := calc.PolicyID{Name: "pol2", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 
-		p3k := model.PolicyKey{Name: "ns1/default.pol3"}
+		p3k := model.PolicyKey{Name: "pol3", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 		p3 := &model.Policy{
+			Tier:      "default",
 			Namespace: "ns1",
 			Order:     &float2_0,
 			Types:     []string{"egress"},
 		}
-		p3id := calc.PolicyID{Name: "pol3", Tier: "default", Namespace: "ns1"}
+		p3id := calc.PolicyID{Name: "pol3", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 
 		t1 := calc.NewTierInfo("tier1")
 		t1.Order = &float1_0
@@ -426,7 +430,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		Expect(ed.IngressMatchData().TierData).To(HaveKey("tier1"))
 		Expect(ed.IngressMatchData().TierData["tier1"]).ToNot(BeNil())
 		Expect(ed.IngressMatchData().TierData["tier1"].TierDefaultActionRuleID).To(Equal(
-			calc.NewRuleID("tier1", "pol1", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny)))
+			calc.NewRuleID(v3.KindGlobalNetworkPolicy, "tier1", "tier1.pol1", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny)))
 		Expect(ed.IngressMatchData().TierData["tier1"].EndOfTierMatchIndex).To(Equal(0))
 
 		By("checking compiled egress data")
@@ -441,7 +445,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		Expect(ed.EgressMatchData().TierData).To(HaveKey("default"))
 		Expect(ed.EgressMatchData().TierData["default"]).ToNot(BeNil())
 		Expect(ed.EgressMatchData().TierData["default"].TierDefaultActionRuleID).To(Equal(
-			calc.NewRuleID("default", "pol3", "ns1", calc.RuleIndexTierDefaultAction, rules.RuleDirEgress, rules.RuleActionDeny)))
+			calc.NewRuleID(v3.KindNetworkPolicy, "default", "pol3", "ns1", calc.RuleIndexTierDefaultAction, rules.RuleDirEgress, rules.RuleActionDeny)))
 		Expect(ed.EgressMatchData().TierData["default"].EndOfTierMatchIndex).To(Equal(0))
 	})
 
@@ -456,35 +460,39 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			}
 
 			By("adding a workloadendpoint with mixed staged/non-staged policies in tier1")
-			sp1k := model.PolicyKey{Name: "staged:tier1.pol1"}
+			sp1k := model.PolicyKey{Name: "pol1", Kind: v3.KindStagedGlobalNetworkPolicy}
 			sp1 := &model.Policy{
+				Tier:  "tier1",
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			sp1id := calc.PolicyID{Name: "staged:pol1", Tier: "tier1"}
+			sp1id := calc.PolicyID{Name: "pol1", Kind: v3.KindStagedGlobalNetworkPolicy}
 
-			p1k := model.PolicyKey{Name: "tier1.pol1"}
+			p1k := model.PolicyKey{Name: "pol1", Kind: v3.KindGlobalNetworkPolicy}
 			p1 := &model.Policy{
+				Tier:  "tier1",
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			p1id := calc.PolicyID{Name: "pol1", Tier: "tier1"}
+			p1id := calc.PolicyID{Name: "pol1", Kind: v3.KindGlobalNetworkPolicy}
 
-			sp2k := model.PolicyKey{Name: "ns1/staged:tier1.pol2"}
+			sp2k := model.PolicyKey{Name: "pol2", Namespace: "ns1", Kind: v3.KindStagedNetworkPolicy}
 			sp2 := &model.Policy{
+				Tier:      "tier1",
 				Namespace: "ns1",
 				Order:     &float2_0,
 				Types:     []string{dir},
 			}
-			sp2id := calc.PolicyID{Name: "staged:pol2", Tier: "tier1", Namespace: "ns1"}
+			sp2id := calc.PolicyID{Name: "pol2", Namespace: "ns1", Kind: v3.KindStagedNetworkPolicy}
 
-			p2k := model.PolicyKey{Name: "ns1/tier1.pol2"}
+			p2k := model.PolicyKey{Name: "pol2", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 			p2 := &model.Policy{
+				Tier:      "tier1",
 				Namespace: "ns1",
 				Order:     &float2_0,
 				Types:     []string{dir},
 			}
-			p2id := calc.PolicyID{Name: "pol2", Tier: "tier1", Namespace: "ns1"}
+			p2id := calc.PolicyID{Name: "pol2", Namespace: "ns1", Kind: v3.KindNetworkPolicy}
 
 			t1 := calc.NewTierInfo("tier1")
 			t1.Order = &float1_0
@@ -497,19 +505,21 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			}
 
 			By("and adding staged policies in tier default")
-			sp3k := model.PolicyKey{Name: "ns2/staged:knp.default.pol3"}
+			sp3k := model.PolicyKey{Name: "knp.default.pol3", Namespace: "ns2", Kind: v3.KindStagedKubernetesNetworkPolicy}
 			sp3 := &model.Policy{
+				Tier:  "default",
 				Order: &float1_0,
 				Types: []string{dir},
 			}
-			sp3id := calc.PolicyID{Name: "staged:knp.default.pol3", Tier: "default", Namespace: "ns2"}
+			sp3id := calc.PolicyID{Name: "knp.default.pol3", Namespace: "ns2", Kind: v3.KindStagedKubernetesNetworkPolicy}
 
-			sp4k := model.PolicyKey{Name: "staged:default.pol4"}
+			sp4k := model.PolicyKey{Name: "pol4", Kind: v3.KindStagedGlobalNetworkPolicy}
 			sp4 := &model.Policy{
+				Tier:  "default",
 				Order: &float2_0,
 				Types: []string{dir},
 			}
-			sp4id := calc.PolicyID{Name: "staged:pol4", Tier: "default"}
+			sp4id := calc.PolicyID{Name: "pol4", Kind: v3.KindStagedGlobalNetworkPolicy}
 
 			td := calc.NewTierInfo("default")
 			td.Valid = true
@@ -572,7 +582,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			// Tier contains enforced policy, so has a real implicit drop rule ID.
 			Expect(data.TierData["tier1"].EndOfTierMatchIndex).To(Equal(2))
 			Expect(data.TierData["tier1"].TierDefaultActionRuleID).To(Equal(
-				calc.NewRuleID("tier1", "pol2", "ns1", calc.RuleIndexTierDefaultAction, ruleDir, rules.RuleActionDeny)))
+				calc.NewRuleID(v3.KindNetworkPolicy, "tier1", "pol2", "ns1", calc.RuleIndexTierDefaultAction, ruleDir, rules.RuleActionDeny)))
 
 			By("checking compiled match data for default tier")
 			// Staged policy increments the next index.
@@ -615,10 +625,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 		By("adding a node and a service")
 		updates = []api.Update{{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
-				Value: &v3.Node{
-					Spec: v3.NodeSpec{
-						BGP: &v3.NodeBGPSpec{
+				Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
+				Value: &libapiv3.Node{
+					Spec: libapiv3.NodeSpec{
+						BGP: &libapiv3.NodeBGPSpec{
 							IPv4Address: nodeIPStr,
 						},
 					},
@@ -658,10 +668,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("updating the node and adding a new node")
 			updates = []api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
-					Value: &v3.Node{
-						Spec: v3.NodeSpec{
-							BGP: &v3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
+					Value: &libapiv3.Node{
+						Spec: libapiv3.NodeSpec{
+							BGP: &libapiv3.NodeBGPSpec{
 								IPv4Address: nodeIPStr,
 							},
 							IPv4VXLANTunnelAddr: nodeIPStr,
@@ -672,15 +682,15 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			}, {
 				// 2nd node has duplicate main IP and also has other interface IPs assigned
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node2"},
-					Value: &v3.Node{
-						Spec: v3.NodeSpec{
-							BGP: &v3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node2"},
+					Value: &libapiv3.Node{
+						Spec: libapiv3.NodeSpec{
+							BGP: &libapiv3.NodeBGPSpec{
 								IPv4Address:        nodeIPStr,
 								IPv4IPIPTunnelAddr: nodeIP2Str,
 							},
 							IPv4VXLANTunnelAddr: nodeIP3Str,
-							Wireguard: &v3.NodeWireguardSpec{
+							Wireguard: &libapiv3.NodeWireguardSpec{
 								InterfaceIPv4Address: nodeIP4Str,
 							},
 						},
@@ -719,15 +729,15 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 2")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node2"},
-					Value: &v3.Node{
-						Spec: v3.NodeSpec{
-							BGP: &v3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node2"},
+					Value: &libapiv3.Node{
+						Spec: libapiv3.NodeSpec{
+							BGP: &libapiv3.NodeBGPSpec{
 								IPv4Address:        nodeIP2Str,
 								IPv4IPIPTunnelAddr: nodeIP2Str,
 							},
 							IPv4VXLANTunnelAddr: nodeIP3Str,
-							Wireguard: &v3.NodeWireguardSpec{
+							Wireguard: &libapiv3.NodeWireguardSpec{
 								InterfaceIPv4Address: nodeIP4Str,
 							},
 						},
@@ -746,10 +756,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 1 to remove the main IP")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
-					Value: &v3.Node{
-						Spec: v3.NodeSpec{
-							BGP: &v3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
+					Value: &libapiv3.Node{
+						Spec: libapiv3.NodeSpec{
+							BGP: &libapiv3.NodeBGPSpec{
 								IPv4IPIPTunnelAddr: nodeIPStr,
 							},
 						},
@@ -765,9 +775,9 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 1 to remove the remaining IP")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
-					Value: &v3.Node{
-						Spec: v3.NodeSpec{},
+					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
+					Value: &libapiv3.Node{
+						Spec: libapiv3.NodeSpec{},
 					},
 				},
 				UpdateType: api.UpdateTypeKVUpdated,
@@ -968,6 +978,70 @@ var _ = Describe("EndpointLookupsCache GetEndpointFromInterfaceKey", func() {
 		})
 	})
 })
+
+func TestIsEndpointDeleted(t *testing.T) {
+	// Create a cache with a short deletion delay for testing
+	cache := calc.NewEndpointLookupsCache(calc.WithDeletionDelay(50 * time.Millisecond))
+
+	// Create a test endpoint key
+	key := model.WorkloadEndpointKey{
+		Hostname:       "test-node",
+		OrchestratorID: "cni",
+		WorkloadID:     "test-workload",
+		EndpointID:     "eth0",
+	}
+
+	// Create endpoint data using the same pattern as existing tests
+	ip := net.ParseIP("10.0.0.1")
+	cidr := net.IPNet{
+		IP:   ip,
+		Mask: net.CIDRMask(32, 32),
+	}
+
+	endpoint := &model.WorkloadEndpoint{
+		State:      "active",
+		Name:       "test-endpoint",
+		ProfileIDs: []string{"test-profile"},
+		IPv4Nets:   []libcaliconet.IPNet{{IPNet: cidr}},
+	}
+
+	// Add the endpoint to the cache using the correct API pattern
+	ed := calc.CalculateRemoteEndpoint(key, endpoint)
+	cache.OnUpdate(api.Update{
+		UpdateType: api.UpdateTypeKVNew,
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: endpoint,
+		},
+	})
+
+	// Check if the endpoint is deleted (should be false)
+	if cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to not be deleted before deletion")
+	}
+
+	// Remove the endpoint (this should mark it for deletion)
+	cache.OnUpdate(api.Update{
+		UpdateType: api.UpdateTypeKVDeleted,
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: nil,
+		},
+	})
+
+	// Check if the endpoint is now marked as deleted (should be true)
+	if !cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to be marked as deleted after deletion")
+	}
+
+	// Wait for the deletion delay to pass
+	time.Sleep(100 * time.Millisecond)
+
+	// Check if the endpoint is still marked as deleted (should be false as it's been cleaned up)
+	if cache.IsEndpointDeleted(ed) {
+		t.Error("Expected endpoint to not be marked as deleted after cleanup")
+	}
+}
 
 func newTierInfoSlice() []calc.TierInfo {
 	return nil

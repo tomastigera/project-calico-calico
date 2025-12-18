@@ -71,29 +71,26 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
-				mset.Iter(func(m mapping) error {
+				for m := range mset.All() {
 					if mappingMatchesLine(&m, line) {
-						return set.RemoveItem
+						mset.Discard(m)
 					}
-					return nil
-				})
-				notset.Iter(func(m mapping) error {
+				}
+				for m := range notset.All() {
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
 						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
 					}
-					return nil
-				})
+				}
 			}
 			if mset.Len() == 0 {
 				log.Info("All expected mappings found")
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
-				mset.Iter(func(m mapping) error {
+				for m := range mset.All() {
 					log.Infof("Missed mapping: %v", m)
 					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
-					return nil
-				})
+				}
 			}
 			if len(problems) > 0 {
 				return errors.New(strings.Join(problems, "\n"))
@@ -494,7 +491,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 					// Hence a longer wait time.
 					if BPFMode() {
 						Eventually(func() bool {
-							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+							return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 						}, "20s", "200ms").Should(BeTrue())
 					} else {
 						time.Sleep(2 * time.Second)
@@ -662,7 +659,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 							Expect(err).NotTo(HaveOccurred())
 							if BPFMode() {
 								Eventually(func() bool {
-									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+									return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 								}, "2s", "200ms").Should(BeTrue())
 							}
 						})
@@ -716,7 +713,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 							Expect(err).NotTo(HaveOccurred())
 							if BPFMode() {
 								Eventually(func() bool {
-									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+									return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 								}, "2s", "200ms").Should(BeTrue())
 							}
 						})
@@ -778,7 +775,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 					Expect(err).NotTo(HaveOccurred())
 					if BPFMode() {
 						Eventually(func() bool {
-							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+							return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 						}, "2s", "200ms").Should(BeTrue())
 					}
 				})

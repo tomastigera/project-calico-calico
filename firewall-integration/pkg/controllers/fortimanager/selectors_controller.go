@@ -573,11 +573,10 @@ func (sc *SelectorsController) syncToFortiGateAddrGrp(key, dev string) error {
 		// Existing object. Time to update it.
 		clog.Debug("Updating AddressGroup in FortiGate")
 		members := []string{}
-		addr.Members.Iter(func(item string) error {
+		for item := range addr.Members.All() {
 			nodeName := item
 			members = append(members, nodeName)
-			return nil
-		})
+		}
 		if len(members) == 0 {
 			members = []string{noMembers}
 		}
@@ -754,7 +753,7 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 		// Iterate over nodes linked to a GNP, if Node is
 		// NOT present in xrefcache, that means Node had been removed.
 		nodes := sc.gnpToNodes[update.ResourceID.Name]
-		nodes.Iter(func(item string) error {
+		for item := range nodes.All() {
 			nodeName := item
 			// If a Node isn't present in xrefcache, delete in Fortigate
 			_, ok := cachedEntryGNP.ScheduledNodes[nodeName]
@@ -763,25 +762,24 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 					cache.Delete(nodeName)
 				}
 			}
-			return nil
-		})
+		}
 
 		// Create an Address Group for a global network policy
 		// Address Group name must match with network policy Name.
 		nodes = sc.gnpToNodes[update.ResourceID.Name]
 		members := []string{}
-		nodes.Iter(func(item string) error {
+		for item := range nodes.All() {
 			nodeName := item
 			_, ok := cachedEntryGNP.ScheduledNodes[nodeName]
 			if !ok {
 				// The Node that we were tracking is no longer referenced in the GNP,
 				// Remove this node as the address group member.
 				log.Infof("Removing node %v from address group %v", nodeName, update.ResourceID.Name)
-				return set.RemoveItem
+				nodes.Discard(item)
+				continue
 			}
 			members = append(members, nodeName)
-			return nil
-		})
+		}
 		if len(members) == 0 {
 			members = []string{noMembers}
 		}
@@ -808,37 +806,35 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		log.Infof("Received node Event Policy started %#v", update)
 
 		// Create a Firewall Address object in Address cache.
-		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
+		for id := range cachedEntryGNP.SelectedPods.All() {
 			p, err := sc.k8sClientset.CoreV1().Pods(id.Namespace).Get(context.Background(), id.Name, metav1.GetOptions{})
 			if err != nil {
 				log.WithError(err).Errorf("failed to get pod resource from k8s client for pod:%#v", id.Name)
-				return nil
+				continue
 			} else {
 				fw, err := ConvertK8sPodToFortinetFirewallAddress(p)
 				if err != nil {
 					log.WithError(err).Error("Failed to convert to Fortinet Firewall Address")
-					return nil
+					continue
 				}
 				for _, cache := range sc.devToRcacheAddr {
 					// Update address object in Address Cache.
 					cache.Set(fw.Name, fw)
 				}
 			}
-			return nil
-		})
+		}
 
 		// Create a Firewall Address Group object in AddressGroup cache.
 		// Create an Address Group for a global network policy
 		// Address Group name must match with network policy Name.
 		pods := sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
+		for id := range cachedEntryGNP.SelectedPods.All() {
 			podName := fmt.Sprintf("%s-%s", id.Namespace, id.Name)
 			pods.Add(id)
 			log.Infof("Assigning pod %v to address group %v", podName, update.ResourceID.Name)
 			members = append(members, podName)
-			return nil
-		})
+		}
 		sc.gnpToPods[update.ResourceID.Name] = pods
 
 		addrGroup := AddressGroup{
@@ -856,7 +852,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Iterate over pods linked to a GNP, if a pod is
 		// NOT present in xrefcache, that means pod had been removed.
 		pods := sc.gnpToPods[update.ResourceID.Name]
-		pods.Iter(func(item v3.ResourceID) error {
+		for item := range pods.All() {
 
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
@@ -866,25 +862,24 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 					cache.Delete(podName)
 				}
 			}
-			return nil
-		})
+		}
 
 		// Modify an Address Group for a global network policy
 		// Address Group name must match with network policy Name.
 		pods = sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		pods.Iter(func(item v3.ResourceID) error {
+		for item := range pods.All() {
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
 			if !ok {
 				// The pod that we were tracking is no longer referenced in the GNP,
 				// Remove this node as the address group member.
 				log.Infof("Removing pod %v from address group %v", podName, update.ResourceID.Name)
-				return set.RemoveItem
+				pods.Discard(item)
+				continue
 			}
 			members = append(members, podName)
-			return nil
-		})
+		}
 		if len(members) == 0 {
 			members = []string{noMembers}
 		}

@@ -17,6 +17,75 @@ const (
 	ProtocolTCP string = "tcp"
 )
 
+// LogConverter converts an EnvoyLog to proto.DataplaneStats.
+// This allows extending the conversion with additional fields (e.g., Gateway API enrichment).
+type LogConverter interface {
+	DataplaneStatsFromL7Log(collector.EnvoyLog) *proto.DataplaneStats
+}
+
+// DefaultLogConverter provides the standard conversion without Gateway API fields.
+type DefaultLogConverter struct{}
+
+// DataplaneStatsFromL7Log converts an EnvoyLog to DataplaneStats.
+func (c DefaultLogConverter) DataplaneStatsFromL7Log(logData collector.EnvoyLog) *proto.DataplaneStats {
+	// Unless the protocol is specified, the protocol will be TCP
+	if logData.Protocol == "" || logData.Protocol == "-" {
+		logData.Protocol = ProtocolTCP
+	}
+
+	d := &proto.DataplaneStats{
+		SrcIp:   logData.SrcIp,
+		DstIp:   logData.DstIp,
+		SrcPort: logData.SrcPort,
+		DstPort: logData.DstPort,
+		Protocol: &proto.Protocol{
+			NumberOrName: &proto.Protocol_Name{
+				Name: logData.Protocol,
+			},
+		},
+	}
+
+	d.HttpData = []*proto.HTTPData{
+		{
+			Duration:      logData.Duration,
+			ResponseCode:  logData.ResponseCode,
+			RouteName:     logData.RouteName,
+			BytesSent:     logData.BytesSent,
+			BytesReceived: logData.BytesReceived,
+			UserAgent:     logData.UserAgent,
+			RequestPath:   logData.RequestPath,
+			RequestMethod: logData.RequestMethod,
+			Count:         logData.Count,
+			Domain:        logData.Domain,
+			DurationMax:   logData.DurationMax,
+			Type:          logData.Type,
+			Latency:       logData.Latency,
+			// Gateway API enrichment fields (empty for base l7-collector, populated by gateway)
+			GatewayName:               logData.GatewayName,
+			GatewayNamespace:          logData.GatewayNamespace,
+			GatewayClass:              logData.GatewayClass,
+			GatewayStatus:             logData.GatewayStatus,
+			GatewayStatusMessage:      logData.GatewayStatusMessage,
+			GatewayListenerName:       logData.GatewayListenerName,
+			GatewayListenerPort:       int32(logData.GatewayListenerPort),
+			GatewayListenerProtocol:   logData.GatewayListenerProtocol,
+			GatewayListenerFullName:   logData.GatewayListenerFullName,
+			GatewayListenerHostname:   logData.GatewayListenerHostname,
+			CollectorName:             logData.CollectorName,
+			CollectorType:             logData.CollectorType,
+			Host:                      logData.Host,
+			GatewayRouteType:          logData.GatewayRouteType,
+			GatewayRouteName:          logData.GatewayRouteName,
+			GatewayRouteNamespace:     logData.GatewayRouteNamespace,
+			GatewayRouteHostname:      logData.GatewayRouteHostname,
+			GatewayRouteStatus:        logData.GatewayRouteStatus,
+			GatewayRouteStatusMessage: logData.GatewayRouteStatusMessage,
+		},
+	}
+
+	return d
+}
+
 type FelixClient interface {
 	SendStats(context.Context, collector.EnvoyCollector)
 	SendData(context.Context, proto.PolicySyncClient, collector.EnvoyInfo) error
@@ -24,18 +93,27 @@ type FelixClient interface {
 
 // felixClient provides the means to send data to Felix
 type felixClient struct {
-	target   string
-	dialOpts []grpc.DialOption
+	target    string
+	dialOpts  []grpc.DialOption
+	converter LogConverter
 }
 
 func init() {
 	resolver.SetDefaultScheme("passthrough")
 }
 
+// NewFelixClient creates a FelixClient with the default log converter.
 func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
+	return NewFelixClientWithConverter(target, opts, DefaultLogConverter{})
+}
+
+// NewFelixClientWithConverter creates a FelixClient with a custom log converter.
+// This allows callers to extend the log conversion with additional fields.
+func NewFelixClientWithConverter(target string, opts []grpc.DialOption, converter LogConverter) FelixClient {
 	return &felixClient{
-		target:   target,
-		dialOpts: opts,
+		target:    target,
+		dialOpts:  opts,
+		converter: converter,
 	}
 }
 
@@ -92,8 +170,8 @@ func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClie
 func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[collector.TupleKey]*proto.DataplaneStats {
 	data := make(map[collector.TupleKey]*proto.DataplaneStats)
 	for _, l := range info.Logs {
-		// Convert the EnvoyLog to DataplaneStats
-		d := fc.dataplaneStatsFromL7Log(l)
+		// Convert the EnvoyLog to DataplaneStats using the configured converter
+		d := fc.converter.DataplaneStatsFromL7Log(l)
 
 		// Join the HttpData fields by 5 tuple
 		tupleKey := collector.TupleKeyFromEnvoyLog(l)
@@ -120,7 +198,7 @@ func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[co
 	for key, count := range info.Connections {
 		if _, ok := data[key]; !ok {
 			l := collector.EnvoyLogFromTupleKey(key)
-			d := fc.dataplaneStatsFromL7Log(l)
+			d := fc.converter.DataplaneStatsFromL7Log(l)
 			// Add the count statistics
 			httpStat := &proto.Statistic{
 				Direction:  proto.Statistic_IN,
@@ -135,46 +213,4 @@ func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[co
 	}
 
 	return data
-}
-
-func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *proto.DataplaneStats {
-	// policy syn server is already configured to consume DataplaneStats object
-	// so we use the same object with envoy l7 data
-
-	// Unless the protocol is specified, the protocol will be TCP
-	if logData.Protocol == "" || logData.Protocol == "-" {
-		logData.Protocol = ProtocolTCP
-	}
-
-	d := &proto.DataplaneStats{
-		SrcIp:   logData.SrcIp,
-		DstIp:   logData.DstIp,
-		SrcPort: logData.SrcPort,
-		DstPort: logData.DstPort,
-		Protocol: &proto.Protocol{
-			NumberOrName: &proto.Protocol_Name{
-				Name: logData.Protocol,
-			},
-		},
-	}
-
-	d.HttpData = []*proto.HTTPData{
-		{
-			Duration:      logData.Duration,
-			ResponseCode:  logData.ResponseCode,
-			RouteName:     logData.RouteName,
-			BytesSent:     logData.BytesSent,
-			BytesReceived: logData.BytesReceived,
-			UserAgent:     logData.UserAgent,
-			RequestPath:   logData.RequestPath,
-			RequestMethod: logData.RequestMethod,
-			Count:         logData.Count,
-			Domain:        logData.Domain,
-			DurationMax:   logData.DurationMax,
-			Type:          logData.Type,
-			Latency:       logData.Latency,
-		},
-	}
-
-	return d
 }

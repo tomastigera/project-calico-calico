@@ -62,22 +62,6 @@ clean:
 	rm -rf _release_archive
 	rm -f manifests/ocp.tgz
 
-ci-preflight-checks:
-	$(MAKE) check-go-mod
-	$(MAKE) verify-go-mods
-	$(MAKE) check-dockerfiles
-	$(MAKE) check-gotchas
-	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
-	$(MAKE) check-release-cut-promotions
-	$(MAKE) generate SKIP_FIX_CHANGED=true
-	$(MAKE) fix-all
-	$(MAKE) -C networking-calico fmtpy
-	$(MAKE) check-ocp-no-crds
-	$(MAKE) yaml-lint
-	$(MAKE) check-dirty
-	$(MAKE) go-vet
-	$(MAKE) -C networking-calico flake8
-
 check-gotchas:
 	@if grep github.com/projectcalico/api go.mod; then \
 	  echo; \
@@ -216,7 +200,11 @@ get-operator-crds: var-require-all-OPERATOR_ORGANIZATION-OPERATOR_GIT_REPO-OPERA
 	$(MAKE) fix-changed
 
 gen-semaphore-yaml:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ./hack/cmd/deps generate-semaphore-yamls'
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
+	                          DEFAULT_BRANCH_OVERRIDE=$(DEFAULT_BRANCH_OVERRIDE) \
+	                          SEMAPHORE_GIT_BRANCH=$(SEMAPHORE_GIT_BRANCH) \
+	                          RELEASE_BRANCH_PREFIX=$(RELEASE_BRANCH_PREFIX) \
+	                          go run ./hack/cmd/deps $(DEPS_ARGS) generate-semaphore-yamls"
 
 GO_DIRS=$(shell find -name '*.go' | grep -v -e './lib/' -e './pkg/' | grep -o --perl '^./\K[^/]+' | sort -u)
 DEP_FILES=$(patsubst %, %/deps.txt, $(GO_DIRS))

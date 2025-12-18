@@ -147,6 +147,12 @@ var baseTests = []StateList{
 		localEpsWithProfile,
 	},
 
+	// Test movement of policy1 from the default tier to a non-default tier and back.
+	{
+		localEp1WithPolicy,
+		localEp1WithPolicyAndTier,
+	},
+
 	// Host endpoint tests.
 	{hostEp1WithPolicy, hostEp2WithPolicy, hostEp1WithIngressPolicy, hostEp1WithEgressPolicy},
 
@@ -782,7 +788,6 @@ func describeAsyncTests(baseTests []StateList) {
 		for _, expander := range testExpanders() {
 			expanderDesc, expandedTests := expander(baseTest)
 			for _, test := range expandedTests {
-				test := test
 				It("should handle: "+baseTest.String()+" "+expanderDesc, func() {
 					// Create the calculation graph.
 					conf := config.New()
@@ -963,20 +968,18 @@ func stringifyRoutes(routes set.Set[types.RouteUpdate]) []string {
 
 func stringifyPacketCapture(pc set.Set[types.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
-	pc.Iter(func(update types.PacketCaptureUpdate) error {
+	for update := range pc.All() {
 		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
-		return nil
-	})
+	}
 	sort.Strings(out)
 	return out
 }
 
 func toSlice(s set.Set[string]) []string {
 	out := make([]string, 0, s.Len())
-	s.Iter(func(pc string) error {
+	for pc := range s.All() {
 		out = append(out, pc)
-		return nil
-	})
+	}
 	sort.Strings(out)
 	return out
 }

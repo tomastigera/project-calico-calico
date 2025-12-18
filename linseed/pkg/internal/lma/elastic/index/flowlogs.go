@@ -51,7 +51,7 @@ func flowLogsSetOpTermToElastic(t *query.SetOpTerm) JsonObject {
 // flowLogsQueryObjectToElastic returns a flow log queryObject as an elastic JsonObject.
 func flowLogsQueryObjectToElastic[E queryObject](o E, key string, basicConverter converterFunc[E]) JsonObject {
 	switch key {
-	case "dest_labels.labels", "policies.all_policies", "policies.enforced_policies", "policies.pending_policies", "source_labels.labels":
+	case "dest_labels.labels", "policies.all_policies", "policies.enforced_policies", "policies.pending_policies", "policies.transit_policies", "source_labels.labels":
 		path := key[:strings.Index(key, ".")]
 		return JsonObject{
 			"nested": JsonObject{

@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
@@ -296,10 +296,10 @@ func chainsForIfaces(ipVersion uint8,
 			ifaceName = nameParts[0]
 			if strings.HasPrefix(nameParts[1], "pol") {
 				tierName = "default"
-				polName = "/" + nameParts[1]
+				polName = nameParts[1]
 			} else {
 				tierName = nameParts[1]
-				polName = "/" + tierToPolicyName(tierName)
+				polName = tierToPolicyName(tierName)
 			}
 			ifaceKind = "normal"
 		} else {
@@ -309,10 +309,10 @@ func chainsForIfaces(ipVersion uint8,
 			ifaceName = nameParts[0]
 			if strings.HasPrefix(nameParts[1], "pol") {
 				tierName = "default"
-				polName = "/" + nameParts[1]
+				polName = nameParts[1]
 			} else {
 				tierName = nameParts[1]
-				polName = "/" + tierToPolicyName(tierName)
+				polName = tierToPolicyName(tierName)
 			}
 			switch nameParts[2] {
 			case "ingress":
@@ -399,9 +399,16 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.ClearMarkAction{Mark: 16},
 				Comment: []string{"Start of tier " + tierName},
 			})
+
+			// Determine the policy chain name.
+			target := rules.PolicyChainName(
+				"cali-po-",
+				&types.PolicyID{Name: polName, Kind: v3.KindGlobalNetworkPolicy},
+				false,
+			)
 			outRules = append(outRules, generictables.Rule{
 				Match:  iptables.Match().MarkClear(16),
-				Action: iptables.JumpAction{Target: "cali-po-" + tierName + polName},
+				Action: iptables.JumpAction{Target: target},
 			})
 			if tableKind == "untracked" {
 				outRules = append(outRules, generictables.Rule{
@@ -517,9 +524,15 @@ func chainsForIfaces(ipVersion uint8,
 				Comment: []string{"Start of tier " + tierName},
 			})
 			// For untracked policy, we expect a tier with a policy in it.
+			// Determine the policy chain name.
+			target := rules.PolicyChainName(
+				"cali-pi-",
+				&types.PolicyID{Name: polName, Kind: v3.KindGlobalNetworkPolicy},
+				false,
+			)
 			inRules = append(inRules, generictables.Rule{
 				Match:  iptables.Match().MarkClear(16),
-				Action: iptables.JumpAction{Target: "cali-pi-" + tierName + polName},
+				Action: iptables.JumpAction{Target: target},
 			})
 			if tableKind == "untracked" {
 				inRules = append(inRules, generictables.Rule{
@@ -947,7 +960,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				IPIPTunnelAddress:        nil,
 				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyMode:            v3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:       100,
 				DNSPacketsNfqueueID:      101,
 				MarkEgress:               0x4,
@@ -1025,7 +1038,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				nil,
 				nil,
 				false,
-				apiv3.BPFAttachOptionTCX,
+				v3.BPFAttachOptionTCX,
 				hepListener,
 				common.NewCallbacks(),
 				nlHandle,
@@ -1049,14 +1062,20 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 			if spec.tierName != "" {
 				parts := strings.Split(spec.tierName, "_")
 				var tierName string
-				var policies []string
+				var policies []*proto.PolicyID
 				if len(parts) == 1 {
 					if strings.HasPrefix(parts[0], "pol") {
 						tierName = "default"
-						policies = []string{parts[0]}
+						policies = []*proto.PolicyID{{
+							Name: parts[0],
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					} else {
 						tierName = parts[0]
-						policies = []string{tierToPolicyName(tierName)}
+						policies = []*proto.PolicyID{{
+							Name: tierToPolicyName(tierName),
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:            tierName,
@@ -1066,10 +1085,16 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				} else if len(parts) == 2 && parts[1] == "untracked" {
 					if strings.HasPrefix(parts[0], "pol") {
 						tierName = "default"
-						policies = []string{parts[0]}
+						policies = []*proto.PolicyID{{
+							Name: parts[0],
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					} else {
 						tierName = parts[0]
-						policies = []string{tierToPolicyName(tierName)}
+						policies = []*proto.PolicyID{{
+							Name: tierToPolicyName(tierName),
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					}
 					untrackedTiers = append(untrackedTiers, &proto.TierInfo{
 						Name:            tierName,
@@ -1079,10 +1104,16 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				} else if len(parts) == 2 && parts[1] == "preDNAT" {
 					if strings.HasPrefix(parts[0], "pol") {
 						tierName = "default"
-						policies = []string{parts[0]}
+						policies = []*proto.PolicyID{{
+							Name: parts[0],
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					} else {
 						tierName = parts[0]
-						policies = []string{tierToPolicyName(tierName)}
+						policies = []*proto.PolicyID{{
+							Name: tierToPolicyName(tierName),
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					}
 					preDNATTiers = append(preDNATTiers, &proto.TierInfo{
 						Name:            tierName,
@@ -1091,16 +1122,22 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				} else if len(parts) == 2 && parts[1] == "applyOnForward" {
 					forwardTiers = append(forwardTiers, &proto.TierInfo{
 						Name:            "default",
-						IngressPolicies: []string{parts[0]},
-						EgressPolicies:  []string{parts[0]},
+						IngressPolicies: []*proto.PolicyID{{Name: parts[0], Kind: v3.KindGlobalNetworkPolicy}},
+						EgressPolicies:  []*proto.PolicyID{{Name: parts[0], Kind: v3.KindGlobalNetworkPolicy}},
 					})
 				} else if len(parts) == 2 && parts[1] == "ingress" {
 					if strings.HasPrefix(parts[0], "pol") {
 						tierName = "default"
-						policies = []string{parts[0]}
+						policies = []*proto.PolicyID{{
+							Name: parts[0],
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					} else {
 						tierName = parts[0]
-						policies = []string{tierToPolicyName(tierName)}
+						policies = []*proto.PolicyID{{
+							Name: tierToPolicyName(tierName),
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:            tierName,
@@ -1109,10 +1146,16 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				} else if len(parts) == 2 && parts[1] == "egress" {
 					if strings.HasPrefix(parts[0], "pol") {
 						tierName = "default"
-						policies = []string{parts[0]}
+						policies = []*proto.PolicyID{{
+							Name: parts[0],
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					} else {
 						tierName = parts[0]
-						policies = []string{tierToPolicyName(tierName)}
+						policies = []*proto.PolicyID{{
+							Name: tierToPolicyName(tierName),
+							Kind: v3.KindGlobalNetworkPolicy,
+						}}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:           tierName,
@@ -2048,8 +2091,8 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					BeforeEach(func() {
 						tiers = []*proto.TierInfo{{
 							Name:            "default",
-							IngressPolicies: []string{"policy1"},
-							EgressPolicies:  []string{"policy1"},
+							IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+							EgressPolicies:  []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
 						}}
 					})
 
@@ -2160,7 +2203,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					BeforeEach(func() {
 						tiers = []*proto.TierInfo{{
 							Name:            "default",
-							IngressPolicies: []string{"policy1"},
+							IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
 						}}
 					})
 
@@ -2171,7 +2214,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					BeforeEach(func() {
 						tiers = []*proto.TierInfo{{
 							Name:           "default",
-							EgressPolicies: []string{"policy1"},
+							EgressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
 						}}
 					})
 
@@ -2784,164 +2827,176 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 		})
 
 		Describe("policy grouping tests", func() {
+			var (
+				// Define expected policy IDs for easier reference.
+				polA1      = "gnp/polA1"
+				polA2      = "gnp/polA2"
+				polB1      = "gnp/polB1"
+				polB2      = "gnp/polB2"
+				polC1      = "gnp/polC1"
+				tier2PolA1 = "gnp/tier2.polA1"
+				tier2PolA2 = "gnp/tier2.polA2"
+				tier2PolB1 = "gnp/tier2.polB1"
+			)
+
 			JustBeforeEach(func() {
+				// Add some policies to the endpoint manager in the default tier.
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "default", Name: "polA1"},
-					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+					Id:     &proto.PolicyID{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(a)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "default", Name: "polA2"},
-					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+					Id:     &proto.PolicyID{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(a)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "default", Name: "polB1"},
-					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+					Id:     &proto.PolicyID{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(b)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "default", Name: "polB2"},
-					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+					Id:     &proto.PolicyID{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(b)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "default", Name: "polC1"},
-					Policy: &proto.Policy{OriginalSelector: "has(c)"},
+					Id:     &proto.PolicyID{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(c)"},
 				})
 
+				// Also add policies in another tier. Note that names are prefixed with tier name
+				// so that they don't clash with the default tier policies.
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "tier2", Name: "polA1"},
-					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+					Id:     &proto.PolicyID{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "tier2", OriginalSelector: "has(a)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "tier2", Name: "polA2"},
-					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+					Id:     &proto.PolicyID{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "tier2", OriginalSelector: "has(a)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "tier2", Name: "polB1"},
-					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+					Id:     &proto.PolicyID{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "tier2", OriginalSelector: "has(b)"},
 				})
 				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-					Id:     &proto.PolicyID{Tier: "tier2", Name: "polB2"},
-					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+					Id:     &proto.PolicyID{Name: "tier2.polB2", Kind: v3.KindGlobalNetworkPolicy},
+					Policy: &proto.Policy{Tier: "tier2", OriginalSelector: "has(b)"},
 				})
 			})
 
 			It("should 'group' a single policy", func() {
 				Expect(epMgr.groupPolicies(
-					"default",
-					[]string{"polA1"},
+					[]*proto.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 				}))
 			})
 			It("should 'group' a pair of policies same selector", func() {
 				Expect(epMgr.groupPolicies(
-					"default",
-					[]string{"polA1", "polA2"},
+					[]*proto.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polA2", Kind: v3.KindGlobalNetworkPolicy}},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1", "polA2"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polA2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 				}))
 			})
 			It("should 'group' a pair of policies different selector", func() {
 				Expect(epMgr.groupPolicies(
-					"default",
-					[]string{"polA1", "polB1"},
+					[]*proto.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polB1", Kind: v3.KindGlobalNetworkPolicy}},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polB1"},
-						Selector:    "has(b)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(b)",
 					},
 				}))
 			})
 			It("should 'group' two pairs", func() {
 				Expect(epMgr.groupPolicies(
-					"default",
-					[]string{"polA1", "polA2", "polB1", "polB2"},
+					[]*proto.PolicyID{
+						{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+					},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1", "polA2"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polA2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polB1", "polB2"},
-						Selector:    "has(b)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polB2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(b)",
 					},
 				}))
 			})
 			It("should 'group' mixed", func() {
 				Expect(epMgr.groupPolicies(
-					"default",
-					[]string{"polA1", "polB1", "polB2", "polA2"},
+					[]*proto.PolicyID{
+						{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+					},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polB1", "polB2"},
-						Selector:    "has(b)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "polB2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(b)",
 					},
 					{
-						Tier:        "default",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA2"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 				}))
 			})
 
 			It("should 'group' non-default tier", func() {
 				Expect(epMgr.groupPolicies(
-					"tier2",
-					[]string{"polA1", "polB1", "polB2", "polA2"},
+					[]*proto.PolicyID{
+						{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "tier2.polB2", Kind: v3.KindGlobalNetworkPolicy},
+						{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
+					},
 					rules.PolicyDirectionInbound,
 				)).To(Equal([]*rules.PolicyGroup{
 					{
-						Tier:        "tier2",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA1"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 					{
-						Tier:        "tier2",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polB1", "polB2"},
-						Selector:    "has(b)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy}, {Name: "tier2.polB2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(b)",
 					},
 					{
-						Tier:        "tier2",
-						Direction:   rules.PolicyDirectionInbound,
-						PolicyNames: []string{"polA2"},
-						Selector:    "has(a)",
+						Direction: rules.PolicyDirectionInbound,
+						Policies:  []*types.PolicyID{{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy}},
+						Selector:  "has(a)",
 					},
 				}))
 			})
@@ -2974,16 +3029,26 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					It("should get the expected policy group chains (ingress)", func() {
 						ingressNamesEP1, groupsEP1 := extractGroups(table.currentChains, ep1IngressChain)
 						Expect(groupsEP1).To(Equal([][]string{
-							{"polA1", "polA2"},
-							{"polB1", "polB2"},
-							{"tier2/polA1", "tier2/polA2"},
+							{polA1, polA2},
+							{polB1, polB2},
+							{tier2PolA1, tier2PolA2},
 						}))
+
 						namesEP2, groupsEP2 := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2).To(Equal([][]string{
-							{"polB1", "polB2"},
-							{"polC1"},
-							{"tier2/polA1", "tier2/polA2"},
+							{
+								polB1,
+								polB2,
+							},
+							{
+								polC1,
+							},
+							{
+								tier2PolA1,
+								tier2PolA2,
+							},
 						}))
+
 						Expect(ingressNamesEP1[1]).NotTo(Equal(""), "Policy B group shouldn't be inlined")
 						Expect(ingressNamesEP1[1]).To(Equal(namesEP2[0]), "EPs should share the policy B group")
 						Expect(namesEP2[1]).To(Equal(""), "Group C should be inlined")
@@ -2993,36 +3058,73 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						// Start as with the above test...
 						ingressNamesEP1, groupsEP1 := extractGroups(table.currentChains, ep1IngressChain)
 						Expect(groupsEP1).To(Equal([][]string{
-							{"polA1", "polA2"},
-							{"polB1", "polB2"},
-							{"tier2/polA1", "tier2/polA2"},
+							{
+								polA1,
+								polA2,
+							},
+							{
+								polB1,
+								polB2,
+							},
+							{
+								tier2PolA1,
+								tier2PolA2,
+							},
 						}))
 						_, groupsEP2 := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2).To(Equal([][]string{
-							{"polB1", "polB2"},
-							{"polC1"},
-							{"tier2/polA1", "tier2/polA2"},
+							{
+								polB1,
+								polB2,
+							},
+							{
+								polC1,
+							},
+							{
+								tier2PolA1,
+								tier2PolA2,
+							},
 						}))
 
 						// Then move polA2 to the B group...
 						epMgr.OnUpdate(&proto.ActivePolicyUpdate{
-							Id:     &proto.PolicyID{Tier: "default", Name: "polA2"},
-							Policy: &proto.Policy{OriginalSelector: "has(b)"}, // :-O
+							Id:     &proto.PolicyID{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+							Policy: &proto.Policy{Tier: "default", OriginalSelector: "has(b)"}, // :-O
 						})
 						applyUpdates(epMgr)
 
 						_, groupsEP1Post := extractGroups(table.currentChains, ep1IngressChain)
 						Expect(groupsEP1Post).To(Equal([][]string{
-							{"polA1"},
-							{"polA2", "polB1", "polB2"},
-							{"tier2/polA1", "tier2/polA2"},
+							{
+								polA1,
+							},
+							{
+								polA2,
+								polB1,
+								polB2,
+							},
+							{
+								tier2PolA1,
+								tier2PolA2,
+							},
 						}))
+
 						_, groupsEP2Post := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2Post).To(Equal([][]string{
-							{"polB1", "polB2"},
-							{"polC1"},
-							{"tier2/polA1", "tier2/polA2"},
+							{
+								polB1,
+								polB2,
+							},
+							{
+								polC1,
+							},
+							// {"tier2.polA1", "tier2.polA2"},
+							{
+								tier2PolA1,
+								tier2PolA2,
+							},
 						}))
+
 						Expect(table.currentChains).NotTo(HaveKey(ingressNamesEP1[0]), "Old polA group should be cleaned up")
 					})
 
@@ -3057,29 +3159,32 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						applyUpdates(epMgr)
 						_, groupsEP1 := extractGroups(table.currentChains, ep1IngressChain)
 						Expect(groupsEP1).To(Equal([][]string{
-							{"polB1", "polB2"},
+							// {"polB1", "polB2"},
+							{
+								polB1,
+								polB2,
+							},
 						}))
-						Expect(table.currentChains).NotTo(HaveKey(polAGroup),
-							"Policy A group should be cleaned up")
-						Expect(table.currentChains).To(HaveKey(polBGroup),
-							"Policy B group chain should still be present, it is shared with the second endpoint")
+						Expect(table.currentChains).NotTo(HaveKey(polAGroup), "Policy A group should be cleaned up")
+						Expect(table.currentChains).To(HaveKey(polBGroup), "Policy B group chain should still be present, it is shared with the second endpoint")
 					})
 				}
+
 				defineEgressPolicyGroupingTests := func() {
 					It("should get the expected policy group chains (egress)", func() {
 						namesEP1, groupsEP1 := extractGroups(table.currentChains, ep1EgressChain)
 						Expect(groupsEP1).To(Equal([][]string{
-							{"polA1"},
-							{"polB1", "polB2"},
-							{"tier2/polA1"},
-							{"tier2/polB1"},
+							{polA1},
+							{polB1, polB2},
+							{tier2PolA1},
+							{tier2PolB1},
 						}))
 						namesEP2In, _ := extractGroups(table.currentChains, ep2IngressChain)
 						namesEP2, groupsEP2 := extractGroups(table.currentChains, ep2EgressChain)
 						Expect(groupsEP2).To(Equal([][]string{
-							{"polB1", "polB2"},
-							{"tier2/polA1"},
-							{"tier2/polB1"},
+							{polB1, polB2},
+							{tier2PolA1},
+							{tier2PolB1},
 						}))
 						Expect(namesEP1[0]).To(Equal(""), "Group A should be inlined")
 						Expect(namesEP1[1]).NotTo(Equal(""), "Policy B group shouldn't be inlined")
@@ -3106,27 +3211,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3144,25 +3249,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3194,19 +3299,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									Tiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3248,27 +3353,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3286,25 +3391,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3336,19 +3441,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									Tiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3390,27 +3495,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3426,25 +3531,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3478,19 +3583,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									Tiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3538,27 +3643,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3574,25 +3679,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								Tiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3626,19 +3731,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									Tiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3686,27 +3791,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								PreDnatTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3722,25 +3827,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								PreDnatTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3774,19 +3879,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									PreDnatTiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3834,27 +3939,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								ForwardTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3870,25 +3975,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								ForwardTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -3922,19 +4027,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									ForwardTiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -3982,27 +4087,27 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								UntrackedTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
-											"polB1",
-											"polB2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polA2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -4018,25 +4123,25 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 								UntrackedTiers: []*proto.TierInfo{
 									{
 										Name: "default",
-										IngressPolicies: []string{
-											"polB1",
-											"polB2",
-											"polC1",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polC1", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polB1",
-											"polB2",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 									{
 										Name: "tier2",
-										IngressPolicies: []string{
-											"polA1",
-											"polA2",
+										IngressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polA2", Kind: v3.KindGlobalNetworkPolicy},
 										},
-										EgressPolicies: []string{
-											"polA1",
-											"polB1",
+										EgressPolicies: []*proto.PolicyID{
+											{Name: "tier2.polA1", Kind: v3.KindGlobalNetworkPolicy},
+											{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 										},
 									},
 								},
@@ -4070,19 +4175,19 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 									UntrackedTiers: []*proto.TierInfo{
 										{
 											Name: "default",
-											IngressPolicies: []string{
-												"polB1",
-												"polB2",
+											IngressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
-											EgressPolicies: []string{
-												"polB1",
-												"polB2",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "polB1", Kind: v3.KindGlobalNetworkPolicy},
+												{Name: "polB2", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 										{
 											Name: "tier2",
-											EgressPolicies: []string{
-												"polB1",
+											EgressPolicies: []*proto.PolicyID{
+												{Name: "tier2.polB1", Kind: v3.KindGlobalNetworkPolicy},
 											},
 										},
 									},
@@ -4129,21 +4234,17 @@ func extractGroups(dpChains map[string]*generictables.Chain, epChainName string)
 				strings.HasPrefix(ja.Target, string(rules.PolicyOutboundPfx)) {
 				// Found jump to policy.
 				groupChainNames = append(groupChainNames, "")
-				groups = append(groups, []string{removeDefaultTierPrefix(removePolChainNamePrefix(ja.Target))})
+				groups = append(groups, []string{removePolChainNamePrefix(ja.Target)})
 			}
 		}
 	}
 	return
 }
 
-func removeDefaultTierPrefix(name string) string {
-	return strings.TrimPrefix(name, "default/")
-}
-
 func extractPolicyNamesFromJumps(chain *generictables.Chain) (pols []string) {
 	for _, r := range chain.Rules {
 		if ja, ok := r.Action.(iptables.JumpAction); ok {
-			pols = append(pols, removeDefaultTierPrefix(removePolChainNamePrefix(ja.Target)))
+			pols = append(pols, removePolChainNamePrefix(ja.Target))
 		}
 	}
 	return
@@ -4223,15 +4324,25 @@ type testHEPListener struct {
 func (t *testHEPListener) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.HostEndpoint) {
 	log.Infof("OnHEPUpdate: %v", hostIfaceToEpMap)
 	t.state = map[string]string{}
+
+	stringifyPolicies := func(policies []*proto.PolicyID) string {
+		var policyStrings []string
+		for _, pol := range policies {
+			policyStrings = append(policyStrings, pol.Name)
+		}
+		return strings.Join(policyStrings, ",")
+	}
+
 	stringify := func(tiers []*proto.TierInfo) string {
 		var tierStrings []string
 		for _, tier := range tiers {
 			tierStrings = append(tierStrings,
-				"I="+strings.Join(tier.IngressPolicies, ",")+
-					",E="+strings.Join(tier.EgressPolicies, ","))
+				"I="+stringifyPolicies(tier.IngressPolicies)+
+					",E="+stringifyPolicies(tier.EgressPolicies))
 		}
 		return strings.Join(tierStrings, "/")
 	}
+
 	for ifaceName, hep := range hostIfaceToEpMap {
 		t.state[ifaceName] = "profiles=" + strings.Join(hep.ProfileIds, ",") +
 			",normal=" + stringify(hep.Tiers) +

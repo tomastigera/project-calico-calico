@@ -21,12 +21,9 @@ import (
 const APPLICABLE_ENDPOINTS = "applicable endpoints"
 
 func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleMatches bool, outputFormat string) (err error) {
-
 	bclient, _ := GetClient(configFile)
 	ctx := context.Background()
 
-	// Get all appropriately named policies from any tier.
-	// kvs, err := bclient.List(ctx, model.PolicyListOptions{Name: policyName, Tier: ""}, "")
 	// policyName will be of the form <namespace>/<name>
 	var name, ns string
 	parts := strings.SplitN(policyName, "/", 2)
@@ -43,12 +40,6 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		fmt.Println("The policy-name must be specified.")
 		log.WithField("<policy-name>", policyName).Error("The policy-name has not been specified")
 		os.Exit(1)
-	}
-
-	// Handle tier prefix
-	nParts := strings.SplitN(name, ".", 2)
-	if len(nParts) != 2 {
-		name = "default." + name
 	}
 
 	// Query either the NP or the GNP depending on whether a namespace has also been supplied.

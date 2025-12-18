@@ -38,10 +38,17 @@ type WinFV struct {
 }
 
 func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
+	var b []byte
 	configFile := filepath.Join(rootDir, "config.ps1")
-	b, err := os.ReadFile(configFile) // just pass the file name
-	if err != nil {
-		return nil, err
+
+	if IsRunningHPC() {
+		log.Infof("Skip reading config file, running on HPC...")
+	} else {
+		var err error
+		b, err = os.ReadFile(configFile) // just pass the file name
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var backend CalicoBackEnd
@@ -90,6 +97,10 @@ func (f *WinFV) RestartFelix() {
 }
 
 func (f *WinFV) RestoreConfig() error {
+	if IsRunningHPC() {
+		log.Infof("Skip writing config file, running on HPC...")
+		return nil
+	}
 	err := os.WriteFile(f.configFile, []byte(f.originalConfig), 0644)
 	if err != nil {
 		return err
@@ -99,6 +110,10 @@ func (f *WinFV) RestoreConfig() error {
 
 // Add config items to config.ps1.
 func (f *WinFV) AddConfigItems(configs map[string]interface{}) error {
+	if IsRunningHPC() {
+		log.Infof("Skip writing config file, running on HPC...")
+		return nil
+	}
 	var entry, items string
 
 	items = f.originalConfig

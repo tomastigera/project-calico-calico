@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/julienschmidt/httprouter"
@@ -86,7 +87,7 @@ func NewHandler(
 
 		reg.POST("/query", handleradapters.In2Out1(queryService.Query,
 			withAuthContext(),
-			handleradapters.WithReqBody[client.QueryRequest](),
+			withQueryRequest(),
 			withQueryResponseWriter(logger),
 		))
 	})
@@ -134,4 +135,22 @@ func NewHandler(
 	})
 
 	return reg, nil
+}
+
+func withQueryRequest() handleradapters.ReqMapper[client.QueryRequest] {
+	return handleradapters.NewReqMapper[client.QueryRequest](
+		func(w http.ResponseWriter, r *http.Request, p httprouter.Params) (client.QueryRequest, bool) {
+			var req client.QueryRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				handleradapters.WriteErr(tdsclient.BadRequest("invalid-json", "Invalid JSON body"), w, r)
+				return req, false
+			}
+			if strings.HasPrefix(r.Header.Get("Accept"), "text/csv") {
+				req.IsExport = true
+			}
+			return req, true
+		},
+		func(op *openapi3.Operation, specOps *handleradapters.SpecOps) {
+		},
+	)
 }

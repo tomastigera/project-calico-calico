@@ -85,10 +85,9 @@ func (e *EndpointSliceAddrIndexer) flush(
 			continue
 		}
 		ipPortProtoSet := set.New[ipPortProtoKey]()
-		endpointSlices.Iter(func(endpointSliceKey model.ResourceKey) error {
+		for endpointSliceKey := range endpointSlices.All() {
 			ipPortProtoSet.AddAll(extractIPPortProto(e.endpointSlices[endpointSliceKey]))
-			return nil
-		})
+		}
 		e.ipPortProtoSetByService[*svc] = ipPortProtoSet
 	}
 }

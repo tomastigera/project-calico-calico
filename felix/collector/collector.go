@@ -408,7 +408,7 @@ func (c *collector) startStatsCollectionAndReporting() {
 func (c *collector) loopProcessingDataplaneInfoUpdates(dpInfoC <-chan *proto.ToDataplane) {
 	for dpInfo := range dpInfoC {
 		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-			log.Debugf("Dataplane payload: %v and sequenceNumber: %d, ", dpInfo.Payload, dpInfo.SequenceNumber)
+			log.Debugf("Dataplane payload: %+v and sequenceNumber: %d, ", dpInfo.Payload, dpInfo.SequenceNumber)
 			// Get the data and update the endpoints.
 			ps.ProcessUpdate(perHostPolicySubscription, dpInfo, true)
 		})
@@ -899,6 +899,16 @@ func (c *collector) expireMetrics(data *Data) {
 	}
 }
 
+// tryReportAndExpire tries to report expired data metrics and clean up the connection entry.
+func (c *collector) tryReportAndExpire(data *Data) {
+	if data.Expired && c.reportMetrics(data, false) {
+		// If the data is expired then attempt to report it now so that we can remove the connection entry. If reported
+		// the data can be expired and deleted immediately, otherwise it will get exported during ticker processing.
+		c.expireMetrics(data)
+		c.deleteDataFromEpStats(data)
+	}
+}
+
 func (c *collector) deleteDataFromEpStats(data *Data) {
 	delete(c.epStats, data.Tuple)
 
@@ -1032,6 +1042,18 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 		data.PreDNATPort = originalTuple.L4Dst
 	}
 
+	// Skip processing if either endpoint is marked for deletion.
+	if data.SrcEp != nil && c.luc.IsEndpointDeleted(data.SrcEp) {
+		log.Debugf("Source endpoint: %s marked for deletion, skipping packet info update", data.SrcEp.GenerateName())
+		c.tryReportAndExpire(data)
+		return
+	}
+	if data.DstEp != nil && c.luc.IsEndpointDeleted(data.DstEp) {
+		log.Debugf("Destination endpoint: %s marked for deletion, skipping packet info update", data.DstEp.GenerateName())
+		c.tryReportAndExpire(data)
+		return
+	}
+
 	// Determine the local endpoint for this update.
 	switch pktInfo.Direction {
 	case rules.RuleDirIngress:
@@ -1157,12 +1179,7 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 		}
 	}
 
-	if data.Expired && c.reportMetrics(data, false) {
-		// If the data is expired then attempt to report it now so that we can remove the connection entry. If reported
-		// the data can be expired and deleted immediately, otherwise it will get exported during ticker processing.
-		c.expireMetrics(data)
-		c.deleteDataFromEpStats(data)
-	}
+	c.tryReportAndExpire(data)
 }
 
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current

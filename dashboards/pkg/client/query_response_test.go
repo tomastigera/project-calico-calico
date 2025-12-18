@@ -14,7 +14,7 @@ func TestQueryResponse(t *testing.T) {
 			subject := QueryResponse{}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, nil)
+			err := subject.WriteCSV(w, nil, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "\n", w.String())
@@ -29,7 +29,7 @@ func TestQueryResponse(t *testing.T) {
 			}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, nil)
+			err := subject.WriteCSV(w, nil, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "\n\n\n", w.String())
@@ -73,9 +73,110 @@ func TestQueryResponse(t *testing.T) {
 
 				t.Run(tc.name, func(t *testing.T) {
 					w := &bytes.Buffer{}
-					err := subject.WriteCSV(w, tc.columns)
+					err := subject.WriteCSV(w, tc.columns, 0)
 					require.NoError(t, err)
 
+					require.Equal(t, tc.expected, w.String())
+				})
+			}
+		})
+
+		t.Run("nested fields", func(t *testing.T) {
+			subject := QueryResponse{
+				Documents: []QueryResponseDocument{
+					{
+						"simple": "value",
+						"parent": map[string]any{
+							"child": "nested-value",
+							"deep": map[string]any{
+								"grandchild": "deep-value",
+							},
+						},
+						"broken": "not-a-map",
+					},
+				},
+			}
+
+			testCases := []struct {
+				name     string
+				columns  []string
+				expected string
+			}{
+				{
+					name:     "simple nested field",
+					columns:  []string{"parent.child"},
+					expected: "parent.child\nnested-value\n",
+				},
+				{
+					name:     "deeply nested field",
+					columns:  []string{"parent.deep.grandchild"},
+					expected: "parent.deep.grandchild\ndeep-value\n",
+				},
+				{
+					name:     "missing nested field",
+					columns:  []string{"parent.missing"},
+					expected: "parent.missing\n\n",
+				},
+				{
+					name:     "nested access on non-map",
+					columns:  []string{"broken.child"},
+					expected: "broken.child\n\n",
+				},
+				{
+					name:     "mixed fields",
+					columns:  []string{"simple", "parent.child", "parent.deep.grandchild"},
+					expected: "simple,parent.child,parent.deep.grandchild\nvalue,nested-value,deep-value\n",
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					w := &bytes.Buffer{}
+					err := subject.WriteCSV(w, tc.columns, 0)
+					require.NoError(t, err)
+					require.Equal(t, tc.expected, w.String())
+				})
+			}
+		})
+
+		t.Run("array fields", func(t *testing.T) {
+			subject := QueryResponse{
+				Documents: []QueryResponseDocument{
+					{
+						"simple_array": []interface{}{"val1", "val2"},
+						"mixed_array":  []interface{}{"val1", 123, true},
+						"empty_array":  []interface{}{},
+					},
+				},
+			}
+
+			testCases := []struct {
+				name     string
+				columns  []string
+				expected string
+			}{
+				{
+					name:     "simple string array",
+					columns:  []string{"simple_array"},
+					expected: "simple_array\nval1;val2\n",
+				},
+				{
+					name:     "mixed type array",
+					columns:  []string{"mixed_array"},
+					expected: "mixed_array\nval1;123;true\n",
+				},
+				{
+					name:     "empty array",
+					columns:  []string{"empty_array"},
+					expected: "empty_array\n\n",
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					w := &bytes.Buffer{}
+					err := subject.WriteCSV(w, tc.columns, 0)
+					require.NoError(t, err)
 					require.Equal(t, tc.expected, w.String())
 				})
 			}
@@ -102,7 +203,7 @@ func TestQueryResponse(t *testing.T) {
 			}
 
 			w := &bytes.Buffer{}
-			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)"})
+			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg1)"}, 0)
 			require.NoError(t, err)
 
 			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg1)\n"+
@@ -180,12 +281,48 @@ func TestQueryResponse(t *testing.T) {
 
 				t.Run(tc.name, func(t *testing.T) {
 					w := &bytes.Buffer{}
-					err := subject.WriteCSV(w, tc.columns)
+					err := subject.WriteCSV(w, tc.columns, 0)
 					require.NoError(t, err)
 
 					require.Equal(t, tc.expected, w.String())
 				})
 			}
+		})
+
+		t.Run("limit rows", func(t *testing.T) {
+			subject := QueryResponse{
+				Documents: []QueryResponseDocument{
+					{"col1": "val1"},
+					{"col1": "val2"},
+					{"col1": "val3"},
+				},
+			}
+
+			w := &bytes.Buffer{}
+			err := subject.WriteCSV(w, []string{"col1"}, 2)
+			require.NoError(t, err)
+
+			require.Equal(t, "col1\nval1\nval2\n", w.String())
+		})
+
+		t.Run("limit rows with groups", func(t *testing.T) {
+			subject := QueryResponse{
+				GroupValues: []QueryResponseGroupValue{
+					{Key: "g1", NestedValues: []QueryResponseGroupValue{
+						{Key: "g1-1", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "1"}}},
+						{Key: "g1-2", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "2"}}},
+					}},
+					{Key: "g2", NestedValues: []QueryResponseGroupValue{
+						{Key: "g2-1", Aggregations: QueryResponseAggregations{"agg": QueryResponseValueAsString{AsString: "3"}}},
+					}},
+				},
+			}
+
+			w := &bytes.Buffer{}
+			err := subject.WriteCSV(w, []string{"groupBys(0)", "groupBys(1)", "aggregations(agg)"}, 2)
+			require.NoError(t, err)
+
+			require.Equal(t, "groupBys(0),groupBys(1),aggregations(agg)\ng1,g1-1,1\ng1,g1-2,2\n", w.String())
 		})
 	})
 }

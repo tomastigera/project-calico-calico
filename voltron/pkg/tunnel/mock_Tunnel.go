@@ -7,7 +7,6 @@ package tunnel
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io"
 	"net"
 	"time"
 
@@ -92,61 +91,6 @@ func (_c *MockTunnel_Accept_Call) Return(conn net.Conn, err error) *MockTunnel_A
 }
 
 func (_c *MockTunnel_Accept_Call) RunAndReturn(run func() (net.Conn, error)) *MockTunnel_Accept_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// AcceptStream provides a mock function for the type MockTunnel
-func (_mock *MockTunnel) AcceptStream() (io.ReadWriteCloser, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for AcceptStream")
-	}
-
-	var r0 io.ReadWriteCloser
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() (io.ReadWriteCloser, error)); ok {
-		return returnFunc()
-	}
-	if returnFunc, ok := ret.Get(0).(func() io.ReadWriteCloser); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.ReadWriteCloser)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockTunnel_AcceptStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AcceptStream'
-type MockTunnel_AcceptStream_Call struct {
-	*mock.Call
-}
-
-// AcceptStream is a helper method to define mock.On call
-func (_e *MockTunnel_Expecter) AcceptStream() *MockTunnel_AcceptStream_Call {
-	return &MockTunnel_AcceptStream_Call{Call: _e.mock.On("AcceptStream")}
-}
-
-func (_c *MockTunnel_AcceptStream_Call) Run(run func()) *MockTunnel_AcceptStream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockTunnel_AcceptStream_Call) Return(readWriteCloser io.ReadWriteCloser, err error) *MockTunnel_AcceptStream_Call {
-	_c.Call.Return(readWriteCloser, err)
-	return _c
-}
-
-func (_c *MockTunnel_AcceptStream_Call) RunAndReturn(run func() (io.ReadWriteCloser, error)) *MockTunnel_AcceptStream_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -336,6 +280,52 @@ func (_c *MockTunnel_Close_Call) Return(err error) *MockTunnel_Close_Call {
 }
 
 func (_c *MockTunnel_Close_Call) RunAndReturn(run func() error) *MockTunnel_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CloseChan provides a mock function for the type MockTunnel
+func (_mock *MockTunnel) CloseChan() <-chan struct{} {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CloseChan")
+	}
+
+	var r0 <-chan struct{}
+	if returnFunc, ok := ret.Get(0).(func() <-chan struct{}); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
+	}
+	return r0
+}
+
+// MockTunnel_CloseChan_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseChan'
+type MockTunnel_CloseChan_Call struct {
+	*mock.Call
+}
+
+// CloseChan is a helper method to define mock.On call
+func (_e *MockTunnel_Expecter) CloseChan() *MockTunnel_CloseChan_Call {
+	return &MockTunnel_CloseChan_Call{Call: _e.mock.On("CloseChan")}
+}
+
+func (_c *MockTunnel_CloseChan_Call) Run(run func()) *MockTunnel_CloseChan_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockTunnel_CloseChan_Call) Return(valCh <-chan struct{}) *MockTunnel_CloseChan_Call {
+	_c.Call.Return(valCh)
+	return _c
+}
+
+func (_c *MockTunnel_CloseChan_Call) RunAndReturn(run func() <-chan struct{}) *MockTunnel_CloseChan_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -705,61 +695,6 @@ func (_c *MockTunnel_Open_Call) RunAndReturn(run func() (net.Conn, error)) *Mock
 	return _c
 }
 
-// OpenStream provides a mock function for the type MockTunnel
-func (_mock *MockTunnel) OpenStream() (io.ReadWriteCloser, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for OpenStream")
-	}
-
-	var r0 io.ReadWriteCloser
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() (io.ReadWriteCloser, error)); ok {
-		return returnFunc()
-	}
-	if returnFunc, ok := ret.Get(0).(func() io.ReadWriteCloser); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.ReadWriteCloser)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockTunnel_OpenStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OpenStream'
-type MockTunnel_OpenStream_Call struct {
-	*mock.Call
-}
-
-// OpenStream is a helper method to define mock.On call
-func (_e *MockTunnel_Expecter) OpenStream() *MockTunnel_OpenStream_Call {
-	return &MockTunnel_OpenStream_Call{Call: _e.mock.On("OpenStream")}
-}
-
-func (_c *MockTunnel_OpenStream_Call) Run(run func()) *MockTunnel_OpenStream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockTunnel_OpenStream_Call) Return(readWriteCloser io.ReadWriteCloser, err error) *MockTunnel_OpenStream_Call {
-	_c.Call.Return(readWriteCloser, err)
-	return _c
-}
-
-func (_c *MockTunnel_OpenStream_Call) RunAndReturn(run func() (io.ReadWriteCloser, error)) *MockTunnel_OpenStream_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // OpenTLS provides a mock function for the type MockTunnel
 func (_mock *MockTunnel) OpenTLS(config *tls.Config) (net.Conn, error) {
 	ret := _mock.Called(config)
@@ -818,50 +753,6 @@ func (_c *MockTunnel_OpenTLS_Call) Return(conn net.Conn, err error) *MockTunnel_
 }
 
 func (_c *MockTunnel_OpenTLS_Call) RunAndReturn(run func(config *tls.Config) (net.Conn, error)) *MockTunnel_OpenTLS_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// WaitForError provides a mock function for the type MockTunnel
-func (_mock *MockTunnel) WaitForError() error {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for WaitForError")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockTunnel_WaitForError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WaitForError'
-type MockTunnel_WaitForError_Call struct {
-	*mock.Call
-}
-
-// WaitForError is a helper method to define mock.On call
-func (_e *MockTunnel_Expecter) WaitForError() *MockTunnel_WaitForError_Call {
-	return &MockTunnel_WaitForError_Call{Call: _e.mock.On("WaitForError")}
-}
-
-func (_c *MockTunnel_WaitForError_Call) Run(run func()) *MockTunnel_WaitForError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockTunnel_WaitForError_Call) Return(err error) *MockTunnel_WaitForError_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockTunnel_WaitForError_Call) RunAndReturn(run func() error) *MockTunnel_WaitForError_Call {
 	_c.Call.Return(run)
 	return _c
 }

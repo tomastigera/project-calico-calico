@@ -20,7 +20,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -31,36 +30,48 @@ const (
 	EnvoyGatewayProxiedReporter = "gateway-proxied"
 )
 
-type connectionCounter struct {
+// ConnectionCounter provides thread-safe connection counting by tuple key.
+// It is exported to allow reuse by gateway and other collectors.
+type ConnectionCounter struct {
 	connectionCounts map[TupleKey]int
 	mu               sync.Locker
 }
 
-func newConnectionCounter() *connectionCounter {
-	return &connectionCounter{
+// NewConnectionCounter creates a new ConnectionCounter instance.
+func NewConnectionCounter() *ConnectionCounter {
+	return &ConnectionCounter{
 		connectionCounts: make(map[TupleKey]int),
 		mu:               &sync.Mutex{},
 	}
 }
 
-func (instance *connectionCounter) incr(key TupleKey) {
+// Incr increments the connection count for the given key.
+func (instance *ConnectionCounter) Incr(key TupleKey) {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 	instance.connectionCounts[key] = instance.connectionCounts[key] + 1
 }
 
-func (instance *connectionCounter) val() map[TupleKey]int {
+// Val returns the current connection counts map.
+func (instance *ConnectionCounter) Val() map[TupleKey]int {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 	return instance.connectionCounts
+}
+
+// EnvoyLogEnricher is an interface for enriching EnvoyLog entries.
+// This allows consumers (like gateway) to add custom enrichment logic.
+type EnvoyLogEnricher interface {
+	EnrichLog(entry *EnvoyLog)
 }
 
 type envoyCollector struct {
 	collectedLogs    chan EnvoyInfo
 	config           *config.Config
 	batch            *BatchEnvoyLog
-	connectionCounts *connectionCounter
+	connectionCounts *ConnectionCounter
 	isActive         bool
+	enricher         EnvoyLogEnricher // Optional enricher for log entries
 }
 
 func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
@@ -68,8 +79,14 @@ func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
 		collectedLogs:    ch,
 		config:           cfg,
 		batch:            NewBatchEnvoyLog(cfg.EnvoyRequestsPerInterval),
-		connectionCounts: newConnectionCounter(),
+		connectionCounts: NewConnectionCounter(),
 	}
+}
+
+// SetEnricher sets an optional enricher for log entries.
+// This must be called before starting log collection if enrichment is desired.
+func (ec *envoyCollector) SetEnricher(enricher EnvoyLogEnricher) {
+	ec.enricher = enricher
 }
 
 func stop(t *tail.Tail) {
@@ -79,7 +96,7 @@ func stop(t *tail.Tail) {
 	}
 }
 
-func (ec *envoyCollector) ReadAccessLogs(ctx context.Context, gatewayLicense license.GatewayLicense) {
+func (ec *envoyCollector) ReadAccessLogs(ctx context.Context, licenseChecker LicenseChecker) {
 	// Read logs from the file and add them to the batch
 	if ec.config.EnvoyAccessLogPath == "" {
 		log.Warn("Envoy access log path is not set, skipping log collection")
@@ -118,12 +135,12 @@ func (ec *envoyCollector) ReadAccessLogs(ctx context.Context, gatewayLicense lic
 	for {
 		select {
 		case <-ticker.C:
-			if !gatewayLicense.IsLicensed() {
+			if !licenseChecker.IsLicensed() {
 				continue
 			}
 			ec.ingestLogs()
 		case line := <-t.Lines:
-			if !gatewayLicense.IsLicensed() {
+			if !licenseChecker.IsLicensed() {
 				continue
 			}
 			log.Infof("Received line from envoy log: %v", line.Text)
@@ -221,9 +238,15 @@ func (ec *envoyCollector) ParseAccessLogs(line string) (EnvoyLog, error) {
 	if err != nil {
 		return entry, err
 	}
+
+	// Apply optional enrichment (e.g., Gateway API resource context)
+	if ec.enricher != nil {
+		ec.enricher.EnrichLog(&entry)
+	}
+
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)
-	ec.connectionCounts.incr(key)
+	ec.connectionCounts.Incr(key)
 
 	return entry, nil
 }
@@ -345,14 +368,14 @@ func (ec *envoyCollector) processLine(line *tail.Line) {
 
 	// count connection statistics, this will contain connection counts even when batch is full
 	tupleKey := TupleKeyFromEnvoyLog(envoyLog)
-	ec.connectionCounts.incr(tupleKey)
+	ec.connectionCounts.Incr(tupleKey)
 }
 
 func (ec *envoyCollector) ingestLogs() {
 	intervalBatch := ec.batch.GetLogs()
-	intervalCounts := ec.connectionCounts.val()
+	intervalCounts := ec.connectionCounts.Val()
 	ec.batch = NewBatchEnvoyLog(ec.config.EnvoyRequestsPerInterval)
-	ec.connectionCounts = newConnectionCounter()
+	ec.connectionCounts = NewConnectionCounter()
 
 	// Send a batch if there is data.
 	if len(intervalBatch) != 0 {
@@ -519,5 +542,5 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	}
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)
-	ec.connectionCounts.incr(key)
+	ec.connectionCounts.Incr(key)
 }

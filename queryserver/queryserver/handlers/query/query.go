@@ -175,7 +175,7 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseEndpointsBody(bodyBytes []byte) (*client.QueryEndpointsReq, error) {
-	var body = client.QueryEndpointsReqBody{}
+	body := client.QueryEndpointsReqBody{}
 
 	if len(bodyBytes) > 0 {
 		err := json.Unmarshal(bodyBytes, &body)
@@ -388,7 +388,6 @@ func (q *query) Labels(resourceType api.ResourceType) http.HandlerFunc {
 			ResourceType: resourceType,
 			Permission:   permissions,
 		}, false)
-
 	}
 }
 

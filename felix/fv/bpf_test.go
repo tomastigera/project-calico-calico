@@ -96,7 +96,7 @@ var (
 // with debug disabled and that can lead to verifier issues.
 var _ = describeBPFTests(withProto("tcp"),
 	withConnTimeLoadBalancingEnabled(),
-	withBPFLogLevel("info"))
+	withBPFLogLevel("off"))
 
 type bpfTestOptions struct {
 	connTimeEnabled bool
@@ -596,16 +596,16 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 				pol = createPolicy(pol)
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "ingress", "default.policy-1", "allow", true)
+					return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "ingress", "policy-1", "allow", true)
 				}, "5s", "200ms").Should(BeTrue())
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.policy-1", "allow", true)
+					return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "policy-1", "allow", true)
 				}, "5s", "200ms").Should(BeTrue())
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[1].InterfaceName, "ingress", "default.policy-1", "allow", true)
+					return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[1].InterfaceName, "ingress", "policy-1", "allow", true)
 				}, "5s", "200ms").Should(BeTrue())
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[1].InterfaceName, "egress", "default.policy-1", "allow", true)
+					return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[1].InterfaceName, "egress", "policy-1", "allow", true)
 				}, "5s", "200ms").Should(BeTrue())
 			})
 
@@ -778,6 +778,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				BeforeEach(func() {
 					options.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
 				})
+
 				It("should allow traffic from workload to workload and to/from host", func() {
 					cc.ExpectSome(w[0], w[1])
 					cc.ExpectSome(w[1], w[0])
@@ -1603,8 +1604,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							pol = createPolicy(pol)
 						})
 
-						bpfWaitForPolicy(tc.Felixes[0], "eth0", "egress", "default.host-0-1")
+						bpfWaitForGlobalNetworkPolicy(tc.Felixes[0], "eth0", "egress", "host-0-1")
 					})
+
 					It("should handle NAT outgoing", func() {
 						By("SNATting outgoing traffic with the flag set")
 						cc.ExpectSNAT(w[0][0], felixIP(0), hostW[1])
@@ -1656,7 +1658,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					cc.CheckConnectivity(conntrackChecks(tc.Felixes)...)
 				})
 
-				_ = !testOpts.ipv6 && !testOpts.dsr &&
+				_ = !testOpts.ipv6 && !testOpts.dsr && testOpts.protocol == "udp" && testOpts.udpUnConnected && !testOpts.connTimeEnabled &&
 					It("should handle fragmented UDP", func() {
 						if testOpts.tunnel == "vxlan" && !utils.UbuntuReleaseGreater("22.04") {
 							Skip("Ubuntu too old to handle frag on vxlan dev properly")
@@ -1687,16 +1689,18 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						time.Sleep(time.Second)
 
 						// Send a packet with large payload without the DNF flag
+						// 16,000 bytes is the typical limit on the size of a
+						// single skb, which in turn is the limit on the size
+						// that a BPF program can grow a packet.
 						_, err := w[1][0].RunCmd("pktgen", w[1][0].IP, w[0][0].IP, "udp",
-							"--port-src", "30444", "--port-dst", "30444", "--ip-dnf=n", "--payload-size=1600", "--udp-sock")
+							"--port-src", "30444", "--port-dst", "30444", "--ip-dnf=n", "--payload-size=16000", "--udp-sock")
 						Expect(err).NotTo(HaveOccurred())
 
 						// We should see two fragments on the host interface
-						Eventually(func() int { return tcpdump1.MatchCount("udp-frags") }).Should(Equal(2))
-						// We should see a reassembled packet at the destination workload.
-						// If ebpf program did not reassemble the packet, we would still
-						// see two fragments!
-						Eventually(func() int { return tcpdump0.MatchCount("udp-pod-frags") }).Should(Equal(2))
+						Eventually(func() int { return tcpdump1.MatchCount("udp-frags") }).Should(Equal(12))
+						// We should see the fragments reach the workload.  We reassemble them in the middle but they
+						// get fragmented again.
+						Eventually(func() int { return tcpdump0.MatchCount("udp-pod-frags") }).Should(Equal(12))
 					})
 
 				if (testOpts.protocol == "tcp" || (testOpts.protocol == "udp" && !testOpts.udpUnConnected)) &&
@@ -2112,7 +2116,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						// Connection should persist after the changeover.
 						Eventually(pc.PongCount, "5s", "100ms").Should(BeNumerically(">", lastPongCount), "Connection is no longer ponging after route failover")
-
 					}
 
 					It("should maintain connections to a cluster IP across loadbalancer failover using maglev", func() { testFailover(clusterIP) })
@@ -2254,6 +2257,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						}
 						pol = updatePolicy(pol)
 					})
+
 					It("should not have connectivity from external client, and return connection refused", func() {
 						icmpProto := "icmp"
 						if testOpts.ipv6 {
@@ -4827,7 +4831,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						})
 					})
 				})
-
 			})
 
 			It("should have connectivity when DNAT redirects to-host traffic to a local pod.", func() {
@@ -4960,7 +4963,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					} else {
 						out, _ = tc.Felixes[0].ExecOutput("nft", "list", "table", "ip", "calico")
 					}
-					return strings.Count(out, "default.policy-1") > 0
+					return strings.Count(out, "policy-1") > 0
 				}
 				Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue())
 
@@ -5128,14 +5131,12 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				pol.Spec.Selector = "all()"
 
 				pol = createPolicy(pol)
-
 			})
 
 			if testOpts.protocol == "udp" || testOpts.tunnel == "ipip" || testOpts.ipv6 {
 				return
 			}
 			It("should allow traffic from workload to this host device", func() {
-
 				var (
 					test30            *workload.Workload
 					test30IP          string
@@ -6185,12 +6186,12 @@ func checkServiceRoute(felix *infrastructure.Felix, ip string) bool {
 	return false
 }
 
-func checkIfPolicyOrRuleProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload, isPolicy bool, ipFamily proto.IPVersion) bool {
+func checkIfPolicyOrRuleProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool, polType string, ipFamily proto.IPVersion) bool {
 	startStr := ""
 	endStr := ""
-	if isPolicy {
-		startStr = fmt.Sprintf("Start of policy %s", polName)
-		endStr = fmt.Sprintf("End of policy %s", polName)
+	if polType != "" {
+		startStr = fmt.Sprintf("Start of %s %s", polType, polName)
+		endStr = fmt.Sprintf("End of %s %s", polType, polName)
 	}
 	actionStr := fmt.Sprintf("Start of rule %s action:\"%s\"", polName, action)
 	var policyDbg bpf.PolicyDebugInfo
@@ -6240,15 +6241,20 @@ func checkIfPolicyOrRuleProgrammed(felix *infrastructure.Felix, iface, hook, pol
 }
 
 func bpfCheckIfRuleProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
-	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, false, proto.IPVersion_IPV4)
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, "", proto.IPVersion_IPV4)
 }
 
-func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
-	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, true, proto.IPVersion_IPV4)
+func bpfCheckIfNetworkPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polNS, polName, action string, isWorkload bool) bool {
+	namespacedName := fmt.Sprintf("%s/%s", polNS, polName)
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, namespacedName, action, isWorkload, "NetworkPolicy", proto.IPVersion_IPV4)
 }
 
-func bpfCheckIfPolicyProgrammedV6(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
-	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, true, proto.IPVersion_IPV6)
+func bpfCheckIfGlobalNetworkPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, "GlobalNetworkPolicy", proto.IPVersion_IPV4)
+}
+
+func bpfCheckIfGlobalNetworkPolicyProgrammedV6(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, "GlobalNetworkPolicy", proto.IPVersion_IPV6)
 }
 
 func bpfDumpPolicy(felix *infrastructure.Felix, iface, hook string) string {
@@ -6266,10 +6272,22 @@ func bpfDumpPolicy(felix *infrastructure.Felix, iface, hook string) string {
 	return out
 }
 
-func bpfWaitForPolicy(felix *infrastructure.Felix, iface, hook, policy string) string {
-	search := fmt.Sprintf("Start of policy %s", policy)
+// bpfWaitForGlobalNetworkPolicy waits for the given global network policy to appear in BPF policy.
+func bpfWaitForGlobalNetworkPolicy(felix *infrastructure.Felix, iface, hook, policyName string) string {
+	search := fmt.Sprintf("Start of GlobalNetworkPolicy %s", policyName)
+	return bpfWaitForPolicy(felix, iface, hook, search)
+}
+
+// bpfWaitForNetworkPolicy waits for the given network policy in the given namespace to appear in BPF policy.
+func bpfWaitForNetworkPolicy(felix *infrastructure.Felix, iface, hook, ns, policyName string) string {
+	search := fmt.Sprintf("Start of NetworkPolicy %s/%s", ns, policyName)
+	return bpfWaitForPolicy(felix, iface, hook, search)
+}
+
+// bpfWaitForNetworkPolicy waits for the given search string to appear in BPF policy.
+func bpfWaitForPolicy(felix *infrastructure.Felix, iface, hook, search string) string {
 	out := ""
-	EventuallyWithOffset(1, func() string {
+	EventuallyWithOffset(2, func() string {
 		out = bpfDumpPolicy(felix, iface, hook)
 		return out
 	}, "5s", "200ms").Should(ContainSubstring(search))

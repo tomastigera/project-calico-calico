@@ -660,7 +660,7 @@ func (c *firewallPolicyIntegrationController) deleteFromPolicy(panRuleName strin
 
 	// Inspect every policy that contains a reference to a Panorama rule and delete it.
 	if policies, exists := c.panRuleToPolicyMap[panRuleName]; exists {
-		policies.Iter(func(key string) error {
+		for key := range policies.All() {
 			if item, exists := c.cache.Get(key); exists {
 				policy := item.(v3.GlobalNetworkPolicy)
 				// delete every v3 rule referencing this Panorama rule in its annotation.
@@ -680,9 +680,7 @@ func (c *firewallPolicyIntegrationController) deleteFromPolicy(panRuleName strin
 					c.cache.Set(key, policy)
 				}
 			}
-
-			return nil
-		})
+		}
 		// All Panorama rule references have been removed from the policies. Remove the mappings for
 		// this key.
 		c.panRuleToPolicyMap[panRuleName].Clear()

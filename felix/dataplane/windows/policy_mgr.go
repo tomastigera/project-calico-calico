@@ -19,6 +19,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
@@ -39,25 +40,25 @@ func newPolicyManager(policysets policysets.PolicySetsDataplane) *policyManager 
 func (m *policyManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.ActivePolicyUpdate:
-		if model.PolicyIsStaged(msg.Id.Name) {
+		if model.KindIsStaged(msg.Id.Kind) {
 			log.WithField("policyID", msg.Id).Debug("Skipping ActivePolicyUpdate with staged policy")
 			return
 		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyUpdate")
-		m.policysetsDataplane.AddOrReplacePolicySet(policysets.PolicyNamePrefix+msg.Id.Name, msg.Policy)
+		m.policysetsDataplane.AddOrReplacePolicySet(types.ProtoToPolicyID(msg.Id), msg.Policy)
 	case *proto.ActivePolicyRemove:
-		if model.PolicyIsStaged(msg.Id.Name) {
+		if model.KindIsStaged(msg.Id.Kind) {
 			log.WithField("policyID", msg.Id).Debug("Skipping ActivePolicyRemove with staged policy")
 			return
 		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyRemove")
-		m.policysetsDataplane.RemovePolicySet(policysets.PolicyNamePrefix + msg.Id.Name)
+		m.policysetsDataplane.RemovePolicySet(types.ProtoToPolicyID(msg.Id))
 	case *proto.ActiveProfileUpdate:
 		log.WithField("profileId", msg.Id).Info("Processing ActiveProfileUpdate")
-		m.policysetsDataplane.AddOrReplacePolicySet(policysets.ProfileNamePrefix+msg.Id.Name, msg.Profile)
+		m.policysetsDataplane.AddOrReplacePolicySet(types.ProtoToProfileID(msg.Id), msg.Profile)
 	case *proto.ActiveProfileRemove:
 		log.WithField("profileId", msg.Id).Info("Processing ActiveProfileRemove")
-		m.policysetsDataplane.RemovePolicySet(policysets.ProfileNamePrefix + msg.Id.Name)
+		m.policysetsDataplane.RemovePolicySet(types.ProtoToProfileID(msg.Id))
 	}
 }
 

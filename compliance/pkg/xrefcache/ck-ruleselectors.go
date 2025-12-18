@@ -140,15 +140,14 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entr
 	// Store and clear the effective set of Netset flags.
 	oldFlags := x.NetworkSetFlags
 	x.NetworkSetFlags = 0
-	x.NetworkSets.Iter(func(nsid apiv3.ResourceID) error {
+	for nsid := range x.NetworkSets.All() {
 		netset := c.GetFromXrefCache(nsid)
 		if netset == nil {
 			log.Errorf("Cannot find referenced NetworkSet in cache when recalculating rule selector flags")
-			return nil
+			continue
 		}
 		x.NetworkSetFlags |= netset.(*CacheEntryNetworkSet).Flags
-		return nil
-	})
+	}
 
 	changed := syncer.UpdateType(oldFlags ^ x.NetworkSetFlags)
 
@@ -165,10 +164,9 @@ func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(up
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkSet)
 
-	x.PolicyRuleSelectors.Iter(func(id apiv3.ResourceID) error {
+	for id := range x.PolicyRuleSelectors.All() {
 		c.QueueUpdate(id, nil, update.Type)
-		return nil
-	})
+	}
 }
 
 func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels apiv3.ResourceID) {

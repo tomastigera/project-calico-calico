@@ -267,13 +267,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				// Handle DNS requests separately. These should have policy hits.
 				if flowLog.Tuple.GetDestPort() == 53 {
 					foundDNS = true
-					if len(flowLog.FlowAllPolicySet) != 1 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowAllPolicySet))
+					if len(flowLog.FlowEnforcedPolicySet) != 1 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|0")
-					if len(flowLog.FlowAllPolicySet) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowAllPolicySet))
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|0")
+					if len(flowLog.FlowEnforcedPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
 					return nil
@@ -303,13 +303,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					// Netset1 is matched by the default drop from the enforced policy. The drop
 					// by the enforced policy should be an exact match.
 					foundNetset1 = true
-					if len(flowLog.FlowAllPolicySet) != 1 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowAllPolicySet))
+					if len(flowLog.FlowEnforcedPolicySet) != 1 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|deny|-1")
-					if len(flowLog.FlowAllPolicySet) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowAllPolicySet))
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|deny|-1")
+					if len(flowLog.FlowEnforcedPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
 				}
@@ -325,13 +325,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					// by the enforced policy should be an exact match because the policy would
 					// otherwise be dropped and packet retry will continue until it is allowed.
 					foundNetset2 = true
-					if len(flowLog.FlowAllPolicySet) != 1 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowAllPolicySet))
+					if len(flowLog.FlowEnforcedPolicySet) != 1 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowAllPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|1")
-					if len(flowLog.FlowAllPolicySet) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowAllPolicySet))
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|1")
+					if len(flowLog.FlowEnforcedPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowEnforcedPolicySet))
 					}
 				}
 
@@ -861,7 +861,6 @@ var _ = infrastructure.DatastoreDescribe(
 			flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
 				ExpectLabels:            true,
 				MatchLabels:             false,
-				ExcludeAllPolicies:      true,
 				ExcludeEnforcedPolicies: true,
 				ExcludePendingPolicies:  true,
 				Includes:                []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(80)},
@@ -939,7 +938,6 @@ var _ = infrastructure.DatastoreDescribe(
 			flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
 				ExpectLabels:            true,
 				MatchLabels:             false,
-				ExcludeAllPolicies:      true,
 				ExcludeEnforcedPolicies: true,
 				ExcludePendingPolicies:  true,
 				Includes:                []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(80)},

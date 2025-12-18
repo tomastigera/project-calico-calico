@@ -15,6 +15,8 @@
 package calc_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -32,9 +34,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var (
-	dscp numorstring.DSCP = numorstring.DSCPFromString("AF43")
-)
+var dscp numorstring.DSCP = numorstring.DSCPFromString("AF43")
 
 var _ = DescribeTable("ModelWorkloadEndpointToProto",
 	func(in model.WorkloadEndpoint, expected *proto.WorkloadEndpoint) {
@@ -152,7 +152,7 @@ var _ = DescribeTable("ModelWorkloadEndpointToProto",
 			EgressMaxConnections:  14000000,
 		},
 		QosPolicies: []*proto.QoSPolicy{
-			&proto.QoSPolicy{
+			{
 				Dscp: 38,
 			},
 		},
@@ -277,6 +277,7 @@ var _ = Describe("ParsedRulesToActivePolicyUpdate", func() {
 	var (
 		fullyLoadedParsedRules = calc.ParsedRules{
 			Namespace: "namespace",
+			Tier:      "default",
 			OutboundRules: []*calc.ParsedRule{
 				{Action: "Allow"},
 			},
@@ -289,10 +290,10 @@ var _ = Describe("ParsedRulesToActivePolicyUpdate", func() {
 		}
 		fullyLoadedProtoRules = proto.ActivePolicyUpdate{
 			Id: &proto.PolicyID{
-				Tier: "default",
 				Name: "a-policy",
 			},
 			Policy: &proto.Policy{
+				Tier:             "default",
 				Namespace:        "namespace",
 				InboundRules:     []*proto.Rule{{Action: "Deny"}},
 				OutboundRules:    []*proto.Rule{{Action: "Allow"}},
@@ -316,7 +317,7 @@ var _ = Describe("ParsedRulesToActivePolicyUpdate", func() {
 	})
 
 	It("should convert the fully-loaded rule", func() {
-		protoUpdate := calc.ParsedRulesToActivePolicyUpdate(model.PolicyKey{Tier: "default", Name: "a-policy"}, &fullyLoadedParsedRules)
+		protoUpdate := calc.ParsedRulesToActivePolicyUpdate(model.PolicyKey{Name: "a-policy"}, &fullyLoadedParsedRules)
 		// Check the rule IDs are filled in but ignore them for comparisons.
 		for _, r := range protoUpdate.Policy.InboundRules {
 			Expect(r.RuleId).ToNot(Equal(""))
@@ -326,7 +327,8 @@ var _ = Describe("ParsedRulesToActivePolicyUpdate", func() {
 			Expect(r.RuleId).ToNot(Equal(""))
 			r.RuleId = ""
 		}
-		Expect(googleproto.Equal(protoUpdate, &fullyLoadedProtoRules)).To(BeTrue())
+		msg := fmt.Sprintf("Converted protoUpdate \n\n %s \n\n did not match expected \n\n %s", protoUpdate.String(), fullyLoadedProtoRules.String())
+		Expect(googleproto.Equal(protoUpdate, &fullyLoadedProtoRules)).To(BeTrue(), msg)
 	})
 })
 
@@ -357,16 +359,16 @@ var _ = DescribeTable("ModelHostEndpointToProto",
 			}),
 			ProfileIDs: []string{"prof1"},
 		},
-		[]*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b", "c"}}},
-		[]*proto.TierInfo{{Name: "d", IngressPolicies: []string{"e", "f"}}},
-		[]*proto.TierInfo{{Name: "g", IngressPolicies: []string{"h", "i"}}},
+		[]*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}, {Name: "c"}}}},
+		[]*proto.TierInfo{{Name: "d", IngressPolicies: []*proto.PolicyID{{Name: "e"}, {Name: "f"}}}},
+		[]*proto.TierInfo{{Name: "g", IngressPolicies: []*proto.PolicyID{{Name: "h"}, {Name: "i"}}}},
 		&proto.HostEndpoint{
 			Name:              "eth0",
 			ExpectedIpv4Addrs: []string{"10.28.0.13", "10.28.0.14"},
 			ExpectedIpv6Addrs: []string{"dead::beef", "dead::bee5"},
-			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b", "c"}}},
-			UntrackedTiers:    []*proto.TierInfo{{Name: "d", IngressPolicies: []string{"e", "f"}}},
-			ForwardTiers:      []*proto.TierInfo{{Name: "g", IngressPolicies: []string{"h", "i"}}},
+			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}, {Name: "c"}}}},
+			UntrackedTiers:    []*proto.TierInfo{{Name: "d", IngressPolicies: []*proto.PolicyID{{Name: "e"}, {Name: "f"}}}},
+			ForwardTiers:      []*proto.TierInfo{{Name: "g", IngressPolicies: []*proto.PolicyID{{Name: "h"}, {Name: "i"}}}},
 			ProfileIds:        []string{"prof1"},
 		},
 	),
@@ -380,16 +382,16 @@ var _ = DescribeTable("ModelHostEndpointToProto",
 			}),
 			ProfileIDs: []string{"prof1"},
 		},
-		[]*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b"}}},
-		[]*proto.TierInfo{{Name: "a", EgressPolicies: []string{"c"}}},
-		[]*proto.TierInfo{{Name: "a", EgressPolicies: []string{"d"}}},
+		[]*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}}}},
+		[]*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "c"}}}},
+		[]*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "d"}}}},
 		&proto.HostEndpoint{
 			Name:              "eth0",
 			ExpectedIpv4Addrs: []string{"10.28.0.13", "10.28.0.14"},
 			ExpectedIpv6Addrs: []string{"dead::beef", "dead::bee5"},
-			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b"}}},
-			UntrackedTiers:    []*proto.TierInfo{{Name: "a", EgressPolicies: []string{"c"}}},
-			ForwardTiers:      []*proto.TierInfo{{Name: "a", EgressPolicies: []string{"d"}}},
+			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}}}},
+			UntrackedTiers:    []*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "c"}}}},
+			ForwardTiers:      []*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "d"}}}},
 			ProfileIds:        []string{"prof1"},
 		},
 	),
@@ -406,19 +408,19 @@ var _ = DescribeTable("ModelHostEndpointToProto",
 				DSCP: &dscp,
 			},
 		},
-		[]*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b"}}},
-		[]*proto.TierInfo{{Name: "a", EgressPolicies: []string{"c"}}},
-		[]*proto.TierInfo{{Name: "a", EgressPolicies: []string{"d"}}},
+		[]*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}}}},
+		[]*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "c"}}}},
+		[]*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "d"}}}},
 		&proto.HostEndpoint{
 			Name:              "eth0",
 			ExpectedIpv4Addrs: []string{"10.28.0.13", "10.28.0.14"},
 			ExpectedIpv6Addrs: []string{"dead::beef", "dead::bee5"},
-			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []string{"b"}}},
-			UntrackedTiers:    []*proto.TierInfo{{Name: "a", EgressPolicies: []string{"c"}}},
-			ForwardTiers:      []*proto.TierInfo{{Name: "a", EgressPolicies: []string{"d"}}},
+			Tiers:             []*proto.TierInfo{{Name: "a", IngressPolicies: []*proto.PolicyID{{Name: "b"}}}},
+			UntrackedTiers:    []*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "c"}}}},
+			ForwardTiers:      []*proto.TierInfo{{Name: "a", EgressPolicies: []*proto.PolicyID{{Name: "d"}}}},
 			ProfileIds:        []string{"prof1"},
 			QosPolicies: []*proto.QoSPolicy{
-				&proto.QoSPolicy{
+				{
 					Dscp: 38,
 				},
 			},
@@ -450,7 +452,8 @@ var _ = Describe("ServiceAccount update/remove", func() {
 			&proto.ServiceAccountUpdate{
 				Id:     &proto.ServiceAccountID{Name: "test", Namespace: "test"},
 				Labels: map[string]string{"k1": "v2"},
-			}}))
+			},
+		}))
 	})
 
 	It("should coalesce add + remove", func() {
@@ -521,7 +524,8 @@ var _ = Describe("Namespace update/remove", func() {
 			&proto.NamespaceUpdate{
 				Id:     &proto.NamespaceID{Name: "test"},
 				Labels: map[string]string{"k1": "v2"},
-			}}))
+			},
+		}))
 	})
 
 	It("should coalesce add + remove", func() {

@@ -133,13 +133,11 @@ type ConnOrError struct {
 }
 
 type Tunnel interface {
+	CloseChan() <-chan struct{}
 	ErrChan() chan struct{}
-	WaitForError() error
-	OpenStream() (io.ReadWriteCloser, error)
 	Open() (net.Conn, error)
 	OpenTLS(*tls.Config) (net.Conn, error)
 	Addr() net.Addr
-	AcceptStream() (io.ReadWriteCloser, error)
 	AcceptWithChannel(acceptChan chan ConnOrError) chan bool
 	Accept() (net.Conn, error)
 	IsClosed() bool
@@ -173,7 +171,14 @@ type tunnel struct {
 	certificate    *x509.Certificate
 }
 
-func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel, error) {
+// NewServerTunnel returns a new tunnel that uses the provided stream as the
+// carrier. The stream must be the server side of the stream
+func NewServerTunnel(stream *tls.Conn, opts ...Option) (Tunnel, error) {
+	if len(stream.ConnectionState().PeerCertificates) == 0 {
+		return nil, errors.New("no peer certificate found")
+	}
+	cert := stream.ConnectionState().PeerCertificates[0]
+
 	t := &tunnel{
 		stream: stream,
 		errCh:  make(chan struct{}),
@@ -182,21 +187,11 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel
 
 		keepAliveInterval: 100 * time.Millisecond,
 		dialTimeout:       60 * time.Second,
-	}
 
-	switch id := t.Identity().(type) {
-	case *x509.Certificate:
-		// N.B. By now, we know that we signed this certificate as these checks
-		// are performed during TLS handshake. We need to extract the common name
-		// and fingerprint of the certificate to check against our internal records
-		// We expect to have a cluster registered with this ID and matching fingerprint
-		// for the cert.
-		t.clusterID = id.Subject.CommonName
-		t.fingerprint = utils.GenerateFingerprint(id)
-		t.md5Fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
-		t.certificate = id
-	default:
-		logrus.Errorf("unknown tunnel identity type %T", id)
+		clusterID:      cert.Subject.CommonName,
+		fingerprint:    utils.GenerateFingerprint(cert),
+		md5Fingerprint: fmt.Sprintf("%x", md5.Sum(cert.Raw)),
+		certificate:    cert,
 	}
 
 	var mux *yamux.Session
@@ -216,15 +211,12 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel
 	config.KeepAliveInterval = t.keepAliveInterval
 	config.LogOutput = logutils.NewLogrusWriter(logrus.WithField("component", "tunnel-yamux"))
 
-	if isServer {
-		mux, err = yamux.Server(&serverCloser{
+	mux, err = yamux.Server(
+		&serverCloser{
 			ReadWriteCloser: stream,
 			t:               t,
 		},
-			config)
-	} else {
-		mux, err = yamux.Client(stream, config)
-	}
+		config)
 
 	if err != nil {
 		return nil, fmt.Errorf("new failed creating muxer: %s", err)
@@ -233,22 +225,6 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (Tunnel
 	t.mux = mux
 
 	return t, nil
-}
-
-// NewServerTunnel returns a new tunnel that uses the provided stream as the
-// carrier. The stream must be the server side of the stream
-func NewServerTunnel(stream io.ReadWriteCloser, opts ...Option) (Tunnel, error) {
-	return newTunnel(stream, true, opts...)
-}
-
-// NewClientTunnel returns a new tunnel that uses the provided stream as the
-// carrier. The stream must be the client side of the stream
-func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (Tunnel, error) {
-	return newTunnel(stream, false, opts...)
-}
-
-type hasIdentity interface {
-	Identity() any
 }
 
 func (t *tunnel) ClusterID() string {
@@ -284,14 +260,6 @@ func (t *tunnel) Close() error {
 // IsClosed checks if the tunnel is closed. If it is true is returned, otherwise false is returned
 func (t *tunnel) IsClosed() bool {
 	return t.mux.IsClosed()
-}
-
-// Accept waits for a new connection, returns net.Conn or an error
-func (t *tunnel) Accept() (net.Conn, error) {
-	logrus.Debugf("Tunnel: Accepting connections")
-	defer logrus.Debugf("Tunnel: Accepted connection")
-	conn, err := t.mux.Accept()
-	return conn, convertYAMUXErr(err)
 }
 
 // AcceptWithChannel takes a channel of ConnWithError, kicks of a go routine that starts accepting connection, and sends
@@ -333,12 +301,12 @@ func (t *tunnel) AcceptWithChannel(acceptChan chan ConnOrError) chan bool {
 	return done
 }
 
-// AcceptStream waits for a new connection, returns io.ReadWriteCloser or an error
-func (t *tunnel) AcceptStream() (io.ReadWriteCloser, error) {
-	logrus.Debugf("Tunnel: Accepting stream")
-	defer logrus.Debugf("Tunnel: Accepted stream")
-	rc, err := t.mux.AcceptStream()
-	return rc, convertYAMUXErr(err)
+// Accept waits for a new connection, returns net.Conn or an error
+func (t *tunnel) Accept() (net.Conn, error) {
+	logrus.Debugf("Tunnel: Accepting connections")
+	defer logrus.Debugf("Tunnel: Accepted connection")
+	conn, err := t.mux.Accept()
+	return conn, convertYAMUXErr(err)
 }
 
 // Addr returns the address of this tunnel sides endpoint.
@@ -358,9 +326,13 @@ func (t *tunnel) Addr() net.Addr {
 // the the new connection is set up
 func (t *tunnel) Open() (net.Conn, error) {
 	c, err := t.mux.Open()
-	err = convertYAMUXErr(err)
-	t.checkErr(err)
-	return c, err
+	if err != nil {
+		err = convertYAMUXErr(err)
+		t.checkErr(err)
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (t *tunnel) OpenTLS(tlsCfg *tls.Config) (net.Conn, error) {
@@ -372,28 +344,8 @@ func (t *tunnel) OpenTLS(tlsCfg *tls.Config) (net.Conn, error) {
 	return tls.Client(conn, tlsCfg), nil
 }
 
-// OpenStream returns, unlike NewConn, an io.ReadWriteCloser
-func (t *tunnel) OpenStream() (io.ReadWriteCloser, error) {
-	s, err := t.mux.OpenStream()
-	err = convertYAMUXErr(err)
-	t.checkErr(err)
-	return s, err
-}
-
-// Identity provides the identity of the remote side that initiated the tunnel
-func (t *tunnel) Identity() any {
-	if id, ok := t.stream.(hasIdentity); ok {
-		return id.Identity()
-	}
-
-	return nil
-}
-
-// WaitForError blocks as long as the tunnel exists and will return the reason
-// why the tunnel exited
-func (t *tunnel) WaitForError() error {
-	<-t.errCh
-	return t.lastErr
+func (t *tunnel) CloseChan() <-chan struct{} {
+	return t.mux.CloseChan()
 }
 
 // ErrChan returns the channel that's notified when an error occurs
@@ -576,7 +528,7 @@ func tlsDialViaHTTPProxy(d *net.Dialer, destination string, proxyTargetURL *url.
 	return mtlsC, nil
 }
 
-// We don't want to / need to expose that we're using the yamux library
+// We don't want to / need to expose that we're using the yamux library.
 func convertYAMUXErr(err error) error {
 	switch err {
 	case yamux.ErrSessionShutdown:

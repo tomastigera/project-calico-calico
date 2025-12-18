@@ -57,13 +57,12 @@ func matchSelector(actual, expected string) bool {
 	expectedSelectors := strings.Split(expected, " && ")
 	as := set.FromArray(actualSelectors)
 	es := set.FromArray(expectedSelectors)
-	es.Iter(func(item string) error {
+	for item := range es.All() {
 		if as.Contains(item) {
 			as.Discard(item)
-			return set.RemoveItem
+			es.Discard(item)
 		}
-		return nil
-	})
+	}
 	log.Debugf("\nActual %+v\nExpected %+v\n", actual, expected)
 	if es.Len() != 0 || as.Len() != 0 {
 		return false

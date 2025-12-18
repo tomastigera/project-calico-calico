@@ -11,9 +11,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/gateway/pkg/license"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
+
+// fakeLicenseChecker is a test implementation of LicenseChecker
+type fakeLicenseChecker struct {
+	IsLicenseEnabled bool
+}
+
+func (f *fakeLicenseChecker) IsLicensed() bool {
+	return f.IsLicenseEnabled
+}
 
 var (
 	//go:embed testdata/host_destination.json
@@ -198,7 +206,7 @@ var _ = Describe("Envoy Log Collector ParseAccessLogs test", func() {
 var _ = Describe("Envoy Log Collector ReadAccessLogs test", func() {
 	var (
 		tmpFile       *os.File
-		fakeLicense   *license.FakeGatewayLicense
+		fakeLicense   *fakeLicenseChecker
 		collector     *envoyCollector
 		ctx           context.Context
 		cancel        context.CancelFunc
@@ -214,7 +222,7 @@ var _ = Describe("Envoy Log Collector ReadAccessLogs test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Setup fake license with enabled state by default
-		fakeLicense = &license.FakeGatewayLicense{IsLicenseEnabled: true}
+		fakeLicense = &fakeLicenseChecker{IsLicenseEnabled: true}
 
 		// Setup collector with test config
 		ch = make(chan EnvoyInfo, 10)

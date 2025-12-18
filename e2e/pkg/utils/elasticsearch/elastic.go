@@ -121,7 +121,6 @@ type FlowLogLabelsJSONOutput struct {
 }
 
 type FlowLogPoliciesJSONOutput struct {
-	AllPolicies      []string `json:"all_policies"`
 	EnforcedPolicies []string `json:"enforced_policies"`
 	PendingPolicies  []string `json:"pending_policies"`
 }

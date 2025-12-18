@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types/boundedset"
@@ -75,6 +76,7 @@ var (
 	publicIP1Str      = "1.0.0.1"
 	publicIP2Str      = "2.0.0.2"
 	ingressRule1Allow = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy1",
 		"",
@@ -83,6 +85,7 @@ var (
 		rules.RuleActionAllow,
 	)
 	ingressRule1Deny = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy1",
 		"",
@@ -91,6 +94,7 @@ var (
 		rules.RuleActionDeny,
 	)
 	egressRule1Allow = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy2",
 		"",
@@ -99,6 +103,7 @@ var (
 		rules.RuleActionAllow,
 	)
 	egressRule2Deny = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy2",
 		"",
@@ -320,7 +325,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
 		flNoTime.FlowLabels = fl.FlowLabels
-		flNoTime.FlowAllPolicySet = fl.FlowAllPolicySet
 		flNoTime.FlowEnforcedPolicySet = fl.FlowEnforcedPolicySet
 		flNoTime.FlowPendingPolicySet = fl.FlowPendingPolicySet
 		flNoTime.FlowTransitPolicySet = fl.FlowTransitPolicySet
@@ -328,7 +332,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 		var expFlowNoProc FlowLog
 		expFlowNoProc.FlowMeta = expectedFlow.FlowMeta
 		expFlowNoProc.FlowLabels = expectedFlow.FlowLabels
-		expFlowNoProc.FlowAllPolicySet = expectedFlow.FlowAllPolicySet
 		expFlowNoProc.FlowEnforcedPolicySet = expectedFlow.FlowEnforcedPolicySet
 		expFlowNoProc.FlowPendingPolicySet = expectedFlow.FlowPendingPolicySet
 		expFlowNoProc.FlowTransitPolicySet = expectedFlow.FlowTransitPolicySet
@@ -344,7 +347,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			flNoTime := FlowLog{}
 			flNoTime.FlowMeta = fl.FlowMeta
 			flNoTime.FlowLabels = fl.FlowLabels
-			flNoTime.FlowAllPolicySet = fl.FlowAllPolicySet
 			flNoTime.FlowEnforcedPolicySet = fl.FlowEnforcedPolicySet
 			flNoTime.FlowPendingPolicySet = fl.FlowPendingPolicySet
 			flNoTime.FlowTransitPolicySet = fl.FlowTransitPolicySet
@@ -405,8 +407,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+					idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -421,8 +423,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.PendingRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+					idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -437,8 +439,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.TransitRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+					idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -548,16 +550,15 @@ var _ = Describe("Flow log aggregator tests", func() {
 			fpi.processArgs = []string{"-"}
 		} else {
 			argCount := 0
-			procArgs.Iter(func(item string) error {
+			for item := range procArgs.All() {
 				if item != "" {
 					fpi.processArgs = append(fpi.processArgs, item)
 					argCount = argCount + 1
 					if argCount == 5 {
-						return set.StopIteration
+						break
 					}
 				}
-				return nil
-			})
+			}
 		}
 		return fpi
 	}
@@ -567,7 +568,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 		BeforeEach(func() {
 			ca = NewAggregator()
-
 		})
 
 		It("aggregates the fed metric updates", func() {
@@ -710,7 +710,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			By("by endpoint IP classification as the meta name when meta info is missing")
 			ca = NewAggregator().AggregateOver(FlowPrefixName)
 			endpointMeta := calc.RemoteEndpointData{
-
 				CommonEndpointData: calc.CalculateCommonEndpointData(
 					model.WorkloadEndpointKey{
 						Hostname:       "node-01",
@@ -862,7 +861,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
 			// Updating the Workload IDs for src and dst.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.SrcEp = &calc.RemoteEndpointData{
-
 				CommonEndpointData: calc.CalculateCommonEndpointData(
 					model.WorkloadEndpointKey{
 						Hostname:       "node-01",
@@ -878,7 +876,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.DstEp = &calc.RemoteEndpointData{
-
 				CommonEndpointData: calc.CalculateCommonEndpointData(
 					model.WorkloadEndpointKey{
 						Hostname:       "node-02",
@@ -1037,7 +1034,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedTCPS := extractFlowTCPStats(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			expectFlowLog(*message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedTransitPacketsIn, expectedTransitPacketsOut, expectedTransitBytesIn, expectedTransitBytesOut, srcMeta, dstMeta, noService, nil, nil, nil, nil, nil, nil, expectedFlowExtras, noProcessInfo, expectedTCPS)
-
 		})
 	})
 
@@ -1133,7 +1129,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = cad.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(0))
 		})
-
 	})
 
 	Context("Flow log aggregator http request countes", func() {
@@ -1235,7 +1230,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			// Updating the Workload IDs for src and dst.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.SrcEp = &calc.RemoteEndpointData{
-
 				CommonEndpointData: calc.CalculateCommonEndpointData(
 					model.WorkloadEndpointKey{
 						Hostname:       "node-01",
@@ -1325,7 +1319,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 	Context("Flow log Aggregator changes aggregation levels", func() {
 		It("Adjusts aggregation levels", func() {
-			var aggregator = NewAggregator()
+			aggregator := NewAggregator()
 			aggregator.AggregateOver(FlowNoDestPorts)
 
 			By("Changing the level to ")
@@ -1402,7 +1396,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 		})
 	})
 	Context("Flow log aggregator process information", func() {
-
 		It("Includes process information with default aggregation", func() {
 			By("Creating an aggregator for allow")
 			caa := NewAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2)
@@ -1978,9 +1971,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedTCPS := extractFlowTCPStats(muWithoutProcessName)
 			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDstFwd,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedTransitPacketsIn, expectedTransitPacketsOut, expectedTransitBytesIn, expectedTransitBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedTP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
-
 		})
-
 	})
 
 	Context("Flow log Aggregator post SNAT ports", func() {

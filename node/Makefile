@@ -158,6 +158,7 @@ DATE:=$(shell date -u +'%FT%T%z')
 SRC_FILES=$(shell find ./pkg -name '*.go') \
 	  $(shell find ./cmd -name '*.go') \
 	  $(shell find ../felix -name '*.go') \
+	  $(shell find ../app-policy -name '*.go') \
 	  $(shell find ../typha -name '*.go') \
 	  $(shell find ../felix -name '*.[ch]') \
 	  $(shell find ../libcalico-go -name '*.go') \
@@ -288,7 +289,7 @@ $(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) ./Dockerfile.$(ARCH) $(NODE_CONTA
 # Package
 ###############################################################################
 .PHONY: init-package
-init-package: $(NODE_CONTAINER_BINARY) $(NONCLUSTER_HOST_INIT_BINARY)
+init-package: $(REMOTE_DEPS) $(NODE_CONTAINER_BINARY) $(NONCLUSTER_HOST_INIT_BINARY)
 	cp $(NODE_CONTAINER_BINARY) calico-node
 	cp $(NONCLUSTER_HOST_INIT_BINARY) calico-noncluster-host-init
 	tar zcf calico-node.tar.gz calico-node calico-noncluster-host-init calico-node.conf calico-node.env calico-node.service filesystem/usr/lib/calico/bpf

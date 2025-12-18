@@ -350,14 +350,13 @@ func getNamesFromLinseed(params *FlowLogNamesParams, lsclient client.Client, rba
 
 	// Convert the set to the name slice
 	i := 0
-	nameSet.Iter(func(item string) error {
+	for item := range nameSet.All() {
 		// Only add items up to the limit
 		if i < int(params.Limit) {
 			names = append(names, item)
 			i++
 		}
-		return nil
-	})
+	}
 
 	// Sort the names for nice display purposes
 	sort.Strings(names)

@@ -64,6 +64,36 @@ var (
                   "doc_count": 5
                 }
               ]
+            },
+            "by_tiered_enforced_policy": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": [
+                {
+                  "key": "efgh",
+                  "doc_count": 6
+                }
+              ]
+            },
+            "by_tiered_pending_policy": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": [
+                {
+                  "key": "ijkl",
+                  "doc_count": 7
+                }
+              ]
+            },
+            "by_tiered_transit_policy": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": [
+                {
+                  "key": "mnop",
+                  "doc_count": 8
+                }
+              ]
             }
           },
           "source_labels": {
@@ -262,6 +292,30 @@ var (
                   "doc_count": 5
                 }
               ]
+            },
+            "by_tiered_enforced_policy": {
+              "buckets": [
+                {
+                  "key": "efgh",
+                  "doc_count": 6
+                }
+              ]
+            },
+            "by_tiered_pending_policy": {
+              "buckets": [
+                {
+                  "key": "ijkl",
+                  "doc_count": 7
+                }
+              ]
+            },
+            "by_tiered_transit_policy": {
+              "buckets": [
+                {
+                  "key": "mnop",
+                  "doc_count": 8
+                }
+              ]
             }
           },
           "source_labels": {
@@ -339,6 +393,9 @@ var (
 
 	aggTerms = []pelastic.AggNestedTermInfo{
 		{"policies", "policies", "by_tiered_policy", "policies.all_policies"},
+		{"policies", "policies", "by_tiered_enforced_policy", "policies.enforced_policies"},
+		{"policies", "policies", "by_tiered_pending_policy", "policies.pending_policies"},
+		{"policies", "policies", "by_tiered_transit_policy", "policies.transit_policies"},
 		{"dest_labels", "dest_labels", "by_kvpair", "dest_labels.labels"},
 		{"source_labels", "source_labels", "by_kvpair", "source_labels.labels"},
 	}
@@ -389,7 +446,10 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(results[0].AggregatedSums["sum_bytes_in"]).To(Equal(float64(3)))
 		Expect(results[0].AggregatedTerms).To(HaveKey("policies"))
 		Expect(results[0].AggregatedTerms["policies"].DocCount).To(Equal(int64(4)))
-		Expect(results[0].AggregatedTerms["policies"].Buckets["abcd"]).To(Equal(int64(5)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["abcd"]).To(Equal(int64(5)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_enforced_policy"]["efgh"]).To(Equal(int64(6)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_pending_policy"]["ijkl"]).To(Equal(int64(7)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_transit_policy"]["mnop"]).To(Equal(int64(8)))
 		Expect(results[0].AggregatedTerms).To(HaveKey("source_labels"))
 		Expect(results[0].AggregatedTerms["source_labels"].DocCount).To(Equal(int64(6)))
 		Expect(results[0].AggregatedTerms["source_labels"].Buckets["aaaa"]).To(Equal(int64(7)))
@@ -552,7 +612,10 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(results[0].AggregatedSums["sum_bytes_in"]).To(Equal(float64(3)))
 		Expect(results[0].AggregatedTerms).To(HaveKey("policies"))
 		Expect(results[0].AggregatedTerms["policies"].DocCount).To(Equal(int64(4)))
-		Expect(results[0].AggregatedTerms["policies"].Buckets["abcd"]).To(Equal(int64(5)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["abcd"]).To(Equal(int64(5)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_enforced_policy"]["efgh"]).To(Equal(int64(6)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_pending_policy"]["ijkl"]).To(Equal(int64(7)))
+		Expect(results[0].AggregatedTerms["policies"].MultiTermBuckets["by_tiered_transit_policy"]["mnop"]).To(Equal(int64(8)))
 		Expect(results[0].AggregatedTerms).To(HaveKey("source_labels"))
 		Expect(results[0].AggregatedTerms["source_labels"].DocCount).To(Equal(int64(6)))
 		Expect(results[0].AggregatedTerms["source_labels"].Buckets["aaaa"]).To(Equal(int64(7)))
@@ -616,8 +679,8 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(r1.AggregatedSums["sum_bytes_in"]).To(Equal(float64(3)))
 		Expect(r1.AggregatedTerms).To(HaveKey("policies"))
 		Expect(r1.AggregatedTerms["policies"].DocCount).To(Equal(int64(21)))
-		Expect(r1.AggregatedTerms["policies"].Buckets["abcd"]).To(Equal(int64(5)))
-		Expect(r1.AggregatedTerms["policies"].Buckets["zzzz"]).To(Equal(int64(18)))
+		Expect(r1.AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["abcd"]).To(Equal(int64(5)))
+		Expect(r1.AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["zzzz"]).To(Equal(int64(18)))
 		Expect(r1.AggregatedTerms).To(HaveKey("source_labels"))
 		Expect(r1.AggregatedTerms["source_labels"].DocCount).To(Equal(int64(66)))
 		Expect(r1.AggregatedTerms["source_labels"].Buckets["aaaa"]).To(Equal(int64(77)))
@@ -634,8 +697,8 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(r1.AggregatedSums["sum_bytes_in"]).To(Equal(float64(3)))
 		Expect(r1.AggregatedTerms).To(HaveKey("policies"))
 		Expect(r1.AggregatedTerms["policies"].DocCount).To(Equal(int64(38)))
-		Expect(r1.AggregatedTerms["policies"].Buckets["abcd"]).To(Equal(int64(5)))
-		Expect(r1.AggregatedTerms["policies"].Buckets["zzzz"]).To(Equal(int64(36)))
+		Expect(r1.AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["abcd"]).To(Equal(int64(5)))
+		Expect(r1.AggregatedTerms["policies"].MultiTermBuckets["by_tiered_policy"]["zzzz"]).To(Equal(int64(36)))
 		Expect(r1.AggregatedTerms).To(HaveKey("source_labels"))
 		Expect(r1.AggregatedTerms["source_labels"].DocCount).To(Equal(int64(126)))
 		Expect(r1.AggregatedTerms["source_labels"].Buckets["aaaa"]).To(Equal(int64(147)))
@@ -714,6 +777,17 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 			{"source_port", float64(0)},
 			{"dest_port", float64(6783)},
 		}))
+
+		Expect(results[0].AggregatedTerms).To(HaveKey("policies"))
+		policies := results[0].AggregatedTerms["policies"]
+		Expect(policies.MultiTermBuckets).To(HaveKey("by_tiered_policy"))
+		Expect(policies.MultiTermBuckets["by_tiered_policy"]).To(HaveKeyWithValue("abcd", int64(5)))
+		Expect(policies.MultiTermBuckets).To(HaveKey("by_tiered_enforced_policy"))
+		Expect(policies.MultiTermBuckets["by_tiered_enforced_policy"]).To(HaveKeyWithValue("efgh", int64(6)))
+		Expect(policies.MultiTermBuckets).To(HaveKey("by_tiered_pending_policy"))
+		Expect(policies.MultiTermBuckets["by_tiered_pending_policy"]).To(HaveKeyWithValue("ijkl", int64(7)))
+		Expect(policies.MultiTermBuckets).To(HaveKey("by_tiered_transit_policy"))
+		Expect(policies.MultiTermBuckets["by_tiered_transit_policy"]).To(HaveKeyWithValue("mnop", int64(8)))
 
 		By("Converting the result to a JSON map and extracting the first bucket")
 		converted := pelastic.CompositeAggregationBucketsToMap(results, q)

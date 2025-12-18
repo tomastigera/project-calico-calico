@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
@@ -25,7 +26,7 @@ var (
 		IndexStr: "0",
 		PolicyID: calc.PolicyID{
 			Name:      "policy3",
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Namespace: "",
 		},
 		Direction: rules.RuleDirIngress,
@@ -36,7 +37,7 @@ var (
 		IndexStr: "0",
 		PolicyID: calc.PolicyID{
 			Name:      "policy4",
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Namespace: "",
 		},
 		Direction: rules.RuleDirIngress,
@@ -521,7 +522,7 @@ var resKey DeniedPacketsAggregateKey
 
 func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
 	var key DeniedPacketsAggregateKey
-	rid := calc.NewRuleID("default", "policy1", "__GLOBAL__", 0, rules.RuleDirIngress, rules.RuleActionDeny)
+	rid := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "__GLOBAL__", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 	mu := metric.Update{
 		UpdateType:   metric.UpdateTypeReport,
 		Tuple:        tuple1,

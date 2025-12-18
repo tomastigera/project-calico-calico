@@ -109,10 +109,9 @@ func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set[string])
 			if clients == nil {
 				return nil
 			}
-			clients.Iter(func(client apiv3.ResourceID) error {
+			for client := range clients.All() {
 				m.onKeyMatchStopped(owner, client, key)
-				return nil
-			})
+			}
 			return nil
 		},
 		// New Key address is added to the owners list.
@@ -130,10 +129,9 @@ func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set[string])
 			if clients == nil {
 				return nil
 			}
-			clients.Iter(func(client apiv3.ResourceID) error {
+			for client := range clients.All() {
 				m.onKeyMatchStarted(owner, client, key)
-				return nil
-			})
+			}
 			return nil
 		},
 	)
@@ -168,10 +166,9 @@ func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set[string
 			if owners == nil {
 				return nil
 			}
-			owners.Iter(func(owner apiv3.ResourceID) error {
+			for owner := range owners.All() {
 				m.onKeyMatchStopped(owner, client, key)
-				return nil
-			})
+			}
 			return nil
 		},
 		// New Key address is added to the clients list.
@@ -189,10 +186,9 @@ func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set[string
 			if owners == nil {
 				return nil
 			}
-			owners.Iter(func(owner apiv3.ResourceID) error {
+			for owner := range owners.All() {
 				m.onKeyMatchStarted(owner, client, key)
-				return nil
-			})
+			}
 			return nil
 		},
 	)

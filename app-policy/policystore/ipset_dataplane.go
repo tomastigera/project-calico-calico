@@ -50,10 +50,9 @@ func (s *DomainIPSetsDataplane) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetada
 			}
 		}
 		// Add the remaining new members that are not already in ipset
-		memberSet.Iter(func(member string) error {
+		for member := range memberSet.All() {
 			ipset.AddString(member)
-			return nil
-		})
+		}
 	})
 }
 

@@ -329,12 +329,11 @@ func (arc *ActiveRulesCalculator) updateStats() {
 
 	// Get the set of all endpoints matching ALP Policy
 	endpoints := set.New[model.WorkloadEndpointKey]()
-	arc.allALPPolicies.Iter(func(polID model.PolicyKey) error {
+	for polID := range arc.allALPPolicies.All() {
 		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
 			endpoints.Add(epKey.(model.WorkloadEndpointKey))
 		})
-		return nil
-	})
+	}
 
 	arc.OnPolicyCountsChanged(len(arc.allTiers), arc.allPolicies.Len(), arc.allProfileRules.Len(), arc.allALPPolicies.Len(), endpoints.Len())
 }
@@ -398,6 +397,7 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 	polKey := selID.(model.PolicyKey)
 	policyWasActive := arc.policyIDToEndpointKeys.ContainsKey(polKey)
 	arc.policyIDToEndpointKeys.Put(selID, labelId)
+
 	if !policyWasActive {
 		// Policy wasn't active before, tell the listener.  The policy
 		// must be in allPolicies because we can only match on a policy
@@ -409,6 +409,7 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 		}
 		arc.sendPolicyUpdate(polKey, policy)
 	}
+
 	if labelId, ok := labelId.(model.EndpointKey); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			l.OnPolicyMatch(polKey, labelId)

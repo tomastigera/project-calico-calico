@@ -360,10 +360,12 @@ func ParsedRulesToActivePolicyUpdate(key model.PolicyKey, rules *ParsedRules) *p
 	}
 	return &proto.ActivePolicyUpdate{
 		Id: &proto.PolicyID{
-			Tier: key.Tier,
-			Name: key.Name,
+			Name:      key.Name,
+			Namespace: key.Namespace,
+			Kind:      key.Kind,
 		},
 		Policy: &proto.Policy{
+			Tier:      rules.Tier,
 			Namespace: rules.Namespace,
 			InboundRules: parsedRulesToProtoRules(
 				rules.InboundRules,
@@ -392,8 +394,9 @@ func (buf *EventSequencer) flushPolicyDeletes() {
 	for item := range buf.pendingPolicyDeletes.All() {
 		buf.Callback(&proto.ActivePolicyRemove{
 			Id: &proto.PolicyID{
-				Tier: item.Tier,
-				Name: item.Name,
+				Name:      item.Name,
+				Namespace: item.Namespace,
+				Kind:      item.Kind,
 			},
 		})
 		buf.sentPolicies.Discard(item)
@@ -1020,14 +1023,14 @@ func (buf *EventSequencer) OnRemoteIPPoolRemove(cluster string, key model.IPPool
 }
 
 func (buf *EventSequencer) flushRemoteIPPoolDeletes() {
-	buf.pendingRemoteIPPoolRemovals.Iter(func(id remotePoolID) error {
+	for id := range buf.pendingRemoteIPPoolRemovals.All() {
 		buf.Callback(&proto.RemoteIPAMPoolRemove{
 			Id:      cidrToIPPoolID(id.cidr),
 			Cluster: id.cluster,
 		})
 		buf.sentRemoteIPPools.Discard(id)
-		return set.RemoveItem
-	})
+		buf.pendingRemoteIPPoolRemovals.Discard(id)
+	}
 }
 
 func (buf *EventSequencer) Flush() {
@@ -1232,10 +1235,10 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// the dataplane from adding a proper binding.
 	if buf.pendingIPSecBlacklistRemoves.Len() > 0 {
 		var addrs []string
-		buf.pendingIPSecBlacklistRemoves.Iter(func(addr ip.Addr) error {
+		for addr := range buf.pendingIPSecBlacklistRemoves.All() {
 			addrs = append(addrs, addr.String())
-			return set.RemoveItem
-		})
+			buf.pendingIPSecBlacklistRemoves.Discard(addr)
+		}
 		upd := &proto.IPSecBlacklistRemove{
 			RemovedAddrs: addrs,
 		}
@@ -1259,38 +1262,38 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// then we can change "add, remove, add" into "add, update, remove" and accidentally remove the updated policy.
 	// This is because the dataplane indexes policies on the policy selector (i.e. the match criteria for the
 	// rule) rather than the whole rule, in order to match the kernel behaviour.
-	buf.pendingIPSecBindingRemoves.Iter(func(b IPSecBinding) error {
+	for b := range buf.pendingIPSecBindingRemoves.All() {
 		upd := getOrCreateUpd(b.TunnelAddr)
 		upd.RemovedAddrs = append(upd.RemovedAddrs, b.WorkloadAddr.String())
-		return set.RemoveItem
-	})
+		buf.pendingIPSecBindingRemoves.Discard(b)
+	}
 	for k, upd := range updatesByTunnel {
 		buf.Callback(upd)
 		delete(updatesByTunnel, k)
 	}
 
 	// Now we've removed all the individual bindings, clean up any tunnels that are no longer present.
-	buf.pendingIPSecTunnelRemoves.Iter(func(addr ip.Addr) error {
+	for addr := range buf.pendingIPSecTunnelRemoves.All() {
 		buf.Callback(&proto.IPSecTunnelRemove{
 			TunnelAddr: addr.String(),
 		})
-		return set.RemoveItem
-	})
+		buf.pendingIPSecTunnelRemoves.Discard(addr)
+	}
 
 	// Then create any new tunnels.
-	buf.pendingIPSecTunnelAdds.Iter(func(addr ip.Addr) error {
+	for addr := range buf.pendingIPSecTunnelAdds.All() {
 		buf.Callback(&proto.IPSecTunnelAdd{
 			TunnelAddr: addr.String(),
 		})
-		return set.RemoveItem
-	})
+		buf.pendingIPSecTunnelAdds.Discard(addr)
+	}
 
 	// Now send the adds.
-	buf.pendingIPSecBindingAdds.Iter(func(b IPSecBinding) error {
+	for b := range buf.pendingIPSecBindingAdds.All() {
 		upd := getOrCreateUpd(b.TunnelAddr)
 		upd.AddedAddrs = append(upd.AddedAddrs, b.WorkloadAddr.String())
-		return set.RemoveItem
-	})
+		buf.pendingIPSecBindingAdds.Discard(b)
+	}
 
 	for _, upd := range updatesByTunnel {
 		buf.Callback(upd)
@@ -1300,10 +1303,10 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// in the dataplane.
 	if buf.pendingIPSecBlacklistAdds.Len() > 0 {
 		var addrs []string
-		buf.pendingIPSecBlacklistAdds.Iter(func(addr ip.Addr) error {
+		for addr := range buf.pendingIPSecBlacklistAdds.All() {
 			addrs = append(addrs, addr.String())
-			return set.RemoveItem
-		})
+			buf.pendingIPSecBlacklistAdds.Discard(addr)
+		}
 		upd := &proto.IPSecBlacklistAdd{
 			AddedAddrs: addrs,
 		}
@@ -1521,13 +1524,12 @@ func (buf *EventSequencer) flushExternalNetworkUpdates() {
 }
 
 func (buf *EventSequencer) flushExternalNetworkRemoves() {
-	buf.pendingExternalNetworkDeletes.Iter(func(id types.ExternalNetworkID) error {
+	for id := range buf.pendingExternalNetworkDeletes.All() {
 		protoID := types.ExternalNetworkIDToProto(id)
 		msg := proto.ExternalNetworkRemove{Id: protoID}
 		buf.Callback(&msg)
 		buf.sentExternalNetworks.Discard(id)
-		return nil
-	})
+	}
 	buf.pendingExternalNetworkDeletes.Clear()
 	log.Debug("Done flushing external network deletes")
 }
@@ -1590,11 +1592,16 @@ func cidrToIPPoolID(cidr ip.CIDR) string {
 }
 
 func addPolicyToTierInfo(pol *PolKV, tierInfo *proto.TierInfo, egressAllowed bool) {
+	id := proto.PolicyID{
+		Name:      pol.Key.Name,
+		Namespace: pol.Key.Namespace,
+		Kind:      pol.Key.Kind,
+	}
 	if pol.GovernsIngress() {
-		tierInfo.IngressPolicies = append(tierInfo.IngressPolicies, pol.Key.Name)
+		tierInfo.IngressPolicies = append(tierInfo.IngressPolicies, &id)
 	}
 	if egressAllowed && pol.GovernsEgress() {
-		tierInfo.EgressPolicies = append(tierInfo.EgressPolicies, pol.Key.Name)
+		tierInfo.EgressPolicies = append(tierInfo.EgressPolicies, &id)
 	}
 }
 

@@ -4,7 +4,7 @@ package cache_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -163,18 +163,22 @@ var _ = Describe("Querycache policy tests", func() {
 			_, err := policyData.IsKubernetesType()
 			Expect(err).Should(HaveOccurred())
 		})
-
 	})
 })
 
 func populateCache() cache.PoliciesCache {
 	policiesCache := cache.NewPoliciesCache()
 	gnpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
-		updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
+		updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(v3.KindGlobalNetworkPolicy),
 	)
-
+	anpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+		updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesAdminNetworkPolicy),
+	)
+	banpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+		updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesBaselineAdminNetworkPolicy),
+	)
 	npConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
-		updateprocessors.NewNetworkPolicyUpdateProcessor(),
+		updateprocessors.NewNetworkPolicyUpdateProcessor(v3.KindNetworkPolicy),
 	)
 	sgnpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 		updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
@@ -193,16 +197,16 @@ func populateCache() cache.PoliciesCache {
 		{
 			// We need to convert the GNP for use with the policy sorter, and to get the
 			// correct selectors for the labelhandler.
-			Kind:      apiv3.KindGlobalNetworkPolicy,
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Converter: gnpConverter,
 		},
 		{
 			Kind:      model.KindKubernetesAdminNetworkPolicy,
-			Converter: gnpConverter,
+			Converter: anpConverter,
 		},
 		{
 			Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
-			Converter: gnpConverter,
+			Converter: banpConverter,
 		},
 		{
 			// Convert the KubernetesNetworkPolicy to NP.
@@ -212,26 +216,26 @@ func populateCache() cache.PoliciesCache {
 		{
 			// We need to convert the NP for use with the policy sorter, and to get the
 			// correct selectors for the labelhandler.
-			Kind:      apiv3.KindNetworkPolicy,
+			Kind:      v3.KindNetworkPolicy,
 			Converter: npConverter,
 		},
 		{
 			// Convert the SGNP to GNP
-			Kind:      apiv3.KindStagedGlobalNetworkPolicy,
+			Kind:      v3.KindStagedGlobalNetworkPolicy,
 			Converter: sgnpConverter,
 		},
 		{
 			// Convert the SNP to NP
-			Kind:      apiv3.KindStagedNetworkPolicy,
+			Kind:      v3.KindStagedNetworkPolicy,
 			Converter: snpConverter,
 		},
 		{
 			// Convert the SK8SNP to NP
-			Kind:      apiv3.KindStagedKubernetesNetworkPolicy,
+			Kind:      v3.KindStagedKubernetesNetworkPolicy,
 			Converter: sk8snpConverter,
 		},
 		{
-			Kind:      apiv3.KindTier,
+			Kind:      v3.KindTier,
 			Converter: tierConverter,
 		},
 	}
@@ -247,21 +251,20 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-
 					Name: "kanp.adminnetworkpolicy.test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier: "adminnetworkpolicy",
-					Egress: []apiv3.Rule{
-						apiv3.Rule{
-							Action: apiv3.Allow,
+					Egress: []v3.Rule{
+						{
+							Action: v3.Allow,
 						},
 					},
 					Selector: "projectcalico.org/orchestrator == 'k8s'",
@@ -278,21 +281,20 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-
 					Name: "kanp.adminnetworkpolicy.test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier: "adminnetworkpolicy",
-					Egress: []apiv3.Rule{
-						apiv3.Rule{
-							Action: apiv3.Allow,
+					Egress: []v3.Rule{
+						{
+							Action: v3.Allow,
 						},
 					},
 					Selector: "projectcalico.org/orchestrator == 'k8s'",
@@ -309,21 +311,20 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-
 					Name: "kbanp.baselineadminnetworkpolicy.test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier: "baselineadminnetworkpolicy",
-					Egress: []apiv3.Rule{
-						apiv3.Rule{
-							Action: apiv3.Allow,
+					Egress: []v3.Rule{
+						{
+							Action: v3.Allow,
 						},
 					},
 					Selector: "projectcalico.org/orchestrator == 'k8s'",
@@ -340,21 +341,20 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-
 					Name: "kbanp.baselineadminnetworkpolicy.test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier: "baselineadminnetworkpolicy",
-					Egress: []apiv3.Rule{
-						apiv3.Rule{
-							Action: apiv3.Allow,
+					Egress: []v3.Rule{
+						{
+							Action: v3.Allow,
 						},
 					},
 					Selector: "projectcalico.org/orchestrator == 'k8s'",
@@ -371,7 +371,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -381,9 +381,9 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "62cb2a82-77ff-44ed-8aab-fabab0a3b521",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:  "",
-					Types: []apiv3.PolicyType{"Ingress"},
+					Types: []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -397,7 +397,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -407,9 +407,9 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "62cb2a82-77ff-44ed-8aab-fabab0a3b521",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:  "",
-					Types: []apiv3.PolicyType{"Ingress"},
+					Types: []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -423,7 +423,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -432,9 +432,9 @@ func populateCache() cache.PoliciesCache {
 					Name:      "knp.default.test",
 					Namespace: "default",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:  "",
-					Types: []apiv3.PolicyType{"Ingress"},
+					Types: []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -448,7 +448,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -458,10 +458,10 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "cd4f30f4-a06c-44b9-a4a9-72b41dbf4658",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
-					Types:    []apiv3.PolicyType{"Ingress"},
+					Types:    []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -475,7 +475,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -485,10 +485,10 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "00ffcda7-1506-43da-a8f5-138cb46df515",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
-					Types:    []apiv3.PolicyType{"Ingress"},
+					Types:    []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -502,7 +502,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -512,10 +512,10 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "cd4f30f4-a06c-44b9-a4a9-72b41dbf4658",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
-					Types:    []apiv3.PolicyType{"Ingress"},
+					Types:    []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -529,7 +529,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "GlobalNetworkPolicy",
 			},
-			Value: &apiv3.GlobalNetworkPolicy{
+			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "GlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -539,10 +539,10 @@ func populateCache() cache.PoliciesCache {
 					Namespace: "default",
 					UID:       "afbb0565-7bc7-43f9-9dda-1126212eac41",
 				},
-				Spec: apiv3.GlobalNetworkPolicySpec{
+				Spec: v3.GlobalNetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
-					Types:    []apiv3.PolicyType{"Ingress"},
+					Types:    []v3.PolicyType{"Ingress"},
 				},
 			},
 		},
@@ -556,7 +556,7 @@ func populateCache() cache.PoliciesCache {
 				Namespace: "default",
 				Kind:      "NetworkPolicy",
 			},
-			Value: &apiv3.NetworkPolicy{
+			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
@@ -565,10 +565,10 @@ func populateCache() cache.PoliciesCache {
 					Name:      "abc.default.test",
 					Namespace: "default",
 				},
-				Spec: apiv3.NetworkPolicySpec{
+				Spec: v3.NetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
-					Types:    []apiv3.PolicyType{"Ingress"},
+					Types:    []v3.PolicyType{"Ingress"},
 				},
 			},
 		},

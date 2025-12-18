@@ -10,6 +10,7 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -110,7 +111,7 @@ func policyAndProfileUpdate(policyName, profileName string, inboundRule *proto.R
 	res = append(res, &proto.ToDataplane{
 		Payload: &proto.ToDataplane_ActivePolicyUpdate{
 			ActivePolicyUpdate: &proto.ActivePolicyUpdate{
-				Id:     &proto.PolicyID{Name: policyName},
+				Id:     &proto.PolicyID{Name: policyName, Kind: v3.KindGlobalNetworkPolicy},
 				Policy: policy,
 			},
 		},
@@ -120,7 +121,6 @@ func policyAndProfileUpdate(policyName, profileName string, inboundRule *proto.R
 }
 
 func stagedPolicyUpdate(name, ns string, inboundRule *proto.Rule) *proto.ToDataplane {
-	policyName := fmt.Sprintf("%s/staged:%s", ns, name)
 	policy := &proto.Policy{
 		InboundRules: []*proto.Rule{
 			inboundRule,
@@ -129,7 +129,11 @@ func stagedPolicyUpdate(name, ns string, inboundRule *proto.Rule) *proto.ToDatap
 	return &proto.ToDataplane{
 		Payload: &proto.ToDataplane_ActivePolicyUpdate{
 			ActivePolicyUpdate: &proto.ActivePolicyUpdate{
-				Id:     &proto.PolicyID{Name: policyName},
+				Id: &proto.PolicyID{
+					Name:      name,
+					Namespace: ns,
+					Kind:      v3.KindStagedNetworkPolicy,
+				},
 				Policy: policy,
 			},
 		},
@@ -143,7 +147,6 @@ func newRequest(
 	headers map[string]string,
 	src, dst *authzv3.AttributeContext_Peer,
 ) *authzv3.CheckRequest {
-
 	u, _ := url.Parse(requestUrl)
 
 	return &authzv3.CheckRequest{
@@ -190,7 +193,7 @@ func newResponseWithStatus(code int32) *authzv3.CheckResponse {
 
 func TestStagedPolicyUpdate(t *testing.T) {
 	stagedPolicy := stagedPolicyUpdate("test", "default", &proto.Rule{})
-	if !model.PolicyIsStaged(stagedPolicy.GetActivePolicyUpdate().GetId().GetName()) {
+	if !model.KindIsStaged(stagedPolicy.GetActivePolicyUpdate().GetId().GetKind()) {
 		t.Error("Expected staged policy")
 	}
 }

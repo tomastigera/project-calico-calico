@@ -5,6 +5,7 @@ package flows_test
 import (
 	"context"
 	_ "embed"
+	gojson "encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -131,6 +132,9 @@ func TestListFlows(t *testing.T) {
 			WithReporter("src").WithAction("allowed").
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
 			WithPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
+			WithEnforcedPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
+			WithPendingPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
+			WithTransitPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
 			WithProcessName("/usr/bin/curl")
 		expected1 := populateFlowData(t, ctx, bld.Copy(), client, cluster1Info)
 		expected2 := populateFlowData(t, ctx, bld.Copy(), client, cluster2Info)
@@ -354,7 +358,13 @@ func TestFlowMultiplePolicies(t *testing.T) {
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
 			// Add in a couple of policies, as well as the default profile hit.
 			WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-			WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
+			WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithEnforcedPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithEnforcedPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithPendingPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithPendingPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithTransitPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithTransitPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
 
 		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
@@ -362,7 +372,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		expected.Policies = []v1.Policy{
 			{
 				Tier:      "allow-tigera",
-				Name:      "cluster-dns",
+				Name:      "allow-tigera.cluster-dns",
 				Namespace: "kube-system",
 				Action:    "pass",
 				Count:     expected.LogStats.FlowLogCount,
@@ -924,6 +934,215 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow2: true,
 		},
 		{
+			Name: "should return flows with a global policy hit in the enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+
+		{
+			Name: "should query based on unprotected flows in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows in all namespaces.
+						Tier:   "__PROFILE__",
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on unprotected flows within a namespace in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeAny,
+						Namespaces: []string{"openshift-dns"},
+					},
+				},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows from the openshift-dns namespace.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on a specific policy hit tier in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+
+			// Only flow 2 has a policy hit in this tier.
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit tier and action in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:   "default",
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			// Both flows have a policy hit in this tier, but only the second
+			// is allowed by the tier.
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name and namespace in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Name:      testutils.StringPtr("cluster-dns"),
+						Namespace: testutils.StringPtr("kube-system"),
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name - match both global and namespace policies when both tier and namespace are not provided in the enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Name: testutils.StringPtr("cluster-dns"),
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			// This test uses a complex query that ultimately only matches on of the flows
+			// beacause it doesn't include flow1's destination namespace.
+			Name: "should query a flow with a complex multi-part query with enforced policies",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				Actions:          []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
+				SourceTypes:      []v1.EndpointType{v1.WEP, v1.HEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"openshift-dns"},
+					},
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with a kubernetes policy hit in the enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Type:      "knp",
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should not return flows with a staged policy hit in the enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Staged: true,
+						Tier:   "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with namespaced policy hit in enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with global policy hit in enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "default",
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should return flows with a global policy hit in enforced policies",
+			Params: v1.L3FlowParams{
+				EnforcedPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
 			Name: "should query based on unprotected flows from pending policies",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
@@ -1315,6 +1534,32 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow1: true,
 			ExpectFlow2: true,
 		},
+		{
+			Name: "should return flows with an admin network policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Type: v1.KANP,
+						Name: testutils.StringPtr("test-kanp"),
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with a baseline admin network policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Type: v1.KBANP,
+						Name: testutils.StringPtr("test-kbanp"),
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -1359,20 +1604,24 @@ func TestFlowFiltering(t *testing.T) {
 				WithPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
 				WithPolicy("3|default|default.test-global-policy|pass|1").
 				WithPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
 				WithEnforcedPolicy("0|custom-tier|default/custom-tier.test-policy|pass|2").
 				WithEnforcedPolicy("1|default|default/knp.default.test-k8s-policy|pass|2").
 				WithEnforcedPolicy("2|default|default.test-global-policy|pass|1").
 				WithEnforcedPolicy("3|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithEnforcedPolicy("4|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
 				WithPendingPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
 				WithPendingPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
 				WithPendingPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
 				WithPendingPolicy("3|default|default.test-global-policy|pass|1").
 				WithPendingPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithPendingPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
 				WithTransitPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
 				WithTransitPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
 				WithTransitPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
 				WithTransitPolicy("3|default|default.test-global-policy|pass|1").
 				WithTransitPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithTransitPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
 
@@ -1399,24 +1648,28 @@ func TestFlowFiltering(t *testing.T) {
 				WithPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
 				WithPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
 				WithPolicy("5|default|default.cluster-dns|allow|1").
+				WithPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
 				WithEnforcedPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
 				WithEnforcedPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
 				WithEnforcedPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
 				WithEnforcedPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
 				WithEnforcedPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
 				WithEnforcedPolicy("5|default|default.cluster-dns|allow|1").
+				WithEnforcedPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
 				WithPendingPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
 				WithPendingPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
 				WithPendingPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
 				WithPendingPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
 				WithPendingPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
 				WithPendingPolicy("5|default|default.cluster-dns|allow|1").
+				WithPendingPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
 				WithTransitPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
 				WithTransitPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
 				WithTransitPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
 				WithTransitPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
 				WithTransitPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
 				WithTransitPolicy("5|default|default.cluster-dns|allow|1").
+				WithTransitPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)
@@ -1434,13 +1687,19 @@ func TestFlowFiltering(t *testing.T) {
 
 			// Assert that the correct flows are returned.
 			if testcase.ExpectFlow1 {
-				require.Contains(t, r.Items, exp1)
+				require.Contains(t, r.Items, exp1, msg(r.Items, exp1))
 			}
 			if testcase.ExpectFlow2 {
-				require.Contains(t, r.Items, exp2)
+				require.Contains(t, r.Items, exp2, msg(r.Items, exp2))
 			}
 		})
 	}
+}
+
+func msg(got []v1.L3Flow, exp v1.L3Flow) string {
+	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
+	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
+	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n", expJSON, gotJSON)
 }
 
 // TestPagination tests that we return multiple flows properly using pagination.
@@ -2296,4 +2555,104 @@ func TestL3FlowCount(t *testing.T) {
 		// Expect global count equal to total count, with no signaled truncation.
 		expectResponse(t, countResp, err, total, false)
 	})
+}
+
+func TestFlowFilteringEndpointTypes(t *testing.T) {
+	type testCase struct {
+		Name   string
+		Params v1.L3FlowParams
+
+		// Configuration for which flows are expected to match.
+		ExpectFlow1 bool
+		ExpectFlow2 bool
+	}
+
+	numExpected := func(tc testCase) int {
+		num := 0
+		if tc.ExpectFlow1 {
+			num++
+		}
+		if tc.ExpectFlow2 {
+			num++
+		}
+		return num
+	}
+
+	testcases := []testCase{
+		{
+			Name: "should query a flow based on network source type",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				SourceTypes: []v1.EndpointType{v1.Network},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query a flow based on network set source type",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				SourceTypes: []v1.EndpointType{v1.NetworkSet},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+	}
+
+	for _, testcase := range testcases {
+		RunAllModes(t, testcase.Name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
+
+			tr := &lmav1.TimeRange{}
+			tr.From = time.Now().Add(-5 * time.Minute)
+			tr.To = time.Now().Add(5 * time.Minute)
+			testcase.Params.TimeRange = tr
+
+			// Flow 1: Network type
+			bld := backendutils.NewFlowLogBuilder()
+			bld.WithType("net").
+				WithSourceNamespace("default").
+				WithDestNamespace("kube-system").
+				WithDestName("kube-dns-*").
+				WithDestIP("10.0.0.10").
+				WithDestService("kube-dns", 53).
+				WithDestPort(53).
+				WithProtocol("udp").
+				WithSourceName("my-network").
+				WithSourceIP("192.168.1.1").
+				WithRandomFlowStats().WithRandomPacketStats().
+				WithReporter("src").WithAction("allowed")
+			exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
+
+			// Flow 2: NetworkSet type
+			bld2 := backendutils.NewFlowLogBuilder()
+			bld2.WithType("ns").
+				WithSourceNamespace("default").
+				WithDestNamespace("kube-system").
+				WithDestName("kube-dns-*").
+				WithDestIP("10.0.0.10").
+				WithDestService("kube-dns", 53).
+				WithDestPort(53).
+				WithProtocol("udp").
+				WithSourceName("my-network-set").
+				WithSourceIP("192.168.1.1").
+				WithRandomFlowStats().WithRandomPacketStats().
+				WithReporter("src").WithAction("allowed")
+			exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
+
+			// Query for flows.
+			r, err := fb.List(ctx, clusterInfo, &testcase.Params)
+
+			require.NoError(t, err)
+			require.Len(t, r.Items, numExpected(testcase))
+			require.Nil(t, r.AfterKey)
+
+			if testcase.ExpectFlow1 {
+				require.Contains(t, r.Items, exp1)
+			}
+			if testcase.ExpectFlow2 {
+				require.Contains(t, r.Items, exp2)
+			}
+		})
+	}
 }

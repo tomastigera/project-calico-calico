@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	testutils "github.com/projectcalico/calico/voltron/pkg/cryptoutils/testutils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
@@ -17,7 +18,7 @@ func TestClientTunnel(t *testing.T) {
 	RegisterTestingT(t)
 
 	t.Run("receives a connection when the server side opens the connection", func(t *testing.T) {
-		cliConn, srvConn := net.Pipe()
+		cliConn, srvConn := testutils.TLSPipe()
 		tun, err := tunnel.NewClientTunnel(cliConn)
 		Expect(err).ToNot(HaveOccurred())
 

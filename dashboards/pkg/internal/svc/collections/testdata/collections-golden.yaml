@@ -188,6 +188,12 @@
     - enforced
   - name: policies.all_policies
     type: text
+  - name: policies.enforced_policies
+    type: text
+  - name: policies.pending_policies
+    type: text
+  - name: policies.transit_policies
+    type: text
   - name: process_args
     type: text
   - name: process_id

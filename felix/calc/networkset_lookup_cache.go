@@ -368,10 +368,9 @@ func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 			cidrStr = append(cidrStr, cidr.String())
 		}
 		domainStr := []string{}
-		ns.allowedEgressDomains.Iter(func(domain string) error {
+		for domain := range ns.allowedEgressDomains.All() {
 			domainStr = append(domainStr, domain)
-			return nil
-		})
+		}
 		lines = append(lines,
 			key.(model.NetworkSetKey).Name,
 			"   cidrs: "+strings.Join(cidrStr, ","),

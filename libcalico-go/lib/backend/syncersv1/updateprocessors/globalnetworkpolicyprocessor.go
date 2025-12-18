@@ -23,30 +23,37 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
 // Create a new SyncerUpdateProcessor to sync GlobalNetworkPolicy data in v1 format for
 // consumption by Felix.
-func NewGlobalNetworkPolicyUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewSimpleUpdateProcessor(apiv3.KindGlobalNetworkPolicy, ConvertGlobalNetworkPolicyV3ToV1Key, ConvertGlobalNetworkPolicyV3ToV1Value)
+func NewGlobalNetworkPolicyUpdateProcessor(keyKind string) watchersyncer.SyncerUpdateProcessor {
+	return NewSimpleUpdateProcessor(
+		apiv3.KindGlobalNetworkPolicy,
+		gnpKeyConverter(keyKind),
+		ConvertGlobalNetworkPolicyV3ToV1Value,
+	)
 }
 
-func ConvertGlobalNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, error) {
-	if v3key.Name == "" {
-		return model.PolicyKey{}, errors.New("Missing Name field to create a v1 NetworkPolicy Key")
-	}
-	tier, err := names.TierFromPolicyName(v3key.Name)
-	if err != nil {
-		return model.PolicyKey{}, err
-	}
-	return model.PolicyKey{
-		Name: v3key.Name,
-		Tier: tier,
-	}, nil
+func ConvertGlobalNetworkPolicyV3ToV1Key(k model.ResourceKey) (model.Key, error) {
+	fn := gnpKeyConverter(k.Kind)
+	return fn(k)
 }
 
-func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
+func gnpKeyConverter(kind string) func(model.ResourceKey) (model.Key, error) {
+	return func(v3key model.ResourceKey) (model.Key, error) {
+		if v3key.Name == "" {
+			return model.PolicyKey{}, errors.New("Missing Name field to create a model.PolicyKey")
+		}
+		return model.PolicyKey{
+			Name:      v3key.Name,
+			Namespace: "",
+			Kind:      kind,
+		}, nil
+	}
+}
+
+func ConvertGlobalNetworkPolicyV3ToV1Value(val any) (any, error) {
 	v3res, ok := val.(*apiv3.GlobalNetworkPolicy)
 	if !ok {
 		return nil, errors.New("Value is not a valid GlobalNetworkPolicy resource value")
@@ -71,6 +78,7 @@ func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.P
 
 	v1value := &model.Policy{
 		Namespace:        "", // Empty string used to signal a GlobalNetworkPolicy.
+		Tier:             tierOrDefault(spec.Tier),
 		Order:            spec.Order,
 		InboundRules:     RulesAPIV3ToBackend(spec.Ingress, "", false),
 		OutboundRules:    RulesAPIV3ToBackend(spec.Egress, "", false),

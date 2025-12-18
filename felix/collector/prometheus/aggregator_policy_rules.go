@@ -22,6 +22,7 @@ var (
 	LABEL_TIER        = "tier"
 	LABEL_NAMESPACE   = "namespace"
 	LABEL_POLICY      = "policy"
+	LABEL_KIND        = "kind"
 	LABEL_RULE_IDX    = "rule_index"
 	LABEL_ACTION      = "action"
 	LABEL_TRAFFIC_DIR = "traffic_direction"
@@ -33,21 +34,21 @@ var (
 			Name: "cnx_policy_rule_packets",
 			Help: "Total number of packets handled by Calico Enterprise policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_KIND, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	counterRuleBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_bytes",
 			Help: "Total number of bytes handled by Calico Enterprise policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_KIND, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	counterRuleConns = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_connections",
 			Help: "Total number of connections handled by Calico Enterprise policy rules.",
 		},
-		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
+		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_KIND, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 )
 
@@ -64,6 +65,7 @@ func (k *RuleAggregateKey) PacketByteLabels(trafficDir types.TrafficDirection, f
 		LABEL_TIER:        k.ruleID.TierString(),
 		LABEL_NAMESPACE:   k.ruleID.NamespaceString(),
 		LABEL_POLICY:      k.ruleID.NameString(),
+		LABEL_KIND:        k.ruleID.Kind,
 		LABEL_RULE_DIR:    k.ruleID.DirectionString(),
 		LABEL_RULE_IDX:    k.ruleID.IndexStr,
 		LABEL_TRAFFIC_DIR: trafficDir.String(),
@@ -78,6 +80,7 @@ func (k *RuleAggregateKey) ConnectionLabels(felixHostname string) prometheus.Lab
 		LABEL_TIER:        k.ruleID.TierString(),
 		LABEL_NAMESPACE:   k.ruleID.NamespaceString(),
 		LABEL_POLICY:      k.ruleID.NameString(),
+		LABEL_KIND:        k.ruleID.Kind,
 		LABEL_RULE_DIR:    k.ruleID.DirectionString(),
 		LABEL_RULE_IDX:    k.ruleID.IndexStr,
 		LABEL_TRAFFIC_DIR: types.RuleDirToTrafficDir(k.ruleID.Direction).String(),
@@ -265,7 +268,7 @@ func getEnforcedPolicyRuleIDs(mu metric.Update) []calc.RuleID {
 	}
 	enforcedRuleIDs := []calc.RuleID{}
 	for _, rID := range mu.RuleIDs {
-		if rID == nil || model.PolicyIsStaged(rID.Name) {
+		if rID == nil || model.KindIsStaged(rID.Kind) {
 			continue
 		}
 		enforcedRuleIDs = append(enforcedRuleIDs, *rID)
@@ -281,7 +284,7 @@ func getStagedPolicyRuleIDs(mu metric.Update) []calc.RuleID {
 	}
 	pendingRuleIDs := []calc.RuleID{}
 	for _, rID := range mu.PendingRuleIDs {
-		if rID == nil || !model.PolicyIsStaged(rID.Name) {
+		if rID == nil || !model.KindIsStaged(rID.Kind) {
 			continue
 		}
 		pendingRuleIDs = append(pendingRuleIDs, *rID)
