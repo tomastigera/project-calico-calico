@@ -4,7 +4,7 @@ ARG CALICO_BASE_UBI10
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.18.8-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
+FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
