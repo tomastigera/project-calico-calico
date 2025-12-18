@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types/boundedset"
@@ -87,7 +88,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "1234",
@@ -125,7 +126,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "*",
@@ -164,7 +165,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "*",
@@ -193,7 +194,7 @@ var _ = Describe("Flow log types tests", func() {
 						Count:             2,
 					},
 				},
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "23456",
@@ -232,7 +233,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "*",
@@ -261,7 +262,7 @@ var _ = Describe("Flow log types tests", func() {
 						Count:             2,
 					},
 				},
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "23456",
@@ -302,7 +303,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "23456",
@@ -331,7 +332,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "9876",
@@ -371,7 +372,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats := []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "-",
 					NumProcessNames: 0,
 					ProcessID:       "-",
@@ -409,7 +410,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "-",
 					NumProcessNames: 0,
 					ProcessID:       "-",
@@ -447,7 +448,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "-",
 					NumProcessNames: 0,
 					ProcessID:       "-",
@@ -492,7 +493,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "1234",
@@ -531,7 +532,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "1234",
@@ -560,7 +561,7 @@ var _ = Describe("Flow log types tests", func() {
 						Count:             1,
 					},
 				},
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "9876",
@@ -602,7 +603,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-3"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-4"))
 			expectedReportedStats = []FlowProcessReportedStats{
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process",
 					NumProcessNames: 1,
 					ProcessID:       "1234",
@@ -631,7 +632,7 @@ var _ = Describe("Flow log types tests", func() {
 						Count:             1,
 					},
 				},
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "test-process-2",
 					NumProcessNames: 1,
 					ProcessID:       "9876",
@@ -660,7 +661,7 @@ var _ = Describe("Flow log types tests", func() {
 						Count:             1,
 					},
 				},
-				FlowProcessReportedStats{
+				{
 					ProcessName:     "*",
 					NumProcessNames: 2,
 					ProcessID:       "*",
@@ -716,10 +717,10 @@ func setEgressTraceAndMetrics(mu metric.Update, egress, pendingEgress []*calc.Ru
 var _ = Describe("FlowPolicySets", func() {
 	var ca *Aggregator
 
-	egress2 := calc.NewRuleID("tier2", "policy2", "namespace2", 1, rules.RuleDirEgress, rules.RuleActionAllow)
-	egress3 := calc.NewRuleID("tier3", "policy3", "namespace3", 3, rules.RuleDirEgress, rules.RuleActionAllow)
-	egress4 := calc.NewRuleID("tier4", "policy4", "namespace4", 1, rules.RuleDirEgress, rules.RuleActionAllow)
-	egress1Staged := calc.NewRuleID("tier1", "staged:policy1", "namespace1", 0, rules.RuleDirEgress, rules.RuleActionAllow)
+	egress1Staged := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier1", "policy1", "namespace1", 0, rules.RuleDirEgress, rules.RuleActionAllow)
+	egress2 := calc.NewRuleID(v3.KindNetworkPolicy, "tier2", "policy2", "namespace2", 1, rules.RuleDirEgress, rules.RuleActionAllow)
+	egress3 := calc.NewRuleID(v3.KindNetworkPolicy, "tier3", "policy3", "namespace3", 3, rules.RuleDirEgress, rules.RuleActionAllow)
+	egress4 := calc.NewRuleID(v3.KindNetworkPolicy, "tier4", "policy4", "namespace4", 1, rules.RuleDirEgress, rules.RuleActionAllow)
 
 	BeforeEach(func() {
 		ca = NewAggregator()
@@ -755,9 +756,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      21,
@@ -775,9 +776,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowSourcePort,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      21,
@@ -795,9 +796,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowPrefixName,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      21,
@@ -815,9 +816,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowNoDestPorts,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      21,
@@ -845,9 +846,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      93,
@@ -866,9 +867,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      36,
@@ -887,9 +888,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      36,
@@ -910,9 +911,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      48,
@@ -934,9 +935,9 @@ var _ = Describe("FlowPolicySets", func() {
 			FlowDefault,
 			TraceAndMetrics{
 				EnforcedTraces: []FlowPolicySet{
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier3|namespace3/tier3.policy3|allow|3": emptyValue, "2|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier4|namespace4/tier4.policy4|allow|1": emptyValue},
-					{"0|tier2|namespace2/tier2.policy2|allow|1": emptyValue, "1|tier4|namespace4/tier4.policy4|allow|1": emptyValue, "2|tier3|namespace3/tier3.policy3|allow|3": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier3|namespace3/policy3|allow|3": emptyValue, "2|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier4|namespace4/policy4|allow|1": emptyValue},
+					{"0|tier2|namespace2/policy2|allow|1": emptyValue, "1|tier4|namespace4/policy4|allow|1": emptyValue, "2|tier3|namespace3/policy3|allow|3": emptyValue},
 				},
 				PendingTrace: FlowPolicySet{"0|tier1|namespace1/tier1.staged:policy1|allow|0": emptyValue},
 				Packets:      48,

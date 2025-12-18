@@ -51,7 +51,8 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 			uv1 := &api.Update{
 				KVPair: model.KVPair{
 					Key: model.PolicyKey{
-						Name: "test-policy",
+						Name:      "test-policy",
+						Namespace: "default",
 					},
 				},
 			}
@@ -61,7 +62,7 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 
 			// Verify the conversion
 			Expect(uv3.Key.(model.ResourceKey).Kind).To(Equal(v3.KindNetworkPolicy))
-			Expect(uv3.Key.(model.ResourceKey).Name).To(Equal(model.PolicyNamePrefixStaged + "test-policy"))
+			Expect(uv3.Key.(model.ResourceKey).Name).To(Equal("staged:test-policy"))
 
 			// Verify the UID is preserved
 			convertedPolicy, ok := uv3.Value.(*v3.NetworkPolicy)
@@ -108,7 +109,7 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 			StagedToEnforcedConversion(uv1, uv3)
 
 			convertedPolicy := uv3.Value.(*v3.NetworkPolicy)
-			Expect(convertedPolicy.Name).To(Equal(model.PolicyNamePrefixStaged + "my-policy"))
+			Expect(convertedPolicy.Name).To(Equal("staged:my-policy"))
 		})
 	})
 
@@ -200,7 +201,7 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 			StagedToEnforcedConversion(uv1, uv3)
 
 			convertedPolicy := uv3.Value.(*v3.NetworkPolicy)
-			Expect(convertedPolicy.Name).To(ContainSubstring(model.PolicyNamePrefixStaged))
+			Expect(convertedPolicy.Name).To(Equal("staged:knp.default.my-k8s-policy"))
 		})
 	})
 
@@ -248,7 +249,7 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 
 			// Verify the conversion
 			Expect(uv3.Key.(model.ResourceKey).Kind).To(Equal(v3.KindGlobalNetworkPolicy))
-			Expect(uv3.Key.(model.ResourceKey).Name).To(Equal(model.PolicyNamePrefixStaged + "global-test-policy"))
+			Expect(uv3.Key.(model.ResourceKey).Name).To(Equal("staged:global-test-policy"))
 
 			// Verify the UID is preserved
 			convertedPolicy, ok := uv3.Value.(*v3.GlobalNetworkPolicy)
@@ -293,7 +294,7 @@ var _ = Describe("StagedToEnforcedConversion", func() {
 			StagedToEnforcedConversion(uv1, uv3)
 
 			convertedPolicy := uv3.Value.(*v3.GlobalNetworkPolicy)
-			Expect(convertedPolicy.Name).To(Equal(model.PolicyNamePrefixStaged + "my-global-policy"))
+			Expect(convertedPolicy.Name).To(Equal("staged:my-global-policy"))
 		})
 	})
 

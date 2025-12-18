@@ -18,9 +18,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const cannedEnvelopeWithHello = "Iv+BAwEBCEVudmVsb3BlAf+CAAEBAQdNZXNzYWdlARAAAAD/jP+CATtnaXRodWIuY29tL3Byb2plY3R" +
@@ -85,4 +89,30 @@ func TestHealthName(t *testing.T) {
 		Expect(st.HealthName()).To(MatchRegexp(`([A-Z]\w+)+`),
 			"health names should be UpperCamel for consistency")
 	}
+}
+
+// Create a SerializedUpdate with a legacy policy key and verify that we upgrade it to a modern key.
+func TestLegacyKeyUpgrade(t *testing.T) {
+	RegisterTestingT(t)
+
+	pol := &model.Policy{}
+	polBytes, err := json.Marshal(pol)
+	Expect(err).NotTo(HaveOccurred())
+
+	su := SerializedUpdate{
+		Key:        "/calico/v1/policy/tier/mytier/policy/ns%2fname",
+		Value:      polBytes,
+		Revision:   "20",
+		UpdateType: api.UpdateTypeKVNew,
+	}
+
+	upd, err := su.ToUpdate()
+	Expect(err).NotTo(HaveOccurred())
+
+	pk, ok := upd.Key.(model.PolicyKey)
+	Expect(ok).To(BeTrue(), "Expected upgraded key to be of type PolicyKey")
+	Expect(pk.Name).To(Equal("name"))
+	Expect(pk.Namespace).To(Equal("ns"))
+	Expect(pk.Kind).To(Equal("NetworkPolicy"))
+	Expect(upd.Value.(*model.Policy).Tier).To(Equal("mytier"))
 }

@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
@@ -99,7 +100,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 			flowCache := &flowCache{
 				source:      endpointCache{selectors: sel.CreateSelectorCache()},
 				destination: endpointCache{selectors: sel.CreateSelectorCache()},
-				policies:    make(map[string]api.ActionFlag),
+				policies:    make(map[model.ResourceKey]api.ActionFlag),
 			}
 
 			// Invoke the calculation twice - once to run through the before processing which will populate our cache
@@ -594,7 +595,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
-		//Expect(compute().Action).To(Equal(api.ActionFlagDeny))
+		// Expect(compute().Action).To(Equal(api.ActionFlagDeny))
 		Expect(compute().Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
@@ -1326,7 +1327,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1)}
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
@@ -1552,7 +1554,7 @@ var _ = Describe("Compiled tiers and gnpolicies tests", func() {
 			flowCache := &flowCache{
 				source:      endpointCache{selectors: sel.CreateSelectorCache()},
 				destination: endpointCache{selectors: sel.CreateSelectorCache()},
-				policies:    make(map[string]api.ActionFlag),
+				policies:    make(map[model.ResourceKey]api.ActionFlag),
 			}
 
 			if gnp.Spec.Types[0] == v3.PolicyTypeIngress {

@@ -659,11 +659,22 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		Expect(ordered).To(HaveLen(2))
 		Expect(ordered[0].Tier.GetObjectMeta().GetName()).To(Equal("tier-1"))
 		Expect(ordered[0].OrderedPolicies).To(HaveLen(4))
-		Expect(ordered[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{cesgnp, cegnp, cesnp, cenp}))
+
+		// Check fields individually to give better error messages.
+		exp := []*xrefcache.CacheEntryNetworkPolicy{cegnp, cesgnp, cenp, cesnp}
+		for i, op := range ordered[0].OrderedPolicies {
+			Expect(op.GetObjectMeta().GetName()).To(Equal(exp[i].GetObjectMeta().GetName()), "name mismatch at index %d", i)
+			Expect(op.GetObjectMeta().GetNamespace()).To(Equal(exp[i].GetObjectMeta().GetNamespace()), "namespace mismatch at index %d", i)
+			Expect(op.GetObjectKind().GroupVersionKind().Kind).To(Equal(exp[i].GetObjectKind().GroupVersionKind().Kind), "kind mismatch at index %d", i)
+			Expect(op.IsStaged()).To(Equal(exp[i].IsStaged()), "staged mismatch at index %d", i)
+			Expect(op).To(Equal(exp[i]), "mismatch at index %d", i)
+		}
+		// Make sure the full slices are equal to catch anything we missed.
+		Expect(ordered[0].OrderedPolicies).To(Equal(exp))
 
 		Expect(ordered[1].Tier.GetObjectMeta().GetName()).To(Equal("default"))
 		Expect(ordered[1].OrderedPolicies).To(HaveLen(2))
-		Expect(ordered[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{cesknp, ceknp}))
+		Expect(ordered[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{ceknp, cesknp}))
 
 		By("Creating staged policy deletes")
 		tester.SetStagedGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1, apiv3.StagedActionDelete)

@@ -758,7 +758,7 @@ func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) sync
 			continue
 		}
 
-		//TODO (rlb): Nets may contain "other namespace"
+		// TODO (rlb): Nets may contain "other namespace"
 		irV1 := ingressV1[i]
 
 		// Note that for ingress we don't care about the dest selector since that would simply further limit
@@ -832,7 +832,7 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 			continue
 		}
 
-		//TODO (rlb): Nets may contain "other namespace"
+		// TODO (rlb): Nets may contain "other namespace"
 		erV1 := egressV1[i]
 
 		// Note that for egress we don't care about the source selector since that would simply further limit

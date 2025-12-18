@@ -163,19 +163,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				"Expected host endpoint to be programmed")
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.allow-all", "allow", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, "eth0", "egress", "default.allow-all", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felix, "eth0", "ingress", "default.allow-all", "allow", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, "eth0", "ingress", "default.allow-all", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw", "deny", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw", "deny", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw-health", "deny", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw-health", "deny", false)
 			}, "5s", "200ms").Should(BeTrue())
 		} else {
 			hostEndpointProgrammed := func() bool {
@@ -441,7 +441,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										felix = tc.Felixes[0]
 									}
 									if BPFMode() {
-										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
+										return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
 									}
 									out, err := getRuleset(felix)
 									Expect(err).NotTo(HaveOccurred())
@@ -737,7 +737,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										felix = tc.Felixes[0]
 									}
 									if BPFMode() {
-										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
+										return bpfCheckIfGlobalNetworkPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
 									}
 									out, err := getRuleset(felix)
 									Expect(err).NotTo(HaveOccurred())

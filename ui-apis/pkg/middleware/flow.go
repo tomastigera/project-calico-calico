@@ -247,6 +247,7 @@ type FlowResponsePolicy struct {
 	Tier         string `json:"tier"`
 	Namespace    string `json:"namespace"`
 	Name         string `json:"name"`
+	Kind         string `json:"kind,omitempty"`
 	Action       string `json:"action"`
 	IsStaged     bool   `json:"isStaged"`
 	IsKubernetes bool   `json:"isKubernetes"`
@@ -526,6 +527,7 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 			// the request so the user knows to try again.
 			return nil, err
 		} else if canListPolicy {
+			logrus.WithFields(logrus.Fields{"name": policy.Name}).Debug("User is authorized to view policy.")
 			if obfuscatedPolicy != nil {
 				obfuscatedPolicy.Index = policyIdx
 				policies = append(policies, obfuscatedPolicy)
@@ -540,6 +542,7 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 				Tier:         policy.Tier,
 				Namespace:    policy.Namespace,
 				Name:         policy.Name,
+				Kind:         policyHit.Kind(),
 				IsStaged:     policy.IsStaged,
 				IsKubernetes: policy.IsKubernetes,
 				IsProfile:    policy.IsProfile,

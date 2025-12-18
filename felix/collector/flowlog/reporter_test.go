@@ -53,6 +53,7 @@ func (mt *mockTime) getMockTime() time.Duration {
 	val := atomic.LoadInt64(&mt.val)
 	return time.Duration(val)
 }
+
 func (mt *mockTime) incMockTime(inc time.Duration) {
 	atomic.AddInt64(&mt.val, int64(inc))
 }
@@ -154,8 +155,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -169,8 +169,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.PendingRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -184,8 +183,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.TransitRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
-					r.TierString(),
+				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),

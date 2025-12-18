@@ -14,7 +14,6 @@ import (
 )
 
 var _ = Describe("NodeLocalDNSCache", func() {
-
 	var (
 		mgr            *nodeLocalDNSManager
 		rrConfigNormal rules.Config

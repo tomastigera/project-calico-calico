@@ -43,33 +43,42 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 	p1Key := uv1.Key.(model.PolicyKey)
 	p3Key := uv3.Key.(model.ResourceKey)
 
+	// TODO: queryserver currently uses two caches - one for NetworkPolicy and one for
+	// GlobalNetworkPolicy. When we receive StagedNetworkPolicy or StagedGlobalNetworkPolicy,
+	// we convert them to enforced NetworkPolicy or GlobalNetworkPolicy respectively, using this prefix
+	// to disambiguate them from normal enforced policies.
+	// In future, we should refactor queryserver to use a single cache for all policy types
+	// and remove the need for this prefix, using the native Kind field on the Key instead.
+	const stagedPrefix = "staged:"
+
 	switch p3Key.Kind {
 	case v3.KindStagedNetworkPolicy:
 		p3Key.Kind = v3.KindNetworkPolicy
-		p3Key.Name = model.PolicyNamePrefixStaged + p3Key.Name
+		p3Key.Name = stagedPrefix + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedNetworkPolicy); ok {
 			// Preserve the original UID from the staged policy
 			originalUID := p3Value.UID
 			_, cp3Value := v3.ConvertStagedPolicyToEnforced(p3Value)
-			cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+			cp3Value.Name = stagedPrefix + cp3Value.Name
 			// Restore the UID so it appears in the API response
 			cp3Value.UID = originalUID
 			uv3.Value = cp3Value
+			// Add back the staged prefix to the name in the v1 key if not present
 		}
 	case v3.KindStagedKubernetesNetworkPolicy:
 		p3Key.Kind = v3.KindNetworkPolicy
-		p3Key.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p3Key.Name
+		p3Key.Name = stagedPrefix + names.K8sNetworkPolicyNamePrefix + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedKubernetesNetworkPolicy); ok {
 			// Preserve the original UID from the staged policy
 			originalUID := p3Value.UID
-			//From StagedKubernetesNetworkPolicy to networkingv1 NetworkPolicy
+			// From StagedKubernetesNetworkPolicy to networkingv1 NetworkPolicy
 			_, v1NetworkPolicy := v3.ConvertStagedKubernetesPolicyToK8SEnforced(p3Value)
 			c := conversion.NewConverter()
-			//From networkingv1 NetworkkPolicy to calico model.KVPair
+			// From networkingv1 NetworkkPolicy to calico model.KVPair
 			kvPair, err := c.K8sNetworkPolicyToCalico(v1NetworkPolicy)
 			if err == nil {
 				if cp3Value, ok := kvPair.Value.(*v3.NetworkPolicy); ok {
-					cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+					cp3Value.Name = stagedPrefix + cp3Value.Name
 					// Restore the UID so it appears in the API response
 					cp3Value.UID = originalUID
 					uv3.Value = cp3Value
@@ -78,12 +87,12 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 		}
 	case v3.KindStagedGlobalNetworkPolicy:
 		p3Key.Kind = v3.KindGlobalNetworkPolicy
-		p3Key.Name = model.PolicyNamePrefixStaged + p3Key.Name
+		p3Key.Name = stagedPrefix + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedGlobalNetworkPolicy); ok {
 			// Preserve the original UID from the staged policy
 			originalUID := p3Value.UID
 			_, cp3Value := v3.ConvertStagedGlobalPolicyToEnforced(p3Value)
-			cp3Value.Name = model.PolicyNamePrefixStaged + cp3Value.Name
+			cp3Value.Name = stagedPrefix + cp3Value.Name
 			// Restore the UID so it appears in the API response
 			cp3Value.UID = originalUID
 			uv3.Value = cp3Value

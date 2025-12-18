@@ -70,7 +70,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 		additionalTypes := []watchersyncer.ResourceType{
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindGlobalNetworkPolicy},
-				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
+				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(apiv3.KindGlobalNetworkPolicy),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
@@ -105,7 +105,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkPolicy},
-				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
+				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(apiv3.KindNetworkPolicy),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
@@ -166,18 +166,16 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 		if cfg.DatastoreType == apiconfig.Kubernetes {
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesNetworkPolicy},
-				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
+				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(model.KindKubernetesNetworkPolicy),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			})
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesAdminNetworkPolicy},
-				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
-				ClientID:        calicoClientID, // This is backed by the calico client
+				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesAdminNetworkPolicy),
 			})
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesBaselineAdminNetworkPolicy},
-				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
-				ClientID:        calicoClientID, // This is backed by the calico client
+				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesBaselineAdminNetworkPolicy),
 			})
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice},

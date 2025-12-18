@@ -87,7 +87,7 @@ var _ = Describe("Test NewRulePrintFromMatchString", func() {
 	It("Creates a RulePrint Object with a valid match string", func() {
 		matchString := "Policy \"test-namespace/default.testPolicy\" testDirection rule 1 testSelectorType match; selector \"testSelector\""
 		rp := NewRulePrintFromMatchString(matchString)
-		Expect(rp.PolicyName).To(Equal("test-namespace/testPolicy"))
+		Expect(rp.PolicyName).To(Equal("test-namespace/default.testPolicy"))
 		Expect(rp.Direction).To(Equal("testDirection"))
 		Expect(rp.SelectorType).To(Equal("testSelectorType"))
 		Expect(rp.Selector).To(Equal("testSelector"))

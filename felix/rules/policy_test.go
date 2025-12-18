@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
@@ -31,6 +31,11 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	. "github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/types"
+)
+
+var (
+	cali_pi_default_foo = "cali-pi-gnp/default.foo"
+	cali_po_default_foo = "cali-po-gnp/default.foo"
 )
 
 var ruleTestData = []TableEntry{
@@ -200,13 +205,15 @@ var filteredRuleTestData = []TableEntry{
 		&proto.Rule{NotDstNet: []string{"::/0"}}),
 }
 
+var fooPolicyID = types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}
+
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	rrConfigNormal := Config{
 		IPIPEnabled:              true,
 		IPIPTunnelAddress:        nil,
 		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+		DNSPolicyMode:            v3.DNSPolicyModeDelayDeniedPacket,
 		DNSPolicyNfqueueID:       100,
 		DNSPacketsNfqueueID:      101,
 		MarkEgress:               0x40,
@@ -227,7 +234,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigNormal.FlowLogsEnabled = false
 			renderer := NewRenderer(rrConfigNormal)
 			rules := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
 			numRules := 2
@@ -252,7 +259,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Explicit allow should be treated the same as empty.
 			in.Action = "allow"
 			rules2 := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
@@ -264,7 +271,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigNormal.FlowLogsEnabled = true
 			renderer := NewRenderer(rrConfigNormal)
 			rules := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
 			numRules := 3
@@ -278,7 +285,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x80),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "API0|default.foo",
+					Prefix: "API0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(generictables.Rule{
@@ -296,7 +303,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Explicit allow should be treated the same as empty.
 			in.Action = "allow"
 			rules2 := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
@@ -310,8 +317,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				renderer := NewRenderer(rrConfigNormal)
 				in.Action = action
 				rules := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-					RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
-				// For next-tier, should be one match rule that sets the mark, then one
+					RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
+				// For pass, should be one match rule that sets the mark, then one
 				// that reads the mark and returns.
 				numRules := 2
 
@@ -346,8 +353,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				renderer := NewRenderer(rrConfigNormal)
 				in.Action = action
 				rules := renderer.ProtoRuleToIptablesRules(in, uint8(ipVer),
-					RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
-				// For next-tier, should be one match rule that sets the mark, then one
+					RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
+				// For pass, should be one match rule that sets the mark, then one
 				// that reads the mark and returns.
 				numRules := 3
 
@@ -362,7 +369,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Match: iptables.Match().MarkSingleBitSet(0x100),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "PPI0|default.foo",
+						Prefix: "PPI0|gnp/default.foo",
 					},
 				}))
 				Expect(rules[2]).To(Equal(generictables.Rule{
@@ -389,7 +396,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			logRule := googleproto.Clone(in).(*proto.Rule)
 			logRule.Action = "log"
 			rules := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
@@ -398,7 +405,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigNormal.FlowLogsEnabled = true
 			renderer = NewRenderer(rrConfigNormal)
 			rules2 := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
@@ -414,7 +421,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			logRule := googleproto.Clone(in).(*proto.Rule)
 			logRule.Action = "log"
 			rules := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
@@ -424,7 +431,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigPrefix.FlowLogsEnabled = true
 			renderer = NewRenderer(rrConfigPrefix)
 			rules2 := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			Expect(rules2).To(Equal(rules))
 		},
 		ruleTestData...,
@@ -438,7 +445,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			// For deny, should be one match rule that just does the DROP.
 			expectedLen := 3
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -475,7 +482,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			// For deny, should be one match rule that just does the DROP.
 			expectedLen := 4
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -493,7 +500,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[3]).To(Equal(generictables.Rule{
@@ -519,10 +526,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
 				Name: "default.foo",
+				Kind: v3.KindGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{denyRule},
 				OutboundRules: []*proto.Rule{},
@@ -531,8 +539,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 
 			chains := renderer.PolicyToIptablesChains(policyID, policy, uint8(ipVer))
-			Expect(chains[0].Name).To(Equal("cali-pi-default/default.foo"))
-			Expect(chains[1].Name).To(Equal("cali-po-default/default.foo"))
+			Expect(chains[0].Name).To(Equal(cali_pi_default_foo))
+			Expect(chains[1].Name).To(Equal(cali_po_default_foo))
 
 			numInboundRules := 3
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -544,7 +552,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(inbound).To(HaveLen(numInboundRules))
 			Expect(outbound).To(ConsistOf(
 				generictables.Rule{
-					Comment: []string{"Policy default.foo egress"},
+					Comment: []string{"GlobalNetworkPolicy default.foo egress"},
 				}))
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
@@ -578,10 +586,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
 				Name: "default.foo",
+				Kind: v3.KindGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{denyRule},
 				OutboundRules: []*proto.Rule{},
@@ -590,8 +599,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 
 			chains := renderer.PolicyToIptablesChains(policyID, policy, uint8(ipVer))
-			Expect(chains[0].Name).To(Equal("cali-pi-default/default.foo"))
-			Expect(chains[1].Name).To(Equal("cali-po-default/default.foo"))
+			Expect(chains[0].Name).To(Equal(cali_pi_default_foo))
+			Expect(chains[1].Name).To(Equal(cali_po_default_foo))
 
 			numInboundRules := 4
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -603,7 +612,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(inbound).To(HaveLen(numInboundRules))
 			Expect(outbound).To(ConsistOf(
 				generictables.Rule{
-					Comment: []string{"Policy default.foo egress"},
+					Comment: []string{"GlobalNetworkPolicy default.foo egress"},
 				}))
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
@@ -618,7 +627,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(inbound[3]).To(Equal(generictables.Rule{
@@ -644,10 +653,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
 				Name: "default.foo",
+				Kind: v3.KindGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{},
 				OutboundRules: []*proto.Rule{denyRule},
@@ -656,8 +666,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 
 			chains := renderer.PolicyToIptablesChains(policyID, policy, uint8(ipVer))
-			Expect(chains[0].Name).To(Equal("cali-pi-default/default.foo"))
-			Expect(chains[1].Name).To(Equal("cali-po-default/default.foo"))
+			Expect(chains[0].Name).To(Equal(cali_pi_default_foo))
+			Expect(chains[1].Name).To(Equal(cali_po_default_foo))
 
 			inbound := chains[0].Rules
 			outbound := chains[1].Rules
@@ -669,7 +679,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			Expect(inbound).To(ConsistOf(
 				generictables.Rule{
-					Comment: []string{"Policy default.foo ingress"},
+					Comment: []string{"GlobalNetworkPolicy default.foo ingress"},
 				}))
 			Expect(outbound).To(HaveLen(numOutboundRules))
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
@@ -701,11 +711,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
 				Name: "default.foo",
+				Kind: v3.KindGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
 				Namespace:     "",
+				Tier:          "default",
 				InboundRules:  []*proto.Rule{},
 				OutboundRules: []*proto.Rule{denyRule},
 				Untracked:     false,
@@ -713,8 +724,8 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 
 			chains := renderer.PolicyToIptablesChains(policyID, policy, uint8(ipVer))
-			Expect(chains[0].Name).To(Equal("cali-pi-default/default.foo"))
-			Expect(chains[1].Name).To(Equal("cali-po-default/default.foo"))
+			Expect(chains[0].Name).To(Equal(cali_pi_default_foo))
+			Expect(chains[1].Name).To(Equal(cali_po_default_foo))
 
 			inbound := chains[0].Rules
 			outbound := chains[1].Rules
@@ -726,7 +737,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			Expect(inbound).To(ConsistOf(
 				generictables.Rule{
-					Comment: []string{"Policy default.foo ingress"},
+					Comment: []string{"GlobalNetworkPolicy default.foo ingress"},
 				}))
 			Expect(outbound).To(HaveLen(numOutboundRules))
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
@@ -739,7 +750,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  2,
-					Prefix: "DPE0|default.foo",
+					Prefix: "DPE0|gnp/default.foo",
 				},
 			}))
 			Expect(outbound[3]).To(Equal(generictables.Rule{
@@ -765,10 +776,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
-				Name: "staged:default.foo",
+				Name: "default.foo",
+				Kind: v3.KindStagedGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{denyRule},
 				OutboundRules: []*proto.Rule{},
@@ -798,10 +810,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
-				Tier: "default",
-				Name: "staged:default.foo",
+				Name: "default.foo",
+				Kind: v3.KindStagedGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{},
 				OutboundRules: []*proto.Rule{denyRule},
@@ -830,10 +843,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			renderer := NewRenderer(rrConfigNormal)
 			denyRule := in
 			policyID := &types.PolicyID{
-				Tier: "default",
-				Name: "staged:default.foo",
+				Name: "default.foo",
+				Kind: v3.KindStagedGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{denyRule},
 				OutboundRules: []*proto.Rule{},
@@ -862,10 +876,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			renderer := NewRenderer(rrConfigNormal)
 			denyRule := in
 			policyID := &types.PolicyID{
-				Tier: "default",
-				Name: "staged:default.foo",
+				Name: "default.foo",
+				Kind: v3.KindStagedGlobalNetworkPolicy,
 			}
 			policy := &proto.Policy{
+				Tier:          "default",
 				Namespace:     "",
 				InboundRules:  []*proto.Rule{},
 				OutboundRules: []*proto.Rule{denyRule},
@@ -897,7 +912,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For LOG-and-DROP, should get two rules with the same match criteria;
 			// first should log, second should drop.
 
@@ -944,7 +959,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For LOG-and-DROP, should get two rules with the same match criteria;
 			// first should log, second should drop.
 
@@ -964,7 +979,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[3]).To(Equal(generictables.Rule{
@@ -998,7 +1013,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For LOG-and-ACCEPT, should get two rules with the same match criteria;
 			// first should log, second should accept.
 
@@ -1041,7 +1056,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For LOG-and-ACCEPT, should get two rules with the same match criteria;
 			// first should log, second should accept.
 
@@ -1057,7 +1072,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(generictables.Rule{
@@ -1091,7 +1106,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For ACCEPT, should get a single accept rule.
 
 			numRules := 2
@@ -1127,7 +1142,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For ACCEPT, should get a single accept rule.
 
 			numRules := 3
@@ -1142,7 +1157,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(generictables.Rule{
@@ -1170,7 +1185,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For deny, should be one match rule that just does the REJECT.
 			expectedLen := 3
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -1209,7 +1224,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 			// For deny, should be one match rule that just does the REJECT.
 			expectedLen := 4
 			if len(in.DstDomainIpSetIds) > 0 {
@@ -1227,7 +1242,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "DPI0|default.foo",
+					Prefix: "DPI0|gnp/default.foo",
 				},
 			}))
 			Expect(rules[3]).To(Equal(generictables.Rule{
@@ -1249,7 +1264,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		clearBothMarksRule       = "-A test --jump MARK --set-mark 0x0/0x600"
 		preSetAllBlocksMarkRule  = "-A test --jump MARK --set-mark 0x200/0x600"
 		allowIfAllMarkRule       = "-A test -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
-		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix API0|default.foo --nflog-range 80"
+		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix API0|gnp/default.foo --nflog-range 80"
 		allowIfAllMarkAndTCPRule = "-A test -p tcp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		allowIfAllMarkAndUDPRule = "-A test -p udp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		returnRule               = "-A test -m mark --mark 0x80/0x80 --jump RETURN"
@@ -1272,7 +1287,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Action:    "allow",
 			}
 			iptRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
 				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
@@ -1389,7 +1404,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Action:    "allow",
 			}
 			iptRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
 				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
@@ -1517,7 +1532,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigNormal.FlowLogsEnabled = false
 			renderer := NewRenderer(rrConfigNormal)
 			iptRules := renderer.ProtoRuleToIptablesRules(pRule, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
 				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
@@ -1913,7 +1928,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigNormal.FlowLogsEnabled = true
 			renderer := NewRenderer(rrConfigNormal)
 			iptRules := renderer.ProtoRuleToIptablesRules(pRule, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
 				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
@@ -2330,55 +2345,55 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 		It("should skip rules of incorrect IP version", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{IpVersion: 4}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{SrcNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{SrcNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{DstNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{DstNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotSrcNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotSrcNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotDstNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotDstNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 	})
@@ -2392,55 +2407,55 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 		It("should skip rules of incorrect IP version", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{IpVersion: 4}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{SrcNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{SrcNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{DstNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{DstNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotSrcNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated source CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotSrcNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotDstNet: []string{"10.0.0.1"}}}, 6,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 
 		It("should skip with mixed negated dest CIDR matches", func() {
 			rules := renderer.ProtoRulesToIptablesRules([]*proto.Rule{{NotDstNet: []string{"feed::beef"}}}, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, fooPolicyID, false)
 			Expect(rules).To(BeEmpty())
 		})
 	})
@@ -2477,7 +2492,7 @@ var _ = Describe("Filtered rules (negated catch-all CIDR validation)", func() {
 				RuleOwnerTypePolicy,
 				RuleDirIngress,
 				0,
-				"default.foo",
+				fooPolicyID,
 				false,
 			)
 			// Rules with catch-all negated CIDRs should be completely filtered out
@@ -2655,7 +2670,7 @@ var _ = Describe("rule metadata tests", func() {
 		IPIPTunnelAddress:        nil,
 		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+		DNSPolicyMode:            v3.DNSPolicyModeDelayDeniedPacket,
 		DNSPolicyNfqueueID:       100,
 		DNSPacketsNfqueueID:      101,
 		MarkEgress:               0x40,
@@ -2674,7 +2689,7 @@ var _ = Describe("rule metadata tests", func() {
 		rrConfigNormal.FlowLogsEnabled = false
 		renderer := NewRenderer(rrConfigNormal)
 		rs := renderer.ProtoRuleToIptablesRules(rule, uint8(4),
-			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 		for _, r := range rs {
 			Expect(r.Comment).To(ContainElement("testkey00=testvalue00"))
 			Expect(r.Comment).To(ContainElement("testkey01=testvalue01"))
@@ -2684,7 +2699,7 @@ var _ = Describe("rule metadata tests", func() {
 		rrConfigNormal.FlowLogsEnabled = true
 		renderer = NewRenderer(rrConfigNormal)
 		rs1 := renderer.ProtoRuleToIptablesRules(rule, uint8(4),
-			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 		for _, r := range rs1 {
 			Expect(r.Comment).To(ContainElement("testkey00=testvalue00"))
 			Expect(r.Comment).To(ContainElement("testkey01=testvalue01"))
@@ -2695,7 +2710,7 @@ var _ = Describe("rule metadata tests", func() {
 		rrConfigNormal.FlowLogsEnabled = false
 		renderer := NewRenderer(rrConfigNormal)
 		rs := renderer.ProtoRuleToIptablesRules(rule, uint8(6),
-			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 		for _, r := range rs {
 			Expect(r.Comment).To(ContainElement("testkey00=testvalue00"))
 			Expect(r.Comment).To(ContainElement("testkey01=testvalue01"))
@@ -2705,7 +2720,7 @@ var _ = Describe("rule metadata tests", func() {
 		rrConfigNormal.FlowLogsEnabled = true
 		renderer = NewRenderer(rrConfigNormal)
 		rs1 := renderer.ProtoRuleToIptablesRules(rule, uint8(6),
-			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+			RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, false)
 		for _, r := range rs1 {
 			Expect(r.Comment).To(ContainElement("testkey00=testvalue00"))
 			Expect(r.Comment).To(ContainElement("testkey01=testvalue01"))
@@ -2718,31 +2733,33 @@ var _ = Describe("rule metadata tests", func() {
 		chains := renderer.PolicyToIptablesChains(
 			&types.PolicyID{
 				Name: "long-policy-name-that-gets-hashed",
+				Kind: v3.KindGlobalNetworkPolicy,
 			},
 			&proto.Policy{
+				Tier:         "default",
 				InboundRules: []*proto.Rule{{Action: "allow"}},
 			},
 			4,
 		)
 		Expect(chains).To(ConsistOf(
 			&generictables.Chain{
-				Name: "cali-pi-_FJ9yUkNpzshVDh2n7mg",
+				Name: "cali-pi-_PymyFHQQg3808jiz1OJ",
 				Rules: []generictables.Rule{
 					{
 						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x80},
 						Comment: []string{
-							"Policy long-policy-name-that-gets-hashed ingress",
+							"GlobalNetworkPolicy long-policy-name-that-gets-hashed ingress",
 						},
 					},
 				},
 			},
 			&generictables.Chain{
-				Name: "cali-po-_FJ9yUkNpzshVDh2n7mg",
+				Name: "cali-po-_PymyFHQQg3808jiz1OJ",
 				Rules: []generictables.Rule{
 					{
 						Comment: []string{
-							"Policy long-policy-name-that-gets-hashed egress",
+							"GlobalNetworkPolicy long-policy-name-that-gets-hashed egress",
 						},
 					},
 				},
@@ -2756,39 +2773,41 @@ var _ = Describe("rule metadata tests", func() {
 		chains := renderer.PolicyToIptablesChains(
 			&types.PolicyID{
 				Name: "long-policy-name-that-gets-hashed",
+				Kind: v3.KindGlobalNetworkPolicy,
 			},
 			&proto.Policy{
+				Tier:         "default",
 				InboundRules: []*proto.Rule{{Action: "allow"}},
 			},
 			4,
 		)
 		Expect(chains).To(ConsistOf(
 			&generictables.Chain{
-				Name: "cali-pi-_FJ9yUkNpzshVDh2n7mg",
+				Name: "cali-pi-_PymyFHQQg3808jiz1OJ",
 				Rules: []generictables.Rule{
 					{
 						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x80},
 						Comment: []string{
-							"Policy long-policy-name-that-gets-hashed ingress",
+							"GlobalNetworkPolicy long-policy-name-that-gets-hashed ingress",
 						},
 					},
 					{
 						Match: iptables.Match().MarkSingleBitSet(0x80),
 						Action: iptables.NflogAction{
 							Group:  1,
-							Prefix: "API0|long-policy-name-that-gets-hashed",
+							Prefix: "API0|gnp/long-policy-name-that-gets-hashed",
 						},
 						Comment: nil,
 					},
 				},
 			},
 			&generictables.Chain{
-				Name: "cali-po-_FJ9yUkNpzshVDh2n7mg",
+				Name: "cali-po-_PymyFHQQg3808jiz1OJ",
 				Rules: []generictables.Rule{
 					{
 						Comment: []string{
-							"Policy long-policy-name-that-gets-hashed egress",
+							"GlobalNetworkPolicy long-policy-name-that-gets-hashed egress",
 						},
 					},
 				},
@@ -2904,7 +2923,7 @@ var _ = Describe("DNS policy rules", func() {
 	}
 
 	DescribeTable("with DNSPolicyModes",
-		func(mode apiv3.DNSPolicyMode, expectDNSMark bool) {
+		func(mode v3.DNSPolicyMode, expectDNSMark bool) {
 			pRule := proto.Rule{
 				DstIpSetIds:       []string{"ipsetid1"},
 				DstDomainIpSetIds: []string{"ipsetid2"},
@@ -2914,13 +2933,13 @@ var _ = Describe("DNS policy rules", func() {
 			renderer := NewRenderer(rrConfigNormal)
 
 			ipSetID := uint64(0)
-			if mode == apiv3.DNSPolicyModeInline {
+			if mode == v3.DNSPolicyModeInline {
 				ipSetAlloc := idalloc.New()
 				renderer.SetIPSetIDGetter(ipSetAlloc, 4)
 				ipSetID = ipSetAlloc.GetOrAlloc("ipsetid2")
 			}
 			iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
-				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
+				RuleOwnerTypePolicy, RuleDirIngress, 0, types.PolicyID{Name: "default.foo", Kind: v3.KindGlobalNetworkPolicy}, false)
 
 			expected := []generictables.Rule{
 				{
@@ -2942,7 +2961,7 @@ var _ = Describe("DNS policy rules", func() {
 					Match: iptables.Match().MarkSingleBitSet(0x80),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "API0|default.foo",
+						Prefix: "API0|gnp/default.foo",
 						Size:   0,
 					},
 				},
@@ -2952,7 +2971,7 @@ var _ = Describe("DNS policy rules", func() {
 				},
 			}
 
-			if mode == apiv3.DNSPolicyModeInline {
+			if mode == v3.DNSPolicyModeInline {
 				progPath := bpfdefs.IPSetMatchProg(ipSetID, 4, rrConfigNormal.BPFLogLevel)
 				expected[2].Match = iptables.Match().BPFProgram(progPath)
 			}
@@ -2966,9 +2985,9 @@ var _ = Describe("DNS policy rules", func() {
 
 			Expect(iptableRules).Should(Equal(expected), cmp.Diff(iptableRules, expected))
 		},
-		Entry(apiv3.DNSPolicyModeDelayDeniedPacket, apiv3.DNSPolicyModeDelayDeniedPacket, true),
-		Entry(apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeNoDelay, false),
-		Entry(apiv3.DNSPolicyModeDelayDNSResponse, apiv3.DNSPolicyModeDelayDNSResponse, false),
-		Entry(apiv3.DNSPolicyModeInline, apiv3.DNSPolicyModeInline, false),
+		Entry(v3.DNSPolicyModeDelayDeniedPacket, v3.DNSPolicyModeDelayDeniedPacket, true),
+		Entry(v3.DNSPolicyModeNoDelay, v3.DNSPolicyModeNoDelay, false),
+		Entry(v3.DNSPolicyModeDelayDNSResponse, v3.DNSPolicyModeDelayDNSResponse, false),
+		Entry(v3.DNSPolicyModeInline, v3.DNSPolicyModeInline, false),
 	)
 })

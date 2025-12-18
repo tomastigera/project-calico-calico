@@ -28,7 +28,6 @@ import (
 var pollingInterval = time.Duration(10) * time.Second
 
 var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datastore, 4 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra          infrastructure.DatastoreInfra
 		tc             infrastructure.TopologyContainers
@@ -95,7 +94,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	It("should generate connection metrics for rule matches on a profile", func() {
-
 		var conns, bytes, packets int
 		incCounts := func(deltaConn, numPackets, packetSize int) {
 			conns += deltaConn
@@ -107,20 +105,20 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			time.Sleep(pollingInterval)
 			// Local-to-Local traffic causes accounting from both workload perspectives.
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "outbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "", "__PROFILE__", "default", "outbound")
 			}()).Should(BeNumerically("==", conns))
 			// ICMP request and responses are the same size.
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "outbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "default", "outbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "inbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "default", "inbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "outbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "default", "outbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "inbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "default", "inbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 		}
 
@@ -149,9 +147,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	Context("should generate connection metrics for rule matches on a policy", func() {
-
 		It("should generate connection metrics when there is full connectivity between workloads, testing ingress rule index", func() {
-
 			By("Creating a policy with multiple ingress rules matching on different workloads")
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -195,39 +191,40 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			expectCounts := func() {
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
+				kind := policy.GetObjectKind().GroupVersionKind().Kind
 				// Local-to-Local traffic causes accounting from both workload perspectives.
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-test-ingress-idx", "outbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "outbound")
 				}()).Should(BeNumerically("==", egrConns))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "outbound", "egress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "egress")
 				}()).Should(BeNumerically("==", egrPackets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "inbound", "egress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "egress")
 				}()).Should(BeNumerically("==", egrPackets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "outbound", "egress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "egress")
 				}()).Should(BeNumerically("==", egrBytes))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "inbound", "egress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "egress")
 				}()).Should(BeNumerically("==", egrBytes))
 				for i := range igrConns {
 					// Include the ruleIdx in the expect description to assist in debugging.
 					ruleIdxString := fmt.Sprintf("RuleIndex=%d", i)
 					Expect(func() (int, error) {
-						return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-test-ingress-idx", "inbound", i)
+						return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "inbound", i)
 					}()).Should(BeNumerically("==", igrConns[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "outbound", "ingress", i)
+						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "ingress", i)
 					}()).Should(BeNumerically("==", igrPackets[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "inbound", "ingress", i)
+						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "ingress", i)
 					}()).Should(BeNumerically("==", igrPackets[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "outbound", "ingress", i)
+						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "ingress", i)
 					}()).Should(BeNumerically("==", igrBytes[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-ingress-idx", "inbound", "ingress", i)
+						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "ingress", i)
 					}()).Should(BeNumerically("==", igrBytes[i]), ruleIdxString)
 				}
 			}
@@ -257,7 +254,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 		})
 
 		It("should generate connection metrics when there is full connectivity between workloads, testing egress rule index", func() {
-
 			By("Creating a policy with multiple egress rules matching on different workloads")
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -287,6 +283,8 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
+			kind := policy.GetObjectKind().GroupVersionKind().Kind
+
 			// There are 4 egress rules, only one ingress. All match on the single ingress rule.
 			var egrConns, egrBytes, egrPackets [4]int
 			var igrConns, igrBytes, igrPackets int
@@ -303,37 +301,37 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				time.Sleep(pollingInterval)
 				// Local-to-Local traffic causes accounting from both workload perspectives.
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-test-egress-idx", "outbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "outbound")
 				}()).Should(BeNumerically("==", igrConns))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "outbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "ingress")
 				}()).Should(BeNumerically("==", igrPackets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "ingress")
 				}()).Should(BeNumerically("==", igrPackets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "outbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "ingress")
 				}()).Should(BeNumerically("==", igrBytes))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "ingress")
 				}()).Should(BeNumerically("==", igrBytes))
 				for i := range egrConns {
 					// Include the ruleIdx in the expect description to assist in debugging.
 					ruleIdxString := fmt.Sprintf("RuleIndex=%d", i)
 					Expect(func() (int, error) {
-						return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-test-egress-idx", "outbound", i)
+						return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "outbound", i)
 					}()).Should(BeNumerically("==", egrConns[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "outbound", "egress", i)
+						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "egress", i)
 					}()).Should(BeNumerically("==", egrPackets[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "inbound", "egress", i)
+						return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "egress", i)
 					}()).Should(BeNumerically("==", egrPackets[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "outbound", "egress", i)
+						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "outbound", "egress", i)
 					}()).Should(BeNumerically("==", egrBytes[i]), ruleIdxString)
 					Expect(func() (int, error) {
-						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "default", "policy-test-egress-idx", "inbound", "egress", i)
+						return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", policy.Spec.Tier, policy.Name, "inbound", "egress", i)
 					}()).Should(BeNumerically("==", egrBytes[i]), ruleIdxString)
 				}
 			}
@@ -364,9 +362,10 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	Context("should generate denied packet metrics with ingress deny rule to w1", func() {
-
+		var policy *api.NetworkPolicy
+		var kind string
 		BeforeEach(func() {
-			policy := api.NewNetworkPolicy()
+			policy = api.NewNetworkPolicy()
 			policy.Namespace = "fv"
 			policy.Name = "default.policy-1"
 			policy.Spec.Tier = "default"
@@ -376,6 +375,8 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("w0 cannot connect to w1 and denied packet metrics are generated", func() {
@@ -388,16 +389,16 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-1", "inbound", 0)
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "inbound", 0)
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "inbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "inbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-1")
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, policy.Spec.Tier, policy.Name)
 				}()).Should(BeNumerically("==", packets))
 			}
 
@@ -426,7 +427,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	Context("should generate metrics with egress deny rule from w0", func() {
-
+		var kind string
 		BeforeEach(func() {
 			proto := numorstring.ProtocolFromString("ICMP")
 			policy := api.NewNetworkPolicy()
@@ -439,6 +440,8 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[0].NameSelector()
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("w0 cannot connect to w1 and denied packet metrics are generated", func() {
@@ -451,16 +454,16 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-icmp", "outbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "default", "default.policy-icmp", "outbound")
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "policy-icmp", "outbound", "egress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", "default", "default.policy-icmp", "outbound", "egress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-icmp", "outbound", "egress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", "default", "default.policy-icmp", "outbound", "egress")
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-icmp")
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "default.policy-icmp")
 				}()).Should(BeNumerically("==", packets))
 			}
 
@@ -491,7 +494,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	Context("should generate denied packet metrics with deny rule in a different tier", func() {
-
+		var kind string
 		BeforeEach(func() {
 			tier := api.NewTier()
 			tier.Name = "tier1"
@@ -510,6 +513,8 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("w0 cannot connect to w1 and denied packet metrics are generated for tier1", func() {
@@ -522,16 +527,16 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "tier1", "tier1.policy-1", "inbound")
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "policy-1")
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "tier1.policy-1")
 				}()).Should(BeNumerically("==", packets))
 			}
 
@@ -555,6 +560,8 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 		longTierName := "this-in-a-very-long-tier-name-012345678900123456789001234567890"
 		longPolicyName := "this-is-a-very-long-policy-name-012345678900123456789001234567890"
 
+		var policy *api.NetworkPolicy
+		var kind string
 		BeforeEach(func() {
 			tier := api.NewTier()
 			tier.Name = longTierName
@@ -563,7 +570,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			policy := api.NewNetworkPolicy()
+			policy = api.NewNetworkPolicy()
 			policy.Namespace = "fv"
 			policy.Name = longTierName + "." + longPolicyName
 			policy.Spec.Tier = longTierName
@@ -573,6 +580,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("Deny metrics for long named tier and policy", func() {
@@ -586,24 +594,26 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			// Pause to allow felix to export metrics.
 			time.Sleep(pollingInterval)
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, longTierName, longPolicyName, "inbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, longTierName, policy.Name, "inbound")
 			}()).Should(BeNumerically("==", 0))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", longTierName, longPolicyName, "inbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", longTierName, policy.Name, "inbound", "ingress")
 			}()).Should(BeNumerically("==", 3))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", longTierName, longPolicyName, "inbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", longTierName, policy.Name, "inbound", "ingress")
 			}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", 3, 5)))
 			Expect(func() (int, error) {
-				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, longTierName, longPolicyName)
+				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, longTierName, policy.Name)
 			}()).Should(BeNumerically("==", 3))
 		})
 	})
 
 	Context("should generate tier ingress-drop matches", func() {
+		var policy *api.NetworkPolicy
+		var kind string
 
 		BeforeEach(func() {
-			policy := api.NewNetworkPolicy()
+			policy = api.NewNetworkPolicy()
 			policy.Namespace = "fv"
 			policy.Name = "default.ingress-drop"
 			policy.Spec.Tier = "default"
@@ -612,6 +622,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("w0 cannot connect to w1 and tier drop metrics are generated", func() {
@@ -627,21 +638,23 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Checking tier ingress-drop counts")
 			time.Sleep(pollingInterval)
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "ingress-drop", "inbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "inbound")
 			}()).Should(BeNumerically("==", 0))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "ingress-drop", "inbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "inbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "ingress-drop", "inbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "inbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 		})
 	})
 
 	Context("should generate tier egress-drop matches", func() {
+		var policy *api.NetworkPolicy
+		var kind string
 
 		BeforeEach(func() {
-			policy := api.NewNetworkPolicy()
+			policy = api.NewNetworkPolicy()
 			policy.Namespace = "fv"
 			policy.Name = "default.egress-drop"
 			policy.Spec.Tier = "default"
@@ -650,6 +663,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
 		It("w0 cannot connect to w1 and tier drop metrics are generated", func() {
@@ -665,19 +679,18 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Checking tier egress-drop counts")
 			time.Sleep(pollingInterval)
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "egress-drop", "outbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, policy.Spec.Tier, policy.Name, "outbound")
 			}()).Should(BeNumerically("==", 0))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "egress-drop", "outbound", "egress", -1)
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "outbound", "egress", -1)
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "egress-drop", "outbound", "egress", -1)
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", policy.Spec.Tier, policy.Name, "outbound", "egress", -1)
 			}()).Should(BeNumerically("==", bytes))
 		})
 	})
 
 	Context("should generate profile ingress-drop matches", func() {
-
 		It("w0 cannot connect to w1 and profile drop metrics are generated", func() {
 			By("Updating the default profile to not match on ingress")
 			defaultProfile.Spec.Ingress = []api.Rule{}
@@ -696,19 +709,18 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Checking profile ingress-drop counts")
 			time.Sleep(pollingInterval)
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "inbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "", "__PROFILE__", "default", "inbound")
 			}()).Should(BeNumerically("==", 0))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 		})
 	})
 
 	Context("should generate profile egress-drop matches", func() {
-
 		It("w0 cannot connect to w1 and profile drop metrics are generated", func() {
 			By("Updating the default profile to not match on egress")
 			defaultProfile.Spec.Egress = []api.Rule{}
@@ -727,18 +739,21 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			By("Checking profile egress-drop counts")
 			time.Sleep(pollingInterval)
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "outbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "", "__PROFILE__", "default", "outbound")
 			}()).Should(BeNumerically("==", 0))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
 			}()).Should(BeNumerically("==", bytes))
 		})
 	})
 
 	Context("should generate pass action metrics with rule in multiple tiers", func() {
+		var policy *api.NetworkPolicy
+		var kind string
+
 		BeforeEach(func() {
 			tier := api.NewTier()
 			tier.Name = "tier1"
@@ -747,7 +762,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			policy := api.NewNetworkPolicy()
+			policy = api.NewNetworkPolicy()
 			policy.Namespace = "fv"
 			policy.Name = "tier1.policy-1"
 			policy.Spec.Tier = "tier1"
@@ -757,8 +772,10 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			policy.Spec.Selector = w[1].NameSelector()
 			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+			kind = policy.GetObjectKind().GroupVersionKind().Kind
 		})
 
+		// TODO: This test may not be relevant any more now that policy names are unique across tiers.
 		It("w0 cannot connect to w1 and pass and denied action packet metrics are generated at appropriate tier", func() {
 			var bytes, packets int
 			incCounts := func(numPackets, packetSize int) {
@@ -769,27 +786,27 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier2", "policy-1", "inbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "tier2", "tier1.policy-1", "inbound")
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "deny", "tier2", "tier2.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "deny", "tier2", "tier2.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier2", "policy-1")
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier2", "tier2.policy-1")
 				}()).Should(BeNumerically("==", packets))
 
 				// And check that the pass action metrics are incremented equally
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "tier1", "tier1.policy-1", "inbound")
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "pass", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "pass", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", bytes))
 			}
 
@@ -821,6 +838,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 			expectCounts()
 		})
 
+		// TODO: This test may not be relevant any more now that policy names are unique across tiers.
 		It("w0 can connect to w1 and pass and allow action packet metrics are generated at appropriate tier", func() {
 			var bytes, packets int
 			incCounts := func(numPackets, packetSize int) {
@@ -831,24 +849,24 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 				// Pause to allow felix to export metrics.
 				time.Sleep(pollingInterval)
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier2", "policy-1", "inbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "tier2", "tier2.policy-1", "inbound")
 				}()).Should(BeNumerically("==", 1))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "tier2", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "allow", "tier2", "tier2.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "tier2", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "allow", "tier2", "tier2.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", bytes))
 
 				// And check that the pass action metrics are incremented equally
 				Expect(func() (int, error) {
-					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, kind, "tier1", "tier1.policy-1", "inbound")
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, kind, "pass", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, kind, "pass", "tier1", "tier1.policy-1", "inbound", "ingress")
 				}()).Should(BeNumerically("==", bytes))
 			}
 
@@ -885,7 +903,6 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
 var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra    infrastructure.DatastoreInfra
 		tc       infrastructure.TopologyContainers
@@ -998,52 +1015,52 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged po
 
 				// Ingress np1-1 (staged)
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "tier1", "staged:np1-1", "inbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "StagedNetworkPolicy", "allow", "tier1", "tier1.np1-1", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "tier1", "staged:np1-1", "inbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "StagedNetworkPolicy", "allow", "tier1", "tier1.np1-1", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "tier1", "staged:np1-1", "outbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "StagedNetworkPolicy", "allow", "tier1", "tier1.np1-1", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "tier1", "staged:np1-1", "outbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "StagedNetworkPolicy", "allow", "tier1", "tier1.np1-1", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", bytes))
 
 				// Ingress gnp1-2 (staged) - a verdict was reached in the np1-1 policy, so this policy should not be hit.
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "inbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "StagedGlobalNetworkPolicy", "pass", "tier1", "tier1.gnp1-2", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "inbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "StagedGlobalNetworkPolicy", "pass", "tier1", "tier1.gnp1-2", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "outbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "StagedGlobalNetworkPolicy", "pass", "tier1", "tier1.gnp1-2", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "outbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "StagedGlobalNetworkPolicy", "pass", "tier1", "tier1.gnp1-2", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 
 				// Ingress knp (staged) - a verdict was reached in the np1-1 policy, so this policy should not be hit.
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "StagedKubernetesNetworkPolicy", "deny", "default", "knp.default.knp2-1", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "StagedKubernetesNetworkPolicy", "deny", "default", "knp.default.knp2-1", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", 0))
 
 				// Profile matches
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "kns.default", "inbound", "ingress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "kns.default", "inbound", "ingress", 0)
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "kns.default", "outbound", "ingress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "kns.default", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", bytes))
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "kns.default", "inbound", "egress", 0)
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "kns.default", "inbound", "egress", 0)
 				}()).Should(BeNumerically("==", packets))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "kns.default", "outbound", "egress", 0)
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "", "allow", "__PROFILE__", "kns.default", "outbound", "egress", 0)
 				}()).Should(BeNumerically("==", bytes))
 			}
 

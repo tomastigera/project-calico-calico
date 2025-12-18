@@ -148,7 +148,7 @@ func (w *L7WorkloadIPSetCalculator) OnResourceUpdate(update api.Update) (_ bool)
 	case model.PolicyKey:
 		// Staged NetworkPolicies/GlobalNetworkPolicies should be
 		// skipped
-		if model.PolicyIsStaged(k.Name) {
+		if model.KindIsStaged(k.Kind) {
 			return
 		}
 		wasALP := w.policiesWithALP.Contains(k)

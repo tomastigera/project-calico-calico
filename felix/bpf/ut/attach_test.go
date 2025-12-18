@@ -32,7 +32,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
@@ -161,28 +161,32 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 		Expect(atEg).To(HaveKey(hook.AttachType{
 			Hook:       hook.Egress,
 			Family:     4,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 		Expect(atIng).NotTo(HaveKey(hook.AttachType{
 			Hook:       hook.Ingress,
 			Family:     6,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 		Expect(atEg).NotTo(HaveKey(hook.AttachType{
 			Hook:       hook.Egress,
 			Family:     6,
 			Type:       tcdefs.EpTypeHost,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 
 		ifstateMap := ifstateMapDump(commonMaps.IfStateMap)
 		Expect(ifstateMap).To(HaveKey(ifstate.NewKey(uint32(host1.Attrs().Index))))
@@ -212,42 +216,46 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 			Expect(atEg).To(HaveKey(hook.AttachType{
 				Hook:       hook.Egress,
 				Family:     4,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 			Expect(atIng).To(HaveKey(hook.AttachType{
 				Hook:       hook.Ingress,
 				Family:     6,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 			Expect(atEg).To(HaveKey(hook.AttachType{
 				Hook:       hook.Egress,
 				Family:     6,
 				Type:       tcdefs.EpTypeHost,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 
 		}
 		bpfEpMgr.OnUpdate(&proto.ActivePolicyUpdate{
-			Id:     &proto.PolicyID{Tier: "default", Name: "untracked"},
-			Policy: &proto.Policy{Untracked: true},
+			Id:     &proto.PolicyID{Name: "untracked"},
+			Policy: &proto.Policy{Tier: "default", Untracked: true},
 		})
 
 		bpfEpMgr.OnHEPUpdate(map[string]*proto.HostEndpoint{
-			"hostep1": &proto.HostEndpoint{
+			"hostep1": {
 				Name: "hostep1",
 				UntrackedTiers: []*proto.TierInfo{
-					&proto.TierInfo{
+					{
 						Name:            "default",
-						IngressPolicies: []string{"untracked"},
+						IngressPolicies: []*proto.PolicyID{{Name: "untracked", Kind: v3.KindGlobalNetworkPolicy}},
 					},
 				},
 			},
@@ -311,10 +319,10 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 
 	t.Run("remove the untracked (xdp) policy", func(t *testing.T) {
 		bpfEpMgr.OnUpdate(&proto.ActivePolicyRemove{
-			Id: &proto.PolicyID{Tier: "default", Name: "untracked"},
+			Id: &proto.PolicyID{Name: "untracked"},
 		})
 		bpfEpMgr.OnHEPUpdate(map[string]*proto.HostEndpoint{
-			"hostep1": &proto.HostEndpoint{
+			"hostep1": {
 				Name: "hostep1",
 			},
 		})
@@ -384,14 +392,16 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Type:       tcdefs.EpTypeWorkload,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 		Expect(atEg).To(HaveKey(hook.AttachType{
 			Hook:       hook.Egress,
 			Family:     4,
 			Type:       tcdefs.EpTypeWorkload,
 			LogLevel:   loglevel,
 			ToHostDrop: false,
-			DSR:        false}))
+			DSR:        false,
+		}))
 		if ipv6Enabled {
 			Expect(atIng).To(HaveKey(hook.AttachType{
 				Hook:       hook.Ingress,
@@ -399,14 +409,16 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				Type:       tcdefs.EpTypeWorkload,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 			Expect(atEg).To(HaveKey(hook.AttachType{
 				Hook:       hook.Egress,
 				Family:     6,
 				Type:       tcdefs.EpTypeWorkload,
 				LogLevel:   loglevel,
 				ToHostDrop: false,
-				DSR:        false}))
+				DSR:        false,
+			}))
 		}
 
 		ifstateMap := ifstateMapDump(commonMaps.IfStateMap)
@@ -495,10 +507,11 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			Endpoint: &proto.WorkloadEndpoint{Name: "workloadep1"},
 		})
 		bpfEpMgr.OnUpdate(&proto.ActivePolicyUpdate{
-			Id: &proto.PolicyID{Tier: "default", Name: "wl1-policy"},
+			Id: &proto.PolicyID{Name: "wl1-policy"},
 			Policy: &proto.Policy{
+				Tier:      "default",
 				Namespace: "default",
-				InboundRules: []*proto.Rule{&proto.Rule{
+				InboundRules: []*proto.Rule{{
 					Action:   "allow",
 					Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 					DstNet:   []string{"1.6.6.6/32"},
@@ -546,7 +559,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		bpfEpMgr.OnUpdate(linux.NewIfaceStateUpdate("workloadep3", ifacemonitor.StateUp, workload3.Attrs().Index))
 		bpfEpMgr.OnUpdate(linux.NewIfaceAddrsUpdate("workloadep3", "1.6.6.8"))
 		err = bpfEpMgr.CompleteDeferredWork()
-
 		if err != nil {
 			deleteLink(workload3)
 		}
@@ -687,7 +699,6 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 		bpfEpMgr.OnUpdate(linux.NewIfaceStateUpdate("workloadep3", ifacemonitor.StateUp, workload3.Attrs().Index))
 		bpfEpMgr.OnUpdate(linux.NewIfaceAddrsUpdate("workloadep3", "1.6.6.8"))
 		err = bpfEpMgr.CompleteDeferredWork()
-
 		if err != nil {
 			deleteLink(workload3)
 		}
@@ -843,14 +854,16 @@ func TestAttachWithMultipleWorkloadUpdate(t *testing.T) {
 		Type:       tcdefs.EpTypeWorkload,
 		LogLevel:   loglevel,
 		ToHostDrop: false,
-		DSR:        false}))
+		DSR:        false,
+	}))
 	Expect(atEg).To(HaveKey(hook.AttachType{
 		Hook:       hook.Egress,
 		Family:     4,
 		Type:       tcdefs.EpTypeWorkload,
 		LogLevel:   loglevel,
 		ToHostDrop: false,
-		DSR:        false}))
+		DSR:        false,
+	}))
 
 	// The expectation is that, WorkloadEndpointUpdates must not
 	// result in re-attaching the program. Hence the priority, handle of
@@ -1175,7 +1188,7 @@ func TestAttachInterfaceRecreate(t *testing.T) {
 			},
 			BPFExtToServiceConnmark: 0,
 			BPFPolicyDebugEnabled:   true,
-			BPFAttachType:           apiv3.BPFAttachOptionTCX,
+			BPFAttachType:           v3.BPFAttachOptionTCX,
 		},
 		bpfmaps,
 		regexp.MustCompile("^workloadep[0123]"),
@@ -1270,7 +1283,7 @@ func TestAttachTcx(t *testing.T) {
 			},
 			BPFExtToServiceConnmark: 0,
 			BPFPolicyDebugEnabled:   true,
-			BPFAttachType:           apiv3.BPFAttachOptionTCX,
+			BPFAttachType:           v3.BPFAttachOptionTCX,
 		},
 		bpfmaps,
 		regexp.MustCompile("^workloadep[0123]"),
@@ -1321,7 +1334,7 @@ func TestAttachTcx(t *testing.T) {
 		},
 		HostIPv4:   net.IPv4(1, 2, 3, 4),
 		IntfIPv4:   net.IPv4(1, 6, 6, 6),
-		AttachType: apiv3.BPFAttachOptionTC,
+		AttachType: v3.BPFAttachOptionTC,
 	}
 
 	_, err = tc.EnsureQdisc("workloadep0")

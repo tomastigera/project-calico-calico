@@ -110,18 +110,21 @@ func (d *MockDataplane) ActiveUntrackedPolicies() set.Set[types.PolicyID] {
 
 	return d.activeUntrackedPolicies.Copy()
 }
+
 func (d *MockDataplane) ActivePreDNATPolicies() set.Set[types.PolicyID] {
 	d.Lock()
 	defer d.Unlock()
 
 	return d.activePreDNATPolicies.Copy()
 }
+
 func (d *MockDataplane) ActiveProfiles() set.Set[types.ProfileID] {
 	d.Lock()
 	defer d.Unlock()
 
 	return d.activeProfiles.Copy()
 }
+
 func (d *MockDataplane) ActiveVTEPs() set.Set[types.VXLANTunnelEndpointUpdate] {
 	d.Lock()
 	defer d.Unlock()
@@ -133,6 +136,7 @@ func (d *MockDataplane) ActiveVTEPs() set.Set[types.VXLANTunnelEndpointUpdate] {
 
 	return cp
 }
+
 func (d *MockDataplane) ActiveWireguardEndpoints() set.Set[types.WireguardEndpointUpdate] {
 	d.Lock()
 	defer d.Unlock()
@@ -144,6 +148,7 @@ func (d *MockDataplane) ActiveWireguardEndpoints() set.Set[types.WireguardEndpoi
 
 	return cp
 }
+
 func (d *MockDataplane) ActiveWireguardV6Endpoints() set.Set[types.WireguardEndpointV6Update] {
 	d.Lock()
 	defer d.Unlock()
@@ -155,6 +160,7 @@ func (d *MockDataplane) ActiveWireguardV6Endpoints() set.Set[types.WireguardEndp
 
 	return cp
 }
+
 func (d *MockDataplane) ActiveHostMetadataV4V6() map[string]*proto.HostMetadataV4V6Update {
 	d.Lock()
 	defer d.Unlock()
@@ -166,6 +172,7 @@ func (d *MockDataplane) ActiveHostMetadataV4V6() map[string]*proto.HostMetadataV
 
 	return cp
 }
+
 func (d *MockDataplane) ActiveRoutes() set.Set[types.RouteUpdate] {
 	d.Lock()
 	defer d.Unlock()
@@ -436,16 +443,15 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		var allPolsIDs []types.PolicyID
 		for i, tier := range event.Endpoint.Tiers {
 			tierInfos[i].Name = tier.Name
-			tierInfos[i].IngressPolicyNames = tier.IngressPolicies
-			tierInfos[i].EgressPolicyNames = tier.EgressPolicies
+			tierInfos[i].IngressPolicies = convertPolicyIDs(tier.IngressPolicies)
+			tierInfos[i].EgressPolicies = convertPolicyIDs(tier.EgressPolicies)
 
 			// Check that all the policies referenced by the endpoint are already present, which
 			// is one of the guarantees provided by the EventSequencer.
-			var combinedPolNames []string
-			combinedPolNames = append(combinedPolNames, tier.IngressPolicies...)
-			combinedPolNames = append(combinedPolNames, tier.EgressPolicies...)
-			for _, polName := range combinedPolNames {
-				polID := types.PolicyID{Tier: tier.Name, Name: polName}
+			var combinedPolicies []types.PolicyID
+			combinedPolicies = append(combinedPolicies, convertPolicyIDs(tier.IngressPolicies)...)
+			combinedPolicies = append(combinedPolicies, convertPolicyIDs(tier.EgressPolicies)...)
+			for _, polID := range combinedPolicies {
 				allPolsIDs = append(allPolsIDs, polID)
 				Expect(d.activePolicies).To(HaveKey(polID),
 					fmt.Sprintf("Expected policy %v referenced by workload endpoint "+
@@ -500,8 +506,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		tierInfos := make([]TierInfo, len(tiers))
 		for i, tier := range tiers {
 			tierInfos[i].Name = tier.Name
-			tierInfos[i].IngressPolicyNames = tier.IngressPolicies
-			tierInfos[i].EgressPolicyNames = tier.EgressPolicies
+			tierInfos[i].IngressPolicies = convertPolicyIDs(tier.IngressPolicies)
+			tierInfos[i].EgressPolicies = convertPolicyIDs(tier.EgressPolicies)
 		}
 		id := hostEpId(types.ProtoToHostEndpointID(event.GetId()))
 		d.endpointToPolicyOrder[id.String()] = tierInfos
@@ -510,8 +516,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		uTierInfos := make([]TierInfo, len(uTiers))
 		for i, tier := range uTiers {
 			uTierInfos[i].Name = tier.Name
-			uTierInfos[i].IngressPolicyNames = tier.IngressPolicies
-			uTierInfos[i].EgressPolicyNames = tier.EgressPolicies
+			uTierInfos[i].IngressPolicies = convertPolicyIDs(tier.IngressPolicies)
+			uTierInfos[i].EgressPolicies = convertPolicyIDs(tier.EgressPolicies)
 		}
 		d.endpointToUntrackedPolicyOrder[id.String()] = uTierInfos
 
@@ -519,8 +525,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		pTierInfos := make([]TierInfo, len(pTiers))
 		for i, tier := range pTiers {
 			pTierInfos[i].Name = tier.Name
-			pTierInfos[i].IngressPolicyNames = tier.IngressPolicies
-			pTierInfos[i].EgressPolicyNames = tier.EgressPolicies
+			pTierInfos[i].IngressPolicies = convertPolicyIDs(tier.IngressPolicies)
+			pTierInfos[i].EgressPolicies = convertPolicyIDs(tier.EgressPolicies)
 		}
 		d.endpointToPreDNATPolicyOrder[id.String()] = pTierInfos
 	case *proto.HostEndpointRemove:
@@ -578,12 +584,12 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 
 	// Enterprise cases below.
 	case *proto.PacketCaptureUpdate:
-		var update = event
-		var id = fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint)
+		update := event
+		id := fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint)
 		d.activePacketCaptures.Add(id)
 	case *proto.PacketCaptureRemove:
-		var remove = event
-		var id = fmt.Sprintf("%+v-%+v", remove.Id, remove.Endpoint)
+		remove := event
+		id := fmt.Sprintf("%+v-%+v", remove.Id, remove.Endpoint)
 		Expect(d.activePacketCaptures.Contains(id)).To(BeTrue(),
 			"Received PacketCaptureRemove for non-existent entry")
 		d.activePacketCaptures.Discard(id)
@@ -643,9 +649,21 @@ func (d *MockDataplane) RawValues() map[string]string {
 }
 
 type TierInfo struct {
-	Name               string
-	IngressPolicyNames []string
-	EgressPolicyNames  []string
+	Name            string
+	IngressPolicies []types.PolicyID
+	EgressPolicies  []types.PolicyID
+}
+
+func convertPolicyIDs(in []*proto.PolicyID) []types.PolicyID {
+	var out []types.PolicyID
+	for _, pid := range in {
+		out = append(out, types.PolicyID{
+			Kind:      pid.Kind,
+			Name:      pid.Name,
+			Namespace: pid.Namespace,
+		})
+	}
+	return out
 }
 
 type workloadId types.WorkloadEndpointID

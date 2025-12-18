@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
@@ -45,10 +45,16 @@ func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, st
 			updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		),
 		gnpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
-			updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
+			updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(v3.KindGlobalNetworkPolicy),
+		),
+		anpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+			updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesAdminNetworkPolicy),
+		),
+		banpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+			updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(model.KindKubernetesBaselineAdminNetworkPolicy),
 		),
 		npConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
-			updateprocessors.NewNetworkPolicyUpdateProcessor(),
+			updateprocessors.NewNetworkPolicyUpdateProcessor(v3.KindNetworkPolicy),
 		),
 		sgnpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
@@ -145,9 +151,11 @@ type cachedQuery struct {
 	policyEndpointLabelHandler labelhandler.Interface
 
 	// Converters for some of the resources.
-	wepConverter dispatcherv1v3.Converter
-	gnpConverter dispatcherv1v3.Converter
-	npConverter  dispatcherv1v3.Converter
+	wepConverter  dispatcherv1v3.Converter
+	gnpConverter  dispatcherv1v3.Converter
+	anpConverter  dispatcherv1v3.Converter
+	banpConverter dispatcherv1v3.Converter
+	npConverter   dispatcherv1v3.Converter
 
 	sgnpConverter   dispatcherv1v3.Converter
 	snpConverter    dispatcherv1v3.Converter
@@ -396,7 +404,7 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 		e.Pod = rt.Spec.Pod
 		e.InterfaceName = rt.Spec.InterfaceName
 		e.IPNetworks = rt.Spec.IPNetworks
-	case *apiv3.HostEndpoint:
+	case *v3.HostEndpoint:
 		e.InterfaceName = rt.Spec.InterfaceName
 		e.IPNetworks = rt.Spec.ExpectedIPs
 	}
@@ -477,7 +485,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		for _, tierName := range req.Tier {
 			if tierName != "" {
 				tier := c.policies.GetTier(model.ResourceKey{
-					Kind: apiv3.KindTier,
+					Kind: v3.KindTier,
 					Name: tierName,
 				})
 				if tier != nil {
@@ -485,7 +493,6 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				}
 			}
 		}
-
 	} else {
 		// Get the required policies ordered by tier and policy Order parameter. If the policy set is
 		// empty this will return all policies across all tiers.
@@ -784,7 +791,7 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 	// For host endpoints, return the labels unchanged.
 	var labels map[string]string
 	var profiles []string
-	if hep, ok := ep.GetResource().(*apiv3.HostEndpoint); ok {
+	if hep, ok := ep.GetResource().(*v3.HostEndpoint); ok {
 		labels = hep.Labels
 		profiles = hep.Spec.Profiles
 	} else {
@@ -828,9 +835,9 @@ func (c *cachedQuery) getNetworkSetLabelsAndProfiles(key model.Key) (map[string]
 
 	if rKey, ok := key.(model.ResourceKey); ok {
 		switch rKey.Kind {
-		case apiv3.KindGlobalNetworkSet:
+		case v3.KindGlobalNetworkSet:
 			labels = netset.GetObjectMeta().GetLabels()
-		case apiv3.KindNetworkSet:
+		case v3.KindNetworkSet:
 			// For namespaced networkset convert
 			nsv1 := c.nsConverter.ConvertV3ToV1(&bapi.Update{
 				UpdateType: bapi.UpdateTypeKVNew,
@@ -903,7 +910,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 	// selector.
 	var converted *bapi.Update
 	switch pr.GetObjectKind().GroupVersionKind().Kind {
-	case apiv3.KindNetworkPolicy:
+	case v3.KindNetworkPolicy:
 		converted = c.npConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
@@ -911,7 +918,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 				Value: pr,
 			},
 		})
-	case apiv3.KindGlobalNetworkPolicy:
+	case v3.KindGlobalNetworkPolicy:
 		converted = c.gnpConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
@@ -919,7 +926,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 				Value: pr,
 			},
 		})
-	case apiv3.KindStagedGlobalNetworkPolicy:
+	case v3.KindStagedGlobalNetworkPolicy:
 		converted = c.sgnpConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
@@ -927,7 +934,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 				Value: pr,
 			},
 		})
-	case apiv3.KindStagedNetworkPolicy:
+	case v3.KindStagedNetworkPolicy:
 		converted = c.snpConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
@@ -935,7 +942,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 				Value: pr,
 			},
 		})
-	case apiv3.KindStagedKubernetesNetworkPolicy:
+	case v3.KindStagedKubernetesNetworkPolicy:
 		converted = c.sk8snpConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
@@ -1032,16 +1039,16 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		{
 			// We need to convert the GNP for use with the policy sorter, and to get the
 			// correct selectors for the labelhandler.
-			Kind:      apiv3.KindGlobalNetworkPolicy,
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Converter: cq.gnpConverter,
 		},
 		{
 			Kind:      model.KindKubernetesAdminNetworkPolicy,
-			Converter: cq.gnpConverter,
+			Converter: cq.anpConverter,
 		},
 		{
 			Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
-			Converter: cq.gnpConverter,
+			Converter: cq.banpConverter,
 		},
 		{
 			// Convert the KubernetesNetworkPolicy to NP.
@@ -1051,27 +1058,27 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		{
 			// We need to convert the NP for use with the policy sorter, and to get the
 			// correct selectors for the labelhandler.
-			Kind:      apiv3.KindNetworkPolicy,
+			Kind:      v3.KindNetworkPolicy,
 			Converter: cq.npConverter,
 		},
 		{
 			// Convert the SGNP to GNP
-			Kind:      apiv3.KindStagedGlobalNetworkPolicy,
+			Kind:      v3.KindStagedGlobalNetworkPolicy,
 			Converter: cq.sgnpConverter,
 		},
 		{
 			// Convert the SNP to NP
-			Kind:      apiv3.KindStagedNetworkPolicy,
+			Kind:      v3.KindStagedNetworkPolicy,
 			Converter: cq.snpConverter,
 		},
 		{
 			// Convert the SK8SNP to NP
-			Kind:      apiv3.KindStagedKubernetesNetworkPolicy,
+			Kind:      v3.KindStagedKubernetesNetworkPolicy,
 			Converter: cq.sk8snpConverter,
 		},
 		{
 			// We need to convert the Tier for use with the policy sorter.
-			Kind: apiv3.KindTier,
+			Kind: v3.KindTier,
 			Converter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 				updateprocessors.NewTierUpdateProcessor(),
 			),
@@ -1082,20 +1089,20 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 			Converter: cq.wepConverter,
 		},
 		{
-			Kind: apiv3.KindHostEndpoint,
+			Kind: v3.KindHostEndpoint,
 		},
 		{
-			Kind: apiv3.KindProfile,
+			Kind: v3.KindProfile,
 		},
 		{
 			// We don't need these to be converted.
 			Kind: libapi.KindNode,
 		},
 		{
-			Kind: apiv3.KindGlobalNetworkSet,
+			Kind: v3.KindGlobalNetworkSet,
 		},
 		{
-			Kind:      apiv3.KindNetworkSet,
+			Kind:      v3.KindNetworkSet,
 			Converter: cq.nsConverter,
 		},
 	}

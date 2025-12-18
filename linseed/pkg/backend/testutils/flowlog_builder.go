@@ -225,14 +225,9 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 				h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
 				require.NoError(t, err)
 
-				name := h.Name()
-				if h.IsProfile() {
-					name = fmt.Sprintf("kns.%s", name)
-				}
-
 				*targetPolicy = append(*targetPolicy, v1.Policy{
 					Tier:         h.Tier(),
-					Name:         name,
+					Name:         h.Name(),
 					Namespace:    h.Namespace(),
 					Action:       string(h.Action()),
 					Count:        f.LogStats.FlowLogCount,

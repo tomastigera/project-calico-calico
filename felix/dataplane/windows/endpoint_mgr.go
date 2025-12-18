@@ -96,7 +96,8 @@ type hnsInterface interface {
 
 func newEndpointManager(hnsInterface hnsInterface,
 	policysets policysets.PolicySetsDataplane,
-	eventListeners []endPointEventListener) *endpointManager {
+	eventListeners []endPointEventListener,
+) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -179,15 +180,15 @@ func (m *endpointManager) OnUpdate(msg interface{}) {
 		id := types.ProtoToWorkloadEndpointID(msg.GetId())
 		m.pendingWlEpUpdates[id] = nil
 	case *proto.ActivePolicyUpdate:
-		if model.PolicyIsStaged(msg.Id.Name) {
+		if model.KindIsStaged(msg.Id.Kind) {
 			log.WithField("policyID", msg.Id).Debug("Skipping ActivePolicyUpdate with staged policy")
 			return
 		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyUpdate")
-		m.ProcessPolicyProfileUpdate(policysets.PolicyNamePrefix + msg.Id.Name)
+		m.ProcessPolicyProfileUpdate(types.ProtoToPolicyID(msg.Id))
 	case *proto.ActiveProfileUpdate:
 		log.WithField("profileId", msg.Id).Info("Processing ActiveProfileUpdate")
-		m.ProcessPolicyProfileUpdate(policysets.ProfileNamePrefix + msg.Id.Name)
+		m.ProcessPolicyProfileUpdate(types.ProtoToProfileID(msg.Id))
 	}
 }
 
@@ -272,7 +273,7 @@ func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 }
 
 // Refresh pendingWlEpUpdates on the event of Policy, Profile or IPSet updates.
-func (m *endpointManager) refreshPendingWlEpUpdates(updatedPolicies []string) {
+func (m *endpointManager) refreshPendingWlEpUpdates(updatedPolicies []types.IDMaker) {
 	if updatedPolicies == nil {
 		return
 	}
@@ -284,12 +285,12 @@ func (m *endpointManager) refreshPendingWlEpUpdates(updatedPolicies []string) {
 			continue
 		}
 
-		var activePolicyNames []string
+		var activePolicies []types.IDMaker
 		profilesApply := true
 
 		if len(workload.Tiers) > 0 {
-			activePolicyNames = append(activePolicyNames, prependAll(policysets.PolicyNamePrefix, workload.Tiers[0].IngressPolicies)...)
-			activePolicyNames = append(activePolicyNames, prependAll(policysets.PolicyNamePrefix, workload.Tiers[0].EgressPolicies)...)
+			activePolicies = append(activePolicies, translateProtoPolicyIDs(workload.Tiers[0].IngressPolicies)...)
+			activePolicies = append(activePolicies, translateProtoPolicyIDs(workload.Tiers[0].EgressPolicies)...)
 
 			if len(workload.Tiers[0].IngressPolicies) > 0 && len(workload.Tiers[0].EgressPolicies) > 0 {
 				profilesApply = false
@@ -297,14 +298,14 @@ func (m *endpointManager) refreshPendingWlEpUpdates(updatedPolicies []string) {
 		}
 
 		if profilesApply && len(workload.ProfileIds) > 0 {
-			activePolicyNames = append(activePolicyNames, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds)...)
+			activePolicies = append(activePolicies, translateProfileIDs(workload.ProfileIds)...)
 		}
 
 	Policies:
-		for _, policyName := range activePolicyNames {
-			for _, updatedPolicy := range updatedPolicies {
-				if policyName == updatedPolicy {
-					log.WithFields(log.Fields{"policyName": policyName, "endpointId": endpointId}).Info("Endpoint is being marked for policy refresh")
+		for _, active := range activePolicies {
+			for _, updated := range updatedPolicies {
+				if active == updated {
+					log.WithFields(log.Fields{"policyName": active, "endpointId": endpointId}).Info("Endpoint is being marked for policy refresh")
 					m.pendingWlEpUpdates[endpointId] = workload
 					break Policies
 				}
@@ -326,11 +327,11 @@ func (m *endpointManager) ProcessIpSetUpdate(ipSetId string) {
 // ProcessPolicyProfileUpdate is called when a Policy or Profile has changed. The policySetsDataplane will have
 // already updated the Policy or Profile itself, but the endpointManager is responsible for marking all
 // impacted endpoints as pending so that updated policies can be pushed to them.
-func (m *endpointManager) ProcessPolicyProfileUpdate(policySetId string) {
+func (m *endpointManager) ProcessPolicyProfileUpdate(policySetId types.IDMaker) {
 	// PolicySets updates will be done by policySetsDataplane on the update event.
 	// Here we just need to refresh pendingWlEpUpdates.
 	log.WithField("policySetId", policySetId).Debug("Refresh pendingWlEpUpdates")
-	m.refreshPendingWlEpUpdates([]string{policySetId})
+	m.refreshPendingWlEpUpdates([]types.IDMaker{policySetId})
 }
 
 // CompleteDeferredWork will apply all pending updates by gathering the rules to be updated per
@@ -417,15 +418,15 @@ func (m *endpointManager) CompleteDeferredWork() error {
 					if t.Name == names.DefaultTierName {
 						defaultTierIngressAppliesToEP = true
 					}
-					policyNames := prependAll(policysets.PolicyNamePrefix, t.IngressPolicies)
-					ingressRules = append(ingressRules, m.policysetsDataplane.GetPolicySetRules(policyNames, true, endOfTierDrop))
+					ids := translateProtoPolicyIDs(t.IngressPolicies)
+					ingressRules = append(ingressRules, m.policysetsDataplane.GetPolicySetRules(ids, true, endOfTierDrop))
 				}
 				if len(t.EgressPolicies) > 0 {
 					if t.Name == names.DefaultTierName {
 						defaultTierEgressAppliesToEP = true
 					}
-					policyNames := prependAll(policysets.PolicyNamePrefix, t.EgressPolicies)
-					egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(policyNames, false, endOfTierDrop))
+					ids := translateProtoPolicyIDs(t.EgressPolicies)
+					egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(ids, false, endOfTierDrop))
 				}
 			}
 			log.Debugf("default tier has ingress policies: %v, egress policies: %v", defaultTierIngressAppliesToEP, defaultTierEgressAppliesToEP)
@@ -433,13 +434,13 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			// If _no_ policies apply at all, then we fall through to the profiles.  Otherwise, there's no way to get
 			// from policies to profiles.
 			if len(ingressRules) == 0 || !defaultTierIngressAppliesToEP {
-				policyNames := prependAll(policysets.ProfileNamePrefix, workload.ProfileIds)
-				ingressRules = append(ingressRules, m.policysetsDataplane.GetPolicySetRules(policyNames, true, true))
+				ids := translateProfileIDs(workload.ProfileIds)
+				ingressRules = append(ingressRules, m.policysetsDataplane.GetPolicySetRules(ids, true, true))
 			}
 
 			if len(egressRules) == 0 || !defaultTierEgressAppliesToEP {
-				policyNames := prependAll(policysets.ProfileNamePrefix, workload.ProfileIds)
-				egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(policyNames, false, true))
+				ids := translateProfileIDs(workload.ProfileIds)
+				egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(ids, false, true))
 			}
 
 			// Flatten any tiers.
@@ -630,12 +631,23 @@ func (m *endpointManager) getHnsEndpointId(ip string) (string, error) {
 	return "", ErrUnknownEndpoint
 }
 
-// prependAll prepends a string to all of the provided input strings
-func prependAll(prefix string, in []string) (out []string) {
-	for _, s := range in {
-		out = append(out, prefix+s)
+// translateProfileIDs converts a list of profile names to their string representation with prefix.
+func translateProfileIDs(in []string) (out []types.IDMaker) {
+	for _, name := range in {
+		pid := types.ProfileID{Name: name}
+		out = append(out, pid)
 	}
-	return
+	return out
+}
+
+// translateProtoPolicyIDs converts a list of PolicyID to their string representation with prefix.
+func translateProtoPolicyIDs(in []*proto.PolicyID) []types.IDMaker {
+	var out []types.IDMaker
+	for _, id := range in {
+		pid := types.ProtoToPolicyID(id)
+		out = append(out, pid)
+	}
+	return out
 }
 
 // loopPollingForInterfaceAddrs periodically checks the IP addresses on the host and sends updates on the channel

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -616,13 +617,14 @@ var _ = Describe("FlowLog middleware", func() {
 					var flResponse FlowResponse
 					Expect(json.Unmarshal(respBody, &flResponse))
 
-					Expect(flResponse).Should(Equal(FlowResponse{
+					exp := FlowResponse{
 						Count:           4,
 						SrcLabels:       FlowResponseLabels{},
 						DstLabels:       FlowResponseLabels{},
 						SrcPolicyReport: expectedSrcPolicyReport,
 						DstPolicyReport: expectedDstPolicyReport,
-					}))
+					}
+					Expect(flResponse).Should(Equal(exp), cmp.Diff(flResponse, exp))
 				},
 				Entry("single policy hit allowed at src and dst",
 					[]map[string]interface{}{
@@ -633,12 +635,12 @@ var _ = Describe("FlowLog middleware", func() {
 					}, nil,
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
 						},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "allow", Count: 1},
 						},
 					},
 				),
@@ -653,12 +655,12 @@ var _ = Describe("FlowLog middleware", func() {
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
 						},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
 						},
 					},
 				),
@@ -671,7 +673,7 @@ var _ = Describe("FlowLog middleware", func() {
 					nil, nil,
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "deny", Count: 1},
 						},
 					},
 					nil,
@@ -692,18 +694,18 @@ var _ = Describe("FlowLog middleware", func() {
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace4", Tier: "tier4", Name: "policy4", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace4", Tier: "tier4", Name: "policy4", Action: "deny", Count: 1},
 						},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace3", Tier: "tier3", Name: "policy3", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace3", Tier: "tier3", Name: "policy3", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
 						},
 					},
 				),
@@ -742,34 +744,34 @@ var _ = Describe("FlowLog middleware", func() {
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace11", Tier: "tier11", Name: "policy11", Action: "pass", Count: 1},
-							{Index: 1, IsStaged: true, Namespace: "namespace12", Tier: "tier12", Name: "policy12", Action: "deny", Count: 1},
-							{Index: 2, Namespace: "namespace12", Tier: "tier12", Name: "policy13", Action: "pass", Count: 1},
-							{Index: 3, Namespace: "namespace13", Tier: "tier13", Name: "policy14", Action: "pass", Count: 1},
-							{Index: 4, Namespace: "namespace14", Tier: "tier14", Name: "policy15", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace11", Tier: "tier11", Name: "tier11.policy11", Action: "pass", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace12", Tier: "tier12", Name: "tier12.policy12", Action: "deny", Count: 1},
+							{Index: 2, Kind: "NetworkPolicy", Namespace: "namespace12", Tier: "tier12", Name: "tier12.policy13", Action: "pass", Count: 1},
+							{Index: 3, Kind: "NetworkPolicy", Namespace: "namespace13", Tier: "tier13", Name: "tier13.policy14", Action: "pass", Count: 1},
+							{Index: 4, Kind: "NetworkPolicy", Namespace: "namespace14", Tier: "tier14", Name: "tier14.policy15", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace21", Tier: "tier21", Name: "policy21", Action: "pass", Count: 1},
-							{Index: 1, IsStaged: true, Namespace: "namespace22", Tier: "tier22", Name: "policy22", Action: "deny", Count: 1},
-							{Index: 2, Namespace: "namespace22", Tier: "tier22", Name: "policy23", Action: "pass", Count: 1},
-							{Index: 3, Namespace: "namespace23", Tier: "tier23", Name: "policy24", Action: "pass", Count: 1},
-							{Index: 4, Namespace: "namespace24", Tier: "tier24", Name: "policy25", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace21", Tier: "tier21", Name: "tier21.policy21", Action: "pass", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace22", Tier: "tier22", Name: "tier22.policy22", Action: "deny", Count: 1},
+							{Index: 2, Kind: "NetworkPolicy", Namespace: "namespace22", Tier: "tier22", Name: "tier22.policy23", Action: "pass", Count: 1},
+							{Index: 3, Kind: "NetworkPolicy", Namespace: "namespace23", Tier: "tier23", Name: "tier23.policy24", Action: "pass", Count: 1},
+							{Index: 4, Kind: "NetworkPolicy", Namespace: "namespace24", Tier: "tier24", Name: "tier24.policy25", Action: "deny", Count: 1},
 						},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace31", Tier: "tier31", Name: "policy31", Action: "pass", Count: 1},
-							{Index: 1, IsStaged: true, Namespace: "namespace32", Tier: "tier32", Name: "policy32", Action: "deny", Count: 1},
-							{Index: 2, Namespace: "namespace32", Tier: "tier32", Name: "policy33", Action: "pass", Count: 1},
-							{Index: 3, Namespace: "namespace33", Tier: "tier33", Name: "policy34", Action: "pass", Count: 1},
-							{Index: 4, Namespace: "namespace34", Tier: "tier34", Name: "policy35", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace31", Tier: "tier31", Name: "tier31.policy31", Action: "pass", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace32", Tier: "tier32", Name: "tier32.policy32", Action: "deny", Count: 1},
+							{Index: 2, Kind: "NetworkPolicy", Namespace: "namespace32", Tier: "tier32", Name: "tier32.policy33", Action: "pass", Count: 1},
+							{Index: 3, Kind: "NetworkPolicy", Namespace: "namespace33", Tier: "tier33", Name: "tier33.policy34", Action: "pass", Count: 1},
+							{Index: 4, Kind: "NetworkPolicy", Namespace: "namespace34", Tier: "tier34", Name: "tier34.policy35", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Namespace: "namespace41", Tier: "tier41", Name: "policy41", Action: "pass", Count: 1},
-							{Index: 1, IsStaged: true, Namespace: "namespace42", Tier: "tier42", Name: "policy42", Action: "deny", Count: 1},
-							{Index: 2, Namespace: "namespace42", Tier: "tier42", Name: "policy43", Action: "pass", Count: 1},
-							{Index: 3, Namespace: "namespace43", Tier: "tier43", Name: "policy44", Action: "pass", Count: 1},
-							{Index: 4, Namespace: "namespace44", Tier: "tier44", Name: "policy45", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace41", Tier: "tier41", Name: "tier41.policy41", Action: "pass", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace42", Tier: "tier42", Name: "tier42.policy42", Action: "deny", Count: 1},
+							{Index: 2, Kind: "NetworkPolicy", Namespace: "namespace42", Tier: "tier42", Name: "tier42.policy43", Action: "pass", Count: 1},
+							{Index: 3, Kind: "NetworkPolicy", Namespace: "namespace43", Tier: "tier43", Name: "tier43.policy44", Action: "pass", Count: 1},
+							{Index: 4, Kind: "NetworkPolicy", Namespace: "namespace44", Tier: "tier44", Name: "tier44.policy45", Action: "deny", Count: 1},
 						},
 					},
 				),
@@ -782,7 +784,7 @@ var _ = Describe("FlowLog middleware", func() {
 					nil, nil,
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
 						},
 					},
 					nil,
@@ -796,7 +798,7 @@ var _ = Describe("FlowLog middleware", func() {
 					nil, nil,
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, IsProfile: true, Namespace: "", Tier: "__PROFILE__", Name: "namespace", Action: "deny", Count: 1},
+							{Index: 0, Kind: "Profile", IsProfile: true, Namespace: "", Tier: "__PROFILE__", Name: "kns.namespace", Action: "deny", Count: 1},
 						},
 					},
 					nil,
@@ -877,13 +879,13 @@ var _ = Describe("FlowLog middleware", func() {
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
 							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-							{Index: 1, Namespace: "namespace1", Tier: "tier13", Name: "policy13", Action: "deny", Count: 1},
+							{Index: 1, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier13", Name: "tier13.policy13", Action: "deny", Count: 1},
 						},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
 							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-							{Index: 1, Namespace: "namespace2", Tier: "tier23", Name: "policy23", Action: "deny", Count: 1},
+							{Index: 1, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier23", Name: "tier23.policy23", Action: "deny", Count: 1},
 						},
 					},
 					[]*authzv1.ResourceAttributes{
@@ -944,14 +946,14 @@ var _ = Describe("FlowLog middleware", func() {
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
 							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-							{Index: 1, IsStaged: true, Namespace: "namespace1", Tier: "tier13", Name: "policy13", Action: "deny", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace1", Tier: "tier13", Name: "tier13.policy13", Action: "deny", Count: 1},
 							{Index: 2, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
 						},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
 							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-							{Index: 1, IsStaged: true, Namespace: "namespace2", Tier: "tier23", Name: "policy23", Action: "deny", Count: 1},
+							{Index: 1, Kind: "StagedNetworkPolicy", IsStaged: true, Namespace: "namespace2", Tier: "tier23", Name: "tier23.policy23", Action: "deny", Count: 1},
 							{Index: 2, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
 						},
 					},

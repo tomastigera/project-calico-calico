@@ -216,47 +216,51 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 		Eventually(hostEndpointProgrammed, "30s", "1s").Should(BeTrue(),
 			"Expected HostEndpoint iptables rules to appear")
 		if !BPFMode() {
-			rulesProgrammed := func() bool {
+			rulesProgrammed := func() error {
 				out0, err := tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
-				Expect(err).NotTo(HaveOccurred())
+				if err != nil {
+					return err
+				}
 				out1, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
-				Expect(err).NotTo(HaveOccurred())
+				if err != nil {
+					return err
+				}
 				if strings.Count(out0, "ARE0|default") == 0 {
-					return false
+					return fmt.Errorf("ARE0|default rule not found on felix 0")
 				}
-				if strings.Count(out1, "default.gnp-1") == 0 {
-					return false
+				if strings.Count(out1, "gnp-1") == 0 {
+					return fmt.Errorf("gnp-1 rule not found on felix 1")
 				}
-				return true
+				return nil
 			}
 			if NFTMode() {
-				rulesProgrammed = func() bool {
+				rulesProgrammed = func() error {
 					out0, err := tc.Felixes[0].ExecOutput("nft", "list", "ruleset")
 					Expect(err).NotTo(HaveOccurred())
 					out1, err := tc.Felixes[1].ExecOutput("nft", "list", "ruleset")
 					Expect(err).NotTo(HaveOccurred())
 					if strings.Count(out0, "ARE0|default") == 0 {
-						return false
+						return fmt.Errorf("ARE0|default rule not found on felix 0")
 					}
-					if strings.Count(out1, "default.gnp-1") == 0 {
-						return false
+					if strings.Count(out1, "gnp-1") == 0 {
+						return fmt.Errorf("gnp-1 rule not found on felix 1")
 					}
-					return true
+					return nil
 				}
 			}
-			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+			Eventually(rulesProgrammed, "10s", "1s").ShouldNot(HaveOccurred(),
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[1], "eth0", "egress", "default.gnp-1", "allow", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[1], "eth0", "egress", "gnp-1", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[1], "eth0", "ingress", "default.gnp-1", "allow", false)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[1], "eth0", "ingress", "gnp-1", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
+				return bpfCheckIfNetworkPolicyProgrammed(tc.Felixes[1], wlHost2[1].InterfaceName, "ingress", "default", "default.np-1", "deny", true)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
@@ -449,7 +453,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.gnp-1|allow|0": {},
+						"0|default|gnp-1|allow|0": {},
 					},
 				})
 
@@ -600,10 +604,10 @@ var _ = infrastructure.DatastoreDescribe("goldmane flow log ipv6 tests", []apico
 					out, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
 				}
 				Expect(err).NotTo(HaveOccurred())
-				if strings.Count(out, "default.gnp-1") == 0 {
+				if strings.Count(out, "gnp-1") == 0 {
 					return false
 				}
-				if strings.Count(out, "default.gnp-2") == 0 {
+				if strings.Count(out, "gnp-2") == 0 {
 					return false
 				}
 				return true
@@ -612,19 +616,19 @@ var _ = infrastructure.DatastoreDescribe("goldmane flow log ipv6 tests", []apico
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0][0].InterfaceName, "egress", "default.gnp-1", "allow", true)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0][0].InterfaceName, "egress", "gnp-1", "allow", true)
 			}, "15s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0][0].InterfaceName, "ingress", "default.gnp-1", "allow", true)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0][0].InterfaceName, "ingress", "gnp-1", "allow", true)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0][1].InterfaceName, "egress", "default.gnp-2", "deny", true)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0][1].InterfaceName, "egress", "gnp-2", "deny", true)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0][1].InterfaceName, "ingress", "default.gnp-2", "deny", true)
+				return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0][1].InterfaceName, "ingress", "gnp-2", "deny", true)
 			}, "5s", "200ms").Should(BeTrue())
 		}
 
@@ -795,7 +799,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane local server tests
 	})
 
 	AfterEach(func() {
-		//FIXME
+		// FIXME
 
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
@@ -894,9 +898,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		Expect(err).NotTo(HaveOccurred())
 
 		if !BPFMode() {
-			Eventually(getRuleFuncTable(tc.Felixes[0], "API0|default.allow-all", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFuncTable(tc.Felixes[0], "API0|gnp/allow-all", "filter"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			bpfWaitForPolicyRule(tc.Felixes[0], swl1.InterfaceName, "ingress", "default.allow-all", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], swl1.InterfaceName, "ingress", "allow-all", `action:"allow"`)
 		}
 		// NetworkSets
 		// netset-1 in ns1 matches dwl1
@@ -933,7 +937,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		if BPFMode() {
 			ensureAllNodesBPFProgramsAttached(tc.Felixes)
 		}
-
 	})
 
 	It("should report correct network sets based on namespace precedence", func() {
@@ -985,7 +988,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 						DstService: flowlog.FlowService{Namespace: flowlog.FieldNotIncluded, Name: flowlog.FieldNotIncluded, PortName: flowlog.FieldNotIncluded, PortNum: 0},
 						Action:     "allow", Reporter: "src",
 					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|default.allow-all|allow|0": {}},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|allow-all|allow|0": {}},
 				})
 			}
 

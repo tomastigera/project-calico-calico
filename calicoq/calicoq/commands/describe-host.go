@@ -112,7 +112,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 			// Go through the rules, and generate a selector for each.
 			cbs.evalCmd.AddPolicyRuleSelectors(
 				update.Value.(*model.Policy),
-				"Policy \""+removeTierFromPolicyName(update.Key.(model.PolicyKey).Name)+"\" ",
+				"Policy \""+keyToName(update.Key.(model.PolicyKey))+"\" ",
 			)
 			return false
 		}
@@ -142,8 +142,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	return
 }
 
-type noopRuleScanner struct {
-}
+type noopRuleScanner struct{}
 
 func (rs *noopRuleScanner) OnPolicyActive(model.PolicyKey, *model.Policy) {
 }
@@ -191,7 +190,8 @@ type describeCmd struct {
 }
 
 func (cbs *describeCmd) OnConfigLoaded(globalConfig map[string]string,
-	hostConfig map[string]string) {
+	hostConfig map[string]string,
+) {
 	// Ignore for now
 }
 
@@ -369,7 +369,7 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 						}
 
 						policyPrint := PolicyPrint{
-							Name:            removeTierFromPolicyName(pol.Key.Name),
+							Name:            keyToName(pol.Key),
 							Order:           polOrder,
 							TierName:        tier.Name,
 							TierOrder:       tierOrder,
@@ -449,7 +449,7 @@ func (cbs *describeCmd) onPolicyUpdate(update api.Update) (filterOut bool) {
 }
 
 func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.EndpointKey) {
-	log.Infof("Policy %v.%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
+	log.Infof("%s now matches %+v", policyKey.String(), endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
 }
 

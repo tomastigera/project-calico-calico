@@ -5,6 +5,7 @@ package flows_test
 import (
 	"context"
 	_ "embed"
+	gojson "encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -371,7 +372,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		expected.Policies = []v1.Policy{
 			{
 				Tier:      "allow-tigera",
-				Name:      "cluster-dns",
+				Name:      "allow-tigera.cluster-dns",
 				Namespace: "kube-system",
 				Action:    "pass",
 				Count:     expected.LogStats.FlowLogCount,
@@ -1686,13 +1687,19 @@ func TestFlowFiltering(t *testing.T) {
 
 			// Assert that the correct flows are returned.
 			if testcase.ExpectFlow1 {
-				require.Contains(t, r.Items, exp1)
+				require.Contains(t, r.Items, exp1, msg(r.Items, exp1))
 			}
 			if testcase.ExpectFlow2 {
-				require.Contains(t, r.Items, exp2)
+				require.Contains(t, r.Items, exp2, msg(r.Items, exp2))
 			}
 		})
 	}
+}
+
+func msg(got []v1.L3Flow, exp v1.L3Flow) string {
+	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
+	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
+	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n", expJSON, gotJSON)
 }
 
 // TestPagination tests that we return multiple flows properly using pagination.

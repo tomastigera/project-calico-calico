@@ -8,7 +8,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	"sigs.k8s.io/network-policy-api/apis/v1alpha1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
@@ -27,6 +30,28 @@ type Policy struct {
 
 func (p Policy) String() string {
 	return fmt.Sprintf("%s -> %s; staged=%v", p.ResourceID, resources.GetResourceID(p.CalicoV3Policy), p.Staged)
+}
+
+func (p Policy) Kind() string {
+	switch p.CalicoV3Policy.(type) {
+	case *v3.NetworkPolicy:
+		return v3.KindNetworkPolicy
+	case *v3.GlobalNetworkPolicy:
+		return v3.KindGlobalNetworkPolicy
+	case *v3.StagedNetworkPolicy:
+		return v3.KindStagedNetworkPolicy
+	case *v3.StagedGlobalNetworkPolicy:
+		return v3.KindStagedGlobalNetworkPolicy
+	case *netv1.NetworkPolicy:
+		return model.KindKubernetesNetworkPolicy
+	case *v1alpha1.AdminNetworkPolicy:
+		return model.KindKubernetesAdminNetworkPolicy
+	case *v1alpha1.BaselineAdminNetworkPolicy:
+		return model.KindKubernetesBaselineAdminNetworkPolicy
+	default:
+		log.Warnf("Unknown policy kind for resource: %T", p.CalicoV3Policy)
+		return ""
+	}
 }
 
 type (
@@ -360,7 +385,7 @@ func (fp *policyCalculator) newFlowCache(flow *api.Flow) *flowCache {
 	if !flow.Destination.Labels.IsNil() {
 		flowCache.destination.selectors = fp.CreateSelectorCache()
 	}
-	flowCache.policies = make(map[string]api.ActionFlag)
+	flowCache.policies = make(map[model.ResourceKey]api.ActionFlag)
 	return flowCache
 }
 

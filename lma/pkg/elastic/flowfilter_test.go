@@ -34,8 +34,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "wep"}, {"source_namespace", "ns1"}, {"source_name", "a"},
-						{"dest_type", "wep"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
+						{"source_type", "wep"},
+						{"source_namespace", "ns1"},
+						{"source_name", "a"},
+						{"dest_type", "wep"},
+						{"dest_namespace", "ns2"},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -49,8 +53,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "wep"}, {"source_namespace", "ns1"}, {"source_name", "a"},
-						{"dest_type", "wep"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
+						{"source_type", "wep"},
+						{"source_namespace", "ns1"},
+						{"source_name", "a"},
+						{"dest_type", "wep"},
+						{"dest_namespace", "ns2"},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -65,8 +73,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
-						{"dest_type", "wep"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", ""},
+						{"source_name", "a"},
+						{"dest_type", "wep"},
+						{"dest_namespace", "ns2"},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -80,8 +92,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "wep"}, {"source_namespace", "ns1"}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
+						{"source_type", "wep"},
+						{"source_namespace", "ns1"},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", ""},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -96,8 +112,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "hep"}, {"source_namespace", ""}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
+						{"source_type", "hep"},
+						{"source_namespace", ""},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", "ns2"},
+						{"dest_name", "b"},
 					},
 				},
 				false,
@@ -113,8 +133,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
-						{"dest_type", "hep"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", ""},
+						{"source_name", "a"},
+						{"dest_type", "hep"},
+						{"dest_namespace", "ns2"},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -129,8 +153,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", ""},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", ""},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -145,8 +173,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", ""},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", ""},
+						{"dest_name", "b"},
 					},
 				},
 				false,
@@ -161,8 +193,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", "ns1"}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", "ns1"},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", ""},
+						{"dest_name", "b"},
 					},
 				},
 				true,
@@ -177,8 +213,12 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "net"}, {"source_namespace", "ns1"}, {"source_name", "a"},
-						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
+						{"source_type", "net"},
+						{"source_namespace", "ns1"},
+						{"source_name", "a"},
+						{"dest_type", "net"},
+						{"dest_namespace", ""},
+						{"dest_name", "b"},
 					},
 				},
 				false,
@@ -225,9 +265,9 @@ var _ = Describe("FlowFilter", func() {
 				},
 				map[interface{}]int64{
 					"0|tier1|tier1.np1|pass|-":                     1000,
-					"1|tier1|tier1.staged:np1|allow|-":             1000,
+					"1|tier1|tier1.staged:tier1.np1|allow|-":       1000,
 					"2|tier2|ns1/tier2.np1|pass|-":                 1000,
-					"3|tier2|ns1/tier2.staged:np1|allow|-":         1000,
+					"3|tier2|ns1/tier2.staged:tier2.np1|allow|-":   1000,
 					"4|default|ns1/staged:knp.default.np1|allow|-": 1000,
 					"5|default|ns1/knp.default.np1|allow|-":        1000,
 				},
@@ -305,18 +345,18 @@ var _ = Describe("FlowFilter", func() {
 					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("12|default|ns1/knp.default.np1|allow|-", 1000)).Return(true, nil)
 				},
 				map[interface{}]int64{
-					"6|tier2|ns1/tier2.staged:np1|allow|-":   1000,
-					"8|tier3|ns2/tier3.np3|allow|1":          1000,
-					"11|default|ns1/knp.default.np1|allow|-": 1000,
-					"4|*|*|deny|*":                           1000,
-					"5|tier2|ns1/tier2.np1|pass|-":           1000,
-					"2|*|*|pass|*":                           1000,
-					"3|tier1|tier1.staged:np1|allow|-":       1000,
-					"7|tier3|ns2/tier3.np2|allow|0":          1000,
-					"9|*|*|deny|*":                           1000,
-					"10|tier3|ns3/tier3.np3|pass|0":          1000,
-					"0|*|*|allow|*":                          1000,
-					"1|*|*|deny|*":                           1000,
+					"6|tier2|ns1/tier2.staged:tier2.np1|allow|-": 1000,
+					"8|tier3|ns2/tier3.np3|allow|1":              1000,
+					"11|default|ns1/knp.default.np1|allow|-":     1000,
+					"4|*|*|deny|*":                               1000,
+					"5|tier2|ns1/tier2.np1|pass|-":               1000,
+					"2|*|*|pass|*":                               1000,
+					"3|tier1|tier1.staged:tier1.np1|allow|-":     1000,
+					"7|tier3|ns2/tier3.np2|allow|0":              1000,
+					"9|*|*|deny|*":                               1000,
+					"10|tier3|ns3/tier3.np3|pass|0":              1000,
+					"0|*|*|allow|*":                              1000,
+					"1|*|*|deny|*":                               1000,
 				},
 			},
 		},
