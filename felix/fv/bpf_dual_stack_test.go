@@ -226,6 +226,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 				ensureRightIFStateFlags(tc.Felixes[1], ifstate.FlgIPv4Ready, ifstate.FlgHEP, nil)
 			})
 			It("should drop ipv6 packets at workload interface and allow ipv6 packets at host interface when in IPv4 only mode", func() {
+				cc.ResetExpectations()
 				// IPv4 connectivity must work.
 				cc.Expect(Some, hostW[0], w[0][0])
 				cc.Expect(Some, hostW[0], hostW[1])
@@ -262,6 +263,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 					"Service endpoints didn't get created? Is controller-manager happy?")
 			})
 			It("Should connect to w[0][0] from all other workloads with IPv4 and IPv6", func() {
+				cc.ResetExpectations()
 				cc.ExpectSome(w[0][1], w[0][0])
 				cc.ExpectSome(w[1][0], w[0][0])
 				cc.ExpectSome(w[1][1], w[0][0])
@@ -273,6 +275,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 			})
 
 			It("Should connect to w[0][0] via clusterIP (IPv4 and IPv6)", func() {
+				cc.ResetExpectations()
 				port := uint16(testSvc.Spec.Ports[0].Port)
 				cc.ExpectSome(w[1][0], TargetIP(clusterIPs[0]), port)
 				cc.ExpectSome(w[1][0], TargetIP(clusterIPs[1]), port)
@@ -283,6 +286,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 			})
 
 			It("Should connect to w[0][0] via nodePort (IPv4 and IPv6)", func() {
+				cc.ResetExpectations()
 				cc.ExpectSome(w[1][0], TargetIP(felixIP(0)), npPort)
 				cc.ExpectSome(w[0][1], TargetIP(felixIP(0)), npPort)
 
@@ -316,6 +320,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 
 				ensureRightIFStateFlags(tc.Felixes[0], ifstate.FlgIPv4Ready, ifstate.FlgHEP, nil)
 				ensureRightIFStateFlags(tc.Felixes[1], ifstate.FlgIPv4Ready|ifstate.FlgIPv6Ready, ifstate.FlgHEP, nil)
+				cc.ResetExpectations()
 				cc.ExpectSome(w[0][1], w[0][0])
 				cc.ExpectSome(w[1][0], w[0][0])
 				cc.ExpectSome(w[1][1], w[0][0])
@@ -348,6 +353,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 				Expect(err).NotTo(HaveOccurred())
 
 				ensureRightIFStateFlags(tc.Felixes[0], ifstate.FlgIPv4Ready|ifstate.FlgIPv6Ready, ifstate.FlgHEP, nil)
+				cc.ResetExpectations()
 				cc.ExpectSome(w[0][1], w[0][0])
 				cc.ExpectSome(w[1][0], w[0][0])
 				cc.ExpectSome(w[1][1], w[0][0])
@@ -421,6 +427,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 					Consistently(felixReady, "10s", "1s").Should(BeGood())
 				}
 
+				cc.ResetExpectations()
 				cc.Expect(None, w[0][1], w[0][0])
 				cc.Expect(None, w[1][0], w[0][0])
 				cc.Expect(None, w[1][1], w[0][0])
@@ -456,6 +463,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 					Consistently(felixReady, "10s", "1s").Should(BeGood())
 				}
 
+				cc.ResetExpectations()
 				cc.Expect(None, w[0][1], w[0][0], ExpectWithIPVersion(6))
 				cc.Expect(None, w[1][0], w[0][0], ExpectWithIPVersion(6))
 				cc.Expect(None, w[1][1], w[0][0], ExpectWithIPVersion(6))
@@ -536,7 +544,7 @@ func describeBPFDualStackProxyHealthTests() bool {
 			_, err := k8sClient.CoreV1().Services("default").Create(context.Background(), testSvc, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
+			Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(2),
 				"Service endpoints didn't get created? Is controller-manager happy?")
 
 			// Check health probe on node 0 (has local endpoint) - should return 200
