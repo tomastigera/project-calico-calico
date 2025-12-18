@@ -48,6 +48,18 @@ func TestParams(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeText, policyAllPoliciesField.Type())
 
+	policyEnforcedPoliciesField, found := collectionsMap[collections.CollectionNameFlows].Field("policies.enforced_policies")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeText, policyEnforcedPoliciesField.Type())
+
+	policyPendingPoliciesField, found := collectionsMap[collections.CollectionNameFlows].Field("policies.pending_policies")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeText, policyPendingPoliciesField.Type())
+
+	policyTransitPoliciesField, found := collectionsMap[collections.CollectionNameFlows].Field("policies.transit_policies")
+	require.True(t, found)
+	require.Equal(t, collections.FieldTypeText, policyTransitPoliciesField.Type())
+
 	enumField, found := collectionsMap[collections.CollectionNameFlows].Field("action")
 	require.True(t, found)
 	require.Equal(t, collections.FieldTypeEnum, enumField.Type())
@@ -92,6 +104,52 @@ func TestParams(t *testing.T) {
 				linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},
 				linseedQuerySortParams: lsv1.QuerySortParams{Sort: []lsv1.SearchRequestSortBy{{Field: "start_time", Descending: true}}},
 			}, subject)
+
+			t.Run("policy type", func(t *testing.T) {
+				testCases := []struct {
+					name             string
+					filter           filters.Criterion
+					expectedSelector string
+				}{
+					{
+						name:             "staged",
+						filter:           filters.NewIn(policyTypeField, []string{"staged"}, false),
+						expectedSelector: `( "policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"} )`,
+					},
+					{
+						name:             "staged negated",
+						filter:           filters.NewIn(policyTypeField, []string{"staged"}, true),
+						expectedSelector: `( "policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"} )`,
+					},
+					{
+						name:             "enforced",
+						filter:           filters.NewIn(policyTypeField, []string{"enforced"}, false),
+						expectedSelector: `( "policies.enforced_policies" IN {"*|*|*|*|*"} )`,
+					},
+					{
+						name:             "enforced negated",
+						filter:           filters.NewIn(policyTypeField, []string{"enforced"}, true),
+						expectedSelector: `( "policies.enforced_policies" NOTIN {"*|*|*|*|*"} )`,
+					},
+					{
+						name:             "staged and enforced",
+						filter:           filters.NewIn(policyTypeField, []string{"staged", "enforced"}, false),
+						expectedSelector: `( "policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.enforced_policies" IN {"*|*|*|*|*"} )`,
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"}, nil)
+						require.NoError(t, err)
+
+						err = subject.setCriteria(filters.Criteria{tc.filter}, time.Time{})
+						require.NoError(t, err)
+
+						require.Equal(t, tc.expectedSelector, subject.linseedLogSelectionParams.Selector)
+					})
+				}
+			})
 		})
 
 		t.Run("or", func(t *testing.T) {
@@ -305,12 +363,12 @@ func TestParams(t *testing.T) {
 					{
 						name:             "enforced",
 						filter:           filters.NewEquals(policyTypeField, "enforced", false),
-						expectedSelector: `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`,
+						expectedSelector: `"policies.enforced_policies" IN {"*|*|*|*|*"}`,
 					},
 					{
 						name:             "enforced negated",
 						filter:           filters.NewEquals(policyTypeField, "enforced", true),
-						expectedSelector: `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`,
+						expectedSelector: `"policies.enforced_policies" NOTIN {"*|*|*|*|*"}`,
 					},
 				}
 
@@ -522,13 +580,13 @@ func TestParams(t *testing.T) {
 				require.NoError(t, err)
 
 				err = subject.setCriteria(filters.Criteria{
-					filters.NewWildcard(policyAllPoliciesField, "*_PROFILE_*", true),
+					filters.NewWildcard(policyEnforcedPoliciesField, "*_PROFILE_*", true),
 				}, time.Time{})
 				require.NoError(t, err)
 
 				require.Equal(t, &queryParams{
 					linseedLogSelectionParams: lsv1.LogSelectionParams{
-						Selector: `"policies.all_policies" NOTIN {"*_PROFILE_*"}`,
+						Selector: `"policies.enforced_policies" NOTIN {"*_PROFILE_*"}`,
 					},
 					domainMatches:          map[lsv1.DomainMatchType][]string{lsv1.DomainMatchQname: nil, lsv1.DomainMatchRRSet: nil, lsv1.DomainMatchRRData: nil},
 					linseedQueryParams:     lsv1.QueryParams{Clusters: []string{"fake-cluster"}, AfterKey: map[string]any{"startFrom": 0}},

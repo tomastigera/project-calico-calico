@@ -108,6 +108,8 @@ var _ = DescribeTable("Flows", func(atom Atom, ok bool) {
 	Entry("policies enforced sub key", Atom{Key: "policies.enforced_policies.abc", Value: "123"}, false),
 	Entry("policies pending valid", Atom{Key: "policies.pending_policies", Value: "123"}, true),
 	Entry("policies pending sub key", Atom{Key: "policies.pending_policies.abc", Value: "123"}, false),
+	Entry("policies transit valid", Atom{Key: "policies.transit_policies", Value: "123"}, true),
+	Entry("policies transit sub key", Atom{Key: "policies.transit_policies.abc", Value: "123"}, false),
 	Entry("source_ip ipv4", Atom{Key: "source_ip", Value: "127.0.0.1"}, true),
 	Entry("source_ip ipv6", Atom{Key: "source_ip", Value: "::1"}, true),
 	Entry("source_ip invalid", Atom{Key: "source_ip", Value: "256.0.0.1"}, false),

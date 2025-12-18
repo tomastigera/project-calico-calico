@@ -95,7 +95,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		for _, fl := range fls {
 			for _, flog := range flogs {
 				if reflect.DeepEqual(flog.FlowMeta, fl.FlowMeta) &&
-					reflect.DeepEqual(flog.FlowAllPolicySet, fl.FlowAllPolicySet) &&
+					reflect.DeepEqual(flog.FlowEnforcedPolicySet, fl.FlowEnforcedPolicySet) &&
 					reflect.DeepEqual(flog.FlowExtras, fl.FlowExtras) &&
 					reflect.DeepEqual(flog.FlowLabels, fl.FlowLabels) &&
 					reflect.DeepEqual(flog.FlowProcessReportedStats, fl.FlowProcessReportedStats) {
@@ -890,7 +890,6 @@ func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr ReporterTy
 			SrcLabels: uniquelabels.Make(srcLabels),
 			DstLabels: uniquelabels.Make(dstLabels),
 		},
-		FlowAllPolicySet:      fap,
 		FlowEnforcedPolicySet: fep,
 		FlowPendingPolicySet:  fpp,
 		FlowTransitPolicySet:  fhp,

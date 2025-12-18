@@ -35,6 +35,15 @@
   "policies": {
     "all_policies": [
       "1|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+    ],
+    "enforced_policies": [
+      "1|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+    ],
+    "pending_policies": [
+      "1|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+    ],
+    "transit_policies": [
+      "1|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
     ]
   },
   "bytes_in": 8791,

@@ -1298,7 +1298,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 //
 // np1-1 will pass ingress and egress
 // snp2-1 will be modified within the flush log interval so that:
-// AllPolicies
+// EnforcedPolicies
 // - ingress and egress have no hits - so staged end of tier drop
 // - ingress moved to a staged allow
 // PendingPolicies

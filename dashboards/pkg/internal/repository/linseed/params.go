@@ -20,8 +20,10 @@ import (
 )
 
 const (
-	policyTypeStagedSelector   = `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`
-	policyTypeEnforcedSelector = `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`
+	policyTypeStagedSelector          = `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`
+	policyTypeStagedNegatedSelector   = `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`
+	policyTypeEnforcedSelector        = `"policies.enforced_policies" IN {"*|*|*|*|*"}`
+	policyTypeEnforcedNegatedSelector = `"policies.enforced_policies" NOTIN {"*|*|*|*|*"}`
 )
 
 var (
@@ -139,12 +141,7 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			}
 
 			if c.Field().Name() == collections.FieldNamePolicyType {
-				if (value == collections.FieldPolicyStaged && !c.Negate()) ||
-					(value != collections.FieldPolicyStaged && c.Negate()) {
-
-					return policyTypeStagedSelector, nil
-				}
-				return policyTypeEnforcedSelector, nil
+				return getPolicyTypeSelector(value, c.Negate())
 			}
 		}
 		return selectorEquals(c)
@@ -207,8 +204,16 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 	case *filters.CriterionIn:
 		var selectors []string
 		for _, value := range c.Values() {
-			// TODO: this is only handling string values for now. If it will handle any, refactor selectorEquals
-			selector, err := selectorEqualsString(c, c.Field().Name(), value)
+			var selector string
+			var err error
+
+			if c.Field().Name() == collections.FieldNamePolicyType {
+				selector, err = getPolicyTypeSelector(value, c.Negate())
+			} else {
+				// TODO: this is only handling string values for now. If it will handle any, refactor selectorEquals
+				selector, err = selectorEqualsString(c, c.Field().Name(), value)
+			}
+
 			if err != nil {
 				return "", err
 			}
@@ -262,6 +267,22 @@ func (p *queryParams) setTimeRange(now, from, to time.Time, requestPeriod time.D
 		Now:   &now,
 		Field: timeField,
 	})
+}
+
+func getPolicyTypeSelector(value string, negate bool) (string, error) {
+	switch value {
+	case collections.FieldPolicyStaged:
+		if negate {
+			return policyTypeStagedNegatedSelector, nil
+		}
+		return policyTypeStagedSelector, nil
+	case collections.FieldPolicyEnforced:
+		if negate {
+			return policyTypeEnforcedNegatedSelector, nil
+		}
+		return policyTypeEnforcedSelector, nil
+	}
+	return "", nil
 }
 
 func selectorEquals(c *filters.CriterionEquals) (string, error) {

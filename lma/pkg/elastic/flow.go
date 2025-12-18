@@ -29,6 +29,9 @@ const (
 var (
 	FlowAggregatedTerms = []AggNestedTermInfo{
 		{"policies", "policies", "by_tiered_policy", "policies.all_policies"},
+		{"policies", "policies", "by_tiered_enforced_policy", "policies.enforced_policies"},
+		{"policies", "policies", "by_tiered_pending_policy", "policies.pending_policies"},
+		{"policies", "policies", "by_tiered_transit_policy", "policies.transit_policies"},
 		{"dest_labels", "dest_labels", "by_kvpair", "dest_labels.labels"},
 		{"source_labels", "source_labels", "by_kvpair", "source_labels.labels"},
 	}

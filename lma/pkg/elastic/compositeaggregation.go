@@ -355,12 +355,25 @@ func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.Aggregatio
 			log.Errorf("Error fetching aggregated terms buckets: %s/%s; %#v", name, term, nested.Aggregations[term])
 			continue
 		}
-		t := NewAggregatedTerm(nested.DocCount)
-		for _, b := range buckets.Buckets {
-			t.Buckets[b.Key] = b.DocCount
+		t, exists := cab.AggregatedTerms[name]
+		if !exists {
+			t = NewAggregatedTerm(nested.DocCount)
+			cab.AggregatedTerms[name] = t
 		}
 
-		cab.AggregatedTerms[name] = t
+		if t.MultiTermBuckets == nil {
+			t.MultiTermBuckets = make(map[string]map[interface{}]int64)
+		}
+
+		termBuckets := make(map[interface{}]int64)
+		// Reset legacy buckets to ensure "last one wins" behavior for legacy field
+		t.Buckets = make(map[interface{}]int64)
+
+		for _, b := range buckets.Buckets {
+			termBuckets[b.Key] = b.DocCount
+			t.Buckets[b.Key] = b.DocCount
+		}
+		t.MultiTermBuckets[term] = termBuckets
 	}
 
 	// Extract the aggregated top-level terms.
@@ -494,6 +507,20 @@ func (cout *CompositeAggregationBucket) Aggregate(cin *CompositeAggregationBucke
 		for kinB, vinB := range vin.Buckets {
 			vout.Buckets[kinB] += vinB
 		}
+
+		if len(vin.MultiTermBuckets) > 0 {
+			if vout.MultiTermBuckets == nil {
+				vout.MultiTermBuckets = make(map[string]map[interface{}]int64)
+			}
+			for term, buckets := range vin.MultiTermBuckets {
+				if vout.MultiTermBuckets[term] == nil {
+					vout.MultiTermBuckets[term] = make(map[interface{}]int64)
+				}
+				for k, v := range buckets {
+					vout.MultiTermBuckets[term][k] += v
+				}
+			}
+		}
 	}
 
 	// Aggregated each of the sum aggregations.
@@ -609,6 +636,10 @@ type AggregatedTerm struct {
 	//              ]
 	//            }
 	Buckets map[interface{}]int64
+
+	// MultiTermBuckets contains the buckets for multiple terms under the same nested aggregation.
+	// The key is the term name.
+	MultiTermBuckets map[string]map[interface{}]int64
 }
 
 // TimedOutError is returned when the response indicates a timeout.
@@ -933,23 +964,43 @@ func compositeAggregationBucketToMap(
 
 	// Add in the aggregated terms.
 	for name, value := range bucket.AggregatedTerms {
-		termBuckets := make(sortedTermBucketMaps, 0, len(bucket.AggregatedTerms))
-		for key, count := range value.Buckets {
-			termBuckets = append(termBuckets, map[string]interface{}{
-				"doc_count": count,
-				"key":       key,
-			})
-		}
+		if len(value.MultiTermBuckets) > 0 {
+			nestedMap := map[string]interface{}{
+				"doc_count": value.DocCount,
+			}
+			for term, buckets := range value.MultiTermBuckets {
+				termBuckets := make(sortedTermBucketMaps, 0, len(buckets))
+				for key, count := range buckets {
+					termBuckets = append(termBuckets, map[string]interface{}{
+						"doc_count": count,
+						"key":       key,
+					})
+				}
+				sort.Sort(sort.Reverse(termBuckets))
+				nestedMap[term] = map[string]interface{}{
+					"buckets": termBuckets,
+				}
+			}
+			bucketMap[name] = nestedMap
+		} else {
+			termBuckets := make(sortedTermBucketMaps, 0, len(value.Buckets))
+			for key, count := range value.Buckets {
+				termBuckets = append(termBuckets, map[string]interface{}{
+					"doc_count": count,
+					"key":       key,
+				})
+			}
 
-		// Sort the term buckets in order of doc count. We need this for our UTs.
-		// TODO(rlb): We should also sort on the natural order of the key, but we don't yet have a use case.
-		sort.Sort(sort.Reverse(termBuckets))
+			// Sort the term buckets in order of doc count. We need this for our UTs.
+			// TODO(rlb): We should also sort on the natural order of the key, but we don't yet have a use case.
+			sort.Sort(sort.Reverse(termBuckets))
 
-		bucketMap[name] = map[string]interface{}{
-			"doc_count": value.DocCount,
-			nameTermMappings[name]: map[string]interface{}{
-				"buckets": termBuckets,
-			},
+			bucketMap[name] = map[string]interface{}{
+				"doc_count": value.DocCount,
+				nameTermMappings[name]: map[string]interface{}{
+					"buckets": termBuckets,
+				},
+			}
 		}
 	}
 

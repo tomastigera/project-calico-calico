@@ -203,9 +203,9 @@ var _ = describe.EnterpriseDescribe(
 
 					item := flowLogs[0]
 					// flowlog entries should only have 4 policy string
-					Expect(len(item.Policies.AllPolicies)).To(Equal(5))
+					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(5))
 
-					for _, policyString := range item.Policies.AllPolicies {
+					for _, policyString := range item.Policies.EnforcedPolicies {
 
 						policySections := strings.Split(policyString, "|")
 						fullname := policySections[2]
@@ -285,9 +285,9 @@ var _ = describe.EnterpriseDescribe(
 					item := flowLogs[0]
 
 					// flowlog entries should have 5 policy string (4 defined in this test and one __PROFILE__)
-					Expect(len(item.Policies.AllPolicies)).To(Equal(5))
+					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(5))
 
-					for _, policyString := range item.Policies.AllPolicies {
+					for _, policyString := range item.Policies.EnforcedPolicies {
 						policySections := strings.Split(policyString, "|")
 						fullname := policySections[2]
 						action := policySections[3]

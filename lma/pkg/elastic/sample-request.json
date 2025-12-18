@@ -107,6 +107,21 @@
               "terms": {
                 "field": "policies.all_policies"
               }
+            },
+            "by_tiered_enforced_policy": {
+              "terms": {
+                "field": "policies.enforced_policies"
+              }
+            },
+            "by_tiered_pending_policy": {
+              "terms": {
+                "field": "policies.pending_policies"
+              }
+            },
+            "by_tiered_transit_policy": {
+              "terms": {
+                "field": "policies.transit_policies"
+              }
             }
           }
         },

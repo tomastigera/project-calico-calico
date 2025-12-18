@@ -73,11 +73,6 @@ func makeLogSlice(n int) []*flowlog.FlowLog {
 				Action:     "allow",
 				Reporter:   "src",
 			},
-			FlowAllPolicySet: flowlog.FlowPolicySet{
-				"0|tier1|default/tier1.np1-1|pass|0":            {},
-				"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
-				"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
-			},
 			FlowEnforcedPolicySet: flowlog.FlowPolicySet{
 				"0|tier1|default/tier1.np1-1|pass|0":            {},
 				"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},

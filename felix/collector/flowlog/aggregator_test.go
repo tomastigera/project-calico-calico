@@ -320,7 +320,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
 		flNoTime.FlowLabels = fl.FlowLabels
-		flNoTime.FlowAllPolicySet = fl.FlowAllPolicySet
 		flNoTime.FlowEnforcedPolicySet = fl.FlowEnforcedPolicySet
 		flNoTime.FlowPendingPolicySet = fl.FlowPendingPolicySet
 		flNoTime.FlowTransitPolicySet = fl.FlowTransitPolicySet
@@ -328,7 +327,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 		var expFlowNoProc FlowLog
 		expFlowNoProc.FlowMeta = expectedFlow.FlowMeta
 		expFlowNoProc.FlowLabels = expectedFlow.FlowLabels
-		expFlowNoProc.FlowAllPolicySet = expectedFlow.FlowAllPolicySet
 		expFlowNoProc.FlowEnforcedPolicySet = expectedFlow.FlowEnforcedPolicySet
 		expFlowNoProc.FlowPendingPolicySet = expectedFlow.FlowPendingPolicySet
 		expFlowNoProc.FlowTransitPolicySet = expectedFlow.FlowTransitPolicySet
@@ -344,7 +342,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			flNoTime := FlowLog{}
 			flNoTime.FlowMeta = fl.FlowMeta
 			flNoTime.FlowLabels = fl.FlowLabels
-			flNoTime.FlowAllPolicySet = fl.FlowAllPolicySet
 			flNoTime.FlowEnforcedPolicySet = fl.FlowEnforcedPolicySet
 			flNoTime.FlowPendingPolicySet = fl.FlowPendingPolicySet
 			flNoTime.FlowTransitPolicySet = fl.FlowTransitPolicySet
