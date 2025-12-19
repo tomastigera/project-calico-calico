@@ -26,7 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/windows-networking/pkg/testutils"
@@ -224,7 +223,7 @@ func getDatastoreFelixConfig(client clientv3.Interface) (*apiv3.FelixConfigurati
 func (f *WinFV) AddConfigItems(configs map[string]any) error {
 	if IsRunningHPC() {
 		c, err := f.GetDatastoreFelixConfig()
-		logrus.WithFields(logrus.Fields{"felixconfiguration": c, "adding configs": configs}).Info("Updating FelixConfiguration")
+		log.WithFields(log.Fields{"felixconfiguration": c, "adding configs": configs}).Info("Updating FelixConfiguration")
 		val := reflect.ValueOf(&c.Spec).Elem()
 		for key, value := range configs {
 			// Get the field by name within the struct
