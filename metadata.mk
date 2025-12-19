@@ -6,8 +6,9 @@
 GO_BUILD_VER=1.25.5-llvm18.1.8-k8s1.34.2
 RUST_BUILD_VER=1.91.1
 
-CALICO_BASE_VER=ubi9-1764972441
-CALICO_BASE_UBI10_VER=ubi10-1764972441
+# Calico Enterprise shipping images now builds on UBI 10. For Calico OSS to Enterprise merges,
+# please don't downgrade the base image back to UBI 9.
+CALICO_BASE_VER=ubi10-1765220429
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
