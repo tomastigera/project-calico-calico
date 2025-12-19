@@ -451,7 +451,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, w[0][0].IP, "8090", tc.Felixes, true)
 
 						By("waiting for deny policy to be programmed")
-						Eventually(tablesWaitForPolicyFn("default.policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
+						Eventually(tablesWaitForPolicyFn("gnp/policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
 
 						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -511,7 +511,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						By("waiting for deny policy to be programmed")
-						Eventually(tablesWaitForPolicyFn("default.policy-deny-1-1", tc.Felixes[1]), "10s", "1s").Should(Succeed())
+						Eventually(tablesWaitForPolicyFn("gnp/policy-deny-1-1", tc.Felixes[1]), "10s", "1s").Should(Succeed())
 
 						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -556,7 +556,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						By("waiting for deny policy to be programmed")
-						Eventually(tablesWaitForPolicyFn("default.policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
+						Eventually(tablesWaitForPolicyFn("gnp/policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
 
 						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -602,7 +602,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						By("waiting for deny policy to be programmed")
-						Eventually(tablesWaitForPolicyFn("default.policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
+						Eventually(tablesWaitForPolicyFn("gnp/policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
 
 						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -793,7 +793,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						})
 
 						By("waiting for deny policy to be programmed")
-						Eventually(tablesWaitForPolicyFn("default.policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
+						Eventually(tablesWaitForPolicyFn("gnp/policy-deny-1-1", tc.Felixes[0]), "10s", "1s").Should(Succeed())
 
 						cc.Expect(None, w[0][0], TargetIP(tc.Felixes[0].IP), opts...)
 						cc.Expect(None, w[0][1], TargetIP(tc.Felixes[0].IP), opts...)

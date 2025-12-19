@@ -219,7 +219,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	})
 
 	It("handles: no policy -> single policy that drops all in namespace ns1", func() {
-
 		By("Having no policy before")
 		rdBefore := &policycalc.ResourceData{
 			Tiers:      policycalc.Tiers{},
@@ -339,7 +338,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy ingress allows all for ns1", func() {
-
 		By("Having a single drop all in namespace ns1 policy")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
@@ -411,7 +409,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy egress allows all for ns1", func() {
-
 		By("Having a single drop all in namespace ns1 policy")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
@@ -484,7 +481,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	})
 
 	It("handles: multiple tiers", func() {
-
 		By("Having no resources before")
 		rdBefore := &policycalc.ResourceData{
 			Tiers:      policycalc.Tiers{},
@@ -494,8 +490,10 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Adding a bunch of policies across multiple tiers")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{
-				{{CalicoV3Policy: tier1Policy1, ResourceID: resources.GetResourceID(tier1Policy1)},
-					{CalicoV3Policy: tier1Policy2, ResourceID: resources.GetResourceID(tier1Policy2)}},
+				{
+					{CalicoV3Policy: tier1Policy1, ResourceID: resources.GetResourceID(tier1Policy1)},
+					{CalicoV3Policy: tier1Policy2, ResourceID: resources.GetResourceID(tier1Policy2)},
+				},
 				{{CalicoV3Policy: tier2Policy1, ResourceID: resources.GetResourceID(tier2Policy1)}},
 				{{CalicoV3Policy: tier3Policy4, ResourceID: resources.GetResourceID(tier3Policy4)}},
 			},
@@ -558,8 +556,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Policies).To(HaveLen(1))
 		Expect(after.Policies).To(HaveLen(1))
-		Expect(before.Policies[0].FullName()).To(Equal("__PROFILE__.kns.ns2"))
-		Expect(after.Policies[0].FullName()).To(Equal("tier1.policy1"))
+		Expect(before.Policies[0].Name()).To(Equal("kns.ns2"))
+		Expect(after.Policies[0].Name()).To(Equal("tier1.policy1"))
 		Expect(modified).To(BeTrue())
 
 		f.Reporter = api.ReporterTypeDestination
@@ -631,7 +629,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	})
 
 	It("handles: pod source and destination info filled in from cache", func() {
-
 		By("Having a policy that denies all")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
@@ -796,7 +793,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Checking action not matching")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1)},
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			},
 			[]api.PolicyHit{
 				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
 			}),
@@ -812,7 +810,6 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 				mustCreatePolicyHit("3|tier|ns1/tier.policy|deny", 1),
 			}),
 		).To(BeFalse())
-
 	})
 
 	It("Compares policy hits for before and after [ignores staged]", func() {

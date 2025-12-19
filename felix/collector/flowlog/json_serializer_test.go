@@ -72,7 +72,6 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: uniquelabels.Make(map[string]string{"foo": "bar", "foo2": "bar2"}),
 				DstLabels: uniquelabels.Make(map[string]string{"foo": "bar", "foo2": "bar2"}),
 			},
-			FlowAllPolicySet:      policies,
 			FlowEnforcedPolicySet: policies,
 			FlowPendingPolicySet:  pendingPolicies,
 			FlowTransitPolicySet:  transitPolicies,

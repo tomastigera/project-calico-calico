@@ -491,7 +491,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 					// Hence a longer wait time.
 					if BPFMode() {
 						Eventually(func() bool {
-							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+							return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 						}, "20s", "200ms").Should(BeTrue())
 					} else {
 						time.Sleep(2 * time.Second)
@@ -659,7 +659,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 							Expect(err).NotTo(HaveOccurred())
 							if BPFMode() {
 								Eventually(func() bool {
-									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+									return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 								}, "2s", "200ms").Should(BeTrue())
 							}
 						})
@@ -713,7 +713,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 							Expect(err).NotTo(HaveOccurred())
 							if BPFMode() {
 								Eventually(func() bool {
-									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+									return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 								}, "2s", "200ms").Should(BeTrue())
 							}
 						})
@@ -775,7 +775,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy (scapy tests)", 
 					Expect(err).NotTo(HaveOccurred())
 					if BPFMode() {
 						Eventually(func() bool {
-							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+							return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "allow-xyz", "allow", true)
 						}, "2s", "200ms").Should(BeTrue())
 					}
 				})

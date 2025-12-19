@@ -360,10 +360,12 @@ func ParsedRulesToActivePolicyUpdate(key model.PolicyKey, rules *ParsedRules) *p
 	}
 	return &proto.ActivePolicyUpdate{
 		Id: &proto.PolicyID{
-			Tier: key.Tier,
-			Name: key.Name,
+			Name:      key.Name,
+			Namespace: key.Namespace,
+			Kind:      key.Kind,
 		},
 		Policy: &proto.Policy{
+			Tier:      rules.Tier,
 			Namespace: rules.Namespace,
 			InboundRules: parsedRulesToProtoRules(
 				rules.InboundRules,
@@ -392,8 +394,9 @@ func (buf *EventSequencer) flushPolicyDeletes() {
 	for item := range buf.pendingPolicyDeletes.All() {
 		buf.Callback(&proto.ActivePolicyRemove{
 			Id: &proto.PolicyID{
-				Tier: item.Tier,
-				Name: item.Name,
+				Name:      item.Name,
+				Namespace: item.Namespace,
+				Kind:      item.Kind,
 			},
 		})
 		buf.sentPolicies.Discard(item)
@@ -1589,11 +1592,16 @@ func cidrToIPPoolID(cidr ip.CIDR) string {
 }
 
 func addPolicyToTierInfo(pol *PolKV, tierInfo *proto.TierInfo, egressAllowed bool) {
+	id := proto.PolicyID{
+		Name:      pol.Key.Name,
+		Namespace: pol.Key.Namespace,
+		Kind:      pol.Key.Kind,
+	}
 	if pol.GovernsIngress() {
-		tierInfo.IngressPolicies = append(tierInfo.IngressPolicies, pol.Key.Name)
+		tierInfo.IngressPolicies = append(tierInfo.IngressPolicies, &id)
 	}
 	if egressAllowed && pol.GovernsEgress() {
-		tierInfo.EgressPolicies = append(tierInfo.EgressPolicies, pol.Key.Name)
+		tierInfo.EgressPolicies = append(tierInfo.EgressPolicies, &id)
 	}
 }
 

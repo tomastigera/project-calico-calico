@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -54,6 +55,7 @@ var (
 // Common RuleID definitions
 var (
 	ingressRule1Allow = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy1",
 		"",
@@ -63,6 +65,7 @@ var (
 	)
 
 	egressRule2Deny = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"default",
 		"policy2",
 		"",
@@ -72,6 +75,7 @@ var (
 	)
 
 	ingressRule3Pass = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"bar",
 		"policy3",
 		"",
@@ -81,6 +85,7 @@ var (
 	)
 
 	egressRule3Pass = calc.NewRuleID(
+		v3.KindGlobalNetworkPolicy,
 		"bar",
 		"policy3",
 		"",
@@ -319,6 +324,7 @@ func (mt *mockTime) getMockTime() time.Duration {
 	val := atomic.LoadInt64(&mt.val)
 	return time.Duration(val)
 }
+
 func (mt *mockTime) incMockTime(inc time.Duration) {
 	atomic.AddInt64(&mt.val, int64(inc))
 }

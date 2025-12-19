@@ -514,18 +514,42 @@ func (c *policiesCache) orderPolicies() {
 }
 
 func (c *policiesCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
-	parts := strings.Split(key.Name, "/")
-	if len(parts) == 1 {
-		return c.globalNetworkPolicies.policies[model.ResourceKey{
+	switch key.Kind {
+	case apiv3.KindStagedGlobalNetworkPolicy:
+		// We merge all staged policies into their enforced counterparts in the cache. Staged policies
+		// receive a "staged:" prefix on their name to disambiguate them.
+		// TODO: Refactor to use the "real" name and rely on key.Kind to disambiguate. See
+		// StagedToEnforcedConversion in staged.go for the corresponding conversion.
+		log.WithField("key", key).Debug("Looking for staged policy - merged into enforced policy")
+		key.Name = "staged:" + key.Name
+		fallthrough
+	case apiv3.KindGlobalNetworkPolicy:
+		v3k := model.ResourceKey{
 			Kind: apiv3.KindGlobalNetworkPolicy,
-			Name: parts[0],
-		}]
+			Name: key.Name,
+		}
+		log.WithField("v3key", v3k).Debug("Looking for global network policy")
+		return c.globalNetworkPolicies.policies[v3k]
+	case apiv3.KindStagedNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicy:
+		// We merge all staged policies into their enforced counterparts in the cache. Staged policies
+		// receive a "staged:" prefix on their name to disambiguate them.
+		// TODO: Refactor to use the "real" name and rely on key.Kind to disambiguate. See
+		// StagedToEnforcedConversion in staged.go for the corresponding conversion.
+		log.WithField("key", key).Debug("Looking for staged policy - merged into enforced policy")
+		key.Name = "staged:" + key.Name
+		fallthrough
+	case apiv3.KindNetworkPolicy:
+		v3k := model.ResourceKey{
+			Kind:      apiv3.KindNetworkPolicy,
+			Namespace: key.Namespace,
+			Name:      key.Name,
+		}
+		log.WithField("v3key", v3k).Debug("Looking for network policy")
+		return c.networkPoliciesByNamespace[key.Namespace].policies[v3k]
+	default:
+		log.WithField("key", key).Error("Unexpected resource in event type, expecting a v3 policy type")
 	}
-	return c.networkPoliciesByNamespace[parts[0]].policies[model.ResourceKey{
-		Kind:      apiv3.KindNetworkPolicy,
-		Namespace: parts[0],
-		Name:      parts[1],
-	}]
+	return nil
 }
 
 func (c *policiesCache) getPolicy(key model.Key) *policyData {
@@ -685,7 +709,7 @@ func (d *policyData) GetResourceType() api.Resource {
 	name := cachedResource.GetObjectMeta().GetName()
 	kind := cachedResource.GetObjectKind().GroupVersionKind().Kind
 
-	isStaged := model.PolicyIsStaged(name)
+	isStaged := model.KindIsStaged(kind)
 	isK8s := strings.Contains(name, "knp")
 	isGlobal := kind == apiv3.KindGlobalNetworkPolicy
 
@@ -750,7 +774,6 @@ func (d *policyData) IsKubernetesType() (bool, error) {
 	}
 
 	return false, nil
-
 }
 
 // tierData is used to hold policy data in the cache, and also implements the Policy interface

@@ -1782,16 +1782,16 @@ func qcStagedAdnDefaultTierAdjustment(p *client.Policy) {
 		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
 			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
 		}
-		p.Name = model.PolicyNamePrefixStaged + p.Name
 		p.Kind = apiv3.KindNetworkPolicy
+		p.Name = "staged:" + p.Name
 	case apiv3.KindStagedGlobalNetworkPolicy:
 		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
 			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
 		}
-		p.Name = model.PolicyNamePrefixStaged + p.Name
 		p.Kind = apiv3.KindGlobalNetworkPolicy
+		p.Name = "staged:" + p.Name
 	case apiv3.KindStagedKubernetesNetworkPolicy:
-		p.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p.Name
+		p.Name = "staged:" + names.K8sNetworkPolicyNamePrefix + p.Name
 		p.Kind = apiv3.KindNetworkPolicy
 	}
 }
@@ -1957,13 +1957,13 @@ func stagedResourceKey(res resourcemgr.ResourceObject) model.ResourceKey {
 	if res.GetObjectKind().GroupVersionKind().Kind == apiv3.KindStagedKubernetesNetworkPolicy {
 		return model.ResourceKey{
 			Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-			Name:      model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + res.GetObjectMeta().GetName(),
+			Name:      "staged:" + names.K8sNetworkPolicyNamePrefix + res.GetObjectMeta().GetName(),
 			Namespace: res.GetObjectMeta().GetNamespace(),
 		}
 	}
 	return model.ResourceKey{
 		Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-		Name:      model.PolicyNamePrefixStaged + res.GetObjectMeta().GetName(),
+		Name:      "staged:" + res.GetObjectMeta().GetName(),
 		Namespace: res.GetObjectMeta().GetNamespace(),
 	}
 }

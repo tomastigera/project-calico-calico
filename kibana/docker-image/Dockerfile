@@ -1,10 +1,10 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI10
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.18.8-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
+FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
@@ -60,7 +60,7 @@ COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
 COPY --from=kibana /usr/share/fonts /usr/share/fonts/
 COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
-FROM ${CALICO_BASE_UBI10}
+FROM ${CALICO_BASE}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

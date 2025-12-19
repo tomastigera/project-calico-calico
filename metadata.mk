@@ -6,25 +6,26 @@
 GO_BUILD_VER=1.25.5-llvm18.1.8-k8s1.34.2
 RUST_BUILD_VER=1.91.1
 
-CALICO_BASE_VER=ubi9-1764972441
-CALICO_BASE_UBI10_VER=ubi10-1764972441
+# Calico Enterprise shipping images now builds on UBI 10. For Calico OSS to Enterprise merges,
+# please don't downgrade the base image back to UBI 9.
+CALICO_BASE_VER=ubi10-1765220429
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
 
 # Version of Kubernetes to use for tests, rancher/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
-K8S_VERSION=v1.34.1
+K8S_VERSION=v1.34.2
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-CRANE_VERSION := v0.20.6
+CRANE_VERSION=v0.20.7
 ETCD_VERSION=v3.5.24
 GHR_VERSION=v0.17.0
 GITHUB_CLI_VERSION=2.76.2
 GOTESTSUM_VERSION=v1.12.3
 HELM_VERSION=v3.16.4
-KINDEST_NODE_VERSION=v1.34.0
+KINDEST_NODE_VERSION=v1.34.2
 KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
 KIND_VERSION=v0.29.0
 

@@ -137,7 +137,7 @@ else
     THIRD_PARTY_REGISTRY?=gcr.io/tigera-dev/third-party-ci
 endif
 
-THIRD_PARTY_BASE_IMAGES_TO_RETAG = elasticsearch fluentd-base kibana snort3
+THIRD_PARTY_BASE_IMAGES_TO_RETAG = elasticsearch fluentd-base istio-ztunnel kibana snort3
 release-retag-third-party-base-images: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
 	$(MAKE) $(addprefix release-retag-third-party-base-images-,$(THIRD_PARTY_BASE_IMAGES_TO_RETAG))
 
@@ -355,7 +355,6 @@ CALICO_BASE ?= $(UBI_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
-CALICO_BASE_UBI10 ?= calico/base:$(CALICO_BASE_UBI10_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -368,7 +367,6 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
-	--build-arg CALICO_BASE_UBI10=$(CALICO_BASE_UBI10) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
@@ -551,7 +549,7 @@ endef
 
 # update_calico_base_pin updates the CALICO_BASE_VER in metadata.mk.
 define update_calico_base_pin
-	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi9-[0-9]+$$" | sort -r | head -n 1))
+	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi10-[0-9]+$$" | sort -r | head -n 1))
 	$(eval old_ver := $(shell grep -E "^CALICO_BASE_VER" $(1) | cut -d'=' -f2 | xargs))
 
 	@echo "current CALICO_BASE_VER=$(old_ver)"
@@ -560,7 +558,6 @@ define update_calico_base_pin
 	bash -c '\
 		if [[ "$(new_ver)" > "$(old_ver)" ]]; then \
 			sed -i "s/^CALICO_BASE_VER[[:space:]]*=.*/CALICO_BASE_VER=$(new_ver)/" $(1); \
-			sed -i "s/^CALICO_BASE_UBI10_VER[[:space:]]*=.*/CALICO_BASE_UBI10_VER=$(subst ubi9,ubi10,$(new_ver))/" $(1); \
 			echo "CALICO_BASE_VER is updated to $(new_ver)"; \
 		else \
 			echo "no need to update CALICO_BASE_VER"; \

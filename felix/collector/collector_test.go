@@ -7,12 +7,12 @@ package collector
 import (
 	"fmt"
 	net2 "net"
-	"strings"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	googleproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kapiv1 "k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -88,12 +88,12 @@ var (
 )
 
 var (
-	node1 = &v3.Node{
+	node1 = &libapiv3.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "node1",
 		},
-		Spec: v3.NodeSpec{
-			Addresses: []v3.NodeAddress{
+		Spec: libapiv3.NodeSpec{
+			Addresses: []libapiv3.NodeAddress{
 				{
 					Address: "192.168.55.55",
 				},
@@ -181,13 +181,20 @@ var (
 		CommonEndpointData: calc.CalculateCommonEndpointData(localWlEPKey1, localWlEp1),
 		Ingress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "policy1", Tier: "default"}: 0,
-				{Name: "policy2", Tier: "default"}: 0,
+				{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 			},
 			TierData: map[string]*calc.TierData{
 				"default": {
-					TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-						rules.RuleDirIngress, rules.RuleActionDeny),
+					TierDefaultActionRuleID: calc.NewRuleID(
+						v3.KindGlobalNetworkPolicy,
+						"default",
+						"policy2",
+						"",
+						calc.RuleIndexTierDefaultAction,
+						rules.RuleDirIngress,
+						rules.RuleActionDeny,
+					),
 					EndOfTierMatchIndex: 0,
 				},
 			},
@@ -195,13 +202,20 @@ var (
 		},
 		Egress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "policy1", Tier: "default"}: 0,
-				{Name: "policy2", Tier: "default"}: 0,
+				{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 			},
 			TierData: map[string]*calc.TierData{
 				"default": {
-					TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-						rules.RuleDirIngress, rules.RuleActionDeny),
+					TierDefaultActionRuleID: calc.NewRuleID(
+						v3.KindGlobalNetworkPolicy,
+						"default",
+						"policy2",
+						"",
+						calc.RuleIndexTierDefaultAction,
+						rules.RuleDirIngress,
+						rules.RuleActionDeny,
+					),
 					EndOfTierMatchIndex: 0,
 				},
 			},
@@ -212,13 +226,20 @@ var (
 		CommonEndpointData: calc.CalculateCommonEndpointData(localWlEPKey2, localWlEp2),
 		Ingress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "policy1", Tier: "default"}: 0,
-				{Name: "policy2", Tier: "default"}: 0,
+				{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 			},
 			TierData: map[string]*calc.TierData{
 				"default": {
-					TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-						rules.RuleDirIngress, rules.RuleActionDeny),
+					TierDefaultActionRuleID: calc.NewRuleID(
+						v3.KindGlobalNetworkPolicy,
+						"default",
+						"policy2",
+						"",
+						calc.RuleIndexTierDefaultAction,
+						rules.RuleDirIngress,
+						rules.RuleActionDeny,
+					),
 					EndOfTierMatchIndex: 0,
 				},
 			},
@@ -226,13 +247,20 @@ var (
 		},
 		Egress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "policy1", Tier: "default"}: 0,
-				{Name: "policy2", Tier: "default"}: 0,
+				{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 			},
 			TierData: map[string]*calc.TierData{
 				"default": {
-					TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-						rules.RuleDirIngress, rules.RuleActionDeny),
+					TierDefaultActionRuleID: calc.NewRuleID(
+						v3.KindGlobalNetworkPolicy,
+						"default",
+						"policy2",
+						"",
+						calc.RuleIndexTierDefaultAction,
+						rules.RuleDirIngress,
+						rules.RuleActionDeny,
+					),
 					EndOfTierMatchIndex: 0,
 				},
 			},
@@ -317,36 +345,44 @@ var (
 		CommonEndpointData: calc.CalculateCommonEndpointData(hepEPKey1, hepEP1),
 		Ingress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "hep-policy1", Tier: "hep-tier"}: 0,
-				{Name: "hep-policy2", Tier: "hep-tier"}: 1,
+				{Name: "hep-policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "hep-policy2", Kind: v3.KindGlobalNetworkPolicy}: 1,
 			},
 		},
 		Egress: &calc.MatchData{
 			PolicyMatches: map[calc.PolicyID]int{
-				{Name: "hep-policy1", Tier: "hep-tier"}: 0,
-				{Name: "hep-policy2", Tier: "hep-tier"}: 1,
+				{Name: "hep-policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+				{Name: "hep-policy2", Kind: v3.KindGlobalNetworkPolicy}: 1,
 			},
 		},
 	}
 )
 
+func toprefix(s string) [64]byte {
+	p := [64]byte{}
+	copy(p[:], []byte(s))
+	return p
+}
+
 // Nflog prefix test parameters
 var (
-	defTierAllowIngressNFLOGPrefix = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	defTierAllowEgressNFLOGPrefix  = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	defTierDenyIngressNFLOGPrefix  = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	defTierDenyEgressNFLOGPrefix   = [64]byte{'D', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	hepTierAllowIngressNFLOGPrefix = [64]byte{'A', 'P', 'I', '3', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	hepTierAllowEgressNFLOGPrefix  = [64]byte{'A', 'P', 'E', '0', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	hepTierDenyIngressNFLOGPrefix  = [64]byte{'D', 'P', 'I', '2', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
-	hepTierDenyEgressNFLOGPrefix   = [64]byte{'D', 'P', 'E', '1', '|', 'h', 'e', 'p', '-', 't', 'i', 'e', 'r', '.', 'h', 'e', 'p', '-', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	defTierAllowIngressNFLOGPrefix = toprefix("API0|gnp/policy1")
+	defTierAllowEgressNFLOGPrefix  = toprefix("APE0|gnp/policy1")
+	defTierDenyIngressNFLOGPrefix  = toprefix("DPI0|gnp/policy2")
+	defTierDenyEgressNFLOGPrefix   = toprefix("DPE0|gnp/policy2")
+
+	hepTierAllowIngressNFLOGPrefix = toprefix("API3|gnp/hep-policy1")
+	hepTierAllowEgressNFLOGPrefix  = toprefix("APE0|gnp/hep-policy1")
+	hepTierDenyIngressNFLOGPrefix  = toprefix("DPI2|gnp/hep-policy1")
+	hepTierDenyEgressNFLOGPrefix   = toprefix("DPE1|gnp/hep-policy1")
 
 	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "policy1",
 			Namespace: "",
 		},
+		Tier:      "default",
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionAllow,
@@ -354,10 +390,11 @@ var (
 	}
 	defTierPolicy1AllowEgressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "policy1",
 			Namespace: "",
 		},
+		Tier:      "default",
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionAllow,
@@ -365,10 +402,11 @@ var (
 	}
 	defTierPolicy2DenyIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "policy2",
 			Namespace: "",
 		},
+		Tier:      "default",
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionDeny,
@@ -376,10 +414,11 @@ var (
 	}
 	defTierPolicy2DenyEgressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "default",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "policy2",
 			Namespace: "",
 		},
+		Tier:      "default",
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionDeny,
@@ -387,10 +426,11 @@ var (
 	}
 	tierHepPolicy1AllowIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "hep-tier",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "hep-policy1",
 			Namespace: "",
 		},
+		Tier:      "hep-tier",
 		Index:     3,
 		IndexStr:  "3",
 		Action:    rules.RuleActionAllow,
@@ -398,10 +438,11 @@ var (
 	}
 	tierHepPolicy1DenyIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "hep-tier",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "hep-policy1",
 			Namespace: "",
 		},
+		Tier:      "hep-tier",
 		Index:     2,
 		IndexStr:  "2",
 		Action:    rules.RuleActionDeny,
@@ -409,10 +450,11 @@ var (
 	}
 	tierHepPolicy1AllowEgressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "hep-tier",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "hep-policy1",
 			Namespace: "",
 		},
+		Tier:      "hep-tier",
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionAllow,
@@ -420,10 +462,11 @@ var (
 	}
 	tierHepPolicy1DenyEgressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Tier:      "hep-tier",
+			Kind:      v3.KindGlobalNetworkPolicy,
 			Name:      "hep-policy1",
 			Namespace: "",
 		},
+		Tier:      "hep-tier",
 		Index:     1,
 		IndexStr:  "1",
 		Action:    rules.RuleActionDeny,
@@ -462,6 +505,7 @@ var egressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var egressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	egressPktAllowNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -605,6 +649,7 @@ var localPktIngressNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var localPktIngress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktIngressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -618,6 +663,7 @@ var localPktIngress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggre
 		Tuple: localPktIngressNflogTuple,
 	},
 }
+
 var localPktHepIngressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktIngressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -631,6 +677,7 @@ var localPktHepIngressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPack
 		Tuple: localPktIngressNflogTuple,
 	},
 }
+
 var localPktHepIngressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktIngressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -644,6 +691,7 @@ var localPktHepIngressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPac
 		Tuple: localPktIngressNflogTuple,
 	},
 }
+
 var localPktHepEgressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktIngressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -657,6 +705,7 @@ var localPktHepEgressDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacke
 		Tuple: localPktIngressNflogTuple,
 	},
 }
+
 var localPktHepEgressAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktIngressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -709,10 +758,10 @@ var localPktEgressNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var localPktEgress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktEgressNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
-
 			{
 				Prefix:  defTierAllowEgressNFLOGPrefix,
 				Len:     20,
@@ -733,6 +782,7 @@ var localPktEgressDeniedPreDNATNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPortDNAT},
 }
+
 var localPktEgressDeniedPreDNAT = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktEgressDeniedPreDNATNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -757,6 +807,7 @@ var localPktEgressAllowedPreDNATNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var localPktEgressAllowedPreDNAT = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	localPktEgressAllowedPreDNATNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -804,7 +855,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*v3.Node{
+			nodeMap := map[string]*libapiv3.Node{
 				"node1": node1,
 			}
 
@@ -864,7 +915,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*v3.Node{
+			nodeMap := map[string]*libapiv3.Node{
 				"node1": node1,
 			}
 
@@ -925,7 +976,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*v3.Node{
+			nodeMap := map[string]*libapiv3.Node{
 				"node1": node1,
 			}
 
@@ -958,7 +1009,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*v3.Node{
+				nodeMap := map[string]*libapiv3.Node{
 					"node1": node1,
 				}
 
@@ -995,7 +1046,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*v3.Node{
+				nodeMap := map[string]*libapiv3.Node{
 					"node1": node1,
 				}
 
@@ -1032,7 +1083,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*v3.Node{
+				nodeMap := map[string]*libapiv3.Node{
 					"node1": node1,
 				}
 
@@ -1070,7 +1121,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*v3.Node{
+				nodeMap := map[string]*libapiv3.Node{
 					"node1": node1,
 				}
 
@@ -1174,6 +1225,7 @@ var podProxyEgressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var podProxyEgressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	podProxyEgressPktAllowNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -1195,6 +1247,7 @@ var proxyBackendIngressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
 	L4Src: nfnetlink.NflogL4Info{Port: proxyPort},
 	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
+
 var proxyBackendIngressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
 	proxyBackendIngressPktAllowNflogTuple: {
 		Prefixes: []nfnetlink.NflogPrefix{
@@ -1214,58 +1267,62 @@ func convertCtEntry(e nfnetlink.CtEntry, markProxy uint32) clttypes.ConntrackInf
 	return i
 }
 
-var alpEntryHTTPReqAllowed = 12
-var alpEntryHTTPReqDenied = 130
-var inALPEntry = proto.DataplaneStats{
-	SrcIp:   remoteIp1Str,
-	DstIp:   localIp1Str,
-	SrcPort: int32(srcPort),
-	DstPort: int32(dstPort),
-	Protocol: &proto.Protocol{
-		NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
-	},
-	Stats: []*proto.Statistic{
-		{
-			Direction:  proto.Statistic_IN,
-			Relativity: proto.Statistic_DELTA,
-			Kind:       proto.Statistic_HTTP_REQUESTS,
-			Action:     proto.Action_ALLOWED,
-			Value:      int64(alpEntryHTTPReqAllowed),
+var (
+	alpEntryHTTPReqAllowed = 12
+	alpEntryHTTPReqDenied  = 130
+	inALPEntry             = proto.DataplaneStats{
+		SrcIp:   remoteIp1Str,
+		DstIp:   localIp1Str,
+		SrcPort: int32(srcPort),
+		DstPort: int32(dstPort),
+		Protocol: &proto.Protocol{
+			NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
 		},
-		{
-			Direction:  proto.Statistic_IN,
-			Relativity: proto.Statistic_DELTA,
-			Kind:       proto.Statistic_HTTP_REQUESTS,
-			Action:     proto.Action_DENIED,
-			Value:      int64(alpEntryHTTPReqDenied),
+		Stats: []*proto.Statistic{
+			{
+				Direction:  proto.Statistic_IN,
+				Relativity: proto.Statistic_DELTA,
+				Kind:       proto.Statistic_HTTP_REQUESTS,
+				Action:     proto.Action_ALLOWED,
+				Value:      int64(alpEntryHTTPReqAllowed),
+			},
+			{
+				Direction:  proto.Statistic_IN,
+				Relativity: proto.Statistic_DELTA,
+				Kind:       proto.Statistic_HTTP_REQUESTS,
+				Action:     proto.Action_DENIED,
+				Value:      int64(alpEntryHTTPReqDenied),
+			},
 		},
-	},
-}
+	}
+)
 
-var dpStatsHTTPDataValue = 23
-var dpStatsEntryWithFwdFor = &proto.DataplaneStats{
-	SrcIp:   remoteIp1Str,
-	DstIp:   localIp1Str,
-	SrcPort: int32(srcPort),
-	DstPort: int32(dstPort),
-	Protocol: &proto.Protocol{
-		NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
-	},
-	Stats: []*proto.Statistic{
-		{
-			Direction:  proto.Statistic_IN,
-			Relativity: proto.Statistic_DELTA,
-			Kind:       proto.Statistic_INGRESS_DATA,
-			Action:     proto.Action_ALLOWED,
-			Value:      int64(dpStatsHTTPDataValue),
+var (
+	dpStatsHTTPDataValue   = 23
+	dpStatsEntryWithFwdFor = &proto.DataplaneStats{
+		SrcIp:   remoteIp1Str,
+		DstIp:   localIp1Str,
+		SrcPort: int32(srcPort),
+		DstPort: int32(dstPort),
+		Protocol: &proto.Protocol{
+			NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
 		},
-	},
-	HttpData: []*proto.HTTPData{
-		{
-			XForwardedFor: publicIP1Str,
+		Stats: []*proto.Statistic{
+			{
+				Direction:  proto.Statistic_IN,
+				Relativity: proto.Statistic_DELTA,
+				Kind:       proto.Statistic_INGRESS_DATA,
+				Action:     proto.Action_ALLOWED,
+				Value:      int64(dpStatsHTTPDataValue),
+			},
 		},
-	},
-}
+		HttpData: []*proto.HTTPData{
+			{
+				XForwardedFor: publicIP1Str,
+			},
+		},
+	}
+)
 
 var outCtEntry = nfnetlink.CtEntry{
 	OriginalTuple: nfnetlink.CtTuple{
@@ -1468,7 +1525,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		nodes := map[string]*v3.Node{
+		nodes := map[string]*libapiv3.Node{
 			"node1": node1,
 		}
 		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
@@ -1904,6 +1961,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(localCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
+
 	Describe("Test conntrack TCP Protoinfo State", func() {
 		It("Handle TCP conntrack entries with TCP state TIME_WAIT after NFLOGs gathered", func() {
 			By("handling a conntrack update to start tracking stats for tuple")
@@ -1964,6 +2022,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntryStateTimeWait, 0)}
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
 		})
+
 		It("Handle TCP conntrack entries with TCP state TIME_WAIT before NFLOGs gathered", func() {
 			By("handling a conntrack update to start tracking stats for tuple")
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
@@ -2079,17 +2138,18 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
 			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
-				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{{
-						Name:     "test",
-						Protocol: kapiv1.ProtocolTCP,
-						Port:     int32(dstPortDNAT),
-					}},
-					ClusterIP: "192.168.0.2",
-					ClusterIPs: []string{
-						"192.168.0.2",
+				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{{
+							Name:     "test",
+							Protocol: kapiv1.ProtocolTCP,
+							Port:     int32(dstPortDNAT),
+						}},
+						ClusterIP: "192.168.0.2",
+						ClusterIPs: []string{
+							"192.168.0.2",
+						},
 					},
-				},
 				},
 			}, nil)
 
@@ -2114,17 +2174,18 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
 			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
-				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{{
-						Name:     "test",
-						Protocol: kapiv1.ProtocolTCP,
-						Port:     int32(dstPortDNAT),
-					}},
-					ClusterIP: "192.168.0.2",
-					ClusterIPs: []string{
-						"192.168.0.2",
+				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{{
+							Name:     "test",
+							Protocol: kapiv1.ProtocolTCP,
+							Port:     int32(dstPortDNAT),
+						}},
+						ClusterIP: "192.168.0.2",
+						ClusterIPs: []string{
+							"192.168.0.2",
+						},
 					},
-				},
 				},
 			}, nil)
 
@@ -2289,22 +2350,9 @@ var _ = Describe("Conntrack Datasource", func() {
 })
 
 func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
-	var (
-		name  string
-		byt64 [64]byte
-	)
-
-	if r.Namespace != "" {
-		if strings.HasPrefix(r.Name, "knp.default.") {
-			name = fmt.Sprintf("%s/%s", r.Namespace, r.Name)
-		} else {
-			name = fmt.Sprintf("%s/%s.%s", r.Namespace, r.Tier, r.Name)
-		}
-	} else {
-		name = fmt.Sprintf("%s.%s", r.Tier, r.Name)
-	}
-
-	prefix := rules.CalculateNFLOGPrefixStr(r.Action, rules.RuleOwnerTypePolicy, r.Direction, r.Index, name)
+	var byt64 [64]byte
+	id := felixtypes.PolicyID{Name: r.Name, Namespace: r.Namespace, Kind: r.Kind}
+	prefix := rules.CalculateNFLOGPrefixStr(r.Action, rules.RuleOwnerTypePolicy, r.Direction, r.Index, id)
 	copy(byt64[:], []byte(prefix))
 	return byt64
 }
@@ -2344,7 +2392,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		nodes := map[string]*v3.Node{
+		nodes := map[string]*libapiv3.Node{
 			"node1": node1,
 		}
 
@@ -2572,7 +2620,7 @@ var _ = Describe("Reporting Metrics", func() {
 				})
 			})
 			Describe("Report HTTP Data only", func() {
-				unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
+				unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 				It("should receive metric", func() {
 					By("Sending a dataplane stats update with HTTP Data")
 					c.ds <- dpStatsEntryWithFwdFor
@@ -2753,7 +2801,6 @@ var _ = Describe("Reporting Metrics", func() {
 			}
 
 			Context("For Local connections with proxy mark", func() {
-
 				It("should receive expire update for marked connections - with only egress verdict", func() {
 					t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 					tmu.tpl = *t
@@ -2865,7 +2912,7 @@ func newMockLookupsCache(
 	nm map[[64]byte]*calc.RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
-	nodes map[string]*v3.Node,
+	nodes map[string]*libapiv3.Node,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
 	l.SetMockData(em, nm, ns, svcs, nodes)
@@ -3166,28 +3213,26 @@ var _ = Describe("WAFEvent logging", func() {
 			CommonEndpointData: calc.CalculateCommonEndpointData(model.WorkloadEndpointKey{WorkloadID: "ns1/localworkloadid1"}, localWlEp1),
 			Ingress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					{Name: "policy1", Tier: "default"}: 0,
-					{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+					{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-							rules.RuleDirIngress, rules.RuleActionDeny),
-						EndOfTierMatchIndex: 0,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex:     0,
 					},
 				},
 				ProfileMatchIndex: 0,
 			},
 			Egress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					{Name: "policy1", Tier: "default"}: 0,
-					{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+					{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-							rules.RuleDirIngress, rules.RuleActionDeny),
-						EndOfTierMatchIndex: 0,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex:     0,
 					},
 				},
 				ProfileMatchIndex: 0,
@@ -3197,28 +3242,26 @@ var _ = Describe("WAFEvent logging", func() {
 			CommonEndpointData: calc.CalculateCommonEndpointData(model.WorkloadEndpointKey{WorkloadID: "ns2/localworkloadid2"}, localWlEp2),
 			Ingress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					{Name: "policy1", Tier: "default"}: 0,
-					{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+					{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-							rules.RuleDirIngress, rules.RuleActionDeny),
-						EndOfTierMatchIndex: 0,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex:     0,
 					},
 				},
 				ProfileMatchIndex: 0,
 			},
 			Egress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					{Name: "policy1", Tier: "default"}: 0,
-					{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}: 0,
+					{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
-							rules.RuleDirIngress, rules.RuleActionDeny),
-						EndOfTierMatchIndex: 0,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction, rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex:     0,
 					},
 				},
 				ProfileMatchIndex: 0,
@@ -4945,7 +4988,6 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 			})
 			return validation
 		}, time.Duration(time.Second*5), time.Millisecond*1000).Should(BeTrue())
-
 	})
 
 	t.Run("should not panic when the channel is closed", func(t *testing.T) {
@@ -5010,12 +5052,20 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 	// Setup initial policy configuration
 	// localWlEp1 has policy1 for both ingress and egress
 	localWlEp1Proto := calc.ModelWorkloadEndpointToProto(localWlEp1, nil, nil, []*proto.TierInfo{
-		{Name: "default", IngressPolicies: []string{"policy1"}, EgressPolicies: []string{"policy1"}},
+		{
+			Name:            "default",
+			IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+		},
 	})
 
 	// localWlEp2 initially has policy2 (deny) for both ingress and egress
 	localWlEp2Proto := calc.ModelWorkloadEndpointToProto(localWlEp2, nil, nil, []*proto.TierInfo{
-		{Name: "default", IngressPolicies: []string{"policy2"}, EgressPolicies: []string{"policy2"}},
+		{
+			Name:            "default",
+			IngressPolicies: []*proto.PolicyID{{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []*proto.PolicyID{{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}},
+		},
 	})
 
 	// remoteWlEp1 has no policies
@@ -5030,13 +5080,15 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 		// Add policy definitions
 		// policy1: Allow all traffic
-		ps.PolicyByID[felixtypes.PolicyID{Tier: "default", Name: "policy1"}] = &proto.Policy{
+		ps.PolicyByID[felixtypes.PolicyID{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}] = &proto.Policy{
+			Tier:          "default",
 			InboundRules:  []*proto.Rule{{Action: "allow"}},
 			OutboundRules: []*proto.Rule{{Action: "allow"}},
 		}
 
 		// policy2: Deny all traffic
-		ps.PolicyByID[felixtypes.PolicyID{Tier: "default", Name: "policy2"}] = &proto.Policy{
+		ps.PolicyByID[felixtypes.PolicyID{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}] = &proto.Policy{
+			Tier:          "default",
 			InboundRules:  []*proto.Rule{{Action: "deny"}},
 			OutboundRules: []*proto.Rule{{Action: "deny"}},
 		}
@@ -5044,7 +5096,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 	policyStoreManager.OnInSync()
 
 	// Simulate packet processing to create flow data
-	ruleIDIngressPolicy1 := calc.NewRuleID("default", "policy1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+	ruleIDIngressPolicy1 := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
 	packetInfoIngress1 := clttypes.PacketInfo{
 		Tuple:          *flowTuple1,
 		Direction:      rules.RuleDirIngress,
@@ -5054,7 +5106,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 	}
 	c.applyPacketInfo(packetInfoIngress1)
 
-	ruleIDEgressPolicy1 := calc.NewRuleID("default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
+	ruleIDEgressPolicy1 := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
 	packetInfoEgress1 := clttypes.PacketInfo{
 		Tuple:          *flowTuple1,
 		Direction:      rules.RuleDirEgress,
@@ -5065,7 +5117,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 	c.applyPacketInfo(packetInfoEgress1)
 
 	// Process egress packet for flow 2 (localIp2 -> remoteIp1)
-	ruleIDEgressPolicy2 := calc.NewRuleID("default", "policy2", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
+	ruleIDEgressPolicy2 := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 	packetInfoEgress2 := clttypes.PacketInfo{
 		Tuple:          *flowTuple2,
 		Direction:      rules.RuleDirEgress,
@@ -5131,7 +5183,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 	t.Run("PolicyUpdate", func(t *testing.T) {
 		// Change localWlEp2 from policy2 (deny) to policy1 (allow)
 		updatedLocalWlEp2Proto := calc.ModelWorkloadEndpointToProto(localWlEp2, nil, nil, []*proto.TierInfo{
-			{Name: "default", IngressPolicies: []string{"policy1"}, EgressPolicies: []string{"policy1"}},
+			{Name: "default", IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}}, EgressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}}},
 		})
 
 		// Update the policy store
@@ -5305,7 +5357,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 		// Make another policy change to trigger evaluation
 		localWlEp2Proto := calc.ModelWorkloadEndpointToProto(localWlEp2, nil, nil, []*proto.TierInfo{
-			{Name: "default", IngressPolicies: []string{"policy1"}, EgressPolicies: []string{"policy1"}},
+			{Name: "default", IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}}, EgressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}}},
 		})
 
 		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
@@ -5384,23 +5436,22 @@ func TestPendingRuleTraceWithDomainBackedNetworkSet(t *testing.T) {
 
 	// Program policy store with an allow-all policy for the source workload endpoint so egress is evaluated.
 	c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-		ps.Endpoints[felixtypes.WorkloadEndpointID{OrchestratorId: localWlEPKey1.OrchestratorID, WorkloadId: localWlEPKey1.WorkloadID, EndpointId: localWlEPKey1.EndpointID}] =
-			calc.ModelWorkloadEndpointToProto(localWlEp1, nil, nil,
-				[]*proto.TierInfo{
-					{
-						Name:           "default",
-						EgressPolicies: []string{"policy1"},
-					},
+		ps.Endpoints[felixtypes.WorkloadEndpointID{OrchestratorId: localWlEPKey1.OrchestratorID, WorkloadId: localWlEPKey1.WorkloadID, EndpointId: localWlEPKey1.EndpointID}] = calc.ModelWorkloadEndpointToProto(localWlEp1, nil, nil,
+			[]*proto.TierInfo{
+				{
+					Name:           "default",
+					EgressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
 				},
-			)
+			},
+		)
 		// Allow-all policy1
-		ps.PolicyByID[felixtypes.PolicyID{Tier: "default", Name: "policy1"}] = &proto.Policy{OutboundRules: []*proto.Rule{{Action: "allow"}}, InboundRules: []*proto.Rule{{Action: "allow"}}}
+		ps.PolicyByID[felixtypes.PolicyID{Kind: v3.KindGlobalNetworkPolicy, Name: "policy1"}] = &proto.Policy{OutboundRules: []*proto.Rule{{Action: "allow"}}, InboundRules: []*proto.Rule{{Action: "allow"}}}
 	})
 	c.policyStoreManager.OnInSync()
 
 	// Simulate packet info from local -> remote. The destination will only resolve via the egress domain -> network set.
 	flow := tuple.New(localIp1, remoteIp1, proto_tcp, 12345, 443)
-	rid := calc.NewRuleID("default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
+	rid := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
 	c.applyPacketInfo(clttypes.PacketInfo{Tuple: *flow, Direction: rules.RuleDirEgress, RuleHits: []clttypes.RuleHit{{RuleID: rid, Hits: 1, Bytes: 100}}})
 
 	// Ensure the entry exists and pending egress rules are evaluated (non-empty).
@@ -5455,7 +5506,7 @@ func TestEqualFunction(t *testing.T) {
 	t.Run("should return true for equal rule IDs", func(t *testing.T) {
 		ruleID1 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5466,7 +5517,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID2 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5477,7 +5528,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID3 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy2",
 				Namespace: "",
 			},
@@ -5488,7 +5539,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID4 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy2",
 				Namespace: "",
 			},
@@ -5504,7 +5555,7 @@ func TestEqualFunction(t *testing.T) {
 	t.Run("should return false for rule IDs that contain the same elements but are out of order", func(t *testing.T) {
 		ruleID1 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5515,7 +5566,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID2 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5526,7 +5577,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID3 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5537,7 +5588,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID4 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5553,7 +5604,7 @@ func TestEqualFunction(t *testing.T) {
 	t.Run("should return false for different lengths of rule IDs", func(t *testing.T) {
 		ruleID1 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5564,7 +5615,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID2 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},
@@ -5575,7 +5626,7 @@ func TestEqualFunction(t *testing.T) {
 		}
 		ruleID3 := &calc.RuleID{
 			PolicyID: calc.PolicyID{
-				Tier:      "default",
+				Kind:      v3.KindGlobalNetworkPolicy,
 				Name:      "policy1",
 				Namespace: "",
 			},

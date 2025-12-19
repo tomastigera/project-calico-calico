@@ -16,17 +16,11 @@ type CompiledPolicy struct {
 	// Policy namespace.
 	Namespace string
 
-	// Calico v3 policy name. This is the name used in the flow log.
-	CalicoV3Name string
+	// Policy Kind.
+	Kind string
 
-	// Name of the policy in flow log format.
-	// -  <name>
-	// -  staged:<name>
-	// -  <namespace>/<name>
-	// -  <namespace>/staged:<name>
-	// -  <namespace>/knp.default.<name>
-	// -  <namespace>/staged:knp.default.<name>
-	FlowLogName string
+	// Calico v3 policy name. This is the name used in the flow log.
+	Name string
 
 	// Flow matchers for the main selector of the policy.
 	MainSelectorMatchers []FlowMatcher
@@ -43,6 +37,14 @@ type CompiledPolicy struct {
 
 	// Whether this policy was deleted. Note that if deleted, Modified will also be true.
 	Deleted bool
+}
+
+func (p *CompiledPolicy) Key() model.ResourceKey {
+	return model.ResourceKey{
+		Kind:      p.Kind,
+		Name:      p.Name,
+		Namespace: p.Namespace,
+	}
 }
 
 // Applies determines whether the policy applies to the flow.
@@ -112,7 +114,6 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 	var serviceAccountMatcher EndpointMatcher
 	var ingress, egress []v3.Rule
 	var types []v3.PolicyType
-	var flowLogName string
 	var tier string
 
 	// The policy is enforced if either the policy is not a staged policy, or it is being previewed (since a staged
@@ -128,11 +129,6 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
 		tier = res.Spec.Tier
-		if p.Staged {
-			flowLogName = res.Namespace + "/" + model.PolicyNamePrefixStaged + res.Name
-		} else {
-			flowLogName = res.Namespace + "/" + res.Name
-		}
 	case *v3.GlobalNetworkPolicy:
 		namespaceMatcher = m.NamespaceSelector(res.Spec.NamespaceSelector)
 		serviceAccountMatcher = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
@@ -140,11 +136,6 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
 		tier = res.Spec.Tier
-		if p.Staged {
-			flowLogName = model.PolicyNamePrefixStaged + res.Name
-		} else {
-			flowLogName = res.Name
-		}
 	default:
 		log.WithField("res", res).Fatal("Unexpected policy resource type")
 	}
@@ -152,14 +143,14 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 	// Handle ingress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeIngress) {
 		ingressPol = &CompiledPolicy{
-			Tier:         tier,
-			Namespace:    p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
-			CalicoV3Name: p.CalicoV3Policy.GetObjectMeta().GetName(),
-			FlowLogName:  flowLogName,
-			Rules:        compileRules(m, namespaceMatcher, ingress),
-			Modified:     impact.Modified,
-			Enforced:     enforced,
-			Deleted:      impact.Deleted,
+			Namespace: p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
+			Name:      p.CalicoV3Policy.GetObjectMeta().GetName(),
+			Kind:      p.Kind(),
+			Tier:      tier,
+			Rules:     compileRules(m, namespaceMatcher, ingress),
+			Modified:  impact.Modified,
+			Enforced:  enforced,
+			Deleted:   impact.Deleted,
 		}
 		ingressPol.add(m.Dst(m.CalicoEndpointSelector()))
 		ingressPol.add(m.Dst(namespaceMatcher))
@@ -170,14 +161,14 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 	// Handle egress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeEgress) {
 		egressPol = &CompiledPolicy{
-			Tier:         tier,
-			Namespace:    p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
-			CalicoV3Name: p.CalicoV3Policy.GetObjectMeta().GetName(),
-			FlowLogName:  flowLogName,
-			Rules:        compileRules(m, namespaceMatcher, egress),
-			Modified:     impact.Modified,
-			Enforced:     enforced,
-			Deleted:      impact.Deleted,
+			Namespace: p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
+			Name:      p.CalicoV3Policy.GetObjectMeta().GetName(),
+			Kind:      p.Kind(),
+			Tier:      tier,
+			Rules:     compileRules(m, namespaceMatcher, egress),
+			Modified:  impact.Modified,
+			Enforced:  enforced,
+			Deleted:   impact.Deleted,
 		}
 		egressPol.add(m.Src(m.CalicoEndpointSelector()))
 		egressPol.add(m.Src(namespaceMatcher))

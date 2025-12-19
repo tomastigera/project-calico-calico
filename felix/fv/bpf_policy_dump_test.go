@@ -34,7 +34,6 @@ import (
 )
 
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
-
 	if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
 		// Non-BPF run.
 		return
@@ -112,12 +111,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 			Expect(err).NotTo(HaveOccurred())
 			return out
 		}, "10s", "200ms").Should(And(
-			ContainSubstring("Start of rule default action"),
+			ContainSubstring("Start of GlobalNetworkPolicy policy-tcp"),
 			ContainSubstring("IPSets src_ip_set_ids"),
 		))
 
 		outStr := out
-		Expect(outStr).To(ContainSubstring("Start of rule default.policy-tcp action:\"allow\""))
+		Expect(outStr).To(ContainSubstring("Start of rule policy-tcp action:\"allow\""))
 		re := regexp.MustCompile("0x[0-9a-fA-F]+")
 		ipSetFound := false
 		for _, tmp := range strings.Split(outStr, "\n") {
@@ -144,7 +143,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 		outStr = string(out)
 		Expect(outStr).To(ContainSubstring(ifaceStr))
 		Expect(outStr).To(ContainSubstring("Hook: tc egress"))
-		Expect(outStr).To(ContainSubstring("Start of policy default.policy-tcp"))
+		Expect(outStr).To(ContainSubstring("Start of GlobalNetworkPolicy policy-tcp"))
 		Expect(outStr).To(ContainSubstring("Load packet metadata saved by previous program"))
 		Expect(outStr).To(ContainSubstring("Save state pointer in register R9"))
 		Expect(outStr).To(ContainSubstring("If protocol != tcp, skip to next rule"))
@@ -159,10 +158,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 			out, err = tc.Felixes[0].ExecOutput("calico-bpf", "policy", "dump", w[0].InterfaceName, "egress")
 			Expect(err).NotTo(HaveOccurred())
 			return out
-		}, "10s", "200ms").Should(ContainSubstring("Start of rule default action"))
+		}, "5s", "200ms").Should(ContainSubstring("Start of GlobalNetworkPolicy policy-tcp"))
 
 		outStr = string(out)
-		Expect(outStr).To(ContainSubstring("Start of rule default.policy-tcp action:\"deny\""))
+		Expect(outStr).To(ContainSubstring("Start of rule policy-tcp action:\"deny\""))
 		ipSetFound = false
 		for _, tmp := range strings.Split(outStr, "\n") {
 			if strings.Contains(tmp, "IPSets not_dst_ip_set_ids:") {
@@ -188,7 +187,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 		outStr = string(out)
 		Expect(outStr).To(ContainSubstring(ifaceStr))
 		Expect(outStr).To(ContainSubstring("Hook: tc ingress"))
-		Expect(outStr).To(ContainSubstring("Start of policy default.policy-tcp"))
+		Expect(outStr).To(ContainSubstring("Start of GlobalNetworkPolicy policy-tcp"))
 		Expect(outStr).To(ContainSubstring("Load packet metadata saved by previous program"))
 		Expect(outStr).To(ContainSubstring("Save state pointer in register R9"))
 		Expect(outStr).To(ContainSubstring("If protocol == tcp, skip to next rule"))
@@ -249,7 +248,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 		outStr := string(out)
 		Expect(outStr).To(ContainSubstring(ifaceStr))
 		Expect(outStr).To(ContainSubstring("Hook: tc egress"))
-		Expect(outStr).To(ContainSubstring("Start of policy default.policy-icmp"))
+		Expect(outStr).To(ContainSubstring("Start of GlobalNetworkPolicy policy-icmp"))
 		Expect(outStr).To(ContainSubstring("Load packet metadata saved by previous program"))
 		Expect(outStr).To(ContainSubstring("Save state pointer in register R9"))
 		Expect(outStr).To(ContainSubstring("If protocol != icmp, skip to next rule"))
@@ -267,7 +266,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 		outStr = string(out)
 		Expect(outStr).To(ContainSubstring(ifaceStr))
 		Expect(outStr).To(ContainSubstring("Hook: tc ingress"))
-		Expect(outStr).To(ContainSubstring("Start of policy default.policy-icmp"))
+		Expect(outStr).To(ContainSubstring("Start of GlobalNetworkPolicy policy-icmp"))
 		Expect(outStr).To(ContainSubstring("Load packet metadata saved by previous program"))
 		Expect(outStr).To(ContainSubstring("Save state pointer in register R9"))
 		Expect(outStr).To(ContainSubstring("If protocol == icmp, skip to next rule"))

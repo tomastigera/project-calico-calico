@@ -1,6 +1,6 @@
 # Copyright (c) 2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI10
+ARG CALICO_BASE
 ARG ISTIO_VERSION
 ARG UBI_IMAGE
 
@@ -28,7 +28,7 @@ COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
 
 COPY bin/LICENSE /LICENSE
 
-FROM ${CALICO_BASE_UBI10}
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

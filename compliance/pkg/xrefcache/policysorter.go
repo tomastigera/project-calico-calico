@@ -27,7 +27,7 @@ type policySorter struct {
 	// sorter will return a set of ordered v1 tiers and policies and we need to map that to our multi-version
 	// representations.
 	tiers    map[string]*CacheEntryTier
-	policies map[string]*CacheEntryNetworkPolicy
+	policies map[model.PolicyKey]*CacheEntryNetworkPolicy
 }
 
 // newPolicySorter creates a new PolicySorter
@@ -36,7 +36,7 @@ func newPolicySorter() PolicySorter {
 		sorter:   calc.NewPolicySorter(),
 		dirty:    true,
 		tiers:    make(map[string]*CacheEntryTier),
-		policies: make(map[string]*CacheEntryNetworkPolicy),
+		policies: make(map[model.PolicyKey]*CacheEntryNetworkPolicy),
 	}
 }
 
@@ -71,7 +71,7 @@ func (p *policySorter) sort() {
 		// and assign to the tier cache entry.
 		twp.OrderedPolicies = make([]*CacheEntryNetworkPolicy, 0, len(t.OrderedPolicies))
 		for _, pol := range t.OrderedPolicies {
-			entry := p.policies[pol.Key.Name]
+			entry := p.policies[pol.Key]
 			if entry == nil {
 				log.WithField("policy", pol.Key).Error("Policy is not in cache")
 				continue
@@ -92,7 +92,7 @@ func (p *policySorter) updatePolicy(entry *CacheEntryNetworkPolicy) {
 			Value: entry.GetCalicoV1Policy(),
 		},
 	})
-	p.policies[v1Key.Name] = entry
+	p.policies[v1Key] = entry
 	p.dirty = p.dirty || dirty
 }
 
@@ -105,7 +105,7 @@ func (p *policySorter) deletePolicy(entry *CacheEntryNetworkPolicy) {
 			Key: v1Key,
 		},
 	})
-	delete(p.policies, v1Key.Name)
+	delete(p.policies, v1Key)
 	p.dirty = p.dirty || dirty
 }
 

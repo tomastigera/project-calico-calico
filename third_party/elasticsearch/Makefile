@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/elasticsearch
 ELASTICSEARCH_IMAGE   ?=elasticsearch
 BUILD_IMAGES          ?=$(ELASTICSEARCH_IMAGE)
 
-ELASTIC_VERSION=8.18.8
+ELASTIC_VERSION=8.19.8
 TINI_VERSION=0.19.0
 
 # required for ci/cd
@@ -101,5 +101,5 @@ push-manifest:
 
 .PHONY: release-retag-image
 release-retag-image: var-require-one-of-CONFIRM-DRYRUN var-require-all-RELEASE_BRANCH
-	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(ELASTICSEARCH_IMAGE):$(ELASTIC_VERSION)-master \
-		$(THIRD_PARTY_REGISTRY_CD)/$(ELASTICSEARCH_IMAGE):$(ELASTIC_VERSION)-$(RELEASE_BRANCH)$(double_quote)
+	$(CRANE) cp $(THIRD_PARTY_REGISTRY_CD)/$(ELASTICSEARCH_IMAGE):v$(ELASTIC_VERSION)-master \
+		$(THIRD_PARTY_REGISTRY_CD)/$(ELASTICSEARCH_IMAGE):v$(ELASTIC_VERSION)-$(RELEASE_BRANCH)

@@ -200,7 +200,7 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 			}
 
 			podIfaces = append(podIfaces, &PodInterface{
-				IsDefault:          isDefault, //first one is always the default interface
+				IsDefault:          isDefault, // first one is always the default interface
 				NetworkName:        networkStatus.Name,
 				NetworkNamespace:   netNamespace,
 				InsidePodIfaceName: networkStatus.Interface,

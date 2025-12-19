@@ -34,9 +34,9 @@ type FlowLogReader interface {
 
 // The expected policies for the flow.
 type ExpectedPolicy struct {
-	Reporter string
-	Action   string
-	Policies []string
+	Reporter         string
+	Action           string
+	EnforcedPolicies []string
 }
 
 // FlowTester is a helper utility to parse and check flows.
@@ -49,20 +49,17 @@ type FlowTester struct {
 type FlowTesterOptions struct {
 	// Whether to expect labels or policies in the flow logs
 	ExpectLabels           bool
-	ExpectAllPolicies      bool
 	ExpectEnforcedPolicies bool
 	ExpectPendingPolicies  bool
 	ExpectTransitPolicies  bool
 
 	// Whether to include labels or policies in the match criteria
 	MatchLabels           bool
-	MatchAllPolicies      bool
 	MatchEnforcedPolicies bool
 	MatchPendingPolicies  bool
 	MatchTransitPolicies  bool
 
 	// Whether to check policies in the flow logs.
-	ExcludeAllPolicies      bool
 	ExcludeEnforcedPolicies bool
 	ExcludePendingPolicies  bool
 	ExcludeTransitPolicies  bool
@@ -78,7 +75,6 @@ type FlowTesterOptions struct {
 
 type flowMeta struct {
 	flowlog.FlowMeta
-	policies        string
 	enforced        string
 	pending         string
 	transitPolicies string
@@ -149,12 +145,6 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 		}
 
 		if fl.Reporter != flowlog.ReporterFwd {
-			if t.options.ExpectAllPolicies && !t.options.ExcludeAllPolicies && len(fl.FlowAllPolicySet) == 0 {
-				return fmt.Errorf("missing all_policies in %v", fl.FlowMeta)
-			}
-			if !t.options.ExpectAllPolicies && !t.options.ExcludeAllPolicies && len(fl.FlowAllPolicySet) != 0 {
-				return fmt.Errorf("unexpected all_policies in %v", fl.FlowMeta)
-			}
 			if t.options.ExpectEnforcedPolicies && !t.options.ExcludeEnforcedPolicies && len(fl.FlowEnforcedPolicySet) == 0 {
 				return fmt.Errorf("missing enforced_policies in %v", fl.FlowMeta)
 			}
@@ -295,14 +285,6 @@ func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 		sort.Strings(srcLabels)
 		sort.Strings(dstLabels)
 		fm.labels = strings.Join(srcLabels, ";") + "|" + strings.Join(dstLabels, ";")
-	}
-	if t.options.MatchAllPolicies {
-		var policies []string
-		for p := range fl.FlowAllPolicySet {
-			policies = append(policies, p)
-		}
-		sort.Strings(policies)
-		fm.policies = strings.Join(policies, ";")
 	}
 	if t.options.MatchEnforcedPolicies {
 		var enforced []string

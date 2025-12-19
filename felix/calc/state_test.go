@@ -160,16 +160,6 @@ func (s State) withKVUpdates(kvs ...model.KVPair) (newState State) {
 	// Make a set containing the new keys.
 	newKeys := make(map[string]bool)
 
-	for i, kv := range kvs {
-		if k, ok := kv.Key.(model.PolicyKey); ok {
-			if k.Tier == "" {
-				k.Tier = "default"
-				kv.Key = k
-				kvs[i] = kv
-			}
-		}
-	}
-
 	for _, kv := range kvs {
 		newKeys[kvToPath(kv)] = true
 	}
@@ -404,7 +394,7 @@ func (s State) KVsCopy() map[string]interface{} {
 func kvToPath(kv model.KVPair) string {
 	path, err := model.KeyToDefaultPath(kv.Key)
 	if err != nil {
-		logrus.WithField("key", kv.Key).Panic("Unable to convert key to default path")
+		logrus.WithError(err).WithField("key", kv.Key).Panic("Unable to convert key to default path")
 	}
 	return path
 }

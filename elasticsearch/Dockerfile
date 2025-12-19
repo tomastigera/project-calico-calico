@@ -1,10 +1,10 @@
 # Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI10
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.18.8-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
 
 FROM scratch AS source
 
@@ -63,7 +63,7 @@ COPY --from=elastic /usr/bin/tini /usr/bin/tini
 # Tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 
-FROM ${CALICO_BASE_UBI10}
+FROM ${CALICO_BASE}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin

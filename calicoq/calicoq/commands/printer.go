@@ -170,7 +170,7 @@ func NewRulePrintFromMatchString(match string) RulePrint {
 	}
 
 	var err error
-	rp.PolicyName = removeTierFromPolicyName(info[1][1 : len(info[1])-1])
+	rp.PolicyName = info[1][1 : len(info[1])-1]
 	rp.Direction = info[2]
 	rp.SelectorType = info[5]
 	if len(info) == 9 {
@@ -228,26 +228,13 @@ func endpointName(key interface{}) string {
 	return epName
 }
 
-// Removes the tier from a V2 converted to V1 policy name.
-// This will need to be changed once the V2 Felix syncer is integrated.
-func removeTierFromPolicyName(prefixed string) string {
-	// Name is in the form <namespace>/<tier>.<name> or <namespace>/knp.<tier>.<name>.
-	// This method returns <namespace>/<name>.
-	nsParts := strings.SplitN(prefixed, "/", 2)
-	// Handle Global Network Policies that are not namespaced
-	prefix := nsParts[0] + "/"
-	if len(nsParts) != 2 {
-		prefix = ""
-		nsParts = append(nsParts, nsParts[0])
+// keyToName takes a model.PolicyKey and returns an appropriate string name.
+// TODO: Remove this and refactor to pass around PolicyKey objects directly.
+func keyToName(k model.PolicyKey) string {
+	if k.Namespace != "" {
+		return fmt.Sprintf("%s/%s", k.Namespace, k.Name)
 	}
-	// TODO: remove the if else statements once libcalico-go is updated to prevent knp.<tier>.<name> from happening
-	var nParts []string
-	if strings.HasPrefix(nsParts[1], "knp.") {
-		nParts = []string{nsParts[1]}
-	} else {
-		nParts = strings.SplitN(nsParts[1], ".", 2)
-	}
-	return prefix + nParts[len(nParts)-1]
+	return k.Name
 }
 
 // TODO: Figure out if we need to change how WorkloadEndpoints are displayed and remove this if

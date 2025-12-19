@@ -18,6 +18,7 @@ import (
 	"errors"
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -35,10 +36,6 @@ const (
 	PolicyRuleBasePriority uint16 = 1000
 	// Max policy priority value.
 	PolicyRuleMaxPriority uint16 = 65000
-	// prefix to use for all policy names
-	PolicyNamePrefix string = "policy-"
-	// prefix to use for all profile names
-	ProfileNamePrefix string = "profile-"
 )
 
 var (
@@ -61,17 +58,17 @@ func (t PolicySetType) SetType() string {
 
 // PolicySetMetadata contains the metadata for a particular Policy set, such as its name and type.
 type PolicySetMetadata struct {
-	SetId string
+	SetId types.IDMaker
 	Type  PolicySetType
 }
 
 // PolicySetsDataplane is a interface for managing a plane of policySet objects
 type PolicySetsDataplane interface {
-	AddOrReplacePolicySet(setId string, policy interface{})
-	RemovePolicySet(setId string)
+	AddOrReplacePolicySet(setId types.IDMaker, policy interface{})
+	RemovePolicySet(types.IDMaker)
 	NewRule(isInbound bool, priority uint16) *hns.ACLPolicy
-	GetPolicySetRules(setIds []string, isInbound, endOfTierDrop bool) (rules []*hns.ACLPolicy)
-	ProcessIpSetUpdate(ipSetId string) []string
+	GetPolicySetRules(setIds []types.IDMaker, isInbound, endOfTierDrop bool) (rules []*hns.ACLPolicy)
+	ProcessIpSetUpdate(ipSetId string) []types.IDMaker
 	NewHostRule(bool) *hns.ACLPolicy
 }
 

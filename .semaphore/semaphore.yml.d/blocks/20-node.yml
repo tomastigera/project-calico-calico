@@ -83,6 +83,10 @@
     env_vars:
       - name: BUILD_CACHE_GROUP
         value: "node"
+      - name: CI_GROUP_LABEL
+        value: "node"
+      - name: CI_JOB_LABEL
+        value: "kind-cluster-tests"
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io

@@ -15,8 +15,9 @@
 package intdataplane
 
 import (
-	"sort"
+	"fmt"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
@@ -78,34 +79,32 @@ func (t *mockTable) checkChains(expecteds [][]*generictables.Chain) {
 			t.expectedChains[chain.Name] = chain
 		}
 	}
-	t.checkChainsSameAsBefore(1)
+	t.checkChainsSameAsBefore()
 }
 
-func (t *mockTable) checkChainsSameAsBefore(optionalOffset ...int) {
-	log.Debug("Expected chains")
+func (t *mockTable) checkChainsSameAsBefore() {
+	// Build a failure message in case of unexpected chains.
+	msg := "Unexpected chain:\n\n %+v\n\n Expected chains:\n\n"
 	for _, chain := range t.expectedChains {
 		log.WithField("chain", *chain).Debug("")
+		msg += fmt.Sprintf(" %+v\n", *chain)
 	}
 
-	var currentChains []generictables.Chain
-	for _, c := range t.currentChains {
-		currentChains = append(currentChains, *c)
+	// Check each current chain is as expected.
+	for _, chain := range t.currentChains {
+		expected, ok := t.expectedChains[chain.Name]
+		ExpectWithOffset(2, ok).To(BeTrue(), fmt.Sprintf(msg, *chain))
+		ExpectWithOffset(2, *chain).To(Equal(*expected), cmp.Diff(expected, chain))
 	}
-	sort.Slice(currentChains, func(i, j int) bool {
-		return currentChains[i].Name < currentChains[j].Name
-	})
-	var expectedChains []generictables.Chain
-	for _, c := range t.expectedChains {
-		expectedChains = append(expectedChains, *c)
+
+	// Ensure no expected chains are missing.
+	for _, chain := range t.expectedChains {
+		_, ok := t.currentChains[chain.Name]
+		ExpectWithOffset(2, ok).To(BeTrue(), "Missing expected chain: %v", chain)
 	}
-	sort.Slice(expectedChains, func(i, j int) bool {
-		return expectedChains[i].Name < expectedChains[j].Name
-	})
-	offset := 1
-	if len(optionalOffset) > 0 {
-		offset += optionalOffset[0]
-	}
-	ExpectWithOffset(offset, currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
+
+	// Assert the whole map is as expected.
+	ExpectWithOffset(2, t.currentChains).To(Equal(t.expectedChains), t.Table+" chains incorrect")
 }
 
 func (t *mockTable) getCurrentChainByName(name string) *generictables.Chain {

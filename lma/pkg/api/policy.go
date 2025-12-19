@@ -8,12 +8,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const (
 	knpPrefix = "knp"
-	knsPrefix = "kns"
 
 	// Backward compatible - handle mixed entries of policy strings,
 	// old format "index|tier|name|action" (count=4) and
@@ -48,11 +50,6 @@ type PolicyHit interface {
 	// -  __PROFILE__.kns.<namespace>
 	FlowLogName() string
 
-	// FullName returns the full policy name, which includes the tier prefix for calico policy or the
-	// "knp.default" prefix
-	// for Kubernetes policies.
-	FullName() string
-
 	// Index returns the index for this hit.
 	Index() int
 
@@ -65,8 +62,11 @@ type PolicyHit interface {
 	// IsStaged returns whether or not this policy is a staged policy.
 	IsStaged() bool
 
-	// Name returns the raw name of the policy without any tier or knp prefixes.
+	// Name returns the raw name of the policy.
 	Name() string
+
+	// Kind() returns the kind of policy (NetworkPolicy, GlobalNetworkPolicy, etc).
+	Kind() string
 
 	// Namespace returns the policy namespace (if namespaced). An empty string is returned if the
 	// policy is not namespaced.
@@ -126,6 +126,31 @@ type policyHit struct {
 	ruleIdIndex *int
 }
 
+// Kind returns the kind of policy (NetworkPolicy, GlobalNetworkPolicy, etc).
+func (p policyHit) Kind() string {
+	if p.isProfile {
+		return v3.KindProfile
+	}
+
+	if p.isKNP {
+		return model.KindKubernetesNetworkPolicy
+	}
+
+	if p.namespace != "" {
+		// Namespaced Calico Network Policy.
+		if p.isStaged {
+			return v3.KindStagedNetworkPolicy
+		}
+		return v3.KindNetworkPolicy
+	}
+
+	// Global Network Policy. This includes AdminNetworkPolicy and BaselineAdminNetworkPolicy.
+	if p.isStaged {
+		return v3.KindStagedGlobalNetworkPolicy
+	}
+	return v3.KindGlobalNetworkPolicy
+}
+
 // Action returns the action for this policy hit. See AllActions() for a list of possible values
 // that could be returned.
 func (p policyHit) Action() Action {
@@ -137,6 +162,13 @@ func (p policyHit) Count() int64 {
 	return p.count
 }
 
+// legacyStagedPrefix is the prefix used in flow logs to indicate a staged policy.
+// This is kept because flow logs still include this prefix for staged policies, even though it is no longer
+// used as part of the policy name.
+//
+// TODO: Remove this when we update the flow log format to include Kind explicitly.
+var legacyStagedPrefix = "staged:"
+
 // FlowLogName returns the name as it would appear in the flow log. This is unique for a specific
 // policy instance.
 // -  <tier>.<name>
@@ -146,21 +178,31 @@ func (p policyHit) Count() int64 {
 // -  <namespace>/staged:knp.default.<name>
 // -  <namespace>/staged:knp.default.<name>
 // -  __PROFILE__.kns.<namespace>
+//
+// See policy_lookup_cache.go in Felix for the code that generates flow log strings. This
+// implementation should match that code.
 func (p policyHit) FlowLogName() string {
 	name := p.name
 
 	if p.isProfile {
-		name = fmt.Sprintf("%s.%s.%s", p.tier, knsPrefix, name)
+		// Profile.
+		// Format is __PROFILE__.kns.<namespace>
+		name = fmt.Sprintf("__PROFILE__.%s", name)
 	} else if p.isKNP {
-		name = fmt.Sprintf("%s.%s.%s", knpPrefix, p.tier, name)
+		name = fmt.Sprintf("knp.default.%s", name)
 		if p.isStaged {
-			name = fmt.Sprintf("%s%s", model.PolicyNamePrefixStaged, name)
+			// Staged Kubernetes NetworkPolicy.
+			// Format is staged:knp.default:<name>
+			name = fmt.Sprintf("%s%s", legacyStagedPrefix, name)
 		}
 	} else {
 		if p.isStaged {
-			name = fmt.Sprintf("%s%s", model.PolicyNamePrefixStaged, name)
+			// Staged Calico NetworkPolicy or GlobalNetworkPolicy.
+			// Format is <tier>.staged:<name>
+			// TODO: Remove the <tier> and staged: prefix when flow log format is
+			// updated to include Kind.
+			name = fmt.Sprintf("%s.%s%s", p.tier, legacyStagedPrefix, name)
 		}
-		name = fmt.Sprintf("%s.%s", p.tier, name)
 	}
 
 	if len(p.namespace) > 0 {
@@ -168,19 +210,6 @@ func (p policyHit) FlowLogName() string {
 	}
 
 	return name
-}
-
-// FullName returns the full policy name, which includes the tier prefix for calico policy or the
-// "knp.default" prefix
-// for Kubernetes policies.
-func (p policyHit) FullName() string {
-	if p.isProfile {
-		return fmt.Sprintf("%s.%s.%s", p.tier, knsPrefix, p.name)
-	} else if p.isKNP {
-		return fmt.Sprintf("%s.%s.%s", knpPrefix, p.tier, p.name)
-	}
-
-	return fmt.Sprintf("%s.%s", p.tier, p.name)
 }
 
 // Index returns the index for this hit.
@@ -218,32 +247,35 @@ func (p policyHit) Namespace() string {
 // or may not contain the staged: pre / mid fix) and sets the appropriate policy hit fields
 // (isKNP, isProfile...).
 func (p *policyHit) parseName(name string) {
-	// kubernetes network policies have the staged prefix before the tier name
-	if strings.HasPrefix(name, model.PolicyNamePrefixStaged) {
+	// First, check for the stagged prefix, which may show up in a couple of different places.
+	if strings.Contains(name, legacyStagedPrefix) {
 		p.isStaged = true
-		name = strings.TrimPrefix(name, model.PolicyNamePrefixStaged)
+
+		// Remove the staged prefix. Calico NPs are prefixed with "tier.staged:" whereas
+		// KNPs are prefixed with "staged:", so split on the legacyStagedPrefix to handle both cases.
+		splits := strings.Split(name, legacyStagedPrefix)
+		name = splits[1]
+		if strings.HasPrefix((splits[0]), p.tier) && !strings.HasPrefix(name, p.tier) {
+			// TODO: This is a best-effort hack to handle both new-style and old-style staged policy
+			// names in flow logs. In older versions of Calico Enterprise, users were forced to create
+			// policies of the form "tier.name", which showed up in flow logs as "tier.staged:name". In newer
+			// versions, users can create policies without the tier prefix, which would show up in flow logs
+			// as "tier.staged:name". To handle both cases, we check if the part before the staged prefix
+			// matches the tier, and if so, we re-add the tier prefix to the name. This is imperfect, and should be removed
+			// in the future once we no longer need to support old-style staged policy names.
+			name = fmt.Sprintf("%s.%s", p.tier, name)
+		}
 	}
 
-	if strings.HasPrefix(name, fmt.Sprintf("%s.", knpPrefix)) {
+	if strings.HasPrefix(name, fmt.Sprintf("%s.default.", knpPrefix)) {
 		p.isKNP = true
-		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", knpPrefix))
+		name = strings.TrimPrefix(name, fmt.Sprintf("%s.default.", knpPrefix))
 	}
 
-	if p.tier != "" {
-		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", p.tier))
-	}
-
-	if strings.HasPrefix(name, fmt.Sprintf("%s.", knsPrefix)) {
+	if strings.HasPrefix(name, "__PROFILE__.") {
 		p.isProfile = true
-		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", knsPrefix))
+		name = strings.TrimPrefix(name, "__PROFILE__.")
 	}
-
-	// calico network policies have the staged prefix after the tier name
-	if strings.HasPrefix(name, model.PolicyNamePrefixStaged) {
-		p.isStaged = true
-		name = strings.TrimPrefix(name, model.PolicyNamePrefixStaged)
-	}
-
 	p.name = name
 }
 
@@ -293,12 +325,42 @@ func (p policyHit) ToFlowLogPolicyString() string {
 	)
 }
 
+func (p policyHit) Fields() logrus.Fields {
+	return logrus.Fields{
+		"action":      p.action,
+		"count":       p.count,
+		"index":       p.index,
+		"isKNP":       p.isKNP,
+		"isProfile":   p.isProfile,
+		"isStaged":    p.isStaged,
+		"name":        p.name,
+		"namespace":   p.namespace,
+		"tier":        p.tier,
+		"ruleIdIndex": p.ruleIdIndex,
+	}
+}
+
 // NewPolicyHit creates and returns a new PolicyHit. This will mainly be used for PIP, where we
 // "generate" policy hit logsfor the user to see how their flows change with new policies.
 func NewPolicyHit(
-	action Action, count int64, index int, isStaged bool, name, namespace, tier string,
+	action Action,
+	count int64,
+	index int,
+	isStaged bool,
+	name, namespace, tier string,
 	ruleIdIndex *int,
 ) (PolicyHit, error) {
+	logrus.WithFields(logrus.Fields{
+		"action":      action,
+		"count":       count,
+		"index":       index,
+		"isStaged":    isStaged,
+		"name":        name,
+		"namespace":   namespace,
+		"tier":        tier,
+		"ruleIdIndex": ruleIdIndex,
+	}).Warn("CASEY Creating new PolicyHit")
+
 	if action == ActionInvalid {
 		return nil, fmt.Errorf("a none empty Action must be provided")
 	}
@@ -312,11 +374,14 @@ func NewPolicyHit(
 		return nil, fmt.Errorf("rule id index must be a positive integer or -1")
 	}
 
+	isProfile := tier == "__PROFILE__" || tier == ""
+
 	p := &policyHit{
 		action:      action,
 		count:       count,
 		index:       index,
 		isStaged:    isStaged,
+		isProfile:   isProfile,
 		tier:        tier,
 		namespace:   namespace,
 		ruleIdIndex: ruleIdIndex,
@@ -389,8 +454,8 @@ func (s SortablePolicyHits) Less(i, j int) bool {
 	if s[i].Namespace() != s[j].Namespace() {
 		return s[i].Namespace() < s[j].Namespace()
 	}
-	if s[i].FullName() != s[j].FullName() {
-		return s[i].FullName() < s[j].FullName()
+	if s[i].FlowLogName() != s[j].FlowLogName() {
+		return s[i].FlowLogName() < s[j].FlowLogName()
 	}
 	if s[i].Action() != s[j].Action() {
 		return s[i].Action() < s[j].Action()

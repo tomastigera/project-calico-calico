@@ -62,7 +62,7 @@ func GetCNXMetrics(felixIP, name string) (metricLines []string, err error) {
 
 // GetCNXConnectionMetricsIntForPolicy returns the total number of connections associated with a
 // policy for a specific traffic direction. You may optionally specify a rule index.
-func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficDirection string, ruleIdx ...int) (sum int, err error) {
+func GetCNXConnectionMetricsIntForPolicy(felixIP, kind, tierName, policyName, trafficDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_connections")
 	if err != nil {
 		return
@@ -71,13 +71,17 @@ func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficD
 	policyName = "policy=\"" + policyName + "\""
 	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
 	ruleIdxStr := ""
+	kind = "kind=\"" + kind + "\""
 	if len(ruleIdx) > 0 {
 		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
 	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
-			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleIdxStr) {
+		if strings.Contains(line, tierName) &&
+			strings.Contains(line, policyName) &&
+			strings.Contains(line, trafficDirection) &&
+			strings.Contains(line, ruleIdxStr) &&
+			strings.Contains(line, kind) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -96,30 +100,37 @@ func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficD
 		"policy":           policyName,
 		"trafficDirection": trafficDirection,
 		"sum":              sum,
+		"kind":             kind,
 	}).Debug("cnx_policy_rule_connections")
 	return
 }
 
 // GetCNXPacketMetricsIntForPolicy returns the total number of packets associated with a
 // policy for a specific traffic and rule direction. You may optionally specify a rule index.
-func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
+func GetCNXPacketMetricsIntForPolicy(felixIP, kind, action, tier, name, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_packets")
 	if err != nil {
 		return
 	}
 	action = "action=\"" + action + "\""
-	tierName = "tier=\"" + tierName + "\""
-	policyName = "policy=\"" + policyName + "\""
+	tier = "tier=\"" + tier + "\""
+	name = "policy=\"" + name + "\""
 	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
 	ruleDirection = "rule_direction=\"" + ruleDirection + "\""
+	kind = "kind=\"" + kind + "\""
 	ruleIdxStr := ""
 	if len(ruleIdx) > 0 {
 		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
 	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
-			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) && strings.Contains(line, ruleIdxStr) {
+		if strings.Contains(line, action) &&
+			strings.Contains(line, tier) &&
+			strings.Contains(line, name) &&
+			strings.Contains(line, trafficDirection) &&
+			strings.Contains(line, ruleDirection) &&
+			strings.Contains(line, ruleIdxStr) &&
+			strings.Contains(line, kind) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -128,22 +139,22 @@ func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, traf
 			}
 			sum += s
 		}
-
 	}
 	log.WithFields(log.Fields{
 		"action":           action,
-		"tier":             tierName,
-		"policy":           policyName,
+		"tier":             tier,
+		"policy":           name,
 		"trafficDirection": trafficDirection,
 		"ruleDirection":    ruleDirection,
 		"sum":              sum,
+		"kind":             kind,
 	}).Debug("cnx_policy_rule_packets")
 	return
 }
 
 // GetCNXByteMetricsIntForPolicy returns the total number of bytes associated with a
 // policy for a specific traffic and rule direction. You may optionally specify a rule index.
-func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
+func GetCNXByteMetricsIntForPolicy(felixIP, kind, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_bytes")
 	if err != nil {
 		return
@@ -153,14 +164,20 @@ func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, traffi
 	policyName = "policy=\"" + policyName + "\""
 	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
 	ruleDirection = "rule_direction=\"" + ruleDirection + "\""
+	kind = "kind=\"" + kind + "\""
 	ruleIdxStr := ""
 	if len(ruleIdx) > 0 {
 		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
 	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
-			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) && strings.Contains(line, ruleIdxStr) {
+		if strings.Contains(line, action) &&
+			strings.Contains(line, tierName) &&
+			strings.Contains(line, policyName) &&
+			strings.Contains(line, trafficDirection) &&
+			strings.Contains(line, ruleDirection) &&
+			strings.Contains(line, ruleIdxStr) &&
+			strings.Contains(line, kind) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -169,7 +186,6 @@ func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, traffi
 			}
 			sum += s
 		}
-
 	}
 	log.WithFields(log.Fields{
 		"action":           action,
@@ -177,6 +193,7 @@ func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, traffi
 		"policy":           policyName,
 		"trafficDirection": trafficDirection,
 		"ruleDirection":    ruleDirection,
+		"kind":             kind,
 		"sum":              sum,
 	}).Debug("cnx_policy_rule_bytes")
 	return

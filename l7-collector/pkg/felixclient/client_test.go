@@ -80,10 +80,10 @@ var (
 )
 
 var _ = Describe("Felix Client Converting single EnvoyLog to DataplaneStats test", func() {
-	testClient := &felixClient{}
+	converter := DefaultLogConverter{}
 	Context("With a log with all fields filled in", func() {
 		It("Should create dataplane stats with the correct fields", func() {
-			dpStats := testClient.dataplaneStatsFromL7Log(httpLog)
+			dpStats := converter.DataplaneStatsFromL7Log(httpLog)
 			httpData := dpStats.HttpData[0]
 			Expect(dpStats.SrcIp).To(Equal(httpLog.SrcIp))
 			Expect(dpStats.DstIp).To(Equal(httpLog.DstIp))
@@ -104,8 +104,47 @@ var _ = Describe("Felix Client Converting single EnvoyLog to DataplaneStats test
 	})
 })
 
+var _ = Describe("Felix Client converting Gateway API enrichment fields", func() {
+	converter := DefaultLogConverter{}
+	Context("With a log containing Gateway API enrichment fields", func() {
+		It("Should convert Gateway API enrichment fields correctly", func() {
+			enrichedLog := collector.EnvoyLog{
+				Reporter:              "gateway",
+				SrcIp:                 "10.0.0.1",
+				DstIp:                 "10.0.0.2",
+				SrcPort:               12345,
+				DstPort:               80,
+				RouteName:             "test-route",
+				GatewayNamespace:      "default",
+				GatewayClass:          "istio",
+				GatewayStatus:         "active",
+				GatewayListenerName:   "http",
+				GatewayListenerPort:   80,
+				GatewayRouteName:      "my-route",
+				GatewayRouteNamespace: "default",
+				CollectorName:         "gateway-collector",
+				CollectorType:         "envoy-access-log",
+			}
+
+			dpStats := converter.DataplaneStatsFromL7Log(enrichedLog)
+
+			// Verify Gateway API enrichment fields are included in HTTP data
+			httpData := dpStats.HttpData[0]
+			Expect(httpData.GatewayNamespace).To(Equal("default"))
+			Expect(httpData.GatewayClass).To(Equal("istio"))
+			Expect(httpData.GatewayStatus).To(Equal("active"))
+			Expect(httpData.GatewayListenerName).To(Equal("http"))
+			Expect(httpData.GatewayListenerPort).To(Equal(int32(80)))
+			Expect(httpData.GatewayRouteName).To(Equal("my-route"))
+			Expect(httpData.GatewayRouteNamespace).To(Equal("default"))
+			Expect(httpData.CollectorName).To(Equal("gateway-collector"))
+			Expect(httpData.CollectorType).To(Equal("envoy-access-log"))
+		})
+	})
+})
+
 var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", func() {
-	testClient := &felixClient{}
+	testClient := &felixClient{converter: DefaultLogConverter{}}
 	logKey := collector.GetEnvoyLogKey(httpLog)
 	logKey1 := collector.GetEnvoyLogKey(httpLog1)
 	logKey2 := collector.GetEnvoyLogKey(httpLog2)

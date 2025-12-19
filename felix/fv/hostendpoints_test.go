@@ -466,7 +466,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 
 			if BPFMode() {
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], "eth0", "egress", "default.f0-egress", "deny", false)
+					return bpfCheckIfGlobalNetworkPolicyProgrammed(tc.Felixes[0], "eth0", "egress", "f0-egress", "deny", false)
 				}, "2s", "200ms").Should(BeTrue())
 			}
 

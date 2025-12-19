@@ -5,6 +5,8 @@
 
 ARG CALICO_BASE
 
+# iptables-legacy is only available in EPEL 9. We can move to AlmaLinux 10
+# once we have confirmed that iptables-legacy is no longer required.
 FROM almalinux:9 AS almalinux
 
 RUN dnf upgrade -y && dnf install -y epel-release

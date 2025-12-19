@@ -179,6 +179,7 @@ func (r flowHelper) CanListEndpoint(typ api.EndpointType, namespace string) (boo
 // CanListPolicy determines if a policy can be listed.
 func (r flowHelper) CanListPolicy(p api.PolicyHit) (bool, error) {
 	ns := p.Namespace()
+
 	switch p.IsStaged() {
 	case true:
 		switch {

@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -91,7 +92,6 @@ func (d *testL7Reporter) getLogs() []*L7Log {
 }
 
 var _ = Describe("L7 Log Reporter", func() {
-
 	var (
 		ed1, ed2, ed3 calc.EndpointData
 		dispatcher    *testL7Reporter
@@ -141,12 +141,12 @@ var _ = Describe("L7 Log Reporter", func() {
 			CommonEndpointData: calc.CalculateCommonEndpointData(localWlEPKey1, localWlEp1),
 			Ingress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
-					calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1"}: 0,
+					{Name: "policy2"}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction,
 							rules.RuleDirIngress, rules.RuleActionDeny),
 						EndOfTierMatchIndex: 0,
 					},
@@ -155,12 +155,12 @@ var _ = Describe("L7 Log Reporter", func() {
 			},
 			Egress: &calc.MatchData{
 				PolicyMatches: map[calc.PolicyID]int{
-					calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
-					calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+					{Name: "policy1"}: 0,
+					{Name: "policy2"}: 0,
 				},
 				TierData: map[string]*calc.TierData{
 					"default": {
-						TierDefaultActionRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+						TierDefaultActionRuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy2", "", calc.RuleIndexTierDefaultAction,
 							rules.RuleDirIngress, rules.RuleActionDeny),
 						EndOfTierMatchIndex: 0,
 					},

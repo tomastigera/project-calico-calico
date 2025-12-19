@@ -113,9 +113,9 @@ var _ = Describe("Windows flow logs test", func() {
 					flowlogs.NoService, 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "dst",
-							Action:   "allow",
-							Policies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
+							Reporter:         "dst",
+							Action:           "allow",
+							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
 						},
 					})
 				if err != nil {
@@ -127,9 +127,9 @@ var _ = Describe("Windows flow logs test", func() {
 					"demo nginx - 80", 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "src",
-							Action:   "allow",
-							Policies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
+							Reporter:         "src",
+							Action:           "allow",
+							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
 						},
 					})
 				if err != nil {
@@ -142,9 +142,9 @@ var _ = Describe("Windows flow logs test", func() {
 					flowlogs.NoService, 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "dst",
-							Action:   "allow",
-							Policies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
+							Reporter:         "dst",
+							Action:           "allow",
+							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
 						},
 					})
 				if err != nil {
@@ -156,9 +156,9 @@ var _ = Describe("Windows flow logs test", func() {
 					"demo nginx - 80", 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "src",
-							Action:   "allow",
-							Policies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
+							Reporter:         "src",
+							Action:           "allow",
+							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
 						},
 					})
 				if err != nil {
@@ -173,9 +173,9 @@ var _ = Describe("Windows flow logs test", func() {
 					flowlogs.NoService, 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "dst",
-							Action:   "deny",
-							Policies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
+							Reporter:         "dst",
+							Action:           "deny",
+							EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
 						},
 					})
 				if err != nil {
@@ -188,9 +188,9 @@ var _ = Describe("Windows flow logs test", func() {
 					flowlogs.NoService, 1, 1,
 					[]flowlogs.ExpectedPolicy{
 						{
-							Reporter: "dst",
-							Action:   "deny",
-							Policies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
+							Reporter:         "dst",
+							Action:           "deny",
+							EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
 						},
 					})
 				if err != nil {

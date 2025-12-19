@@ -660,6 +660,12 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
 					WithPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
+					WithEnforcedPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithEnforcedPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
+					WithPendingPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithPendingPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
+					WithTransitPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithTransitPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
 					WithTCPLostPackets(100).
 					WithTCPMeanSendCongestionWindow(101).
 					WithTCPMinSendCongestionWindow(102).
@@ -794,11 +800,20 @@ func TestFlowLogFiltering(t *testing.T) {
 						}
 					}
 
+					// We can't assert that *only* these clusters are returned, because other tests might be running
+					// and we are querying all clusters.
 					if numExpected(testcase) > 0 {
 						allClusters := []string{cluster1, cluster2, cluster3}
+						count := 0
 						for _, item := range r.Items {
-							require.Contains(t, allClusters, item.Cluster)
+							for _, c := range allClusters {
+								if item.Cluster == c {
+									count++
+									break
+								}
+							}
 						}
+						require.Equal(t, numExpected(testcase)*3, count)
 					}
 				})
 			})
@@ -1330,7 +1345,10 @@ func TestFlowLogCount(t *testing.T) {
 			Reporter:        "src",
 			Action:          "allowed",
 			Policies: &v1.FlowLogPolicy{
-				AllPolicies: []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+				AllPolicies:      []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+				EnforcedPolicies: []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+				PendingPolicies:  []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+				TransitPolicies:  []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
 			},
 		}
 
@@ -1351,7 +1369,10 @@ func TestFlowLogCount(t *testing.T) {
 			Reporter:        "src",
 			Action:          "allowed",
 			Policies: &v1.FlowLogPolicy{
-				AllPolicies: []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
+				AllPolicies:      []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
+				EnforcedPolicies: []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
+				PendingPolicies:  []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
+				TransitPolicies:  []string{"1|custom-tier|custom-tier.my-policy|deny|1"},
 			},
 		}
 

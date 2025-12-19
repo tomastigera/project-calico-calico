@@ -9,6 +9,8 @@
     "plugin-helpers": "node ../../scripts/plugin_helpers",
     "kbn": "node ../../scripts/kbn"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "playwright": "^1.57.0"
   }
 }

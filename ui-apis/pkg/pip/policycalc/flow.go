@@ -1,6 +1,7 @@
 package policycalc
 
 import (
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -12,7 +13,7 @@ type flowCache struct {
 
 	// Cached policy actions. Populated by the before flow calculation and used by the after policy calculation to
 	// speed up processing and to assist with unknown rule matches.
-	policies map[string]api.ActionFlag
+	policies map[model.ResourceKey]api.ActionFlag
 }
 
 type endpointCache struct {

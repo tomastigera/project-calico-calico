@@ -98,8 +98,6 @@ var fullyLoadedParsedRule = ParsedRule{
 		},
 	},
 
-	LogPrefix: "foobar",
-
 	Metadata: &model.RuleMetadata{Annotations: map[string]string{"key": "value"}},
 }
 
@@ -172,8 +170,6 @@ var fullyLoadedProtoRule = &proto.Rule{
 			{Header: "x-forwarded-for", Operator: "In", Values: []string{"192.168.0.254", "192.168.0.1"}},
 		},
 	},
-
-	LogPrefix: "foobar",
 
 	Metadata: &proto.RuleMetadata{Annotations: map[string]string{"key": "value"}},
 }

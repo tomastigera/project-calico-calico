@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -17,7 +18,7 @@ func TestPolicyResolver_OnUpdate(t *testing.T) {
 		Name: "test-policy",
 	}
 
-	policy := model.Policy{}
+	policy := model.Policy{Tier: "default"}
 
 	kvp := model.KVPair{
 		Key:   polKey,
@@ -84,11 +85,11 @@ func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
 	pr, recorder := createPolicyResolver()
 
 	polKey := model.PolicyKey{
-		Tier: "default",
 		Name: "test-policy",
+		Kind: v3.KindNetworkPolicy,
 	}
 
-	pol := ExtractPolicyMetadata(&model.Policy{})
+	pol := ExtractPolicyMetadata(&model.Policy{Tier: "default"})
 
 	endpointKey := model.WorkloadEndpointKey{
 		Hostname: "test-workload-ep",
@@ -154,8 +155,8 @@ func TestPolicyResolver_OnPolicyMatchStopped(t *testing.T) {
 	pr.OnDatamodelStatus(api.InSync)
 
 	polKey := model.PolicyKey{
-		Tier: "default",
 		Name: "test-policy",
+		Kind: v3.KindNetworkPolicy,
 	}
 
 	pol := PolicyMetadata{}

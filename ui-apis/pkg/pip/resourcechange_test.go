@@ -118,25 +118,4 @@ var _ = Describe("Test resourcechange unmarshaling and marshaling", func() {
 		r2Copy.Spec.Tier = "default"
 		Expect(output).To(Equal(test))
 	})
-
-	It("errors if the tier name and policy name do not align", func() {
-		r1Copy := r1.DeepCopy()
-		r1Copy.Spec.Tier = "tier1"
-		r1.Name = "tier2.policy"
-		test := []pip.ResourceChange{
-			{
-				Action:   "update",
-				Resource: r1Copy,
-			},
-		}
-
-		By("Marshalling a slice of ResourceChange structs")
-		j, err := json.Marshal(test)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Unmarshalling the json output and expecting an error")
-		var output []pip.ResourceChange
-		err = json.Unmarshal(j, &output)
-		Expect(err).To(HaveOccurred())
-	})
 })
