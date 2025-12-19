@@ -223,6 +223,9 @@ func getDatastoreFelixConfig(client clientv3.Interface) (*apiv3.FelixConfigurati
 func (f *WinFV) AddConfigItems(configs map[string]any) error {
 	if IsRunningHPC() {
 		c, err := f.GetDatastoreFelixConfig()
+		if err != nil {
+			return err
+		}
 		log.WithFields(log.Fields{"felixconfiguration": c, "adding configs": configs}).Info("Updating FelixConfiguration")
 		val := reflect.ValueOf(&c.Spec).Elem()
 		for key, value := range configs {
