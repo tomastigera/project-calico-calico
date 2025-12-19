@@ -183,11 +183,11 @@ var _ = infrastructure.DatastoreDescribe(
 			},
 			{
 				Encap:       "ipip",
-				BPFLogLevel: "Debug",
+				BPFLogLevel: "Info",
 			},
 			{
 				Encap:       "vxlan",
-				BPFLogLevel: "Debug",
+				BPFLogLevel: "Info",
 			},
 		} {
 			encap := testConfig.Encap
