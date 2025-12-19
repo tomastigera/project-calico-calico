@@ -12,6 +12,10 @@ USER 0
 
 ARG GTM_INTEGRATION=disabled
 
+RUN mkdir -p /rootfs/usr/bin
+RUN ln -sf usr/bin /rootfs/bin
+RUN cp -a /usr/bin/sh /rootfs/usr/bin/sh
+
 COPY create_kibana_config.sh /usr/bin/create_kibana_config.sh
 RUN /usr/bin/create_kibana_config.sh /usr/share/kibana/config/kibana.yml
 
@@ -22,11 +26,11 @@ RUN if [ "$GTM_INTEGRATION" != "enabled" ]; then \
 
 FROM scratch AS source
 
+COPY --from=kibana /rootfs/ /
+
 # init script binary dependencies
-COPY --from=kibana /bin/bash /bin/bash
-COPY --from=kibana /bin/sh /bin/sh
-COPY --from=kibana /bin/tini /bin/tini
 COPY --from=kibana /usr/bin/basename /usr/bin/basename
+COPY --from=kibana /usr/bin/bash /usr/bin/bash
 COPY --from=kibana /usr/bin/cat /usr/bin/cat
 COPY --from=kibana /usr/bin/coreutils /usr/bin/coreutils
 COPY --from=kibana /usr/bin/cp /usr/bin/cp
@@ -37,6 +41,7 @@ COPY --from=kibana /usr/bin/env /usr/bin/env
 COPY --from=kibana /usr/bin/grep /usr/bin/grep
 COPY --from=kibana /usr/bin/ln /usr/bin/ln
 COPY --from=kibana /usr/bin/ls /usr/bin/ls
+COPY --from=kibana /usr/bin/tini /usr/bin/tini
 COPY --from=kibana /usr/bin/touch /usr/bin/touch
 COPY --from=kibana /usr/bin/tr /usr/bin/tr
 COPY --from=kibana /usr/bin/xargs /usr/bin/xargs
@@ -71,6 +76,6 @@ WORKDIR /usr/share/kibana
 
 USER 1000
 
-ENTRYPOINT ["/bin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 CMD ["/usr/local/bin/kibana-docker"]
