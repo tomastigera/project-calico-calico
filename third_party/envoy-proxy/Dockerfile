@@ -1,12 +1,16 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
-ARG ENVOYBINARY_IMAGE
 ARG UBI_IMAGE
 
-FROM ${ENVOYBINARY_IMAGE} AS envoybinary
-
 FROM ${UBI_IMAGE} AS ubi
+
+RUN microdnf upgrade -y && microdnf install -y \
+    shadow-utils
+
+# For updating this version please see
+# https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
+FROM quay.io/tigera/envoybinary:v1.35.8-6ddb700081 AS envoybinary
 
 FROM scratch AS source
 
@@ -25,7 +29,9 @@ COPY --from=ubi /lib64/libaudit.so.1 /lib64/libaudit.so.1
 COPY --from=ubi /lib64/libbz2.so.1 /lib64/libbz2.so.1
 COPY --from=ubi /lib64/libcap-ng.so.0 /lib64/libcap-ng.so.0
 COPY --from=ubi /lib64/libcap.so.2 /lib64/libcap.so.2
+COPY --from=ubi /lib64/libcrypt.so.2 /lib64/libcrypt.so.2
 COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=ubi /lib64/libeconf.so.0 /lib64/libeconf.so.0
 COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1

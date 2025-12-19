@@ -16,6 +16,7 @@ ARG IPTABLES_VER=1.8.2-16
 
 # Use this build stage to build iptables rpm binaries.
 # We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
+# FIXME(jiawei): Update the base image to AlmaLinux 9.
 FROM almalinux:8 AS almalinux
 
 ARG IPTABLES_VER
@@ -80,6 +81,7 @@ RUN sed -i '/%files$/a \
 # Finally rebuild iptables.
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
+# FIXME(jiawei): Update the base image to UBI 9.
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest AS ubi
 
 ARG IPTABLES_VER

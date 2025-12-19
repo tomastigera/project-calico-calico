@@ -1,4 +1,1 @@
-docker-image/scaleloader/playbooks
-docker-image/scaleloader/scenarios
-
 !pkg/report

@@ -6,10 +6,8 @@ COMPLIANCE_SERVER_IMAGE      =compliance-server
 COMPLIANCE_CONTROLLER_IMAGE  =compliance-controller
 COMPLIANCE_SNAPSHOTTER_IMAGE =compliance-snapshotter
 COMPLIANCE_REPORTER_IMAGE    =compliance-reporter
-COMPLIANCE_SCALELOADER_IMAGE =compliance-scaleloader
 COMPLIANCE_BENCHMARKER_IMAGE =compliance-benchmarker
 
-# NOTE COMPLIANCE_SCALELOADER_IMAGE isn't included as it is a special case that we don't need to push.
 BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE) \
  	$(COMPLIANCE_CONTROLLER_IMAGE) \
  	$(COMPLIANCE_SNAPSHOTTER_IMAGE) \
@@ -152,7 +150,6 @@ COMPLIANCE_CONTROLLER_CONTAINER_CREATED=.compliance-controller.created-$(ARCH)
 COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED=.compliance-snapshotter.created-$(ARCH)
 COMPLIANCE_REPORTER_CONTAINER_CREATED=.compliance-reporter.created-$(ARCH)
 COMPLIANCE_BENCHMARKER_CONTAINER_CREATED=.compliance-benchmarker.created-$(ARCH)
-COMPLIANCE_SCALELOADER_CONTAINER_CREATED=.compliance-scaleloader.created-$(ARCH)
 
 # Build the images for the target architecture
 .PHONY: image-all
@@ -199,25 +196,9 @@ $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/D
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
-# Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
-$(COMPLIANCE_SCALELOADER_IMAGE): $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
-$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/Dockerfile bin/scaleloader-$(ARCH)
-	rm -rf docker-image/scaleloader/bin
-	rm -rf docker-image/scaleloader/playbooks
-	rm -rf docker-image/scaleloader/scenarios
-	mkdir -p docker-image/scaleloader/bin
-	cp bin/scaleloader-$(ARCH) docker-image/scaleloader/bin/
-	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
-	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
-	$(DOCKER_BUILD) -t $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) -f docker-image/scaleloader/Dockerfile docker-image/scaleloader
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE)
-	touch $@
-
 .PHONY: clean
 clean:
-	rm -rf bin \
-	       docker-image/scaleloader/bin \
-	       release-notes-*
+	rm -rf bin
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
@@ -226,13 +207,11 @@ clean:
 	rm -f $(COMPLIANCE_CONTROLLER_CONTAINER_CREATED)
 	rm -f $(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED)
 	rm -f $(COMPLIANCE_REPORTER_CONTAINER_CREATED)
-	rm -f $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
 	rm -f $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(COMPLIANCE_SERVER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_CONTROLLER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_SNAPSHOTTER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_REPORTER_IMAGE) -a -q)
-	-docker image rm -f $$(docker images $(COMPLIANCE_SCALELOADER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(COMPLIANCE_BENCHMARKER_IMAGE) -a -q)
 
 ###############################################################################

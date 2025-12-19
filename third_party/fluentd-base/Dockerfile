@@ -1,6 +1,6 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM registry.access.redhat.com/ubi9/ubi AS builder
+FROM registry.access.redhat.com/ubi10/ubi AS builder
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI_IMAGE
 ARG CALICO_BASE
 
-FROM ${UBI_IMAGE} AS builder
+# FIXME(jiawei): iptables package is dropped in UBI 10. We can move to UBI 10
+# once we have confirmed that iptables is no longer required.
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS builder
 
 # Update base packages to pick up security updates and embedding iptables
 RUN microdnf upgrade -y && microdnf install -y findutils iptables && \

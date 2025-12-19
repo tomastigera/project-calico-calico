@@ -49,6 +49,7 @@ COPY --from=fluentd /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
 COPY --from=fluentd /lib64/libcurl.so.4 /lib64/libcurl.so.4
 COPY --from=fluentd /lib64/libgmp.so.10 /lib64/libgmp.so.10 
 COPY --from=fluentd /lib64/libgssapi_krb5.so.2 /lib64/libgssapi_krb5.so.2
+COPY --from=fluentd /lib64/libidn2.so.0 /lib64/libidn2.so.0
 COPY --from=fluentd /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
 COPY --from=fluentd /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
 COPY --from=fluentd /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
@@ -59,9 +60,9 @@ COPY --from=fluentd /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
 COPY --from=fluentd /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=fluentd /lib64/libreadline.so.8 /lib64/libreadline.so.8
 COPY --from=fluentd /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=fluentd /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=fluentd /lib64/libssl.so.3 /lib64/libssl.so.3
 COPY --from=fluentd /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=fluentd /lib64/libunistring.so.5 /lib64/libunistring.so.5
 COPY --from=fluentd /lib64/libz.so.1 /lib64/libz.so.1
 
 # ruby and fluentd
