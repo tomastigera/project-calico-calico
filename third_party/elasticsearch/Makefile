@@ -40,7 +40,8 @@ else ifeq ($(ARCH),arm64)
 	override GRADLE_TASK=:distribution:archives:linux-aarch64-tar:assemble
 endif
 
-OPENJDK_BUILD=registry.access.redhat.com/ubi9/openjdk-21:latest
+# FIXME(jiawei): Use ubi10/openjdk image when available.
+OPENJDK_BUILD=registry.access.redhat.com/ubi9/openjdk-25:latest
 
 .PHONY: build
 build: init-elastic

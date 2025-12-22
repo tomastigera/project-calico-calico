@@ -43,7 +43,7 @@ image: $(ELASTICSEARCH_IMAGE)
 
 $(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE_MARKER)
 
-$(ELASTICSEARCH_IMAGE_MARKER): Dockerfile bin/readiness-probe-$(ARCH)
+$(ELASTICSEARCH_IMAGE_MARKER): register Dockerfile bin/readiness-probe-$(ARCH)
 	$(DOCKER_BUILD_THIRD_PARTY) --build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
 		-t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest

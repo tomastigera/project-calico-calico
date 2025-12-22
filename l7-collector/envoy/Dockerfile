@@ -5,12 +5,15 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} AS ubi
 
-# Update base packages to pick up security updates.
-RUN microdnf upgrade -y && microdnf install -y shadow-utils
+RUN microdnf upgrade -y && microdnf install -y \
+    shadow-utils
 
-FROM envoyproxy/envoy:v1.33.1 AS envoy
+# Ensure this version matches the version used in quay.io/tigera/envoybinary.
+FROM envoyproxy/envoy:v1.35.8 AS envoy
 
-FROM quay.io/tigera/envoybinary:v1.35.3-e1e533c6fb AS envoybinary
+# For updating this version please see
+# https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
+FROM quay.io/tigera/envoybinary:v1.35.8-6ddb700081 AS envoybinary
 
 FROM scratch AS source
 
@@ -26,13 +29,18 @@ COPY --from=ubi /usr/sbin/usermod /usr/sbin/usermod
 COPY --from=ubi /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=ubi /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=ubi /lib64/libaudit.so.1 /lib64/libaudit.so.1
+COPY --from=ubi /lib64/libbz2.so.1 /lib64/libbz2.so.1
 COPY --from=ubi /lib64/libcap-ng.so.0 /lib64/libcap-ng.so.0
 COPY --from=ubi /lib64/libcap.so.2 /lib64/libcap.so.2
+COPY --from=ubi /lib64/libcrypt.so.2 /lib64/libcrypt.so.2
 COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=ubi /lib64/libeconf.so.0 /lib64/libeconf.so.0
 COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
+COPY --from=ubi /lib64/libsemanage.so.2 /lib64/libsemanage.so.2
+COPY --from=ubi /lib64/libsepol.so.2 /lib64/libsepol.so.2
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 
 # envoy
