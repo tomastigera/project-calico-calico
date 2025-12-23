@@ -104,12 +104,12 @@ func generateRulesNftables(
 		{
 			Chain:   inputRedirectChain,
 			Comment: knftables.PtrTo("Redirect inbound traffic to envoy"),
-			Rule:    fmt.Sprintf("ip protocol tcp redirect to %s", envoyInboundPort),
+			Rule:    fmt.Sprintf("ip protocol tcp redirect to :%s", envoyInboundPort),
 		},
 		{
-			Chain:   "prerouting",
+			Chain:   "PREROUTING",
 			Comment: knftables.PtrTo(fmt.Sprintf("Jump to %s chain for ALL inbound traffic", inputProxyInbound)),
-			Rule:    "ip protocol tcp jump " + inputProxyInbound,
+			Rule:    "ip protocol tcp counter jump " + inputProxyInbound,
 		},
 		{
 			Chain:   inputProxyInbound,

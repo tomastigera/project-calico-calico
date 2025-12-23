@@ -75,7 +75,7 @@ func initIptables(config *flags.Config) {
 }
 
 func initNftables(config *flags.Config) {
-	nft, err := knftables.New(knftables.IPv4Family, "nat")
+	nft, err := knftables.New(knftables.IPv4Family, "dikastes")
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create nftables instance")
 	}
@@ -85,7 +85,7 @@ func initNftables(config *flags.Config) {
 
 	// Add in the base chain and hook it to prerouting with priority DNAT.
 	tx.Add(&knftables.Chain{
-		Name:     "prerouting",
+		Name:     "PREROUTING",
 		Hook:     knftables.PtrTo(knftables.PreroutingHook),
 		Type:     knftables.PtrTo(knftables.NATType),
 		Priority: knftables.PtrTo(knftables.DNATPriority),

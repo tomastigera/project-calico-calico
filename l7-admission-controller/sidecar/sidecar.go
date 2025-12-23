@@ -116,15 +116,6 @@ var defaultVolumes = []map[string]interface{}{
 }
 
 func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]interface{} {
-	securityContext := map[string]interface{}{
-		"runAsGroup": 0,
-		"runAsUser":  0,
-	}
-	if dataplane == "nftables" {
-		securityContext["privileged"] = true
-	} else {
-		securityContext["capabilities"] = []string{"NET_ADMIN", "NET_RAW"}
-	}
 	return []map[string]interface{}{
 		{
 			"name":    "tigera-dikastes-init",
@@ -151,7 +142,17 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 					"mountPath": "/etc/tigera",
 				},
 			},
-			"securityContext": securityContext,
+			"securityContext": map[string]interface{}{
+				"runAsGroup": 0,
+				"runAsUser":  0,
+				// needed for openshift or systems with SELinux Enabled
+				"seLinuxOptions": map[string]interface{}{
+					"type": "spc_t",
+				},
+				"capabilities": map[string]interface{}{
+					"add": []string{"NET_ADMIN", "NET_RAW"},
+				},
+			},
 		},
 	}
 }
@@ -181,8 +182,12 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 		"securityContext": map[string]interface{}{
 			"runAsGroup": 0,
 			"runAsUser":  0,
+			// needed for openshift or systems with SELinux Enabled
+			"seLinuxOptions": map[string]interface{}{
+				"type": "spc_t",
+			},
 			"capabilities": map[string]interface{}{
-				"add": []string{"NET_ADMIN"},
+				"add": []string{"NET_RAW"},
 			},
 		},
 		"volumeMounts": []map[string]interface{}{
