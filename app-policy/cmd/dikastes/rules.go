@@ -104,7 +104,7 @@ func generateRulesNftables(
 		{
 			Chain:   inputRedirectChain,
 			Comment: knftables.PtrTo("Redirect inbound traffic to envoy"),
-			Rule:    fmt.Sprintf("ip protocol tcp counter redirect to :%s", envoyInboundPort),
+			Rule:    fmt.Sprintf("ip protocol tcp redirect to :%s", envoyInboundPort),
 		},
 		{
 			Chain:   "PREROUTING",
@@ -114,32 +114,32 @@ func generateRulesNftables(
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Allow access to envoy metrics port"),
-			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyMetricsPort),
+			Rule:    fmt.Sprintf("tcp dport %s counter return", envoyMetricsPort),
 		},
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Allow access to envoy liveness probe port"),
-			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyLivenessPort),
+			Rule:    fmt.Sprintf("tcp dport %s counter return", envoyLivenessPort),
 		},
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Allow access to envoy readiness probe port"),
-			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyReadinessPort),
+			Rule:    fmt.Sprintf("tcp dport %s counter return", envoyReadinessPort),
 		},
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Allow access to envoy startup probe port"),
-			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyStartupProbePort),
+			Rule:    fmt.Sprintf("tcp dport %s counter return", envoyStartupProbePort),
 		},
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Allow access to envoy health check port"),
-			Rule:    fmt.Sprintf("ip protocol tcp dport %s counter return", envoyHealthCheckPort),
+			Rule:    fmt.Sprintf("tcp dport %s counter return", envoyHealthCheckPort),
 		},
 		{
 			Chain:   inputProxyInbound,
 			Comment: knftables.PtrTo("Redirect remaining inbound traffic to envoy"),
-			Rule:    "ip protocol tcp counter jump " + inputRedirectChain,
+			Rule:    "ip protocol tcp jump " + inputRedirectChain,
 		},
 	}
 

@@ -145,6 +145,10 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 			"securityContext": map[string]interface{}{
 				"runAsGroup": 0,
 				"runAsUser":  0,
+				// needed for openshift or systems with SELinux Enabled
+				"seLinuxOptions": map[string]interface{}{
+					"type": "spc_t",
+				},
 				"capabilities": map[string]interface{}{
 					"add": []string{"NET_ADMIN", "NET_RAW"},
 				},
@@ -178,6 +182,13 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 		"securityContext": map[string]interface{}{
 			"runAsGroup": 0,
 			"runAsUser":  0,
+			// needed for openshift or systems with SELinux Enabled
+			"seLinuxOptions": map[string]interface{}{
+				"type": "spc_t",
+			},
+			"capabilities": map[string]interface{}{
+				"add": []string{"NET_RAW"},
+			},
 		},
 		"volumeMounts": []map[string]interface{}{
 			{

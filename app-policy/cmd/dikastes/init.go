@@ -85,7 +85,7 @@ func initNftables(config *flags.Config) {
 
 	// Add in the base chain and hook it to prerouting with priority DNAT.
 	tx.Add(&knftables.Chain{
-		Name:     "nat",
+		Name:     "PREROUTING",
 		Hook:     knftables.PtrTo(knftables.PreroutingHook),
 		Type:     knftables.PtrTo(knftables.NATType),
 		Priority: knftables.PtrTo(knftables.DNATPriority),
