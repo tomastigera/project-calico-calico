@@ -125,6 +125,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		sgHandler          servicegraph.ServiceGraphHandler
 		sgStatsHandler     http.Handler
 		clusterInfo        bapi.ClusterInfo
+		managedClusterInfo *bapi.ClusterInfo
 		existingNamespaces *corev1.NamespaceList
 
 		// Tracking for scenario teardowns
@@ -190,6 +191,15 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			WaitForCompletion(true).
 			Query(elastic.NewMatchAllQuery()).
 			Do(ctx)
+
+		if managedClusterInfo != nil {
+			_, _ = esClient.DeleteByQuery().
+				Index(index.FlowLogMultiIndex.Index(*managedClusterInfo)).
+				WaitForCompletion(true).
+				Query(elastic.NewMatchAllQuery()).
+				Do(ctx)
+			managedClusterInfo = nil
+		}
 	})
 
 	Context("Mainline cases", func() {
@@ -929,8 +939,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			managedVeryHighFlowNamespaces := newNamespaceGroup("managed-very-high-flow-logs", 1, 3200000, dataTimeRange, false)
 			managedNsGroups := []namespaceGroup{managedVeryHighFlowNamespaces, managedHighFlowNamespaces}
 			mu := testUser{Username: "managed-test-sg-user"}
-			managedClusterInfo := bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
-			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, managedClusterInfo)
+			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, *managedClusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, managedScenarioTeardowns...)
 
@@ -967,7 +977,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				HighVolume:   util.BoolPtr(false),
 				Approximated: util.BoolPtr(true),
 			}))
-			Eventually(queryLastTwoDays(managedUserInfo, managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
 				Namespace:    "managed-high-flow-logs-frontend-a",
 				HighVolume:   util.BoolPtr(false),
 				Approximated: util.BoolPtr(true),
@@ -983,7 +993,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				HighVolume:   util.BoolPtr(true),
 				Approximated: util.BoolPtr(true),
 			}))
-			Eventually(queryLastTwoDays(managedUserInfo, managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
 				Namespace:    "managed-high-flow-logs-frontend-a",
 				HighVolume:   util.BoolPtr(true),
 				Approximated: util.BoolPtr(true),
@@ -1043,8 +1053,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			managedLowScaleNamespaces := newNamespaceGroup("managed-low-scale", 5, 10, dataTimeRange, false)
 			managedNsGroups := []namespaceGroup{managedLowScaleNamespaces, managedHighL3FlowNamespaces, managedHighFlowNamespaces}
 			managedTestUser := testUser{Username: "managed-test-sg-user"}
-			managedClusterInfo := bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
-			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, managedClusterInfo)
+			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, *managedClusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, managedScenarioTeardowns...)
 
@@ -1058,7 +1068,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
 			teardowns = append(teardowns, managedClusterTeardowns)
 
-			Eventually(queryLastThreeDays(managedUserInfo, managedClusterInfo)).
+			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
 				WithTimeout(3 * time.Minute).
 				WithPolling(3 * time.Second).
 				To(ContainElement(uiapisv1.NamespaceStatistics{
@@ -1075,7 +1085,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			// This is not a valid state to be in, since the managed cluster is disconnected and we should not be able to contact its API server anymore.
 			// This invalid state is facilitated by the fact that we have one API server acting as the API server for both the default cluster and the managed cluster.
 			// Even though this state is invalid, it can be used to show whether we cleared out our cache entry for the namespace.
-			Eventually(queryLastThreeDays(managedUserInfo, managedClusterInfo)).
+			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
 				WithTimeout(3 * time.Minute).
 				WithPolling(3 * time.Second).
 				To(ContainElement(uiapisv1.NamespaceStatistics{
