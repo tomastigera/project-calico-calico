@@ -115,7 +115,7 @@ func SetupManagedClusterCreateRequirements(k8sClient *kubernetes.Clientset) (fun
 	if err != nil {
 		return nil, err
 	}
-	secret := ToSecret("tigera-management-cluster-connection", "calico-system", caPem, caKeyPem)
+	secret := ToSecret("calico-management-cluster-connection", "calico-system", caPem, caKeyPem)
 	namespace := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{

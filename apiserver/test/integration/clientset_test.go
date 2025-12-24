@@ -3311,7 +3311,7 @@ func TestManagedClusterClient(t *testing.T) {
 				},
 				enableManagedClusterCreateAPI: true,
 				managementClusterAddr:         "example.org:1234",
-				tunnelSecretName:              "tigera-management-cluster-connection",
+				tunnelSecretName:              "calico-management-cluster-connection",
 				applyTigeraLicense:            true,
 			}
 
@@ -3338,7 +3338,7 @@ func TestManagedClusterClient(t *testing.T) {
 				return &v3.ManagedCluster{}
 			},
 			enableManagedClusterCreateAPI: false,
-			tunnelSecretName:              "tigera-management-cluster-connection",
+			tunnelSecretName:              "calico-management-cluster-connection",
 			applyTigeraLicense:            true,
 		}
 
