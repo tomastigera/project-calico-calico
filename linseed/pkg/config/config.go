@@ -4,6 +4,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
@@ -81,6 +82,11 @@ type Config struct {
 	// linseed can restrict functionality accordingly, for example by disabling
 	// api's that are not used in oss.
 	ProductVariant ProductVariant `envconfig:"PRODUCT_VARIANT" default:"TigeraSecureEnterprise"`
+
+	// PolicyActivityCacheCleanupInterval controls how often the in-memory deduplication cache is scanned for expired policy activity records.
+	PolicyActivityCacheCleanupInterval time.Duration `envconfig:"POLICY_ACTIVITY_CACHE_CLEANUP_INTERVAL" default:"10m"`
+	// PolicyActivityCacheCleanupTTL defines the max age of a cache entry and should slightly exceed the deduplication window for policy activity.
+	PolicyActivityCacheCleanupTTL time.Duration `envconfig:"POLICY_ACTIVITY_CACHE_CLEANUP_TTL" default:"2h"`
 }
 
 // ElasticClientConfig represents the elastic configuration
@@ -130,6 +136,10 @@ type ElasticClientConfig struct {
 	ElasticRuntimeReplicas int `envconfig:"ELASTIC_RUNTIME_INDEX_REPLICAS" default:"0"`
 	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
 
+	// Replicas and flows for PolicyActivity
+	ElasticPolicyActivityReplicas int `envconfig:"ELASTIC_POLICY_ACTIVITY_INDEX_REPLICAS" default:"0"`
+	ElasticPolicyActivityShards   int `envconfig:"ELASTIC_POLICY_ACTIVITY_INDEX_SHARDS" default:"1"`
+
 	// These environment variables allow overriding the index names to use for this Linseed.
 	// They are only supported when running in single-index mode. If unset, defaults will be used instead
 	ElasticAlertsBaseIndexName               string `envconfig:"ELASTIC_ALERTS_BASE_INDEX_NAME" default:"calico_alerts"`
@@ -158,6 +168,8 @@ type ElasticClientConfig struct {
 	ElasticThreatFeedsIPSetIPolicyName       string `envconfig:"ELASTIC_THREAT_FEEDS_IP_SET_POLICY_NAME" default:"tigera_secure_ee_threatfeeds_domainnameset_policy"`
 	ElasticWAFLogsBaseIndexName              string `envconfig:"ELASTIC_WAF_LOGS_BASE_INDEX_NAME" default:"calico_waf"`
 	ElasticWAFLogsPolicyName                 string `envconfig:"ELASTIC_WAF_LOGS_POLICY_NAME" default:"tigera_secure_ee_waf_policy"`
+	ElasticPolicyActivityBaseIndexName       string `envconfig:"ELASTIC_POLICY_ACTIVITY_BASE_INDEX_NAME" default:"calico_policy_activity"`
+	ElasticPolicyActivityPolicyName          string `envconfig:"ELASTIC_POLICY_ACTIVITY_POLICY_NAME" default:"tigera_secure_ee_policy_activity_policy"`
 }
 
 type BackendType string

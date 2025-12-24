@@ -47,7 +47,8 @@ type RequestParams interface {
 		v1.WAFLogParams | v1.WAFLogAggregationParams |
 		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
 		v1.RuntimeReportParams | v1.IPSetThreatFeedParams |
-		v1.DomainNameSetThreatFeedParams | v1.EventStatisticsParams
+		v1.DomainNameSetThreatFeedParams | v1.EventStatisticsParams |
+		v1.PolicyActivityParams
 }
 
 // BulkRequestParams is the collection of request parameters types
@@ -59,7 +60,8 @@ type BulkRequestParams interface {
 		v1.WAFLog | v1.ReportData |
 		v1.Snapshot | v1.Benchmarks |
 		v1.Report | v1.IPSetThreatFeed |
-		v1.DomainNameSetThreatFeed
+		v1.DomainNameSetThreatFeed |
+		v1.PolicyActivity
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters

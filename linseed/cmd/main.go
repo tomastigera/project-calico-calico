@@ -42,6 +42,7 @@ import (
 	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	policybackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/policy"
 	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
 	runtimebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
@@ -57,6 +58,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
+	"github.com/projectcalico/calico/linseed/pkg/handler/policy"
 	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
 	"github.com/projectcalico/calico/linseed/pkg/handler/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/handler/threatfeeds"
@@ -179,6 +181,7 @@ func run() {
 	var wafBackend api.WAFBackend
 	var ipSetBackend api.IPSetBackend
 	var domainNameSetBackend api.DomainNameSetBackend
+	var policyBackend api.PolicyBackend
 
 	switch cfg.Backend {
 	case config.BackendTypeMultiIndex:
@@ -199,6 +202,7 @@ func run() {
 		wafBackend = wafbackend.NewBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
 		ipSetBackend = threatfeedsbackend.NewIPSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
 		domainNameSetBackend = threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
+		policyBackend = policybackend.NewBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL)
 	case config.BackendTypeSingleIndex:
 		flowLogBackend = flowbackend.NewSingleIndexFlowLogBackend(esClient, flowInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticFlowLogsBaseIndexName))
 		flowBackend = flowbackend.NewSingleIndexFlowBackend(esClient, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticFlowLogsBaseIndexName))
@@ -217,8 +221,15 @@ func run() {
 		wafBackend = wafbackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticWAFLogsBaseIndexName))
 		ipSetBackend = threatfeedsbackend.NewSingleIndexIPSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsIPSetBaseIndexName))
 		domainNameSetBackend = threatfeedsbackend.NewSingleIndexDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsDomainSetBaseIndexName))
+		policyBackend = policybackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
 	default:
 		logrus.Fatalf("Invalid backend type: %s", cfg.Backend)
+	}
+
+	// Ensure the policy backend background routines (cache cleanup)
+	// are stopped when the server shuts down.
+	if policyBackend != nil {
+		defer policyBackend.Close()
 	}
 
 	// Create a Kubernetes client to use for authorization.
@@ -412,6 +423,7 @@ func run() {
 			compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
 			runtime.New(runtimeBackend),
 			threatfeeds.New(ipSetBackend, domainNameSetBackend),
+			policy.New(policyBackend),
 		)
 	}
 

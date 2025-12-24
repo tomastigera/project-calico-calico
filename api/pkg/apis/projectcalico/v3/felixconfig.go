@@ -1339,6 +1339,24 @@ type FelixConfigurationSpec struct {
 	// [Default: 100]
 	WAFEventLogsFileMaxFileSizeMB *int `json:"wafEventLogsFileMaxFileSizeMB,omitempty"`
 
+	// PolicyActivityLogsFlushInterval configures the interval at which Felix exports policy activity logs.
+	// [Default: 15s]
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
+	PolicyActivityLogsFlushInterval *metav1.Duration `json:"policyActivityLogsFlushInterval,omitempty" configv1timescale:"seconds"`
+	// PolicyActivityLogsFileEnabled controls logging policy activity logs to a file. If false no policy activity logging to file will occur.
+	// [Default: true]
+	PolicyActivityLogsFileEnabled *bool `json:"policyActivityLogsFileEnabled,omitempty"`
+	// PolicyActivityLogsFileDirectory sets the directory where policy activity log files are stored.
+	// [Default: /var/log/calico/policy]
+	PolicyActivityLogsFileDirectory *string `json:"policyActivityLogsFileDirectory,omitempty"`
+	// PolicyActivityLogsFileMaxFiles sets the number of policy activity log files to keep.
+	// [Default: 5]
+	PolicyActivityLogsFileMaxFiles *int `json:"policyActivityLogsFileMaxFiles,omitempty"`
+	// PolicyActivityLogsFileMaxFileSizeMB sets the max size in MB of policy activity log files before rotation.
+	// [Default: 100]
+	PolicyActivityLogsFileMaxFileSizeMB *int `json:"policyActivityLogsFileMaxFileSizeMB,omitempty"`
+
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
 	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`

@@ -20,6 +20,7 @@ var TemplateNamePatternLookup = map[bapi.DataType]string{
 	bapi.Snapshots:      "tigera_secure_ee_snapshots.%s",
 	bapi.IPSet:          "tigera_secure_ee_threatfeeds_ipset.%s",
 	bapi.DomainNameSet:  "tigera_secure_ee_threatfeeds_domainnameset.%s",
+	bapi.PolicyActivity: "tigera_secure_ee_policy_activity.%s",
 }
 
 // BootstrapIndexPatternLookup will keep track of the boostrap indices that will be created
@@ -38,4 +39,5 @@ var BootstrapIndexPatternLookup = map[bapi.DataType]string{
 	bapi.Snapshots:      "<tigera_secure_ee_snapshots.%s.lma-{now/s{yyyyMMdd}}-000000>",
 	bapi.IPSet:          "<tigera_secure_ee_threatfeeds_ipset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
 	bapi.DomainNameSet:  "<tigera_secure_ee_threatfeeds_domainnameset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
+	bapi.PolicyActivity: "<tigera_secure_ee_policy_activity.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 }

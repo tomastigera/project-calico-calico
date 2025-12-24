@@ -34,4 +34,5 @@ type Collector interface {
 	WAFReportingHandler() func(*proto.WAFEvent)
 	LogWAFEvents([]*proto.WAFEvent)
 	SetWAFEventsReporter(types.Reporter)
+	SetPolicyActivityReporter(types.Reporter)
 }

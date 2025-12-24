@@ -1151,6 +1151,71 @@ due to a bug in the netlink library.
 | `FelixConfiguration` schema | String. |
 | Default value (YAML) | `65536` |
 
+### `PolicyActivityLogsFileDirectory` (config file) / `policyActivityLogsFileDirectory` (YAML)
+
+Sets the directory where policy activity log files are stored.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileDirectory` |
+| Encoding (env var/config file) | String |
+| Default value (above encoding) | `/var/log/calico/policy` |
+| `FelixConfiguration` field | `policyActivityLogsFileDirectory` (YAML) `PolicyActivityLogsFileDirectory` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | `/var/log/calico/policy` |
+
+### `PolicyActivityLogsFileEnabled` (config file) / `policyActivityLogsFileEnabled` (YAML)
+
+Controls logging policy activity logs to a file. If false no policy activity logging to file will occur.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileEnabled` |
+| Encoding (env var/config file) | Boolean: <code>true</code>, <code>1</code>, <code>yes</code>, <code>y</code>, <code>t</code> accepted as True; <code>false</code>, <code>0</code>, <code>no</code>, <code>n</code>, <code>f</code> accepted (case insensitively) as False. |
+| Default value (above encoding) | `true` |
+| `FelixConfiguration` field | `policyActivityLogsFileEnabled` (YAML) `PolicyActivityLogsFileEnabled` (Go API) |
+| `FelixConfiguration` schema | Boolean. |
+| Default value (YAML) | `true` |
+
+### `PolicyActivityLogsFileMaxFileSizeMB` (config file) / `policyActivityLogsFileMaxFileSizeMB` (YAML)
+
+Sets the max size in MB of policy activity log files before rotation.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileMaxFileSizeMB` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `100` |
+| `FelixConfiguration` field | `policyActivityLogsFileMaxFileSizeMB` (YAML) `PolicyActivityLogsFileMaxFileSizeMB` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `100` |
+
+### `PolicyActivityLogsFileMaxFiles` (config file) / `policyActivityLogsFileMaxFiles` (YAML)
+
+Sets the number of policy activity log files to keep.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileMaxFiles` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `5` |
+| `FelixConfiguration` field | `policyActivityLogsFileMaxFiles` (YAML) `PolicyActivityLogsFileMaxFiles` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `5` |
+
+### `PolicyActivityLogsFlushInterval` (config file) / `policyActivityLogsFlushInterval` (YAML)
+
+Configures the interval at which Felix exports policy activity logs.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFlushInterval` |
+| Encoding (env var/config file) | Seconds (floating point) |
+| Default value (above encoding) | `15` (15s) |
+| `FelixConfiguration` field | `policyActivityLogsFlushInterval` (YAML) `PolicyActivityLogsFlushInterval` (Go API) |
+| `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
+| Default value (YAML) | `15s` |
+
 ### `PolicySyncPathPrefix` (config file) / `policySyncPathPrefix` (YAML)
 
 Used to by Felix to communicate policy changes to external services,

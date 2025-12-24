@@ -40,6 +40,7 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 	minimalGNP := apiv3.NewGlobalNetworkPolicy()
 	minimalGNP.Spec.PreDNAT = true
 	minimalGNP.Spec.ApplyOnForward = true
+	minimalGNP.Generation = testGeneration
 
 	fullGNPKey := model.ResourceKey{Kind: apiv3.KindGlobalNetworkPolicy, Name: "full"}
 	fullGNP := fullGNPv3(ns1, selector)
@@ -109,6 +110,7 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 					Tier:           "default",
 					PreDNAT:        true,
 					ApplyOnForward: true,
+					Generation:     testGeneration,
 				},
 				Revision: testRev,
 			}))

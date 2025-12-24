@@ -7066,6 +7066,40 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"policyActivityLogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyActivityLogsFlushInterval configures the interval at which Felix exports policy activity logs. [Default: 15s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"policyActivityLogsFileEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyActivityLogsFileEnabled controls logging policy activity logs to a file. If false no policy activity logging to file will occur. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"policyActivityLogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyActivityLogsFileDirectory sets the directory where policy activity log files are stored. [Default: /var/log/calico/policy]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"policyActivityLogsFileMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyActivityLogsFileMaxFiles sets the number of policy activity log files to keep. [Default: 5]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"policyActivityLogsFileMaxFileSizeMB": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyActivityLogsFileMaxFileSizeMB sets the max size in MB of policy activity log files before rotation. [Default: 100]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",

@@ -531,6 +531,12 @@ type Config struct {
 	WAFEventLogsFileMaxFiles      int           `config:"int;5"`
 	WAFEventLogsFileMaxFileSizeMB int           `config:"int;100"`
 
+	PolicyActivityLogsFlushInterval     time.Duration `config:"seconds;15"`
+	PolicyActivityLogsFileEnabled       bool          `config:"bool;true"`
+	PolicyActivityLogsFileDirectory     string        `config:"string;/var/log/calico/policy"`
+	PolicyActivityLogsFileMaxFiles      int           `config:"int;5"`
+	PolicyActivityLogsFileMaxFileSizeMB int           `config:"int;100"`
+
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
 	WindowsStatsDumpFilePath        string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`

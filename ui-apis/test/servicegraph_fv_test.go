@@ -1590,6 +1590,7 @@ func (f failingClient) WAFLogs(s string) lsclient.WAFLogsInterface              
 func (f failingClient) Compliance(s string) lsclient.ComplianceInterface             { return nil }
 func (f failingClient) RuntimeReports(s string) lsclient.RuntimeReportsInterface     { return nil }
 func (f failingClient) ThreatFeeds(s string) lsclient.ThreatFeedsInterface           { return nil }
+func (f failingClient) PolicyActivity(s string) lsclient.PolicyActivityInterface     { return nil }
 
 type clientSetSet struct {
 	kubernetes.Interface

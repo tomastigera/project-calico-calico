@@ -329,6 +329,7 @@ func ConvertK8sResourceToCalicoResource(res Resource) error {
 	meta.UID = rom.GetUID()
 	meta.Labels = labels
 	meta.Annotations = annotations
+	meta.Generation = rom.GetGeneration()
 
 	// If no creation timestamp was stored in the metadata annotation, use the one from the CR.
 	// The timestamp is normally set in the clientv3 code. However, for objects that bypass

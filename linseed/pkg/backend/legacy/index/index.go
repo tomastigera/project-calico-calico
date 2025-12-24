@@ -25,6 +25,7 @@ var (
 	DNSLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_dns", dataType: bapi.DNSLogs, hasLifeCycleEnabled: true}
 	FlowLogMultiIndex             bapi.Index = multiIndex{baseName: "tigera_secure_ee_flows", dataType: bapi.FlowLogs, hasLifeCycleEnabled: true}
 	RuntimeReportMultiIndex       bapi.Index = multiIndex{baseName: "tigera_secure_ee_runtime", dataType: bapi.RuntimeReports, hasLifeCycleEnabled: true}
+	PolicyActivityMultiIndex      bapi.Index = multiIndex{baseName: "tigera_secure_ee_policy_activity", dataType: bapi.PolicyActivity, hasLifeCycleEnabled: false}
 )
 
 // Single index - these all use a single index for all clusters and tenants.
@@ -59,7 +60,7 @@ func AlertsIndex(options ...Option) bapi.Index {
 
 func AuditLogIndex(options ...Option) bapi.Index {
 	// The AuditLogIndex uses data type AuditEELogs, but it's actually used for both AuditEELogs and AuditKubeLogs.
-	// This is OK because our code for initializing indicies treats these the same anyway.
+	// This is OK because our code for initializing indices treats these the same anyway.
 	index := singleIndex{
 		name:                "calico_auditlogs",
 		policyName:          "tigera_secure_ee_audit_ee_policy",
@@ -207,6 +208,7 @@ func ThreatFeedsDomainSetIndex(options ...Option) bapi.Index {
 
 	return &index
 }
+
 func WAFLogIndex(options ...Option) bapi.Index {
 	index := singleIndex{
 		name:                "calico_waf",
@@ -219,6 +221,18 @@ func WAFLogIndex(options ...Option) bapi.Index {
 		opt(&index)
 	}
 
+	return &index
+}
+
+func PolicyActivityIndex(options ...Option) bapi.Index {
+	index := singleIndex{
+		name:                "calico_policy_activity",
+		dataType:            bapi.PolicyActivity,
+		hasLifeCycleEnabled: false,
+	}
+	for _, opt := range options {
+		opt(&index)
+	}
 	return &index
 }
 
@@ -273,7 +287,7 @@ func NewMultiIndex(baseName string, dataType bapi.DataType) bapi.Index {
 }
 
 // multiIndex implements the Index interface for an index mode that uses multiple
-// indicies to store data for multiple clusters and tenants.
+// indices to store data for multiple clusters and tenants.
 type multiIndex struct {
 	baseName            string
 	dataType            bapi.DataType

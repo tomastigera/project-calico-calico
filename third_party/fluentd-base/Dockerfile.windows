@@ -62,6 +62,7 @@ RUN mkdir C:\fluentd\etc && `
     mkdir C:\fluentd\etc\output_runtime && `
     mkdir C:\fluentd\etc\output_tsee_audit && `
     mkdir C:\fluentd\etc\output_waf && `
+    mkdir C:\fluentd\etc\output_policy && `
     mkdir C:\fluentd\plugins
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb

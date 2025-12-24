@@ -151,6 +151,7 @@ func (lc *LookupsCache) SetMockData(
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
 	nodes map[string]*v3.Node,
+	gc map[model.PolicyKey]int64,
 ) {
 	for k, v := range nodes {
 		lc.epCache.nodes[k] = v.Spec
@@ -175,4 +176,11 @@ func (lc *LookupsCache) SetMockData(
 	for k, v := range svcs {
 		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
+	for k, v := range gc {
+		lc.polCache.generationCache[k] = v
+	}
+}
+
+func (lc *LookupsCache) GetGeneration(key model.PolicyKey) int64 {
+	return lc.polCache.GetGeneration(key)
 }

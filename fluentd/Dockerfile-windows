@@ -44,6 +44,7 @@ ENV DISABLE_ES_DNS_LOG=true
 ENV DISABLE_ES_L7_LOG=true
 ENV DISABLE_ES_BGP_LOG=true
 ENV DISABLE_ES_RUNTIME_LOG=true
+ENV DISABLE_ES_POLICY_ACTIVITY_LOG=true
 
 COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
@@ -61,6 +62,7 @@ ENV WAF_LOG_FILE=${ROOT_DIR}/var/log/calico/waf/waf.log
 ENV L7_LOG_FILE=${ROOT_DIR}/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=${ROOT_DIR}/var/log/calico/audit/tsee-audit.log
 ENV RUNTIME_LOG_FILE=${ROOT_DIR}/var/log/calico/runtime-security/report.log
+ENV POLICY_ACTIVITY_LOG_FILE=/var/log/calico/policy/policy_activity.log
 
 # TLS Settings
 ENV TLS_KEY_PATH=${ROOT_DIR}/tls/tls.key
@@ -93,6 +95,8 @@ ENV ELASTIC_BGP_INDEX_SHARDS=1
 ENV ELASTIC_BGP_INDEX_REPLICAS=0
 ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
 ENV ELASTIC_RUNTIME_INDEX_REPLICAS=0
+ENV ELASTIC_POLICY_ACTIVITY_INDEX_REPLICAS=0
+ENV ELASTIC_POLICY_ACTIVITY_INDEX_SHARDS=1
 
 ENV SYSLOG_PACKET_SIZE=1024
 

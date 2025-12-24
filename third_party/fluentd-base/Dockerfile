@@ -64,6 +64,7 @@ RUN mkdir -p /fluentd/etc/output_l7
 RUN mkdir -p /fluentd/etc/output_runtime
 RUN mkdir -p /fluentd/etc/output_tsee_audit
 RUN mkdir -p /fluentd/etc/output_waf
+RUN mkdir -p /fluentd/etc/output_policy
 RUN mkdir -p /fluentd/log
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb

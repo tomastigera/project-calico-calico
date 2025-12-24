@@ -46,6 +46,9 @@ type PolicyLookupsCache struct {
 	keyToTier map[model.PolicyKey]string
 
 	tierDefaultActions map[model.TierKey]rules.RuleAction
+
+	// Policy's generation cache.
+	generationCache map[model.PolicyKey]int64
 }
 
 func NewPolicyLookupsCache() *PolicyLookupsCache {
@@ -57,6 +60,7 @@ func NewPolicyLookupsCache() *PolicyLookupsCache {
 		tierDefaultActions:   map[model.TierKey]rules.RuleAction{},
 		keyToTier:            map[model.PolicyKey]string{},
 		ids:                  idalloc.New(),
+		generationCache:      map[model.PolicyKey]int64{},
 	}
 	// Add NFLog mappings for the no-profile match.
 	pc.addNFLogPrefixEntry(
@@ -83,10 +87,12 @@ func (pc *PolicyLookupsCache) SetUseIDs() {
 
 func (pc *PolicyLookupsCache) OnPolicyActive(key model.PolicyKey, policy *model.Policy) {
 	pc.updatePolicyRulesNFLOGPrefixes(key, policy)
+	pc.setGeneration(key, policy.Generation)
 }
 
 func (pc *PolicyLookupsCache) OnPolicyInactive(key model.PolicyKey) {
 	pc.removePolicyRulesNFLOGPrefixes(key)
+	pc.removeGeneration(key)
 }
 
 func (pc *PolicyLookupsCache) OnProfileActive(key model.ProfileRulesKey, profile *model.ProfileRules) {
@@ -103,6 +109,29 @@ func (pc *PolicyLookupsCache) OnTierActive(key model.TierKey, tier *model.Tier) 
 
 func (pc *PolicyLookupsCache) OnTierInactive(key model.TierKey) {
 	pc.removeTierDefaultAction(key)
+}
+
+func (pc *PolicyLookupsCache) GetGeneration(key model.PolicyKey) int64 {
+	pc.lock.RLock()
+	defer pc.lock.RUnlock()
+	return pc.generationCache[key]
+}
+
+func (pc *PolicyLookupsCache) setGeneration(key model.PolicyKey, generation int64) {
+	pc.lock.Lock()
+	defer pc.lock.Unlock()
+	if pc.generationCache == nil {
+		pc.generationCache = make(map[model.PolicyKey]int64)
+	}
+
+	pc.generationCache[key] = generation
+}
+
+// removeGeneration removes the generation for an inactive policy.
+func (pc *PolicyLookupsCache) removeGeneration(key model.PolicyKey) {
+	pc.lock.Lock()
+	defer pc.lock.Unlock()
+	delete(pc.generationCache, key)
 }
 
 // addNFLogPrefixEntry adds a single NFLOG prefix entry to our internal cache.

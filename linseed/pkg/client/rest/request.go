@@ -91,7 +91,7 @@ func (r *request) ContentType(c string) Request {
 func (r *request) Do(ctx context.Context) *Result {
 	if r.body != nil && r.params != nil {
 		return &Result{
-			err: fmt.Errorf("cannot specify body and params on same requst"),
+			err: fmt.Errorf("cannot specify body and params on same request"),
 		}
 	}
 

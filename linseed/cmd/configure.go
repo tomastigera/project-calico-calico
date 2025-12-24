@@ -55,6 +55,7 @@ func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 	l7Initializer := templates.NewCachedInitializer(esClient, cfg.ElasticClientConfig.ElasticL7Shards, cfg.ElasticClientConfig.ElasticL7Replicas)
 	auditInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticClientConfig.ElasticAuditShards, cfg.ElasticClientConfig.ElasticAuditReplicas)
 	bgpInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticClientConfig.ElasticBGPShards, cfg.ElasticClientConfig.ElasticBGPReplicas)
+	policyInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticClientConfig.ElasticPolicyActivityShards, cfg.ElasticClientConfig.ElasticPolicyActivityReplicas)
 
 	// Create all indices with the given configurations (name and ilm policy)
 	alertIndex := index.AlertsIndex(index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticAlertsBaseIndexName), index.WithILMPolicyName(cfg.ElasticClientConfig.ElasticAlertsPolicyName))
@@ -70,6 +71,7 @@ func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 	threatFeedsIPSetIndex := index.ThreatFeedsIPSetIndex(index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsIPSetBaseIndexName), index.WithILMPolicyName(cfg.ElasticClientConfig.ElasticThreatFeedsIPSetIPolicyName))
 	threatFeedsDomainSetIndex := index.ThreatFeedsDomainSetIndex(index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsDomainSetBaseIndexName), index.WithILMPolicyName(cfg.ElasticClientConfig.ElasticThreatFeedsDomainSetPolicyName))
 	wafIndex := index.WAFLogIndex(index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticWAFLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticClientConfig.ElasticWAFLogsPolicyName))
+	policyActivityIndex := index.PolicyActivityIndex(index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName), index.WithILMPolicyName(cfg.ElasticClientConfig.ElasticPolicyActivityPolicyName))
 
 	initialization := []indexInitializer{
 		// Indices defined below share the same configuration for shards / replicas
@@ -87,6 +89,7 @@ func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 		{index: dnsIndex, initializer: dnsInitializer},
 		{index: flowIndex, initializer: flowInitializer},
 		{index: l7Index, initializer: l7Initializer},
+		{index: policyActivityIndex, initializer: policyInitializer},
 	}
 
 	for _, idx := range initialization {
