@@ -158,6 +158,11 @@ type RunConfigureElasticArgs struct {
 	WAFReplicas      string
 	WAFShards        string
 
+	PolicyActivityBaseIndexName string
+	PolicyActivityPolicyName    string
+	PolicyActivityReplicas      string
+	PolicyActivityShards        string
+
 	ElasticReplicas string
 	ElasticShards   string
 }
@@ -243,6 +248,9 @@ func updateDockerArgs(dockerArgs []string, args *RunConfigureElasticArgs) []stri
 
 	addEnvVarIfNotEmpty("ELASTIC_WAF_INDEX_REPLICAS", args.WAFReplicas)
 	addEnvVarIfNotEmpty("ELASTIC_WAF_INDEX_SHARDS", args.WAFShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_POLICY_ACTIVITY_INDEX_REPLICAS", args.PolicyActivityReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_POLICY_ACTIVITY_INDEX_SHARDS", args.PolicyActivityShards)
 
 	addEnvVarIfNotEmpty("ELASTIC_REPLICAS", args.ElasticReplicas)
 	addEnvVarIfNotEmpty("ELASTIC_SHARDS", args.ElasticShards)

@@ -380,10 +380,10 @@ var _ = Describe("Test end-to-end pod and network policy processing", func() {
 	It("should handle a basic pod and network policy", func() {
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "test-pod",
-				Namespace:       "default",
-				Labels:          map[string]string{"foo": "bar"},
-				ResourceVersion: "1234",
+				Name:       "test-pod",
+				Namespace:  "default",
+				Labels:     map[string]string{"foo": "bar"},
+				Generation: 1,
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "node-a",
@@ -452,10 +452,10 @@ var _ = Describe("Test end-to-end pod and network policy processing", func() {
 	It("should not match pods in other namespaces", func() {
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "test-pod",
-				Namespace:       "not-default",
-				Labels:          map[string]string{"foo": "bar"},
-				ResourceVersion: "1234",
+				Name:       "test-pod",
+				Namespace:  "not-default",
+				Labels:     map[string]string{"foo": "bar"},
+				Generation: 1,
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "node-a",
@@ -525,10 +525,10 @@ var _ = Describe("Test end-to-end pod and network policy processing", func() {
 		longName := "service-account-with-a-name-that-exceeds-the-character-limit-for-a-kubernetes-label"
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "test-pod",
-				Namespace:       "default",
-				Labels:          map[string]string{"foo": "bar"},
-				ResourceVersion: "1234",
+				Name:       "test-pod",
+				Namespace:  "default",
+				Labels:     map[string]string{"foo": "bar"},
+				Generation: 1,
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:           "node-a",

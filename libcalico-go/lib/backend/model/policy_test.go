@@ -35,8 +35,9 @@ var _ = Describe("Policy functions", func() {
 			ApplyOnForward:   true,
 			Types:            []string{"Ingress", "Egress"},
 			PerformanceHints: []v3.PolicyPerformanceHint{v3.PerfHintAssumeNeededOnEveryNode},
+			Generation:       2,
 		}
-		Expect(p.String()).To(Equal(`order:10.5,selector:"apples=='oranges'",namespaceSelector:"",serviceaccountSelector:"",inbound:Deny,outbound:Allow,untracked:false,pre_dnat:true,apply_on_forward:true,types:Ingress;Egress,performance_hints:[AssumeNeededOnEveryNode]`))
+		Expect(p.String()).To(Equal(`order:10.5,selector:"apples=='oranges'",namespaceSelector:"",serviceaccountSelector:"",inbound:Deny,outbound:Allow,untracked:false,pre_dnat:true,apply_on_forward:true,types:Ingress;Egress,performance_hints:[AssumeNeededOnEveryNode],generation:2`))
 	})
 
 	It("Policy should identify as staged by kind", func() {

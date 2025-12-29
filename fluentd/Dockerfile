@@ -120,6 +120,7 @@ ENV IDS_EVENT_LOG_FILE=/var/log/calico/ids/events.log
 ENV L7_LOG_FILE=/var/log/calico/l7logs/l7.log
 ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 ENV WAF_LOG_FILE=/var/log/calico/waf/waf.log
+ENV POLICY_ACTIVITY_LOG_FILE=/var/log/calico/policy/policy_activity.log
 
 # TLS Settings
 ENV CA_CRT_PATH=/etc/pki/tls/certs/tigera-ca-bundle.crt
@@ -154,6 +155,8 @@ ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
 ENV ELASTIC_TEMPLATE_OVERWRITE=true
 ENV ELASTIC_WAF_INDEX_REPLICAS=0
 ENV ELASTIC_WAF_INDEX_SHARDS=1
+ENV ELASTIC_POLICY_ACTIVITY_INDEX_REPLICAS=0
+ENV ELASTIC_POLICY_ACTIVITY_INDEX_SHARDS=1
 
 ENV SYSLOG_PACKET_SIZE=1024
 

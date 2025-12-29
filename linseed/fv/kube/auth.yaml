@@ -56,6 +56,7 @@ rules:
       - threatfeeds_domainnameset
       - threatfeeds_ipset
       - waflogs
+      - policyactivity
     verbs: ["*"]
 
 ---
@@ -100,6 +101,7 @@ rules:
       - threatfeeds_domainnameset
       - threatfeeds_ipset
       - waflogs
+      - policyactivity
       - auditlogs-multi-cluster
       - benchmarks-multi-cluster
       - bgplogs-multi-cluster
@@ -117,6 +119,7 @@ rules:
       - threatfeeds_domainnameset-multi-cluster
       - threatfeeds_ipset-multi-cluster
       - waflogs-multi-cluster
+      - policyactivity-multi-cluster
     verbs: ["get"]
 
 ---

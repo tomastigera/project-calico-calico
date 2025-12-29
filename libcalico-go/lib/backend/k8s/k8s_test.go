@@ -97,6 +97,7 @@ var (
 				Action: "allow",
 			},
 		},
+		Generation: 1,
 	}
 	calicoDisallowPolicyModelV1 = model.Policy{
 		Tier:  "default",
@@ -111,6 +112,7 @@ var (
 				Action: "deny",
 			},
 		},
+		Generation: 1,
 	}
 	calicoAllowProfileSpec = apiv3.ProfileSpec{
 		Ingress: []apiv3.Rule{
@@ -1069,9 +1071,11 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			Eventually(cb.GetSyncerValuePresentFunc(kvp3KeyV1)).Should(BeFalse())
 		})
 	})
-
 	It("should handle a CRUD of Global Network Policy", func() {
 		var kvpRes *model.KVPair
+
+		calicoDisallowPolicyModelV2 := calicoDisallowPolicyModelV1
+		calicoDisallowPolicyModelV2.Generation = 2
 
 		gnpClient := c.GetResourceClientFromResourceKind(apiv3.KindGlobalNetworkPolicy)
 		kvp1Name := "default.my-test-gnp"
@@ -1087,7 +1091,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: kvp1Name,
+					Name:       kvp1Name,
+					Generation: 2,
 				},
 				Spec: calicoAllowPolicyModelSpec,
 			},
@@ -1101,7 +1106,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: kvp1Name,
+					Name:       kvp1Name,
+					Generation: 2,
 				},
 				Spec: calicoDisallowPolicyModelSpec,
 			},
@@ -1120,7 +1126,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: kvp2Name,
+					Name:       kvp2Name,
+					Generation: 1,
 				},
 				Spec: calicoAllowPolicyModelSpec,
 			},
@@ -1134,7 +1141,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: kvp2Name,
+					Name:       kvp2Name,
+					Generation: 2,
 				},
 				Spec: calicoDisallowPolicyModelSpec,
 			},
@@ -1171,7 +1179,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
-			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV1))
+			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV2))
 			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
 		})
 
@@ -1182,7 +1190,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
-			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV1))
+			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV2))
 			Eventually(cb.GetSyncerValueFunc(kvp2KeyV1)).Should(Equal(&calicoAllowPolicyModelV1))
 		})
 
@@ -1193,8 +1201,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
-			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV1))
-			Eventually(cb.GetSyncerValueFunc(kvp2KeyV1)).Should(Equal(&calicoDisallowPolicyModelV1))
+			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV2))
+			Eventually(cb.GetSyncerValueFunc(kvp2KeyV1)).Should(Equal(&calicoDisallowPolicyModelV2))
 		})
 
 		By("Deleted the Global Network Policy created by Apply", func() {
@@ -1203,7 +1211,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
-			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV1))
+			Eventually(cb.GetSyncerValueFunc(kvp1KeyV1)).Should(Equal(&calicoDisallowPolicyModelV2))
 			Eventually(cb.GetSyncerValuePresentFunc(kvp2KeyV1)).Should(BeFalse())
 		})
 
@@ -2600,9 +2608,10 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 
 	It("should support setting and getting FelixConfig", func() {
 		enabled := apiv3.FloatingIPsEnabled
+		configName := "node.calico-node-1"
 		fc := &model.KVPair{
 			Key: model.ResourceKey{
-				Name: "myfelixconfig",
+				Name: configName,
 				Kind: apiv3.KindFelixConfiguration,
 			},
 			Value: &apiv3.FelixConfiguration{
@@ -2611,7 +2620,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "myfelixconfig",
+					Name: configName,
 				},
 				Spec: apiv3.FelixConfigurationSpec{
 					InterfacePrefix: "xali-",
@@ -2625,14 +2634,9 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		By("creating a new object", func() {
 			updFC, err = c.Create(ctx, fc)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal("myfelixconfig"))
-			// Set the ResourceVersion (since it is auto populated by the Kubernetes datastore) to make it easier to compare objects.
-			Expect(fc.Value.(*apiv3.FelixConfiguration).GetObjectMeta().GetResourceVersion()).To(Equal(""))
-			fc.Value.(*apiv3.FelixConfiguration).GetObjectMeta().SetResourceVersion(updFC.Value.(*apiv3.FelixConfiguration).GetObjectMeta().GetResourceVersion())
+			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal(configName))
 
-			// UID and CreationTimestamp are auto-generated, make sure we don't fail the assertion based on it.
-			fc.Value.(*apiv3.FelixConfiguration).ObjectMeta.UID = updFC.Value.(*apiv3.FelixConfiguration).ObjectMeta.UID
-			fc.Value.(*apiv3.FelixConfiguration).ObjectMeta.CreationTimestamp = updFC.Value.(*apiv3.FelixConfiguration).ObjectMeta.CreationTimestamp
+			fc.Value.(*apiv3.FelixConfiguration).ObjectMeta = updFC.Value.(*apiv3.FelixConfiguration).ObjectMeta
 
 			// Assert the created object matches what we created.
 			Expect(updFC.Value.(*apiv3.FelixConfiguration)).To(Equal(fc.Value.(*apiv3.FelixConfiguration)))
@@ -2646,7 +2650,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			updFC, err = c.Get(ctx, fc.Key, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updFC.Value.(*apiv3.FelixConfiguration).Spec).To(Equal(fc.Value.(*apiv3.FelixConfiguration).Spec))
-			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal("myfelixconfig"))
+			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal(configName))
 			Expect(updFC.Revision).NotTo(BeNil())
 		})
 
@@ -2668,7 +2672,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			updFC, err = c.Get(ctx, fc.Key, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updFC.Value.(*apiv3.FelixConfiguration).Spec.InterfacePrefix).To(Equal("someotherprefix-"))
-			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal("myfelixconfig"))
+			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal(configName))
 			Expect(updFC.Revision).NotTo(BeNil())
 		})
 
@@ -2679,7 +2683,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					APIVersion: apiv3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "myfelixconfig",
+					Name: configName,
 				},
 				Spec: apiv3.FelixConfigurationSpec{
 					InterfacePrefix: "somenewprefix-",
@@ -2695,7 +2699,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			updFC, err = c.Get(ctx, fc.Key, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updFC.Value.(*apiv3.FelixConfiguration).Spec.InterfacePrefix).To(Equal("somenewprefix-"))
-			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal("myfelixconfig"))
+			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal(configName))
 			Expect(updFC.Revision).NotTo(BeNil())
 		})
 
@@ -2727,7 +2731,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			updFC, err = c.Get(ctx, fc.Key, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updFC.Value.(*apiv3.FelixConfiguration).Spec).To(Equal(fc.Value.(*apiv3.FelixConfiguration).Spec))
-			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal("myfelixconfig"))
+			Expect(updFC.Key.(model.ResourceKey).Name).To(Equal(configName))
 			Expect(updFC.Revision).NotTo(BeNil())
 		})
 

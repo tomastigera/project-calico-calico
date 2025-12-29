@@ -1,0 +1,33 @@
+{
+  "dynamic": false,
+  "properties": {
+    "generated_time": {
+      "type": "date"
+    },
+    "policy": {
+      "properties": {
+        "kind": {
+          "type": "keyword"
+        },
+        "namespace": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        }
+      }
+    },
+    "cluster": {
+      "type": "keyword"
+    },
+    "tenant": {
+      "type": "keyword"
+    },
+    "rule": {
+      "type": "keyword"
+    } ,
+    "last_evaluated": {
+      "type": "date"
+    }
+  }
+}

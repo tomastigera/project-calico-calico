@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -438,3 +438,47 @@ func toprefix(s string) [64]byte {
 	copy(p[:], []byte(s))
 	return p
 }
+
+var _ = Describe("PolicyLookupsCache Generation tests", func() {
+	pc := NewPolicyLookupsCache()
+	key := model.PolicyKey{
+		Name: "test-gen-id-policy",
+		Kind: v3.KindGlobalNetworkPolicy,
+	}
+
+	BeforeEach(func() {
+		pc.OnPolicyInactive(key)
+	})
+
+	It("should return 0 for unknown keys", func() {
+		Expect(pc.GetGeneration(key)).To(Equal(int64(0)))
+	})
+
+	It("should set and retrieve generations correctly via OnPolicyActive", func() {
+		genID := int64(12345)
+		policy := &model.Policy{
+			Tier:       "default",
+			Generation: genID,
+		}
+
+		pc.OnPolicyActive(key, policy)
+		Expect(pc.GetGeneration(key)).To(Equal(genID))
+
+		newGenID := int64(67890)
+		policy.Generation = newGenID
+		pc.OnPolicyActive(key, policy)
+		Expect(pc.GetGeneration(key)).To(Equal(newGenID))
+	})
+
+	It("should remove generation correctly via OnPolicyInactive", func() {
+		policy := &model.Policy{
+			Tier:       "default",
+			Generation: 999,
+		}
+		pc.OnPolicyActive(key, policy)
+		Expect(pc.GetGeneration(key)).To(Equal(int64(999)))
+
+		pc.OnPolicyInactive(key)
+		Expect(pc.GetGeneration(key)).To(Equal(int64(0)))
+	})
+})

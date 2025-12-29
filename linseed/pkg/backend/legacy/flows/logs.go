@@ -186,7 +186,7 @@ func (b *flowLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 		l := v1.FlowLog{}
 		err = json.Unmarshal(h.Source, &l)
 		if err != nil {
-			log.WithError(err).Error("Error unmarshalling log")
+			log.WithError(err).Error("Error unmarshaling log")
 			continue
 		}
 		l.ID = h.Id

@@ -3582,6 +3582,31 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.PolicyActivityLogsFlushInterval != nil {
+		in, out := &in.PolicyActivityLogsFlushInterval, &out.PolicyActivityLogsFlushInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.PolicyActivityLogsFileEnabled != nil {
+		in, out := &in.PolicyActivityLogsFileEnabled, &out.PolicyActivityLogsFileEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.PolicyActivityLogsFileDirectory != nil {
+		in, out := &in.PolicyActivityLogsFileDirectory, &out.PolicyActivityLogsFileDirectory
+		*out = new(string)
+		**out = **in
+	}
+	if in.PolicyActivityLogsFileMaxFiles != nil {
+		in, out := &in.PolicyActivityLogsFileMaxFiles, &out.PolicyActivityLogsFileMaxFiles
+		*out = new(int)
+		**out = **in
+	}
+	if in.PolicyActivityLogsFileMaxFileSizeMB != nil {
+		in, out := &in.PolicyActivityLogsFileMaxFileSizeMB, &out.PolicyActivityLogsFileMaxFileSizeMB
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)

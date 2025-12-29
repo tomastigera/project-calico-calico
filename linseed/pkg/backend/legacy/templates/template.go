@@ -102,13 +102,15 @@ func (c *TemplateConfig) mappings() string {
 		return IPSetMappings
 	case bapi.DomainNameSet:
 		return DomainSetMappings
+	case bapi.PolicyActivity:
+		return PolicyActivityMappings
 
 	default:
 		panic("data type not implemented")
 	}
 }
 
-// BootstrapIndexName will construct the boostrap index name
+// BootstrapIndexName will construct the bootstrap index name
 // to be used for rollover
 func (c *TemplateConfig) BootstrapIndexName() string {
 	return c.Index.BootstrapIndexName(c.info)

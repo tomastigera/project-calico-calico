@@ -75,6 +75,10 @@ func (c *mockClient) ThreatFeeds(cluster string) ThreatFeedsInterface {
 	return newThreatFeeds(c, cluster)
 }
 
+func (c *mockClient) PolicyActivity(cluster string) PolicyActivityInterface {
+	return newPolicyActivityLogs(c, cluster)
+}
+
 func (c *mockClient) Token() []byte {
 	return nil
 }

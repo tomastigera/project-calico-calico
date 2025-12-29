@@ -181,6 +181,8 @@ var (
 // v3 model.KVPair revision
 var testRev string = "1234"
 
+var testGeneration int64 = 5
+
 func mustParseCIDR(cidr string) *cnet.IPNet {
 	ipn := cnet.MustParseCIDR(cidr)
 	return &ipn
@@ -197,6 +199,7 @@ func fullGNPv1() (p model.Policy) {
 		PreDNAT:        false,
 		ApplyOnForward: true,
 		Types:          []string{"ingress", "egress"},
+		Generation:     testGeneration,
 	}
 }
 
@@ -212,6 +215,7 @@ func fullGNPv3(namespace, selector string) *apiv3.GlobalNetworkPolicy {
 	fullGNP.Spec.PreDNAT = false
 	fullGNP.Spec.ApplyOnForward = true
 	fullGNP.Spec.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
+	fullGNP.Generation = testGeneration
 	return fullGNP
 }
 
@@ -234,6 +238,7 @@ func fullNPv1(namespace string) (p model.Policy) {
 		OutboundRules:  []model.Rule{or},
 		ApplyOnForward: false,
 		Types:          []string{"ingress", "egress"},
+		Generation:     testGeneration,
 	}
 }
 
@@ -247,6 +252,7 @@ func fullNPv3(name, namespace, selector string) *apiv3.NetworkPolicy {
 	fullNP.Spec.Egress = []apiv3.Rule{v3TestEgressRule}
 	fullNP.Spec.Selector = selector
 	fullNP.Spec.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
+	fullNP.Generation = testGeneration
 
 	return fullNP
 }

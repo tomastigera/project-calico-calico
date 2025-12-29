@@ -100,6 +100,7 @@ type Policy struct {
 	Types                  []string                      `json:"types,omitempty"`
 	PerformanceHints       []apiv3.PolicyPerformanceHint `json:"performance_hints,omitempty" validate:"omitempty,unique,dive,oneof=AssumeNeededOnEveryNode"`
 	StagedAction           *apiv3.StagedAction           `json:"staged_action,omitempty"`
+	Generation             int64                         `json:"generation,omitempty"`
 }
 
 func (p Policy) String() string {
@@ -133,6 +134,7 @@ func (p Policy) String() string {
 	if p.StagedAction != nil {
 		parts = append(parts, fmt.Sprintf("staged_action:%v", p.StagedAction))
 	}
+	parts = append(parts, fmt.Sprintf("generation:%v", p.Generation))
 	return strings.Join(parts, ",")
 }
 
