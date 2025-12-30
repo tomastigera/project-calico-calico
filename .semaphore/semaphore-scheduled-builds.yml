@@ -536,28 +536,11 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: Refresh GeoIP cache
-    run:
-      when: "false"
-    dependencies:
-      - Prerequisites
-    task:
-      prologue:
-        commands:
-          - cache delete app-policy-geoip
-      epilogue:
-        on_pass:
-          commands:
-            - cache store app-policy-geoip app-policy/geoip
-      jobs:
-        - name: "Application Layer Policy: Refresh GeoIP cache"
-          commands:
-            - make -C app-policy geoip/dbip-city-lite.mmdb
   - name: Application Layer Policy
     run:
       when: "true"
     dependencies:
-      - Refresh GeoIP cache
+      - Prerequisites
     task:
       prologue:
         commands:
@@ -2460,6 +2443,23 @@ blocks:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Refresh GeoIP cache
+    run:
+      when: "false"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cache delete app-policy-geoip
+      epilogue:
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: Refresh GeoIP cache
+          commands:
+            - make -C app-policy geoip/dbip-city-lite.mmdb
   - name: Prometheus Operator
     run:
       when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
