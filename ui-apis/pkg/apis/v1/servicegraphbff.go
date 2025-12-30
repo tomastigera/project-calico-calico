@@ -39,15 +39,17 @@ type TopologyStatistics struct {
 }
 
 type NamespaceStatistics struct {
-	Namespace  string `json:"namespace"`
-	HighVolume *bool  `json:"high_volume,omitempty"`
+	Namespace    string `json:"namespace"`
+	HighVolume   *bool  `json:"high_volume,omitempty"`
+	Approximated *bool  `json:"approximated,omitempty"`
 }
 
 type DeveloperStatistics struct {
-	Counts          TopologyCounts  `json:"counts"`
-	NamespaceCounts NamespaceCounts `json:"namespace_counts"`
-	Cancellations   Operations      `json:"cancellations"`
-	Truncations     Operations      `json:"truncations"`
+	Counts               TopologyCounts  `json:"counts"`
+	NamespaceCounts      NamespaceCounts `json:"namespace_counts"`
+	NamespaceCacheCounts NamespaceCounts `json:"namespace_cache_counts"`
+	Cancellations        Operations      `json:"cancellations"`
+	Truncations          Operations      `json:"truncations"`
 }
 
 type TopologyCounts struct {

@@ -115,6 +115,7 @@ st:
 # Normally we run Linseed in multi-tenant mode, expecting all requests to have "tenant-a".
 # But this can be overridden by pre-setting TENANT_ID_ENV.
 TENANT_ID_ENV ?= -e LINSEED_EXPECTED_TENANT_ID="tenant-a"
+LOG_LEVEL_ENV ?= -e LINSEED_LOG_LEVEL="debug"
 run-image: stop-image stop-elastic run-elastic k8s-setup gen-certs
 	docker run --detach \
 		--net=host \
@@ -130,8 +131,8 @@ run-image: stop-image stop-elastic run-elastic k8s-setup gen-certs
 		-e KUBERNETES_SERVICE_PORT=6443 \
 		-e ELASTIC_HOST="localhost" \
 		-e ELASTIC_SCHEME="http" \
-		-e LINSEED_LOG_LEVEL="debug" \
 		-e LINSEED_ENABLE_METRICS="true" \
+		$(LOG_LEVEL_ENV) \
 		$(TENANT_ID_ENV) \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.
