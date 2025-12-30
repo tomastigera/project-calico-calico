@@ -4,7 +4,7 @@ FROM registry.access.redhat.com/ubi10/ubi AS builder
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.8
 ARG TARGETARCH
 
 RUN dnf upgrade -y && dnf install -y \
