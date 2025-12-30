@@ -27,6 +27,7 @@ COPY --from=snort /lib64/libibverbs.so.1 /lib64/libibverbs.so.1
 COPY --from=snort /lib64/libluajit-5.1.so.2 /lib64/libluajit-5.1.so.2
 COPY --from=snort /lib64/liblzma.so.5 /lib64/liblzma.so.5
 COPY --from=snort /lib64/libm.so.6 /lib64/libm.so.6
+COPY --from=snort /lib64/libnl-3.so.200 /lib64/libnl-3.so.200
 COPY --from=snort /lib64/libnl-route-3.so.200 /lib64/libnl-route-3.so.200
 COPY --from=snort /lib64/libpcap.so.1 /lib64/libpcap.so.1
 COPY --from=snort /lib64/libpciaccess.so.0 /lib64/libpciaccess.so.0
