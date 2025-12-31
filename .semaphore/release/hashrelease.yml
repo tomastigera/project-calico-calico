@@ -62,3 +62,9 @@ blocks:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
           - cd release
+
+promotions:
+  - name: Smoke Test on hashrelease
+    pipeline_file: /release/hashrelease_smoke_test.yml
+    auto_promote:
+      when: "result = 'stopped'"

@@ -38,6 +38,8 @@ type HashreleaseMessageData struct {
 	CIURL              string
 	DocsURL            string
 	ImageScanResultURL string
+	SmokeTestURL       string
+	SmokeTestStatus    string
 }
 
 // PostHashreleaseAnnouncement sends a message to slack about a hashrelease being published.
