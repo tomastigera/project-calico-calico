@@ -15,6 +15,9 @@
 package tasks
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
@@ -27,6 +30,19 @@ var product = utils.ProductName
 // AnnounceHashrelease sends a slack notification for a new hashrelease.
 func AnnounceHashrelease(cfg *slack.Config, hashrel *hashreleaseserver.Hashrelease, ciURL string) error {
 	logrus.WithField("hashrelease", hashrel.Name).Info("Sending hashrelease announcement to Slack")
+
+	// Build smoke test URL from SEMAPHORE_JOB_ID if available
+	var smokeTestURL string
+	if jobID := os.Getenv("SEMAPHORE_JOB_ID"); jobID != "" {
+		smokeTestURL = fmt.Sprintf("https://tigera-delivery.semaphoreci.com/jobs/%s", jobID)
+	}
+
+	// Get smoke test status from SEMAPHORE_JOB_RESULT, default to "passed"
+	smokeTestStatus := os.Getenv("SEMAPHORE_JOB_RESULT")
+	if smokeTestStatus == "" {
+		smokeTestStatus = "passed"
+	}
+
 	msgData := &slack.HashreleaseMessageData{
 		ReleaseName:        hashrel.Name,
 		Product:            product,
@@ -37,6 +53,8 @@ func AnnounceHashrelease(cfg *slack.Config, hashrel *hashreleaseserver.Hashrelea
 		CIURL:              ciURL,
 		DocsURL:            hashrel.URL(),
 		ImageScanResultURL: hashrel.ImageScanResultURL,
+		SmokeTestURL:       smokeTestURL,
+		SmokeTestStatus:    smokeTestStatus,
 	}
 	return slack.PostHashreleaseAnnouncement(cfg, msgData)
 }
