@@ -3642,6 +3642,7 @@ spec:
                 serviceAccountSelector:
                   type: string
                 tier:
+                  default: default
                   type: string
                 types:
                   items:
@@ -5275,6 +5276,7 @@ spec:
                 serviceAccountSelector:
                   type: string
                 tier:
+                  default: default
                   type: string
                 types:
                   items:
@@ -6130,6 +6132,7 @@ spec:
                 stagedAction:
                   type: string
                 tier:
+                  default: default
                   type: string
                 types:
                   items:
@@ -6798,6 +6801,7 @@ spec:
                 stagedAction:
                   type: string
                 tier:
+                  default: default
                   type: string
                 types:
                   items:

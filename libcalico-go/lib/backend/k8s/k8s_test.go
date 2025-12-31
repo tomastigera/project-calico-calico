@@ -57,6 +57,7 @@ var (
 	zeroOrder                  = float64(0.0)
 	zeroInt64                  = int64(0)
 	calicoAllowPolicyModelSpec = apiv3.GlobalNetworkPolicySpec{
+		Tier:  "default",
 		Order: &zeroOrder,
 		Ingress: []apiv3.Rule{
 			{
@@ -70,6 +71,7 @@ var (
 		},
 	}
 	calicoDisallowPolicyModelSpec = apiv3.GlobalNetworkPolicySpec{
+		Tier:  "default",
 		Order: &zeroOrder,
 		Ingress: []apiv3.Rule{
 			{
@@ -1272,6 +1274,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		var kvpRes *model.KVPair
 
 		stagedCalicoAllowPolicyModelSpec := apiv3.StagedGlobalNetworkPolicySpec{
+			Tier:         "default",
 			StagedAction: apiv3.StagedActionSet,
 			Order:        &zeroOrder,
 			Ingress: []apiv3.Rule{
@@ -1286,6 +1289,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			},
 		}
 		stagedCalicoDisallowPolicyModelSpec := apiv3.StagedGlobalNetworkPolicySpec{
+			Tier:         "default",
 			StagedAction: apiv3.StagedActionSet,
 			Order:        &zeroOrder,
 			Ingress: []apiv3.Rule{
