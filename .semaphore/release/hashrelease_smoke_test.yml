@@ -1,6 +1,6 @@
 version: v1.0
 
-name: calient master - smoke tests
+name: calient private - smoke tests
 
 agent:
   machine:
@@ -34,7 +34,7 @@ global_job_config:
     - name: RELEASE_STREAM
       value: master
     - name: USE_HASH_RELEASE
-      value: "true"                       # Use this env_var for executing smoke tests on hashrelease      
+      value: "true"                       # Use this env_var for executing smoke tests on hashrelease
     - name: USE_LATEST_RELEASE
       value: "false"                      # It should be false when USE_HASH_RELEASE is true
 
