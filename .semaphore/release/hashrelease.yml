@@ -61,10 +61,75 @@ blocks:
       prologue:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
+          - export NOTIFY=false  # Disable notification here - will be sent after smoke tests
           - cd release
 
+  - name: Smoke Tests
+    dependencies: ["Publish hashrelease"]
+    task:
+      env_vars:
+        - name: INSTALLER
+          value: operator
+        - name: K8S_E2E_FLAGS
+          value: --ginkgo.focus=(\[SmokeTest\]) --ginkgo.skip=(\[Disabled\]|\[Slow\]|\[Disruptive\])
+        - name: ENABLE_SKIMBLE
+          value: "false"
+        - name: FUNCTIONAL_AREA
+          value: "smoke"
+        - name: RELEASE_STREAM
+          value: master
+        - name: USE_HASH_RELEASE
+          value: "true"
+        - name: USE_LATEST_RELEASE
+          value: "false"
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: banzai-secrets
+      prologue:
+        commands:
+          - /end-to-end/scripts/global_prologue.sh
+      epilogue:
+        always:
+          commands:
+            - /end-to-end/scripts/global_epilogue.sh
+      jobs:
+        - name: "gcp-kubeadm stable-1 CalicoIptables"
+          execution_time_limit:
+            hours: 4
+          commands:
+            - /end-to-end/scripts/body_standard.sh
+          matrix:
+            - env_var: PROVISIONER
+              values: ["gcp-kubeadm"]
+            - env_var: K8S_VERSION
+              values: ["stable-1"]
+            - env_var: DATAPLANE
+              values: ["CalicoIptables"]
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Send Hashrelease Announcement
+        commands:
+          - checkout
+          - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
+          - cd release
+          - make bin/release
+          # Fetch smoke test job ID from the Semaphore API and send announcement
+          - |
+            # Get the smoke test job ID from current pipeline
+            SMOKE_TEST_JOB_ID=$(curl -s -H "Authorization: Token ${SEMAPHORE_API_TOKEN}" \
+              "https://tigera-delivery.semaphoreci.com/api/v1alpha/pipelines/${SEMAPHORE_PIPELINE_ID}/jobs" \
+              | jq -r '.[] | select(.metadata.name | contains("Smoke Tests")) | .metadata.id' | head -n1)
+            
+            # Export for the announce command
+            export SMOKE_TEST_JOB_ID="${SMOKE_TEST_JOB_ID}"
+            
+            # Always send announcement with the test result status
+            bin/release hashrelease announce --notify
+
 promotions:
-  - name: Smoke Test on hashrelease
-    pipeline_file: /release/hashrelease_smoke_test.yml
+  - name: Cleanup jobs
+    pipeline_file: /end-to-end/pipelines/cleanup.yml
     auto_promote:
       when: "result = 'stopped'"

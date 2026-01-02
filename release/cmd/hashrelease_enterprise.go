@@ -21,6 +21,7 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 		enterpriseBuildHashreleaseCommand(cfg),
 		enterprisePublishHashreleaseCommand(cfg),
 		enterpriseMetadataCommand(cfg),
+		enterpriseAnnounceHashreleaseCommand(cfg),
 	}
 }
 
@@ -315,7 +316,8 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			// Send a slack message to notify that the hashrelease has been published.
-			if c.Bool(publishHashreleaseFlag.Name) {
+			// Only send if both publishHashreleaseFlag and notifyFlag are true.
+			if c.Bool(publishHashreleaseFlag.Name) && c.Bool(notifyFlag.Name) {
 				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
 			}
 			return nil
@@ -356,6 +358,37 @@ func enterpriseMetadataCommand(cfg *Config) *cli.Command {
 			}
 			r := calico.NewEnterpriseManager(opts)
 			return r.BuildMetadata(c.String("dir"))
+		},
+	}
+}
+
+func enterpriseAnnounceHashreleaseCommand(cfg *Config) *cli.Command {
+	flags := append(hashreleaseServerFlags, slackFlags...)
+	return &cli.Command{
+		Name:  "announce",
+		Usage: "Send Slack notification for a published hashrelease",
+		Flags: flags,
+		Action: func(_ context.Context, c *cli.Command) error {
+			configureLogging("hashrelease-announce.log")
+
+			// Validate flags.
+			if err := validateHashreleaseServerFlags(c); err != nil {
+				return err
+			}
+
+			// Extract the pinned version as a hashrelease.
+			hashrel, err := pinnedversion.LoadEnterpriseHashrelease(cfg.RepoRootDir, cfg.TmpDir, baseHashreleaseOutputDir(cfg.RepoRootDir), c.Bool(latestFlag.Name))
+			if err != nil {
+				return fmt.Errorf("failed to load hashrelease from pinned file: %v", err)
+			}
+
+			// Send the Slack announcement.
+			if c.Bool(notifyFlag.Name) {
+				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
+			}
+
+			logrus.Info("Notification disabled, skipping Slack announcement")
+			return nil
 		},
 	}
 }
