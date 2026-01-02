@@ -39,7 +39,7 @@ func AnnounceHashrelease(cfg *slack.Config, hashrel *hashreleaseserver.Hashrelea
 	if jobID := os.Getenv("SMOKE_TEST_JOB_ID"); jobID != "" {
 		// Build direct link to the smoke test job
 		smokeTestURL = fmt.Sprintf("https://tigera-delivery.semaphoreci.com/jobs/%s", jobID)
-		
+
 		// Get pipeline result status
 		if result := os.Getenv("SEMAPHORE_PIPELINE_RESULT"); result != "" {
 			smokeTestStatus = result
@@ -56,8 +56,8 @@ func AnnounceHashrelease(cfg *slack.Config, hashrel *hashreleaseserver.Hashrelea
 		CIURL:              ciURL,
 		DocsURL:            hashrel.URL(),
 		ImageScanResultURL: hashrel.ImageScanResultURL,
-		SmokeTestURL:       smokeTestURL,       // Empty string if not available (OSS)
-		SmokeTestStatus:    smokeTestStatus,    // Empty string if not available (OSS)
+		SmokeTestURL:       smokeTestURL,    // Empty string if not available (OSS)
+		SmokeTestStatus:    smokeTestStatus, // Empty string if not available (OSS)
 	}
 	return slack.PostHashreleaseAnnouncement(cfg, msgData)
 }
