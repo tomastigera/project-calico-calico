@@ -195,6 +195,25 @@ func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command
 	return nil
 }
 
+// validateEnterpriseHashreleaseAnnounceFlags checks that the flags are set correctly for the announce command.
+func validateEnterpriseHashreleaseAnnounceFlags(c *cli.Command) error {
+	// Check that hashrelease server configuration is valid to load the hashrelease
+	if !hashreleaseServerConfig(c).Valid() {
+		return fmt.Errorf("missing hashrelease server configuration, ensure --%s is set",
+			hashreleaseServerBucketFlag.Name)
+	}
+
+	// Check slack configuration if notify is enabled
+	if c.Bool(notifyFlag.Name) {
+		cfg := slackConfig(c)
+		if !cfg.Valid() {
+			return fmt.Errorf("slack configuration invalid: token and channel must be set for notifications")
+		}
+	}
+
+	return nil
+}
+
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
 		devTagSuffixFlag,
@@ -372,7 +391,7 @@ func enterpriseAnnounceHashreleaseCommand(cfg *Config) *cli.Command {
 			configureLogging("hashrelease-announce.log")
 
 			// Validate flags.
-			if err := validateHashreleaseServerFlags(c); err != nil {
+			if err := validateEnterpriseHashreleaseAnnounceFlags(c); err != nil {
 				return err
 			}
 

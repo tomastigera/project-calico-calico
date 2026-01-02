@@ -121,10 +121,8 @@ after_pipeline:
             SMOKE_TEST_JOB_ID=$(curl -s -H "Authorization: Token ${SEMAPHORE_API_TOKEN}" \
               "https://tigera-delivery.semaphoreci.com/api/v1alpha/pipelines/${SEMAPHORE_PIPELINE_ID}/jobs" \
               | jq -r '.[] | select(.metadata.name | contains("Smoke Tests")) | .metadata.id' | head -n1)
-            
             # Export for the announce command
             export SMOKE_TEST_JOB_ID="${SMOKE_TEST_JOB_ID}"
-            
             # Always send announcement with the test result status
             bin/release hashrelease announce --notify
 
