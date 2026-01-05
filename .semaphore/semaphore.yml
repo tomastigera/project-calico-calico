@@ -1858,7 +1858,7 @@ blocks:
     dependencies:
       - Prerequisites
     execution_time_limit:
-      hours: 2
+      hours: 3
     task:
       secrets:
         - name: banzai-secrets
