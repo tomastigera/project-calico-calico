@@ -23,7 +23,6 @@ jobs:
             "ref": "master",
             "inputs": {
               "trigger_pr_number": "${{ github.event.pull_request.number }}",
-              "trigger_merge_sha": "${{ github.event.pull_request.merge_commit_sha }}",
               "triggered_by_action": "EE_PICK_CREATED"
             }
           }
