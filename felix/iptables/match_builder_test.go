@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,6 +116,9 @@ var _ = DescribeTable("MatchBuilder",
 	// IPVS.
 	Entry("IPVSConnection", Match().IPVSConnection(), "-m ipvs --ipvs"),
 	Entry("NotIPVSConnection", Match().NotIPVSConnection(), "-m ipvs ! --ipvs"),
+	// Limits.
+	Entry("Limit with rate", Match().Limit("30/second", 0), "-m limit --limit 30/second"),
+	Entry("Limit with rate and burst", Match().Limit("40/day", 5), "-m limit --limit 40/day --limit-burst 5"),
 
 	// BPF.
 	Entry("BPFProgram", Match().BPFProgram("/sys/fs/bpf/dns/dns_parser"), "-m bpf --object-pinned /sys/fs/bpf/dns/dns_parser"),

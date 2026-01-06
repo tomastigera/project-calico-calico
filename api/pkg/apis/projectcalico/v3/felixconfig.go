@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -371,6 +371,17 @@ type FelixConfigurationSpec struct {
 
 	// LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.
 	LogDropActionOverride *bool `json:"logDropActionOverride,omitempty"`
+
+	// LogActionRateLimit sets the rate of hitting a Log action. The value must be in the format "N/unit",
+	// where N is a number and unit is one of: second, minute, hour, or day. For example: "10/second" or "100/hour".
+	// +optional
+	// +kubebuilder:validation:Pattern=`^\d+/(?:second|minute|hour|day)$`
+	LogActionRateLimit *string `json:"logActionRateLimit,omitempty"`
+
+	// LogActionRateLimitBurst sets the rate limit burst of hitting a Log action when LogActionRateLimit is enabled.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	LogActionRateLimitBurst *int `json:"logActionRateLimitBurst,omitempty"`
 
 	// LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]
 	LogFilePath string `json:"logFilePath,omitempty"`
