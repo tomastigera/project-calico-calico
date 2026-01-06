@@ -64,20 +64,12 @@ var _ = Describe("Tests address groups controller", func() {
 		BeforeEach(func() {
 			By("Setting up controller configurations")
 			apiserver = &containers.Container{IP: "127.0.0.2"}
-			// Write out a kubeconfig file for the local API server, and create a k8s client.
-			lkubeconfig, err := os.CreateTemp("", "ginkgo-localcluster")
-			Expect(err).NotTo(HaveOccurred())
-			// Change ownership of the kubeconfig file so it is accessible by all users in the container
-			err = lkubeconfig.Chmod(os.ModePerm)
-			Expect(err).NotTo(HaveOccurred())
 
 			ctx = context.Background()
 
-			kubeconfig = lkubeconfig.Name()
-
-			data := testutils.BuildKubeconfig(apiserver.IP)
-			_, err = lkubeconfig.Write([]byte(data))
-			Expect(err).NotTo(HaveOccurred())
+			var cancel func()
+			kubeconfig, cancel = testutils.BuildKubeconfig(apiserver.IP)
+			defer cancel()
 
 			k8sClient, err = testutils.GetK8sClient(kubeconfig)
 			Expect(err).NotTo(HaveOccurred())

@@ -53,7 +53,6 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 		calicoClient      clientv3.Interface
 		k8sClient         *kubernetes.Clientset
 		controllerManager *containers.Container
-		kconfigfile       *os.File
 		ctx               context.Context
 		cancel            context.CancelFunc
 	)
@@ -69,16 +68,11 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 
 		// Write out a kubeconfig file.
 		var err error
-		kconfigfile, err = os.CreateTemp("", "ginkgo-usage-controller")
-		Expect(err).NotTo(HaveOccurred())
-		defer func() { _ = os.Remove(kconfigfile.Name()) }()
-		data := testutils.BuildKubeconfig(apiserver.IP)
-		_, err = kconfigfile.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(kconfigfile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
+		kconfigfile, cancel := testutils.BuildKubeconfig(apiserver.IP)
+		defer cancel()
 
 		// Create the k8s client from the kubeconfig file.
-		k8sClient, err = testutils.GetK8sClient(kconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the API server to be available.
@@ -101,10 +95,10 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 		Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
 
 		// Make a Calico client.
-		calicoClient = testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile.Name())
+		calicoClient = testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile)
 
 		// Make a usage client.
-		config, err := clientcmd.BuildConfigFromFlags("", kconfigfile.Name())
+		config, err := clientcmd.BuildConfigFromFlags("", kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 		usageClient, err = createUsageClient(ctx, config)
 		Expect(err).NotTo(HaveOccurred())
@@ -132,7 +126,7 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 		createNode(ctx, "node-b", "20", k8sClient)
 
 		// Run the usage controller.
-		controller = runUsageControllerForFV(apiconfig.Kubernetes, kconfigfile.Name(), reportsPerDay, secondsToRetainReports)
+		controller = runUsageControllerForFV(apiconfig.Kubernetes, kconfigfile, reportsPerDay, secondsToRetainReports)
 
 		// Run controller manager.
 		controllerManager = testutils.RunK8sControllerManager(apiserver.IP)

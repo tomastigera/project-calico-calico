@@ -178,6 +178,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterSpec":                       schema_pkg_apis_projectcalico_v3_ManagedClusterSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterStatus":                     schema_pkg_apis_projectcalico_v3_ManagedClusterStatus(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterStatusCondition":            schema_pkg_apis_projectcalico_v3_ManagedClusterStatusCondition(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.MigrationControllerConfig":                schema_pkg_apis_projectcalico_v3_MigrationControllerConfig(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.NamedSelector":                            schema_pkg_apis_projectcalico_v3_NamedSelector(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.NamesAndLabelsMatch":                      schema_pkg_apis_projectcalico_v3_NamesAndLabelsMatch(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.NamespaceControllerConfig":                schema_pkg_apis_projectcalico_v3_NamespaceControllerConfig(ref),
@@ -3877,11 +3878,17 @@ func schema_pkg_apis_projectcalico_v3_ControllersConfig(ref common.ReferenceCall
 							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig"),
 						},
 					},
+					"policyMigration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Migration enables and configures migration controllers.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.MigrationControllerConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NamespaceControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NodeControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.WorkloadEndpointControllerConfig"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.MigrationControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NamespaceControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NodeControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.WorkloadEndpointControllerConfig"},
 	}
 }
 
@@ -10237,6 +10244,25 @@ func schema_pkg_apis_projectcalico_v3_ManagedClusterStatusCondition(ref common.R
 					},
 				},
 				Required: []string{"status", "type"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_MigrationControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PolicyNameMigrator enables or disables the Policy Name Migrator, which migrates old-style Calico backend policy names to use v3 style names.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
