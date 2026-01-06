@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -136,4 +137,14 @@ func HashToIPv4(nodeName string) (string, error) {
 		strconv.Itoa(int(ip[2])) + "." +
 		strconv.Itoa(int(ip[3]))
 	return routerId, nil
+}
+
+// FormatBirdTime converts a time duration string to BIRD time format (e.g., "100ms", "5s")
+// This is used to format BFD intervals and other time-related configuration values.
+func FormatBirdTime(val string) (string, error) {
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return "", fmt.Errorf("error parsing time value %s: %w", val, err)
+	}
+	return fmt.Sprintf("%dms", d.Milliseconds()), nil
 }

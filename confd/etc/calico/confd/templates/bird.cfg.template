@@ -74,8 +74,8 @@ protocol device {
 protocol direct from direct_template {
 }
 
-{{- if $config.BFDConfig}}
 protocol bfd {
+{{- if $config.BFDConfig}}
 {{- range $config.BFDConfig}}
 
   interface "{{.MatchPattern}}" {
@@ -86,38 +86,18 @@ protocol bfd {
   };
 
 {{- end}}
-}
 {{- end}}
+}
 
 {{if eq "" $config.NodeIP}}# IPv4 disabled on this node.
 {{else}}
-{{- define "LOGGING_PEERS"}}
-{{- $node_logging_key := printf "/bgp/v1/host/%s/loglevel" (getenv "NODENAME")}}
-{{- if exists $node_logging_key}}
-{{- $logging := getv $node_logging_key}}
-{{- if eq $logging "debug"}}
-  debug all;
-{{- else if ne $logging "none"}}
-  debug { states, routes, filters, events };
-{{- end}}
-{{- else if exists "/bgp/v1/global/loglevel"}}
-{{- $logging := getv "/bgp/v1/global/loglevel"}}
-{{- if eq $logging "debug"}}
-  debug all;
-{{- else if ne $logging "none"}}
-  debug { states, routes, filters, events };
-{{- end}}
-{{- else}}
-  debug { states, routes, filters, events };
-{{- end}}
-{{- end}}
-
 # Template for all BGP clients
 template bgp bgp_template {
-{{- template "LOGGING_PEERS"}}
+{{- if $config.PeerLogging}}
+  {{$config.PeerLogging}}
+{{- end}}
   description "Connection to BGP peer";
   local as {{$config.ASNumber}};
-  gateway recursive; # This should be the default, but just in case.
   add paths on;
   graceful restart;  # See comment in kernel section about graceful restart.
   connect delay time 2;
@@ -134,22 +114,29 @@ template bgp bgp_template {
 # BGP Protocol Configurations
 {{- range $config.Peers}}
 protocol bgp {{.Name}} from bgp_template {
-{{- if .DirectlyConnected}}
-  direct;
-{{- else}}
-{{- if eq .TTLSecurity "off"}}
-  ttl security off;
-  multihop;
-{{- else if .TTLSecurity}}
-  ttl security {{.TTLSecurity}};
-{{- end}}
-{{- end}}
-{{- if .LocalASNumber}}
+{{- if and .LocalASNumber (or (eq .Type "global") (eq .Type "mesh") (eq .Type "local_workload"))}}
   local as {{.LocalASNumber}};
 {{- end}}
   neighbor {{.IP}}{{if .Port}} port {{.Port}}{{end}} as {{.ASNumber}};
 {{- if .SourceAddr}}
   source address {{.SourceAddr}};  # The local address we use for the TCP connection
+{{- end}}
+{{- if eq .TTLSecurity "off"}}
+  ttl security off;
+{{- else if .TTLSecurity}}
+  ttl security on;
+{{- end}}
+{{- if .DirectlyConnected}}
+  direct;
+{{- else}}
+{{- if and .TTLSecurity (ne .TTLSecurity "off")}}
+  multihop {{.TTLSecurity}};
+{{- else}}
+  multihop;
+{{- end}}
+{{- end}}
+{{- if and .LocalASNumber (eq .Type "node")}}
+  local as {{.LocalASNumber}};
 {{- end}}
 {{- if .ImportFilter}}
   import filter {

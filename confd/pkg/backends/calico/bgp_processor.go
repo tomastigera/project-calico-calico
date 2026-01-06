@@ -19,7 +19,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -141,11 +140,14 @@ func (c *client) populateNodeConfig(config *types.BirdBGPConfig, ipVersion int) 
 	switch logLevel {
 	case "none":
 		// DebugMode stays empty (no debug output)
+		// PeerLogging stays empty too
 	case "debug":
 		config.DebugMode = "all"
+		config.PeerLogging = "debug all;"
 	default:
 		// Default behavior for empty string or any other log level
 		config.DebugMode = "{ states }"
+		config.PeerLogging = "debug { states, routes, filters, events };"
 	}
 
 	// Handle router ID logic
@@ -348,7 +350,8 @@ func (c *client) processMeshPeers(config *types.BirdBGPConfig, nodeClusterID str
 			ASNumber:        peerAS,
 			Type:            "mesh",
 			SourceAddr:      currentNodeIP,
-			ImportFilter:    "", // Empty means "import all;" in template
+			TTLSecurity:     "off", // Mesh peers always use ttl security off with multihop
+			ImportFilter:    "",    // Empty means "import all;" in template
 			ExportFilter:    exportFilter,
 			Password:        meshPassword,
 			GracefulRestart: meshRestartTime,
@@ -488,9 +491,9 @@ func (c *client) buildPeerFromData(peer *backends.BGPPeer, prefix string, config
 	// Directly connected peers
 	result.DirectlyConnected = peer.DirectlyConnected
 
-	// TTL security
+	// TTL security - store the hop count or "off"
 	if peer.TTLSecurity > 0 {
-		result.TTLSecurity = fmt.Sprintf("on;\n  multihop %d", peer.TTLSecurity)
+		result.TTLSecurity = fmt.Sprintf("%d", peer.TTLSecurity)
 	} else {
 		result.TTLSecurity = "off"
 	}
@@ -550,6 +553,11 @@ func (c *client) buildPeerFromData(peer *backends.BGPPeer, prefix string, config
 			if err == nil {
 				result.ExternalNetworkTable = tableName
 			}
+		} else {
+			// External network doesn't exist - skip this peer
+			logc.Warnf("Omitting BGPPeer %s (%s) due to missing specified ExternalNetwork '%s'",
+				result.Name, result.IP, peer.ExternalNetwork)
+			return nil
 		}
 	}
 
@@ -641,7 +649,7 @@ func (c *client) buildImportFilter(filters []string, ipVersion int) string {
 		}
 	}
 
-	filterLines = append(filterLines, "accept; # Prior to introduction of BGP Filters we used \"import all\" so use default accept behaviour on import")
+	filterLines = append(filterLines, "accept;")
 	return strings.Join(filterLines, "\n    ")
 }
 
@@ -769,38 +777,29 @@ func (c *client) processBFDConfig(config *types.BirdBGPConfig) error {
 		return nil
 	}
 
-	var bfdConfig struct {
-		Spec struct {
-			Interfaces []struct {
-				MatchPattern        string `json:"matchPattern"`
-				MinimumRecvInterval string `json:"minimumRecvInterval"`
-				MinimumSendInterval string `json:"minimumSendInterval"`
-				IdleSendInterval    string `json:"idleSendInterval"`
-				Multiplier          int    `json:"multiplier"`
-			} `json:"interfaces"`
-		} `json:"spec"`
-	}
-
+	var bfdConfig v3.BFDConfiguration
 	if err := json.Unmarshal([]byte(bfdConfigValue), &bfdConfig); err != nil {
 		return fmt.Errorf("failed to unmarshal BFD configuration: %w", err)
 	}
 
 	for _, iface := range bfdConfig.Spec.Interfaces {
-		// Format time values
-		minRx, err := formatBirdTime(iface.MinimumRecvInterval)
-		if err != nil {
-			log.WithError(err).Warnf("Failed to format MinimumRecvInterval: %s", iface.MinimumRecvInterval)
-			continue
+		// Convert time.Duration values directly to BIRD's millisecond format
+		// If a field is nil, default to 0ms to match original behavior
+		var minRx, minTx, idleTx string
+		if iface.MinimumRecvInterval != nil {
+			minRx = fmt.Sprintf("%dms", iface.MinimumRecvInterval.Milliseconds())
+		} else {
+			minRx = "0ms"
 		}
-		minTx, err := formatBirdTime(iface.MinimumSendInterval)
-		if err != nil {
-			log.WithError(err).Warnf("Failed to format MinimumSendInterval: %s", iface.MinimumSendInterval)
-			continue
+		if iface.MinimumSendInterval != nil {
+			minTx = fmt.Sprintf("%dms", iface.MinimumSendInterval.Milliseconds())
+		} else {
+			minTx = "0ms"
 		}
-		idleTx, err := formatBirdTime(iface.IdleSendInterval)
-		if err != nil {
-			log.WithError(err).Warnf("Failed to format IdleSendInterval: %s", iface.IdleSendInterval)
-			continue
+		if iface.IdleSendInterval != nil {
+			idleTx = fmt.Sprintf("%dms", iface.IdleSendInterval.Milliseconds())
+		} else {
+			idleTx = "0ms"
 		}
 
 		config.BFDConfig = append(config.BFDConfig, types.BFDInterfaceConfig{
@@ -813,13 +812,4 @@ func (c *client) processBFDConfig(config *types.BirdBGPConfig) error {
 	}
 
 	return nil
-}
-
-// formatBirdTime converts a time duration string to BIRD time format
-func formatBirdTime(val string) (string, error) {
-	d, err := time.ParseDuration(val)
-	if err != nil {
-		return "", fmt.Errorf("error parsing time value %s: %w", val, err)
-	}
-	return fmt.Sprintf("%dms", d.Milliseconds()), nil
 }

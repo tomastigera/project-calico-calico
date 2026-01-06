@@ -46,10 +46,8 @@ func newFuncMap() map[string]interface{} {
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
 	m["externalNetworkBIRDConfig"] = ExternalNetworkBIRDConfig
-	m["externalNetworkTableName"] = ExternalNetworkTableName
 	m["bgpFilterFunctionName"] = BGPFilterFunctionName
 	m["bgpFilterBIRDFuncs"] = BGPFilterBIRDFuncs
-	m["formatTime"] = formatTime
 	return m
 }
 
@@ -69,19 +67,6 @@ func ExternalNetworkTableName(name string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("'%s%s'", prefix, resizedName), nil
-}
-
-// formatTime converts the provided time.Duration formatted string into a valid BIRD <time> format.
-// While BIRD accepts time in either s|ms|us, we convert everything to ms for simplicity.
-func formatTime(val interface{}) (string, error) {
-	if _, ok := val.(string); !ok {
-		return "", fmt.Errorf("time value must be a string, got %T", val)
-	}
-	d, err := time.ParseDuration(val.(string))
-	if err != nil {
-		return "", fmt.Errorf("error formatting time value %s: %s", val, err)
-	}
-	return fmt.Sprintf("%dms", d.Milliseconds()), nil
 }
 
 // addCalicoFuncs adds Calico-specific template functions
