@@ -850,24 +850,28 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 
 		// Source workloads on Node 0
 		// swl1 in ns1
+		infrastructure.AssignIP("swl1", "10.65.0.2", tc.Felixes[0].Hostname, client)
 		swl1 = workload.Run(tc.Felixes[0], "swl1", "ns1", "10.65.0.2", "8055", "tcp")
 		swl1.WorkloadEndpoint.GenerateName = "swl1-"
 		swl1.WorkloadEndpoint.Namespace = "ns1"
 		swl1.ConfigureInInfra(infra)
 
 		// swl2 in ns2
+		infrastructure.AssignIP("swl2", "10.65.0.3", tc.Felixes[0].Hostname, client)
 		swl2 = workload.Run(tc.Felixes[0], "swl2", "ns2", "10.65.0.3", "8055", "tcp")
 		swl2.WorkloadEndpoint.GenerateName = "swl2-"
 		swl2.WorkloadEndpoint.Namespace = "ns2"
 		swl2.ConfigureInInfra(infra)
 
 		// swl3 in ns3
+		infrastructure.AssignIP("swl3", "10.65.0.4", tc.Felixes[0].Hostname, client)
 		swl3 = workload.Run(tc.Felixes[0], "swl3", "ns3", "10.65.0.4", "8055", "tcp")
 		swl3.WorkloadEndpoint.GenerateName = "swl3-"
 		swl3.WorkloadEndpoint.Namespace = "ns3"
 		swl3.ConfigureInInfra(infra)
 
 		// swl4 in ns3
+		infrastructure.AssignIP("swl4", "10.65.0.5", tc.Felixes[0].Hostname, client)
 		swl4 = workload.Run(tc.Felixes[0], "swl4", "ns3", "10.65.0.5", "8055", "tcp")
 		swl4.WorkloadEndpoint.GenerateName = "swl4-"
 		swl4.WorkloadEndpoint.Namespace = "ns3"
