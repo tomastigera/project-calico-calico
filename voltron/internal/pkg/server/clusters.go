@@ -351,7 +351,6 @@ loop:
 			continue
 		}
 		resyncedClusters[mc.Name] = cs.clusters[mc.Name]
-		delete(cs.clusters, mc.Name)
 	}
 
 	for id, c := range cs.clusters {

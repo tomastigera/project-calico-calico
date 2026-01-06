@@ -83,7 +83,7 @@ func TestWatchResource(t *testing.T) {
 			Expect(result.Type).Should(Equal(k8s.SyncEnd))
 		})
 
-		t.Run("list doesn't return any values and sync event is skipped, watch still sends a value.", func(t *testing.T) {
+		t.Run("list doesn't return any values and sync event is still done, watch still sends a value.", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
@@ -113,6 +113,12 @@ func TestWatchResource(t *testing.T) {
 			events <- watch.Event{Type: watch.Added, Object: &v3.ManagedCluster{ObjectMeta: metav1.ObjectMeta{Name: "test"}}}
 
 			result := mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncStart))
+
+			result = mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncEnd))
+
+			result = mustReadChannel(ctx, results)
 			Expect(result.Type).Should(Equal(k8s.Added))
 			Expect(result.Obj.Name).Should(Equal("test"))
 		})
@@ -207,6 +213,12 @@ func TestWatchResource(t *testing.T) {
 			events <- watch.Event{Type: watch.Added, Object: &v3.ManagedCluster{ObjectMeta: metav1.ObjectMeta{Name: "test"}}}
 
 			result := mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncStart))
+
+			result = mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncEnd))
+
+			result = mustReadChannel(ctx, results)
 			Expect(result.Type).Should(Equal(k8s.Added))
 			Expect(result.Obj.Name).Should(Equal("test"))
 
@@ -265,6 +277,12 @@ func TestWatchResource(t *testing.T) {
 			events <- watch.Event{Type: watch.Added, Object: &v3.ManagedCluster{ObjectMeta: metav1.ObjectMeta{Name: "test", ResourceVersion: "2"}}}
 
 			result := mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncStart))
+
+			result = mustReadChannel(ctx, results)
+			Expect(result.Type).Should(Equal(k8s.SyncEnd))
+
+			result = mustReadChannel(ctx, results)
 			Expect(result.Type).Should(Equal(k8s.Added))
 			Expect(result.Obj.Name).Should(Equal("test"))
 

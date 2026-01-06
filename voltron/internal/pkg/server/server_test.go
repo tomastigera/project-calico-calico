@@ -31,9 +31,11 @@ import (
 	"golang.org/x/net/http2"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -44,6 +46,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
+	"github.com/projectcalico/calico/lib/std/chanutil"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
@@ -55,6 +58,8 @@ import (
 	accesslogtest "github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	mockwatch "github.com/projectcalico/calico/voltron/pkg/thirdpartymocks/k8s.io/apimachinery/pkg/watch"
+	mockk8sclient "github.com/projectcalico/calico/voltron/pkg/thirdpartymocks/sigs.k8s.io/controller-runtime/pkg/client"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
@@ -88,8 +93,8 @@ var (
 	// Tokens issued by k8s.
 	janeBearerToken = testing.NewFakeJWT(k8sIssuer, "jane@example.io")
 	bobBearerToken  = testing.NewFakeJWT(k8sIssuer, "bob@example.io")
-
-	mockFactory = &MockManagedClusterQuerierFactory{}
+	janeUserInfo    = &user.DefaultInfo{Name: "jane@example.io", Groups: []string{"developers"}}
+	mockFactory     = &MockManagedClusterQuerierFactory{}
 )
 
 type k8sClient struct {
@@ -105,6 +110,11 @@ func describe(name string, testFn func(string)) bool {
 
 var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 	var (
+		ctx               context.Context
+		ctxCancel         func()
+		mockAuthenticator *auth.MockJWTAuth
+		mockAuthorizer    *auth.MockRBACAuthorizer
+
 		fakeK8s    *k8sfake.Clientset
 		k8sAPI     bootstrap.K8sClient
 		fakeClient ctrlclient.WithWatch
@@ -118,10 +128,17 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		voltronIntHttpsPrivKey *rsa.PrivateKey
 		voltronTunnelCAs       *x509.CertPool
 		voltronHttpsCAs        *x509.CertPool
+
+		managedClusterA, managedClusterB, managedClusterC                         *v3.ManagedCluster
+		clusterATLSCert, clusterBTLSCert, clusterCTLSCert                         tls.Certificate
+		clusterATunnelTLSConfig, clusterBTunnelTLSConfig, clusterCTunnelTLSConfig *tls.Config
 	)
 
 	BeforeEach(func() {
 		var err error
+		ctx, ctxCancel = context.WithCancel(context.Background())
+		mockAuthenticator = new(auth.MockJWTAuth)
+		mockAuthorizer = new(auth.MockRBACAuthorizer)
 
 		fakeK8s = k8sfake.NewClientset()
 		k8sAPI = &k8sClient{
@@ -130,8 +147,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		}
 
 		scheme := kscheme.Scheme
-		err = v3.AddToScheme(scheme)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(v3.AddToScheme(scheme)).NotTo(HaveOccurred())
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		voltronTunnelCertTemplate := test.CreateCACertificateTemplate("voltron")
@@ -156,11 +172,73 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		voltronHttpsCAs = x509.NewCertPool()
 		voltronHttpsCAs.AppendCertsFromPEM(test.CertToPemBytes(voltronExtHttpsCert))
 		voltronHttpsCAs.AppendCertsFromPEM(test.CertToPemBytes(voltronIntHttpsCert))
+
+		clusterACertTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
+		clusterAPrivKey, clusterACert, err := test.CreateCertPair(clusterACertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		clusterATLSCert, err = test.X509CertToTLSCert(clusterACert, clusterAPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		managedClusterA = &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterA,
+				Namespace:   clusterNS,
+				Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterACert)},
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(clusterACert),
+			},
+		}
+
+		clusterATunnelTLSConfig = &tls.Config{Certificates: []tls.Certificate{clusterATLSCert}, RootCAs: voltronTunnelCAs}
+
+		clusterBCertTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
+		clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		clusterBTLSCert, err = test.X509CertToTLSCert(clusterBCert, clusterBPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		managedClusterB = &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterB,
+				Namespace:   clusterNS,
+				Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterBCert)},
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(clusterBCert),
+			},
+		}
+
+		clusterBTunnelTLSConfig = &tls.Config{Certificates: []tls.Certificate{clusterBTLSCert}, RootCAs: voltronTunnelCAs}
+
+		clusterCCertTemplate := test.CreateClientCertificateTemplate(clusterC, "localhost")
+		clusterCPrivKey, clusterCCert, err := test.CreateCertPair(clusterCCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		managedClusterC = &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clusterC,
+				Namespace: clusterNS,
+			},
+			Spec: v3.ManagedClusterSpec{
+				Certificate: test.CertToPemBytes(clusterCCert),
+			},
+		}
+
+		clusterCTLSCert, err = test.X509CertToTLSCert(clusterCCert, clusterCPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		clusterCTunnelTLSConfig = &tls.Config{Certificates: []tls.Certificate{clusterCTLSCert}, RootCAs: voltronTunnelCAs}
+	})
+
+	JustAfterEach(func() {
+		ctxCancel()
 	})
 
 	It("should fail to start the server when the paths to the external credentials are invalid", func() {
 		vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
-		mockAuthenticator := new(auth.MockJWTAuth)
 		_, err := server.New(
 			fakeClient,
 			config,
@@ -173,41 +251,30 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		Expect(err).To(HaveOccurred())
 	})
 
-	Context("Server is running", func() {
+	Context("Proxying requests over the tunnel", func() {
 		var (
-			httpsAddr, tunnelAddr string
-			srvWg                 *sync.WaitGroup
-			srv                   *server.Server
-			defaultServer         *httptest.Server
+			mockClient *mockk8sclient.WithWatch
+			events     chan watch.Event
+
+			voltronServerAddr, voltronTunnelAddr string
+			srvWg                                *sync.WaitGroup
+			srv                                  *server.Server
+			defaultServer                        *httptest.Server
 		)
 
 		BeforeEach(func() {
-			var err error
+			mockAuthenticator.On("Authenticate", mock.Anything).Return(janeUserInfo, 0, nil)
+			mockAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
-			mockAuthenticator := new(auth.MockJWTAuth)
-			mockAuthenticator.On("Authenticate", mock.Anything).Return(
-				&user.DefaultInfo{
-					Name:   "jane@example.io",
-					Groups: []string{"developers"},
-				}, 0, nil)
-			testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
-				testing.UserPermissions{
-					Username: janeBearerToken.UserName(),
-					Attrs: []authzv1.ResourceAttributes{
-						{
-							Verb:     "get",
-							Group:    "projectcalico.org",
-							Version:  "v3",
-							Resource: "managedclusters",
-							Name:     clusterA,
-						},
-					},
-				},
-			)
+			mockClient = new(mockk8sclient.WithWatch)
+			mockClient.EXPECT().List(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(setList("1")).Once()
+
+			var watchInf *mockwatch.Interface
+			watchInf, events = newWatchInf()
+			mockClient.EXPECT().Watch(mock.Anything, mock.Anything, mock.Anything).Return(watchInf, nil).Once()
 
 			defaultServer = httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// Echo the token, such that we can determine if the auth header was successfully swapped.
 					w.Header().Set(authentication.AuthorizationHeader, r.Header.Get(authentication.AuthorizationHeader))
 					w.Header().Set(authnv1.ImpersonateUserHeader, r.Header.Get(authnv1.ImpersonateUserHeader))
 					w.Header().Set(authnv1.ImpersonateGroupHeader, r.Header.Get(authnv1.ImpersonateGroupHeader))
@@ -216,11 +283,10 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			defaultURL, err := url.Parse(defaultServer.URL)
 			Expect(err).NotTo(HaveOccurred())
 
-			defaultProxy, e := proxy.New([]proxy.Target{
-				{Path: "/", Dest: defaultURL},
-				{Path: "/compliance/", Dest: defaultURL},
+			defaultProxy, err := proxy.New([]proxy.Target{
+				{Path: "/", Dest: defaultURL}, {Path: "/compliance/", Dest: defaultURL},
 			})
-			Expect(e).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -228,10 +294,8 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(fakeClient,
-				config,
-				mockAuthenticator,
-				clusterNS,
+			srv, voltronServerAddr, _, voltronTunnelAddr, srvWg = createAndStartServer(
+				mockClient, config, mockAuthenticator, clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
 				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
@@ -239,7 +303,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				server.WithDefaultProxy(defaultProxy),
 				server.WithKubernetesAPITargets(k8sTargets),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 0, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
+				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 0, mockAuthorizer),
 			)
 		})
 
@@ -247,398 +311,434 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(srv.Close()).NotTo(HaveOccurred())
 			defaultServer.Close()
 			srvWg.Wait()
+			close(events)
 		})
 
-		Context("Proxying requests over the tunnel", func() {
-			It("should not proxy anywhere without valid headers", func() {
-				resp, err := http.Get("http://" + httpsAddr + "/")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(400))
-			})
+		It("should not proxy anywhere without valid headers", func() {
+			resp, err := http.Get("http://" + voltronServerAddr + "/")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
 
-			It("Should reject requests to clusters that don't exist", func() {
-				req, err := http.NewRequest("GET", "http://"+httpsAddr+"/", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(utils.ClusterHeaderField, "zzzzzzz")
-				resp, err := http.DefaultClient.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(400))
-			})
+		It("Should reject requests to clusters that don't exist", func() {
+			req, err := http.NewRequest("GET", "http://"+voltronServerAddr+"/", nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Add(utils.ClusterHeaderField, "zzzzzzz")
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
 
-			It("Should not proxy anywhere - multiple headers", func() {
-				tr := &http.Transport{
+		It("Should not proxy anywhere - multiple headers", func() {
+			tr := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+					ServerName:         "localhost",
+				},
+			}
+			client := &http.Client{Transport: tr}
+			req, err := http.NewRequest("GET", "https://"+voltronServerAddr+"/", nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Add(utils.ClusterHeaderField, clusterA)
+			req.Header.Add(utils.ClusterHeaderField, "helloworld")
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
+
+		It("should not be able to proxy to a cluster without a tunnel", func() {
+			mockClient.EXPECT().
+				Get(mock.Anything, types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterA))
+			mockClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			err := chanutil.WriteWithDeadline(ctx, events, watch.Event{
+				Type:   watch.Added,
+				Object: managedClusterA,
+			}, 2*time.Second)
+			Expect(err).NotTo(HaveOccurred())
+			clientHelloReq(voltronServerAddr, clusterA, 400)
+		})
+
+		It("Should proxy to default if no header", func() {
+			resp, err := http.Get(defaultServer.URL)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
+		It("Should proxy to default even with header, if request path matches one of bypass tunnel targets", func() {
+			req, err := http.NewRequest(
+				"GET",
+				"https://"+voltronServerAddr+"/compliance/reports",
+				strings.NewReader("HELLO"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Add(utils.ClusterHeaderField, clusterA)
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			httpClient := &http.Client{
+				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{
 						InsecureSkipVerify: true,
-						ServerName:         "localhost",
 					},
-				}
-				client := &http.Client{Transport: tr}
-				req, err := http.NewRequest("GET", "https://"+httpsAddr+"/", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(utils.ClusterHeaderField, clusterA)
-				req.Header.Add(utils.ClusterHeaderField, "helloworld")
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(400))
+				},
+			}
+			resp, err := httpClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
+		It("Should swap the auth header and impersonate the user for requests to k8s (a)api server", func() {
+			req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", voltronServerAddr, "/api/v1/namespaces"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(janeBearerToken.UserName()))
+			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal("developers"))
+		})
+
+		It("should not overwrite impersonation headers if they have already been configured by client", func() {
+			req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", voltronServerAddr, "/api/v1/namespaces"), nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			impersonatedUser := "impersonated-user"
+			impersonatedGroup := "impersonated-group"
+
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+			req.Header.Set(authnv1.ImpersonateUserHeader, impersonatedUser)
+			req.Header.Set(authnv1.ImpersonateGroupHeader, impersonatedGroup)
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(impersonatedUser))
+			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal(impersonatedGroup))
+		})
+
+		Context("A single cluster is registered", func() {
+			var (
+				clusterAConnected chan struct{}
+			)
+
+			BeforeEach(func() {
+				clusterAConnected = make(chan struct{})
+				closeOnce := sync.OnceFunc(func() { close(clusterAConnected) })
+
+				mockClient.EXPECT().
+					Get(mock.Anything, types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterA))
+
+				mockClient.EXPECT().
+					Update(mock.Anything, mock.MatchedBy(func(obj *v3.ManagedCluster) bool {
+						if obj.Name == clusterA {
+							closeOnce()
+							return true
+						}
+
+						return false
+					}), mock.Anything).Return(nil)
+
+				err := chanutil.WriteWithDeadline(ctx, events, watch.Event{
+					Type:   watch.Added,
+					Object: managedClusterA,
+				}, 2*time.Second)
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 
-			It("should not be able to proxy to a cluster without a tunnel", func() {
-				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v3.KindManagedCluster,
-						APIVersion: v3.GroupVersionCurrent,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: clusterA,
-					},
-				})).ShouldNot(HaveOccurred())
-				clientHelloReq(httpsAddr, clusterA, 400)
+			It("should not send requests if not authorized on that managed cluster", func() {
+				// Reset the expected calls so we can ensure false is returned on the authorize call.
+				mockAuthorizer.ExpectedCalls = nil
+
+				mockAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
+				resp := clientHelloReq(voltronServerAddr, clusterA, http.StatusForbidden)
+				bits, err := io.ReadAll(resp.Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(bits)).To(Equal("not authorized for managed cluster\n"))
 			})
 
-			It("Should proxy to default if no header", func() {
-				resp, err := http.Get(defaultServer.URL)
+			It("can send requests from the server to the cluster", func() {
+				clusterATunnel, err := tunnel.DialTLS(voltronTunnelAddr, clusterATunnelTLSConfig, 5*time.Second, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(200))
-			})
 
-			It("Should proxy to default even with header, if request path matches one of bypass tunnel targets", func() {
-				req, err := http.NewRequest(
-					"GET",
-					"https://"+httpsAddr+"/compliance/reports",
-					strings.NewReader("HELLO"),
-				)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(utils.ClusterHeaderField, clusterA)
-				req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+				_, err = chanutil.ReadWithDeadline(ctx, clusterAConnected, 5*time.Second)
+				Expect(err).Should(Equal(chanutil.ErrChannelClosed))
 
-				httpClient := &http.Client{
-					Transport: &http.Transport{
+				reqAChan := startMgdClusterService(ctx, clusterATunnel, clusterATLSCert)
+
+				cli := &http.Client{
+					Transport: &http2.Transport{
 						TLSClientConfig: &tls.Config{
-							InsecureSkipVerify: true,
+							NextProtos: []string{"h2"}, RootCAs: voltronHttpsCAs, ServerName: "localhost",
 						},
 					},
 				}
-				resp, err := httpClient.Do(req)
+
+				sendReqToManagedCluster(cli, voltronServerAddr, clusterA, "HELLO")
+
+				body, err := chanutil.ReadWithDeadline(ctx, reqAChan, 2*time.Second)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(200))
+				Expect(body).To(Equal("HELLO"))
+
+				By("testing that the tunnel is closed when the cluster is deleted")
+				err = chanutil.WriteWithDeadline(ctx, events, watch.Event{
+					Type:   watch.Deleted,
+					Object: managedClusterA,
+				}, 2*time.Second)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				clusterATunnel, err = tunnel.DialTLS(voltronTunnelAddr, &tls.Config{
+					Certificates: []tls.Certificate{clusterATLSCert}, RootCAs: voltronTunnelCAs,
+				}, 5*time.Second, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(clusterATunnel.CloseChan()).Should(BeClosed())
 			})
 
-			It("Should swap the auth header and impersonate the user for requests to k8s (a)api server", func() {
-				req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", httpsAddr, "/api/v1/namespaces"), nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
-
-				resp, err := configureHTTPSClient().Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(200))
-				Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
-				Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(janeBearerToken.UserName()))
-				Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal("developers"))
-			})
-
-			It("should not overwrite impersonation headers if they have already been configured by client", func() {
-				req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", httpsAddr, "/api/v1/namespaces"), nil)
-				Expect(err).NotTo(HaveOccurred())
-
-				impersonatedUser := "impersonated-user"
-				impersonatedGroup := "impersonated-group"
-
-				req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
-				req.Header.Set(authnv1.ImpersonateUserHeader, impersonatedUser)
-				req.Header.Set(authnv1.ImpersonateGroupHeader, impersonatedGroup)
-
-				resp, err := configureHTTPSClient().Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(200))
-				Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
-				Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(impersonatedUser))
-				Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal(impersonatedGroup))
-			})
-
-			Context("A single cluster is registered", func() {
-				var clusterATLSCert tls.Certificate
+			Context("A second cluster is registered", func() {
+				var (
+					clusterBConnected chan struct{}
+				)
 
 				BeforeEach(func() {
-					clusterACertTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
-					clusterAPrivKey, clusterACert, err := test.CreateCertPair(clusterACertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+					clusterBConnected = make(chan struct{})
+					closeOnce := sync.OnceFunc(func() { close(clusterBConnected) })
+
+					mockClient.EXPECT().
+						Get(mock.Anything, types.NamespacedName{Name: clusterB, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterB))
+
+					mockClient.EXPECT().
+						Update(mock.Anything, mock.MatchedBy(func(obj *v3.ManagedCluster) bool {
+							if obj.Name == clusterB {
+								closeOnce()
+								return true
+							}
+
+							return false
+						}), mock.Anything).Return(nil)
+
+					err := chanutil.WriteWithDeadline(ctx, events, watch.Event{
+						Type: watch.Added, Object: managedClusterB,
+					}, 2*time.Second)
 					Expect(err).ShouldNot(HaveOccurred())
-
-					Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        clusterA,
-							Namespace:   clusterNS,
-							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterACert)},
-						},
-					})).ShouldNot(HaveOccurred())
-
-					clusterATLSCert, err = test.X509CertToTLSCert(clusterACert, clusterAPrivKey)
-					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("can send requests from the server to the cluster", func() {
-					tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-						Certificates: []tls.Certificate{clusterATLSCert},
-						RootCAs:      voltronTunnelCAs,
-					}, 5*time.Second, nil)
+				It("can send requests from the server to the second cluster", func() {
+					clusterBTunnel, err := tunnel.DialTLS(voltronTunnelAddr, clusterBTunnelTLSConfig, 5*time.Second, nil)
 					Expect(err).NotTo(HaveOccurred())
 
-					WaitForClusterToConnect(fakeClient, clusterA, clusterNS)
+					_, err = chanutil.ReadWithDeadline(ctx, clusterBConnected, 5*time.Second)
+					Expect(err).Should(Equal(chanutil.ErrChannelClosed))
+
+					reqBChan := startMgdClusterService(ctx, clusterBTunnel, clusterATLSCert)
 
 					cli := &http.Client{
 						Transport: &http2.Transport{
 							TLSClientConfig: &tls.Config{
-								NextProtos: []string{"h2"},
-								RootCAs:    voltronHttpsCAs,
-								ServerName: "localhost",
+								NextProtos: []string{"h2"}, RootCAs: voltronHttpsCAs, ServerName: "localhost",
 							},
 						},
 					}
 
-					req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
+					sendReqToManagedCluster(cli, voltronServerAddr, clusterB, "HELLO")
+
+					body, err := chanutil.ReadWithDeadline(ctx, reqBChan, 2*time.Second)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(body).To(Equal("HELLO"))
+				})
+
+				It("should not be possible to open a two tunnels to the same cluster", func() {
+					_, err := tunnel.DialTLS(voltronTunnelAddr, clusterBTunnelTLSConfig, 5*time.Second, nil)
 					Expect(err).NotTo(HaveOccurred())
 
-					req.Header[utils.ClusterHeaderField] = []string{clusterA}
-					req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+					tunB2, err := tunnel.DialTLS(voltronTunnelAddr, clusterBTunnelTLSConfig, 5*time.Second, nil)
+					Expect(err).NotTo(HaveOccurred())
 
-					var wg sync.WaitGroup
-					wg.Add(1)
-					go func() {
-						defer GinkgoRecover()
-						defer wg.Done()
-
-						_, err := cli.Do(req)
-						Expect(err).ShouldNot(HaveOccurred())
-					}()
-
-					serve := &http.Server{
-						Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							f, ok := w.(http.Flusher)
-							Expect(ok).To(BeTrue())
-
-							body, err := io.ReadAll(r.Body)
-							Expect(err).ShouldNot(HaveOccurred())
-
-							Expect(string(body)).Should(Equal("HELLO"))
-
-							f.Flush()
-						}),
-					}
-
-					defer func() { _ = serve.Close() }()
-					go func() {
-						defer GinkgoRecover()
-						err := serve.Serve(tls.NewListener(tun, &tls.Config{
-							Certificates: []tls.Certificate{clusterATLSCert},
-							NextProtos:   []string{"h2"},
-						}))
-						Expect(err).Should(Equal(fmt.Errorf("http: Server closed")))
-					}()
-
-					wg.Wait()
-				})
-
-				It("should not send requests if not authorized on that managedcluster", func() {
-					testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
-						testing.UserPermissions{
-							Username: janeBearerToken.UserName(),
-							Attrs:    []authzv1.ResourceAttributes{},
-						},
-					)
-					resp := clientHelloReq(httpsAddr, clusterA, http.StatusForbidden)
-					bits, err := io.ReadAll(resp.Body)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(string(bits)).To(Equal("not authorized for managed cluster\n"))
-				})
-
-				Context("A second cluster is registered", func() {
-					var clusterBTLSCert tls.Certificate
-					BeforeEach(func() {
-						clusterBCertTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
-						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
-						Expect(err).ShouldNot(HaveOccurred())
-						err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:        clusterB,
-								Namespace:   clusterNS,
-								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterBCert)},
-							},
-						})
-						Expect(err).ShouldNot(HaveOccurred())
-
-						clusterBTLSCert, err = test.X509CertToTLSCert(clusterBCert, clusterBPrivKey)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can send requests from the server to the second cluster", func() {
-						tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-							Certificates: []tls.Certificate{clusterBTLSCert},
-							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second, nil)
-						Expect(err).NotTo(HaveOccurred())
-
-						WaitForClusterToConnect(fakeClient, clusterB, clusterNS)
-
-						cli := &http.Client{
-							Transport: &http2.Transport{
-								TLSClientConfig: &tls.Config{
-									NextProtos: []string{"h2"},
-									RootCAs:    voltronHttpsCAs,
-									ServerName: "localhost",
-								},
-							},
-						}
-
-						req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
-						Expect(err).NotTo(HaveOccurred())
-
-						req.Header[utils.ClusterHeaderField] = []string{clusterB}
-						req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
-
-						var wg sync.WaitGroup
-						wg.Add(1)
-						go func() {
-							defer GinkgoRecover()
-							defer wg.Done()
-
-							_, err := cli.Do(req)
-							Expect(err).ShouldNot(HaveOccurred())
-						}()
-
-						serve := &http.Server{
-							Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								f, ok := w.(http.Flusher)
-								Expect(ok).To(BeTrue())
-
-								body, err := io.ReadAll(r.Body)
-								Expect(err).ShouldNot(HaveOccurred())
-
-								Expect(string(body)).Should(Equal("HELLO"))
-
-								f.Flush()
-							}),
-						}
-
-						defer func() { _ = serve.Close() }()
-						go func() {
-							defer GinkgoRecover()
-							err := serve.Serve(tls.NewListener(tun, &tls.Config{
-								Certificates: []tls.Certificate{clusterBTLSCert},
-								NextProtos:   []string{"h2"},
-							}))
-							Expect(err).Should(Equal(fmt.Errorf("http: Server closed")))
-						}()
-
-						wg.Wait()
-					})
-
-					It("should not be possible to open a two tunnels to the same cluster", func() {
-						_, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-							Certificates: []tls.Certificate{clusterBTLSCert},
-							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second, nil)
-						Expect(err).NotTo(HaveOccurred())
-
-						tunB2, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-							Certificates: []tls.Certificate{clusterBTLSCert},
-							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second, nil)
-						Expect(err).NotTo(HaveOccurred())
-
-						_, err = tunB2.Accept()
-						Expect(err).Should(HaveOccurred())
-					})
+					_, err = tunB2.Accept()
+					Expect(err).Should(HaveOccurred())
 				})
 
 				Context("A third cluster with certificate is registered", func() {
-					var clusterCTLSCert tls.Certificate
-					BeforeEach(func() {
-						clusterCCertTemplate := test.CreateClientCertificateTemplate(clusterC, "localhost")
-						clusterCPrivKey, clusterCCert, err := test.CreateCertPair(clusterCCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      clusterC,
-								Namespace: clusterNS,
-							},
-							Spec: v3.ManagedClusterSpec{
-								Certificate: test.CertToPemBytes(clusterCCert),
-							},
-						})).NotTo(HaveOccurred())
-
-						clusterCTLSCert, err = test.X509CertToTLSCert(clusterCCert, clusterCPrivKey)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
 					It("can send requests from the server to the third cluster", func() {
-						tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-							Certificates: []tls.Certificate{clusterCTLSCert},
-							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second, nil)
+						clusterCConnected := make(chan struct{})
+						closeOnce := sync.OnceFunc(func() { close(clusterCConnected) })
+
+						mockClient.EXPECT().
+							Get(mock.Anything, types.NamespacedName{Name: clusterC, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterC))
+
+						mockClient.EXPECT().
+							Update(mock.Anything, mock.MatchedBy(func(obj *v3.ManagedCluster) bool {
+								if obj.Name == clusterC {
+									closeOnce()
+									return true
+								}
+								return false
+							}), mock.Anything).Return(nil)
+
+						err := chanutil.WriteWithDeadline(ctx, events, watch.Event{
+							Type: watch.Added, Object: managedClusterC,
+						}, 2*time.Second)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						clusterCTunnel, err := tunnel.DialTLS(voltronTunnelAddr, clusterCTunnelTLSConfig, 5*time.Second, nil)
 						Expect(err).NotTo(HaveOccurred())
 
-						WaitForClusterToConnect(fakeClient, clusterC, clusterNS)
+						_, err = chanutil.ReadWithDeadline(ctx, clusterCConnected, 5*time.Second)
+						Expect(err).Should(Equal(chanutil.ErrChannelClosed))
+
+						reqCChan := startMgdClusterService(ctx, clusterCTunnel, clusterATLSCert)
 
 						cli := &http.Client{
 							Transport: &http2.Transport{
 								TLSClientConfig: &tls.Config{
-									NextProtos: []string{"h2"},
-									RootCAs:    voltronHttpsCAs,
-									ServerName: "localhost",
+									NextProtos: []string{"h2"}, RootCAs: voltronHttpsCAs, ServerName: "localhost",
 								},
 							},
 						}
 
-						req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
+						sendReqToManagedCluster(cli, voltronServerAddr, clusterC, "HELLO")
+
+						body, err := chanutil.ReadWithDeadline(ctx, reqCChan, 2*time.Second)
 						Expect(err).NotTo(HaveOccurred())
-
-						req.Header[utils.ClusterHeaderField] = []string{clusterC}
-						req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
-
-						var wg sync.WaitGroup
-						wg.Add(1)
-						go func() {
-							defer GinkgoRecover()
-							defer wg.Done()
-
-							_, err := cli.Do(req)
-							Expect(err).ShouldNot(HaveOccurred())
-						}()
-
-						serve := &http.Server{
-							Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								f, ok := w.(http.Flusher)
-								Expect(ok).To(BeTrue())
-
-								body, err := io.ReadAll(r.Body)
-								Expect(err).ShouldNot(HaveOccurred())
-
-								Expect(string(body)).Should(Equal("HELLO"))
-
-								f.Flush()
-							}),
-						}
-
-						defer func() { _ = serve.Close() }()
-						go func() {
-							defer GinkgoRecover()
-							err := serve.Serve(tls.NewListener(tun, &tls.Config{
-								Certificates: []tls.Certificate{clusterCTLSCert},
-								NextProtos:   []string{"h2"},
-							}))
-							Expect(err).Should(Equal(fmt.Errorf("http: Server closed")))
-						}()
-
-						wg.Wait()
+						Expect(body).To(Equal("HELLO"))
 					})
 				})
+			})
+		})
+
+		Context("A resync is forced on the watch", func() {
+			var (
+				clusterATunnel, clusterBTunnel tunnel.Tunnel
+
+				reqAChan, reqBChan chan string
+			)
+
+			BeforeEach(func() {
+				clusterAConnected := make(chan struct{})
+				closeAOnce := sync.OnceFunc(func() { close(clusterAConnected) })
+				clusterBConnected := make(chan struct{})
+				closeBOnce := sync.OnceFunc(func() { close(clusterBConnected) })
+
+				mockClient.EXPECT().
+					Get(mock.Anything, types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterA))
+
+				mockClient.EXPECT().
+					Get(mock.Anything, types.NamespacedName{Name: clusterB, Namespace: clusterNS}, mock.Anything).RunAndReturn(setGet(managedClusterB))
+
+				mockClient.EXPECT().
+					Update(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(
+					func(ctx context.Context, obj ctrlclient.Object, opts ...ctrlclient.UpdateOption) error {
+						if obj.(*v3.ManagedCluster).Name == clusterA {
+							closeAOnce()
+						}
+						if obj.(*v3.ManagedCluster).Name == clusterB {
+							closeBOnce()
+						}
+						return nil
+					})
+
+				err := chanutil.WriteWithDeadline(ctx, events, watch.Event{
+					Type:   watch.Added,
+					Object: managedClusterA,
+				}, 2*time.Second)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = chanutil.WriteWithDeadline(ctx, events, watch.Event{
+					Type:   watch.Added,
+					Object: managedClusterB,
+				}, 2*time.Second)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				clusterATunnel, err = tunnel.DialTLS(voltronTunnelAddr, clusterATunnelTLSConfig, 5*time.Second, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = chanutil.ReadWithDeadline(context.Background(), clusterAConnected, 5*time.Second)
+				Expect(err).Should(Equal(chanutil.ErrChannelClosed))
+
+				clusterBTunnel, err = tunnel.DialTLS(voltronTunnelAddr, clusterBTunnelTLSConfig, 5*time.Second, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = chanutil.ReadWithDeadline(context.Background(), clusterBConnected, 5*time.Second)
+				Expect(err).Should(Equal(chanutil.ErrChannelClosed))
+
+				cli := &http.Client{
+					Transport: &http2.Transport{
+						TLSClientConfig: &tls.Config{NextProtos: []string{"h2"}, RootCAs: voltronHttpsCAs, ServerName: "localhost"},
+					},
+				}
+
+				reqAChan = startMgdClusterService(ctx, clusterATunnel, clusterATLSCert)
+				reqBChan = startMgdClusterService(ctx, clusterBTunnel, clusterBTLSCert)
+
+				// Verify that both managed clusters are connected and working properly before continuing with the test.
+				sendReqToManagedCluster(cli, voltronServerAddr, clusterA, "HELLO A")
+				sendReqToManagedCluster(cli, voltronServerAddr, clusterB, "HELLO B")
+
+				body, err := chanutil.ReadWithDeadline(ctx, reqAChan, 2*time.Second)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(body).To(Equal("HELLO A"))
+
+				body, err = chanutil.ReadWithDeadline(ctx, reqBChan, 2*time.Second)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(body).To(Equal("HELLO B"))
+			})
+
+			It("stops the tunnel when no managed clusters are returned from the resync", func() {
+				mockClient.EXPECT().
+					Watch(mock.Anything, mock.Anything, mock.Anything).Return(nil, k8serrors.NewResourceExpired("resource expired")).Once()
+
+				oldEventChan := events
+
+				var watchInf *mockwatch.Interface
+				watchInf, events = newWatchInf()
+
+				mockClient.EXPECT().Watch(mock.Anything, mock.Anything, mock.Anything).Return(watchInf, nil).Once()
+				mockClient.EXPECT().List(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(setList("1")).Once()
+
+				close(oldEventChan)
+
+				// Test that eventually the server closes both tunnels, this is the real test.
+				Eventually(clusterATunnel.CloseChan(), 5*time.Second, 100*time.Millisecond).Should(BeClosed())
+				Eventually(clusterBTunnel.CloseChan(), 5*time.Second, 100*time.Millisecond).Should(BeClosed())
+			})
+
+			It("stops the tunnel that doesn't appear in the resync list but not the other one", func() {
+				mockClient.EXPECT().
+					Watch(mock.Anything, mock.Anything, mock.Anything).Return(nil, k8serrors.NewResourceExpired("resource expired")).Once()
+
+				oldEventChan := events
+
+				var watchInf *mockwatch.Interface
+				watchInf, events = newWatchInf()
+
+				mockClient.EXPECT().Watch(mock.Anything, mock.Anything, mock.Anything).Return(watchInf, nil).Once()
+				mockClient.EXPECT().
+					List(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(setList("1", *managedClusterA)).Once()
+
+				close(oldEventChan)
+
+				// Test that the server closes tunnel B but not tunnel A.
+				Eventually(clusterBTunnel.CloseChan(), 5*time.Second, 100*time.Millisecond).Should(BeClosed())
+
+				cli := &http.Client{
+					Transport: &http2.Transport{
+						TLSClientConfig: &tls.Config{NextProtos: []string{"h2"}, RootCAs: voltronHttpsCAs, ServerName: "localhost"},
+					},
+				}
+
+				Consistently(func() string {
+					sendReqToManagedCluster(cli, voltronServerAddr, clusterA, "HELLO A AGAIN")
+					body, err := chanutil.ReadWithDeadline(ctx, reqAChan, 2*time.Second)
+					Expect(err).NotTo(HaveOccurred())
+					return body
+				}, 2*time.Second, 500*time.Millisecond).Should(Equal("HELLO A AGAIN"))
 			})
 		})
 	})
 
 	Context("with logging, metrics & auth caching enabled", func() {
 		var (
-			cancelFunc    context.CancelFunc
 			srvWg         *sync.WaitGroup
 			srv           *server.Server
 			defaultServer *httptest.Server
@@ -662,9 +762,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 		BeforeEach(func() {
 			var err error
-			var ctx context.Context
-
-			ctx, cancelFunc = context.WithCancel(context.Background())
 
 			accessLogFile, err = os.CreateTemp("", "voltron-access-log")
 			Expect(err).ToNot(HaveOccurred())
@@ -775,7 +872,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		})
 
 		AfterEach(func() {
-			cancelFunc()
 			Expect(srv.Close()).NotTo(HaveOccurred())
 			defaultServer.Close()
 			srvWg.Wait()
@@ -840,8 +936,8 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		})
 
 		It("should cache token requests", func() {
-			closeCluster1 := createAndStartManagedCluster(managedCluster1, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster1))
-			closeCluster2 := createAndStartManagedCluster(managedCluster2, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster2))
+			closeCluster1 := createAndStartManagedCluster(managedCluster1, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, fakeClient, newEchoHandler(managedCluster1))
+			closeCluster2 := createAndStartManagedCluster(managedCluster2, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, fakeClient, newEchoHandler(managedCluster2))
 			defer closeCluster1()
 			defer closeCluster2()
 
@@ -995,19 +1091,13 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 			defaultProxy          *proxy.Proxy
 			k8sTargets            []regexp.Regexp
-			mockAuthenticator     *auth.MockJWTAuth
 			tunnelTargetWhitelist []regexp.Regexp
 		)
 
 		BeforeEach(func() {
 			var err error
 
-			mockAuthenticator = new(auth.MockJWTAuth)
-			mockAuthenticator.On("Authenticate", mock.Anything).Return(
-				&user.DefaultInfo{
-					Name:   "jane@example.io",
-					Groups: []string{"developers"},
-				}, 0, nil)
+			mockAuthenticator.On("Authenticate", mock.Anything).Return(janeUserInfo, 0, nil)
 
 			defaultServer = httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1139,12 +1229,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		)
 
 		BeforeEach(func() {
-			mockAuthenticator := new(auth.MockJWTAuth)
-			mockAuthenticator.On("Authenticate", mock.Anything).Return(
-				&user.DefaultInfo{
-					Name:   "jane@example.io",
-					Groups: []string{"developers"},
-				}, 0, nil)
+			mockAuthenticator.On("Authenticate", mock.Anything).Return(janeUserInfo, 0, nil)
 			defaultServer = httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
@@ -1232,7 +1317,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 	Context("paths with authorization enabled", func() {
 		var (
-			cancelFunc            context.CancelFunc
 			srvWg                 *sync.WaitGroup
 			srv                   *server.Server
 			defaultServer         *httptest.Server
@@ -1248,8 +1332,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 		BeforeEach(func() {
 			var err error
-			var ctx context.Context
-			ctx, cancelFunc = context.WithCancel(context.Background())
 
 			// Configure authentication and authorization.
 			authorizerInvocations = 0
@@ -1335,7 +1417,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		})
 
 		AfterEach(func() {
-			cancelFunc()
 			Expect(srv.Close()).NotTo(HaveOccurred())
 			defaultServer.Close()
 			srvWg.Wait()
@@ -1469,7 +1550,6 @@ func createAndStartManagedCluster(
 	tunnelCA *x509.CertPool,
 	voltronTunnelCert *x509.Certificate,
 	voltronTunnelPrivKey *rsa.PrivateKey,
-	k8sAPI bootstrap.K8sClient,
 	fakeClient ctrlclient.WithWatch,
 	handler http.Handler,
 ) (closer func()) {
@@ -1533,4 +1613,72 @@ func newEchoHandler(name string) http.Handler {
 
 		_, _ = w.Write(reqBody)
 	})
+}
+
+func newWatchInf() (*mockwatch.Interface, chan watch.Event) {
+	watchInf := new(mockwatch.Interface)
+	events := make(chan watch.Event, 1)
+	watchInf.EXPECT().ResultChan().Return(events)
+	watchInf.EXPECT().Stop().Return()
+
+	return watchInf, events
+}
+
+func setList(resourceVersion string, managedClusters ...v3.ManagedCluster) func(ctx context.Context, list ctrlclient.ObjectList, opts ...ctrlclient.ListOption) error {
+	return func(ctx context.Context, list ctrlclient.ObjectList, opts ...ctrlclient.ListOption) error {
+		*(list.(*v3.ManagedClusterList)) = v3.ManagedClusterList{
+			ListMeta: metav1.ListMeta{ResourceVersion: resourceVersion},
+			Items:    managedClusters,
+		}
+		return nil
+	}
+}
+
+func sendReqToManagedCluster(cli *http.Client, voltronServerAddr, clusterName, body string) {
+	req, err := http.NewRequest("GET", "https://"+voltronServerAddr+"/some/path", strings.NewReader(body))
+	Expect(err).NotTo(HaveOccurred())
+
+	req.Header[utils.ClusterHeaderField] = []string{clusterName}
+	req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+	_, err = cli.Do(req)
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+func startMgdClusterService(ctx context.Context, listener net.Listener, tlsCert tls.Certificate) chan string {
+	reqChan := make(chan string, 1)
+	srv := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			Expect(err).NotTo(HaveOccurred())
+
+			if err := chanutil.WriteWithDeadline(ctx, reqChan, string(body), 2*time.Second); err != nil {
+				panic(err)
+			}
+		}),
+	}
+
+	go func() {
+		defer GinkgoRecover()
+		defer close(reqChan)
+		_ = srv.Serve(tls.NewListener(listener, &tls.Config{
+			NextProtos:   []string{"h2"},
+			Certificates: []tls.Certificate{tlsCert},
+		}))
+	}()
+
+	go func() {
+		defer GinkgoRecover()
+		<-ctx.Done()
+		_ = srv.Close()
+	}()
+
+	return reqChan
+}
+
+func setGet(managedCluster *v3.ManagedCluster) func(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
+	return func(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
+		managedCluster.DeepCopyInto(obj.(*v3.ManagedCluster))
+		return nil
+	}
 }

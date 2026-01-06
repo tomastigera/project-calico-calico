@@ -71,12 +71,13 @@ func syncResources(ctx context.Context, k8sCli ctrlclient.WithWatch, ns string, 
 		break
 	}
 
-	// Only signal a sync if there are items to sync.
-	if len(managedClusterList.Items) > 0 {
-		if err := chanutil.Write(ctx, results, Event[v3.ManagedCluster]{Type: SyncStart}); err != nil {
-			return "", err
-		}
+	// Signal that the receiver needs to start syncing. This needs to be handled even (and especially) when the list is
+	// empty to handle the case where all managed clusters were removed while the watch was down.
+	if err := chanutil.Write(ctx, results, Event[v3.ManagedCluster]{Type: SyncStart}); err != nil {
+		return "", err
+	}
 
+	if len(managedClusterList.Items) > 0 {
 		for _, mc := range managedClusterList.Items {
 			// Return if an error occurs here as that means something is wrong with the cluster or the context signaled
 			// and error.
@@ -84,10 +85,10 @@ func syncResources(ctx context.Context, k8sCli ctrlclient.WithWatch, ns string, 
 				return "", err
 			}
 		}
+	}
 
-		if err := chanutil.Write(ctx, results, Event[v3.ManagedCluster]{Type: SyncEnd}); err != nil {
-			return "", err
-		}
+	if err := chanutil.Write(ctx, results, Event[v3.ManagedCluster]{Type: SyncEnd}); err != nil {
+		return "", err
 	}
 
 	return managedClusterList.ResourceVersion, nil
