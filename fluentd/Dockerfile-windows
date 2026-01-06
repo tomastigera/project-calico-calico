@@ -44,7 +44,6 @@ ENV DISABLE_ES_DNS_LOG=true
 ENV DISABLE_ES_L7_LOG=true
 ENV DISABLE_ES_BGP_LOG=true
 ENV DISABLE_ES_RUNTIME_LOG=true
-ENV DISABLE_ES_POLICY_ACTIVITY_LOG=true
 
 COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
