@@ -215,7 +215,7 @@ func (kds *K8sDatastoreInfra) PerTestSetup(index K8sInfraIndex) {
 }
 
 func (kds *K8sDatastoreInfra) RunBPFLog() {
-	kds.bpfLog = RunBPFLog(kds)
+	kds.bpfLog = RunBPFLog(kds, kds.bpfLogByteLimit)
 }
 
 type CleanupProvider interface {

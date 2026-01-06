@@ -101,7 +101,7 @@ func GetEtcdDatastoreInfra(opts ...CreateOption) (_ *EtcdDatastoreInfra, err err
 }
 
 func (eds *EtcdDatastoreInfra) RunBPFLog() {
-	eds.bpfLog = RunBPFLog(eds)
+	eds.bpfLog = RunBPFLog(eds, eds.bpfLogByteLimit)
 }
 
 func (eds *EtcdDatastoreInfra) setBPFLogByteLimit(limit int) {
