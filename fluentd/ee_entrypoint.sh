@@ -280,7 +280,9 @@ fi
 echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 
 # Include output destination for policy activity logs.
-cat "${ROOT_DIR}/fluentd/etc/output_match/policy-activity.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
-echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+if [ -z "${DISABLE_ES_POLICY_ACTIVITY_LOG}" ] || [ "${DISABLE_ES_POLICY_ACTIVITY_LOG}" == "false" ]; then
+  cat "${ROOT_DIR}/fluentd/etc/output_match/policy-activity.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+  echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+fi
 # Run fluentd
 "$@"
