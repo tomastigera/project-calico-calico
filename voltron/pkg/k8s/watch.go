@@ -115,13 +115,15 @@ func startWatch(ctx context.Context, k8sCli ctrlclient.WithWatch, ns string, rs 
 			time.Sleep(time.Second)
 			continue
 		}
+		logrus.Debugf("Starting watch with resource version: %s", rs)
+
 		eventCh := watcher.ResultChan()
 	inner:
 		for {
 			select {
 			case event, ok := <-eventCh:
 				if !ok {
-					logrus.Errorf("watcher stopped unexpectedly")
+					logrus.Errorf("Watcher stopped unexpectedly.")
 					break inner
 				}
 
@@ -131,7 +133,7 @@ func startWatch(ctx context.Context, k8sCli ctrlclient.WithWatch, ns string, rs 
 					continue
 				}
 
-				logrus.Debugf("Watching K8s resource type: %s for cluster %s", event.Type, mc.Name)
+				logrus.Debugf("Received k8s event: %s for cluster %s", event.Type, mc.Name)
 				switch event.Type {
 				case Added, Modified, Deleted:
 					if err := chanutil.Write(ctx, results, Event[v3.ManagedCluster]{Type: event.Type, Obj: mc}); err != nil {
@@ -143,6 +145,7 @@ func startWatch(ctx context.Context, k8sCli ctrlclient.WithWatch, ns string, rs 
 				}
 
 				rs = mc.ResourceVersion
+				logrus.Debugf("Updated resource version to %s", rs)
 			case <-ctx.Done():
 				watcher.Stop()
 				return nil
