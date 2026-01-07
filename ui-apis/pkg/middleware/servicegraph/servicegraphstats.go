@@ -529,16 +529,28 @@ func (s *serviceGraphStats) refreshCachedStats(cluster string) {
 	}
 
 	// Fetch the stats. We don't need to hold the lock while we fetch.
+	// We retry immediately in case the error is transient. If these attempts fail, we will retry again when the cache
+	// update interval elapses.
 	start := time.Now()
-	cs, err := s.getCachedStats(context.Background(), cluster, &lmav1.TimeRange{
-		From: time.Now().Add(-s.config.GraphStatsCacheDuration),
-		To:   time.Now(),
-	})
-	log.Infof("Completed fetch of cached stats for cluster=%s in %v", cluster, time.Since(start))
+	var cs *cachedStats
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		cs, err = s.getCachedStats(context.Background(), cluster, &lmav1.TimeRange{
+			From: time.Now().Add(-s.config.GraphStatsCacheDuration),
+			To:   time.Now(),
+		})
+
+		if err == nil {
+			break
+		}
+		log.Warnf("Retrying cached stats update for cluster=%s (attempt %d): %v", cluster, attempt, err)
+		time.Sleep(10 * time.Second)
+	}
 	if err != nil {
-		log.Warnf("Failed to update cached stats: %v", err)
+		log.Errorf("Failed to update cached stats for cluster=%s: %v", cluster, err)
 		return
 	}
+	log.Infof("Completed fetch of cached stats for cluster=%s in %v", cluster, time.Since(start))
 
 	// Set the stats.
 	s.cachedStatsMutex.Lock()
