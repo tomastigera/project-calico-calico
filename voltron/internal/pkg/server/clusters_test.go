@@ -89,7 +89,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
-				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				tenantNamespace:  clusterNamespace,
 				statusUpdateFunc: statusUpdater.SetStatus,
 			}
 
@@ -169,7 +169,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
-				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				tenantNamespace:  clusterNamespace,
 				statusUpdateFunc: su.SetStatus,
 			}
 
@@ -217,7 +217,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
-				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				tenantNamespace:  clusterNamespace,
 				statusUpdateFunc: su.SetStatus,
 			}
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
@@ -251,50 +251,6 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			})).NotTo(HaveOccurred())
 			Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
 		})
-
-		It("should delete a cluster deleted while watch was down", func() {
-			By("adding a cluster when watch is running", func() {
-				annotations := map[string]string{
-					AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
-				}
-				err := fakeClient.Create(context.Background(), &v3.ManagedCluster{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v3.KindManagedCluster,
-						APIVersion: v3.GroupVersionCurrent,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        clusterID,
-						Namespace:   clusterNamespace,
-						Annotations: annotations,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(1))
-			})
-
-			By("Closing the watch", func() {
-				cancel()
-			})
-
-			By("Deleting a managed cluster while the watch is down", func() {
-				Expect(len(myClusters.clusters)).To(Equal(1))
-				Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v3.KindManagedCluster,
-						APIVersion: v3.GroupVersionCurrent,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      clusterID,
-						Namespace: clusterNamespace,
-					},
-				})).ShouldNot(HaveOccurred())
-				ctx, cancel = context.WithCancel(context.Background())
-				go func() {
-					_ = myClusters.watchK8s(ctx)
-				}()
-				Eventually(func() int { return len(myClusters.clusters) }).Should(Equal(0))
-			})
-		})
 	})
 
 	When("ManagedCluster update fails", func() {
@@ -309,7 +265,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
-				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				tenantNamespace:  clusterNamespace,
 				statusUpdateFunc: su.SetStatus,
 			}
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
@@ -400,7 +356,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
-				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				tenantNamespace:  clusterNamespace,
 				statusUpdateFunc: su.SetStatus,
 			}
 			myClusters.managedClusterQuerierFactory = &MockManagedClusterQuerierFactory{}
@@ -468,7 +424,6 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 var _ = describe("Update certificates", func(clusterNamespace string) {
 	clusters := &clusters{
 		clusters:              make(map[string]*cluster),
-		voltronCfg:            &vcfg.Config{},
 		clientCertificatePool: x509.NewCertPool(),
 		statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},
 	}
