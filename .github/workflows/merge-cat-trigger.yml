@@ -1,8 +1,8 @@
 name: Trigger Merge Cat
 
 on:
-  pull_request:
-    types: [opened]
+  pull_request_target:
+    types: [opened, labeled]
 
 jobs:
   trigger-merge-queue-bot:
@@ -17,7 +17,7 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.TIGERA_BOT_PAT }}" \
-            https://api.github.com/repos/tigera/merge-queue-bot/actions/workflows/merge-queue-bot-oss-gh-action.yml/dispatches \
+            https://api.github.com/repos/tigera/merge-queue-bot/actions/workflows/221254945/dispatches \
             -d @- <<'EOF'
           {
             "ref": "master",
