@@ -642,6 +642,11 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 				SrcPort: 8080,
 				DstIp:   "10.0.0.2",
 				DstPort: 80,
+				Request: &proto.Request{
+					Method:  "GET",
+					Path:    "/test",
+					Version: "1.1",
+				},
 			},
 		}
 
@@ -655,8 +660,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		// Give some time for goroutine to exit
 		time.Sleep(100 * time.Millisecond)
 
-		// Starting again should work fine
-		reporter.done = make(chan struct{}) // Reset done channel
+		// Starting again should work fine (done channel is automatically recreated)
 		Expect(reporter.Start()).NotTo(HaveOccurred())
 		
 		// Clean up

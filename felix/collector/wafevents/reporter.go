@@ -89,6 +89,8 @@ func (r *WAFEventReporter) Start() error {
 	defer r.mu.Unlock()
 	if !r.running {
 		r.running = true
+		// Recreate done channel if it was closed
+		r.done = make(chan struct{})
 		// Initialize all dispatchers before starting the background goroutine
 		// to prevent race condition where flush() is called before dispatchers are ready
 		for _, d := range r.dispatchers {
@@ -213,9 +215,13 @@ func (b *buffer) cpyClearBuffer() *buffer {
 	cpyBuf := make(map[aggregationKey]*Report, len(b.buf))
 	for k, v := range b.buf {
 		// Create a new Report with copied values
+		// We only need to copy the count, as the WAFEvent pointer can be shared
+		// since it's read-only after creation
 		cpyBuf[k] = &Report{
-			log:   v.log,
-			count: v.count,
+			WAFEvent: v.WAFEvent,
+			Src:      v.Src,
+			Dst:      v.Dst,
+			count:    v.count,
 		}
 	}
 	
@@ -227,6 +233,20 @@ func (b *buffer) cpyClearBuffer() *buffer {
 func (b *buffer) getUpdates() (updates []*v1.WAFLog) {
 
 	for _, r := range b.buf {
+		// Defensive nil checks to prevent panics with malformed data
+		if r == nil || r.WAFEvent == nil {
+			log.Warn("Skipping nil report or WAFEvent in buffer")
+			continue
+		}
+		if r.Request == nil {
+			log.Warn("Skipping report with nil Request")
+			continue
+		}
+		if r.Timestamp == nil {
+			log.Warn("Skipping report with nil Timestamp")
+			continue
+		}
+
 		// XXX we need to imporove on linseed to inform how many
 		// requests were aggregated adding the r.count to the report
 		update := &v1.WAFLog{
@@ -241,6 +261,11 @@ func (b *buffer) getUpdates() (updates []*v1.WAFLog) {
 			Timestamp:   time.Unix(r.Timestamp.Seconds, int64(r.Timestamp.Nanos)).UTC(),
 		}
 		for _, rule := range r.Rules {
+			// Defensive nil check for rule
+			if rule == nil || rule.Rule == nil {
+				log.Warn("Skipping nil rule in WAF report")
+				continue
+			}
 			update.Rules = append(update.Rules, v1.WAFRuleHit{
 				Message:    rule.Rule.Message,
 				Disruptive: rule.Disruptive,
