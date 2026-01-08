@@ -2347,38 +2347,38 @@ func TestPopulateNodeConfig_PeerLogging(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	tests := []struct {
-		name               string
-		logLevel           string
-		logLevelExists     bool
-		expectedDebugMode  string
-		expectedPeerLog    string
+		name              string
+		logLevel          string
+		logLevelExists    bool
+		expectedDebugMode string
+		expectedPeerLog   string
 	}{
 		{
-			name:               "Log level debug",
-			logLevel:           "debug",
-			logLevelExists:     true,
-			expectedDebugMode:  "all",
-			expectedPeerLog:    "debug all;",
+			name:              "Log level debug",
+			logLevel:          "debug",
+			logLevelExists:    true,
+			expectedDebugMode: "all",
+			expectedPeerLog:   "debug all;",
 		},
 		{
-			name:               "Log level none",
-			logLevel:           "none",
-			logLevelExists:     true,
-			expectedDebugMode:  "",
-			expectedPeerLog:    "",
+			name:              "Log level none",
+			logLevel:          "none",
+			logLevelExists:    true,
+			expectedDebugMode: "",
+			expectedPeerLog:   "",
 		},
 		{
-			name:               "Log level info (default behavior)",
-			logLevel:           "info",
-			logLevelExists:     true,
-			expectedDebugMode:  "{ states }",
-			expectedPeerLog:    "debug { states, routes, filters, events };",
+			name:              "Log level info (default behavior)",
+			logLevel:          "info",
+			logLevelExists:    true,
+			expectedDebugMode: "{ states }",
+			expectedPeerLog:   "debug { states, routes, filters, events };",
 		},
 		{
-			name:               "No log level set (default behavior)",
-			logLevelExists:     false,
-			expectedDebugMode:  "{ states }",
-			expectedPeerLog:    "debug { states, routes, filters, events };",
+			name:              "No log level set (default behavior)",
+			logLevelExists:    false,
+			expectedDebugMode: "{ states }",
+			expectedPeerLog:   "debug { states, routes, filters, events };",
 		},
 	}
 
@@ -2410,10 +2410,10 @@ func TestPopulateNodeConfig_RouterIDComment(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	tests := []struct {
-		name                     string
-		ipVersion                int
-		routerIDEnv              string
-		expectedRouterIDComment  string
+		name                    string
+		ipVersion               int
+		routerIDEnv             string
+		expectedRouterIDComment string
 	}{
 		{
 			name:                    "IPv4 - no comment",
@@ -2667,12 +2667,12 @@ func TestBuildPeerFromData_LongLivedGracefulRestart(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	tests := []struct {
-		name                        string
-		restartMode                 string
-		restartTime                 string
-		expectedLLGR                bool
-		expectedGracefulRestart     string
-		expectedLongLivedStaleTime  string
+		name                       string
+		restartMode                string
+		restartTime                string
+		expectedLLGR               bool
+		expectedGracefulRestart    string
+		expectedLongLivedStaleTime string
 	}{
 		{
 			name:                       "Long-lived graceful restart with stale time",
@@ -2741,10 +2741,10 @@ func TestBuildPeerFromData_ExternalNetwork(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	tests := []struct {
-		name                     string
-		externalNetworkExists    bool
-		expectedExternalTable    string
-		expectedPeerCount        int
+		name                  string
+		externalNetworkExists bool
+		expectedExternalTable string
+		expectedPeerCount     int
 	}{
 		{
 			name:                  "External network exists",
