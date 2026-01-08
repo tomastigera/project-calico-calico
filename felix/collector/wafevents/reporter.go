@@ -224,7 +224,7 @@ func (b *buffer) cpyClearBuffer() *buffer {
 			count:    v.count,
 		}
 	}
-	
+
 	cpy := &buffer{buf: cpyBuf}
 	b.buf = map[aggregationKey]*Report{}
 	return cpy
