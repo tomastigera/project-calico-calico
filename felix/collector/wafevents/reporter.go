@@ -194,7 +194,17 @@ func (b *buffer) cpyClearBuffer() *buffer {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	cpy := &buffer{buf: b.buf}
+	// Deep copy the buffer to avoid shared pointers between old and new buffers
+	cpyBuf := make(map[aggregationKey]*Report, len(b.buf))
+	for k, v := range b.buf {
+		// Create a new Report with copied values
+		cpyBuf[k] = &Report{
+			log:   v.log,
+			count: v.count,
+		}
+	}
+	
+	cpy := &buffer{buf: cpyBuf}
 	b.buf = map[aggregationKey]*Report{}
 	return cpy
 }
