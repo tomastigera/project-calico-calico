@@ -2749,7 +2749,7 @@ func TestBuildPeerFromData_ExternalNetwork(t *testing.T) {
 		{
 			name:                  "External network exists",
 			externalNetworkExists: true,
-			expectedExternalTable: "t_external_network_test_net",
+			expectedExternalTable: "'T_test-net'",
 			expectedPeerCount:     1,
 		},
 		{
