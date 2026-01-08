@@ -187,7 +187,7 @@ var _ = infrastructure.DatastoreDescribe(
 			},
 			{
 				Encap:       "vxlan",
-				BPFLogLevel: "Debug",
+				BPFLogLevel: "Info",
 			},
 		} {
 			encap := testConfig.Encap
@@ -204,7 +204,7 @@ var _ = infrastructure.DatastoreDescribe(
 				)
 
 				BeforeEach(func() {
-					infra = getInfra()
+					infra = getInfra(infrastructure.WithBPFLogByteLimit(16 * 1024 * 1024))
 					topt = infrastructure.DefaultTopologyOptions()
 
 					if bpfLogLevel != "Debug" && !BPFMode() {
