@@ -180,13 +180,13 @@ func (b *buffer) add(report *Report) {
 	}
 
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	idxReport := b.buf[key]
 	if idxReport == nil {
 		b.buf[key] = report
 		idxReport = report
 	}
-	b.mu.Unlock()
-
 	idxReport.count++
 }
 

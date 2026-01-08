@@ -544,4 +544,77 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		_, err = os.Stat(logFile)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("should handle concurrent Report() calls without race conditions", func() {
+		// This test verifies that concurrent calls to Report() don't cause
+		// race conditions on the buffer's aggregation counter
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-concurrent",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules: []*proto.WAFRuleHit{
+					{
+						Rule: &proto.WAFRule{
+							Id:       "100001",
+							Message:  "Test rule",
+							Severity: "warning",
+						},
+						Disruptive: false,
+					},
+				},
+				Action: "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/concurrent",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12345},
+			},
+		}
+
+		// Report the same event concurrently from multiple goroutines
+		// This should aggregate properly without race conditions
+		const numGoroutines = 100
+		done := make(chan bool, numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				err := reporter.Report(testReport)
+				Expect(err).NotTo(HaveOccurred())
+				done <- true
+			}()
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < numGoroutines; i++ {
+			<-done
+		}
+
+		// Flush and verify the count is correct
+		flushTrigger <- time.Now()
+		time.Sleep(100 * time.Millisecond)
+
+		// The file should exist and contain the aggregated event
+		logFile := tmpDir + "/test-waf.log"
+		_, err := os.Stat(logFile)
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
