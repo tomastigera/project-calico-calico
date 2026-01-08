@@ -23,6 +23,7 @@ type WAFEventReporter struct {
 	running          bool
 	mu               sync.Mutex
 	done             chan struct{}
+	wg               sync.WaitGroup // tracks run() goroutine
 
 	buf *buffer
 }
@@ -100,6 +101,7 @@ func (r *WAFEventReporter) Start() error {
 			}
 		}
 		r.reportHealth()
+		r.wg.Add(1)
 		go r.run()
 	}
 	return nil
@@ -108,10 +110,13 @@ func (r *WAFEventReporter) Start() error {
 // Stop gracefully shuts down the WAFEventReporter by stopping the background goroutine
 func (r *WAFEventReporter) Stop() {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.running {
 		r.running = false
 		close(r.done)
+		r.mu.Unlock()
+		r.wg.Wait() // Wait for run() goroutine to exit
+	} else {
+		r.mu.Unlock()
 	}
 }
 
@@ -126,6 +131,7 @@ func (r *WAFEventReporter) Report(event interface{}) error {
 }
 
 func (r *WAFEventReporter) run() {
+	defer r.wg.Done() // Signal goroutine exit
 	healthTicks := time.NewTicker(wafEventHealthInterval)
 	defer healthTicks.Stop()
 

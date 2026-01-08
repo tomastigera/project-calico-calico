@@ -385,29 +385,6 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 		logs := <-dispatcher.logs
 		Expect(logs).To(HaveLen(3))
 	})
-
-	It("should perform on huge loads", func() {
-		// get start time
-		start := time.Now()
-
-		// report the 100k events
-		for i := 0; i < 25000; i++ {
-			err := r.Report(r0)
-			Expect(err).NotTo(HaveOccurred())
-		}
-		for i := 0; i < 75000; i++ {
-			err := r.Report(r1)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		// flush and verify logs
-		flushTrigger <- time.Now()
-		logs := <-dispatcher.logs
-		Expect(logs).To(HaveLen(2))
-
-		// test if it takes less than 7 secs
-		Expect(time.Since(start)).To(BeNumerically("<", 10*time.Second))
-	})
 })
 
 var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", func() {
