@@ -14,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
-	"os"
 	"sync"
 	"time"
 
@@ -24,15 +23,14 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/logutils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/pkg/k8s"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
@@ -60,6 +58,9 @@ type cluster struct {
 
 	sync.RWMutex
 
+	tenantID        string
+	tenantNamespace string
+
 	tunnelManager tunnel.Manager
 
 	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
@@ -76,9 +77,6 @@ type cluster struct {
 	// target Voltron itself will be handled by the proxy's inner TLS server.
 	inboundTLSProxy vtls.Proxy
 
-	// Pointer to general Voltron configuration.
-	voltronCfg *config.Config
-
 	// Version stores managed cluster's version information.
 	version string
 
@@ -93,7 +91,7 @@ func (c *cluster) updateActiveFingerprint(fingerprint string) error {
 	defer cancel()
 
 	// Client Get act as single tenant when the TenantNamespace is empty
-	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
+	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.tenantNamespace}, mc)
 	if err != nil {
 		return err
 	}
@@ -112,6 +110,11 @@ func (c *cluster) updateActiveFingerprint(fingerprint string) error {
 
 type clusters struct {
 	sync.RWMutex
+
+	tenantID        string
+	tenantNamespace string
+	goldmaneEnabled bool
+
 	clusters      map[string]*cluster
 	sniServiceMap map[string]string
 	client        ctrlclient.WithWatch
@@ -121,9 +124,6 @@ type clusters struct {
 	defaultForwardServerName        string
 	defaultForwardDialRetryAttempts int
 	defaultForwardDialRetryInterval time.Duration
-
-	// Pointer to general Voltron config.
-	voltronCfg *config.Config
 
 	// TLS configuration to use for inner tunnel HTTPS servers.
 	tlsConfig *tls.Config
@@ -139,30 +139,6 @@ type clusters struct {
 	managedClusterQuerierFactory ManagedClusterQuerierFactory
 }
 
-func (cs *clusters) makeInnerTLSConfig() error {
-	cfg, err := calicotls.NewTLSConfig()
-	if err != nil {
-		return err
-	}
-	if cs.voltronCfg.LinseedServerKey != "" && cs.voltronCfg.LinseedServerCert != "" {
-		certBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerCert)
-		if err != nil {
-			return err
-		}
-		keyBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerKey)
-		if err != nil {
-			return err
-		}
-		cert, err := tls.X509KeyPair(certBytes, keyBytes)
-		if err != nil {
-			return err
-		}
-		cfg.Certificates = append(cfg.Certificates, cert)
-	}
-	cs.tlsConfig = cfg
-	return nil
-}
-
 func (cs *clusters) add(mc v3.ManagedCluster) error {
 	if cs.clusters[mc.Name] != nil {
 		return fmt.Errorf("cluster id %q already exists", mc.Name)
@@ -174,7 +150,8 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 		Certificate:       mc.Spec.Certificate,
 		tunnelManager:     tunnel.NewManager(),
 		client:            cs.client,
-		voltronCfg:        cs.voltronCfg,
+		tenantID:          cs.tenantID,
+		tenantNamespace:   cs.tenantNamespace,
 		statusUpdateFunc:  cs.statusUpdateFunc,
 	}
 
@@ -190,7 +167,7 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 
 	if cs.forwardingEnabled {
 		var opts []InnerHandlerOption
-		if cs.voltronCfg.GoldmaneEnabled {
+		if cs.goldmaneEnabled {
 			opts = append(opts, WithTokenPath(voltronToken))
 
 			// A simple rate limited to prevent abuse of the tunnel. We know that Goldmane will only publish flows every 5 minutes
@@ -207,7 +184,7 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 		// This handler will only be used for requests from managed clusters over the mTLS tunnel
 		// with a server name of "tigera-linseed.tigera-elasticsearch".
 		innerServer := &http.Server{
-			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc.Name, cs.innerProxy, opts...).Handler(),
+			Handler:     NewInnerHandler(cs.tenantID, mc.Name, cs.innerProxy, opts...).Handler(),
 			TLSConfig:   cs.tlsConfig,
 			ReadTimeout: DefaultReadTimeout,
 			ErrorLog:    log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),
@@ -228,16 +205,16 @@ func (cs *clusters) add(mc v3.ManagedCluster) error {
 	}
 
 	cs.clusters[mc.Name] = c
+
+	c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse)
+
 	return nil
 }
 
 func (cs *clusters) update(mc v3.ManagedCluster) error {
 	cs.Lock()
 	defer cs.Unlock()
-	return cs.updateLocked(mc)
-}
 
-func (cs *clusters) updateLocked(mc v3.ManagedCluster) error {
 	if c, ok := cs.clusters[mc.Name]; ok {
 		c.Lock()
 		clog := logrus.WithField("cluster", c.ID)
@@ -312,119 +289,76 @@ func (cs *clusters) get(id string) *cluster {
 	return cs.clusters[id]
 }
 
-func (cs *clusters) watchK8sFrom(ctx context.Context, last string) error {
-	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{},
-		&ctrlclient.ListOptions{
-			Namespace: cs.voltronCfg.TenantNamespace,
-			Raw: &metav1.ListOptions{
-				ResourceVersion: last,
-			},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create k8s watch: %s", err)
-	}
+func (cs *clusters) watchK8s(ctx context.Context) error {
+	eventChan := make(chan k8s.Event[v3.ManagedCluster], 100)
+	defer close(eventChan)
 
-	for {
-		select {
-		case r, ok := <-watcher.ResultChan():
-			if !ok {
-				return fmt.Errorf("watcher stopped unexpectedly")
+	go func() {
+		for {
+			select {
+			case event := <-eventChan:
+				mc := event.Obj
+				var err error
+				switch event.Type {
+				case watch.Added, watch.Modified:
+					logrus.Infof("Adding/Updating %s", mc.Name)
+					err = cs.update(*mc)
+				case watch.Deleted:
+					logrus.Infof("Deleting %s", mc.Name)
+					err = cs.remove(*mc)
+				case k8s.SyncStart:
+					cs.resyncClusters(ctx, eventChan)
+				default:
+					err = fmt.Errorf("watch event %s unsupported", event.Type)
+				}
+
+				if err != nil {
+					logrus.Errorf("ManagedClusters watch event %s failed: %s", event.Type, err)
+				}
+			case <-ctx.Done():
+				return
 			}
-			mc, ok := r.Object.(*v3.ManagedCluster)
-			if !ok {
-				logrus.Debugf("Unexpected object type %T", r.Object)
-				continue
-			}
-
-			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.Name)
-
-			var err error
-
-			switch r.Type {
-			case watch.Added, watch.Modified:
-				logrus.Infof("Adding/Updating %s", mc.Name)
-				err = cs.update(*mc)
-			case watch.Deleted:
-				logrus.Infof("Deleting %s", mc.Name)
-				err = cs.remove(*mc)
-			default:
-				err = fmt.Errorf("watch event %s unsupported", r.Type)
-			}
-
-			if err != nil {
-				logrus.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
-			}
-		case <-ctx.Done():
-			watcher.Stop()
-			return fmt.Errorf("watcher exiting: %s", ctx.Err())
 		}
-	}
+
+	}()
+
+	return k8s.WatchManagedClusters(ctx, cs.client, cs.tenantNamespace, eventChan)
 }
 
-func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string, error) {
-	list := &v3.ManagedClusterList{}
-	err := cs.client.List(ctx, list, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
-	if err != nil {
-		return "", fmt.Errorf("failed to get k8s list: %s", err)
-	}
+func (cs *clusters) resyncClusters(ctx context.Context, events chan k8s.Event[v3.ManagedCluster]) {
+	var managedClusters []*v3.ManagedCluster
 
-	known := make(map[string]struct{})
-
-	cs.Lock()
-	defer cs.Unlock()
-
-	for _, mc := range list.Items {
-		known[mc.Name] = struct{}{}
-
-		logrus.Debugf("Sync K8s watch for cluster : %s", mc.Name)
-		err = cs.updateLocked(mc)
-		if err != nil {
-			logrus.Errorf("ManagedClusters listing failed: %s", err)
-		}
-
-		if startupSync && isConnectedStatus(mc, v3.ManagedClusterStatusValueTrue) {
-			if c, ok := cs.clusters[mc.Name]; ok {
-				c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse)
+loop:
+	for {
+		select {
+		case event := <-events:
+			switch event.Type {
+			case k8s.SyncEnd:
+				logrus.Info("Resync finished.")
+				break loop
+			case k8s.Added:
+				managedClusters = append(managedClusters, event.Obj)
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 
-	// remove all the active clusters not in the list since we must have missed
-	// the DELETE watch event
-	for id, c := range cs.clusters {
-		if _, ok := known[id]; ok {
+	resyncedClusters := make(map[string]*cluster)
+	for _, mc := range managedClusters {
+		if err := cs.update(*mc); err != nil {
+			logrus.Errorf("Failed to update cluster %s: %s", mc.Name, err)
 			continue
 		}
-		delete(cs.clusters, id)
-		c.stop()
-		logrus.Infof("Cluster id %q removed", id)
+		resyncedClusters[mc.Name] = cs.clusters[mc.Name]
 	}
 
-	return list.ResourceVersion, nil
-}
-
-func (cs *clusters) watchK8s(ctx context.Context) error {
-	// Initial sync for new server
-	startupSync := true
-	for {
-		last, err := cs.resyncWithK8s(ctx, startupSync)
-		if err == nil {
-			startupSync = false
-			err = cs.watchK8sFrom(ctx, last)
-			if err != nil {
-				err = errors.WithMessage(err, "k8s watch failed")
-			}
-		} else {
-			err = errors.WithMessage(err, "k8s list failed")
-		}
-		logrus.Debugf("ManagedClusters: could not sync watch due to %s", err)
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("watcher exiting: %s", ctx.Err())
-		default:
+	for id, c := range cs.clusters {
+		if _, ok := resyncedClusters[id]; !ok {
+			c.stop()
 		}
 	}
+	cs.clusters = resyncedClusters
 }
 
 // updateCertPool updates the client cert pool if the new (non-empty) certificate is different from
@@ -686,13 +620,4 @@ func parseCertificatePEMBlock(certPEM []byte) (*x509.Certificate, error) {
 		return nil, err
 	}
 	return cert, nil
-}
-
-func isConnectedStatus(mc v3.ManagedCluster, status v3.ManagedClusterStatusValue) bool {
-	for _, c := range mc.Status.Conditions {
-		if c.Type == v3.ManagedClusterStatusTypeConnected {
-			return c.Status == status
-		}
-	}
-	return false
 }

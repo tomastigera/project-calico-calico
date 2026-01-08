@@ -5,7 +5,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"time"
 
@@ -230,6 +229,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		remoteK8sClient      *kubernetes.Clientset
 		remoteKubeconfig     string
 		localKubeconfig      string
+		cleanupRC, cleanupLC func()
 	)
 
 	getSubsets := func(namespace, name string) []v1.EndpointSubset { //nolint:staticcheck
@@ -253,15 +253,9 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localApiserver = testutils.RunK8sApiserver(localEtcd.IP)
 
 		// Write out a kubeconfig file for the local API server, and create a k8s client.
-		lkubeconfig, err := os.CreateTemp("", "ginkgo-localcluster")
-		Expect(err).NotTo(HaveOccurred())
-		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
-		err = lkubeconfig.Chmod(os.ModePerm)
-		Expect(err).NotTo(HaveOccurred())
-		localKubeconfig = lkubeconfig.Name()
-		data := testutils.BuildKubeconfig(localApiserver.IP)
-		_, err = lkubeconfig.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
+		localKubeconfig, cleanupLC = testutils.BuildKubeconfig(localApiserver.IP)
+
+		var err error
 		localK8sClient, err = testutils.GetK8sClient(localKubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -277,15 +271,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		remoteApiserver = testutils.RunK8sApiserver(remoteEtcd.IP)
 
 		// Write out a kubeconfig file for the remote API server.
-		rkubeconfig, err := os.CreateTemp("", "ginkgo-remotecluster")
-		Expect(err).NotTo(HaveOccurred())
-		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
-		err = rkubeconfig.Chmod(os.ModePerm)
-		Expect(err).NotTo(HaveOccurred())
-		remoteKubeconfig = rkubeconfig.Name()
-		data = testutils.BuildKubeconfig(remoteApiserver.IP)
-		_, err = rkubeconfig.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
+		remoteKubeconfig, cleanupRC = testutils.BuildKubeconfig(remoteApiserver.IP)
 		remoteK8sClient, err = testutils.GetK8sClient(remoteKubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -372,8 +358,8 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localEtcd.Stop()
 		remoteApiserver.Stop()
 		remoteEtcd.Stop()
-		_ = os.Remove(remoteKubeconfig)
-		_ = os.Remove(localKubeconfig)
+		cleanupLC()
+		cleanupRC()
 	})
 
 	DescribeTable("Test with specific local Calico datastore type", func(isCalicoEtcdDatastore bool) {

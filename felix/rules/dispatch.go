@@ -109,6 +109,7 @@ func (r *DefaultRuleRenderer) WorkloadInterfaceAllowChains(
 			return r.Allow()
 		},
 		endRules,
+		"",
 	)
 	chains = append(chains, toChildChains...)
 	chains = append(chains, toRootChain)
@@ -356,6 +357,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 			func(name string) generictables.MatchCriteria { return r.NewMatch().InInterface(name) },
 			perEndpointFn,
 			fromEndRules,
+			"",
 		)
 		chains = append(chains, fromChildChains...)
 		chains = append(chains, fromRootChain)
@@ -372,6 +374,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 			func(name string) generictables.MatchCriteria { return r.NewMatch().OutInterface(name) },
 			perEndpointFn,
 			toEndRules,
+			"",
 		)
 		chains = append(chains, toChildChains...)
 		chains = append(chains, toRootChain)
@@ -402,9 +405,18 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 
 	// The workload and host endpoint share the same root chain. We also need to put an non-cali mark rules at the end.
 	// Work out child chains and root rules for workload and host endpoint separately and merge them back together.
-	for _, names := range [][]string{wlNames, hepNames} {
+	for index, names := range [][]string{wlNames, hepNames} {
 		if len(names) > 0 {
 			commonPrefix, prefixes, prefixToNames := r.sortAndDivideEndpointNamesToPrefixTree(names)
+			var infix string
+			switch index {
+			case 0:
+				infix = "wep"
+			case 1:
+				infix = "hep"
+			default:
+				log.Panicf("no mapping for index %d to infix", index)
+			}
 
 			childChains, _, rootRules := r.buildSingleDispatchChains(
 				dispatchSetMarkEndpointChainName,
@@ -417,6 +429,7 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 					return r.GoTo(EndpointChainName(pfx, name, r.maxNameLength))
 				},
 				nil,
+				"-"+infix,
 			)
 
 			chains = append(chains, childChains...)
@@ -507,6 +520,7 @@ func (r *DefaultRuleRenderer) buildSingleDispatchChains(
 	getMatchForEndpoint func(name string) generictables.MatchCriteria,
 	getActionForEndpoint func(pfx, name string) generictables.Action,
 	endRules []generictables.Rule,
+	infix string,
 ) ([]*generictables.Chain, *generictables.Chain, []generictables.Rule) {
 	if r.NFTables && (endpointPfx == WorkloadFromEndpointPfx || endpointPfx == WorkloadToEndpointPfx) {
 		// Currently only supported for nftables workload endpoint dispatch.
@@ -525,6 +539,7 @@ func (r *DefaultRuleRenderer) buildSingleDispatchChains(
 		getMatchForEndpoint,
 		getActionForEndpoint,
 		endRules,
+		infix,
 	)
 }
 
@@ -539,6 +554,7 @@ func (r *DefaultRuleRenderer) buildSingleDispatchChainTree(
 	getMatchForEndpoint func(name string) generictables.MatchCriteria,
 	getActionForEndpoint func(pfx, name string) generictables.Action,
 	endRules []generictables.Rule,
+	infix string,
 ) ([]*generictables.Chain, *generictables.Chain, []generictables.Rule) {
 	childChains := make([]*generictables.Chain, 0)
 	rootRules := make([]generictables.Rule, 0)
@@ -557,7 +573,14 @@ func (r *DefaultRuleRenderer) buildSingleDispatchChainTree(
 			// More than one name, render a prefix match in the root chain...
 			nextChar := prefix[len(commonPrefix):]
 			ifaceMatch := prefix + r.wildcard
-			childChainName := chainName + "-" + nextChar
+			// Inject an infix into the child chain name. This fixes the chain
+			// naming collision that can occur when chains are constructed in
+			// more than a single pass. Without this, interfaces like "caliX..."
+			// (Calico workload interfaces) can end up in the same chain as
+			// interfaces exposed as host endpoints that start with the same
+			// character "X". In this case rules generated in the previous round
+			// could be overwritten by the new ones.
+			childChainName := fmt.Sprintf("%s%s-%s", chainName, infix, nextChar)
 			logCxt := logCxt.WithFields(log.Fields{
 				"childChainName": childChainName,
 				"ifaceMatch":     ifaceMatch,
