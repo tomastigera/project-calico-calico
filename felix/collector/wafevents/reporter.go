@@ -87,6 +87,15 @@ func (r *WAFEventReporter) Start() error {
 	defer r.mu.Unlock()
 	if !r.running {
 		r.running = true
+		// Initialize all dispatchers before starting the background goroutine
+		// to prevent race condition where flush() is called before dispatchers are ready
+		for _, d := range r.dispatchers {
+			if err := d.Start(); err != nil {
+				log.WithError(err).Error("dispatcher unable to initialize")
+				return err
+			}
+		}
+		r.reportHealth()
 		go r.run()
 	}
 	return nil

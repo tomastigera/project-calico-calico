@@ -3,6 +3,7 @@
 package wafevents
 
 import (
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -10,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/projectcalico/calico/felix/collector/file"
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/proto"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -405,5 +407,141 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 
 		// test if it takes less than 7 secs
 		Expect(time.Since(start)).To(BeNumerically("<", 10*time.Second))
+	})
+})
+
+var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", func() {
+	var (
+		tmpDir       string
+		fileReporter *file.FileReporter
+		flushTrigger chan time.Time
+		reporter     *WAFEventReporter
+	)
+
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "waf-test-*")
+		Expect(err).NotTo(HaveOccurred())
+
+		fileReporter = file.NewReporter(tmpDir, "test-waf.log", 10, 3)
+		flushTrigger = make(chan time.Time)
+		reporter = NewReporterWithShims([]types.Reporter{fileReporter}, flushTrigger, nil)
+	})
+
+	AfterEach(func() {
+		if tmpDir != "" {
+			os.RemoveAll(tmpDir)
+		}
+	})
+
+	It("should not panic when flush is triggered immediately after Start()", func() {
+		// This test reproduces the race condition where flush() is called
+		// before the health ticker can initialize the FileReporter's logger.
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		// Create a simple WAF event to report
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-1",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules: []*proto.WAFRuleHit{
+					{
+						Rule: &proto.WAFRule{
+							Id:       "100001",
+							Message:  "Test rule",
+							Severity: "warning",
+						},
+						Disruptive: false,
+					},
+				},
+				Action: "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/test",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12345},
+			},
+		}
+
+		// Report an event
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Trigger flush immediately - this will panic if the FileReporter
+		// wasn't properly initialized via Start()
+		flushTrigger <- time.Now()
+
+		// Give it a moment to process
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	It("should properly initialize FileReporter when Start() is called", func() {
+		// This test verifies that after Start() is called,
+		// the FileReporter should be initialized and ready to write
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		// Wait for health tick to potentially initialize (but shouldn't be needed)
+		time.Sleep(100 * time.Millisecond)
+
+		// Create and report an event
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-2",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules:   []*proto.WAFRuleHit{},
+				Action:  "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/test2",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12346},
+			},
+		}
+
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Trigger flush
+		flushTrigger <- time.Now()
+		time.Sleep(100 * time.Millisecond)
+
+		// Should not panic and file should exist
+		logFile := tmpDir + "/test-waf.log"
+		_, err = os.Stat(logFile)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
