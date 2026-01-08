@@ -617,4 +617,49 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		_, err := os.Stat(logFile)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("should gracefully shutdown when Stop() is called", func() {
+		// Start the reporter
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-shutdown",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+			},
+		}
+
+		// Report an event
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Stop the reporter - should shutdown gracefully
+		reporter.Stop()
+
+		// Give some time for goroutine to exit
+		time.Sleep(100 * time.Millisecond)
+
+		// Starting again should work fine
+		reporter.done = make(chan struct{}) // Reset done channel
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+		
+		// Clean up
+		reporter.Stop()
+	})
 })

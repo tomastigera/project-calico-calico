@@ -22,6 +22,7 @@ type WAFEventReporter struct {
 	healthAggregator *health.HealthAggregator
 	running          bool
 	mu               sync.Mutex
+	done             chan struct{}
 
 	buf *buffer
 }
@@ -79,6 +80,7 @@ func NewReporterWithShims(dispatchers []types.Reporter, flushTrigger <-chan time
 		flushTrigger:     flushTrigger,
 		healthAggregator: healthAggregator,
 		buf:              newBuffer(),
+		done:             make(chan struct{}),
 	}
 }
 
@@ -101,6 +103,16 @@ func (r *WAFEventReporter) Start() error {
 	return nil
 }
 
+// Stop gracefully shuts down the WAFEventReporter by stopping the background goroutine
+func (r *WAFEventReporter) Stop() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.running {
+		r.running = false
+		close(r.done)
+	}
+}
+
 func (r *WAFEventReporter) Report(event interface{}) error {
 	switch e := event.(type) {
 	case *Report:
@@ -117,6 +129,9 @@ func (r *WAFEventReporter) run() {
 
 	for {
 		select {
+		case <-r.done:
+			log.Info("WAFEventReporter shutting down")
+			return
 		case <-r.flushTrigger:
 			r.flush()
 		case <-healthTicks.C:
