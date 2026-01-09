@@ -1,6 +1,6 @@
 //go:build !race
 
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2026 Tigera, Inc. All rights reserved.
 
 package wafevents
 
