@@ -22,6 +22,8 @@ type WAFEventReporter struct {
 	healthAggregator *health.HealthAggregator
 	running          bool
 	mu               sync.Mutex
+	done             chan struct{}
+	wg               sync.WaitGroup // tracks run() goroutine
 
 	buf *buffer
 }
@@ -79,6 +81,7 @@ func NewReporterWithShims(dispatchers []types.Reporter, flushTrigger <-chan time
 		flushTrigger:     flushTrigger,
 		healthAggregator: healthAggregator,
 		buf:              newBuffer(),
+		done:             make(chan struct{}),
 	}
 }
 
@@ -87,9 +90,34 @@ func (r *WAFEventReporter) Start() error {
 	defer r.mu.Unlock()
 	if !r.running {
 		r.running = true
+		// Recreate done channel if it was closed
+		r.done = make(chan struct{})
+		// Initialize all dispatchers before starting the background goroutine
+		// to prevent race condition where flush() is called before dispatchers are ready
+		for _, d := range r.dispatchers {
+			if err := d.Start(); err != nil {
+				log.WithError(err).Error("dispatcher unable to initialize")
+				return err
+			}
+		}
+		r.reportHealth()
+		r.wg.Add(1)
 		go r.run()
 	}
 	return nil
+}
+
+// Stop gracefully shuts down the WAFEventReporter by stopping the background goroutine
+func (r *WAFEventReporter) Stop() {
+	r.mu.Lock()
+	if r.running {
+		r.running = false
+		close(r.done)
+		r.mu.Unlock()
+		r.wg.Wait() // Wait for run() goroutine to exit
+	} else {
+		r.mu.Unlock()
+	}
 }
 
 func (r *WAFEventReporter) Report(event interface{}) error {
@@ -103,11 +131,15 @@ func (r *WAFEventReporter) Report(event interface{}) error {
 }
 
 func (r *WAFEventReporter) run() {
+	defer r.wg.Done() // Signal goroutine exit
 	healthTicks := time.NewTicker(wafEventHealthInterval)
 	defer healthTicks.Stop()
 
 	for {
 		select {
+		case <-r.done:
+			log.Info("WAFEventReporter shutting down")
+			return
 		case <-r.flushTrigger:
 			r.flush()
 		case <-healthTicks.C:
@@ -171,13 +203,13 @@ func (b *buffer) add(report *Report) {
 	}
 
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	idxReport := b.buf[key]
 	if idxReport == nil {
 		b.buf[key] = report
 		idxReport = report
 	}
-	b.mu.Unlock()
-
 	idxReport.count++
 }
 
@@ -185,7 +217,21 @@ func (b *buffer) cpyClearBuffer() *buffer {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	cpy := &buffer{buf: b.buf}
+	// Deep copy the buffer to avoid shared pointers between old and new buffers
+	cpyBuf := make(map[aggregationKey]*Report, len(b.buf))
+	for k, v := range b.buf {
+		// Create a new Report with copied values
+		// We only need to copy the count, as the WAFEvent pointer can be shared
+		// since it's read-only after creation
+		cpyBuf[k] = &Report{
+			WAFEvent: v.WAFEvent,
+			Src:      v.Src,
+			Dst:      v.Dst,
+			count:    v.count,
+		}
+	}
+
+	cpy := &buffer{buf: cpyBuf}
 	b.buf = map[aggregationKey]*Report{}
 	return cpy
 }
@@ -193,6 +239,20 @@ func (b *buffer) cpyClearBuffer() *buffer {
 func (b *buffer) getUpdates() (updates []*v1.WAFLog) {
 
 	for _, r := range b.buf {
+		// Defensive nil checks to prevent panics with malformed data
+		if r == nil || r.WAFEvent == nil {
+			log.Warn("Skipping nil report or WAFEvent in buffer")
+			continue
+		}
+		if r.Request == nil {
+			log.Warn("Skipping report with nil Request")
+			continue
+		}
+		if r.Timestamp == nil {
+			log.Warn("Skipping report with nil Timestamp")
+			continue
+		}
+
 		// XXX we need to imporove on linseed to inform how many
 		// requests were aggregated adding the r.count to the report
 		update := &v1.WAFLog{
@@ -207,6 +267,11 @@ func (b *buffer) getUpdates() (updates []*v1.WAFLog) {
 			Timestamp:   time.Unix(r.Timestamp.Seconds, int64(r.Timestamp.Nanos)).UTC(),
 		}
 		for _, rule := range r.Rules {
+			// Defensive nil check for rule
+			if rule == nil || rule.Rule == nil {
+				log.Warn("Skipping nil rule in WAF report")
+				continue
+			}
 			update.Rules = append(update.Rules, v1.WAFRuleHit{
 				Message:    rule.Rule.Message,
 				Disruptive: rule.Disruptive,

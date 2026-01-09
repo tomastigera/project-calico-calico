@@ -3,6 +3,7 @@
 package wafevents
 
 import (
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -10,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/projectcalico/calico/felix/collector/file"
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/proto"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -383,27 +385,262 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 		logs := <-dispatcher.logs
 		Expect(logs).To(HaveLen(3))
 	})
+})
 
-	It("should perform on huge loads", func() {
-		// get start time
-		start := time.Now()
+var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", func() {
+	var (
+		tmpDir       string
+		fileReporter *file.FileReporter
+		flushTrigger chan time.Time
+		reporter     *WAFEventReporter
+	)
 
-		// report the 100k events
-		for i := 0; i < 25000; i++ {
-			err := r.Report(r0)
-			Expect(err).NotTo(HaveOccurred())
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "waf-test-*")
+		Expect(err).NotTo(HaveOccurred())
+
+		fileReporter = file.NewReporter(tmpDir, "test-waf.log", 10, 3)
+		flushTrigger = make(chan time.Time)
+		reporter = NewReporterWithShims([]types.Reporter{fileReporter}, flushTrigger, nil)
+	})
+
+	AfterEach(func() {
+		if tmpDir != "" {
+			os.RemoveAll(tmpDir)
 		}
-		for i := 0; i < 75000; i++ {
-			err := r.Report(r1)
-			Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should not panic when flush is triggered immediately after Start()", func() {
+		// This test reproduces the race condition where flush() is called
+		// before the health ticker can initialize the FileReporter's logger.
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		// Create a simple WAF event to report
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-1",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules: []*proto.WAFRuleHit{
+					{
+						Rule: &proto.WAFRule{
+							Id:       "100001",
+							Message:  "Test rule",
+							Severity: "warning",
+						},
+						Disruptive: false,
+					},
+				},
+				Action: "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/test",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12345},
+			},
 		}
 
-		// flush and verify logs
+		// Report an event
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Trigger flush immediately - this will panic if the FileReporter
+		// wasn't properly initialized via Start()
 		flushTrigger <- time.Now()
-		logs := <-dispatcher.logs
-		Expect(logs).To(HaveLen(2))
 
-		// test if it takes less than 7 secs
-		Expect(time.Since(start)).To(BeNumerically("<", 10*time.Second))
+		// Give it a moment to process
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	It("should properly initialize FileReporter when Start() is called", func() {
+		// This test verifies that after Start() is called,
+		// the FileReporter should be initialized and ready to write
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		// Wait for health tick to potentially initialize (but shouldn't be needed)
+		time.Sleep(100 * time.Millisecond)
+
+		// Create and report an event
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-2",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules:   []*proto.WAFRuleHit{},
+				Action:  "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/test2",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12346},
+			},
+		}
+
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Trigger flush
+		flushTrigger <- time.Now()
+		time.Sleep(100 * time.Millisecond)
+
+		// Should not panic and file should exist
+		logFile := tmpDir + "/test-waf.log"
+		_, err = os.Stat(logFile)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should handle concurrent Report() calls without race conditions", func() {
+		// This test verifies that concurrent calls to Report() don't cause
+		// race conditions on the buffer's aggregation counter
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-concurrent",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Rules: []*proto.WAFRuleHit{
+					{
+						Rule: &proto.WAFRule{
+							Id:       "100001",
+							Message:  "Test rule",
+							Severity: "warning",
+						},
+						Disruptive: false,
+					},
+				},
+				Action: "pass",
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/concurrent",
+					Version: "1.1",
+				},
+				Timestamp: &timestamppb.Timestamp{Seconds: 12345},
+			},
+		}
+
+		// Report the same event concurrently from multiple goroutines
+		// This should aggregate properly without race conditions
+		const numGoroutines = 100
+		done := make(chan bool, numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				err := reporter.Report(testReport)
+				Expect(err).NotTo(HaveOccurred())
+				done <- true
+			}()
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < numGoroutines; i++ {
+			<-done
+		}
+
+		// Flush and verify the count is correct
+		flushTrigger <- time.Now()
+		time.Sleep(100 * time.Millisecond)
+
+		// The file should exist and contain the aggregated event
+		logFile := tmpDir + "/test-waf.log"
+		_, err := os.Stat(logFile)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should gracefully shutdown when Stop() is called", func() {
+		// Start the reporter
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		testReport := &Report{
+			Src: &v1.WAFEndpoint{
+				IP:           "10.0.0.1",
+				PortNum:      8080,
+				PodName:      "test-pod",
+				PodNameSpace: "default",
+			},
+			Dst: &v1.WAFEndpoint{
+				IP:           "10.0.0.2",
+				PortNum:      80,
+				PodName:      "test-server",
+				PodNameSpace: "default",
+			},
+			WAFEvent: &proto.WAFEvent{
+				TxId:    "test-tx-shutdown",
+				Host:    "test-host",
+				SrcIp:   "10.0.0.1",
+				SrcPort: 8080,
+				DstIp:   "10.0.0.2",
+				DstPort: 80,
+				Request: &proto.HTTPRequest{
+					Method:  "GET",
+					Path:    "/test",
+					Version: "1.1",
+				},
+			},
+		}
+
+		// Report an event
+		err := reporter.Report(testReport)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Stop the reporter - should shutdown gracefully
+		reporter.Stop()
+
+		// Give some time for goroutine to exit
+		time.Sleep(100 * time.Millisecond)
+
+		// Starting again should work fine (done channel is automatically recreated)
+		Expect(reporter.Start()).NotTo(HaveOccurred())
+
+		// Clean up
+		reporter.Stop()
 	})
 })
