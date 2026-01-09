@@ -69,18 +69,6 @@
         "url": "{{.CIURL}}"
       }
       {{- end }}
-      {{- if .SmokeTestURL }},
-      {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "{{if eq .SmokeTestStatus \"passed\"}}:white_check_mark:{{else}}:x:{{end}} Smoke Tests",
-          "emoji": true
-        },
-        "value": "smoke_test_link",
-        "url": "{{.SmokeTestURL}}"
-      }
-      {{- end }}      
     ]
   }
   {{- if not .ImageScanResultURL }},
