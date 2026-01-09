@@ -42,7 +42,7 @@ ci: static-checks ut
 ###############################################################################
 # Hashrelease
 ###############################################################################
-.PHONY: hashrelease hashrelease-build hashrelease-publish
+.PHONY: hashrelease hashrelease-build hashrelease-publish hashrelease-enterprise-smoke-test
 hashrelease: hashrelease-build hashrelease-publish
 
 hashrelease-build: bin/release var-require-all-GITHUB_TOKEN
@@ -53,6 +53,13 @@ hashrelease-publish: bin/helm bin/release var-require-all-GITHUB_TOKEN
 
 hashrelease-svr-gc: bin/release
 	@bin/release hashrelease garbage-collect
+
+# Run hashrelease smoke tests
+hashrelease-enterprise-smoke-test:
+	@mkdir -p report
+	@echo "Running smoke tests hashrelease enterprise ..."
+	@$(DOCKER_GO_BUILD) gotestsum --junitfile report/hashrelease-smoke-tests.xml \
+		-- -v -timeout 4h $(POSTRELEASE_TEST_PACKAGE) -run TestHashreleaseSmokeTests
 
 ###############################################################################
 # Release

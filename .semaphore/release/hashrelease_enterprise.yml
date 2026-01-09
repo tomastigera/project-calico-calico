@@ -73,3 +73,22 @@ blocks:
           value: gcr.io/unique-caldron-775/cnx/tigera
         - name: WINDOWS_GCS_BUCKET
           value: tigera-windows/dev
+
+  - name: Smoke Tests
+    dependencies: ["Publish hashrelease"]
+    task:
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: banzai-secrets
+      prologue:
+        commands:
+          - checkout
+          - retry git fetch --quiet --unshallow
+      jobs:
+        - name: "Run hashrelease enterprise smoke tests"
+          execution_time_limit:
+            hours: 4
+          commands:
+            - cd release
+            - make hashrelease-enterprise-smoke-test
+
