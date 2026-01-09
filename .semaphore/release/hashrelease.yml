@@ -62,4 +62,3 @@ blocks:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
           - cd release
-
