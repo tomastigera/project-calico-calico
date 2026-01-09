@@ -187,7 +187,7 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		return aapi
 	case *v3.BFDConfiguration:
 		aapi := &v3.BFDConfiguration{}
-		BGPConfigurationConverter{}.convertToAAPI(obj, aapi)
+		BFDConfigurationConverter{}.convertToAAPI(obj, aapi)
 		return aapi
 	default:
 		logrus.Tracef("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
