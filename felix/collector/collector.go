@@ -281,10 +281,10 @@ func (c *collector) Start() error {
 	}
 
 	if c.wafEventsReporter != nil {
-		go c.wafEventsBatchStart()
 		if err := c.wafEventsReporter.Start(); err != nil {
 			return err
 		}
+		go c.wafEventsBatchStart()
 	}
 
 	if c.policyActivityReporter != nil {
