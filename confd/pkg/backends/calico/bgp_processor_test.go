@@ -2439,8 +2439,10 @@ func TestPopulateNodeConfig_RouterIDComment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set environment variable
 			if tt.routerIDEnv != "" {
-				os.Setenv("CALICO_ROUTER_ID", tt.routerIDEnv)
-				defer os.Unsetenv("CALICO_ROUTER_ID")
+				require.NoError(t, os.Setenv("CALICO_ROUTER_ID", tt.routerIDEnv))
+				defer func() {
+					require.NoError(t, os.Unsetenv("CALICO_ROUTER_ID"))
+				}()
 			}
 
 			cache := map[string]string{
