@@ -21,7 +21,6 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 		enterpriseBuildHashreleaseCommand(cfg),
 		enterprisePublishHashreleaseCommand(cfg),
 		enterpriseMetadataCommand(cfg),
-		enterpriseAnnounceHashreleaseCommand(cfg),
 	}
 }
 
@@ -195,25 +194,6 @@ func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command
 	return nil
 }
 
-// validateEnterpriseHashreleaseAnnounceFlags checks that the flags are set correctly for the announce command.
-func validateEnterpriseHashreleaseAnnounceFlags(c *cli.Command) error {
-	// Check that hashrelease server configuration is valid to load the hashrelease
-	if !hashreleaseServerConfig(c).Valid() {
-		return fmt.Errorf("missing hashrelease server configuration, ensure --%s is set",
-			hashreleaseServerBucketFlag.Name)
-	}
-
-	// Check slack configuration if notify is enabled
-	if c.Bool(notifyFlag.Name) {
-		cfg := slackConfig(c)
-		if !cfg.Valid() {
-			return fmt.Errorf("slack configuration invalid: token and channel must be set for notifications")
-		}
-	}
-
-	return nil
-}
-
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
 		devTagSuffixFlag,
@@ -335,8 +315,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			// Send a slack message to notify that the hashrelease has been published.
-			// Only send if both publishHashreleaseFlag and notifyFlag are true.
-			if c.Bool(publishHashreleaseFlag.Name) && c.Bool(notifyFlag.Name) {
+			if c.Bool(publishHashreleaseFlag.Name) {
 				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
 			}
 			return nil
@@ -377,37 +356,6 @@ func enterpriseMetadataCommand(cfg *Config) *cli.Command {
 			}
 			r := calico.NewEnterpriseManager(opts)
 			return r.BuildMetadata(c.String("dir"))
-		},
-	}
-}
-
-func enterpriseAnnounceHashreleaseCommand(cfg *Config) *cli.Command {
-	flags := append(hashreleaseServerFlags, slackFlags...)
-	return &cli.Command{
-		Name:  "announce",
-		Usage: "Send Slack notification for a published hashrelease",
-		Flags: flags,
-		Action: func(_ context.Context, c *cli.Command) error {
-			configureLogging("hashrelease-announce.log")
-
-			// Validate flags.
-			if err := validateEnterpriseHashreleaseAnnounceFlags(c); err != nil {
-				return err
-			}
-
-			// Extract the pinned version as a hashrelease.
-			hashrel, err := pinnedversion.LoadEnterpriseHashrelease(cfg.RepoRootDir, cfg.TmpDir, baseHashreleaseOutputDir(cfg.RepoRootDir), c.Bool(latestFlag.Name))
-			if err != nil {
-				return fmt.Errorf("failed to load hashrelease from pinned file: %v", err)
-			}
-
-			// Send the Slack announcement.
-			if c.Bool(notifyFlag.Name) {
-				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
-			}
-
-			logrus.Info("Notification disabled, skipping Slack announcement")
-			return nil
 		},
 	}
 }
