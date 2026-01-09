@@ -22,7 +22,7 @@
           },
           {
             "fieldName": "gateway_route_name",
-            "maxValues": 10
+            "maxValues": 1000
           }
         ],
         "aggregations": {
@@ -60,7 +60,7 @@
           },
           {
             "fieldName": "gateway_route_name",
-            "maxValues": 10
+            "maxValues": 1000
           }
         ],
         "aggregations": {
@@ -98,7 +98,7 @@
           },
           {
             "fieldName": "gateway_route_name",
-            "maxValues": 10
+            "maxValues": 1000
           }
         ],
         "aggregations": {
@@ -130,27 +130,27 @@
         "groupBys": [
           {
             "fieldName": "gateway_namespace",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_listener_full_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "host",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_class",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_status",
-            "maxValues": 100
+            "maxValues": 1000
           }
         ],
         "aggregations": {
@@ -185,39 +185,39 @@
         "groupBys": [
           {
             "fieldName": "gateway_route_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_route_namespace",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_namespace",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_listener_full_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "dest_service_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "dest_port_num",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "type",
-            "maxValues": 10
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_route_status",
-            "maxValues": 10
+            "maxValues": 1000
           }
         ],
         "aggregations": {
@@ -255,39 +255,39 @@
         "groupBys": [
           {
             "fieldName": "gateway_namespace",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_listener_full_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "type",
-            "maxValues": 10
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_route_namespace",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "gateway_route_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "dest_service_name",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "dest_port_num",
-            "maxValues": 100
+            "maxValues": 1000
           },
           {
             "fieldName": "response_code",
-            "maxValues": 100
+            "maxValues": 1000
           }
         ],
         "aggregations": {
