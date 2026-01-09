@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -40,11 +39,14 @@ import (
 var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 	var (
 		etcd              *containers.Container
-		policyController  *containers.Container
+		kubeControllers   *containers.Container
 		apiserver         *containers.Container
 		calicoClient      client.Interface
 		k8sClient         *kubernetes.Clientset
 		controllerManager *containers.Container
+		err               error
+		kconfigfile       string
+		removeKubeconfig  func()
 	)
 
 	BeforeEach(func() {
@@ -55,21 +57,12 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 		// Run apiserver.
 		apiserver = testutils.RunK8sApiserver(etcd.IP)
 
-		// Write out a kubeconfig file
-		kconfigfile, err := os.CreateTemp("", "ginkgo-policycontroller")
-		Expect(err).NotTo(HaveOccurred())
-		defer func() { _ = os.Remove(kconfigfile.Name()) }()
-		data := testutils.BuildKubeconfig(apiserver.IP)
-		_, err = kconfigfile.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
-
-		// Make the kubeconfig readable by the container.
-		Expect(kconfigfile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
+		kconfigfile, removeKubeconfig = testutils.BuildKubeconfig(apiserver.IP)
 
 		// Run the controller.
-		policyController = testutils.RunPolicyController(apiconfig.EtcdV3, etcd.IP, kconfigfile.Name(), "")
+		kubeControllers = testutils.RunKubeControllers(apiconfig.EtcdV3, etcd.IP, kconfigfile, "")
 
-		k8sClient, err = testutils.GetK8sClient(kconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the apiserver to be available.
@@ -89,9 +82,10 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 	AfterEach(func() {
 		_ = calicoClient.Close()
 		controllerManager.Stop()
-		policyController.Stop()
+		kubeControllers.Stop()
 		apiserver.Stop()
 		etcd.Stop()
+		removeKubeconfig()
 	})
 
 	It("should initialize the datastore at start-of-day", func() {
@@ -114,19 +108,19 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 			By("Applying a valid license")
 			infrastructure.ApplyValidLicense(calicoClient)
 			By("Checking that the controller continues to run")
-			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
+			Consistently(kubeControllers.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
 		})
 
 		It("should not exit for a license change that removes functionality since the policy controller does not run licensed controllers by default", func() {
 			By("Applying a valid license")
 			infrastructure.ApplyValidLicense(calicoClient)
 			By("Checking the controller continues to run")
-			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
+			Consistently(kubeControllers.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
 
 			By("Applying an invalid license")
 			infrastructure.ApplyExpiredLicense(calicoClient)
 			By("Checking the controller continues to run")
-			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
+			Consistently(kubeControllers.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
 		})
 	})
 
@@ -134,7 +128,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 		It("should pass health check", func() {
 			By("Waiting for an initial readiness report")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -142,7 +136,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 
 			By("Waiting for the controller to be ready")
 			Eventually(func() string {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return strings.TrimSpace(string(stdoutStderr))
@@ -152,7 +146,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 		It("should fail health check if apiserver is not running", func() {
 			By("Waiting for an initial readiness report")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -163,7 +157,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 
 			By("Waiting for the readiness to change")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -173,7 +167,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 		It("should fail health check if etcd not running", func() {
 			By("Waiting for an initial readiness report")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -184,7 +178,7 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 
 			By("Waiting for the readiness to change")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -195,9 +189,11 @@ var _ = Describe("[etcd] kube-controllers health check FV tests", func() {
 
 var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 	var (
-		etcd      *containers.Container
-		kubectrls *containers.Container
-		apiserver *containers.Container
+		etcd             *containers.Container
+		kubectrls        *containers.Container
+		apiserver        *containers.Container
+		kconfigfile      string
+		removeKubeconfig func()
 	)
 
 	BeforeEach(func() {
@@ -208,19 +204,11 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 		apiserver = testutils.RunK8sApiserver(etcd.IP)
 
 		// Write out a kubeconfig file
-		kconfigfile, err := os.CreateTemp("", "ginkgo-policycontroller")
-		Expect(err).NotTo(HaveOccurred())
-		defer func() { _ = os.Remove(kconfigfile.Name()) }()
-		data := testutils.BuildKubeconfig(apiserver.IP)
-		_, err = kconfigfile.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
-
-		// Make the kubeconfig readable by the container.
-		Expect(kconfigfile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
+		kconfigfile, removeKubeconfig = testutils.BuildKubeconfig(apiserver.IP)
 
 		// Create some clients.
-		client := testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile.Name())
-		k8sClient, err := testutils.GetK8sClient(kconfigfile.Name())
+		client := testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile)
+		k8sClient, err := testutils.GetK8sClient(kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the apiserver to be available.
@@ -231,15 +219,7 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 
 		// Apply the necessary CRDs. There can sometimes be a delay between starting
 		// the API server and when CRDs are apply-able, so retry here.
-		apply := func() error {
-			out, err := apiserver.ExecOutput("kubectl", "apply", "-f", "/crds/")
-			if err != nil {
-				return fmt.Errorf("%s: %s", err, out)
-			}
-			return nil
-		}
-		By("Applying CRDs")
-		Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
+		testutils.ApplyCRDs(apiserver)
 
 		// Enable metrics and pprof ports for these tests.
 		Eventually(func() error {
@@ -255,13 +235,14 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 
 		// Run the controller. We don't need to run any controllers for these tests, but
 		// we do need to run something, so just run the node controller.
-		kubectrls = testutils.RunPolicyController(apiconfig.Kubernetes, etcd.IP, kconfigfile.Name(), "node")
+		kubectrls = testutils.RunKubeControllers(apiconfig.Kubernetes, etcd.IP, kconfigfile, "node")
 	})
 
 	AfterEach(func() {
 		kubectrls.Stop()
 		apiserver.Stop()
 		etcd.Stop()
+		removeKubeconfig()
 	})
 
 	get := func(server, path string) error {
@@ -295,11 +276,14 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 	var (
 		etcd              *containers.Container
-		policyController  *containers.Container
+		kubeControllers   *containers.Container
 		apiserver         *containers.Container
 		calicoClient      client.Interface
 		k8sClient         *kubernetes.Clientset
 		controllerManager *containers.Container
+		err               error
+		kconfigfile       string
+		removeKubeconfig  func()
 	)
 
 	BeforeEach(func() {
@@ -310,17 +294,10 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 		apiserver = testutils.RunK8sApiserver(etcd.IP)
 
 		// Write out a kubeconfig file
-		var err error
-		kconfigfile, err := os.CreateTemp("", "ginkgo-policycontroller")
-		Expect(err).NotTo(HaveOccurred())
-		defer func() { _ = os.Remove(kconfigfile.Name()) }()
-		data := testutils.BuildKubeconfig(apiserver.IP)
-		_, err = kconfigfile.Write([]byte(data))
-		Expect(err).NotTo(HaveOccurred())
+		kconfigfile, removeKubeconfig = testutils.BuildKubeconfig(apiserver.IP)
 
 		// Make the kubeconfig readable by the container.
-		Expect(kconfigfile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
-		k8sClient, err = testutils.GetK8sClient(kconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 		// Wait for the apiserver to be available.
 		Eventually(func() error {
@@ -334,29 +311,24 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 
 		// Apply the necessary CRDs. There can sometimes be a delay between starting
 		// the API server and when CRDs are apply-able, so retry here.
-		apply := func() error {
-			out, err := apiserver.ExecOutput("kubectl", "apply", "-f", "/crds/")
-			if err != nil {
-				return fmt.Errorf("%s: %s", err, out)
-			}
-			return nil
-		}
-		By("Applying CRDs")
-		Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
-		calicoClient = testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile.Name())
+		testutils.ApplyCRDs(apiserver)
+
+		calicoClient = testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile)
 
 		// In KDD mode, we only support the node controller right now.
-		policyController = testutils.RunPolicyController(apiconfig.Kubernetes, "", kconfigfile.Name(), "node")
+		kubeControllers = testutils.RunKubeControllers(apiconfig.Kubernetes, "", kconfigfile, "node")
 
 		// Run controller manager.
 		controllerManager = testutils.RunK8sControllerManager(apiserver.IP)
 	})
+
 	AfterEach(func() {
 		_ = calicoClient.Close()
 		controllerManager.Stop()
-		policyController.Stop()
+		kubeControllers.Stop()
 		apiserver.Stop()
 		etcd.Stop()
+		removeKubeconfig()
 	})
 
 	It("should initialize the datastore at start-of-day", func() {
@@ -375,7 +347,7 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 		It("should pass health check", func() {
 			By("Waiting for an initial readiness report")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -383,7 +355,7 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 
 			By("Waiting for the controller to be ready")
 			Eventually(func() string {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return strings.TrimSpace(string(stdoutStderr))
@@ -393,7 +365,7 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 		It("should fail health check if apiserver is not running", func() {
 			By("Waiting for an initial readiness report")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr
@@ -404,7 +376,7 @@ var _ = Describe("[kdd] kube-controllers health check FV tests", func() {
 
 			By("Waiting for the readiness to change")
 			Eventually(func() []byte {
-				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				cmd := exec.Command("docker", "exec", kubeControllers.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
 				return stdoutStderr

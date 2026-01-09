@@ -12,3 +12,4 @@ c6b4f1c786aff371f2641771b49a866172daa4c5:_includes/master/non-helm-manifests/ope
 741acc18640982566a5037ee48d3016041e8f6a2:_includes/master/manifests/monitor-calico.yaml:generic-api-key:516
 741acc18640982566a5037ee48d3016041e8f6a2:_includes/v2.3/manifests/monitor-calico.yaml:generic-api-key:516
 451f487365ba01da7466fd0784e8b839e7204995:_includes/v2.2/manifests/monitor-calico.yaml:kubernetes-secret-yaml:206
+2901abdc91e1f16f8fc56a3401ed7f13b7db1b1d:istio/patches/0002-chore-deps-update-golang.org-x-crypto-and-quic-go.patch:generic-api-key:105

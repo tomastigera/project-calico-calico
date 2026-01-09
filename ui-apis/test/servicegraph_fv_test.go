@@ -1660,8 +1660,15 @@ func setupServiceGraphScenario(
 		return nil, nil, fmt.Errorf("failed to refresh ES index: %w", err)
 	}
 
-	// Give ES a moment to process
-	time.Sleep(1 * time.Second)
+	// Wait for the ES index to be ready
+	_, err = lmaClient.Backend().ClusterHealth().
+		Index(flowIndex.Index(clusterInfo)).
+		WaitForStatus("green").
+		Timeout("30s").
+		Do(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ES index failed to reach green status: %w", err)
+	}
 
 	return userInfo, teardowns, nil
 }

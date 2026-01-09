@@ -34,7 +34,6 @@ import (
 )
 
 var _ = Describe("Config", func() {
-
 	// unsetEnv() function that unsets environment variables
 	// required by kube-controllers controller
 	unsetEnv := func() {
@@ -195,6 +194,9 @@ current-context: test-context`
 				Expect(rc.LoadBalancer).To(Equal(&config.LoadBalancerControllerConfig{
 					AssignIPs: v3.AllServices,
 				}))
+				Expect(rc.Migration).To(Equal(&config.MigrationControllerConfig{
+					PolicyNameMigrator: "Enabled",
+				}))
 				close(done)
 			})
 
@@ -214,13 +216,17 @@ current-context: test-context`
 					LeakGracePeriod:  &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(c.Policy).To(Equal(&v3.PolicyControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
+				}))
 				Expect(c.WorkloadEndpoint).To(Equal(&v3.WorkloadEndpointControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
+				}))
 				Expect(c.Namespace).To(Equal(&v3.NamespaceControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
+				}))
 				Expect(c.ServiceAccount).To(Equal(&v3.ServiceAccountControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
+				}))
 				Expect(c.LoadBalancer).To(Equal(&v3.LoadBalancerControllerConfig{
 					AssignIPs: v3.AllServices,
 				}))
@@ -249,15 +255,22 @@ current-context: test-context`
 							LeakGracePeriod:  &v1.Duration{Duration: 20 * time.Minute},
 						},
 						Policy: &v3.PolicyControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30},
+						},
 						WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31},
+						},
 						Namespace: &v3.NamespaceControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32},
+						},
 						ServiceAccount: &v3.ServiceAccountControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33},
+						},
 						LoadBalancer: &v3.LoadBalancerControllerConfig{
 							AssignIPs: v3.RequestedServicesOnly,
+						},
+						Migration: &v3.MigrationControllerConfig{
+							PolicyNameMigrator: "Disabled",
 						},
 					},
 				}
@@ -304,6 +317,9 @@ current-context: test-context`
 				}))
 				Expect(rc.LoadBalancer).To(Equal(&config.LoadBalancerControllerConfig{
 					AssignIPs: v3.RequestedServicesOnly,
+				}))
+				Expect(rc.Migration).To(Equal(&config.MigrationControllerConfig{
+					PolicyNameMigrator: "Disabled",
 				}))
 				close(done)
 			})
@@ -449,7 +465,6 @@ current-context: test-context`
 				<-ctrl.ConfigChan()
 
 				close(done)
-
 			}, 3)
 		})
 
@@ -467,13 +482,17 @@ current-context: test-context`
 						HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled},
 					},
 					Policy: &v3.PolicyControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30},
+					},
 					WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31},
+					},
 					Namespace: &v3.NamespaceControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32},
+					},
 					ServiceAccount: &v3.ServiceAccountControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33},
+					},
 				},
 			}
 			m := &mockKCC{get: kcc}
@@ -506,7 +525,6 @@ current-context: test-context`
 	})
 
 	Context("with valid user defined values", func() {
-
 		var cfg *config.Config
 		var kubeControllersConfigName string
 
@@ -610,7 +628,8 @@ current-context: test-context`
 					LeakGracePeriod:  &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(c.Policy).To(Equal(&v3.PolicyControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105},
+				}))
 				Expect(c.WorkloadEndpoint).To(BeNil())
 				Expect(c.Namespace).To(BeNil())
 				Expect(c.ServiceAccount).To(BeNil())
@@ -641,13 +660,17 @@ current-context: test-context`
 							},
 						},
 						Policy: &v3.PolicyControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30},
+						},
 						WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31},
+						},
 						Namespace: &v3.NamespaceControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32},
+						},
 						ServiceAccount: &v3.ServiceAccountControllerConfig{
-							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33},
+						},
 					},
 				}
 				m = &mockKCC{get: kcc}
@@ -707,14 +730,14 @@ current-context: test-context`
 					HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled, CreateDefaultHostEndpoint: v3.DefaultHostEndpointsEnabled},
 				}))
 				Expect(c.Policy).To(Equal(&v3.PolicyControllerConfig{
-					ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105}}))
+					ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105},
+				}))
 				Expect(c.WorkloadEndpoint).To(BeNil())
 				Expect(c.Namespace).To(BeNil())
 				Expect(c.ServiceAccount).To(BeNil())
 				close(done)
 			})
 		})
-
 	})
 
 	Context("with invalid user defined values", func() {
@@ -740,7 +763,6 @@ current-context: test-context`
 	})
 
 	Context("with ENABLED_CONTROLLERS set", func() {
-
 		BeforeEach(func() {
 			unsetEnv()
 			createAndSetKubeConfig()
@@ -754,7 +776,6 @@ current-context: test-context`
 		})
 
 		It("should use reconciler periods from API", func(done Done) {
-
 			cfg := new(config.Config)
 			err := cfg.Parse()
 			Expect(err).ToNot(HaveOccurred())
@@ -770,13 +791,17 @@ current-context: test-context`
 						HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled},
 					},
 					Policy: &v3.PolicyControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30},
+					},
 					WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31},
+					},
 					Namespace: &v3.NamespaceControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32},
+					},
 					ServiceAccount: &v3.ServiceAccountControllerConfig{
-						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33},
+					},
 				},
 			}
 			m := &mockKCC{get: kcc}

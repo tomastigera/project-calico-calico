@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/textproto"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -118,8 +119,6 @@ type Server struct {
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
-	sniServiceMap map[string]string
-
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
 
@@ -134,18 +133,23 @@ type Server struct {
 	// BearerTokenFile location by the kubelet (k8s 1.22+). This token source uses client-go's tokenSource.
 	tokenSource               oauth2.TokenSource
 	waitForStatusManagerClose func()
+
+	impersonationSupported bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
 func New(client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, mcQuerierFactory ManagedClusterQuerierFactory, opts ...Option) (*Server, error) {
 	srv := &Server{
-		config:        config,
-		authenticator: authenticator,
+		config:                 config,
+		authenticator:          authenticator,
+		impersonationSupported: vcfg.ManagedClusterSupportsImpersonation,
 		clusters: &clusters{
-			clusters:   make(map[string]*cluster),
-			voltronCfg: &vcfg,
-			client:     client,
+			clusters:        make(map[string]*cluster),
+			tenantID:        vcfg.TenantID,
+			tenantNamespace: vcfg.TenantNamespace,
+			goldmaneEnabled: vcfg.GoldmaneEnabled,
+			client:          client,
 			// Dummy function that will be overwritten if voltron is accepting
 			// managed cluster connections.
 			statusUpdateFunc:             func(string, v3.ManagedClusterStatusValue) {},
@@ -165,10 +169,11 @@ func New(client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, a
 
 	// Generate TLS configuration for the per-cluster HTTPS server that
 	// handles incoming requests from connected managed clusters.
-	if err := srv.clusters.makeInnerTLSConfig(); err != nil {
+	tlsConfig, err := makeInnerTLSConfig(vcfg)
+	if err != nil {
 		return nil, err
 	}
-	srv.clusters.sniServiceMap = srv.sniServiceMap
+	srv.clusters.tlsConfig = tlsConfig
 
 	// Create an HTTP server to handle incoming requests.
 	srv.proxyMux = http.NewServeMux()
@@ -232,6 +237,30 @@ func New(client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, a
 
 	srv.tokenSource = transport.NewCachedFileTokenSource(config.BearerTokenFile)
 	return srv, nil
+}
+
+func makeInnerTLSConfig(voltronCfg config.Config) (*tls.Config, error) {
+	cfg, err := calicotls.NewTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	if voltronCfg.LinseedServerKey != "" && voltronCfg.LinseedServerCert != "" {
+		certBytes, err := os.ReadFile(voltronCfg.LinseedServerCert)
+		if err != nil {
+			return nil, err
+		}
+		keyBytes, err := os.ReadFile(voltronCfg.LinseedServerKey)
+		if err != nil {
+			return nil, err
+		}
+		cert, err := tls.X509KeyPair(certBytes, keyBytes)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Certificates = append(cfg.Certificates, cert)
+	}
+
+	return cfg, nil
 }
 
 // ServeHTTPS starts serving HTTPS requests
@@ -483,7 +512,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// 1. The request is going to a managed cluster, and Guardian has impersonation capabilities.
 	// 2. The request is going to the management cluster.
 	// 3. The request is from non-cluster hosts using Tigera signed JWT tokens.
-	if s.clusters.voltronCfg.ManagedClusterSupportsImpersonation || !shouldUseTunnel {
+	if s.impersonationSupported || !shouldUseTunnel {
 		// Don't overwrite impersonation headers set by clients.
 		if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {
 			addImpersonationHeaders(r, usr)
@@ -515,7 +544,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 			(strings.HasPrefix(userName, "system:serviceaccount:tigera-") ||
 				strings.HasPrefix(userName, "system:serviceaccount:calico-") ||
 				strings.HasPrefix(userName, "system:serviceaccount:cc-tenant-")) ||
-			!s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
+			!s.impersonationSupported {
 			logrus.Debugf("Removing impersonation headers from request (%s)", userName)
 			r.Header.Del(authnv1.ImpersonateUserHeader)
 			r.Header.Del(authnv1.ImpersonateGroupHeader)
@@ -526,7 +555,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		// to refer to the older policy recommendation service account.
 		// Apply the impersonation header only to non–free-tier clusters that support impersonation;
 		// free-tier clusters do not support impersonation.
-		if isOlderCluster && s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
+		if isOlderCluster && s.impersonationSupported {
 			switch userName {
 			case "system:serviceaccount:calico-system:tigera-policy-recommendation":
 				r.Header.Set(authnv1.ImpersonateUserHeader, "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation")

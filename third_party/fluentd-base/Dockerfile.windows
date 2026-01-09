@@ -7,7 +7,7 @@ ARG WINDOWS_VERSION
 
 FROM mcr.microsoft.com/windows/servercore:${WINDOWS_VERSION}-amd64
 
-RUN powershell -Command "Invoke-WebRequest -Uri https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.7-1/rubyinstaller-devkit-3.4.7-1-x64.exe -OutFile C:\rubyinstaller.exe; `
+RUN powershell -Command "Invoke-WebRequest -Uri https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.8-1/rubyinstaller-devkit-3.4.8-1-x64.exe -OutFile C:\rubyinstaller.exe; `
     Start-Process -FilePath C:\rubyinstaller.exe -ArgumentList '/allusers /norestart /tasks=assocfiles,modpath /verysilent /dir=C:\ruby34' -Wait; `
     & C:\ruby34\bin\ridk.cmd install 1 2 3; `
     & C:\ruby34\msys64\usr\bin\pacman -S --noconfirm jq; `

@@ -206,7 +206,7 @@ func WithUnauthenticatedTargets(tgts []string) Option {
 // WithSNIServiceMap sets the service map used by the SNI proxy to say where to proxy traffic from a specific host to.
 func WithSNIServiceMap(serviceMap map[string]string) Option {
 	return func(s *Server) error {
-		s.sniServiceMap = serviceMap
+		s.clusters.sniServiceMap = serviceMap
 		return nil
 	}
 }
