@@ -140,14 +140,14 @@ func (c *client) populateNodeConfig(config *types.BirdBGPConfig, ipVersion int) 
 	switch logLevel {
 	case "none":
 		// DebugMode stays empty (no debug output)
-		// PeerLogging stays empty too
+		// PeerDebugMode stays empty too
 	case "debug":
 		config.DebugMode = "all"
-		config.PeerLogging = "debug all;"
+		config.PeerDebugMode = "debug all;"
 	default:
 		// Default behavior for empty string or any other log level
 		config.DebugMode = "{ states }"
-		config.PeerLogging = "debug { states, routes, filters, events };"
+		config.PeerDebugMode = "debug { states, routes, filters, events };"
 	}
 
 	// Handle router ID logic
@@ -492,6 +492,9 @@ func (c *client) buildPeerFromData(peer *backends.BGPPeer, prefix string, config
 	result.DirectlyConnected = peer.DirectlyConnected
 
 	// TTL security - store the hop count or "off"
+	// Note: This differs from OSS which formats it as "on;\n  multihop %d".
+	// In our template, we handle "ttl security on/off;" and "multihop <value>;" separately,
+	// so we only store the numeric hop count value or "off" here.
 	if peer.TTLSecurity > 0 {
 		result.TTLSecurity = fmt.Sprintf("%d", peer.TTLSecurity)
 	} else {

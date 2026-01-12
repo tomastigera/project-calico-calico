@@ -93,8 +93,8 @@ protocol bfd {
 {{else}}
 # Template for all BGP clients
 template bgp bgp_template {
-{{- if $config.PeerLogging}}
-  {{$config.PeerLogging}}
+{{- if $config.PeerDebugMode}}
+  {{$config.PeerDebugMode}}
 {{- end}}
   description "Connection to BGP peer";
   local as {{$config.ASNumber}};
@@ -144,7 +144,7 @@ protocol bgp {{.Name}} from bgp_template {
   };
 {{- else}}
   import all;        # Import all routes, since we don't know what the upstream
-                       # topology is and therefore have to trust the ToR/RR.
+                     # topology is and therefore have to trust the ToR/RR.
 {{- end}}
 {{- if .ExportFilter}}
   export filter {

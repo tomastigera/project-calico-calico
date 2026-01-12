@@ -2341,7 +2341,7 @@ func TestTruncateBGPFilterName(t *testing.T) {
 // Private Feature Tests
 // =============================================================================
 
-func TestPopulateNodeConfig_PeerLogging(t *testing.T) {
+func TestPopulateNodeConfig_PeerDebugMode(t *testing.T) {
 	originalNodeName := NodeName
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
@@ -2399,7 +2399,7 @@ func TestPopulateNodeConfig_PeerLogging(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedDebugMode, config.DebugMode)
-			assert.Equal(t, tt.expectedPeerLog, config.PeerLogging)
+			assert.Equal(t, tt.expectedPeerLog, config.PeerDebugMode)
 		})
 	}
 }

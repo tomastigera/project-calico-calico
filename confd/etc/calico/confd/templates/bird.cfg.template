@@ -93,8 +93,8 @@ protocol bfd {
 {{else}}
 # Template for all BGP clients
 template bgp bgp_template {
-{{- if $config.PeerLogging}}
-  {{$config.PeerLogging}}
+{{- if $config.PeerDebugMode}}
+  {{$config.PeerDebugMode}}
 {{- end}}
   description "Connection to BGP peer";
   local as {{$config.ASNumber}};

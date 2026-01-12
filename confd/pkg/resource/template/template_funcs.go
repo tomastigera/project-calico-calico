@@ -46,7 +46,6 @@ func newFuncMap() map[string]interface{} {
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
 	m["externalNetworkBIRDConfig"] = ExternalNetworkBIRDConfig
-	m["bgpFilterFunctionName"] = BGPFilterFunctionName
 	m["bgpFilterBIRDFuncs"] = BGPFilterBIRDFuncs
 	return m
 }
