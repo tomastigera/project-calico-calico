@@ -1,0 +1,21 @@
+dashboards:
+- id: "1"
+  isImmutable: true
+  title: Traffic Volume
+- id: "2"
+  isImmutable: true
+  title: DNS Logs
+- id: "3"
+  isImmutable: true
+  title: Flow Logs
+- id: "6"
+  isImmutable: true
+  title: Ingress Gateway L7
+- id: "4"
+  isImmutable: true
+  title: HTTP Traffic
+- id: "5"
+  isImmutable: true
+  title: Network Performance
+- id: fake-dashboard-id2
+  title: fake-dashboard2

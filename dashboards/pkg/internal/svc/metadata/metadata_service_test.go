@@ -1,19 +1,19 @@
 package metadata
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
-	"net/http"
+	"fmt"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/require"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
+	"github.com/tigera/tds-apiserver/lib/util"
+	"github.com/tigera/tds-apiserver/pkg/http/handleradapters"
 	"github.com/tigera/tds-apiserver/pkg/types"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,97 +23,132 @@ import (
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/map/orderedmap"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/testutils"
+)
+
+var (
+	errMetadataNotFound = httpreply.Reply{
+		Key:     "http_status_404",
+		Status:  404,
+		Message: `{"key":"error_not_found","message":"the entity was not found"}`,
+	}
 )
 
 func TestMetadataService(t *testing.T) {
 
 	logger := logging.New("TestMetadataService")
 
-	var serverRequest http.Request
-	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeError := func(err error) bool {
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte(err.Error()))
-				return true
-			}
-			return false
-		}
+	fakeDashboards := orderedmap.New[types.DashboardID, *client.Dashboard]()
+	for _, dashboard := range []client.Dashboard{
+		{ID: "fake-dashboard-id1", Title: "fake-dashboard1", IsImmutable: true},
+		{ID: "fake-dashboard-id2", Title: "fake-dashboard2"},
+	} {
+		fakeDashboards.Put(types.DashboardID(dashboard.ID), &dashboard)
+	}
 
-		requestBody, err := io.ReadAll(r.Body)
-		if writeError(err) {
-			return
-		}
-		err = r.Body.Close()
-		if writeError(err) {
-			return
-		}
+	withDashboardID := handleradapters.WithPathParam[types.DashboardID]("dashboardID", handleradapters.WithParamDescription("Dashboard ID"))
+	withAuthorization := handleradapters.WithRequiredHeader[string]("Authorization")
 
-		serverRequest = *r
-		if len(requestBody) == 0 {
-			r.Body = http.NoBody
-			serverRequest.Body = http.NoBody
-		} else {
-			r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-			serverRequest.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-		}
-
-		switch serverRequest.Method {
-		case http.MethodGet:
-			var err error
-			if strings.HasSuffix(r.URL.Path, "/server-path") {
-				err = writeJson(w, &client.DashboardListResponse{})
-			} else {
-				err = writeJson(w, &client.Dashboard{
-					ID: client.DashboardID(strings.TrimPrefix(r.URL.Path, "/server-path/")),
-				})
-			}
-			if writeError(err) {
-				return
-			}
-		case http.MethodPost:
-			createReq := &client.DashboardCreateRequest{}
-			err = json.NewDecoder(bytes.NewBuffer(requestBody)).Decode(createReq)
-			if writeError(err) {
-				return
+	// mock (tds-apiserver) remote metadata api
+	reg := handleradapters.NewRegistry("/api", httprouter.New())
+	reg.Group("Metadata").Apply(func(reg handleradapters.Registry) {
+		reg.GET("/metadata/:dashboardID", handleradapters.In2Out1(func(auth string, dashboardID types.DashboardID) (client.Dashboard, error) {
+			if auth != "Bearer fake-token" {
+				return client.Dashboard{}, httpreply.ReplyAccessDenied
 			}
 
-			err = writeJson(w, &client.Dashboard{
-				ID:             "fake-create-dashboard-id",
-				Title:          createReq.Title,
-				Cards:          createReq.Cards,
-				Layout:         createReq.Layout,
-				DefaultFilters: createReq.DefaultFilters,
-			})
-			if writeError(err) {
-				return
-			}
-		case http.MethodPut:
-			updateReq := &client.DashboardUpdateRequest{}
-			err = json.NewDecoder(bytes.NewBuffer(requestBody)).Decode(updateReq)
-			if writeError(err) {
-				return
+			dashboard, found := fakeDashboards.Get(dashboardID)
+			if !found || dashboard == nil {
+				return client.Dashboard{}, httpreply.ReplyNotFound
 			}
 
-			err = writeJson(w, &client.Dashboard{
-				ID:             "fake-update-dashboard-id",
-				Title:          updateReq.Title,
-				Cards:          updateReq.Cards,
-				Layout:         updateReq.Layout,
-				DefaultFilters: updateReq.DefaultFilters,
-			})
-			if writeError(err) {
-				return
-			}
-		}
-	}))
+			return *dashboard, nil
+		},
+			withAuthorization,
+			withDashboardID,
+			handleradapters.WithRespBody[client.Dashboard]()))
 
+		reg.GET("/metadata", handleradapters.In1Out1(func(auth string) (client.DashboardListResponse, error) {
+			if auth != "Bearer fake-token" {
+				return client.DashboardListResponse{}, httpreply.ReplyAccessDenied
+			}
+
+			return client.DashboardListResponse{
+				Dashboards: slices.Map(fakeDashboards.ValuesInOrder(), func(dashboard *client.Dashboard) client.DashboardSummary {
+					return client.DashboardSummary{
+						ID:          dashboard.ID,
+						Title:       dashboard.Title,
+						IsImmutable: dashboard.IsImmutable,
+					}
+				}),
+			}, nil
+		},
+			withAuthorization,
+			handleradapters.WithRespBody[client.DashboardListResponse]()))
+
+		reg.POST("/metadata", handleradapters.In2Out1(func(auth string, req client.DashboardCreateRequest) (client.Dashboard, error) {
+			if auth != "Bearer fake-token" {
+				return client.Dashboard{}, httpreply.ReplyAccessDenied
+			}
+			dashboard := &client.Dashboard{
+				ID:             client.DashboardID(fmt.Sprintf("fake-dashboard-id-%s", util.CryptoRandAlphaNum(8))),
+				Title:          req.Title,
+				Cards:          req.Cards,
+				Layout:         req.Layout,
+				DefaultFilters: req.DefaultFilters,
+			}
+			fakeDashboards.Put(types.DashboardID(dashboard.ID), dashboard)
+
+			return *dashboard, nil
+		},
+			withAuthorization,
+			handleradapters.WithReqBody[client.DashboardCreateRequest](),
+			handleradapters.WithRespBody[client.Dashboard]()))
+
+		reg.PUT("/metadata/:dashboardID", handleradapters.In3Out1(func(auth string, dashboardID types.DashboardID, req client.DashboardUpdateRequest) (client.Dashboard, error) {
+			if auth != "Bearer fake-token" {
+				return client.Dashboard{}, httpreply.ReplyAccessDenied
+			}
+			dashboard, found := fakeDashboards.Get(dashboardID)
+			if !found || dashboard == nil {
+				return client.Dashboard{}, httpreply.ReplyNotFound
+			}
+
+			dashboard.Title = req.Title
+			dashboard.Cards = req.Cards
+			dashboard.Layout = req.Layout
+			dashboard.DefaultFilters = req.DefaultFilters
+
+			return *dashboard, nil
+		},
+			withAuthorization,
+			withDashboardID,
+			handleradapters.WithReqBody[client.DashboardUpdateRequest](),
+			handleradapters.WithRespBody[client.Dashboard]()))
+
+		reg.DELETE("/metadata/:dashboardID", handleradapters.In2Out0(func(auth string, dashboardID types.DashboardID) error {
+			if auth != "Bearer fake-token" {
+				return httpreply.ReplyAccessDenied
+			}
+			dashboard, found := fakeDashboards.Get(dashboardID)
+			if !found || dashboard == nil {
+				return httpreply.ReplyNotFound
+			}
+
+			fakeDashboards.Put(dashboardID, nil)
+			return nil
+		},
+			withAuthorization,
+			withDashboardID))
+	})
+
+	httpServer := httptest.NewServer(reg.Handler())
 	t.Cleanup(httpServer.Close)
 
-	fakeDashboardID := types.DashboardID("fake-dashboard-id")
-
-	subject := NewRemoteMetadataService(logger, httpServer.URL+"/server-path", collections.Collections(nil))
+	subject, err := NewRemoteMetadataService(logger, packageNamePro, httpServer.URL+"/api/metadata", collections.Collections(nil), nil)
+	require.NoError(t, err)
 
 	newUserAuthContextWithResourceRules := func(t *testing.T, resourceRules []authzv1.ResourceRule) security.Context {
 		authorizer, err := security.NewAuthorizer(
@@ -164,8 +199,6 @@ func TestMetadataService(t *testing.T) {
 		t.Run("success", func(t *testing.T) {
 			_, err := subject.List(ctx, types.ProjectIDDefault)
 			require.NoError(t, err)
-
-			require.Equal(t, "Bearer fake-token", serverRequest.Header.Get("Authorization"))
 		})
 
 		t.Run("unauthorized", func(t *testing.T) {
@@ -177,22 +210,52 @@ func TestMetadataService(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
-		_, err := subject.List(ctx, types.ProjectIDDefault)
-		require.NoError(t, err)
+		testCases := []struct {
+			packageName types.PackageName
+			goldenYaml  string
+		}{
+			{
+				packageName: packageNamePro,
+				goldenYaml:  "dashboard-list-pro",
+			},
+			{
+				packageName: packageNameFree,
+				goldenYaml:  "dashboard-list-free",
+			},
+		}
 
-		require.Equal(t, "/server-path", serverRequest.URL.Path)
-		require.Equal(t, http.MethodGet, serverRequest.Method)
-	})
+		for _, tc := range testCases {
+			t.Run(string(tc.packageName), func(t *testing.T) {
+				subject, err := NewRemoteMetadataService(logger, tc.packageName, httpServer.URL+"/api/metadata", collections.Collections(nil), nil)
+				require.NoError(t, err)
 
-	t.Run("get", func(t *testing.T) {
-		dashboard, err := subject.Get(ctx, types.ProjectIDDefault, fakeDashboardID)
-		require.NoError(t, err)
+				dashboards, err := subject.List(ctx, types.ProjectIDDefault)
+				require.NoError(t, err)
+				testutils.ExpectMatchesGoldenYaml(t, tc.goldenYaml, dashboards)
+			})
+		}
 
-		require.Equal(t, "/server-path/fake-dashboard-id", serverRequest.URL.Path)
-		require.Equal(t, http.MethodGet, serverRequest.Method)
-		require.Equal(t, client.Dashboard{
-			ID: "fake-dashboard-id",
-		}, dashboard)
+		t.Run("disabled dashboards", func(t *testing.T) {
+			disabledDashboards := map[string][]string{"global": {"1"}}
+
+			subject, err := NewRemoteMetadataService(logger, packageNamePro, httpServer.URL+"/api/metadata", collections.Collections(nil), nil)
+			require.NoError(t, err)
+
+			resp, err := subject.List(ctx, types.ProjectIDDefault)
+			require.NoError(t, err)
+			require.True(t, slices.AnyMatch(resp.Dashboards, func(summary client.DashboardSummary) bool {
+				return summary.ID == "1"
+			}))
+
+			subject, err = NewRemoteMetadataService(logger, packageNamePro, httpServer.URL+"/api/metadata", collections.Collections(nil), disabledDashboards)
+			require.NoError(t, err)
+
+			resp, err = subject.List(ctx, types.ProjectIDDefault)
+			require.NoError(t, err)
+			require.False(t, slices.AnyMatch(resp.Dashboards, func(summary client.DashboardSummary) bool {
+				return summary.ID == "1"
+			}))
+		})
 	})
 
 	t.Run("create", func(t *testing.T) {
@@ -201,51 +264,74 @@ func TestMetadataService(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.Equal(t, "/server-path", serverRequest.URL.Path)
-		require.Equal(t, http.MethodPost, serverRequest.Method)
-		require.Equal(t, client.Dashboard{
-			ID:    "fake-create-dashboard-id",
-			Title: "fake-dashboard-title-create",
-		}, dashboard)
-	})
+		require.Equal(t, "fake-dashboard-title-create", dashboard.Title)
+		require.False(t, dashboard.IsImmutable)
 
-	t.Run("update", func(t *testing.T) {
-		dashboard, err := subject.Update(ctx, types.ProjectIDDefault, "fake-update-dashboard-id", client.DashboardUpdateRequest{
-			Title: "fake-dashboard-title-update",
+		t.Run("get", func(t *testing.T) {
+
+			testCases := []struct {
+				name        string
+				dashboardID types.DashboardID
+
+				expected        client.Dashboard
+				expectedError   error
+				expectedURLPath string
+			}{
+				{
+					name:            "static",
+					dashboardID:     types.DashboardID("1"),
+					expectedURLPath: "/server-path/1",
+					expected: client.Dashboard{
+						ID:          "1",
+						Title:       "Traffic Volume",
+						IsImmutable: true,
+					},
+				},
+				{
+					name:            "created",
+					dashboardID:     types.DashboardID(dashboard.ID),
+					expectedURLPath: fmt.Sprintf("/server-path/%s", dashboard.ID),
+					expected: client.Dashboard{
+						ID:    dashboard.ID,
+						Title: "fake-dashboard-title-create",
+					},
+				},
+				{
+					name:            "not found",
+					dashboardID:     types.DashboardID("unknown-dashboard-id"),
+					expectedURLPath: "/server-path/unknown-dashboard-id",
+					expectedError:   errMetadataNotFound,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					resp, err := subject.Get(ctx, types.ProjectIDDefault, tc.dashboardID)
+					require.Equal(t, tc.expectedError, err)
+
+					require.Equal(t, tc.expected.ID, resp.ID)
+					require.Equal(t, tc.expected.Title, resp.Title)
+				})
+			}
 		})
-		require.NoError(t, err)
 
-		require.Equal(t, "/server-path/fake-update-dashboard-id", serverRequest.URL.Path)
-		require.Equal(t, http.MethodPut, serverRequest.Method)
-		require.Equal(t, client.Dashboard{
-			ID:    "fake-update-dashboard-id",
-			Title: "fake-dashboard-title-update",
-		}, dashboard)
+		t.Run("update", func(t *testing.T) {
+			dashboard, err := subject.Update(ctx, types.ProjectIDDefault, types.DashboardID(dashboard.ID), client.DashboardUpdateRequest{
+				Title: "fake-dashboard-title-update",
+			})
+			require.NoError(t, err)
+			require.Equal(t, client.Dashboard{
+				ID:    dashboard.ID,
+				Title: "fake-dashboard-title-update",
+			}, dashboard)
+		})
+
+		t.Run("delete", func(t *testing.T) {
+			err := subject.Delete(ctx, types.ProjectIDDefault, types.DashboardID(dashboard.ID))
+			require.NoError(t, err)
+
+			err = subject.Delete(ctx, types.ProjectIDDefault, types.DashboardID(dashboard.ID))
+			require.ErrorIs(t, err, errMetadataNotFound)
+		})
 	})
-
-	t.Run("delete", func(t *testing.T) {
-		err := subject.Delete(ctx, types.ProjectIDDefault, fakeDashboardID)
-		require.NoError(t, err)
-
-		require.Equal(t, "/server-path/fake-dashboard-id", serverRequest.URL.Path)
-		require.Equal(t, http.MethodDelete, serverRequest.Method)
-		require.Equal(t, http.NoBody, serverRequest.Body)
-	})
-}
-
-func writeJson(w http.ResponseWriter, object any) error {
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-
-	b, err := json.Marshal(object)
-	if err != nil {
-		return err
-	}
-
-	_, err = w.Write(b)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
