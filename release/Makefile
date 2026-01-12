@@ -58,7 +58,7 @@ hashrelease-svr-gc: bin/release
 hashrelease-enterprise-smoke-test:
 	@mkdir -p report
 	@echo "Running smoke tests hashrelease enterprise ..."
-	@$(DOCKER_GO_BUILD) gotestsum --junitfile report/hashrelease-smoke-tests.xml \
+	@EXTRA_DOCKER_ARGS="-e SKIP_SMOKE_TESTS=$(SKIP_SMOKE_TESTS) -e REPO_ROOT=/go/src/github.com/projectcalico/calico" $(DOCKER_GO_BUILD) gotestsum --junitfile report/hashrelease-smoke-tests.xml \
 		-- -v -timeout 4h $(POSTRELEASE_TEST_PACKAGE)/enterprise -run TestHashreleaseSmokeTests
 
 ###############################################################################

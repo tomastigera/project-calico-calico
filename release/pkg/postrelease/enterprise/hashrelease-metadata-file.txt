@@ -1,9 +1,0 @@
-name: 2026-01-09-v3-23-1-detector
-hash: v3.23.0-1.0-calient-0.dev-1871-gd23e2db58373-v1.41.0-0.dev-95-g1e68fd770ead
-stream: master
-version: v3.23.0-1.0-calient-0.dev-1871-gd23e2db58373
-operator: v1.41.0-0.dev-95-g1e68fd770ead
-url: https://2026-01-09-v3-23-1-detector.docs.eng.tigera.net/
-slack:
-  channel: C123ABC456
-  timestamp: "1767941028.000000"

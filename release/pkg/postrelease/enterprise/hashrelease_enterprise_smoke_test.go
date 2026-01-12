@@ -51,9 +51,10 @@ func init() {
 // NOTE: This is an enterprise-specific hashrelease smoke test and is designed to verify
 // the integrity and functionality of enterprise hashrelease builds before production deployment.
 func TestHashreleaseSmokeTests(t *testing.T) {
-	// Check if we're in a CI environment or if required environment is set up
+	// Check if we should skip smoke tests before any other initialization
 	if os.Getenv("SKIP_SMOKE_TESTS") == "true" {
 		t.Skip("Skipping smoke tests as SKIP_SMOKE_TESTS is set")
+		return
 	}
 
 	// Define test configurations using flag parameters
@@ -118,9 +119,11 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 			logrus.Infof("  Dataplane: %s", tc.dataplane)
 
 			// Get the repository root directory
+			// Go test runs from the test package directory:
+			// /go/src/github.com/projectcalico/calico/release/pkg/postrelease/enterprise
+			// Repo root is 4 levels up at /go/src/github.com/projectcalico/calico
 			repoRoot := os.Getenv("REPO_ROOT")
 			if repoRoot == "" {
-				// Try to find repo root by going up from current directory
 				repoRoot = filepath.Join("..", "..", "..", "..")
 			}
 
@@ -255,6 +258,9 @@ func setURLEnvironmentVariables() error {
 	if !ok || url == "" {
 		return fmt.Errorf("url field not found or empty in metadata")
 	}
+
+	// Ensure URL ends with exactly one trailing slash
+	url = strings.TrimRight(url, "/")
 
 	// Set environment variables based on the URL
 	releaseArtifactsURL := url + "/"
