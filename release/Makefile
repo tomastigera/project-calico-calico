@@ -59,7 +59,7 @@ hashrelease-enterprise-smoke-test:
 	@mkdir -p report
 	@echo "Running smoke tests hashrelease enterprise ..."
 	@$(DOCKER_GO_BUILD) gotestsum --junitfile report/hashrelease-smoke-tests.xml \
-		-- -v -timeout 4h $(POSTRELEASE_TEST_PACKAGE) -run TestHashreleaseSmokeTests
+		-- -v -timeout 4h $(POSTRELEASE_TEST_PACKAGE)/enterprise -run TestHashreleaseSmokeTests
 
 ###############################################################################
 # Release

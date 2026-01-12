@@ -1,10 +1,12 @@
-package postrelease
+package enterprise
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -22,6 +24,10 @@ var (
 	provisioner       string
 	k8sVersion        string
 	dataplane         string
+	hashreleaseMetadataFile string
+	
+	// hashreleaseMetadata stores the parsed metadata from the hashrelease metadata file
+	hashreleaseMetadata map[string]string
 )
 
 func init() {
@@ -35,6 +41,7 @@ func init() {
 	flag.StringVar(&provisioner, "provisioner", "gcp-kubeadm", "Kubernetes provisioner to use")
 	flag.StringVar(&k8sVersion, "k8s-version", "stable-1", "Kubernetes version to test")
 	flag.StringVar(&dataplane, "dataplane", "CalicoIptables", "Dataplane to use for tests")
+	flag.StringVar(&hashreleaseMetadataFile, "hashrelease-metadata-file", "hashrelease-metadata-file.txt", "Path to hashrelease metadata file for setting URL environment variables")
 }
 
 // TestHashreleaseSmokeTests runs the smoke tests specifically for enterprise hashreleases.
@@ -75,6 +82,21 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 		"USE_LATEST_RELEASE": useLatestRelease,
 	}
 
+	// Load and set URL environment variables from hashrelease metadata file if provided
+	if hashreleaseMetadataFile != "" {
+		// Check if the file exists before parsing
+		if _, err := os.Stat(hashreleaseMetadataFile); err == nil {
+			if err := parseHashreleaseMetadataFile(hashreleaseMetadataFile); err != nil {
+				t.Fatalf("Failed to parse hashrelease metadata: %v", err)
+			}
+			if err := setURLEnvironmentVariables(); err != nil {
+				t.Fatalf("Failed to set URL environment variables: %v", err)
+			}
+		} else {
+			t.Logf("Hashrelease metadata file not found at %s, skipping URL environment variable setup", hashreleaseMetadataFile)
+		}
+	}
+
 	// Set common environment variables
 	for key, value := range commonEnvVars {
 		if err := os.Setenv(key, value); err != nil {
@@ -95,10 +117,17 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 			logrus.Infof("  K8S Version: %s", tc.k8sVersion)
 			logrus.Infof("  Dataplane: %s", tc.dataplane)
 
+			// Get the repository root directory
+			repoRoot := os.Getenv("REPO_ROOT")
+			if repoRoot == "" {
+				// Try to find repo root by going up from current directory
+				repoRoot = filepath.Join("..", "..", "..", "..")
+			}
+
 			// Check if the end-to-end scripts exist
-			prologueScript := "/.semaphore/end-to-end/scripts/global_prologue.sh"
-			bodyScript := "/.semaphore/end-to-end/scripts/body_standard.sh"
-			epilogueScript := "/.semaphore/end-to-end/scripts/global_epilogue.sh"
+			prologueScript := filepath.Join(repoRoot, ".semaphore/end-to-end/scripts/global_prologue.sh")
+			bodyScript := filepath.Join(repoRoot, ".semaphore/end-to-end/scripts/body_standard.sh")
+			epilogueScript := filepath.Join(repoRoot, ".semaphore/end-to-end/scripts/global_epilogue.sh")
 
 			// Run prologue
 			if err := runScript(prologueScript); err != nil {
@@ -117,15 +146,12 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 				t.Logf("Warning: Epilogue script failed: %v", err)
 			}
 
-			// Run cleanup after epilogue
-			cleanupScript := "/.semaphore/end-to-end/pipelines/cleanup.yml"
-			if _, err := os.Stat(cleanupScript); err == nil {
+			// Run cleanup after epilogue (note: cleanup is handled by runCleanup function)
+			if true {
 				logrus.Info("Running cleanup jobs...")
 				if err := runCleanup(); err != nil {
 					t.Logf("Warning: Cleanup failed: %v", err)
 				}
-			} else {
-				t.Logf("Cleanup script not found, skipping cleanup")
 			}
 
 			// Check if body script failed
@@ -136,6 +162,122 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 			logrus.Infof("Smoke test passed: %s", tc.name)
 		})
 	}
+}
+
+// parseHashreleaseMetadataFile parses the hashrelease metadata text file
+// and stores the key-value pairs in the global hashreleaseMetadata variable
+func parseHashreleaseMetadataFile(metadataFilePath string) error {
+	logrus.Infof("Parsing hashrelease metadata from: %s", metadataFilePath)
+
+	// Check if file exists
+	if _, err := os.Stat(metadataFilePath); os.IsNotExist(err) {
+		return fmt.Errorf("hashrelease metadata file not found: %s", metadataFilePath)
+	}
+
+	// Open the file
+	file, err := os.Open(metadataFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open metadata file: %w", err)
+	}
+	defer file.Close()
+
+	// Parse the file line by line and create key-value map
+	hashreleaseMetadata = make(map[string]string)
+	scanner := bufio.NewScanner(file)
+	var currentParent string
+	
+	for scanner.Scan() {
+		line := scanner.Text()
+		trimmedLine := strings.TrimSpace(line)
+		
+		// Skip empty lines
+		if trimmedLine == "" {
+			continue
+		}
+		
+		// Check if line is indented (nested value)
+		isIndented := len(line) > 0 && (line[0] == ' ' || line[0] == '\t')
+		
+		// Split by colon to get key and value
+		parts := strings.SplitN(trimmedLine, ":", 2)
+		if len(parts) >= 1 {
+			key := strings.TrimSpace(parts[0])
+			var value string
+			if len(parts) == 2 {
+				value = strings.TrimSpace(parts[1])
+			}
+			
+			if isIndented && currentParent != "" {
+				// Nested value - combine with parent key
+				fullKey := currentParent + "." + key
+				hashreleaseMetadata[fullKey] = value
+			} else {
+				// Top-level key
+				hashreleaseMetadata[key] = value
+				// If value is empty, this might be a parent key for nested values
+				if value == "" {
+					currentParent = key
+				} else {
+					currentParent = ""
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading metadata file: %w", err)
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"hashrelease_name": hashreleaseMetadata["name"],
+		"hash":             hashreleaseMetadata["hash"],
+		"stream":           hashreleaseMetadata["stream"],
+		"version":          hashreleaseMetadata["version"],
+		"operator":         hashreleaseMetadata["operator"],
+		"url":              hashreleaseMetadata["url"],
+	}).Info("Hashrelease metadata parsed successfully")
+
+	return nil
+}
+
+// setURLEnvironmentVariables sets the URL-related environment variables
+// using the url value from the global hashreleaseMetadata variable
+func setURLEnvironmentVariables() error {
+	logrus.Info("Setting URL environment variables from hashrelease metadata")
+
+	// Check if metadata has been parsed
+	if hashreleaseMetadata == nil || len(hashreleaseMetadata) == 0 {
+		return fmt.Errorf("hashrelease metadata not parsed yet")
+	}
+
+	// Get the URL from metadata
+	url, ok := hashreleaseMetadata["url"]
+	if !ok || url == "" {
+		return fmt.Errorf("url field not found or empty in metadata")
+	}
+
+	// Set environment variables based on the URL
+	releaseArtifactsURL := url + "/"
+	docsManifestURL := url + "/" + "manifests"
+	docsURL := url + "/"
+
+	if err := os.Setenv("RELEASE_ARTIFACTS_URL", releaseArtifactsURL); err != nil {
+		return fmt.Errorf("failed to set RELEASE_ARTIFACTS_URL: %w", err)
+	}
+	if err := os.Setenv("DOCS_MANIFEST_URL", docsManifestURL); err != nil {
+		return fmt.Errorf("failed to set DOCS_MANIFEST_URL: %w", err)
+	}
+	if err := os.Setenv("DOCS_URL", docsURL); err != nil {
+		return fmt.Errorf("failed to set DOCS_URL: %w", err)
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"RELEASE_ARTIFACTS_URL": releaseArtifactsURL,
+		"DOCS_MANIFEST_URL":     docsManifestURL,
+		"DOCS_URL":              docsURL,
+	}).Info("URL environment variables set successfully")
+
+	return nil
 }
 
 // runScript executes a shell script and returns any error
