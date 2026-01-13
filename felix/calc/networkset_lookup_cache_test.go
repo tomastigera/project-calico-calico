@@ -236,14 +236,14 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}
 			ec.OnUpdate(update)
-			ed, ok := ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(Equal(before1))
-			if ok {
+			ed, match := ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(Equal(before1))
+			if match != MatchNone {
 				Expect(ed.Key()).To(Equal(netSet1Key))
 			}
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(Equal(before2))
-			if ok {
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(Equal(before2))
+			if match != MatchNone {
 				Expect(ed.Key()).To(Equal(netSet1Key))
 			}
 
@@ -255,14 +255,14 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVUpdated,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(Equal(after1))
-			if ok {
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(Equal(after1))
+			if match != MatchNone {
 				Expect(ed.Key()).To(Equal(netSet1Key))
 			}
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(Equal(after2))
-			if ok {
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(Equal(after2))
+			if match != MatchNone {
 				Expect(ed.Key()).To(Equal(netSet1Key))
 			}
 
@@ -273,10 +273,10 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(BeFalse())
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(BeFalse())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(BeFalse())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(BeFalse())
 		},
 		Entry("none -> tigera+google", &netSet1, &netSet1WithEgressDomains, "tigera.io", "google.com", false, false, true, true),
 		Entry("google -> none", &netSet2WithEgressDomains, &netSet1, "tigera.io", "google.com", false, true, false, false),
@@ -295,13 +295,13 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}
 			ec.OnUpdate(update)
-			ed, ok := ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(BeTrue())
+			ed, match := ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet1Key))
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(BeFalse())
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(BeFalse())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain12, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet1Key))
 
 			// Add networkset 2. Check domain1 still returns netset1, domain2 returns netset2 and domain12 returns
@@ -314,14 +314,14 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet1Key))
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet2Key))
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain12, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(BeElementOf(netSet1Key, netSet2Key))
 
 			// Delete networkset 1.  Check domain1 is not present and check domain2 and domain12 both return netset2.
@@ -332,13 +332,13 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(BeFalse())
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match != MatchNone).To(BeFalse())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet2Key))
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
-			Expect(ok).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain12, "")
+			Expect(match != MatchNone).To(BeTrue())
 			Expect(ed.Key()).To(Equal(netSet2Key))
 
 			// Delete networkset 1.  There should be no domain name mappings now.
@@ -349,12 +349,12 @@ var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
-			Expect(ok).To(BeFalse())
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
-			Expect(ok).To(BeFalse())
-			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
-			Expect(ok).To(BeFalse())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain1, "")
+			Expect(match == MatchNone).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain2, "")
+			Expect(match == MatchNone).To(BeTrue())
+			ed, match = ec.GetNetworkSetFromEgressDomainWithNamespace(domain12, "")
+			Expect(match == MatchNone).To(BeTrue())
 		},
 		Entry("tigera+google and projectcalico+google",
 			&netSet1WithEgressDomains, &netSet2WithEgressDomains,
@@ -447,21 +447,21 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 		Expect(networkSet.Key()).To(Equal(globalKey))
 
 		// With ns1 namespace context - should return ns1 NetworkSet
-		networkSet, ok = ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
-		Expect(ok).To(BeTrue())
+		networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
+		Expect(match).To(Equal(MatchSameNamespace))
 		Expect(networkSet.Key()).To(Equal(ns1Key))
 
 		// With different namespace context - should fallback to longest prefix match (ns1)
-		networkSet, ok = ec.GetNetworkSetFromIPWithNamespace(testIP, "ns2")
-		Expect(ok).To(BeTrue())
+		networkSet, match = ec.GetNetworkSetFromIPWithNamespace(testIP, "ns2")
+		Expect(match).To(Equal(MatchGlobal))
 		Expect(networkSet.Key()).To(Equal(globalKey))
 
 		// Test IP that only matches global range
 		testIPGlobal := ipToBytes(calinet.MustParseNetwork("10.3.1.1/32").IP)
 
 		// With any namespace context - should return global NetworkSet
-		networkSet, ok = ec.GetNetworkSetFromIPWithNamespace(testIPGlobal, "ns1")
-		Expect(ok).To(BeTrue())
+		networkSet, match = ec.GetNetworkSetFromIPWithNamespace(testIPGlobal, "ns1")
+		Expect(match).To(Equal(MatchGlobal))
 		Expect(networkSet.Key()).To(Equal(globalKey))
 	})
 
@@ -498,8 +498,8 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 		// Test multiple times to ensure consistent ordering
 		var firstResult model.Key
 		for i := 0; i < 1000; i++ {
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
+			Expect(match).ToNot(Equal(MatchNone))
 
 			if i == 0 {
 				firstResult = networkSet.Key()
@@ -542,8 +542,8 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 		// Test multiple times to ensure consistent ordering
 		var firstResult model.Key
 		for i := 0; i < 1000; i++ {
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
+			Expect(match).ToNot(Equal(MatchNone))
 
 			if i == 0 {
 				firstResult = networkSet.Key()
@@ -590,8 +590,8 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 				Expect(ok).To(BeTrue(), tc.description)
 				Expect(networkSet.Key()).To(Equal(tc.expectedKey), tc.description)
 			} else {
-				networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, tc.namespace)
-				Expect(ok).To(BeTrue(), tc.description)
+				networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, tc.namespace)
+				Expect(match).ToNot(Equal(MatchNone), tc.description)
 				Expect(networkSet.Key()).To(Equal(tc.expectedKey), tc.description)
 			}
 		}
@@ -657,8 +657,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("192.168.1.100/32").IP)
 
 			// Should always return "aaa-netset" as it's lexicographically lowest
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsBKey), "Should return lexicographically lowest global NetworkSet")
 			labelValue, labelOk := networkSet.Labels().GetString("name")
 			Expect(labelOk).To(BeTrue())
@@ -709,8 +709,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("172.20.0.50/32").IP)
 
 			// Should always return "ns1/alpha-netset" when querying with ns1 context
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsAlphaKey), "Should return lexicographically lowest namespaced NetworkSet")
 			labelValue, labelOk := networkSet.Labels().GetString("name")
 			Expect(labelOk).To(BeTrue())
@@ -748,8 +748,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("10.50.10.100/32").IP)
 
 			// With ns1 context, should return namespaced NetworkSet despite global being lexicographically lower
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(ns1Key), "Namespace precedence should override lexicographic ordering")
 			labelValue, labelOk := networkSet.Labels().GetString("type")
 			Expect(labelOk).To(BeTrue())
@@ -798,8 +798,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("10.60.0.50/32").IP)
 
 			// With ns3 context (no match), should fallback to global
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns3")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns3")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(globalKey))
 			labelValue, labelOk := networkSet.Labels().GetString("scope")
 			Expect(labelOk).To(BeTrue())
@@ -834,24 +834,24 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("10.70.0.100/32").IP)
 
 			// Should return "aaa-netset"
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsBKey))
 
 			// Delete the lexicographically lowest
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: netsBKey}, UpdateType: api.UpdateTypeKVDeleted})
 
 			// Should now return "bbb-netset"
-			networkSet, ok = ec.GetNetworkSetFromIPWithNamespace(testIP, "")
-			Expect(ok).To(BeTrue())
+			networkSet, match = ec.GetNetworkSetFromIPWithNamespace(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsCKey))
 
 			// Re-add the original lowest
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: netsBKey, Value: &netsB}, UpdateType: api.UpdateTypeKVNew})
 
 			// Should return "aaa-netset" again
-			networkSet, ok = ec.GetNetworkSetFromIPWithNamespace(testIP, "")
-			Expect(ok).To(BeTrue())
+			networkSet, match = ec.GetNetworkSetFromIPWithNamespace(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsBKey))
 		})
 
@@ -883,8 +883,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			testIP := ipToBytes(calinet.MustParseNetwork("10.80.50.100/32").IP)
 
 			// All have same prefix length, should use lexicographic ordering
-			networkSet, ok := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsAKey), "Should use lexicographic ordering when prefix lengths are equal")
 		})
 	})
@@ -916,8 +916,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: netsAKey, Value: &netsA}, UpdateType: api.UpdateTypeKVNew})
 
 			// Should always return "aaa-domain-netset"
-			networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("example.com", "")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("example.com", "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsAKey), "Should return lexicographically lowest global NetworkSet for egress domain")
 			labelValue, labelOk := networkSet.Labels().GetString("name")
 			Expect(labelOk).To(BeTrue())
@@ -949,8 +949,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: netsBKey, Value: &netsB}, UpdateType: api.UpdateTypeKVNew})
 
 			// Should return "ns1/bbb-netset"
-			networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("test.io", "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("test.io", "ns1")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(networkSet.Key()).To(Equal(netsBKey), "Should return lexicographically lowest namespaced NetworkSet")
 			labelValue, labelOk := networkSet.Labels().GetString("name")
 			Expect(labelOk).To(BeTrue())
@@ -976,16 +976,16 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: ns1Key, Value: &ns1NS}, UpdateType: api.UpdateTypeKVNew})
 
 			// With ns1 context, should prioritize namespaced
-			networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.com", "ns1")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.com", "ns1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(networkSet.Key()).To(Equal(ns1Key), "Namespace precedence should override lexicographic ordering for domains")
 			labelValue, labelOk := networkSet.Labels().GetString("type")
 			Expect(labelOk).To(BeTrue())
 			Expect(labelValue).To(Equal("namespaced"))
 
 			// Without namespace context, should use global
-			networkSet, ok = ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.com", "")
-			Expect(ok).To(BeTrue())
+			networkSet, match = ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.com", "")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(networkSet.Key()).To(Equal(globalKey))
 			labelValue, labelOk = networkSet.Labels().GetString("type")
 			Expect(labelOk).To(BeTrue())
@@ -1016,8 +1016,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			// Query multiple times and verify consistency
 			var firstResult model.Key
 			for i := 0; i < 100; i++ {
-				networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("consistent.test", "")
-				Expect(ok).To(BeTrue())
+				networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("consistent.test", "")
+				Expect(match).To(Equal(MatchGlobal))
 
 				if i == 0 {
 					firstResult = networkSet.Key()
@@ -1053,8 +1053,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: ns3Key, Value: &ns3NS}, UpdateType: api.UpdateTypeKVNew})
 
 			// Request with non-existent namespace - should fallback to lexicographically lowest from other namespaces
-			networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("fallback-test.com", "nonexistent-ns")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("fallback-test.com", "nonexistent-ns")
+			Expect(match).To(Equal(MatchOtherNamespace))
 			Expect(networkSet.Key()).To(Equal(ns1Key), "Should fallback to lexicographically lowest from other namespaces (ns1/alpha-netset)")
 
 			// Verify it returns the correct label
@@ -1088,15 +1088,15 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec.OnUpdate(api.Update{KVPair: model.KVPair{Key: otherNsKey, Value: &otherNsNS}, UpdateType: api.UpdateTypeKVNew})
 
 			// Test 1: When preferred namespace exists, it should win
-			networkSet, ok := ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "target-ns")
-			Expect(ok).To(BeTrue())
+			networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "target-ns")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(networkSet.Key()).To(Equal(targetNsKey), "Preferred namespace should have highest priority")
 			labelValue, _ := networkSet.Labels().GetString("type")
 			Expect(labelValue).To(Equal("target"))
 
 			// Test 2: When preferred namespace doesn't exist, global should win over other namespaces
-			networkSet, ok = ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "nonexistent-ns")
-			Expect(ok).To(BeTrue())
+			networkSet, match = ec.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "nonexistent-ns")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(networkSet.Key()).To(Equal(globalKey), "Global should have priority over other namespaces")
 			labelValue, _ = networkSet.Labels().GetString("type")
 			Expect(labelValue).To(Equal("global"))
@@ -1105,8 +1105,8 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 			ec2 := NewNetworkSetLookupsCache()
 			ec2.OnUpdate(api.Update{KVPair: model.KVPair{Key: otherNsKey, Value: &otherNsNS}, UpdateType: api.UpdateTypeKVNew})
 
-			networkSet, ok = ec2.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "nonexistent-ns")
-			Expect(ok).To(BeTrue())
+			networkSet, match = ec2.GetNetworkSetFromEgressDomainWithNamespace("priority-test.io", "nonexistent-ns")
+			Expect(match).To(Equal(MatchOtherNamespace))
 			Expect(networkSet.Key()).To(Equal(otherNsKey), "Other namespace should be used as last resort")
 			labelValue, _ = networkSet.Labels().GetString("type")
 			Expect(labelValue).To(Equal("other"))

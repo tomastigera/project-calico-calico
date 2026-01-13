@@ -11,6 +11,26 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
+// MatchType indicates the namespace scope of a NetworkSet match.
+// It is used to choose the best match when multiple NetworkSets cover the same IP.
+//
+// The values are ordered by priority (higher value = higher priority):
+// - MatchSameNamespace (Highest): NetworkSet in the preferred namespace.
+// - MatchGlobal (Medium): Global NetworkSet.
+// - MatchOtherNamespace (Lowest valid): NetworkSet in a different namespace.
+// - MatchNone (Sentinel): No match found (value 0).
+//
+// This specific ordering is relied upon by collector.go's lookupNetworkSetWithNamespace.
+// DO NOT reorder without updating the priority logic in that function.
+type MatchType int
+
+const (
+	MatchNone           MatchType = iota
+	MatchOtherNamespace           // Lowest priority: NetworkSet in a different namespace
+	MatchGlobal                   // Medium priority: Global (non-namespaced) NetworkSet
+	MatchSameNamespace            // Highest priority: NetworkSet in the same namespace as the endpoint
+)
+
 // LookupsCache provides an API to do the following:
 // - lookup endpoint information given an IP
 // - lookup policy/profile information given the NFLOG prefix
@@ -80,20 +100,22 @@ func (lc *LookupsCache) GetNetworkSet(addr [16]byte) (EndpointData, bool) {
 
 // GetNetworkSetWithNamespace returns the NetworkSet information for an address with namespace
 // precedence. If preferredNamespace is provided, NetworkSets in that namespace are prioritized.
-func (lc *LookupsCache) GetNetworkSetWithNamespace(addr [16]byte, preferredNamespace string) (EndpointData, bool) {
+//
+// Returns:
+//   - EndpointData: the selected NetworkSet endpoint data, or nil if no match is found.
+//   - MatchType:    indicates which priority level produced the match (SameNamespace, Global, or OtherNamespace).
+func (lc *LookupsCache) GetNetworkSetWithNamespace(addr [16]byte, preferredNamespace string) (EndpointData, MatchType) {
 	return lc.nsCache.GetNetworkSetFromIPWithNamespace(addr, preferredNamespace)
-}
-
-// GetNetworkSetFromEgressDomain returns the networkset information for an egress domain.
-// It returns the first networkset it finds that contains the given domain.
-func (lc *LookupsCache) GetNetworkSetFromEgressDomain(domain string) (EndpointData, bool) {
-	return lc.nsCache.GetNetworkSetFromEgressDomain(domain)
 }
 
 // GetNetworkSetFromEgressDomainWithNamespace returns the networkset information for an egress domain with namespace precedence.
 // It prioritizes NetworkSets in the preferredNamespace, falling back to global NetworkSets if none found in the preferred namespace.
 // If no preferred namespace is provided, it prioritizes global NetworkSets.
-func (lc *LookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (EndpointData, bool) {
+//
+// Returns:
+//   - EndpointData: the selected NetworkSet endpoint data, or nil if no match is found.
+//   - MatchType:    indicates which priority level produced the match (SameNamespace, Global, or OtherNamespace).
+func (lc *LookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (EndpointData, MatchType) {
 	return lc.nsCache.GetNetworkSetFromEgressDomainWithNamespace(domain, preferredNamespace)
 }
 
@@ -141,6 +163,14 @@ func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePo
 
 func (lc *LookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
 	return lc.svcCache.GetServiceSpecFromResourceKey(key)
+}
+
+// MockDeleteNetworkSet is a helper for tests to simulate a NetworkSet deletion.
+func (lc *LookupsCache) MockDeleteNetworkSet(k model.NetworkSetKey) {
+	lc.nsCache.OnUpdate(api.Update{
+		KVPair:     model.KVPair{Key: k, Value: nil},
+		UpdateType: api.UpdateTypeKVDeleted,
+	})
 }
 
 // SetMockData fills in some of the data structures for use in the test code. This should not

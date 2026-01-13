@@ -265,7 +265,8 @@ func compareNetworkSetKeys(h unique.Handle[model.NetworkSetKey], target model.Ne
 // GetNetworkSetFromIP finds Longest Prefix Match CIDR from given IP ADDR and return last observed
 // Networkset for that CIDR
 func (nc *NetworkSetLookupsCache) GetNetworkSetFromIP(addr [16]byte) (ed EndpointData, ok bool) {
-	return nc.GetNetworkSetFromIPWithNamespace(addr, "")
+	ed, match := nc.GetNetworkSetFromIPWithNamespace(addr, "")
+	return ed, match != MatchNone
 }
 
 // GetNetworkSetFromIPWithNamespace finds NetworkSet for the Given IP with namespace precedence.
@@ -273,7 +274,7 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromIP(addr [16]byte) (ed Endpoin
 // the global networkSets if none found, then the first lexicographically ordered matching
 // NetworkSet if no other matches are found. If no preferred namespace is provided, it prioritizes
 // global NetworkSets.
-func (nc *NetworkSetLookupsCache) GetNetworkSetFromIPWithNamespace(ipAddr [16]byte, preferredNamespace string) (ed EndpointData, ok bool) {
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromIPWithNamespace(ipAddr [16]byte, preferredNamespace string) (ed EndpointData, matchType MatchType) {
 	netIP := net.IP(ipAddr[:])
 	addr := ip.FromNetIP(netIP)
 
@@ -281,23 +282,17 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromIPWithNamespace(ipAddr [16]by
 	defer nc.nsMutex.RUnlock()
 
 	// Use the namespace isolation lookup from IpTrie for collector use case
-	key, found := nc.ipTree.GetLongestPrefixCidrWithNamespaceIsolation(addr, preferredNamespace)
-	if !found {
-		return nil, false
+	key, matchType := nc.ipTree.GetLongestPrefixCidrWithNamespaceIsolation(addr, preferredNamespace)
+	if matchType == MatchNone {
+		return nil, MatchNone
 	}
 
 	// Get the NetworkSet data for the key
 	if ns := nc.networkSets[key]; ns != nil {
-		return ns, true
+		return ns, matchType
 	}
 
-	return nil, false
-}
-
-// GetNetworkSetFromEgressDomain returns an arbitrary NetworkSet that contains the suppled egress domain. This does not do
-// any pattern matching as it is assumed the domain will be in the format configured in either a networkset or a policy.
-func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (ed EndpointData, ok bool) {
-	return nc.GetNetworkSetFromEgressDomainWithNamespace(domain, "")
+	return nil, MatchNone
 }
 
 // GetNetworkSetFromEgressDomainWithNamespace returns a NetworkSet that contains the supplied
@@ -306,13 +301,13 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (
 // 2. Global NetworkSets (if no preferred namespace match)
 // 3. NetworkSets in any other namespace (if no global match)
 // Returning the lexicographically lowest matching NetworkSet.
-func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (ed EndpointData, ok bool) {
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomainWithNamespace(domain string, preferredNamespace string) (ed EndpointData, matchType MatchType) {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 
 	handles := nc.domainToNetworksets[domain]
 	if len(handles) == 0 {
-		return nil, false
+		return nil, MatchNone
 	}
 
 	// Helper to check a specific namespace for the best match among candidates
@@ -334,16 +329,16 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomainWithNamespace(dom
 		return nil, false
 	}
 
-	// Match against preferred namespace first
-	if ed, ok := checkNamespace(preferredNamespace); ok {
-		return ed, true
+	// Match against preferred namespace first (only when preferredNamespace is non-empty)
+	if preferredNamespace != "" {
+		if ed, ok := checkNamespace(preferredNamespace); ok {
+			return ed, MatchSameNamespace
+		}
 	}
 
-	// Match against global namespace, if no preferred namespace match found
-	if preferredNamespace != "" {
-		if ed, ok := checkNamespace(""); ok {
-			return ed, true
-		}
+	// Match against global namespace
+	if ed, ok := checkNamespace(""); ok {
+		return ed, MatchGlobal
 	}
 
 	// Fallback and return the lexicographically first NetworkSet. Since the list is sorted and
@@ -351,10 +346,10 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomainWithNamespace(dom
 	lowestHandle := handles[0]
 	lowestKey := model.NetworkSetKey(lowestHandle.Value())
 	if nsData := nc.networkSets[lowestKey]; nsData != nil {
-		return nsData, true
+		return nsData, MatchOtherNamespace
 	}
 
-	return nil, false
+	return nil, MatchNone
 }
 
 func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
