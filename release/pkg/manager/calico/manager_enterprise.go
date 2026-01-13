@@ -1,8 +1,8 @@
 package calico
 
 import (
-	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -13,11 +13,11 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/sirupsen/logrus"
 	"go.yaml.in/yaml/v3"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
@@ -883,29 +883,25 @@ type makeInDirectoryWithOutputFn func(dir, target string, env ...string) (string
 // cutReleaseImage attempts to cut release images in specified directory
 // by using the provided make function to run "cut-release-image" make target
 // in the provided dir with the specified environment variables.
-func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir string, env []string) error {
+func cutReleaseImage(makeInDirectoryWithOutput makeInDirectoryWithOutputFn, dir string, env []string) error {
 	// We allow for a certain number of retries when publishing each directory, since
 	// network flakes can occasionally result in images failing to push.
+	desc := dir
 	log := logrus.WithField("directory", dir)
 	for _, e := range env {
 		if strings.HasPrefix(e, "TESLA") {
+			desc = fmt.Sprintf("%s cloud", dir)
 			log = log.WithField("cloud_image", strings.SplitN(e, "=", 2)[1])
 		} else if strings.HasPrefix(e, "WINDOWS_RELEASE") {
+			desc = fmt.Sprintf("%s windows", dir)
 			log = log.WithField("windows_image", strings.SplitN(e, "=", 2)[1])
 		}
 	}
 	maxRetries := 1
 	attempt := 0
 	for {
-		// Check if the context has been cancelled
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
 		// Attempt to cut the release image
-		out, err := fn(dir, "cut-release-image", env...)
+		out, err := makeInDirectoryWithOutput(dir, "cut-release-image", env...)
 		if err != nil {
 			if attempt < maxRetries {
 				log.WithField("attempt", attempt).WithError(err).Error("Publish failed, retrying")
@@ -914,13 +910,31 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 			}
 			// Log the output and return a formatted error
 			log.Error(out)
-			return fmt.Errorf("failed to publish %s images: %w", dir, err)
+			return fmt.Errorf("publish %s images: %w", desc, err)
 		}
 		// Success - move on
-		log.Info(out)
+		log.Debug(out)
 		break
 	}
 	return nil
+}
+
+// concurrentErrors collates errors from multiple goroutines.
+type concurrentErrors struct {
+	errs []error
+	mu   sync.Mutex
+}
+
+func (ce *concurrentErrors) Add(err error) {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
+	ce.errs = append(ce.errs, err)
+}
+
+func (ce *concurrentErrors) Error() error {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
+	return errors.Join(ce.errs...)
 }
 
 // publishReleaseImages publishes the release images for enterprise
@@ -928,16 +942,15 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 //
 // It uses concurrency to publish images from multiple directories in parallel.
 // The actual publishing is done by the cutReleaseImage function.
-// Using sync.errgroup to manage goroutines, this ensures that all publishing
-// tasks are completed before returning.
-// If any of the publishing fails, the error is returned and the entire process is halted.
+// Any errors encountered during publishing are collected and returned as a single error.
 func (m *EnterpriseManager) publishReleaseImages() error {
 	if !m.publishImages {
 		logrus.Info("Skipping publishing release images")
 		return nil
 	}
 
-	eg, ctx := errgroup.WithContext(context.Background())
+	var wg sync.WaitGroup
+	var wgErrs concurrentErrors
 
 	// Publish release images.
 	logrus.Info("Start publishing release images")
@@ -958,29 +971,43 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 		env = append(env, "SKIP_DEV_IMAGE_RETAG=true")
 	}
 	for _, dir := range enterpriseImageReleaseDirs {
-		baseEnv := slices.Clone(env)
 		current := dir
 		d := filepath.Join(m.repoRoot, current)
-		eg.Go(func() error {
-			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, baseEnv)
-		})
+
+		wg.Add(1)
+		go func(baseEnv []string, dir string) {
+			defer wg.Done()
+			if err := cutReleaseImage(m.makeInDirectoryWithOutput, dir, baseEnv); err != nil {
+				wgErrs.Add(err)
+			}
+		}(slices.Clone(env), d)
 
 		// Publish images for cloud if the directory produces Calico Cloud images
-		if slices.Contains(cloudImageReleaseDirs, dir) {
-			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "TESLA=true"))
-			})
+		if slices.Contains(cloudImageReleaseDirs, current) {
+			wg.Add(1)
+			go func(baseEnv []string, dir string) {
+				defer wg.Done()
+				if err := cutReleaseImage(m.makeInDirectoryWithOutput, dir, append(baseEnv, "TESLA=true")); err != nil {
+					wgErrs.Add(err)
+				}
+			}(slices.Clone(env), d)
 		}
 
 		// Publish images for Windows if the directory produces Windows images
 		if slices.Contains(enterpriseWindowsReleaseDirs, current) {
-			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true"))
-			})
+			wg.Add(1)
+			go func(baseEnv []string, dir string) {
+				defer wg.Done()
+				if err := cutReleaseImage(m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true")); err != nil {
+					wgErrs.Add(err)
+				}
+			}(slices.Clone(env), d)
 		}
 	}
-	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("failed to publish release images: %s", err)
+	wg.Wait()
+
+	if err := wgErrs.Error(); err != nil {
+		return fmt.Errorf("publish release images: %s", err)
 	}
 	logrus.Info("Finished publishing release images")
 	return nil
