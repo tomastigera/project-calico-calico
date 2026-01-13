@@ -437,9 +437,6 @@ chart: ../bin/tigera-operator-$(GIT_VERSION).tgz
 # tests/k8st/infra/calico_versions.yml
 TEST_BUILD_TAG=test-build
 
-# Default the branch used when pulling images, but allow it to be overridden.
-RELEASE_BRANCH ?= master
-
 operator.tar: $(K8ST_IMAGE_TARS) tests/k8st/infra/calico_versions.yml tests/k8st/infra/enterprise_versions.yml
 	cd tests/k8st/infra/ && BRANCH=$(OPERATOR_BRANCH) ./build-operator.sh
 	docker save --output $@ docker.io/tigera/operator:$(TEST_BUILD_TAG)
@@ -513,8 +510,8 @@ prometheus.tar:
 	# TODO: Build this. We cannot at the moment because it relies on the host OS npm / go toolchain.
 	# make -C ../third_party/prometheus image
 	# docker tag tigera/prometheus:latest-$(ARCH) tigera/prometheus:$(TEST_BUILD_TAG)
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(RELEASE_BRANCH) tigera/prometheus:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH) tigera/prometheus:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/prometheus:$(TEST_BUILD_TAG)
 
 prometheus-service.tar:
@@ -539,30 +536,30 @@ eck.tar:
 
 alertmanager.tar:
 	# TODO: Build this.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(RELEASE_BRANCH) tigera/alertmanager:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/alertmanager:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/alertmanager:$(TEST_BUILD_TAG)
 
 elastic.tar:
 	# TODO: Build this.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(RELEASE_BRANCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
 	# make -C ../third_party/elasticsearch/ image
 	# docker tag tigera/elasticsearch:latest-$(ARCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/elasticsearch:$(TEST_BUILD_TAG)
 
 kibana.tar:
 	# TODO: Can we run without kibana? Requires operator change.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/kibana:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/kibana:$(RELEASE_BRANCH) tigera/kibana:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH) tigera/kibana:$(TEST_BUILD_TAG)
 	# make -C ../third_party/kibana/ image
 	# docker tag tigera/kibana:latest-$(ARCH) tigera/kibana:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/kibana:$(TEST_BUILD_TAG)
 
 manager.tar:
 	# TODO
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/manager:$(RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/manager:$(RELEASE_BRANCH) tigera/manager:$(TEST_BUILD_TAG)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/manager:$(TEST_BUILD_TAG)
 	docker save --output $@ tigera/manager:$(TEST_BUILD_TAG)
 
 ui-apis.tar:
