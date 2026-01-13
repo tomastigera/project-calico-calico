@@ -114,7 +114,7 @@ template bgp bgp_template {
 # BGP Protocol Configurations
 {{- range $config.Peers}}
 protocol bgp {{.Name}} from bgp_template {
-{{- if and .LocalASNumber (or (eq .Type "global") (eq .Type "mesh") (eq .Type "local_workload"))}}
+{{- if .LocalASNumber}}
   local as {{.LocalASNumber}};
 {{- end}}
   neighbor {{.IP}}{{if .Port}} port {{.Port}}{{end}} as {{.ASNumber}};
@@ -134,9 +134,6 @@ protocol bgp {{.Name}} from bgp_template {
 {{- else}}
   multihop;
 {{- end}}
-{{- end}}
-{{- if and .LocalASNumber (eq .Type "node")}}
-  local as {{.LocalASNumber}};
 {{- end}}
 {{- if .ImportFilter}}
   import filter {
