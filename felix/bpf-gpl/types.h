@@ -117,6 +117,9 @@ struct cali_tc_state {
 	 * appropriate conntrack entry.
 	 */
 	DECLARE_IP_ADDR(ip_src_masq);
+
+	__u32 nat_svc_id;
+	__u32 pad;
 #ifndef IPVER6
 	__u8 __pad_ipv4[56];
 #endif
@@ -125,7 +128,7 @@ struct cali_tc_state {
 static CALI_BPF_INLINE void __xxx_compile_asserts_cali_tc_state(void) {
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wunused-local-typedef"
-	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 504));
+	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 512));
 	#pragma clang diagnostic pop
 }
 
