@@ -1,0 +1,36 @@
+From 3f8d0b68da30fd10916eef607ab93be1c311fb8a Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Wed, 14 Jan 2026 13:30:46 -0800
+Subject: [PATCH] Use ADD instead of tar in Kibana base image build
+
+Remove this patch once [1] is fixed in tonistiigi/binfmt.
+
+[1] https://github.com/tonistiigi/binfmt/issues/285
+---
+ .../os_packages/docker_generator/templates/base/Dockerfile  | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
+index 91dd42efd6f0..98e127fdd73d 100644
+--- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
++++ b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
+@@ -35,14 +35,12 @@ RUN cd /tmp && \
+   cd -
+ {{/usePublicArtifact}}
+ {{^usePublicArtifact}}
+-COPY {{artifactTarball}} /tmp/kibana.tar.gz
++ADD {{artifactTarball}} /tmp/
+ {{/usePublicArtifact}}
+ 
+ RUN mkdir /usr/share/kibana
+ WORKDIR /usr/share/kibana
+-RUN tar \
+-  --strip-components=1 \
+-  -zxf /tmp/kibana.tar.gz
++RUN mv /tmp/kibana-*/* .
+ 
+ # Ensure that group permissions are the same as user permissions.
+ # This will help when relying on GID-0 to run Kibana, rather than UID-1000.
+-- 
+2.52.0
+
