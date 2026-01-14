@@ -3,7 +3,7 @@
 #################################################################################################
 
 # Calico toolchain versions and the calico/base image to use.
-GO_BUILD_VER=1.25.5-llvm18.1.8-k8s1.34.2
+GO_BUILD_VER=1.25.5-llvm18.1.8-k8s1.34.2-1
 RUST_BUILD_VER=1.91.1
 
 # Calico Enterprise shipping images now builds on UBI 10. For Calico OSS to Enterprise merges,
