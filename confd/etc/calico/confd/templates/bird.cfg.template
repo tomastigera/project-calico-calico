@@ -44,7 +44,7 @@ include "bird_ipam.cfg";
 {{ $line }}
 {{- end }}
 
-router id {{$config.RouterID}};{{if $config.RouterIDComment}}  {{$config.RouterIDComment}}{{end}}
+router id {{$config.RouterID}};
 
 {{- if or $config.ListenAddress $config.ListenPort}}
 # BGP listen configuration
@@ -157,7 +157,7 @@ protocol bgp {{.Name}} from bgp_template {
   table {{.ExternalNetworkTable}};
 {{- end}}
 {{- if .Passive}}
-  passive on;{{.PassiveComment}}
+  passive on;
 {{- end}}
 {{- if .LongLivedGracefulRestart}}
   graceful restart time 0;
