@@ -1,4 +1,4 @@
-From 3f8d0b68da30fd10916eef607ab93be1c311fb8a Mon Sep 17 00:00:00 2001
+From 8a390332df776961e0a77f1b83acf018ae2ccf1c Mon Sep 17 00:00:00 2001
 From: Jiawei Huang <jiawei@tigera.io>
 Date: Wed, 14 Jan 2026 13:30:46 -0800
 Subject: [PATCH] Use ADD instead of tar in Kibana base image build
@@ -7,14 +7,14 @@ Remove this patch once [1] is fixed in tonistiigi/binfmt.
 
 [1] https://github.com/tonistiigi/binfmt/issues/285
 ---
- .../os_packages/docker_generator/templates/base/Dockerfile  | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
+ .../docker_generator/templates/base/Dockerfile     | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
 
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
-index 91dd42efd6f0..98e127fdd73d 100644
+index 91dd42efd6f0..9d2401adadce 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
 +++ b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
-@@ -35,14 +35,12 @@ RUN cd /tmp && \
+@@ -35,14 +35,20 @@ RUN cd /tmp && \
    cd -
  {{/usePublicArtifact}}
  {{^usePublicArtifact}}
@@ -27,7 +27,15 @@ index 91dd42efd6f0..98e127fdd73d 100644
 -RUN tar \
 -  --strip-components=1 \
 -  -zxf /tmp/kibana.tar.gz
-+RUN mv /tmp/kibana-*/* .
++RUN set -eux; \
++  kibana_dirs="$(find /tmp -maxdepth 1 -type d -name 'kibana-*' -print)"; \
++  count="$(printf '%s\n' "$kibana_dirs" | sed '/^$/d' | wc -l)"; \
++  if [ "$count" -ne 1 ]; then \
++    echo "Expected exactly one kibana-* directory under /tmp, found $count"; \
++    exit 1; \
++  fi; \
++  kibana_dir="$kibana_dirs"; \
++  mv "$kibana_dir"/* .
  
  # Ensure that group permissions are the same as user permissions.
  # This will help when relying on GID-0 to run Kibana, rather than UID-1000.
