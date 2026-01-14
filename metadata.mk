@@ -90,6 +90,9 @@ WINDOWS_VERSIONS ?= ltsc2019 ltsc2022
 CNI_VERSION=master
 FLANNEL_VERSION=main
 
+# The libbpf version to use
+LIBBPF_VERSION=v1.6.2
+
 # The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
 BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
@@ -99,9 +102,6 @@ OPERATOR_ORGANIZATION ?= tigera
 OPERATOR_GIT_REPO     ?= operator
 # The manager branch corresponding to this branch.
 MANAGER_BRANCH ?= master
-
-# The libbpf version to use
-LIBBPF_VERSION=v1.4.6
 
 # quay.io expiry time for hashrelease/dev images
 QUAY_EXPIRE_DAYS=90
