@@ -66,7 +66,8 @@ type AggMeanInfo struct {
 
 // Structure encapsulating info about an aggregated standard term query.
 type AggTermInfo struct {
-	Name string
+	Name  string
+	Field string
 }
 
 // CompositeAggregationQuery encapsulates and provides helper functions for a composite aggregation query. This
@@ -209,7 +210,11 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 
 	// Add the aggregated top-level terms.
 	for _, a := range q.AggTermInfos {
-		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewTermsAggregation().Field(a.Name))
+		field := a.Field
+		if field == "" {
+			field = a.Name
+		}
+		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewTermsAggregation().Field(field))
 	}
 
 	return compiledCompositeAgg
