@@ -203,6 +203,59 @@ func TestServeHTTP(t *testing.T) {
 	}
 }
 
+// TestNoPatchTypWithoutPatch verifies that when no sidecar injection is needed,
+// the webhook returns a response without PatchType set. Setting PatchType without
+// Patch is an invalid admission response per Kubernetes API spec.
+func TestNoPatchTypeWithoutPatch(t *testing.T) {
+	sidecar := NewSidecarHandler(&config.Config{
+		EnvoyImg:    testEnvoyImage,
+		DikastesImg: testDikastesImage,
+	})
+
+	// Pod with sidecar label but NO feature annotations - this is the bug scenario
+	pod := testPodWithAnnotations(map[string]string{
+		"some-unrelated-annotation": "value",
+	})
+
+	admissionReviewBytes, err := admissionReviewBytes(pod)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest("POST", "/", io.NopCloser(bytes.NewReader(admissionReviewBytes)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	sidecar.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", recorder.Code)
+	}
+
+	var admissionReviewResponse admissionv1.AdmissionReview
+	if err := json.Unmarshal(recorder.Body.Bytes(), &admissionReviewResponse); err != nil {
+		t.Fatal(err)
+	}
+
+	response := admissionReviewResponse.Response
+	if !response.Allowed {
+		t.Error("Expected Allowed to be true")
+	}
+
+	// This is the key assertion: PatchType must be nil when Patch is nil
+	// Otherwise Kubernetes will reject the response with:
+	// "webhook returned response.patchType but not response.patch"
+	if response.Patch != nil {
+		t.Errorf("Expected Patch to be nil, got %s", string(response.Patch))
+	}
+	if response.PatchType != nil {
+		t.Errorf("Expected PatchType to be nil when Patch is nil, got %v", *response.PatchType)
+	}
+}
+
 func genTestCase(name string, pod *corev1.Pod, expectedResponseCode int, fromSidecarCfg sidecarCfg) testCase {
 	return testCase{
 		name:                 name,
