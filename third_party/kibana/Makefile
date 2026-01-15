@@ -33,6 +33,7 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
 	patch -d kibana -p1 < patches/0004-Build-with-ubi10.patch
 	patch -d kibana -p1 < patches/0005-Update-libraries-to-patch-CVE.patch
+	patch -d kibana -p1 < patches/0006-Use-ADD-instead-of-tar-in-Kibana-base-image-build.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/googletagmanager kibana/plugins/
 	touch $@
