@@ -608,6 +608,62 @@ var _ = Describe("Query Converter", func() {
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
 
+		It("should handle a policies clause", func() {
+			result := JsonObject{
+				"term": JsonObject{
+					"policies.all_policies": JsonObject{
+						"value": "mypolicy",
+					},
+				},
+			}
+			query := "\"policies.all_policies\"=mypolicy"
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+
+		It("should handle a enforced policies clause", func() {
+			result := JsonObject{
+				"term": JsonObject{
+					"policies.enforced_policies": JsonObject{
+						"value": "mypolicy",
+					},
+				},
+			}
+			query := "\"policies.enforced_policies\"=mypolicy"
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+
+		It("should handle a pending policies clause", func() {
+			result := JsonObject{
+				"term": JsonObject{
+					"policies.pending_policies": JsonObject{
+						"value": "mypolicy",
+					},
+				},
+			}
+			query := "\"policies.pending_policies\"=mypolicy"
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+
+		It("should handle a transit policies clause", func() {
+			result := JsonObject{
+				"term": JsonObject{
+					"policies.transit_policies": JsonObject{
+						"value": "mypolicy",
+					},
+				},
+			}
+			query := "\"policies.transit_policies\"=mypolicy"
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(esquery.Source()).Should(BeEquivalentTo(result))
+		})
+
 		It("should handle an composite clause", func() {
 			result := JsonObject{
 				"bool": JsonObject{

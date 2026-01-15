@@ -185,36 +185,16 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 			Term:  "by_kvpair",
 			Field: "source_labels.labels",
 		},
-		{
-			Name:  policiesField,
-			Path:  policiesPath,
-			Term:  "by_tiered_policy",
-			Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField),
-		},
-		{
-			Name:  enforcedPoliciesSubField,
-			Path:  policiesPath,
-			Term:  "by_tiered_enforced_policy",
-			Field: fmt.Sprintf("%s.%s", policiesField, enforcedPoliciesSubField),
-		},
-		{
-			Name:  pendingPoliciesSubField,
-			Path:  policiesPath,
-			Term:  "by_tiered_pending_policy",
-			Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField),
-		},
-		{
-			Name:  transitPoliciesSubField,
-			Path:  policiesPath,
-			Term:  "by_tiered_transit_policy",
-			Field: fmt.Sprintf("%s.%s", policiesField, transitPoliciesSubField),
-		},
 	}
 
 	terms := []lmaelastic.AggTermInfo{
 		{Name: "dest_domains"},
 		{Name: "source_ip"},
 		{Name: "dest_ip"},
+		{Name: policiesField, Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField)},
+		{Name: enforcedPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, enforcedPoliciesSubField)},
+		{Name: pendingPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField)},
+		{Name: transitPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, transitPoliciesSubField)},
 	}
 
 	indexTemplate := index.FlowLogIndex(options...)

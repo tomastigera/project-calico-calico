@@ -143,7 +143,6 @@
       "type": "keyword"
     },
     "policies": {
-      "type": "nested",
       "properties": {
         "all_policies": {
           "type": "keyword"
