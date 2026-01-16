@@ -275,7 +275,7 @@ CHART_DESTINATION ?= ./bin
 # Build helm charts.
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
-tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
+tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
 # Build the multi-tenant-crds helm chart.
@@ -299,7 +299,7 @@ publish-multi-tenant-crds: multi-tenant-crds-release
 # If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
 tigera-operator-master:
 ifeq ($(SEMAPHORE_GIT_BRANCH), master)
-	$(MAKE) bin/tigera-operator-v0.0.tgz
+	$(MAKE) $(CHART_DESTINATION)/tigera-operator-v0.0.tgz
 endif
 
 $(CHART_DESTINATION)/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)

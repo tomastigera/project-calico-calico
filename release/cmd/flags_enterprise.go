@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v3"
 
-	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 )
@@ -79,13 +78,6 @@ var (
 	}
 )
 
-var helmRegistryFlag = &cli.StringFlag{
-	Name:    "helm-registry",
-	Usage:   "The registry to publish the helm charts (hashrelease ONLY)",
-	Sources: cli.EnvVars("HELM_REGISTRY"),
-	Value:   registry.HelmDevRegistry,
-}
-
 var hashReleaseRegistryFlag = &cli.StringFlag{
 	Name:    "hashrelease-registry",
 	Aliases: []string{"hr-registry"},
@@ -98,13 +90,6 @@ var (
 		Name:    "publish-windows-archive",
 		Usage:   "Publish the Windows archive to GCS",
 		Sources: cli.EnvVars("PUBLISH_WINDOWS_ARCHIVE"),
-		Value:   true,
-	}
-
-	publishChartsFlag = &cli.BoolFlag{
-		Name:    "publish-charts",
-		Usage:   "Publish the helm charts",
-		Sources: cli.EnvVars("PUBLISH_CHARTS"),
 		Value:   true,
 	}
 
@@ -157,20 +142,6 @@ var confirmFlag = &cli.BoolFlag{
 	Usage:   "Perform all the steps. If not set, it will be a dry-run",
 	Sources: cli.EnvVars("CONFIRM"),
 	Value:   false,
-}
-
-var awsProfileFlag = &cli.StringFlag{
-	Name:     "aws-profile",
-	Usage:    "The AWS profile to use",
-	Sources:  cli.EnvVars("AWS_PROFILE"),
-	Value:    "default",
-	Required: true,
-}
-
-var s3BucketFlag = &cli.StringFlag{
-	Name:    "s3-bucket",
-	Usage:   "The S3 bucket to publish the release to publish release artifacts to. ",
-	Sources: cli.EnvVars("S3_BUCKET"),
 }
 
 var windowsArchiveBucketFlag = &cli.StringFlag{
