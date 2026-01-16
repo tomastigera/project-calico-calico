@@ -278,7 +278,6 @@ chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release 
 tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
-# Build the multi-tenant-crds helm chart.
 multi-tenant-crds-release: $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz
 $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	mkdir -p $(CHART_DESTINATION)
