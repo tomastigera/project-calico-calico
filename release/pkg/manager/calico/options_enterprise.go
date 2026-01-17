@@ -53,13 +53,6 @@ func WithPublishWindowsArchive(publish bool) EnterpriseOption {
 	}
 }
 
-func WithPublishCharts(publish bool) EnterpriseOption {
-	return func(r *EnterpriseManager) error {
-		r.publishCharts = publish
-		return nil
-	}
-}
-
 func WithPublishToS3(publish bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.publishCharts = publish
@@ -68,30 +61,9 @@ func WithPublishToS3(publish bool) EnterpriseOption {
 	}
 }
 
-func WithHelmRegistry(registry string) EnterpriseOption {
-	return func(r *EnterpriseManager) error {
-		r.helmRegistry = registry
-		return nil
-	}
-}
-
 func WithRPMs(rpm bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.rpm = rpm
-		return nil
-	}
-}
-
-func WithAWSProfile(profile string) EnterpriseOption {
-	return func(r *EnterpriseManager) error {
-		r.awsProfile = profile
-		return nil
-	}
-}
-
-func WithS3Bucket(bucket string) EnterpriseOption {
-	return func(r *EnterpriseManager) error {
-		r.s3Bucket = bucket
 		return nil
 	}
 }

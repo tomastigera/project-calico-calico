@@ -18,7 +18,7 @@ func ReformatEnterpriseHashrelease(hashreleaseOutputDir, tmpDir string) error {
 	}
 
 	// Copy the operator tarball to tigera-operator.tgz
-	operatorTarball := filepath.Join(hashreleaseOutputDir, fmt.Sprintf("tigera-operator-%s.tgz", versions.HelmChartVersion()))
+	operatorTarball := filepath.Join(hashreleaseOutputDir, "charts", fmt.Sprintf("tigera-operator-%s.tgz", versions.HelmChartVersion()))
 	operatorTarballDst := filepath.Join(hashreleaseOutputDir, "tigera-operator.tgz")
 	if err := utils.CopyFile(operatorTarball, operatorTarballDst); err != nil {
 		return err

@@ -40,7 +40,6 @@ var (
 	enterpriseArtifactsBaseURL = utils.EnterpriseArtifactsBaseURL
 
 	enterpriseS3Bucket = "tigera-public/ee"
-	s3ACLPublicRead    = []string{"--acl", "public-read"}
 
 	enterpriseImageReleaseDirs = utils.EnterpriseImageReleaseDirs
 
@@ -79,6 +78,7 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		WithBuildImages(false),
 		WithArchiveImages(false),
 		WithPublishGithubRelease(false),
+		WithS3Bucket(enterpriseS3Bucket),
 	}
 	calicoOpts = append(defaultCalicoOpts, calicoOpts...)
 	calicoManager := NewManager(calicoOpts...)
@@ -88,10 +88,7 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		CalicoManager:                 *calicoManager,
 		publishWindowsArchive:         true,
 		windowsArchiveBucket:          enterpriseWindowsGCSBucket,
-		publishCharts:                 true,
-		helmRegistry:                  registry.HelmDevRegistry, // Defaults to dev registry as currently only used for hashreleases.
 		enterpriseHashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
-		s3Bucket:                      enterpriseS3Bucket,
 		baseArtifactsURL:              enterpriseArtifactsBaseURL,
 		imageReleaseDirs:              enterpriseImageReleaseDirs,
 		includeManager:                true,
@@ -131,15 +128,11 @@ type EnterpriseManager struct {
 	// publishing options
 	dryRun                bool
 	publishWindowsArchive bool
-	publishCharts         bool
 	publishToS3           bool
 
 	rpm bool
 
-	helmRegistry         string
 	windowsArchiveBucket string
-	awsProfile           string
-	s3Bucket             string
 	baseArtifactsURL     string
 }
 
@@ -211,13 +204,30 @@ func (m *EnterpriseManager) BuildHelm() error {
 	}
 
 	// Build the helm chart, passing the version to use.
-	env := append(os.Environ(), fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion))
-	env = append(env, fmt.Sprintf("RELEASE_STREAM=%s", m.calicoVersion))
-	if m.chartVersion != "" {
-		env = append(env, fmt.Sprintf("CHART_RELEASE=%s", m.chartVersion))
+	chartsDest := filepath.Join(m.outputDir, "charts")
+	if err := os.MkdirAll(chartsDest, utils.DirPerms); err != nil {
+		return fmt.Errorf("create chart destination dir: %s", err)
 	}
+	env := append(os.Environ(),
+		fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion),
+		fmt.Sprintf("CHART_DESTINATION=%s", chartsDest),
+		fmt.Sprintf("RELEASE_STREAM=%s", m.calicoVersion))
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "chart", env...); err != nil {
 		return err
+	}
+
+	// Rename charts to include chart version.
+	if m.chartVersion != "" {
+		charts, err := listCharts(chartsDest, m.calicoVersion)
+		if err != nil {
+			return fmt.Errorf("list of built charts: %s", err)
+		}
+		for _, chart := range charts {
+			newChartName := strings.Replace(chart, fmt.Sprintf("-%s.tgz", m.calicoVersion), fmt.Sprintf("-%s-%s.tgz", m.calicoVersion, m.chartVersion), 1)
+			if err := utils.MoveFile(chart, newChartName); err != nil {
+				return fmt.Errorf("renaming chart %s to %s: %s", chart, newChartName, err)
+			}
+		}
 	}
 
 	logrus.Info("Done building helm charts")
@@ -682,30 +692,6 @@ func (m *EnterpriseManager) collectArtifacts() error {
 		return fmt.Errorf("failed to move Windows archive: %w", err)
 	}
 
-	// Add helm charts
-	charts, err := listCharts(filepath.Join(m.repoRoot, "bin"), m.calicoVersion)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to get list of charts")
-	}
-	chartsDir := filepath.Join(uploadDir, "charts")
-	if err := os.MkdirAll(chartsDir, utils.DirPerms); err != nil {
-		return fmt.Errorf("failed to create charts directory: %s", err)
-	}
-	for _, chart := range charts {
-		logrus.WithField("chart", chart).Debug("Copying chart")
-		chartName := filepath.Base(chart)
-		chartDest := filepath.Join(chartsDir, strings.ReplaceAll(chartName, m.calicoVersion, m.helmChartVersion()))
-		if err := utils.CopyFile(chart, chartDest); err != nil {
-			logrus.WithError(err).Error("Failed to copy chart")
-			return err
-		}
-		if strings.Contains(chartName, "tigera-operator") {
-			if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{chartDest, uploadDir}, nil); err != nil {
-				return err
-			}
-		}
-	}
-
 	// Add the binaries
 	rsyncArgs = []string{"-av"}
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -1048,7 +1034,7 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 	}
 	for _, chart := range charts {
 		if m.isHashRelease {
-			if _, err := m.runner.Run("helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
+			if err := m.publishHelmChart(chart, m.helmRegistries[0]); err != nil {
 				return err
 			}
 		} else {
@@ -1206,35 +1192,23 @@ func (m *EnterpriseManager) PrepareRelease() error {
 }
 
 func (m *EnterpriseManager) s3Cp(src, dest string, additionalFlags ...string) error {
-	args := []string{
-		"--profile", m.awsProfile,
-		"s3", "cp",
-		src, dest,
-	}
-	if len(additionalFlags) > 0 {
-		args = append(args, additionalFlags...)
-	}
-	if strings.HasSuffix(src, "/") {
-		args = append(args, "--recursive")
-	}
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		args = append(args, "--debug")
-	}
 	if m.dryRun {
-		args = append(args, "--dryrun")
-		logrus.WithField("cmd", fmt.Sprintf("aws %s", strings.Join(args, " "))).Info("Dry-run: upload to S3")
+		additionalFlags = append(additionalFlags, "--dryrun")
+		logrus.WithFields(logrus.Fields{
+			"src":  src,
+			"dest": dest,
+		}).Info("Dry-run: upload to S3")
 	}
-	if _, err := m.runner.Run("aws", args, nil); err != nil {
-		return err
-	}
-	return nil
+	return m.CalicoManager.s3Cp(src, dest, additionalFlags...)
 }
 
 func (m *EnterpriseManager) s3Sync(src, dest string, additionalFlags ...string) error {
 	args := []string{
-		"--profile", m.awsProfile,
 		"s3", "sync",
 		src, dest,
+	}
+	if m.awsProfile != "" {
+		args = append(args, "--profile", m.awsProfile)
 	}
 	if len(additionalFlags) > 0 {
 		args = append(args, additionalFlags...)
