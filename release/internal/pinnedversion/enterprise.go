@@ -375,7 +375,6 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 			ProductVersion:  pinnedVersion.Title,
 			OperatorVersion: pinnedVersion.TigeraOperator.Version,
 			Source:          hashreleaseSrc,
-			Time:            time.Now(),
 			Latest:          latest,
 		},
 		ChartVersion:   pinnedVersion.HelmRelease,
