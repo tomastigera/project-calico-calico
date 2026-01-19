@@ -85,8 +85,7 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 				calico.WithManager(!c.Bool(skipManagerFlag.Name)),
 				calico.WithEnterpriseHashrelease(hashreleaseserver.EnterpriseHashrelease{
 					Hashrelease: hashreleaseserver.Hashrelease{
-						Name:    c.String(hashreleaseNameFlag.Name),
-						Product: utils.EnterpriseProductCode,
+						Name: c.String(hashreleaseNameFlag.Name),
 					},
 				}, hashreleaseserver.Config{}),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
