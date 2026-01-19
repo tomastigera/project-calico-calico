@@ -250,6 +250,28 @@ func WrapPayloadWithEnvelope(msg interface{}, seqNo uint64) (*proto.ToDataplane,
 		envelope.Payload = &proto.ToDataplane_ServiceUpdate{ServiceUpdate: msg}
 	case *proto.ServiceRemove:
 		envelope.Payload = &proto.ToDataplane_ServiceRemove{ServiceRemove: msg}
+	case *proto.IPSecTunnelAdd:
+		envelope.Payload = &proto.ToDataplane_IpsecTunnelAdd{IpsecTunnelAdd: msg}
+	case *proto.IPSecTunnelRemove:
+		envelope.Payload = &proto.ToDataplane_IpsecTunnelRemove{IpsecTunnelRemove: msg}
+	case *proto.IPSecBindingUpdate:
+		envelope.Payload = &proto.ToDataplane_IpsecBindingUpdate{IpsecBindingUpdate: msg}
+	case *proto.IPSecBlacklistAdd:
+		envelope.Payload = &proto.ToDataplane_IpsecBindingAdd{IpsecBindingAdd: msg}
+	case *proto.IPSecBlacklistRemove:
+		envelope.Payload = &proto.ToDataplane_IpsecBindingRemove{IpsecBindingRemove: msg}
+	case *proto.PacketCaptureUpdate:
+		envelope.Payload = &proto.ToDataplane_PacketCaptureUpdate{PacketCaptureUpdate: msg}
+	case *proto.PacketCaptureRemove:
+		envelope.Payload = &proto.ToDataplane_PacketCaptureRemove{PacketCaptureRemove: msg}
+	case *proto.ExternalNetworkUpdate:
+		envelope.Payload = &proto.ToDataplane_ExternalNetworkUpdate{ExternalNetworkUpdate: msg}
+	case *proto.ExternalNetworkRemove:
+		envelope.Payload = &proto.ToDataplane_ExternalNetworkRemove{ExternalNetworkRemove: msg}
+	case *proto.RemoteIPAMPoolUpdate:
+		envelope.Payload = &proto.ToDataplane_RemoteIpamPoolUpdate{RemoteIpamPoolUpdate: msg}
+	case *proto.RemoteIPAMPoolRemove:
+		envelope.Payload = &proto.ToDataplane_RemoteIpamPoolRemove{RemoteIpamPoolRemove: msg}
 
 	default:
 		return nil, fmt.Errorf("unknown message type: %T", msg)
