@@ -10,7 +10,7 @@ export class TigeraPlugin implements Plugin {
   }
 
   public setup(core: CoreSetup) {
-    this.logger.debug('Tigera plugin ser up')
+    this.logger.debug('Tigera plugin setup')
     const config$ = this.initializerContext.config.create();
     config$.subscribe((config) => {
       core.uiSettings.register({

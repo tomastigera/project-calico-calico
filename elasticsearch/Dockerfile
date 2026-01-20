@@ -1,10 +1,10 @@
-# Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.10-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
 
 RUN mkdir -p /rootfs/usr/bin
 RUN ln -sf usr/bin /rootfs/bin
