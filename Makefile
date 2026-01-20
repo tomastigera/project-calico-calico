@@ -305,8 +305,8 @@ $(CHART_DESTINATION)/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tiger
 	mkdir -p $(CHART_DESTINATION)
 	bin/helm package ./charts/tigera-operator \
 	--destination $(CHART_DESTINATION)/ \
-	--version $(@:$(CHART_DESTINATION)/tigera-operator-%.tgz=%) \
-	--app-version $(@:$(CHART_DESTINATION)/tigera-operator-%.tgz=%)
+	--version $* \
+	--app-version $*
 
 # Build the tigera-prometheus-operator.tgz helm chart.
 tigera-prometheus-operator-release: $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz
