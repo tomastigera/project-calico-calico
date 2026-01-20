@@ -704,12 +704,12 @@ func combinePortsWithBANPEgressPeers(
 			// One and only one of the following fields is set (based on specification).
 			var found bool
 			if peer.Namespaces != nil {
-				nsSelector = k8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
+				nsSelector = K8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
 				found = true
 			}
 			if peer.Pods != nil {
-				selector = k8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
-				nsSelector = k8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
+				selector = K8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
+				nsSelector = K8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
 				found = true
 			}
 			if len(peer.Networks) != 0 {

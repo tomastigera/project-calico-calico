@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"sort"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusternetpol "sigs.k8s.io/network-policy-api/apis/v1alpha2"
@@ -80,12 +80,12 @@ func (c converter) K8sClusterNetworkPolicyToCalico(kcnp *clusternetpol.ClusterNe
 	// Either Namespaces or Pods is set. Use one of them to populate the selectors.
 	var nsSelector, podSelector string
 	if kcnp.Spec.Subject.Namespaces != nil {
-		nsSelector = k8sSelectorToCalico(kcnp.Spec.Subject.Namespaces, SelectorNamespace)
+		nsSelector = K8sSelectorToCalico(kcnp.Spec.Subject.Namespaces, SelectorNamespace)
 		// Make sure projectcalico.org/orchestrator == 'k8s' label is added to exclude heps.
-		podSelector = k8sSelectorToCalico(nil, SelectorPod)
+		podSelector = K8sSelectorToCalico(nil, SelectorPod)
 	} else {
-		nsSelector = k8sSelectorToCalico(&kcnp.Spec.Subject.Pods.NamespaceSelector, SelectorNamespace)
-		podSelector = k8sSelectorToCalico(&kcnp.Spec.Subject.Pods.PodSelector, SelectorPod)
+		nsSelector = K8sSelectorToCalico(&kcnp.Spec.Subject.Pods.NamespaceSelector, SelectorNamespace)
+		podSelector = K8sSelectorToCalico(&kcnp.Spec.Subject.Pods.PodSelector, SelectorPod)
 	}
 
 	var uid types.UID
@@ -220,12 +220,12 @@ func combinePortsWithCNPIngressPeers(
 			var found bool
 			if peer.Namespaces != nil {
 				selector = ""
-				nsSelector = k8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
+				nsSelector = K8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
 				found = true
 			}
 			if peer.Pods != nil {
-				selector = k8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
-				nsSelector = k8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
+				selector = K8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
+				nsSelector = K8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
 				found = true
 			}
 			if !found {
@@ -280,12 +280,12 @@ func combinePortsWithCNPEgressPeers(
 			// One and only one of the following fields is set (based on specification).
 			var found bool
 			if peer.Namespaces != nil {
-				nsSelector = k8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
+				nsSelector = K8sSelectorToCalico(peer.Namespaces, SelectorNamespace)
 				found = true
 			}
 			if peer.Pods != nil {
-				selector = k8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
-				nsSelector = k8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
+				selector = K8sSelectorToCalico(&peer.Pods.PodSelector, SelectorPod)
+				nsSelector = K8sSelectorToCalico(&peer.Pods.NamespaceSelector, SelectorNamespace)
 				found = true
 			}
 			if len(peer.Networks) != 0 {
