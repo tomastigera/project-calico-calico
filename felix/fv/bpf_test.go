@@ -1660,7 +1660,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						tcpd.SetLogEnabled(true)
 						tcpd.AddMatcher("eth0-vxlan", regexp.MustCompile("VXLAN,.* vni 4096"))
 						tcpd.Start(infra, "-vvv", "udp", "port", "4789")
-						defer tcpd.Stop()
 					}
 
 					cc.ExpectSome(w[0][1], w[0][0])
