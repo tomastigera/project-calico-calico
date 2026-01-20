@@ -1,0 +1,51 @@
+From dc660fbe5dba27cbc5bfc00a98a0727f6196fc31 Mon Sep 17 00:00:00 2001
+From: Alex Szabo <alex.szabo@elastic.co>
+Date: Mon, 12 Jan 2026 13:19:09 +0100
+Subject: [PATCH] [ci] update baseline-browser-mapping through a resolutions
+ field (#248610)
+
+## Summary
+Updates browser-baseline-mapping as it's causing warnings in the install
+process, and some sensitive tests are failing due to that.
+
+Fixes: https://github.com/elastic/kibana/issues/89079
+(cherry picked from commit 6dacc2afcff47d7c6417618142bfbf291a2d23c9)
+
+# Conflicts:
+#	package.json
+---
+ package.json | 1 +
+ yarn.lock    | 8 ++++----
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/package.json b/package.json
+index a15aad2e300fc..2236599c5547f 100644
+--- a/package.json
++++ b/package.json
+@@ -83,6 +83,7 @@
+     "**/@types/node": "22.19.1",
+     "**/@types/prop-types": "15.7.5",
+     "**/@typescript-eslint/utils": "8.46.3",
++    "**/baseline-browser-mapping": "2.9.14",
+     "**/chokidar": "^3.5.3",
+     "**/d3-scale/**/d3-color": "npm:@elastic/kibana-d3-color@2.0.1",
+     "**/globule/minimatch": "^3.1.2",
+diff --git a/yarn.lock b/yarn.lock
+index 4cab21644ab46..cfc5c3273aa53 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -15451,10 +15451,10 @@ base@^0.11.1:
+     mixin-deep "^1.2.0"
+     pascalcase "^0.1.1"
+ 
+-baseline-browser-mapping@^2.8.25:
+-  version "2.8.26"
+-  resolved "https://registry.yarnpkg.com/baseline-browser-mapping/-/baseline-browser-mapping-2.8.26.tgz#2c7e2f840f0ae4d83782bdfe795229a43dfc3e59"
+-  integrity sha512-73lC1ugzwoaWCLJ1LvOgrR5xsMLTqSKIEoMHVtL9E/HNk0PXtTM76ZIm84856/SF7Nv8mPZxKoBsgpm0tR1u1Q==
++baseline-browser-mapping@2.9.14, baseline-browser-mapping@^2.8.25:
++  version "2.9.14"
++  resolved "https://registry.yarnpkg.com/baseline-browser-mapping/-/baseline-browser-mapping-2.9.14.tgz#3b6af0bc032445bca04de58caa9a87cfe921cbb3"
++  integrity sha512-B0xUquLkiGLgHhpPBqvl7GWegWBUNuujQ6kXd/r1U38ElPT6Ok8KZ8e+FpUGEc2ZoRQUzq/aUnaKFc/svWUGSg==
+ 
+ basic-auth-parser@0.0.2-1:
+   version "0.0.2-1"
