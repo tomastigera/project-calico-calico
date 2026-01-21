@@ -10,7 +10,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Microsoft/hcsshim v0.13.0
-	github.com/PaloAltoNetworks/pango v0.10.2
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/alecthomas/participle v0.7.1
