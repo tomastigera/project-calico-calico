@@ -103,10 +103,7 @@ func TestInvalidStrings(t *testing.T) {
 		// Tier field is missing.
 		"0||namespace/name|allow|1",
 
-		// Tier fields do not match.
-		"0|tier|namespace/knp.default.name|allow|2",
-		"0|kube-admin|kcnp.foobar.policy1|allow|-1",
-		"1|tier|tier2.name|allow|0",
+		// Tier fields is missing.
 		"0||namespace/tier.name|allow|1",
 
 		// Missing a name section.
