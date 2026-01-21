@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ const (
 	SubProgIPFrag
 	SubProgDNSParser
 	SubProgMaglev
+	SubProgTCPRst
 	SubProgTCMainDebug
 
 	SubProgXDPMain    = SubProgTCMain
@@ -65,6 +66,7 @@ var tcSubProgNames = []string{
 	"calico_tc_skb_ipv4_frag",
 	"calico_tc_dns_parser",
 	"calico_tc_maglev",
+	"calico_tc_skb_send_tcp_rst",
 }
 
 var xdpSubProgNames = []string{
