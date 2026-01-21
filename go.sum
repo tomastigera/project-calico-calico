@@ -70,8 +70,6 @@ github.com/Microsoft/hnslib v0.1.1 h1:JsZy681SnvSOUAfCZVAxkX4LgQGp+CZZwPbLV0/pdF
 github.com/Microsoft/hnslib v0.1.1/go.mod h1:DRQR4IjLae6WHYVhW7uqe44hmFUiNhmaWA+jwMbz5tM=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
-github.com/PaloAltoNetworks/pango v0.10.2 h1:Tjn6vIzzAq6Dd7N0mDuiP8w8pz8k5W9zz/TTSUQCsQY=
-github.com/PaloAltoNetworks/pango v0.10.2/go.mod h1:GztcRnVLur7G+VFG7Z5ZKNFgScLtsycwPMp1qVebE5g=
 github.com/ProtonMail/go-crypto v1.0.0 h1:LRuvITjQWX+WIfr930YHG2HNfjR1uOfyf5vE0kC2U78=
 github.com/ProtonMail/go-crypto v1.0.0/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
 github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2 h1:koK7z0nSsRiRiBWwa+E714Puh+DO+ZRdIyAXiXzL+lg=
