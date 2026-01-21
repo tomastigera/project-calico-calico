@@ -72,7 +72,8 @@ gen-crds:
 	curl -sSfL --retry 3 $(NETPOL_CRD_URL)/$(NETPOL_ANP_CRD) -o ./config/crd/$(NETPOL_ANP_CRD)
 	curl -sSfL --retry 3 $(NETPOL_CRD_URL)/$(NETPOL_BANP_CRD) -o ./config/crd/$(NETPOL_BANP_CRD)
 	# Add K8S ClusterNetworkPolicy CRD
-	curl -sSfL --retry 3 $(NETPOL_CNP_CRD_URL)/$(NETPOL_CNP_CRD) -o ./config/crd/$(NETPOL_CNP_CRD)
+	# TODO(mazdak): Enable when CNP is fully supported in enterprise.
+	#curl -sSfL --retry 3 $(NETPOL_CNP_CRD_URL)/$(NETPOL_CNP_CRD) -o ./config/crd/$(NETPOL_CNP_CRD)
 	# Run prettier to fix indentation
 	docker run --rm --user $(id -u):$(id -g) -v $(CURDIR)/config/crd/:/work/config/crd/ tmknom/prettier --write --parser=yaml /work
 	# Patch in manual tweaks to the generated CRDs.
