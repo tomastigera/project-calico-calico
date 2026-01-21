@@ -17,6 +17,10 @@ func TestConversion(t *testing.T) {
 		"1|tier|tier.staged:name|deny|2",
 		"1|tier|tier.staged:name.with.dots|deny|2",
 
+		// GNP in baseline / anp namespaces.
+		"0|adminnetworkpolicy|adminnetworkpolicy.name|deny|1",
+		"1|baselineadminnetworkpolicy|baselineadminnetworkpolicy.name|deny|2",
+
 		// GNP in ClusterNetworkPolicy namespaces.
 		"0|kube-admin|kube-admin.name|deny|1",
 		"1|kube-baseline|kube-baseline.name|deny|2",
@@ -39,6 +43,16 @@ func TestConversion(t *testing.T) {
 		// StagedKubernetesNetworkPolicy.
 		"1|default|namespace/staged:knp.default.name|deny|3",
 		"1|default|namespace/staged:knp.default.name.with.dots|deny|3",
+
+		// AdminNetworkPolicy
+		"3|adminnetworkpolicy|kanp.adminnetworkpolicy.name|pass|4",
+		"3|adminnetworkpolicy|kanp.adminnetworkpolicy.name.with.dots|pass|4",
+		"2|adminnetworkpolicy|kanp.adminnetworkpolicy.name.with.dots|pass|1",
+
+		// BaslineAdminNetworkPolicy
+		"0|baselineadminnetworkpolicy|kbanp.baselineadminnetworkpolicy.name|pass|4",
+		"3|baselineadminnetworkpolicy|kbanp.baselineadminnetworkpolicy.name.with.dots|pass|4",
+		"2|baselineadminnetworkpolicy|kbanp.baselineadminnetworkpolicy.name.with.dots|pass|1",
 
 		// ClusterNetworkPolicy - Admin Tier
 		"3|kube-admin|kcnp.kube-admin.name|pass|4",

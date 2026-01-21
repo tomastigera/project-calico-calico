@@ -78,6 +78,8 @@ func (h *PolicyHit) Validate() error {
 	switch h.Kind {
 	case PolicyKind_GlobalNetworkPolicy,
 		PolicyKind_StagedGlobalNetworkPolicy,
+		PolicyKind_AdminNetworkPolicy,
+		PolicyKind_BaselineAdminNetworkPolicy,
 		PolicyKind_ClusterNetworkPolicy:
 		if h.Namespace != "" {
 			return fmt.Errorf("unexpected namespace for global policy")
@@ -118,6 +120,10 @@ func makeNamePart(h *PolicyHit) (string, error) {
 		namePart = fmt.Sprintf("%s.staged:%s", h.Tier, h.Name)
 	case PolicyKind_StagedNetworkPolicy:
 		namePart = fmt.Sprintf("%s/%s.staged:%s", h.Namespace, h.Tier, h.Name)
+	case PolicyKind_AdminNetworkPolicy:
+		namePart = names.K8sAdminNetworkPolicyNamePrefix + h.Name
+	case PolicyKind_BaselineAdminNetworkPolicy:
+		namePart = names.K8sBaselineAdminNetworkPolicyNamePrefix + h.Name
 	case PolicyKind_ClusterNetworkPolicy:
 		if h.Tier == names.KubeAdminTierName {
 			namePart = names.K8sCNPAdminTierNamePrefix + h.Name
@@ -186,6 +192,12 @@ func HitFromString(s string) (*PolicyHit, error) {
 			// Take form of "tier.staged:name", so we can trim the entire prefix off.
 			kind = PolicyKind_StagedGlobalNetworkPolicy
 			n = strings.Split(n, "staged:")[1]
+		} else if strings.HasPrefix(n, names.K8sAdminNetworkPolicyNamePrefix) {
+			kind = PolicyKind_AdminNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sAdminNetworkPolicyNamePrefix)
+		} else if strings.HasPrefix(n, names.K8sBaselineAdminNetworkPolicyNamePrefix) {
+			kind = PolicyKind_BaselineAdminNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sBaselineAdminNetworkPolicyNamePrefix)
 		} else if strings.HasPrefix(n, names.K8sCNPAdminTierNamePrefix) {
 			kind = PolicyKind_ClusterNetworkPolicy
 			n = strings.TrimPrefix(n, names.K8sCNPAdminTierNamePrefix)
