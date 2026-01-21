@@ -505,8 +505,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
 
-require github.com/projectcalico/api v0.0.0-20250916150628-d4009e4d7c50
-
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
