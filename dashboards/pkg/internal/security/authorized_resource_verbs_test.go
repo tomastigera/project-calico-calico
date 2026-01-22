@@ -42,6 +42,8 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 			nil,
 			"Bearer fake-token",
 			mockClientSetFactory,
+			"fake-tenant",
+			nil,
 		)
 
 		return ctx, fakeCalicoClient, mockClientSetFactory

@@ -18,6 +18,7 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -33,8 +34,10 @@ func TestAuthorizer(t *testing.T) {
 		userName string,
 		namespace string,
 		cacheTTL time.Duration,
+		productMode string,
 		namespacedRBAC bool,
 		resourceRules []authzv1.ResourceRule,
+		groups []string,
 	) (Context, Authorizer, *k8s.MockClientSetFactory, *[]string) {
 		t.Helper()
 
@@ -61,6 +64,7 @@ func TestAuthorizer(t *testing.T) {
 			cacheTTL,
 			AuthorizerConfig{
 				Namespace:                             namespace,
+				ProductMode:                           productMode,
 				EnableNamespacedRBAC:                  namespacedRBAC,
 				AuthorizedVerbsCacheHardTTL:           10 * time.Second,
 				AuthorizedVerbsCacheSoftTTL:           1 * time.Second,
@@ -71,14 +75,14 @@ func TestAuthorizer(t *testing.T) {
 		require.NoError(t, err)
 
 		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
-		ctx := NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: userName}, authorizer, k8sClient, "Bearer fake-token", mockClientSetFactory)
+		ctx := NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: userName}, authorizer, k8sClient, "Bearer fake-token", mockClientSetFactory, "fake-tenant", groups)
 
 		return ctx, authorizer, mockClientSetFactory, namespaceHits
 	}
 
 	t.Run("authorization resource", func(t *testing.T) {
 		t.Run("any", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, nil)
+			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, nil)
 			require.NoError(t, err)
@@ -86,7 +90,7 @@ func TestAuthorizer(t *testing.T) {
 		})
 
 		t.Run("managed cluster", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, nil)
+			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -98,7 +102,7 @@ func TestAuthorizer(t *testing.T) {
 				resourceRules := []authzv1.ResourceRule{
 					{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"dns"}, Resources: []string{"*"}},
 				}
-				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, resourceRules)
+				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
 
 				authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 				require.NoError(t, err)
@@ -113,7 +117,7 @@ func TestAuthorizer(t *testing.T) {
 				resourceRules := []authzv1.ResourceRule{
 					{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"*"}, Resources: []string{testCluster}},
 				}
-				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, resourceRules)
+				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
 
 				authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 				require.NoError(t, err)
@@ -129,7 +133,7 @@ func TestAuthorizer(t *testing.T) {
 	})
 
 	t.Run("unauthorized", func(t *testing.T) {
-		ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, nil)
+		ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
 
 		testCases := []struct {
 			name         string
@@ -176,7 +180,7 @@ func TestAuthorizer(t *testing.T) {
 			resourceRules := []authzv1.ResourceRule{
 				{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"dns"}, Resources: []string{testClusterResource}},
 			}
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, false, resourceRules)
+			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testClusterResource)
 			require.NoError(t, err)
@@ -190,7 +194,7 @@ func TestAuthorizer(t *testing.T) {
 
 	t.Run("namespace", func(t *testing.T) {
 		t.Run("is set", func(t *testing.T) {
-			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "fake-namespace", 1*time.Second, false, nil)
+			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "fake-namespace", 1*time.Second, "fake-product-mode", false, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -198,7 +202,7 @@ func TestAuthorizer(t *testing.T) {
 			require.Equal(t, []string{"fake-namespace"}, *namespaceHits)
 		})
 		t.Run("is unset", func(t *testing.T) {
-			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Second, false, nil)
+			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -208,7 +212,7 @@ func TestAuthorizer(t *testing.T) {
 	})
 
 	t.Run("cache", func(t *testing.T) {
-		ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Hour, false, nil)
+		ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil)
 
 		for i := 0; i < 10; i++ {
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
@@ -218,7 +222,7 @@ func TestAuthorizer(t *testing.T) {
 		}
 
 		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
-		ctx = NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user2"}, authorizer, ctx.KubernetesClient(), "Bearer fake-token", mockClientSetFactory)
+		ctx = NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user2"}, authorizer, ctx.KubernetesClient(), "Bearer fake-token", mockClientSetFactory, "fake-tenant", nil)
 		authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 		require.NoError(t, err)
 		require.True(t, authorized)
@@ -237,9 +241,8 @@ func TestAuthorizer(t *testing.T) {
 	})
 
 	t.Run("authorized resource verbs", func(t *testing.T) {
-
 		t.Run("namespaced RBAC feature disabled", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, false, nil)
+			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil)
 
 			authVerbs, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1", "fake-managed-cluster2"})
 			require.NoError(t, err)
@@ -250,6 +253,8 @@ func TestAuthorizer(t *testing.T) {
 		t.Run("namespaced RBAC feature enabled", func(t *testing.T) {
 			testCases := []struct {
 				name                                    string
+				groups                                  []string
+				productMode                             string
 				authReviewError                         map[string]error
 				authReviewDelay                         map[string]time.Duration
 				authReviewStatusAuthorizedResourceVerbs map[string][]v3.AuthorizedResourceVerbs
@@ -556,7 +561,7 @@ func TestAuthorizer(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, true, nil)
+					ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
 
 					for resource, authorizedResourceVerbs := range tc.authReviewStatusAuthorizedResourceVerbs {
 
@@ -601,10 +606,44 @@ func TestAuthorizer(t *testing.T) {
 					}
 				})
 			}
+
+			t.Run("cloud group permissions", func(t *testing.T) {
+
+				testCases := []struct {
+					name      string
+					groupName string
+				}{
+					{
+						name:      "admin",
+						groupName: "tigera-auth-fake-tenant-admin",
+					},
+					{
+						name:      "dashboards admin",
+						groupName: "tigera-auth-fake-tenant-dashboards-admin",
+					},
+					{
+						name:      "viewer",
+						groupName: "tigera-auth-fake-tenant-read-only",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, config.ProductModeCloud, true, nil, []string{tc.groupName})
+
+						permissionsResult, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1", "fake-managed-cluster2", "fake-managed-cluster3"})
+						require.NoError(t, err)
+
+						require.Empty(t, permissionsResult.Errors)
+						require.Empty(t, permissionsResult.AuthorizedResourceVerbs)
+
+					})
+				}
+			})
 		})
 
 		t.Run("reuse stale cache item on revalidate timeout", func(t *testing.T) {
-			ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, true, nil)
+			ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
 
 			callIndex := 0
 			fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &k8sfake.NewClientset().Fake}

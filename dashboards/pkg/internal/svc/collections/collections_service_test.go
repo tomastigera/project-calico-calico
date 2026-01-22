@@ -70,6 +70,8 @@ func TestCollectionsService(t *testing.T) {
 			k8sClient,
 			"Bearer fake-token",
 			nil,
+			"fake-tenant",
+			nil,
 		)
 	}
 

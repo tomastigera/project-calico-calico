@@ -101,6 +101,8 @@ func newAuthContext(
 		k8sClient,
 		"Bearer fake-token",
 		mockClientSetFactory,
+		"fake-tenant",
+		nil,
 	), mockClientSetFactory
 }
 

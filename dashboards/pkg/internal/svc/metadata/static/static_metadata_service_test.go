@@ -20,6 +20,8 @@ func TestStaticMetadataService(t *testing.T) {
 		nil,
 		"Bearer fake-token",
 		nil,
+		"fake-tenant",
+		nil,
 	)
 
 	subject, err := NewStaticMetadataService()
