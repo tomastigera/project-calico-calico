@@ -49,7 +49,7 @@ func newLMAResource(verb string, resources ...string) authzv1.ResourceRule {
 	return authzv1.ResourceRule{
 		Verbs:         []string{verb},
 		APIGroups:     []string{security.APIGroupLMATigera},
-		ResourceNames: []string{"flows", "dns"},
+		ResourceNames: []string{"flows", "dns", "l7"},
 		Resources:     resources,
 	}
 }
@@ -1062,6 +1062,134 @@ func TestQueryService(t *testing.T) {
 
 					if testCase.valid {
 						require.NoError(t, err)
+					} else {
+						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
+						require.ErrorContains(t, err, `invalid group combination`)
+					}
+				})
+			}
+		})
+
+		t.Run("groupBy combination with backtracking", func(t *testing.T) {
+			// Tests for groupBy validation backtracking behavior when multiple
+			// groupBy trees share the same root field (e.g., L7 collection has
+			// multiple groupBys starting with start_time)
+			testCases := []struct {
+				name           string
+				collectionName client.CollectionName
+				valid          bool
+				groupBys       []client.QueryRequestGroup
+			}{
+				{
+					// L7: Charts use start_time → gateway_route_name
+					name:           "l7 charts groupBy (start_time → gateway_route_name)",
+					collectionName: "l7",
+					valid:          true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "start_time"},
+						{FieldName: "gateway_route_name"},
+					},
+				},
+				{
+					// L7: Traffic Performance uses start_time → gateway_namespace → gateway_name → ...
+					// This requires backtracking because the first start_time groupBy
+					// leads to gateway_route_name, not gateway_namespace
+					name:           "l7 traffic performance groupBy (start_time → gateway_namespace → gateway_name)",
+					collectionName: "l7",
+					valid:          true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "start_time"},
+						{FieldName: "gateway_namespace"},
+						{FieldName: "gateway_name"},
+					},
+				},
+				{
+					// L7: Full Traffic Performance path
+					name:           "l7 full traffic performance groupBy path",
+					collectionName: "l7",
+					valid:          true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "start_time"},
+						{FieldName: "gateway_namespace"},
+						{FieldName: "gateway_name"},
+						{FieldName: "gateway_listener_full_name"},
+						{FieldName: "gateway_route_type"},
+						{FieldName: "gateway_route_namespace"},
+						{FieldName: "gateway_route_name"},
+						{FieldName: "dest_service_name"},
+						{FieldName: "dest_port_num"},
+						{FieldName: "response_code"},
+					},
+				},
+				{
+					// L7: Gateways table groupBy path
+					name:           "l7 gateways table groupBy path",
+					collectionName: "l7",
+					valid:          true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "gateway_namespace"},
+						{FieldName: "gateway_name"},
+						{FieldName: "gateway_listener_full_name"},
+						{FieldName: "host"},
+						{FieldName: "gateway_class"},
+						{FieldName: "gateway_status"},
+					},
+				},
+				{
+					// L7: Routes table groupBy path (starts with gateway_route_type)
+					name:           "l7 routes table groupBy path",
+					collectionName: "l7",
+					valid:          true,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "gateway_route_type"},
+						{FieldName: "gateway_route_namespace"},
+						{FieldName: "gateway_route_name"},
+						{FieldName: "gateway_namespace"},
+						{FieldName: "gateway_name"},
+						{FieldName: "gateway_listener_full_name"},
+						{FieldName: "dest_service_name"},
+						{FieldName: "dest_port_num"},
+						{FieldName: "gateway_route_status"},
+					},
+				},
+				{
+					// L7: Invalid path - start_time exists but wrong nested field
+					name:           "l7 invalid path (start_time → invalid_field)",
+					collectionName: "l7",
+					valid:          false,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "start_time"},
+						{FieldName: "invalid_field_that_does_not_exist"},
+					},
+				},
+				{
+					// L7: Invalid path - valid root but wrong continuation
+					name:           "l7 invalid path (gateway_namespace → wrong nested field)",
+					collectionName: "l7",
+					valid:          false,
+					groupBys: []client.QueryRequestGroup{
+						{FieldName: "gateway_namespace"},
+						{FieldName: "response_code"}, // response_code is not nested under gateway_namespace
+					},
+				},
+			}
+
+			for _, testCase := range testCases {
+				t.Run(testCase.name, func(t *testing.T) {
+					if testCase.valid {
+						mockClient.SetResults(lsrest.MockResult{Body: nil})
+					}
+
+					_, err := subject.Query(ctx, client.QueryRequest{
+						CollectionName: testCase.collectionName,
+						Filters: []client.QueryRequestFilter{
+							{Criterion: client.QueryRequestFilterCriterion{Type: "relativeTimeRange", GTE: "PT15M", Field: "start_time"}},
+						},
+						GroupBys: testCase.groupBys,
+					})
+
+					if testCase.valid {
+						require.NoError(t, err, "expected valid groupBy combination for %s", testCase.name)
 					} else {
 						require.ErrorIs(t, err, httpreply.ToBadRequest(``))
 						require.ErrorContains(t, err, `invalid group combination`)
