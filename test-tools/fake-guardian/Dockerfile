@@ -1,14 +1,13 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
+ARG UBI_IMAGE
 
-FROM alpine:3 AS builder
+FROM ${UBI_IMAGE} AS builder
 
 ARG CONTROLLER_RUNTIME_VERSION
 ARG K8S_VERSION
 ARG TARGETARCH
-
-RUN apk add --no-cache curl
 
 RUN curl -sfL https://github.com/kubernetes-sigs/controller-runtime/releases/download/${CONTROLLER_RUNTIME_VERSION}/setup-envtest-linux-${TARGETARCH} -o /usr/bin/setup-envtest && chmod +x /usr/bin/setup-envtest
 

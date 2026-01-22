@@ -1,8 +1,9 @@
 # Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
+ARG UBI_IMAGE
 
-FROM alpine:3 AS builder
+FROM ${UBI_IMAGE} AS builder
 
 RUN mkdir /alertmanager
 
