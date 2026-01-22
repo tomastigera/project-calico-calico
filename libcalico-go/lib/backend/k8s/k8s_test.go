@@ -3286,6 +3286,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 	})
 
 	Describe("watching / listing network polices (k8s and Calico) and cluster network policies", func() {
+		// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
 		//createTestClusterNetworkPolicy := func(name string) {
 		//	cnp := &clusternetpolicy.ClusterNetworkPolicy{
 		//		ObjectMeta: metav1.ObjectMeta{
@@ -3306,15 +3307,15 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		//	_, err := kcnpClient.ClusterNetworkPolicies().Create(ctx, cnp, metav1.CreateOptions{})
 		//	Expect(err).NotTo(HaveOccurred())
 		//}
-		deleteAllClusterNetworkPolicies := func() {
-			var zero int64
-			err := kcnpClient.ClusterNetworkPolicies().DeleteCollection(
-				ctx,
-				metav1.DeleteOptions{GracePeriodSeconds: &zero},
-				metav1.ListOptions{},
-			)
-			Expect(err).NotTo(HaveOccurred())
-		}
+		//deleteAllClusterNetworkPolicies := func() {
+		//	var zero int64
+		//	err := kcnpClient.ClusterNetworkPolicies().DeleteCollection(
+		//		ctx,
+		//		metav1.DeleteOptions{GracePeriodSeconds: &zero},
+		//		metav1.ListOptions{},
+		//	)
+		//	Expect(err).NotTo(HaveOccurred())
+		//}
 		createTestAdminNetworkPolicy := func(name string) {
 			anp := &adminpolicy.AdminNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3382,6 +3383,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		}
 		BeforeEach(func() {
 			// Create 2x Calico NP and 2x k8s NP, 2x k8s ANP and 2x k8s CNP
+			// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
 			//createTestClusterNetworkPolicy("test-cluster-net-policy-1")
 			//createTestClusterNetworkPolicy("test-cluster-net-policy-2")
 			createTestAdminNetworkPolicy("test-admin-net-policy-1")
@@ -3396,7 +3398,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			log.Info("[Test] Beginning Cleanup ----")
 			deleteAllNetworkPolicies()
 			deleteAllAdminNetworkPolicies()
-			deleteAllClusterNetworkPolicies()
+			// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
+			//deleteAllClusterNetworkPolicies()
 		})
 
 		It("supports resuming watch from previous revision (calico)", func() {
