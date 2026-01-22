@@ -528,23 +528,24 @@ func TestTierList(t *testing.T) {
 		return fmt.Sprintf("projectcalico.org/tiers/%s", name)
 	}
 
-	kubeAdminTier := makeTier(names.KubeAdminTierName, "", v3.KubeAdminTierOrder)
-	err := store.Get(ctx, tierPath(names.KubeAdminTierName), opts, kubeAdminTier)
-	if err != nil {
-		t.Fatalf("Get failed: %v", err)
-	}
-
 	defaultTier := makeTier(names.DefaultTierName, "", v3.DefaultTierOrder)
-	err = store.Get(ctx, tierPath(names.DefaultTierName), opts, defaultTier)
+	err := store.Get(ctx, tierPath(names.DefaultTierName), opts, defaultTier)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
 
-	kubeBaselineTier := makeTier(names.KubeBaselineTierName, "", v3.KubeBaselineTierOrder)
-	err = store.Get(ctx, tierPath(names.KubeBaselineTierName), opts, kubeBaselineTier)
-	if err != nil {
-		t.Fatalf("Get failed: %v", err)
-	}
+	// TODO(mazdak): Enable this test when ClusterNetworkPolicy is supported.
+	//kubeAdminTier := makeTier(names.KubeAdminTierName, "", v3.KubeAdminTierOrder)
+	//err = store.Get(ctx, tierPath(names.KubeAdminTierName), opts, kubeAdminTier)
+	//if err != nil {
+	//	t.Fatalf("Get failed: %v", err)
+	//}
+
+	//kubeBaselineTier := makeTier(names.KubeBaselineTierName, "", v3.KubeBaselineTierOrder)
+	//err = store.Get(ctx, tierPath(names.KubeBaselineTierName), opts, kubeBaselineTier)
+	//if err != nil {
+	//	t.Fatalf("Get failed: %v", err)
+	//}
 
 	anpTier := makeTier(names.AdminNetworkPolicyTierName, "", v3.AdminNetworkPolicyTierOrder)
 	err = store.Get(ctx, tierPath(names.AdminNetworkPolicyTierName), opts, anpTier)
@@ -577,7 +578,9 @@ func TestTierList(t *testing.T) {
 			},
 		},
 		// Tiers are returned in name order.
-		expectedOut: []*v3.Tier{anpTier, preset[1].storedObj, banpTier, defaultTier, kubeAdminTier, kubeBaselineTier},
+		// TODO (mazdak): Update the correct ordering when ClusterNetworkPolicy is enabled.
+		//expectedOut: []*v3.Tier{anpTier, preset[1].storedObj, banpTier, defaultTier, kubeAdminTier, kubeBaselineTier},
+		expectedOut: []*v3.Tier{anpTier, preset[1].storedObj, banpTier, defaultTier},
 	}}
 
 	for i, tt := range tests {
