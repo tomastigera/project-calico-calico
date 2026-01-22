@@ -50,15 +50,9 @@ COPY --from=kibana /usr/bin/yes /usr/bin/yes
 COPY --from=kibana /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=kibana /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=kibana /lib64/libcap.so.2 /lib64/libcap.so.2
-COPY --from=kibana /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=kibana /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=kibana /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=kibana /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
-
-# additional node dependencies
-COPY --from=kibana /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
-COPY --from=kibana /lib64/libm.so.6 /lib64/libm.so.6
-COPY --from=kibana /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
 # kibana node binaries and packages
 COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
