@@ -283,23 +283,41 @@ func (s *QueryService) validateRequest(req client.QueryRequest) (collections.Col
 		return collections.Collection{}, httpreply.ToBadRequest("aggregations limit exceeded")
 	}
 
-	// Enforce collection groupBys combination tree
-	collectionGroupBys := queryCollection.GroupBys()
-	for _, groupBy := range req.GroupBys {
-		collectionGroupBy, found := slices.Find(collectionGroupBys, func(g collections.GroupBy) bool {
-			return g.Field() == collections.FieldName(groupBy.FieldName)
-		})
-
-		if !found {
-			fieldNames := slices.Map(req.GroupBys, func(g client.QueryRequestGroup) string { return g.FieldName })
-
-			return collections.Collection{}, httpreply.ToBadRequest(fmt.Sprintf("invalid group combination: %s", strings.Join(fieldNames, ",")))
-		}
-
-		collectionGroupBys = collectionGroupBy.Nested()
+	// Enforce collection groupBys combination tree using backtracking
+	// This allows multiple groupBy trees with the same root field to coexist
+	if !validateGroupByPath(queryCollection.GroupBys(), req.GroupBys) {
+		fieldNames := slices.Map(req.GroupBys, func(g client.QueryRequestGroup) string { return g.FieldName })
+		return collections.Collection{}, httpreply.ToBadRequest(fmt.Sprintf("invalid group combination: %s", strings.Join(fieldNames, ",")))
 	}
 
 	return queryCollection, nil
+}
+
+// validateGroupByPath recursively validates that the requested groupBy fields
+// form a valid path through the collection's groupBy tree. It uses backtracking
+// to handle cases where multiple groupBy trees share the same root field.
+func validateGroupByPath(collectionGroupBys []collections.GroupBy, requestedGroupBys []client.QueryRequestGroup) bool {
+	// Base case: all requested groupBys have been matched
+	if len(requestedGroupBys) == 0 {
+		return true
+	}
+
+	currentField := collections.FieldName(requestedGroupBys[0].FieldName)
+	remainingGroupBys := requestedGroupBys[1:]
+
+	// Try all matching groupBys at the current level (backtracking)
+	for _, groupBy := range collectionGroupBys {
+		if groupBy.Field() == currentField {
+			// Found a match, recursively validate the remaining fields
+			if validateGroupByPath(groupBy.Nested(), remainingGroupBys) {
+				return true
+			}
+			// If this path didn't work, continue trying other matches
+		}
+	}
+
+	// No valid path found
+	return false
 }
 
 var reRemovePrefix = regexp.MustCompile(`^PT`)

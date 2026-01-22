@@ -28,6 +28,10 @@ type EndpointSliceAddrIndexer struct {
 	endpointSlicesByService map[model.ResourceKey]set.Set[model.ResourceKey]
 	endpointSlices          map[model.ResourceKey]*discovery.EndpointSlice
 	ignoredWorkloads        map[model.WorkloadEndpointKey]*model.WorkloadEndpoint
+
+	// Reverse index: endpoint IP/port/proto -> service key
+	// This allows looking up which service an endpoint IP belongs to.
+	ipPortProtoToService map[ipPortProtoKey]model.ResourceKey
 }
 
 func NewEndpointSliceAddrIndexer() *EndpointSliceAddrIndexer {
@@ -36,6 +40,7 @@ func NewEndpointSliceAddrIndexer() *EndpointSliceAddrIndexer {
 		endpointSlicesByService: map[model.ResourceKey]set.Set[model.ResourceKey]{},
 		endpointSlices:          map[model.ResourceKey]*discovery.EndpointSlice{},
 		ignoredWorkloads:        map[model.WorkloadEndpointKey]*model.WorkloadEndpoint{},
+		ipPortProtoToService:    map[ipPortProtoKey]model.ResourceKey{},
 	}
 	return e
 }
@@ -78,6 +83,13 @@ func (e *EndpointSliceAddrIndexer) flush(
 		}
 		processedSvcs.Add(*svc)
 
+		// Remove old reverse mappings for this service
+		if oldIPPortProtoSet, ok := e.ipPortProtoSetByService[*svc]; ok {
+			for ipPortProto := range oldIPPortProtoSet.All() {
+				delete(e.ipPortProtoToService, ipPortProto)
+			}
+		}
+
 		delete(e.ipPortProtoSetByService, *svc)
 
 		endpointSlices, ok := e.endpointSlicesByService[*svc]
@@ -89,6 +101,11 @@ func (e *EndpointSliceAddrIndexer) flush(
 			ipPortProtoSet.AddAll(extractIPPortProto(e.endpointSlices[endpointSliceKey]))
 		}
 		e.ipPortProtoSetByService[*svc] = ipPortProtoSet
+
+		// Add new reverse mappings for this service
+		for ipPortProto := range ipPortProtoSet.All() {
+			e.ipPortProtoToService[ipPortProto] = *svc
+		}
 	}
 }
 
@@ -185,4 +202,12 @@ func (e *EndpointSliceAddrIndexer) IPPortProtosByService(
 	}
 
 	return result
+}
+
+// GetServiceFromEndpointAddr looks up the service associated with an endpoint IP address.
+// This is useful for resolving service names from backend pod IPs (e.g., from upstream_host in L7 logs).
+func (e *EndpointSliceAddrIndexer) GetServiceFromEndpointAddr(ip [16]byte, port int, proto int) (model.ResourceKey, bool) {
+	key := ipPortProtoKey{ip: ip, port: port, proto: proto}
+	svc, ok := e.ipPortProtoToService[key]
+	return svc, ok
 }

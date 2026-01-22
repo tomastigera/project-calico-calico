@@ -57,6 +57,7 @@ var collectionL7 = Collection{
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_route_name"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_route_namespace"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_route_status"},
+		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_route_type"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "gateway_status"},
 		collectionFieldGeneric{fieldType: FieldTypeText, fieldName: "host"},
 		collectionFieldGeneric{
@@ -115,15 +116,31 @@ var collectionL7 = Collection{
 										},
 									},
 								},
-								// For Traffic Performance table: ... -> type -> gateway_route_namespace -> gateway_route_name -> dest_service_name -> dest_port_num -> response_code
+							},
+						},
+					},
+				},
+			},
+		},
+		// RS-2936: Routes table mockup order - gateway_route_type first
+		// gateway_route_type -> gateway_route_namespace -> gateway_route_name -> gateway_namespace -> gateway_name -> gateway_listener_full_name -> dest_service_name -> dest_port_num -> gateway_route_status
+		groupBy{
+			field: "gateway_route_type",
+			nested: []GroupBy{
+				groupBy{
+					field: "gateway_route_namespace",
+					nested: []GroupBy{
+						groupBy{
+							field: "gateway_route_name",
+							nested: []GroupBy{
 								groupBy{
-									field: "type",
+									field: "gateway_namespace",
 									nested: []GroupBy{
 										groupBy{
-											field: "gateway_route_namespace",
+											field: "gateway_name",
 											nested: []GroupBy{
 												groupBy{
-													field: "gateway_route_name",
+													field: "gateway_listener_full_name",
 													nested: []GroupBy{
 														groupBy{
 															field: "dest_service_name",
@@ -131,7 +148,7 @@ var collectionL7 = Collection{
 																groupBy{
 																	field: "dest_port_num",
 																	nested: []GroupBy{
-																		groupBy{field: "response_code"},
+																		groupBy{field: "gateway_route_status"},
 																	},
 																},
 															},
@@ -148,32 +165,38 @@ var collectionL7 = Collection{
 				},
 			},
 		},
-		// For Routes table: gateway_route_name -> gateway_route_namespace -> gateway_namespace -> gateway_name -> gateway_listener_full_name -> dest_service_name -> dest_port_num -> type -> gateway_route_status
+		// RS-2936: Traffic Performance table mockup order with start_time
+		// start_time -> gateway_namespace -> gateway_name -> gateway_listener_full_name -> gateway_route_type -> gateway_route_namespace -> gateway_route_name -> dest_service_name -> dest_port_num -> response_code
 		groupBy{
-			field: "gateway_route_name",
+			field: "start_time",
 			nested: []GroupBy{
 				groupBy{
-					field: "gateway_route_namespace",
+					field: "gateway_namespace",
 					nested: []GroupBy{
 						groupBy{
-							field: "gateway_namespace",
+							field: "gateway_name",
 							nested: []GroupBy{
 								groupBy{
-									field: "gateway_name",
+									field: "gateway_listener_full_name",
 									nested: []GroupBy{
 										groupBy{
-											field: "gateway_listener_full_name",
+											field: "gateway_route_type",
 											nested: []GroupBy{
 												groupBy{
-													field: "dest_service_name",
+													field: "gateway_route_namespace",
 													nested: []GroupBy{
 														groupBy{
-															field: "dest_port_num",
+															field: "gateway_route_name",
 															nested: []GroupBy{
 																groupBy{
-																	field: "type",
+																	field: "dest_service_name",
 																	nested: []GroupBy{
-																		groupBy{field: "gateway_route_status"},
+																		groupBy{
+																			field: "dest_port_num",
+																			nested: []GroupBy{
+																				groupBy{field: "response_code"},
+																			},
+																		},
 																	},
 																},
 															},

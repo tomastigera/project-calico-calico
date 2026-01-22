@@ -389,6 +389,8 @@
     type: text
   - name: gateway_route_status
     type: text
+  - name: gateway_route_type
+    type: text
   - name: gateway_status
     type: text
   - name: host
@@ -434,34 +436,42 @@
           - field: gateway_class
             nested:
             - field: gateway_status
-        - field: type
+  - field: gateway_route_type
+    nested:
+    - field: gateway_route_namespace
+      nested:
+      - field: gateway_route_name
+        nested:
+        - field: gateway_namespace
           nested:
-          - field: gateway_route_namespace
+          - field: gateway_name
             nested:
-            - field: gateway_route_name
+            - field: gateway_listener_full_name
               nested:
               - field: dest_service_name
                 nested:
                 - field: dest_port_num
                   nested:
-                  - field: response_code
-  - field: gateway_route_name
-    nested:
-    - field: gateway_route_namespace
-      nested:
-      - field: gateway_namespace
-        nested:
-        - field: gateway_name
-          nested:
-          - field: gateway_listener_full_name
-            nested:
-            - field: dest_service_name
-              nested:
-              - field: dest_port_num
-                nested:
-                - field: type
-                  nested:
                   - field: gateway_route_status
+  - field: start_time
+    nested:
+    - field: gateway_namespace
+      nested:
+      - field: gateway_name
+        nested:
+        - field: gateway_listener_full_name
+          nested:
+          - field: gateway_route_type
+            nested:
+            - field: gateway_route_namespace
+              nested:
+              - field: gateway_route_name
+                nested:
+                - field: dest_service_name
+                  nested:
+                  - field: dest_port_num
+                    nested:
+                    - field: response_code
   name: l7
 - defaultTimeFieldName: '@timestamp'
   fields:

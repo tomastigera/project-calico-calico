@@ -164,12 +164,11 @@
       "responseMapping": {
         "fieldLabels": [
           { "field": "gateway_namespace", "label": "Gateway Namespace" },
-          { "field": "gateway_name", "label": "Gateway Name" },
-          { "field": "gateway_listener_full_name", "label": "Listener" },
-          { "field": "host", "label": "Host" },
+          { "field": "gateway_name", "label": "Gateway" },
+          { "field": "gateway_listener_full_name", "label": "Gateway Listener" },
+          { "field": "host", "label": "Gateway Hostname" },
           { "field": "gateway_class", "label": "Gateway Class" },
-          { "field": "gateway_status", "label": "Status" },
-          { "field": "count", "label": "Count" }
+          { "field": "gateway_status", "label": "Gateway Status" }
         ]
       }
     },
@@ -184,11 +183,15 @@
         "maxDocs": 0,
         "groupBys": [
           {
-            "fieldName": "gateway_route_name",
+            "fieldName": "gateway_route_type",
             "maxValues": 1000
           },
           {
             "fieldName": "gateway_route_namespace",
+            "maxValues": 1000
+          },
+          {
+            "fieldName": "gateway_route_name",
             "maxValues": 1000
           },
           {
@@ -212,10 +215,6 @@
             "maxValues": 1000
           },
           {
-            "fieldName": "type",
-            "maxValues": 1000
-          },
-          {
             "fieldName": "gateway_route_status",
             "maxValues": 1000
           }
@@ -230,16 +229,15 @@
       },
       "responseMapping": {
         "fieldLabels": [
-          { "field": "gateway_route_name", "label": "Route Name" },
+          { "field": "gateway_route_type", "label": "Route Type" },
           { "field": "gateway_route_namespace", "label": "Route Namespace" },
+          { "field": "gateway_route_name", "label": "Route" },
           { "field": "gateway_namespace", "label": "Gateway Namespace" },
-          { "field": "gateway_name", "label": "Gateway Name" },
-          { "field": "gateway_listener_full_name", "label": "Listener" },
-          { "field": "dest_service_name", "label": "Destination Service" },
+          { "field": "gateway_name", "label": "Gateway" },
+          { "field": "gateway_listener_full_name", "label": "Gateway Listener" },
+          { "field": "dest_service_name", "label": "Backend Service" },
           { "field": "dest_port_num", "label": "Destination Port" },
-          { "field": "type", "label": "Route Type" },
-          { "field": "gateway_route_status", "label": "Route Status" },
-          { "field": "count", "label": "Count" }
+          { "field": "gateway_route_status", "label": "Status" }
         ]
       }
     },
@@ -254,6 +252,10 @@
         "maxDocs": 0,
         "groupBys": [
           {
+            "fieldName": "start_time",
+            "interval": "PT1M"
+          },
+          {
             "fieldName": "gateway_namespace",
             "maxValues": 1000
           },
@@ -266,7 +268,7 @@
             "maxValues": 1000
           },
           {
-            "fieldName": "type",
+            "fieldName": "gateway_route_type",
             "maxValues": 1000
           },
           {
@@ -291,12 +293,6 @@
           }
         ],
         "aggregations": {
-          "requests": {
-            "fieldName": "count",
-            "function": {
-              "type": "sum"
-            }
-          },
           "request_time": {
             "fieldName": "duration_mean",
             "function": {
@@ -319,16 +315,16 @@
       },
       "responseMapping": {
         "fieldLabels": [
+          { "field": "start_time", "label": "Time" },
           { "field": "gateway_namespace", "label": "Gateway Namespace" },
-          { "field": "gateway_name", "label": "Gateway Name" },
-          { "field": "gateway_listener_full_name", "label": "Listener" },
-          { "field": "type", "label": "Route Type" },
+          { "field": "gateway_name", "label": "Gateway" },
+          { "field": "gateway_listener_full_name", "label": "Gateway Listener" },
+          { "field": "gateway_route_type", "label": "Route Type" },
           { "field": "gateway_route_namespace", "label": "Route Namespace" },
-          { "field": "gateway_route_name", "label": "Route Name" },
-          { "field": "dest_service_name", "label": "Destination Service" },
+          { "field": "gateway_route_name", "label": "Route" },
+          { "field": "dest_service_name", "label": "Backend Service" },
           { "field": "dest_port_num", "label": "Destination Port" },
           { "field": "response_code", "label": "Response Code" },
-          { "field": "requests", "label": "Requests" },
           { "field": "request_time", "label": "Request Time" },
           { "field": "bytes_out", "label": "Bytes Out" },
           { "field": "bytes_in", "label": "Bytes In" }

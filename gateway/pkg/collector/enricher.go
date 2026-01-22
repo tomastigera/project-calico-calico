@@ -92,16 +92,19 @@ func (e *Enricher) EnrichLog(envoyLog *l7collector.EnvoyLog) {
 		envoyLog.GatewayNamespace = e.defaultGatewayNamespace
 	}
 
-	// Enrich Gateway status
-	e.enrichGatewayStatus(envoyLog)
-
-	// Enrich Route status based on type
+	// Enrich Route status based on type.
+	// This must happen BEFORE gateway enrichment because route enrichment
+	// can populate GatewayName/GatewayNamespace from the route's parent refs
+	// when they weren't set from environment variables.
 	switch routeType {
 	case "http":
 		e.enrichHTTPRouteStatus(envoyLog, routeNamespace, routeResourceName)
 	case "grpc":
 		e.enrichGRPCRouteStatus(envoyLog, routeNamespace, routeResourceName)
 	}
+
+	// Enrich Gateway status (must happen after route enrichment which may populate gateway info)
+	e.enrichGatewayStatus(envoyLog)
 }
 
 // enrichGatewayStatus adds Gateway status information to the log entry
