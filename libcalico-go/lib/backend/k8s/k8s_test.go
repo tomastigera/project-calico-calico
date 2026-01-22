@@ -37,7 +37,6 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	adminpolicy "sigs.k8s.io/network-policy-api/apis/v1alpha1"
 	adminpolicyclient "sigs.k8s.io/network-policy-api/pkg/client/clientset/versioned/typed/apis/v1alpha1"
-	netpolicyclient "sigs.k8s.io/network-policy-api/pkg/client/clientset/versioned/typed/apis/v1alpha2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -2966,10 +2965,10 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 
 var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.DatastoreK8s, func(cfg apiconfig.CalicoAPIConfig) {
 	var (
-		c          *k8s.KubeClient
-		ctx        context.Context
-		anpClient  *adminpolicyclient.PolicyV1alpha1Client
-		kcnpClient *netpolicyclient.PolicyV1alpha2Client
+		c         *k8s.KubeClient
+		ctx       context.Context
+		anpClient *adminpolicyclient.PolicyV1alpha1Client
+		//kcnpClient *netpolicyclient.PolicyV1alpha2Client
 	)
 
 	BeforeEach(func() {
@@ -2985,8 +2984,9 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		config.ContentType = runtime.ContentTypeJSON
 		anpClient, err = k8s.BuildK8SAdminPolicyClient(config)
 		Expect(err).NotTo(HaveOccurred())
-		kcnpClient, err = k8s.BuildK8SCNPClient(config)
-		Expect(err).NotTo(HaveOccurred())
+		// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
+		//kcnpClient, err = k8s.BuildK8SCNPClient(config)
+		//Expect(err).NotTo(HaveOccurred())
 
 		ctx = context.Background()
 	})
