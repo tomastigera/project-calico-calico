@@ -1582,13 +1582,23 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 	}
 
 	if ip := net.ParseIP(addr); ip != nil {
-		// Address is an IP. Attempt to look up a service name by cluster IP
+		// Address is an IP. First try to look up a service name by cluster IP
 		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(utils.IpStrTo16Byte(addr), port, t.Proto)
 		if found {
 			svcName = k8sSvcPortName.Name
 			svcNamespace = k8sSvcPortName.Namespace
 			svcPortName = k8sSvcPortName.Port
 			validService = true
+		} else {
+			// Cluster IP lookup failed. Try to look up by endpoint (pod) IP.
+			// This is needed for gateway logs where upstream_host contains the backend pod IP.
+			k8sSvcPortName, found = c.luc.GetServiceFromEndpointAddr(utils.IpStrTo16Byte(addr), port, t.Proto)
+			if found {
+				svcName = k8sSvcPortName.Name
+				svcNamespace = k8sSvcPortName.Namespace
+				svcPortName = k8sSvcPortName.Port
+				validService = true
+			}
 		}
 	} else {
 		// Check if the address is a Kubernetes service name

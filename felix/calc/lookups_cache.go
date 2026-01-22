@@ -134,6 +134,12 @@ func (lc *LookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNA
 	return lc.svcCache.GetServiceFromPreDNATDest(ipPreDNAT, portPreDNAT, proto)
 }
 
+// GetServiceFromEndpointAddr looks up a service by endpoint (pod) IP address.
+// This is useful for resolving service names from backend pod IPs (e.g., from upstream_host in L7 logs).
+func (lc *LookupsCache) GetServiceFromEndpointAddr(ipAddr [16]byte, port int, proto int) (proxy.ServicePortName, bool) {
+	return lc.svcCache.GetServiceFromEndpointAddr(ipAddr, port, proto)
+}
+
 // GetNodePortService looks up a service by port and protocol (assuming a node IP).
 func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePortName, bool) {
 	return lc.svcCache.GetNodePortService(port, proto)
