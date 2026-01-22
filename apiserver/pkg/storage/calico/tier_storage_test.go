@@ -523,20 +523,38 @@ func TestTierList(t *testing.T) {
 	}
 
 	opts := storage.GetOptions{IgnoreNotFound: false}
+
+	tierPath := func(name string) string {
+		return fmt.Sprintf("projectcalico.org/tiers/%s", name)
+	}
+
 	defaultTier := makeTier(names.DefaultTierName, "", v3.DefaultTierOrder)
-	err := store.Get(ctx, "projectcalico.org/tiers/default", opts, defaultTier)
+	err := store.Get(ctx, tierPath(names.DefaultTierName), opts, defaultTier)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
 
+	// TODO(mazdak): Enable this test when ClusterNetworkPolicy is supported.
+	//kubeAdminTier := makeTier(names.KubeAdminTierName, "", v3.KubeAdminTierOrder)
+	//err = store.Get(ctx, tierPath(names.KubeAdminTierName), opts, kubeAdminTier)
+	//if err != nil {
+	//	t.Fatalf("Get failed: %v", err)
+	//}
+
+	//kubeBaselineTier := makeTier(names.KubeBaselineTierName, "", v3.KubeBaselineTierOrder)
+	//err = store.Get(ctx, tierPath(names.KubeBaselineTierName), opts, kubeBaselineTier)
+	//if err != nil {
+	//	t.Fatalf("Get failed: %v", err)
+	//}
+
 	anpTier := makeTier(names.AdminNetworkPolicyTierName, "", v3.AdminNetworkPolicyTierOrder)
-	err = store.Get(ctx, "projectcalico.org/tiers/adminnetworkpolicy", opts, anpTier)
+	err = store.Get(ctx, tierPath(names.AdminNetworkPolicyTierName), opts, anpTier)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
 
 	banpTier := makeTier(names.BaselineAdminNetworkPolicyTierName, "", v3.BaselineAdminNetworkPolicyTierOrder)
-	err = store.Get(ctx, "projectcalico.org/tiers/baselineadminnetworkpolicy", opts, banpTier)
+	err = store.Get(ctx, tierPath(names.BaselineAdminNetworkPolicyTierName), opts, banpTier)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
@@ -560,6 +578,8 @@ func TestTierList(t *testing.T) {
 			},
 		},
 		// Tiers are returned in name order.
+		// TODO (mazdak): Update the correct ordering when ClusterNetworkPolicy is enabled.
+		//expectedOut: []*v3.Tier{anpTier, preset[1].storedObj, banpTier, defaultTier, kubeAdminTier, kubeBaselineTier},
 		expectedOut: []*v3.Tier{anpTier, preset[1].storedObj, banpTier, defaultTier},
 	}}
 

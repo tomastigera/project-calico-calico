@@ -205,6 +205,7 @@ const (
 	PolicyKind_NetworkPolicy              PolicyKind = 6
 	PolicyKind_AdminNetworkPolicy         PolicyKind = 7
 	PolicyKind_BaselineAdminNetworkPolicy PolicyKind = 8
+	PolicyKind_ClusterNetworkPolicy       PolicyKind = 11
 	// Calico Profiles.
 	PolicyKind_Profile   PolicyKind = 9
 	PolicyKind_EndOfTier PolicyKind = 10
@@ -222,6 +223,7 @@ var (
 		6:  "NetworkPolicy",
 		7:  "AdminNetworkPolicy",
 		8:  "BaselineAdminNetworkPolicy",
+		11: "ClusterNetworkPolicy",
 		9:  "Profile",
 		10: "EndOfTier",
 	}
@@ -235,6 +237,7 @@ var (
 		"NetworkPolicy":                 6,
 		"AdminNetworkPolicy":            7,
 		"BaselineAdminNetworkPolicy":    8,
+		"ClusterNetworkPolicy":          11,
 		"Profile":                       9,
 		"EndOfTier":                     10,
 	}
@@ -2496,7 +2499,7 @@ const file_api_proto_rawDesc = "" +
 	"\x04Pass\x10\x03*!\n" +
 	"\tMatchType\x12\t\n" +
 	"\x05Exact\x10\x00\x12\t\n" +
-	"\x05Fuzzy\x10\x01*\x95\x02\n" +
+	"\x05Fuzzy\x10\x01*\xaf\x02\n" +
 	"\n" +
 	"PolicyKind\x12\x13\n" +
 	"\x0fKindUnspecified\x10\x00\x12\x17\n" +
@@ -2507,7 +2510,8 @@ const file_api_proto_rawDesc = "" +
 	"\x1dStagedKubernetesNetworkPolicy\x10\x05\x12\x11\n" +
 	"\rNetworkPolicy\x10\x06\x12\x16\n" +
 	"\x12AdminNetworkPolicy\x10\a\x12\x1e\n" +
-	"\x1aBaselineAdminNetworkPolicy\x10\b\x12\v\n" +
+	"\x1aBaselineAdminNetworkPolicy\x10\b\x12\x18\n" +
+	"\x14ClusterNetworkPolicy\x10\v\x12\v\n" +
 	"\aProfile\x10\t\x12\r\n" +
 	"\tEndOfTier\x10\n" +
 	"*v\n" +

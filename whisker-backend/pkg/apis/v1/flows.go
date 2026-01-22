@@ -183,6 +183,7 @@ const (
 	PolicyKindNetworkPolicy              = PolicyKind(proto.PolicyKind_NetworkPolicy)
 	PolicyKindAdminNetworkPolicy         = PolicyKind(proto.PolicyKind_AdminNetworkPolicy)
 	PolicyKindBaselineAdminNetworkPolicy = PolicyKind(proto.PolicyKind_BaselineAdminNetworkPolicy)
+	PolicyKindClusterNetworkPolicy       = PolicyKind(proto.PolicyKind_ClusterNetworkPolicy)
 
 	PolicyKindProfile   = PolicyKind(proto.PolicyKind_Profile)
 	PolicyKindEndOfTier = PolicyKind(proto.PolicyKind_EndOfTier)
