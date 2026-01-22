@@ -12,6 +12,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
@@ -394,9 +395,17 @@ func (slc *ServiceLookupsCache) GetServiceFromEndpointAddr(ipAddr [16]byte, port
 }
 
 // getPortNameFromServiceSpec finds the port name for a given port number in a service spec.
+// It matches against both TargetPort (if numeric) and Port (service port).
+// Note: If TargetPort is defined as a named port string, we can only match via the service Port,
+// since resolving named ports would require access to the pod's container spec.
 func getPortNameFromServiceSpec(spec kapiv1.ServiceSpec, port int) string {
 	for _, p := range spec.Ports {
-		if int(p.TargetPort.IntVal) == port || int(p.Port) == port {
+		// Check if the port matches the service port
+		if int(p.Port) == port {
+			return p.Name
+		}
+		// Check if the port matches the target port (only if target port is numeric)
+		if p.TargetPort.Type == intstr.Int && int(p.TargetPort.IntVal) == port {
 			return p.Name
 		}
 	}
