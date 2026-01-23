@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.25.5
+go 1.25.6
 github.com/armon/go-radix v1.0.0
 github.com/blang/semver/v4 v4.0.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -58,9 +58,9 @@ gopkg.in/evanphx/json-patch.v4 v4.13.0
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/yaml.v3 v3.0.1
 howett.net/plist v1.0.1
-k8s.io/api v0.34.2
-k8s.io/apimachinery v0.34.2
-k8s.io/client-go v0.34.2
+k8s.io/api v0.34.3
+k8s.io/apimachinery v0.34.3
+k8s.io/client-go v0.34.3
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
 k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
