@@ -17,10 +17,10 @@ github.com/projectcalico/calico
 github.com/prometheus-community/elasticsearch_exporter v1.5.0
 github.com/prometheus/client_golang v1.23.2
 github.com/prometheus/client_model v0.6.2
-github.com/prometheus/common v0.67.2
+github.com/prometheus/common v0.67.5
 github.com/prometheus/procfs v0.19.2
 github.com/xhit/go-str2duration/v2 v2.1.0
 go.yaml.in/yaml/v2 v2.4.3
 golang.org/x/sys v0.39.0
-google.golang.org/protobuf v1.36.10
+google.golang.org/protobuf v1.36.11
 gopkg.in/alecthomas/kingpin.v2 v2.2.6

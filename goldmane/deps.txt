@@ -38,7 +38,7 @@ github.com/projectcalico/calico
 github.com/projectcalico/calico/lib/std v0.0.0-20251108162545-e9546d52eb7a
 github.com/prometheus/client_golang v1.23.2
 github.com/prometheus/client_model v0.6.2
-github.com/prometheus/common v0.67.2
+github.com/prometheus/common v0.67.5
 github.com/prometheus/procfs v0.19.2
 github.com/rivo/uniseg v0.4.7
 github.com/sirupsen/logrus v1.9.3
@@ -60,7 +60,7 @@ golang.org/x/time v0.14.0
 google.golang.org/genproto v0.0.0-20250603155806-513f23925822
 google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
 google.golang.org/grpc v1.76.0
-google.golang.org/protobuf v1.36.10
+google.golang.org/protobuf v1.36.11
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/yaml.v3 v3.0.1
 k8s.io/api v0.34.3
