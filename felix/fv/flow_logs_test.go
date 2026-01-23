@@ -2437,9 +2437,11 @@ var _ = infrastructure.DatastoreDescribe("flow log with deleted service pod test
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-1", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 

@@ -295,8 +295,8 @@ func (kds *K8sDatastoreInfra) runK8sControllerManager() {
 		"--kubeconfig=/home/user/certs/kube-controller-manager.kubeconfig",
 		// We run trivially small clusters, so increase the QPS to get the
 		// cluster to start up as fast as possible.
-		"--kube-api-qps=100",
-		"--kube-api-burst=200",
+		"--kube-api-qps=1000",
+		"--kube-api-burst=1000",
 		"--min-resync-period=3m",
 		// Disable node CIDRs since the controller manager stalls for 10s if
 		// they are enabled.
@@ -374,8 +374,8 @@ func setupK8sDatastoreInfra(opts ...CreateOption) (kds *K8sDatastoreInfra, err e
 		kds.K8sClient, err = kubernetes.NewForConfig(&rest.Config{
 			Transport: insecureTransport,
 			Host:      "https://" + kds.containerGetIPForURL(kds.k8sApiContainer) + ":6443",
-			QPS:       100,
-			Burst:     100,
+			QPS:       1000,
+			Burst:     1000,
 		})
 		if err == nil {
 			break
@@ -528,7 +528,7 @@ func setupK8sDatastoreInfra(opts ...CreateOption) (kds *K8sDatastoreInfra, err e
 				KubeConfig: apiconfig.KubeConfig{
 					K8sAPIEndpoint:           kds.Endpoint,
 					K8sInsecureSkipTLSVerify: true,
-					K8sClientQPS:             100,
+					K8sClientQPS:             1000,
 				},
 			},
 		})

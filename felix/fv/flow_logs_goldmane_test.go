@@ -827,7 +827,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		infra = getInfra()
 		opts.FelixLogSeverity = "Debug"
 		opts = infrastructure.DefaultTopologyOptions()
-		opts.IPIPMode = api.IPIPModeNever
+		//opts.IPIPMode = api.IPIPModeNever
 		opts.FlowLogSource = infrastructure.FlowLogSourceLocalSocket
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
@@ -880,6 +880,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		// Destination workloads on Node 1 (Host Networked to simulate external/non-WEP IPs)
 
 		// dwl1
+		infrastructure.AssignIP("dwl1", "10.65.1.2", tc.Felixes[1].Hostname, client)
 		dwl1 = workload.New(tc.Felixes[1], "dwl1", "", "10.65.1.2", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.2/32", "dev", "lo")
@@ -887,6 +888,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		Expect(dwl1.Start(tc.Felixes[1])).NotTo(HaveOccurred())
 
 		// dwl2
+		infrastructure.AssignIP("dwl2", "10.65.1.3", tc.Felixes[1].Hostname, client)
 		dwl2 = workload.New(tc.Felixes[1], "dwl2", "", "10.65.1.3", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.3/32", "dev", "lo")
