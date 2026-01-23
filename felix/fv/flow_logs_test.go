@@ -2222,24 +2222,28 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log networkset precede
 
 		// Source workloads on Node 0
 		// swl1 in ns1
+		infrastructure.AssignIP("swl1", "10.65.0.2", tc.Felixes[0].Hostname, client)
 		swl1 = workload.Run(tc.Felixes[0], "swl1", "ns1", "10.65.0.2", "8055", "tcp")
 		swl1.WorkloadEndpoint.GenerateName = "swl1-"
 		swl1.WorkloadEndpoint.Namespace = "ns1"
 		swl1.ConfigureInInfra(infra)
 
 		// swl2 in ns2
+		infrastructure.AssignIP("swl2", "10.65.0.3", tc.Felixes[0].Hostname, client)
 		swl2 = workload.Run(tc.Felixes[0], "swl2", "ns2", "10.65.0.3", "8055", "tcp")
 		swl2.WorkloadEndpoint.GenerateName = "swl2-"
 		swl2.WorkloadEndpoint.Namespace = "ns2"
 		swl2.ConfigureInInfra(infra)
 
 		// swl3 in ns3
+		infrastructure.AssignIP("swl3", "10.65.0.4", tc.Felixes[0].Hostname, client)
 		swl3 = workload.Run(tc.Felixes[0], "swl3", "ns3", "10.65.0.4", "8055", "tcp")
 		swl3.WorkloadEndpoint.GenerateName = "swl3-"
 		swl3.WorkloadEndpoint.Namespace = "ns3"
 		swl3.ConfigureInInfra(infra)
 
 		// swl4 in ns3
+		infrastructure.AssignIP("swl4", "10.65.0.5", tc.Felixes[0].Hostname, client)
 		swl4 = workload.Run(tc.Felixes[0], "swl4", "ns3", "10.65.0.5", "8055", "tcp")
 		swl4.WorkloadEndpoint.GenerateName = "swl4-"
 		swl4.WorkloadEndpoint.Namespace = "ns3"
@@ -2248,6 +2252,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log networkset precede
 		// Destination workloads on Node 1 (Host Networked to simulate external/non-WEP IPs)
 
 		// dwl1
+		infrastructure.AssignIP("dwl1", "10.65.1.2", tc.Felixes[1].Hostname, client)
 		dwl1 = workload.New(tc.Felixes[1], "dwl1", "", "10.65.1.2", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.2/32", "dev", "lo")
@@ -2255,6 +2260,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log networkset precede
 		Expect(dwl1.Start(tc.Felixes[1])).NotTo(HaveOccurred())
 
 		// dwl2
+		infrastructure.AssignIP("dwl2", "10.65.1.3", tc.Felixes[1].Hostname, client)
 		dwl2 = workload.New(tc.Felixes[1], "dwl2", "", "10.65.1.3", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.3/32", "dev", "lo")
