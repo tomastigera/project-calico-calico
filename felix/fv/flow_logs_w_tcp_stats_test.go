@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -28,6 +29,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		flowLogsReaders []flowlogs.FlowLogReader
 		ep1_1           *workload.Workload
 		ep1_2           *workload.Workload
+		client          client.Interface
 	)
 
 	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
@@ -52,7 +54,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTPROCESSINFO"] = "true"
 
 		// Start felix instances.
-		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		if bpfEnabled {
 			ensureBPFProgramsAttached(tc.Felixes[0])
@@ -63,10 +65,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
 		// Create workload on host 2.
+		infrastructure.AssignIP("ep1-2", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep1_2 = workload.Run(tc.Felixes[1], "ep1-2", "default", "10.65.1.0", "8055", "tcp")
 		ep1_2.ConfigureInInfra(infra)
 

@@ -389,6 +389,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		tc                infrastructure.TopologyContainers
 		flowLogsReaders   []flowlogs.FlowLogReader
 		ep1_1, ep2_1      *workload.Workload
+		client            client.Interface
 
 		dnsServerIP string
 	)
@@ -442,16 +443,18 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		opts.ExtraEnvVars["FELIX_DNSEXTRATTL"] = "300"
 
 		// Start felix instances.
-		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
 		// Create ep1 workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
 		// Create ep2 workload on host 1.
+		infrastructure.AssignIP("ep2-1", "10.65.0.1", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.0.1", "8056", "tcp")
 		ep2_1.ConfigureInInfra(infra)
 

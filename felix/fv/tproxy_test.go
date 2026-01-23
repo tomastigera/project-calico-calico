@@ -27,8 +27,6 @@ import (
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var (
@@ -201,7 +199,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				if !ipip {
 					options.IPIPMode = api.IPIPModeNever
-					options.SimulateBIRDRoutes = true
 				}
 
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
@@ -234,7 +231,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					proxies = append(proxies, proxy)
 				}
 
-				addWorkload := func(run bool, ii, wi, port int, labels map[string]string) *workload.Workload {
+				addWorkload := func(ii, wi, port int, labels map[string]string) *workload.Workload {
 					if labels == nil {
 						labels = make(map[string]string)
 					}
@@ -242,30 +239,16 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
 					wName := fmt.Sprintf("w%d%d", ii, wi)
 
+					infrastructure.AssignIP(wName, wIP, tc.Felixes[ii].Hostname, calicoClient)
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
-					if run {
-						Expect(w.Start(infra)).To(Succeed())
-					}
+					Expect(w.Start(infra)).To(Succeed())
 
 					labels["name"] = w.Name
 					labels["workload"] = "regular"
 
 					w.WorkloadEndpoint.Labels = labels
 					w.ConfigureInInfra(infra)
-					if options.UseIPPools {
-						// Assign the workload's IP in IPAM, this will trigger calculation of routes.
-						err := calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-							IP:       cnet.MustParseIP(wIP),
-							HandleID: &w.Name,
-							Attrs: map[string]string{
-								ipam.AttributeNode: tc.Felixes[ii].Hostname,
-							},
-							Hostname: tc.Felixes[ii].Hostname,
-						})
-						Expect(err).NotTo(HaveOccurred())
-					}
-
 					return w
 				}
 
@@ -280,8 +263,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					hostW[ii].ConfigureInInfra(infra)
 
 					// Two workloads on each host so we can check the same host and other host cases.
-					w[ii][0] = addWorkload(true, ii, 0, 8055, nil)
-					w[ii][1] = addWorkload(true, ii, 1, 8055, nil)
+					w[ii][0] = addWorkload(ii, 0, 8055, nil)
+					w[ii][1] = addWorkload(ii, 1, 8055, nil)
 				}
 
 				var (

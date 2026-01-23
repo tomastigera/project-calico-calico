@@ -69,7 +69,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			f.TriggerDelayedStart()
 		}
 
-		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "tcp")
+		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "tcp", client)
 
 		cc = &connectivity.Checker{}
 	})
@@ -500,7 +500,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 			f.TriggerDelayedStart()
 		}
 
-		createWorkloads(infra, tc.Felixes, w[:], hostW[:], "tcp")
+		createWorkloads(infra, tc.Felixes, w[:], hostW[:], "tcp", client)
 
 		cc = &connectivity.Checker{}
 
@@ -579,7 +579,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			f.TriggerDelayedStart()
 		}
 
-		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "udp") /* UDP for packet loss test */
+		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "udp", client) /* UDP for packet loss test */
 
 		cc = &connectivity.Checker{}
 		cc.Protocol = "udp"
@@ -703,7 +703,6 @@ func ipSecTopologyOptions() infrastructure.TopologyOptions {
 	// Set up IPIP configuration but routes as if IPIP was disabled.  This allows us to check that Felix correctly
 	// ignores IPIP configuration when IPsec is enabled.
 	topologyOptions.IPIPMode = api.IPIPModeAlways
-	topologyOptions.SimulateBIRDRoutes = false
 	// Turn on NAT outgoing because it interacts with IPsec; when a workload connects to a remote host with IPsec
 	// then we _do not_ SNAT the traffic because it is tunneled.  Otherwise, we _do_ NAT such traffic because
 	// we can't guarantee that the traffic won't get dropped by the fabric due to RPF.
@@ -721,16 +720,29 @@ func disableIPSec(client clientv3.Interface) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func startWorkloadsandWaitForPolicy(infra infrastructure.DatastoreInfra, felixes []*infrastructure.Felix, w []*workload.Workload, hostW []*workload.Workload, protocol string) {
-	createWorkloads(infra, felixes, w, hostW, protocol)
+func startWorkloadsandWaitForPolicy(
+	infra infrastructure.DatastoreInfra,
+	felixes []*infrastructure.Felix,
+	w, hostW []*workload.Workload,
+	protocol string,
+	client clientv3.Interface,
+) {
+	createWorkloads(infra, felixes, w, hostW, protocol, client)
 	waitForPolicy(felixes, w)
 }
 
-func createWorkloads(infra infrastructure.DatastoreInfra, felixes []*infrastructure.Felix, w []*workload.Workload, hostW []*workload.Workload, protocol string) {
+func createWorkloads(
+	infra infrastructure.DatastoreInfra,
+	felixes []*infrastructure.Felix,
+	w, hostW []*workload.Workload,
+	protocol string,
+	client clientv3.Interface,
+) {
 	// Create workloads, using the default profile.  One on each "host".
 	for ii := range w {
 		wIP := fmt.Sprintf("10.65.%d.2", ii)
 		wName := fmt.Sprintf("w%d", ii)
+		infrastructure.AssignIP(wName, wIP, felixes[ii].Hostname, client)
 		w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", protocol)
 		w[ii].ConfigureInInfra(infra)
 	}

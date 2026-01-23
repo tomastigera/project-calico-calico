@@ -3,7 +3,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -21,8 +20,6 @@ import (
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var (
@@ -105,7 +102,6 @@ func describeALPTest(ipip bool) bool {
 
 				if !ipip {
 					options.IPIPMode = api.IPIPModeNever
-					options.SimulateBIRDRoutes = false
 				}
 
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
@@ -137,6 +133,7 @@ func describeALPTest(ipip bool) bool {
 					wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
 					wName := fmt.Sprintf("w%d-%d", ii, wi)
 
+					infrastructure.AssignIP(wName, wIP, tc.Felixes[ii].Hostname, calicoClient)
 					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
@@ -149,19 +146,6 @@ func describeALPTest(ipip bool) bool {
 
 					w.WorkloadEndpoint.Labels = labels
 					w.ConfigureInInfra(infra)
-					if options.UseIPPools {
-						// Assign the workload's IP in IPAM, this will trigger calculation of routes.
-						err := calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-							IP:       cnet.MustParseIP(wIP),
-							HandleID: &w.Name,
-							Attrs: map[string]string{
-								ipam.AttributeNode: tc.Felixes[ii].Hostname,
-							},
-							Hostname: tc.Felixes[ii].Hostname,
-						})
-						Expect(err).NotTo(HaveOccurred())
-					}
-
 					return w
 				}
 
