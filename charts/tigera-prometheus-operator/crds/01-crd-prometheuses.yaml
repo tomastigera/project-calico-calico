@@ -3,8 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
-    operator.prometheus.io/version: 0.84.0
+    controller-gen.kubebuilder.io/version: v0.19.0
+    operator.prometheus.io/version: 0.88.0
   name: prometheuses.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -589,7 +589,6 @@ spec:
                                   type: string
                                 sourceLabels:
                                   items:
-                                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                                     type: string
                                   type: array
                                 targetLabel:
@@ -663,6 +662,7 @@ spec:
                           noProxy:
                             type: string
                           pathPrefix:
+                            minLength: 1
                             type: string
                           port:
                             anyOf:
@@ -732,7 +732,6 @@ spec:
                                   type: string
                                 sourceLabels:
                                   items:
-                                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                                     type: string
                                   type: array
                                 targetLabel:
@@ -740,6 +739,11 @@ spec:
                               type: object
                             type: array
                           scheme:
+                            enum:
+                              - http
+                              - https
+                              - HTTP
+                              - HTTPS
                             type: string
                           sigv4:
                             properties:
@@ -775,6 +779,8 @@ spec:
                                   - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              useFIPSSTSEndpoint:
+                                type: boolean
                             type: object
                           timeout:
                             pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
@@ -1131,6 +1137,23 @@ spec:
                                     - fieldPath
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                fileKeyRef:
+                                  properties:
+                                    key:
+                                      type: string
+                                    optional:
+                                      default: false
+                                      type: boolean
+                                    path:
+                                      type: string
+                                    volumeName:
+                                      type: string
+                                  required:
+                                    - key
+                                    - path
+                                    - volumeName
+                                  type: object
+                                  x-kubernetes-map-type: atomic
                                 resourceFieldRef:
                                   properties:
                                     containerName:
@@ -1559,6 +1582,29 @@ spec:
                         type: object
                       restartPolicy:
                         type: string
+                      restartPolicyRules:
+                        items:
+                          properties:
+                            action:
+                              type: string
+                            exitCodes:
+                              properties:
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    format: int32
+                                    type: integer
+                                  type: array
+                                  x-kubernetes-list-type: set
+                              required:
+                                - operator
+                              type: object
+                          required:
+                            - action
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
                       securityContext:
                         properties:
                           allowPrivilegeEscalation:
@@ -1907,6 +1953,8 @@ spec:
                   x-kubernetes-list-type: map
                 hostNetwork:
                   type: boolean
+                hostUsers:
+                  type: boolean
                 ignoreNamespaceSelectors:
                   type: boolean
                 image:
@@ -1970,6 +2018,23 @@ spec:
                                       type: string
                                   required:
                                     - fieldPath
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                fileKeyRef:
+                                  properties:
+                                    key:
+                                      type: string
+                                    optional:
+                                      default: false
+                                      type: boolean
+                                    path:
+                                      type: string
+                                    volumeName:
+                                      type: string
+                                  required:
+                                    - key
+                                    - path
+                                    - volumeName
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 resourceFieldRef:
@@ -2400,6 +2465,29 @@ spec:
                         type: object
                       restartPolicy:
                         type: string
+                      restartPolicyRules:
+                        items:
+                          properties:
+                            action:
+                              type: string
+                            exitCodes:
+                              properties:
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    format: int32
+                                    type: integer
+                                  type: array
+                                  x-kubernetes-list-type: set
+                              required:
+                                - operator
+                              type: object
+                          required:
+                            - action
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
                       securityContext:
                         properties:
                           allowPrivilegeEscalation:
@@ -2643,6 +2731,7 @@ spec:
                   type: integer
                 minReadySeconds:
                   format: int32
+                  minimum: 0
                   type: integer
                 nameEscapingScheme:
                   enum:
@@ -2664,7 +2753,16 @@ spec:
                   properties:
                     convertHistogramsToNHCB:
                       type: boolean
+                    ignoreResourceAttributes:
+                      items:
+                        minLength: 1
+                        type: string
+                      minItems: 1
+                      type: array
+                      x-kubernetes-list-type: set
                     keepIdentifyingResourceAttributes:
+                      type: boolean
+                    promoteAllResourceAttributes:
                       type: boolean
                     promoteResourceAttributes:
                       items:
@@ -2673,11 +2771,14 @@ spec:
                       minItems: 1
                       type: array
                       x-kubernetes-list-type: set
+                    promoteScopeMetadata:
+                      type: boolean
                     translationStrategy:
                       enum:
                         - NoUTF8EscapingWithSuffixes
                         - UnderscoreEscapingWithSuffixes
                         - NoTranslation
+                        - UnderscoreEscapingWithoutSuffixes
                       type: string
                   type: object
                 overrideHonorLabels:
@@ -2693,6 +2794,11 @@ spec:
                     whenScaled:
                       type: string
                   type: object
+                podManagementPolicy:
+                  enum:
+                    - OrderedReady
+                    - Parallel
+                  type: string
                 podMetadata:
                   properties:
                     annotations:
@@ -3270,9 +3376,8 @@ spec:
                           managedIdentity:
                             properties:
                               clientId:
+                                minLength: 1
                                 type: string
-                            required:
-                              - clientId
                             type: object
                           oauth:
                             properties:
@@ -3301,11 +3406,26 @@ spec:
                               - clientSecret
                               - tenantId
                             type: object
+                          scope:
+                            pattern: ^[\w\s:/.\\-]+$
+                            type: string
                           sdk:
                             properties:
                               tenantId:
                                 pattern: ^[0-9a-zA-Z-.]+$
                                 type: string
+                            type: object
+                          workloadIdentity:
+                            properties:
+                              clientId:
+                                minLength: 1
+                                type: string
+                              tenantId:
+                                minLength: 1
+                                type: string
+                            required:
+                              - clientId
+                              - tenantId
                             type: object
                         type: object
                       basicAuth:
@@ -3640,6 +3760,8 @@ spec:
                               - key
                             type: object
                             x-kubernetes-map-type: atomic
+                          useFIPSSTSEndpoint:
+                            type: boolean
                         type: object
                       tlsConfig:
                         properties:
@@ -3782,7 +3904,6 @@ spec:
                               type: string
                             sourceLabels:
                               items:
-                                pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                                 type: string
                               type: array
                             targetLabel:
@@ -4003,7 +4124,6 @@ spec:
                               type: string
                             sourceLabels:
                               items:
-                                pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                                 type: string
                               type: array
                             targetLabel:
@@ -4053,7 +4173,6 @@ spec:
                               type: string
                             sourceLabels:
                               items:
-                                pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                                 type: string
                               type: array
                             targetLabel:
@@ -4226,6 +4345,8 @@ spec:
                   default: 30s
                   pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                   type: string
+                scrapeNativeHistograms:
+                  type: boolean
                 scrapeProtocols:
                   items:
                     enum:
@@ -5029,10 +5150,13 @@ spec:
                       enum:
                         - http
                         - grpc
+                        - HTTP
+                        - GRPC
                       type: string
                     compression:
                       enum:
                         - gzip
+                        - Gzip
                       type: string
                     endpoint:
                       minLength: 1
@@ -5159,6 +5283,27 @@ spec:
                       pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                       type: string
                   type: object
+                updateStrategy:
+                  properties:
+                    rollingUpdate:
+                      properties:
+                        maxUnavailable:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
+                      type: object
+                    type:
+                      enum:
+                        - OnDelete
+                        - RollingUpdate
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: rollingUpdate requires type to be RollingUpdate
+                      rule: '!(self.type != ''RollingUpdate'' && has(self.rollingUpdate))'
                 version:
                   type: string
                 volumeMounts:
@@ -5777,6 +5922,25 @@ spec:
                                       type: array
                                       x-kubernetes-list-type: atomic
                                   type: object
+                                podCertificate:
+                                  properties:
+                                    certificateChainPath:
+                                      type: string
+                                    credentialBundlePath:
+                                      type: string
+                                    keyPath:
+                                      type: string
+                                    keyType:
+                                      type: string
+                                    maxExpirationSeconds:
+                                      format: int32
+                                      type: integer
+                                    signerName:
+                                      type: string
+                                  required:
+                                    - keyType
+                                    - signerName
+                                  type: object
                                 secret:
                                   properties:
                                     items:
@@ -6174,12 +6338,6 @@ spec:
                 updatedReplicas:
                   format: int32
                   type: integer
-              required:
-                - availableReplicas
-                - paused
-                - replicas
-                - unavailableReplicas
-                - updatedReplicas
               type: object
           required:
             - spec

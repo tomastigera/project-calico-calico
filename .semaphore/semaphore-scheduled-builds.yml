@@ -2381,7 +2381,7 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.25.3
+          - sem-version go 1.25.6
           - cd third_party/alertmanager
       jobs:
         - name: "Alert Manager: CI"
