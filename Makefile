@@ -92,6 +92,9 @@ go-vet:
 	$(MAKE) -C felix clone-libbpf
 	$(DOCKER_GO_BUILD) go vet --tags fvtests ./...
 
+update-x-libraries:
+	$(DOCKER_GO_BUILD) sh -c "go get golang.org/x/... && go mod tidy"
+
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
 
@@ -243,10 +246,10 @@ publish-selinux:
 	$(MAKE) -C selinux publish
 
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
-	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
+	mv $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 
 publish-chart-release: chart-release
-	@aws --profile helm s3 cp ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/charts/ --acl public-read
+	@aws --profile helm s3 cp $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/charts/ --acl public-read
 
 publish-release-archive: release-archive
 	$(MAKE) -f release-archive.mk publish-release-archive
@@ -267,23 +270,27 @@ publish-non-cluster-host-rpms: var-require-all-VERSION build-non-cluster-host-rp
 	VERSION=$(RELEASE_STREAM) hack/publish_rpms_to_repo.sh
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
+CHART_DESTINATION ?= ./bin
+
+# Build helm charts.
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
-tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
+tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
-multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion).tgz
-bin/multi-tenant-crds-$(chartVersion).tgz: bin/helm
+multi-tenant-crds-release: $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz
+$(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz: bin/helm
+	mkdir -p $(CHART_DESTINATION)
 	bin/helm package ./charts/multi-tenant-crds \
-	--destination ./bin/ \
+	--destination $(CHART_DESTINATION) \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
 publish-multi-tenant-crds: multi-tenant-crds-release
-	mv ./bin/multi-tenant-crds-$(RELEASE_STREAM).tgz ./bin/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
+	mv $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 	aws --profile helm \
 		s3 cp \
-		bin/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz \
+		$(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz \
 		s3://tigera-public/ee/charts/ \
 		--acl public-read
 
@@ -291,27 +298,29 @@ publish-multi-tenant-crds: multi-tenant-crds-release
 # If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
 tigera-operator-master:
 ifeq ($(SEMAPHORE_GIT_BRANCH), master)
-	$(MAKE) bin/tigera-operator-v0.0.tgz
+	$(MAKE) $(CHART_DESTINATION)/tigera-operator-v0.0.tgz
 endif
 
-bin/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
+$(CHART_DESTINATION)/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
+	mkdir -p $(CHART_DESTINATION)
 	bin/helm package ./charts/tigera-operator \
-	--destination ./bin/ \
-	--version $(@:bin/tigera-operator-%.tgz=%) \
-	--app-version $(@:bin/tigera-operator-%.tgz=%)
+	--destination $(CHART_DESTINATION)/ \
+	--version $* \
+	--app-version $*
 
 # Build the tigera-prometheus-operator.tgz helm chart.
-tigera-prometheus-operator-release: bin/tigera-prometheus-operator-$(chartVersion).tgz
-bin/tigera-prometheus-operator-$(chartVersion).tgz: bin/helm
+tigera-prometheus-operator-release: $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz
+$(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz: bin/helm
+	mkdir -p $(CHART_DESTINATION)
 	bin/helm package ./charts/tigera-prometheus-operator \
-	--destination ./bin/ \
+	--destination $(CHART_DESTINATION)/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
 # Include the tigera-prometheus-operator helm chart as a sub-chart.
-charts/tigera-operator/charts/tigera-prometheus-operator.tgz: bin/tigera-prometheus-operator-$(chartVersion).tgz
+charts/tigera-operator/charts/tigera-prometheus-operator.tgz: $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz
 	mkdir -p $(@D)
-	cp bin/tigera-prometheus-operator-$(chartVersion).tgz $@
+	cp $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz $@
 
 # Build all Calico images for the current architecture.
 image:
@@ -331,15 +340,17 @@ image:
 ###############################################################################
 E2E_FOCUS ?= "sig-network.*Conformance|sig-calico.*Conformance|BGP"
 E2E_SKIP ?= "\[sig-calico\].*staged"
-ADMINPOLICY_SUPPORTED_FEATURES ?= "AdminNetworkPolicy,BaselineAdminNetworkPolicy"
-ADMINPOLICY_UNSUPPORTED_FEATURES ?= ""
+K8S_NETPOL_SUPPORTED_FEATURES ?= "ClusterNetworkPolicy"
+K8S_NETPOL_UNSUPPORTED_FEATURES ?= ""
 e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
 	$(MAKE) e2e-run-test
-	$(MAKE) e2e-run-anp-test
+	# Disabling k8s ANP conformance test since it's failing in Ubuntu22.04 and newer.
+	# It's been tracked in CORE-12206 task, and will be fixed seperately.
+	#$(MAKE) e2e-run-kcnp-test
 
-e2e-test-adminpolicy:
+e2e-test-clusternetworkpolicy:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
 	$(MAKE) e2e-run-anp-test
@@ -348,11 +359,11 @@ e2e-test-adminpolicy:
 e2e-run-test:
 	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
 
-## Run the AdminNetworkPolicy specific e2e tests against a pre-existing kind cluster.
-e2e-run-anp-test:
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test \
-	  -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) \
-	  -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)
+## Run the ClusterNetworkPolicy specific e2e tests against a pre-existing kind cluster.
+e2e-run-kcnp-test:
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/clusternetworkpolicy/e2e.test \
+	  -exempt-features=$(K8S_NETPOL_UNSUPPORTED_FEATURES) \
+	  -supported-features=$(K8S_NETPOL_SUPPORTED_FEATURES)
 
 ###############################################################################
 # Release logic below

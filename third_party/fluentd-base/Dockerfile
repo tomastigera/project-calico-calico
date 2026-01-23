@@ -1,10 +1,10 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-FROM registry.access.redhat.com/ubi9/ubi AS builder
+FROM registry.access.redhat.com/ubi10/ubi AS builder
 
 ARG FLUENTD_VERSION
 ARG JQ_VERSION=1.8.1
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.8
 ARG TARGETARCH
 
 RUN dnf upgrade -y && dnf install -y \
@@ -64,6 +64,7 @@ RUN mkdir -p /fluentd/etc/output_l7
 RUN mkdir -p /fluentd/etc/output_runtime
 RUN mkdir -p /fluentd/etc/output_tsee_audit
 RUN mkdir -p /fluentd/etc/output_waf
+RUN mkdir -p /fluentd/etc/output_policy
 RUN mkdir -p /fluentd/log
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb

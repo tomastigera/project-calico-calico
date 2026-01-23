@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.25.5
+go 1.25.6
 github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 github.com/beorn7/perks v1.0.1
 github.com/cespare/xxhash/v2 v2.3.0
@@ -44,23 +44,23 @@ github.com/ugorji/go/codec v1.1.7
 github.com/x448/float16 v0.8.4
 go.yaml.in/yaml/v2 v2.4.3
 go.yaml.in/yaml/v3 v3.0.4
-golang.org/x/net v0.47.0
-golang.org/x/oauth2 v0.33.0
-golang.org/x/sys v0.38.0
-golang.org/x/term v0.37.0
-golang.org/x/text v0.31.0
+golang.org/x/net v0.48.0
+golang.org/x/oauth2 v0.34.0
+golang.org/x/sys v0.39.0
+golang.org/x/term v0.38.0
+golang.org/x/text v0.32.0
 golang.org/x/time v0.14.0
 google.golang.org/protobuf v1.36.10
 gopkg.in/evanphx/json-patch.v4 v4.13.0
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/yaml.v3 v3.0.1
-k8s.io/api v0.34.2
-k8s.io/apimachinery v0.34.2
-k8s.io/apiserver v0.34.2
-k8s.io/client-go v0.34.2
+k8s.io/api v0.34.3
+k8s.io/apimachinery v0.34.3
+k8s.io/apiserver v0.34.3
+k8s.io/client-go v0.34.3
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
-k8s.io/kube-aggregator v0.34.2
+k8s.io/kube-aggregator v0.34.3
 k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
 k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730

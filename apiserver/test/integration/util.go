@@ -18,6 +18,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -28,6 +29,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 func CreateCAKeyPair(cn string, altNames []string) ([]byte, []byte, error) {
@@ -106,4 +108,37 @@ func ToSecret(name, namespace string, certPem, keyPem []byte) *corev1.Secret {
 			corev1.TLSPrivateKeyKey: keyPem,
 		},
 	}
+}
+
+func SetupManagedClusterCreateRequirements(k8sClient *kubernetes.Clientset) (func(), error) {
+	caPem, caKeyPem, err := CreateCAKeyPair("tigera-voltron", []string{"voltron"})
+	if err != nil {
+		return nil, err
+	}
+	secret := ToSecret("calico-management-cluster-connection", "calico-system", caPem, caKeyPem)
+	namespace := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "calico-system",
+		},
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	createdNs, err := k8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	createdSecret, err := k8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	teardowns := func() {
+		_ = k8sClient.CoreV1().Secrets(namespace.Name).Delete(context.Background(), createdSecret.Name, metav1.DeleteOptions{})
+		_ = k8sClient.CoreV1().Namespaces().Delete(context.Background(), createdNs.Name, metav1.DeleteOptions{})
+	}
+
+	return teardowns, nil
 }

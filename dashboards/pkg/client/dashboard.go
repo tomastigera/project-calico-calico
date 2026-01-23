@@ -8,6 +8,8 @@ type DashboardCardChart map[string]any
 type DashboardCardQuery map[string]any
 type DashboardCardMapping map[string]any
 
+type PackageName string
+
 type Dashboard struct {
 	ID             DashboardID       `json:"id"`
 	Title          string            `json:"title"`

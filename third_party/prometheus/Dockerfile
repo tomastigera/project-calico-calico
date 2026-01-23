@@ -22,6 +22,7 @@ COPY --from=ubi /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
 COPY --from=ubi /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
 COPY --from=ubi /lib64/libcurl.so.4 /lib64/libcurl.so.4
 COPY --from=ubi /lib64/libgssapi_krb5.so.2 /lib64/libgssapi_krb5.so.2
+COPY --from=ubi /lib64/libidn2.so.0 /lib64/libidn2.so.0
 COPY --from=ubi /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
 COPY --from=ubi /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
 COPY --from=ubi /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
@@ -31,6 +32,7 @@ COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=ubi /lib64/libssl.so.3 /lib64/libssl.so.3
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=ubi /lib64/libunistring.so.5 /lib64/libunistring.so.5
 COPY --from=ubi /lib64/libz.so.1 /lib64/libz.so.1
 
 # prometheus files

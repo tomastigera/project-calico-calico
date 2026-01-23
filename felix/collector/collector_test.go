@@ -863,7 +863,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap)
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap, nil)
 			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 			Expect(nflogReader.Start()).NotTo(HaveOccurred())
 			c = newCollector(lm, conf).(*collector)
@@ -923,7 +923,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap)
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap, nil)
 			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 			Expect(nflogReader.Start()).NotTo(HaveOccurred())
 			c = newCollector(lm, conf).(*collector)
@@ -984,7 +984,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap)
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodeMap, nil)
 			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 			Expect(nflogReader.Start()).NotTo(HaveOccurred())
 			c = newCollector(lm, conf).(*collector)
@@ -1018,7 +1018,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				}
 
 				// Update the lookups cache with endpoint map
-				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap)
+				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap, nil)
 
 				// Mark the source endpoint for deletion
 				lm.MarkEndpointDeleted(localEd1)
@@ -1055,7 +1055,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				}
 
 				// Update the lookups cache with endpoint map
-				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap)
+				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap, nil)
 
 				// Mark the destination endpoint for deletion
 				lm.MarkEndpointDeleted(localEd2)
@@ -1092,7 +1092,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				}
 
 				// Update the lookups cache with endpoint map
-				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap)
+				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap, nil)
 
 				// Mark the remote source endpoint for deletion
 				lm.MarkEndpointDeleted(remoteEd1)
@@ -1130,7 +1130,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				}
 
 				// Update the lookups cache with normal (active) endpoint map
-				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap)
+				lm.SetMockData(epMap, nflogMap, nil, nil, nodeMap, nil)
 
 				t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 
@@ -1532,7 +1532,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes, nil)
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, conf).(*collector)
 
@@ -1571,7 +1571,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
@@ -1585,7 +1585,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
@@ -1606,7 +1606,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
@@ -1627,7 +1627,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1645,7 +1645,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1664,7 +1664,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			data := c.epStats[*t]
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
@@ -1687,7 +1687,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1709,7 +1709,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1769,7 +1769,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
@@ -1783,7 +1783,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
@@ -1804,7 +1804,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
@@ -1825,7 +1825,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			ciReaderSenderChan <- []clttypes.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -1843,7 +1843,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
 			data.Reported = true
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1862,7 +1862,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			data := c.epStats[*t]
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
-			lm.SetMockData(epMapDelete, nil, nil, nil, nil)
+			lm.SetMockData(epMapDelete, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
@@ -1885,7 +1885,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
@@ -1907,7 +1907,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			oldSrc := data.SrcEp
 			oldDest := data.DstEp
 
-			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil)
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
@@ -2151,7 +2151,7 @@ var _ = Describe("Conntrack Datasource", func() {
 						},
 					},
 				},
-			}, nil)
+			}, nil, nil)
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
 			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
@@ -2187,7 +2187,7 @@ var _ = Describe("Conntrack Datasource", func() {
 						},
 					},
 				},
-			}, nil)
+			}, nil, nil)
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
 			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
@@ -2409,7 +2409,7 @@ var _ = Describe("Reporting Metrics", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil, nodes, nil)
 		mockReporter = newMockReporter()
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		Expect(nflogReader.Start()).NotTo(HaveOccurred())
@@ -2881,7 +2881,7 @@ var _ = Describe("DNS logging", func() {
 			remoteIp1: remoteEd1,
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil, nil)
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil, nil, nil)
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
@@ -2913,9 +2913,10 @@ func newMockLookupsCache(
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
 	nodes map[string]*libapiv3.Node,
+	genCache map[model.PolicyKey]int64,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
-	l.SetMockData(em, nm, ns, svcs, nodes)
+	l.SetMockData(em, nm, ns, svcs, nodes, genCache)
 	return l
 }
 
@@ -2954,7 +2955,7 @@ var _ = Describe("L7 logging", func() {
 		nflogMap := map[[64]byte]*calc.RuleID{}
 		nsMap := map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}
 		svcMap := map[model.ResourceKey]*kapiv1.Service{svcKey1: &svc1}
-		lm := newMockLookupsCache(epMap, nflogMap, nsMap, svcMap, nil)
+		lm := newMockLookupsCache(epMap, nflogMap, nsMap, svcMap, nil, nil)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -3271,7 +3272,7 @@ var _ = Describe("WAFEvent logging", func() {
 			localIp1: lep1,
 			localIp2: lep2,
 		}
-		lm := newMockLookupsCache(epMap, nil, nil, nil, nil)
+		lm := newMockLookupsCache(epMap, nil, nil, nil, nil, nil)
 		c = newCollector(lm, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -3499,7 +3500,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				globalKey:   globalNetworkSet,
 				specificKey: specificNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			// Create collector with NetworkSets enabled
 			c = newCollector(lm, &Config{
@@ -3533,7 +3534,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				globalKey: globalNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3559,7 +3560,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				globalKey: globalNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     false, // Disabled
@@ -3604,7 +3605,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				testIP: endpoint,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3631,7 +3632,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nonMatchingKey: nonMatchingNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3685,7 +3686,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				mediumKey: mediumNetworkSet,
 				narrowKey: narrowNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3721,7 +3722,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				nsMap[key] = networkSet
 			}
 
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
 				ExportingInterval:     time.Second,
@@ -3791,7 +3792,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			namespacedNSKey := model.NetworkSetKey{Name: namespaceKey.Name}
 			nsMap[namespacedNSKey] = namespaceNetworkSet
 
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3842,7 +3843,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				globalKey:     globalNetworkSet,
 				productionKey: productionNetworkSet,
 			}
-			lc := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lc := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lc, &Config{
 				EnableNetworkSets:     true,
@@ -3902,7 +3903,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				stagingKey: stagingNetworkSet,
 				devKey:     developmentNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -3960,7 +3961,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				frontendKey: frontendNetworkSet,
 				backendKey:  backendNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4003,7 +4004,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				defaultKey: defaultNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4062,7 +4063,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				srcIP: srcEP,
 				dstIP: dstEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4125,7 +4126,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				dstIP: dstEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4191,7 +4192,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				srcIP: srcEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4252,7 +4253,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				dstKey:      dstNetworkSet,
 				fallbackKey: fallbackNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4291,7 +4292,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     false, // Disabled
@@ -4340,7 +4341,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				srcIP: srcEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4377,7 +4378,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     false,
@@ -4405,7 +4406,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4432,7 +4433,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4459,7 +4460,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			// Create a mock domain lookup that would return something for 8.8.8.8
 			mockDomainLookup := &mockEgressDomainCache{
@@ -4498,7 +4499,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4538,7 +4539,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 				globalNsKey:     globalNetworkSet,
 				namespacedNsKey: namespacedNetworkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			// Mock egress domain cache that returns "example.com" for our test IP
 			mockDomainLookup := &mockEgressDomainCache{
@@ -4608,7 +4609,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				srcIP: srcEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4662,7 +4663,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				srcIP: srcEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4715,7 +4716,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			epMap := map[[16]byte]calc.EndpointData{
 				srcIP: srcEP,
 			}
-			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(epMap, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -4786,7 +4787,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
 	}
-	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
@@ -4820,7 +4821,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 		DisplayDebugTraceLogs:        true,
 	}
-	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
@@ -5027,7 +5028,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 		nodeIp1:   nodeEd1,
 	}
 
-	lm := newMockLookupsCache(epMap, nil, nil, nil, nil)
+	lm := newMockLookupsCache(epMap, nil, nil, nil, nil, nil)
 	policyStoreManager := policystore.NewPolicyStoreManager()
 
 	conf := &Config{
@@ -5267,7 +5268,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -5298,7 +5299,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     true,
@@ -5331,7 +5332,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
 				nsKey: networkSet,
 			}
-			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil)
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
 
 			c = newCollector(lm, &Config{
 				EnableNetworkSets:     false, // NetworkSets disabled
@@ -5352,7 +5353,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			remoteIp1: remoteEd1,
 			nodeIp1:   nodeEd1,
 		}
-		lm = newMockLookupsCache(epMapWithoutLocalEd1, nil, nil, nil, nil)
+		lm = newMockLookupsCache(epMapWithoutLocalEd1, nil, nil, nil, nil, nil)
 		c.luc = lm
 
 		// Make another policy change to trigger evaluation
@@ -5414,7 +5415,7 @@ func TestPendingRuleTraceWithDomainBackedNetworkSet(t *testing.T) {
 	}
 
 	// Prepare LookupsCache and insert the NetworkSet.
-	lm := newMockLookupsCache(epMap, nil, map[model.NetworkSetKey]*model.NetworkSet{nsKey: ns}, nil, nil)
+	lm := newMockLookupsCache(epMap, nil, map[model.NetworkSetKey]*model.NetworkSet{nsKey: ns}, nil, nil, nil)
 
 	// Mock a domain cache that maps client localIp1 -> destination remoteIp1 to a domain present in the NetworkSet.
 	dom := &mockDomainCache{domains: map[[16]byte][]string{remoteIp1: {"example.com"}}}

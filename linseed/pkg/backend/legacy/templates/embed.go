@@ -50,6 +50,9 @@ var RuntimeReportsMappings string
 //go:embed ipset_mappings.json
 var IPSetMappings string
 
+//go:embed policy_activity_mapping.json
+var PolicyActivityMappings string
+
 //go:embed domainset_mappings.json
 var DomainSetMappings string
 
@@ -75,4 +78,5 @@ var LifeCycleEnabledLookup = map[bapi.DataType]bool{
 	bapi.Snapshots:      true,
 	bapi.IPSet:          false,
 	bapi.DomainNameSet:  false,
+	bapi.PolicyActivity: true,
 }

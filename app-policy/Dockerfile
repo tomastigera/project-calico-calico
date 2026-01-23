@@ -12,34 +12,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI_IMAGE
 ARG CALICO_BASE
 
-FROM ${UBI_IMAGE} AS builder
+# FIXME(jiawei): iptables package is dropped in UBI 10. We can move to UBI 10
+# once we have confirmed that iptables is no longer required.
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS builder
 
-# Update base packages to pick up security updates and embedding iptables
-RUN microdnf upgrade -y && microdnf install -y findutils iptables && \
-  ldd /sbin/iptables | tr -s '[:blank:]' '\n' | grep '^/' | \
-  xargs -I % sh -c 'mkdir -p $(dirname /deps%); cp % /deps%;'
+RUN microdnf upgrade -y && microdnf install -y \
+    iptables \
+    nftables
 
-RUN mkdir -p /var/run/dikastes
+# Create symlinks to xtables-nft-multi
+RUN set -eux; \
+    mkdir -p /rootfs/usr/sbin && cd /rootfs/usr/sbin; \
+    for link in \
+      ip6tables \
+      ip6tables-nft \
+      ip6tables-nft-restore \
+      ip6tables-nft-save \
+      ip6tables-restore \
+      ip6tables-restore-translate \
+      ip6tables-save \
+      ip6tables-translate \
+      iptables \
+      iptables-nft \
+      iptables-nft-restore \
+      iptables-nft-save \
+      iptables-restore \
+      iptables-restore-translate \
+      iptables-save \
+      iptables-translate \
+      xtables-monitor; \
+    do \
+      ln -sf xtables-nft-multi "$link"; \
+    done
+
+# Precreate the /var/run/dikastes directory so that we don't need any elevated
+# permission to create the directory at runtime.
+RUN mkdir -p /rootfs/var/run/dikastes
 
 FROM scratch AS source
 
 ARG BINDIR
 ARG TARGETARCH
 
-# Copy default GeoIP MMDB binary files from DB-IP.
-COPY geoip/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
+COPY --from=builder /rootfs/ /
 
-# Precreate the /var/run/dikastes directory so that we don't need any elevated
-# permission to create the directory at runtime.
-COPY --from=builder /var/run/dikastes /var/run/dikastes/
-COPY --from=builder /sbin/iptables /sbin/iptables
-COPY --from=builder /usr/lib64/xtables /usr/lib64/xtables
-COPY --from=builder /deps /
+COPY --from=builder /usr/sbin/nft /usr/sbin/nft
+COPY --from=builder /usr/sbin/xtables-nft-multi /usr/sbin/xtables-nft-multi
+
+COPY --from=builder /lib64/libgmp.so.10 /lib64/libgmp.so.10
+COPY --from=builder /lib64/libjansson.so.4 /lib64/libjansson.so.4
+COPY --from=builder /lib64/libmnl.so.0 /lib64/libmnl.so.0
+COPY --from=builder /lib64/libnftables.so.1 /lib64/libnftables.so.1
+COPY --from=builder /lib64/libnftnl.so.11 /lib64/libnftnl.so.11
+COPY --from=builder /lib64/libreadline.so.8 /lib64/libreadline.so.8
+COPY --from=builder /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=builder /lib64/libxtables.so.12 /lib64/libxtables.so.12
+
+# xtables modules are expected to be in /usr/lib64/xtables/
+COPY --from=builder /usr/lib64/xtables/ /usr/lib64/xtables/
 
 COPY ${BINDIR}/dikastes-${TARGETARCH} /dikastes
+COPY geoip/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
 
 FROM ${CALICO_BASE}
 
@@ -52,6 +87,15 @@ LABEL org.opencontainers.image.title="Calico Dikastes"
 LABEL org.opencontainers.image.vendor="Project Calico"
 LABEL org.opencontainers.image.version="${GIT_VERSION}"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+# Labels for RedHat OCP certification
+LABEL description="Calico Dikastes enables Application Layer Policy"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico Dikastes"
+LABEL release=1
+LABEL summary="Calico Dikastes enables Application Layer Policy"
+LABEL vendor="Project Calico"
+LABEL version="${GIT_VERSION}"
 
 COPY --from=source / /
 

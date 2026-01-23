@@ -28,10 +28,9 @@ type DefaultLogConverter struct{}
 
 // DataplaneStatsFromL7Log converts an EnvoyLog to DataplaneStats.
 func (c DefaultLogConverter) DataplaneStatsFromL7Log(logData collector.EnvoyLog) *proto.DataplaneStats {
-	// Unless the protocol is specified, the protocol will be TCP
-	if logData.Protocol == "" || logData.Protocol == "-" {
-		logData.Protocol = ProtocolTCP
-	}
+	// L7 logs are always TCP at the transport layer. Envoy reports application-layer
+	// protocols like "HTTP/1.1", but Felix expects transport-layer names like "tcp"
+	logData.Protocol = ProtocolTCP
 
 	d := &proto.DataplaneStats{
 		SrcIp:   logData.SrcIp,

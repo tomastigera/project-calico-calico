@@ -536,28 +536,11 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-  - name: Refresh GeoIP cache
-    run:
-      when: "false"
-    dependencies:
-      - Prerequisites
-    task:
-      prologue:
-        commands:
-          - cache delete app-policy-geoip
-      epilogue:
-        on_pass:
-          commands:
-            - cache store app-policy-geoip app-policy/geoip
-      jobs:
-        - name: "Application Layer Policy: Refresh GeoIP cache"
-          commands:
-            - make -C app-policy geoip/dbip-city-lite.mmdb
   - name: Application Layer Policy
     run:
       when: "true"
     dependencies:
-      - Refresh GeoIP cache
+      - Prerequisites
     task:
       prologue:
         commands:
@@ -687,7 +670,7 @@ blocks:
         - name: AZURE_LOCATION
           value: eastus2
         - name: KUBE_VERSION
-          value: v1.29.7
+          value: v1.33.6
       jobs:
         - name: "CNI Plugin: Windows Containerd FV - overlay"
           execution_time_limit:
@@ -968,10 +951,11 @@ blocks:
         - name: SEMAPHORE_ARTIFACT_EXPIRY
           value: 2w
         - name: CONTAINERD_VERSION
-          value: 1.7.22
+          value: 1.7.28
       jobs:
         - name: "Felix: Windows FV"
           commands:
+            - export BACKEND=overlay
             - export AZURE_RESOURCE_GROUP=${RG_PREFIX}-${BACKEND}-rg
             - echo AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
             - ../.semaphore/run-and-monitor win-fv-felix.log ~/calico-private/process/testing/winfv-felix/run-win-fv.sh
@@ -991,7 +975,6 @@ blocks:
           commands:
             - source felix/.semaphore/fv-prologue
             - export NUM_FV_BATCHES=16
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1015,7 +998,6 @@ blocks:
           commands:
             - source felix/.semaphore/fv-prologue
             - export NUM_FV_BATCHES=16
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1039,7 +1021,6 @@ blocks:
           commands:
             - source felix/.semaphore/fv-prologue
             - export NUM_FV_BATCHES=60
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1067,7 +1048,6 @@ blocks:
             # Limit to BPF conntrack tests to reduce overall runtime.
             - export FV_FOCUS='_BPF_.*ct=true'
             - export NUM_FV_BATCHES=10
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1094,7 +1074,6 @@ blocks:
             - source felix/.semaphore/fv-prologue
             # Only run the UT that checks that the precompiled BPF binaries are loadable.
             - export UT_FOCUS="TestPrecompiledBinariesAreLoadable"
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1122,8 +1101,6 @@ blocks:
             # Limit to BPF TCP+conntrack tests to reduce overall runtime.
             - export FV_FOCUS='_BPF_.*tcp.*ct=true'
             - export NUM_FV_BATCHES=16
-            - .semaphore/vms/create-test-vms ${VM_PREFIX}
-            - .semaphore/vms/run-on-vms ${VM_PREFIX} "sudo sysctl -w net.core.bpf_jit_harden=2"
             - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
       epilogue:
         always:
@@ -1285,7 +1262,7 @@ blocks:
       agent:
         machine:
           type: f1-standard-4
-          os_image: ubuntu2004
+          os_image: ubuntu2204
       secrets:
         # Mount a secret for pulling images from GCR, and a license for the k8s FVs
         - name: tigera-dev-ci-pull-credentials
@@ -1358,6 +1335,10 @@ blocks:
       env_vars:
         - name: BUILD_CACHE_GROUP
           value: "node"
+        - name: CI_GROUP_LABEL
+          value: "node"
+        - name: CI_JOB_LABEL
+          value: "kind-cluster-tests"
       prologue:
         commands:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
@@ -1374,7 +1355,6 @@ blocks:
           - export VM_DISK_SIZE=120GB
           - mkdir artifacts
           - ./.semaphore/cache-test-artifacts
-          - ../.semaphore/vms/create-test-vms ${VM_PREFIX}
       jobs:
         - name: "Node: kind-cluster tests"
           execution_time_limit:
@@ -1384,7 +1364,6 @@ blocks:
       epilogue:
         always:
           commands:
-            - ../.semaphore/vms/collect-artifacts-from-vms ${VM_PREFIX}
             - '../.semaphore/vms/publish-reports "Node: KinD STs"'
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
       secrets:
@@ -1870,7 +1849,7 @@ blocks:
     dependencies:
       - Prerequisites
     execution_time_limit:
-      hours: 2
+      hours: 3
     task:
       secrets:
         - name: banzai-secrets
@@ -2455,6 +2434,23 @@ blocks:
                 - arm64
           commands:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+  - name: Refresh GeoIP cache
+    run:
+      when: "false"
+    dependencies:
+      - Prerequisites
+    task:
+      prologue:
+        commands:
+          - cache delete app-policy-geoip
+      epilogue:
+        on_pass:
+          commands:
+            - cache store app-policy-geoip app-policy/geoip
+      jobs:
+        - name: Refresh GeoIP cache
+          commands:
+            - make -C app-policy geoip/dbip-city-lite.mmdb
   - name: Prometheus Operator
     run:
       when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

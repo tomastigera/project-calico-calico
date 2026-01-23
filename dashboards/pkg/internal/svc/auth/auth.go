@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SermoDigital/jose/jws"
 	"github.com/julienschmidt/httprouter"
 	"github.com/swaggest/openapi-go/openapi3"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
@@ -23,8 +24,10 @@ import (
 type AuthService struct {
 	logger                         logging.Logger
 	jwtAuth                        lmaauth.JWTAuth
+	tenantID                       string
 	authorizer                     security.Authorizer
 	baseK8sConfig                  *rest.Config
+	groupsClaimKey                 string
 	productMode                    string
 	multiClusterForwardingEndpoint string
 	multiClusterForwardingCA       string
@@ -33,6 +36,7 @@ type AuthService struct {
 func NewAuthService(
 	cfg *config.Config,
 	logger logging.Logger,
+	tenantID string,
 	tenantClaim string,
 	authorizer security.Authorizer,
 	k8sClient kubernetes.Interface,
@@ -76,10 +80,12 @@ func NewAuthService(
 
 	return &AuthService{
 		logger:                         logger,
+		tenantID:                       tenantID,
 		jwtAuth:                        jwtAuth,
 		authorizer:                     authorizer,
-		baseK8sConfig:                  baseCfg,
 		productMode:                    cfg.ProductMode,
+		baseK8sConfig:                  baseCfg,
+		groupsClaimKey:                 cfg.OIDCAuthGroupsClaim,
 		multiClusterForwardingEndpoint: cfg.MultiClusterForwardingEndpoint,
 		multiClusterForwardingCA:       cfg.MultiClusterForwardingCA,
 	}, nil
@@ -130,6 +136,7 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 
 	k8sRestConfig := rest.CopyConfig(s.baseK8sConfig)
 
+	var groups []string
 	// Configure the Kubernetes client based on product mode.
 	switch s.productMode {
 	case config.ProductModeEnterprise:
@@ -150,6 +157,21 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		if s.multiClusterForwardingCA != "" {
 			k8sRestConfig.CAFile = s.multiClusterForwardingCA
 		}
+
+		requestJWT, err := jws.ParseJWTFromRequest(r)
+		if err != nil {
+			return nil, jws.ErrNoTokenInRequest
+		}
+
+		claimGroups := requestJWT.Claims().Get(s.groupsClaimKey)
+		if anyGroups, ok := claimGroups.([]any); ok {
+			for _, anyGroup := range anyGroups {
+				if group, ok := anyGroup.(string); ok {
+					groups = append(groups, group)
+				}
+			}
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported product mode: %s", s.productMode)
 	}
@@ -165,7 +187,7 @@ func (s *AuthService) authenticateRequest(r *http.Request) (security.Context, er
 		s.multiClusterForwardingEndpoint,
 	)
 
-	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient, authHeader, clientSetFactory), nil
+	return security.NewUserAuthContext(r.Context(), userInfo, s.authorizer, k8sClient, authHeader, clientSetFactory, s.tenantID, groups), nil
 }
 
 func p[T any](v T) *T { return &v }

@@ -9,7 +9,14 @@ echo "Removing old coverprofiles..."
 find . -name "*.coverprofile" -type f -delete
 
 echo "Calculating packages to cover..."
-go_dirs=$(find tests -name '*_test.go' | \
+
+files=$(find tests -name '*_test.go')
+if [ -z "$files" ]; then
+  echo "No tests found."
+  exit 0
+fi
+
+go_dirs=$(echo "$files" | \
           grep -vE '/vendor/|.glide|.git' | \
           xargs -n 1 dirname | \
           sort | uniq | \

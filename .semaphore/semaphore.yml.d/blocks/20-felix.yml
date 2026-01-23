@@ -124,10 +124,11 @@
       - name: SEMAPHORE_ARTIFACT_EXPIRY
         value: 2w
       - name: CONTAINERD_VERSION
-        value: 1.7.22
+        value: 1.7.28
     jobs:
       - name: "Felix: Windows FV"
         commands:
+          - export BACKEND=overlay
           - export AZURE_RESOURCE_GROUP=${RG_PREFIX}-${BACKEND}-rg
           - echo AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
           - ../.semaphore/run-and-monitor win-fv-felix.log ~/calico-private/process/testing/winfv-felix/run-win-fv.sh
@@ -147,7 +148,6 @@
         commands:
           - source felix/.semaphore/fv-prologue
           - export NUM_FV_BATCHES=16
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
@@ -171,7 +171,6 @@
         commands:
           - source felix/.semaphore/fv-prologue
           - export NUM_FV_BATCHES=16
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
@@ -195,7 +194,6 @@
         commands:
           - source felix/.semaphore/fv-prologue
           - export NUM_FV_BATCHES=60
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
@@ -223,7 +221,6 @@
           # Limit to BPF conntrack tests to reduce overall runtime.
           - export FV_FOCUS='_BPF_.*ct=true'
           - export NUM_FV_BATCHES=10
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
@@ -250,7 +247,6 @@
           - source felix/.semaphore/fv-prologue
           # Only run the UT that checks that the precompiled BPF binaries are loadable.
           - export UT_FOCUS="TestPrecompiledBinariesAreLoadable"
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
@@ -278,8 +274,6 @@
           # Limit to BPF TCP+conntrack tests to reduce overall runtime.
           - export FV_FOCUS='_BPF_.*tcp.*ct=true'
           - export NUM_FV_BATCHES=16
-          - .semaphore/vms/create-test-vms ${VM_PREFIX}
-          - .semaphore/vms/run-on-vms ${VM_PREFIX} "sudo sysctl -w net.core.bpf_jit_harden=2"
           - .semaphore/vms/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:

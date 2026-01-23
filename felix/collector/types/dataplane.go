@@ -36,7 +36,7 @@ func (pkt PacketInfo) String() string {
 }
 
 // PacketInfoReader is an interface for a reader that consumes information
-// from dataplane and converts it to the format needed by colelctor
+// from dataplane and converts it to the format needed by collector.
 type PacketInfoReader interface {
 	Start() error
 	PacketInfoChan() <-chan PacketInfo

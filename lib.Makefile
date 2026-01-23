@@ -259,7 +259,7 @@ ifeq ($(BUILDARCH),amd64)
 	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 
-UBI_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:latest
+UBI_IMAGE ?= registry.access.redhat.com/ubi10/ubi-minimal:latest
 
 ifeq ($(GIT_USE_SSH),true)
 	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
@@ -355,7 +355,6 @@ CALICO_BASE ?= $(UBI_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
-CALICO_BASE_UBI10 ?= calico/base:$(CALICO_BASE_UBI10_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -368,7 +367,6 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
-	--build-arg CALICO_BASE_UBI10=$(CALICO_BASE_UBI10) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
@@ -551,7 +549,7 @@ endef
 
 # update_calico_base_pin updates the CALICO_BASE_VER in metadata.mk.
 define update_calico_base_pin
-	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi9-[0-9]+$$" | sort -r | head -n 1))
+	$(eval new_ver := $(shell curl -s "https://hub.docker.com/v2/repositories/calico/base/tags/?page_size=100" | jq -r '.results[].name' | grep -E "^ubi10-[0-9]+$$" | sort -r | head -n 1))
 	$(eval old_ver := $(shell grep -E "^CALICO_BASE_VER" $(1) | cut -d'=' -f2 | xargs))
 
 	@echo "current CALICO_BASE_VER=$(old_ver)"
@@ -560,7 +558,6 @@ define update_calico_base_pin
 	bash -c '\
 		if [[ "$(new_ver)" > "$(old_ver)" ]]; then \
 			sed -i "s/^CALICO_BASE_VER[[:space:]]*=.*/CALICO_BASE_VER=$(new_ver)/" $(1); \
-			sed -i "s/^CALICO_BASE_UBI10_VER[[:space:]]*=.*/CALICO_BASE_UBI10_VER=$(subst ubi9,ubi10,$(new_ver))/" $(1); \
 			echo "CALICO_BASE_VER is updated to $(new_ver)"; \
 		else \
 			echo "no need to update CALICO_BASE_VER"; \
@@ -1695,6 +1692,8 @@ BOOTSTRAP_PASSWORD := $(shell cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | h
 ELASTIC_PASSWORD := $(BOOTSTRAP_PASSWORD)
 
 ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(shell grep -o '^ELASTIC_VERSION=[0-9\.]*' $(REPO_ROOT)/third_party/elasticsearch/Makefile | cut -d "=" -f 2)
+ELASTIC_EXTRA_DOCKER_ARGS ?=
+ELASTIC_MEMORY ?= 2GB
 
 ## Run elasticsearch as a container (tigera-elastic)
 .PHONY: run-elastic
@@ -1702,11 +1701,12 @@ run-elastic: $(REPO_ROOT)/.elasticsearch.created
 $(REPO_ROOT)/.elasticsearch.created:
 	# Run ES on Docker.
 	docker run --detach \
-	-m 2GB \
+	-m $(ELASTIC_MEMORY) \
 	--net=host \
 	--name=tigera-elastic \
 	-e "discovery.type=single-node" \
 	-e "xpack.security.enabled=false" \
+	$(ELASTIC_EXTRA_DOCKER_ARGS) \
 	$(ELASTIC_IMAGE)
 
 	# Wait until ES is accepting requests.

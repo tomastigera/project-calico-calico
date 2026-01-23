@@ -122,6 +122,18 @@ type WAFBackend interface {
 	Aggregations(context.Context, ClusterInfo, *v1.WAFLogAggregationParams) (*elastic.Aggregations, error)
 }
 
+// PolicyBackend defines the interface for interacting with policy activities index.
+type PolicyBackend interface {
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.PolicyActivity) (*v1.BulkResponse, error)
+	// List lists policy activities that match the given parameters.
+	List(context.Context, ClusterInfo, *v1.PolicyActivityParams) (*v1.List[v1.PolicyActivity], error)
+	// Aggregations aggregates on the policy activities.
+	Aggregations(context.Context, ClusterInfo, *v1.PolicyActivityParams) (*elastic.Aggregations, error)
+	// Close shutdowns the cache cleanup go routine.
+	Close()
+}
+
 // EventsBackend defines the interface for interacting with events.
 type EventsBackend interface {
 	// Create creates the given logs.
@@ -192,13 +204,14 @@ const (
 	RuntimeReports DataType = "runtime"
 	IPSet          DataType = "threatfeeds_ipset"
 	DomainNameSet  DataType = "threatfeeds_domainnameset"
+	PolicyActivity DataType = "policy_activity"
 )
 
 type Index interface {
 	// Name returns the name of the index.
 	Name(ClusterInfo) string
 
-	// BootstrapIndexName returns the name of the iniitial index to use when bootstrapping the index.
+	// BootstrapIndexName returns the name of the initial index to use when bootstrapping the index.
 	// This is used when creating the index for the first time, and will serve as the basis
 	// for future names when ES rolls over the index.
 	BootstrapIndexName(ClusterInfo) string

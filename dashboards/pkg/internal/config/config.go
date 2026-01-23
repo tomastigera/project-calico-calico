@@ -1,10 +1,15 @@
 package config
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/tigera/tds-apiserver/lib/slices"
 	"k8s.io/apimachinery/pkg/util/json"
 )
+
+type stringSliceMapConfig map[string][]string
 
 type Config struct {
 	LogLevel   string `default:"INFO" split_words:"true"`
@@ -104,6 +109,12 @@ type Config struct {
 	// DisabledCollections is a comma separated list of collections to be disabled e.g.: waf,dns
 	DisabledCollections string `split_words:"true"`
 
+	// DisabledDashboards contains a map of static dashboard IDs that must be disabled by path and id e.g.: global/free:1,6;global:2,4
+	DisabledDashboards stringSliceMapConfig `default:"" split_words:"true"`
+
+	// CalicoCloudPackage contains the organization package for predefined cloud dashboards (pro, free)
+	CalicoCloudPackage string `default:"pro" split_words:"true"`
+
 	// NamespacedRBAC enable support for namespaced resource authorization for the query API. It requires the
 	// AuthorizationReview api on managed clusters
 	NamespacedRBAC bool `default:"false" split_words:"true"`
@@ -128,4 +139,18 @@ func (c Config) String() string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func (m *stringSliceMapConfig) Decode(value string) error {
+	*m = make(map[string][]string)
+	for _, v := range strings.Split(value, ";") {
+		kvpair := strings.Split(v, ":")
+		if len(kvpair) != 2 {
+			return fmt.Errorf("invalid key/value config pair: %s", v)
+		}
+
+		key := strings.TrimSpace(kvpair[0])
+		(*m)[key] = slices.Map(strings.Split(kvpair[1], ","), strings.TrimSpace)
+	}
+	return nil
 }

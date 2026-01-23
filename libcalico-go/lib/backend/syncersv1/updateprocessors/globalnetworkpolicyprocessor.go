@@ -58,10 +58,11 @@ func ConvertGlobalNetworkPolicyV3ToV1Value(val any) (any, error) {
 	if !ok {
 		return nil, errors.New("Value is not a valid GlobalNetworkPolicy resource value")
 	}
-	return ConvertGlobalPolicyV3ToV1Spec(v3res.Spec)
+	return ConvertGlobalPolicyV3ToV1(v3res)
 }
 
-func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.Policy, error) {
+func ConvertGlobalPolicyV3ToV1(policy *apiv3.GlobalNetworkPolicy) (*model.Policy, error) {
+	spec := policy.Spec
 	selector := spec.Selector
 
 	nsSelector := spec.NamespaceSelector
@@ -88,6 +89,7 @@ func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.P
 		PreDNAT:          spec.PreDNAT,
 		ApplyOnForward:   spec.ApplyOnForward,
 		PerformanceHints: spec.PerformanceHints,
+		Generation:       policy.Generation,
 	}
 
 	return v1value, nil

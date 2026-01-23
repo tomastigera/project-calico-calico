@@ -117,6 +117,9 @@ struct cali_tc_state {
 	 * appropriate conntrack entry.
 	 */
 	DECLARE_IP_ADDR(ip_src_masq);
+
+	__u32 nat_svc_id;
+	__u32 pad;
 #ifndef IPVER6
 	__u8 __pad_ipv4[56];
 #endif
@@ -125,7 +128,7 @@ struct cali_tc_state {
 static CALI_BPF_INLINE void __xxx_compile_asserts_cali_tc_state(void) {
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wunused-local-typedef"
-	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 504));
+	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 512));
 	#pragma clang diagnostic pop
 }
 
@@ -169,6 +172,8 @@ enum cali_state_flags {
 	CALI_ST_SKIP_REDIR_ONCE   = 0x1000,
 	/* CALI_ST_SET_DSCP is set if we need to update packet's DSCP */
 	CALI_ST_SET_DSCP   = 0x2000,
+	/* CALI_ST_FIRST_FRAG is set if this packet is the first fragment of a fragmented IP packet */
+	CALI_ST_FIRST_FRAG        = 0x4000,
 
 	/* EE flags */
 

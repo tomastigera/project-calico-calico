@@ -73,3 +73,5 @@ blocks:
           value: gcr.io/unique-caldron-775/cnx/tigera
         - name: WINDOWS_GCS_BUCKET
           value: tigera-windows/dev
+        - name: HELM_REGISTRIES
+          value: us-central1-docker.pkg.dev/unique-caldron-775/hashrelease-charts

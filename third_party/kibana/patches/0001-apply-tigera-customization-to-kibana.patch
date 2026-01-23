@@ -2853,16 +2853,14 @@ index 000000000..9e0f3cbae
 +<path fill-rule="evenodd" clip-rule="evenodd" d="M52.3805 61C51.7588 61.7962 51.175 62.6823 50.6346 63.6546C48.2865 68.0122 47.0388 72.877 47 77.8262C47 87.8061 52.9711 94.7921 61.5083 94.7921C70.0555 94.7921 76.0166 87.7962 76.0166 77.7863C75.97 72.852 74.7262 68.0027 72.392 63.6546C71.8496 62.6823 71.2642 61.7962 70.6413 61H68.529C72.3573 65.1436 74.399 72.2907 74.399 77.8062C74.399 88.4349 67.9187 93.1953 61.5083 93.1953C55.0979 93.1953 48.6176 88.4149 48.6176 77.7863C48.6176 72.2844 50.6636 65.1422 54.4914 61H52.3805Z" fill="#141414"/>
 +</svg>
 diff --git a/x-pack/platform/plugins/shared/security/tsconfig.json b/x-pack/platform/plugins/shared/security/tsconfig.json
-index 9f854b5a9..fb80eb13f 100644
+index 839a15830..118ef4f60 100644
 --- a/x-pack/platform/plugins/shared/security/tsconfig.json
 +++ b/x-pack/platform/plugins/shared/security/tsconfig.json
-@@ -8,7 +8,8 @@
+@@ -8,6 +8,7 @@
      "public/**/*",
      "server/**/*",
      "__mocks__/**/*",
--    "__fixtures__/**/*"
-+    "__fixtures__/**/*",
-+    "tigera_icons/**/*"
++    "tigera_icons/**/*",
    ],
    "kbn_references": [
      "@kbn/cloud-plugin",

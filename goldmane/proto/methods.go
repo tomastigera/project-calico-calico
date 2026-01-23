@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/kubernetes/pkg/apis/core/validation"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
 // NewFlow returns a new proto.Flow object with all fields initialized and non-nil.
@@ -77,7 +79,8 @@ func (h *PolicyHit) Validate() error {
 	case PolicyKind_GlobalNetworkPolicy,
 		PolicyKind_StagedGlobalNetworkPolicy,
 		PolicyKind_AdminNetworkPolicy,
-		PolicyKind_BaselineAdminNetworkPolicy:
+		PolicyKind_BaselineAdminNetworkPolicy,
+		PolicyKind_ClusterNetworkPolicy:
 		if h.Namespace != "" {
 			return fmt.Errorf("unexpected namespace for global policy")
 		}
@@ -118,9 +121,15 @@ func makeNamePart(h *PolicyHit) (string, error) {
 	case PolicyKind_StagedNetworkPolicy:
 		namePart = fmt.Sprintf("%s/%s.staged:%s", h.Namespace, h.Tier, h.Name)
 	case PolicyKind_AdminNetworkPolicy:
-		namePart = fmt.Sprintf("kanp.adminnetworkpolicy.%s", h.Name)
+		namePart = names.K8sAdminNetworkPolicyNamePrefix + h.Name
 	case PolicyKind_BaselineAdminNetworkPolicy:
-		namePart = fmt.Sprintf("kbanp.baselineadminnetworkpolicy.%s", h.Name)
+		namePart = names.K8sBaselineAdminNetworkPolicyNamePrefix + h.Name
+	case PolicyKind_ClusterNetworkPolicy:
+		if h.Tier == names.KubeAdminTierName {
+			namePart = names.K8sCNPAdminTierNamePrefix + h.Name
+		} else {
+			namePart = names.K8sCNPBaselineTierNamePrefix + h.Name
+		}
 	case PolicyKind_Profile:
 		// Profile names are __PROFILE__.name. The name part may include indicators of the kind of
 		// profile - e.g., __PROFILE__.kns.default, __PROFILE__.ksa.svcacct.
@@ -183,13 +192,18 @@ func HitFromString(s string) (*PolicyHit, error) {
 			// Take form of "tier.staged:name", so we can trim the entire prefix off.
 			kind = PolicyKind_StagedGlobalNetworkPolicy
 			n = strings.Split(n, "staged:")[1]
-			// TODO: Uncomment when CNP is ported to enterprise.
-			// } else if strings.HasPrefix(n, names.K8sCNPAdminTierNamePrefix) {
-			// 	kind = PolicyKind_ClusterNetworkPolicy
-			// 	n = strings.TrimPrefix(n, names.K8sCNPAdminTierNamePrefix)
-			// } else if strings.HasPrefix(n, names.K8sCNPBaselineTierNamePrefix) {
-			// 	kind = PolicyKind_ClusterNetworkPolicy
-			// 	n = strings.TrimPrefix(n, names.K8sCNPBaselineTierNamePrefix)
+		} else if strings.HasPrefix(n, names.K8sAdminNetworkPolicyNamePrefix) {
+			kind = PolicyKind_AdminNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sAdminNetworkPolicyNamePrefix)
+		} else if strings.HasPrefix(n, names.K8sBaselineAdminNetworkPolicyNamePrefix) {
+			kind = PolicyKind_BaselineAdminNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sBaselineAdminNetworkPolicyNamePrefix)
+		} else if strings.HasPrefix(n, names.K8sCNPAdminTierNamePrefix) {
+			kind = PolicyKind_ClusterNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sCNPAdminTierNamePrefix)
+		} else if strings.HasPrefix(n, names.K8sCNPBaselineTierNamePrefix) {
+			kind = PolicyKind_ClusterNetworkPolicy
+			n = strings.TrimPrefix(n, names.K8sCNPBaselineTierNamePrefix)
 		} else if strings.HasPrefix(n, "__PROFILE__.") {
 			kind = PolicyKind_Profile
 			n = strings.TrimPrefix(n, "__PROFILE__.")

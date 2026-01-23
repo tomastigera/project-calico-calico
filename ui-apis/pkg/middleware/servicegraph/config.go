@@ -69,6 +69,12 @@ type Config struct {
 	// The base timeout set on all computations performed by the /stats handler.
 	GlobalStatsTimeoutSeconds int
 
+	// The interval at which the cache for namespaced service graph stats is updated.
+	GraphStatsCacheUpdateInterval time.Duration
+
+	// The duration that namespaced stats are cached from - the cache will hold namespaced counts between now and now-duration.
+	GraphStatsCacheDuration time.Duration
+
 	// TenantNamespace is the namespace of the tenant this instance is serving, or empty if this is a single-tenant cluster.
 	TenantNamespace string
 

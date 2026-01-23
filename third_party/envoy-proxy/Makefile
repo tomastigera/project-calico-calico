@@ -5,10 +5,6 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-proxy
 ENVOY_PROXY_IMAGE ?= envoy-proxy
 BUILD_IMAGES ?= $(ENVOY_PROXY_IMAGE)
 
-# For updating this version please see
-# https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
-ENVOYBINARY_IMAGE ?= quay.io/tigera/envoybinary:v1.35.8-6ddb700081
-
 EXCLUDEARCH ?= ppc64le s390x
 
 ##############################################################################
@@ -44,9 +40,8 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(ENVOY_PROXY_IMAGE): $(ENVOY_PROXY_IMAGE_CREATED)
-$(ENVOY_PROXY_IMAGE_CREATED): Dockerfile
-	$(DOCKER_BUILD) --build-arg ENVOYBINARY_IMAGE=$(ENVOYBINARY_IMAGE) \
-		-t $(ENVOY_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(ENVOY_PROXY_IMAGE_CREATED): register Dockerfile
+	$(DOCKER_BUILD) -t $(ENVOY_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

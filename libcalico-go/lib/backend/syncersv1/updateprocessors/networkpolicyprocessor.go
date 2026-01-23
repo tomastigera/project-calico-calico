@@ -104,6 +104,7 @@ func ConvertNetworkPolicyV3ToV1Value(val any) (any, error) {
 		Types:            policyTypesAPIV3ToBackend(spec.Types),
 		ApplyOnForward:   false,
 		PerformanceHints: v3res.Spec.PerformanceHints,
+		Generation:       v3res.Generation,
 	}
 
 	return v1value, nil

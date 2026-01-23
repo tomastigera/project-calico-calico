@@ -33,6 +33,9 @@ fi
 if [ "${SYSLOG_WAF_LOG}" == "true" ]; then
   cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_waf/out-syslog.conf"
 fi
+if [ "${SYSLOG_POLICY_ACTIVITY_LOG}" == "true" ]; then
+  cp "${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf" "${ROOT_DIR}/fluentd/etc/output_policy/out-syslog.conf"
+fi
 
 # Append additional output matcher config (for IDS events) when SYSLOG forwarding is turned on
 if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then

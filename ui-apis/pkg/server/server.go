@@ -197,6 +197,8 @@ func Start(cfg *Config) error {
 		LargeFlowLogScaleThreshold:            cfg.LargeFlowLogScaleThreshold,
 		LargeL3FlowScaleThreshold:             cfg.LargeL3FlowScaleThreshold,
 		GlobalStatsTimeoutSeconds:             cfg.GlobalStatsTimeoutSeconds,
+		GraphStatsCacheUpdateInterval:         cfg.GraphStatsCacheUpdateInterval,
+		GraphStatsCacheDuration:               cfg.GraphStatsCacheDuration,
 		TenantNamespace:                       cfg.TenantNamespace,
 
 		// If impersonation is not enabled, then we cannot perform RBAC based on the original user.
@@ -221,6 +223,7 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					servicegraph.NewServiceGraphStatsHandler(
+						client,
 						linseed,
 						k8sClientSetFactory,
 						serviceGraphHandler.ServiceGraphCache(),

@@ -1699,7 +1699,7 @@ func TestFlowFiltering(t *testing.T) {
 func msg(got []v1.L3Flow, exp v1.L3Flow) string {
 	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
 	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
-	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n", expJSON, gotJSON)
+	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n\nFull Exp Structure:\n%#v\n\nFull Got Structure:\n%#v", expJSON, gotJSON, exp, got)
 }
 
 // TestPagination tests that we return multiple flows properly using pagination.

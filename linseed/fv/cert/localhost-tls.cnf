@@ -1,10 +1,1 @@
-authorityKeyIdentifier=keyid,issuer      
-basicConstraints=CA:FALSE                            
-keyUsage = digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth, clientAuth            
-subjectAltName = @alt_names
-                                                     
-[alt_names]                                          
-DNS.1 = localhost
-DNS.2 = fake1.local
-DNS.3 = fake2.local
+subjectAltName = DNS:localhost, IP:127.0.0.1

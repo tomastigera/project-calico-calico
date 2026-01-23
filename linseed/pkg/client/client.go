@@ -24,6 +24,7 @@ type Client interface {
 	Compliance(string) ComplianceInterface
 	RuntimeReports(string) RuntimeReportsInterface
 	ThreatFeeds(string) ThreatFeedsInterface
+	PolicyActivity(string) PolicyActivityInterface
 }
 
 type client struct {
@@ -103,6 +104,11 @@ func (c *client) RuntimeReports(cluster string) RuntimeReportsInterface {
 // ThreatFeeds returns an interface for managing threat feeds resources.
 func (c *client) ThreatFeeds(cluster string) ThreatFeedsInterface {
 	return newThreatFeeds(c, cluster)
+}
+
+// PolicyActivity returns an interface for managing policy logs resources.
+func (c *client) PolicyActivity(cluster string) PolicyActivityInterface {
+	return newPolicyActivityLogs(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config, opts ...rest.ClientOption) (Client, error) {

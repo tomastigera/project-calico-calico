@@ -1,18 +1,22 @@
-# Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 
-ARG CALICO_BASE_UBI10
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.18.8-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.10-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
+
+RUN mkdir -p /rootfs/usr/bin
+RUN ln -sf usr/bin /rootfs/bin
+RUN cp -a /usr/bin/sh /rootfs/usr/bin/sh
 
 FROM scratch AS source
 
 ARG TARGETARCH
 
+COPY --from=elastic /rootfs/ /
+
 # Binary dependencies
-COPY --from=elastic /bin/bash /bin/bash
-COPY --from=elastic /bin/sh /bin/sh
 COPY --from=elastic /usr/bin/basename /usr/bin/basename
 COPY --from=elastic /usr/bin/bash /usr/bin/bash
 COPY --from=elastic /usr/bin/cat /usr/bin/cat
@@ -27,7 +31,6 @@ COPY --from=elastic /usr/bin/id /usr/bin/id
 COPY --from=elastic /usr/bin/ln /usr/bin/ln
 COPY --from=elastic /usr/bin/ls /usr/bin/ls
 COPY --from=elastic /usr/bin/mkdir /usr/bin/mkdir
-COPY --from=elastic /usr/bin/sh /usr/bin/sh
 COPY --from=elastic /usr/bin/sleep /usr/bin/sleep
 COPY --from=elastic /usr/bin/touch /usr/bin/touch
 COPY --from=elastic /usr/bin/uname /usr/bin/uname
@@ -63,7 +66,7 @@ COPY --from=elastic /usr/bin/tini /usr/bin/tini
 # Tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 
-FROM ${CALICO_BASE_UBI10}
+FROM ${CALICO_BASE}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin

@@ -58,7 +58,7 @@ func allPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.all_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard), nil
+	return wildcard, nil
 }
 
 func enforcedPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
@@ -68,7 +68,7 @@ func enforcedPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.enforced_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard), nil
+	return wildcard, nil
 }
 
 func pendingPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
@@ -78,7 +78,7 @@ func pendingPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.pending_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard), nil
+	return wildcard, nil
 }
 
 func transitPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
@@ -88,7 +88,7 @@ func transitPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.transit_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard), nil
+	return wildcard, nil
 }
 
 func CompileStringMatch(m v1.PolicyMatch) (string, error) {

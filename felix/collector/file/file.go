@@ -13,14 +13,16 @@ import (
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/policy"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
-	FlowLogFilename     = "flows.log"
-	DNSLogFilename      = "dns.log"
-	L7LogFilename       = "l7.log"
-	WAFEventLogFilename = "waf.log"
+	FlowLogFilename           = "flows.log"
+	DNSLogFilename            = "dns.log"
+	L7LogFilename             = "l7.log"
+	WAFEventLogFilename       = "waf.log"
+	PolicyActivityLogFilename = "policy_activity.log"
 )
 
 // FileReporter is a Reporter that writes logs to a local,
@@ -134,6 +136,19 @@ func (f *FileReporter) Report(logSlice interface{}) (err error) {
 				log.WithError(err).
 					WithField("wafEventLog", l).
 					Error("Unable to serialize WAFEvent log to JSON")
+				return err
+			}
+		}
+	case []*policy.ActivityLog:
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithField("num", len(logs)).Debug("Dispatching policy activity logs to file")
+		}
+		for _, l := range logs {
+			err := enc.Encode(l)
+			if err != nil {
+				log.WithError(err).
+					WithField("policyActivityLog", l).
+					Error("Unable to serialize policy activity log to JSON")
 				return err
 			}
 		}

@@ -2,7 +2,6 @@ package collections
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -15,11 +14,11 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/testutils"
 )
 
 func TestCollectionsService(t *testing.T) {
@@ -70,6 +69,8 @@ func TestCollectionsService(t *testing.T) {
 			authorizer,
 			k8sClient,
 			"Bearer fake-token",
+			nil,
+			"fake-tenant",
 			nil,
 		)
 	}
@@ -178,32 +179,6 @@ func TestCollectionsService(t *testing.T) {
 		collectionsResponse, err := subject.Collections(newSecurityContext(true))
 		require.NoError(t, err)
 
-		expectMatchesGoldenYaml(t, "collections", collectionsResponse)
+		testutils.ExpectMatchesGoldenYaml(t, "collections", collectionsResponse)
 	})
-}
-
-func expectMatchesGoldenYaml(t *testing.T, filename string, actual client.CollectionsResponse) {
-	var err error
-	goldenPath := fmt.Sprintf("testdata/%s-golden.yaml", filename)
-	actualPath := fmt.Sprintf("testdata/%s-actual.yaml", filename)
-
-	actualBytes, err := yaml.Marshal(actual)
-	require.NoError(t, err)
-
-	expectedBytes, err := os.ReadFile(goldenPath)
-	require.NoError(t, err)
-
-	actualString := string(actualBytes)
-	expectedString := string(expectedBytes)
-
-	// write the actual file only if it is different to the expected, otherwise remove it
-	if actualString != expectedString {
-		require.NoError(t, os.WriteFile(actualPath, actualBytes, 0755))
-	} else {
-		_ = os.Remove(actualPath)
-	}
-
-	require.Equal(t, expectedString, actualString,
-		fmt.Sprintf("goldenFile: %s, actualFile: %s", goldenPath, actualPath),
-	)
 }

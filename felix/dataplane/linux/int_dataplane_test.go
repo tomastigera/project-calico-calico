@@ -81,6 +81,8 @@ func (*mockCollector) LogWAFEvents([]*proto.WAFEvent) {}
 
 func (*mockCollector) SetWAFEventsReporter(types.Reporter) {}
 
+func (*mockCollector) SetPolicyActivityReporter(types.Reporter) {}
+
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
 	var dpConfig intdataplane.Config

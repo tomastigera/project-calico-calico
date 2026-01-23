@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -22,6 +24,7 @@ import (
 	calicoclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	calicofake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/projectcalico/calico/apiserver/test/integration"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	"github.com/projectcalico/calico/licensing/utils"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
@@ -59,8 +64,6 @@ const (
 	TokenPath = "./ui-apis-token"
 	// LinseedTokenPath points to the Linseed service account token
 	LinseedTokenPath = "../../linseed/fv/client-token"
-
-	clusterName = "cluster"
 )
 
 // These FVs comprehensively test the /serviceGraph/stats endpoint using a full stack of live components.
@@ -78,6 +81,8 @@ const (
 // +-------------------+----------------+
 //
 // This test suite sets up each of these scenarios, and validates that the global and namespaced scale detections are computed as expected.
+// In case (3) and (4), namespace counts are canceled. In these cases, we validate that we approximate namespace stats using the internal cache.
+// In case (2), the L3 flow namespace count is truncated. In this case, we also validate that we approximate namespace stats using the internal cache.
 //
 // To set up these scenarios, this test suite simulates network topologies using the concept of a 'namespace group'.
 // A namespace group consists of 2 frontend clients connecting to a backend server, with all 3 workloads in their own namespace.
@@ -120,6 +125,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		sgHandler          servicegraph.ServiceGraphHandler
 		sgStatsHandler     http.Handler
 		clusterInfo        bapi.ClusterInfo
+		managedClusterInfo *bapi.ClusterInfo
 		existingNamespaces *corev1.NamespaceList
 
 		// Tracking for scenario teardowns
@@ -145,7 +151,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		By("Configuring Linseed connection")
 		linseedPort := 8444
 		linseedTenantId := "tenant-a"
-		clusterInfo = bapi.ClusterInfo{Cluster: clusterName, Tenant: linseedTenantId}
+		clusterInfo = bapi.ClusterInfo{Cluster: k8s.DefaultCluster, Tenant: linseedTenantId}
 
 		cfg := lsrest.Config{
 			CACertPath:     "../../linseed/fv/cert/RootCA.crt",
@@ -185,70 +191,79 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			WaitForCompletion(true).
 			Query(elastic.NewMatchAllQuery()).
 			Do(ctx)
+
+		if managedClusterInfo != nil {
+			_, _ = esClient.DeleteByQuery().
+				Index(index.FlowLogMultiIndex.Index(*managedClusterInfo)).
+				WaitForCompletion(true).
+				Query(elastic.NewMatchAllQuery()).
+				Do(ctx)
+			managedClusterInfo = nil
+		}
 	})
 
 	Context("Mainline cases", func() {
-		BeforeEach(func() {
-			By("Initializing ServiceGraph handlers")
-			sgHandler, sgStatsHandler = createServiceGraphHandler(linseedCli, k8sClient, ctrlClient, clientSetFactory)
-		})
-
 		// Test case 1, outlined in the comment above the Describe block.
 		It("(1) should return correct stats when flow logs are low and L3 flows are low", func() {
-			// Set up a namespace group that we expect to have low flow logs and low L3 flows.
-			nsGroup := newNamespaceGroup("low-scale", 5, 10)
+			// Create a namespace group that we expect to have low flow logs and low L3 flows.
+			// Distribute the data evenly over the past 3 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			nsGroup := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
 
-			// Set up our scenario
+			// Set up our scenario.
 			nsGroups := []namespaceGroup{nsGroup}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 
-			// Execute our request
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+			// Execute our request, querying the last 3 days with a bit of a buffer, since From is exclusive.
+			queryTimeRange := &lmav1.TimeRange{
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
-			statsResp, sgResp, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			statsResp, sgResp, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
 			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
-
-			By("Verifying service graph stats response")
 			Expect(statsResp).NotTo(BeNil(), "Expected stats response")
 
+			// Validate the response.
 			// The global scale determination should be false, since both flow logs and L3 flows are low.
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(false))
-
-			// Each namespace in our namespace group should have a scale determination, and it should be false.
+			// Each namespace in our namespace group should have scale determination, and it should be false.
 			// When flow logs and l3 flows are low, we perform all computations, so no scale determinations should be nil.
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-a",
-				HighVolume: util.BoolPtr(false),
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-b",
-				HighVolume: util.BoolPtr(false),
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-backend",
-				HighVolume: util.BoolPtr(false),
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(false),
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(false),
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(false),
+				},
 			}))
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(len(existingNamespaces.Items) + 3))
-
 			// When the global scale is low, we compute the graph edges for the frontend so it can determine if the amount of edge is too high to render.
 			Expect(*statsResp.TopologyStatistics.NumEdges).To(Equal(2))
 			Expect(*statsResp.TopologyStatistics.NumEdges).To(Equal(len(sgResp.Edges)))
-
 			// No cancellations should have occurred, since we perform all computations when flow logs and l3 flows are low.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Truncations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Truncations.L3FlowCounts).To(Equal(false))
-
 			// Check that we computed the correct number of flow logs and l3 flows.
-			expectedL3Flows, expectedFlowLogs := calculateExpectedCountsForNamespaceGroup(5, 10)
+			expectedL3Flows, expectedFlowLogs := nsGroup.expectedCounts()
 			Expect(statsResp.DeveloperStatistics.Counts.NumFlowLogs).To(Equal(expectedFlowLogs))
 			// Our expected L3 flow count has a max of 2000, since we truncate pagination once we reach 2000.
 			Expect(statsResp.DeveloperStatistics.Counts.NumL3Flows).To(Equal(min(expectedL3Flows, 2000)))
@@ -257,87 +272,133 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		// Test case 2, outlined in the comment above the Describe block.
 		It("(2) should return correct stats when flow logs are low and L3 flows are high", func() {
 			// Set up a namespace group that we expect to have high L3 flows, along with the low scale group.
-			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1)
-			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10)
+			// Distribute the data evenly over the past 3 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			// We pick n=1000 and m=1 as we know this will result in 4000 unique L3 flows, and we expect the threshold for high L3 flows to be 2000.
+			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1, dataTimeRange, false)
+			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
 
-			// Set up our scenario
+			// Set up our scenario.
 			nsGroups := []namespaceGroup{highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 
-			// Execute our request
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+			// Execute our request, querying the last 3 days with a bit of a buffer, since From is exclusive.
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			var statsResp *uiapisv1.ServiceGraphStatsResponse
+			var statsErr error
+			queryLastThreeDays := func() []uiapisv1.NamespaceStatistics {
+				queryTimeRange := &lmav1.TimeRange{
+					From: dataTimeRange.From.Add(-time.Hour),
+					To:   time.Now(),
+				}
+				statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+				Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+				Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+				return statsResp.NamespacesStatistics
 			}
-			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
-			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
-			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
+			queryLastThreeDays()
 
-			By("Verifying service graph stats response")
-			Expect(statsResp).NotTo(BeNil(), "Expected stats response")
-
+			// Validate the response.
 			// The global scale determination should be true, since L3 flows are high.
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
-
 			// Our global L3 flows are high. Since we determine this via pagination, we terminate the pagination once we know L3 flows are high.
-			// This means we don't have namespaced L3 flow counts as that requires all pages to be fetched.
-			// Since all flow log counts are low, the scale determination for a namespace becomes whether L3 flows are high.
+			// This means we don't have namespaced L3 flow counts, as that requires all pages to be fetched.
+			// Since all flow log counts are low, the scale boolean for a namespace short-circuits to whether L3 flows are high.
 			// Since we do not know L3 flows for any namespace, every namespace should have nil scale determination.
 			Expect(statsResp.DeveloperStatistics.Truncations.L3FlowCounts).To(Equal(true))
 			Expect(statsResp.DeveloperStatistics.Truncations.NamespacedFlowLogCounts).To(Equal(false))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-backend",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-backend",
-				HighVolume: nil,
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "high-l3-flows-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "default",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
 			}))
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(len(existingNamespaces.Items) + 6))
-
 			// Global scale determination is high, so we do not compute the graph edges for the frontend.
 			Expect(statsResp.TopologyStatistics.NumEdges).To(BeNil())
-
 			// Flow log counts are low, so we do not expect any cancellations.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(false))
-
 			// Check that we computed the correct number of flow logs and l3 flows.
-			expectedNsGroup1L3Flows, expectedNsGroup1FlowLogs := calculateExpectedCountsForNamespaceGroup(5, 10)
-			expectedNsGroup2L3Flows, expectedNsGroup2FlowLogs := calculateExpectedCountsForNamespaceGroup(1000, 1)
+			expectedNsGroup1L3Flows, expectedNsGroup1FlowLogs := highL3FlowNamespaces.expectedCounts()
+			expectedNsGroup2L3Flows, expectedNsGroup2FlowLogs := lowScaleNamespaces.expectedCounts()
 			Expect(statsResp.DeveloperStatistics.Counts.NumFlowLogs).To(Equal(expectedNsGroup1FlowLogs + expectedNsGroup2FlowLogs))
 			// Our expected L3 flow count has a max of 2000, since we truncate pagination once we reach 2000.
 			Expect(statsResp.DeveloperStatistics.Counts.NumL3Flows).To(Equal(min(expectedNsGroup1L3Flows+expectedNsGroup2L3Flows, 2000)))
+
+			// Validate that eventually we see the cache kick in - it should deem that the high-l3-flows backend is high volume (>2k L3 flows)
+			Eventually(queryLastThreeDays).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				}))
+			// Expect that namespaces without flows, like default, still have no scale determination.
+			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
+				Namespace:    "default",
+				HighVolume:   nil,
+				Approximated: nil,
+			}))
 		})
 
 		// Test case 3, outlined in the comment above the Describe block.
 		It("(3) should return correct stats when flow logs are high and the L3 flows are high", func() {
 			// Set up a namespace group that we expect to have high flow logs, along with a high l3 flows namespace group and low scale namespace group.
-			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000)
-			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1)
-			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10)
+			// Distribute the data evenly over the past 3 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			// We pick n=1 and m=600000, as we know this will result in 2.4 million flow logs globally, and the threshold for high flow logs is 1 million.
+			// When this cluster is queried over 2 days, rather than 3, we expect the global count (and the backend namespace count) to be 1.6 million and thus 'high'
+			// For the same 2-day period, we expect the frontend namespace counts to be 0.8 million and thus 'low'.
+			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000, dataTimeRange, false)
+			// We pick n=800 and m=1, as we know this will result in 3200 L3 flows globally, and the threshold for high l3 flows is 2000.
+			// L3 flows do not scale with time: they represent the shape of traffic, not the scale of it. We expect the frontend namespaces to
+			// be 'low', as they will each have half of the L3 flows (1.6k). The backend namespace will be 'high'.
+			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 800, 1, dataTimeRange, false)
+			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
 
-			// Set up our scenario
+			// Set up our scenario.
 			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
@@ -345,181 +406,700 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			teardowns = append(teardowns, scenarioTeardowns...)
 
 			// Execute our request
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+			queryTimeRange := &lmav1.TimeRange{
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
-			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
-			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
-
-			By("Verifying service graph stats response")
 			Expect(statsResp).NotTo(BeNil(), "Expected stats response")
 
+			// Validate the response.
 			// The global scale determination should be true, since both flow logs and L3 flows are high.
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
-
 			// We expect the high flow logs namespaces to have explicit high scale determinations.
-			// This is because when the global flow log count not very high, we compute namespaced flow log counts.
+			// This is because when the global flow log count is not very high, we compute namespaced flow log counts.
 			// Since the namespaced flow log counts are high, we know the scale of the namespace is high.
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-flow-logs-backend",
-				HighVolume: util.BoolPtr(true),
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-flow-logs-frontend-a",
-				HighVolume: util.BoolPtr(true),
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-flow-logs-frontend-b",
-				HighVolume: util.BoolPtr(true),
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "high-flow-logs-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(false),
+				},
+				{
+					Namespace:    "high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(false),
+				},
+				{
+					Namespace:    "high-flow-logs-frontend-b",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(false),
+				},
 			}))
 			// The remaining namespaces have low flow log counts, meaning their scale determination depends on the L3 flow counts.
-			// Since the L3 flow counts are cancelled when we have a high flow log count, the scale determination for these namespaces is nil.
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-backend",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-backend",
-				HighVolume: nil,
+			// Since the L3 flow counts are canceled when we have a high flow log count, and we expect that the cache is not yet ready,
+			// the scale determination for these namespaces is nil.
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "high-l3-flows-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "default",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
 			}))
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(len(existingNamespaces.Items) + 9))
-
 			// Global scale determination is high, so we do not compute the graph edges for the frontend.
 			Expect(statsResp.TopologyStatistics.NumEdges).To(BeNil())
-
 			// Flow log counts are high, so we expect the L3 flow count to be canceled.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
 			Expect(statsResp.DeveloperStatistics.Truncations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Truncations.L3FlowCounts).To(Equal(false))
-
 			// Check that we computed the correct number of flow logs and l3 flows.
-			_, expectedNsGroup1FlowLogs := calculateExpectedCountsForNamespaceGroup(1, 600000)
-			_, expectedNsGroup2FlowLogs := calculateExpectedCountsForNamespaceGroup(1000, 1)
-			_, expectedNsGroup3FlowLogs := calculateExpectedCountsForNamespaceGroup(5, 10)
+			_, expectedNsGroup1FlowLogs := highFlowNamespaces.expectedCounts()
+			_, expectedNsGroup2FlowLogs := highL3FlowNamespaces.expectedCounts()
+			_, expectedNsGroup3FlowLogs := lowScaleNamespaces.expectedCounts()
 			Expect(statsResp.DeveloperStatistics.Counts.NumFlowLogs).To(Equal(expectedNsGroup1FlowLogs + expectedNsGroup2FlowLogs + expectedNsGroup3FlowLogs))
 			Expect(statsResp.DeveloperStatistics.Counts.NumL3Flows).To(BeZero())
 
+			// Now, execute our request against the 2-day window described earlier to test cache-based approximation of namespace stats.
+			// We expect that the first request did not have the cache ready - so now we query until we see approximations, meaning the cache is ready.
+			queryLastTwoDays := func() []uiapisv1.NamespaceStatistics {
+				queryTimeRange := &lmav1.TimeRange{
+					From: time.Now().Add(-2 * 24 * time.Hour),
+					To:   time.Now(),
+				}
+				statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+				Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+				Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+				return statsResp.NamespacesStatistics
+			}
+			Eventually(queryLastTwoDays).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				}))
+
+			// Validate the response.
+			// The global scale determination should be true, since both flow logs and L3 flows are high.
+			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
+			// Flow log counts are high, so we expect the L3 flow count to be canceled.
+			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(false))
+			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				// In the 2-day window, the backend namespace for the high-flow-logs namespace group crosses the threshold for high flow logs.
+				// Since namespaced flow log counts were not cancelled, we have enough information to make an exact determination of volume.
+				{
+					Namespace:    "high-flow-logs-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(false),
+				},
+				// In the 2-day window, the high-flow-logs frontend namespaces have low flow log counts, meaning their scale determination depends on the L3 flow counts.
+				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says they have low flow log counts.
+				{
+					Namespace:    "high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "high-flow-logs-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				// The high-l3-flow namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
+				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says the backend namespace has high volume,
+				// and that the frontend namespaces have low volume, as described earlier.
+				{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				// The low-scale namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
+				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says all namespaces have low volume.
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				// Expect that namespaces without flows, like default, still have no scale determination.
+				{
+					Namespace:    "default",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+			}))
 		})
 
 		// Test case 4, outlined in the comment above the Describe block.
 		It("(4) should return correct stats when flow logs are very high and L3 flows are high", func() {
 			// Set up a namespace group that we expect to have very high flow logs, along with a high l3 flows namespace group and low scale namespace group.
-			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 2500000)
-			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1)
-			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10)
+			// Distribute the data evenly over the past 3 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			// We pick n=1 and m=3600000, as we know this will result in 15.2 million flow logs globally, and the threshold for very high flow logs is 10 million.
+			// When this cluster is queried over 2 days, rather than 3, we expect the global count (and the backend namespace count) to be ~10.1 million and thus 'very high'
+			// For the same 2-day period, we expect the frontend namespace counts to be ~5 million and thus 'high'.
+			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 3800000, dataTimeRange, false)
+			// We pick n=800 and m=1, as we know this will result in 3200 L3 flows globally, and the threshold for high l3 flows is 2000.
+			// L3 flows do not scale with time: they represent the shape of traffic, not the scale of it. We expect the frontend namespaces to
+			// be 'low', as they will each have half of the L3 flows (1.6k). The backend namespace will be 'high'.
+			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 800, 1, dataTimeRange, false)
+			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
 
-			// Set up our scenario
+			// Set up our scenario.
 			nsGroups := []namespaceGroup{veryHighFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 
-			// Execute our request, first with some focuses, and then without, to compare performance.
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-3600, 0),
-				To:   time.Unix(now, 0),
+			// Execute our request
+			queryTimeRange := &lmav1.TimeRange{
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
-			_, _, _, serviceFocusedSgDuration, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{Focus: []uiapisv1.GraphNodeID{"svc/low-scale-backend/api"}})
-			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service-focused service graph stats response")
-			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
-			_, _, _, namespacedFocusedSgDuration, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{Focus: []uiapisv1.GraphNodeID{"namespace/low-scale-backend"}})
-			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get namespaced-focused service graph stats response")
-			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
-			statsResp, _, _, fullSgDuration, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
-			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
-			Expect(serviceFocusedSgDuration).To(BeNumerically("<=", fullSgDuration/5), "Service-focused service graph duration should be significantly less than unfocused service graph duration")
-			Expect(namespacedFocusedSgDuration).To(BeNumerically("<=", fullSgDuration/5), "Namespaced-focused service graph duration should be significantly less than unfocused service graph duration")
-
-			By("Verifying service graph stats response")
 			Expect(statsResp).NotTo(BeNil(), "Expected stats response")
 
+			// Validate the response.
 			// The global scale determination should be true, since both flow logs and L3 flows are high.
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
-
 			// With flow logs very high, we expect namespaced flow log computation and L3 flow log computation to be canceled.
 			// This means we have no scale determinations for any namespaces.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "low-scale-backend",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "high-l3-flows-backend",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "very-high-flow-logs-backend",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "very-high-flow-logs-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "very-high-flow-logs-frontend-b",
-				HighVolume: nil,
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "very-high-flow-logs-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "very-high-flow-logs-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "very-high-flow-logs-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				// Expect that namespaces without flows, like default, still have no scale determination.
+				{
+					Namespace:    "default",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
 			}))
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(len(existingNamespaces.Items) + 9))
-
 			// Global scale determination is high, so we do not compute the graph edges for the frontend.
 			Expect(statsResp.TopologyStatistics.NumEdges).To(BeNil())
-
 			// Expect no truncations, since there was no computation to truncate.
 			Expect(statsResp.DeveloperStatistics.Truncations.NamespacedFlowLogCounts).To(Equal(false))
 			Expect(statsResp.DeveloperStatistics.Truncations.L3FlowCounts).To(Equal(false))
-
 			// Check that we computed the correct number of flow logs and l3 flows.
-			_, expectedNsGroup1FlowLogs := calculateExpectedCountsForNamespaceGroup(1, 2500000)
-			_, expectedNsGroup2FlowLogs := calculateExpectedCountsForNamespaceGroup(1000, 1)
-			_, expectedNsGroup3FlowLogs := calculateExpectedCountsForNamespaceGroup(5, 10)
+			_, expectedNsGroup1FlowLogs := veryHighFlowNamespaces.expectedCounts()
+			_, expectedNsGroup2FlowLogs := highL3FlowNamespaces.expectedCounts()
+			_, expectedNsGroup3FlowLogs := lowScaleNamespaces.expectedCounts()
 			Expect(statsResp.DeveloperStatistics.Counts.NumFlowLogs).To(Equal(expectedNsGroup1FlowLogs + expectedNsGroup2FlowLogs + expectedNsGroup3FlowLogs))
 			Expect(statsResp.DeveloperStatistics.Counts.NumL3Flows).To(BeZero())
 
+			// Now, execute our request against the 2-day window described earlier to test cache-based approximation of namespace stats.
+			// We expect that the first request did not have the cache ready - so now we query until we see approximations, meaning the cache is ready.
+			queryLastTwoDays := func() []uiapisv1.NamespaceStatistics {
+				queryTimeRange := &lmav1.TimeRange{
+					From: time.Now().Add(-2 * 24 * time.Hour),
+					To:   time.Now(),
+				}
+				statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+				Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+				Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+				return statsResp.NamespacesStatistics
+			}
+			Eventually(queryLastTwoDays).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				}))
+			// The global scale determination should be true, since both flow logs and L3 flows are high.
+			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
+			// With flow logs very high, we expect namespaced flow log computation and L3 flow log computation to be canceled.
+			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
+			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				// In the 2-day window, the namespaces for the very-high-flow-logs namespace group all cross the threshold for high flow logs.
+				// Since all namespace counts were canceled, we expect the determinations to be approximated.
+				{
+					Namespace:    "very-high-flow-logs-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "very-high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "very-high-flow-logs-frontend-b",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				},
+				// The high-l3-flow namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
+				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says the backend namespace has high volume,
+				// and that the frontend namespaces have low volume, as described earlier.
+				{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "high-l3-flows-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				// The low-scale namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
+				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says all namespaces have low volume.
+				{
+					Namespace:    "low-scale-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "low-scale-frontend-b",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				{
+					Namespace:    "low-scale-backend",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				},
+				// Expect that namespaces without flows, like default, still have no scale determination.
+				{
+					Namespace:    "default",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+			}))
+		})
+
+		// The tests above validate namespace stats approximation when the query duration is shorter than the cache duration.
+		// This test validates that stats are scaled appropriately when the query duration is longer than the cache duration.
+		It("should approximate namespace stats correctly when the cache duration is lower than the query duration", func() {
+			// Distribute the data evenly over the past 7 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-7 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			// We pick n=1 and m=300000, as we know this will result in 1.2 million in the backend namespace of the group, and the threshold for high flow logs is 1 million.
+			// We want the backend namespace to be above the high mark at 7 days (we expect 1.2 mil), and below the high mark at our cache duration of 3 days (we expect ~500k)
+			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 300000, dataTimeRange, false)
+
+			// We pick n=800 and m=1, as we know this will result in 3200 L3 flows globally, and the threshold for high l3 flows is 2000.
+			// L3 flows do not scale with time: they represent the shape of traffic, not the scale of it. We expect the frontend namespaces
+			// to be 'low', as they will each have half of the L3 flows (1.6k). The backend namespace will be 'high'.
+			// Namespace groups spread all L3 flows over the time range, whereas real L3 flows are typically repeated within time ranges.
+			// To simulate real L3 flows better, we repeat the same L3 flows so that the cache will see the whole picture in its 3-day duration.
+			// This discrepancy didn't matter for previous tests since this is the first test where the cache duration does not cover the data duration.
+			l3FlowTimeRange1 := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   dataTimeRange.To,
+			}
+			l3FlowTimeRange2 := &lmav1.TimeRange{
+				From: dataTimeRange.From,
+				To:   time.Now().Add(-3 * 24 * time.Hour),
+			}
+			highL3FlowNamespaces1 := newNamespaceGroup("high-l3-flows", 800, 1, l3FlowTimeRange1, false)
+			highL3FlowNamespaces2 := newNamespaceGroup("high-l3-flows", 800, 1, l3FlowTimeRange2, true)
+
+			// Include a low-scale namespace group to validate non-approximation behaviour too.
+			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
+
+			// Include a final namespace group to push us into the 'very high' mark for total flow logs. We pick n=1 and m=2250000 as this should give an extra 9 million
+			// flow logs, pushing us over 10 million total.
+			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 2250000, dataTimeRange, false)
+
+			// Set up our scenario.
+			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces1, highL3FlowNamespaces2, lowScaleNamespaces, veryHighFlowNamespaces}
+			testUser := testUser{Username: "test-sg-user"}
+			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+			teardowns = append(teardowns, scenarioTeardowns...)
+
+			// Query against the last seven days. This allows us to check the behaviour of cache approximation when the request duration exceeds the cache duration.
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			var statsResp *uiapisv1.ServiceGraphStatsResponse
+			var statsErr error
+			queryLastSevenDays := func() []uiapisv1.NamespaceStatistics {
+				queryTimeRange := &lmav1.TimeRange{
+					From: dataTimeRange.From.Add(-1 * time.Hour),
+					To:   time.Now(),
+				}
+				statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+				Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+				Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+				return statsResp.NamespacesStatistics
+			}
+
+			Eventually(queryLastSevenDays).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElements([]uiapisv1.NamespaceStatistics{
+					// For the high-flow-logs namespace group: our query time range matches the full data set, so approximation should yield us
+					// a count that matches the total count. Therefore, we expect the backend namespace to be high volume at ~1.2 million, and
+					// the frontend namespaces to be low volume at ~600k.
+					{
+						Namespace:    "high-flow-logs-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "high-flow-logs-frontend-a",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "high-flow-logs-frontend-b",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					// For the high-l3-flows namespace group: both the full query range and the cache range should contain ~3200 L3 flows.
+					// Therefore, we expect the backend namespace to be high volume at ~3200 L3 flows, and the frontend namespaces to be
+					// low volume at ~1600 L3 flows.
+					{
+						Namespace:    "high-l3-flows-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "high-l3-flows-frontend-a",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "high-l3-flows-frontend-b",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					// The low-scale namespace group should have all of its namespaces approximated for low volume.
+					{
+						Namespace:    "low-scale-frontend-a",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "low-scale-frontend-b",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "low-scale-backend",
+						HighVolume:   util.BoolPtr(false),
+						Approximated: util.BoolPtr(true),
+					},
+					// Namespaces with no flows should have no approximation.
+					{
+						Namespace:    "default",
+						HighVolume:   nil,
+						Approximated: nil,
+					},
+				}))
+			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
+			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
+			// The cache count of flow logs for the high-flow-logs backend namespace should be less than half of the global count for the namespace, since the cache is only 3 days.
+			Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumFlowLogs["high-flow-logs-backend"]).To(BeNumerically("<", 600000))
+			// The cache count of L3 flows for the high-l3-flows backend namespace should be roughly equal to the total count of L3 flows for the namespace.
+			Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumL3Flows["high-l3-flows-backend"]).To(BeNumerically("~", 3200, 5))
+		})
+
+		// This test validates that the cache is responsive to changes in flow log storage. It sets up a default cluster and a managed
+		// cluster at 'very high' flow log scale, to ensure namespace stats are computed from the cache. It expects certain namespaces
+		// in the created groups to be low volume via approximation, and then doubles their flows, expecting the cache to update and
+		// result in a high volume approximation.
+		It("should react to changes in the cached window", func() {
+			// Set up a namespace group that we expect to have very high flow logs, along with a high flow logs namespace group and low scale namespace group.
+			// Distribute the data evenly over the past 3 days.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+
+			// We need a namespace that is low volume at first, but become high volume when doubled. We choose n=1 and m=600000.
+			// When this cluster is queried over 2 days, rather than 3, we expect the global count (and the backend namespace count) to be 1.6 million and thus 'high'
+			// For the same 3-day period, we expect the frontend namespace counts to be 0.8 million and thus 'low'. When these namespaces are doubled, the counts will be 1.6 million, and thus 'high'.
+			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000, dataTimeRange, false)
+			// The cluster should have very high flows total, so that the all namespace computations are done via the cache. This namespace group pushes the global flow count over 10 million.
+			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 3200000, dataTimeRange, false)
+
+			// Set up our default cluster scenario.
+			nsGroups := []namespaceGroup{veryHighFlowNamespaces, highFlowNamespaces}
+			u := testUser{Username: "test-sg-user"}
+			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+			teardowns = append(teardowns, scenarioTeardowns...)
+
+			// Replicate the same scenario as above, in a managed cluster.
+			managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 600000, dataTimeRange, false)
+			managedVeryHighFlowNamespaces := newNamespaceGroup("managed-very-high-flow-logs", 1, 3200000, dataTimeRange, false)
+			managedNsGroups := []namespaceGroup{managedVeryHighFlowNamespaces, managedHighFlowNamespaces}
+			mu := testUser{Username: "managed-test-sg-user"}
+			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, *managedClusterInfo)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+			teardowns = append(teardowns, managedScenarioTeardowns...)
+
+			// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
+			// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
+			// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
+			licenseTeardown, err := applyLicense(calicoClient)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create license")
+			teardowns = append(teardowns, licenseTeardown)
+			managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
+			teardowns = append(teardowns, managedClusterTeardowns)
+
+			// Execute our request.
+			var statsResp *uiapisv1.ServiceGraphStatsResponse
+			var statsErr error
+			customSgConfig := getDefaultServiceGraphConfig()
+			customSgConfig.GraphStatsCacheUpdateInterval = 5 * time.Second
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			queryLastTwoDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
+				return func() []uiapisv1.NamespaceStatistics {
+					queryTimeRange := &lmav1.TimeRange{
+						From: time.Now().Add(-2 * 24 * time.Hour),
+						To:   time.Now(),
+					}
+					statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+					Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+					return statsResp.NamespacesStatistics
+				}
+			}
+			// We expect the high-flow-logs frontend namespaces to both be approximated as low volume, as described earlier.
+			Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+				Namespace:    "high-flow-logs-frontend-a",
+				HighVolume:   util.BoolPtr(false),
+				Approximated: util.BoolPtr(true),
+			}))
+			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+				Namespace:    "managed-high-flow-logs-frontend-a",
+				HighVolume:   util.BoolPtr(false),
+				Approximated: util.BoolPtr(true),
+			}))
+
+			// Double the flows for high-flow namespaces. This should push the frontend high-flow-logs namespaces into high volume in the cache, as described earlier.
+			err = highFlowNamespaces.createFlows(context.Background(), linseedCli, clusterInfo.Cluster)
+			Expect(err).NotTo(HaveOccurred(), "Failed to double flows for high l3 flow namespaces")
+			err = managedHighFlowNamespaces.createFlows(context.Background(), linseedCli, managedClusterInfo.Cluster)
+			Expect(err).NotTo(HaveOccurred(), "Failed to double flows for managed high l3 flow namespaces")
+			Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+				Namespace:    "high-flow-logs-frontend-a",
+				HighVolume:   util.BoolPtr(true),
+				Approximated: util.BoolPtr(true),
+			}))
+			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+				Namespace:    "managed-high-flow-logs-frontend-a",
+				HighVolume:   util.BoolPtr(true),
+				Approximated: util.BoolPtr(true),
+			}))
+		})
+
+		// This test validates that the cache is responsive to changes in managed cluster lifecycle, specifically addition and deletion.
+		// It adds a managed cluster to a base setup that has a default cluster, and validates that the cache fills with the managed cluster data.
+		// It also validates that when the managed cluster is deleted, the cached data is cleared. It also conducts some baseline testing
+		// to validate that the default cluster cache queries as expected in the presence of the managed cluster.
+		It("should support queries from different clusters and maintain a per-cluster cache", func() {
+			// For the default cluster, set up a namespace group that we expect to have high flow logs, along with a high l3 flows namespace group and low scale namespace group.
+			// This follows the same count choices as previous test cases, refer to them for detailed rationale.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000, dataTimeRange, false)
+			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1, dataTimeRange, false)
+			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
+
+			// Set up our scenario for the default cluster.
+			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
+			u := testUser{Username: "test-sg-user"}
+			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+			teardowns = append(teardowns, scenarioTeardowns...)
+
+			// Execute our request against the default cluster, validating that we see a response derived from the cache.
+			var statsResp *uiapisv1.ServiceGraphStatsResponse
+			var statsErr error
+			queryLastThreeDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
+				return func() []uiapisv1.NamespaceStatistics {
+					queryTimeRange := &lmav1.TimeRange{
+						From: time.Now().Add(-3 * 24 * time.Hour),
+						To:   time.Now(),
+					}
+					statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+					Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+					Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+					return statsResp.NamespacesStatistics
+				}
+			}
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+			Eventually(queryLastThreeDays(userInfo, clusterInfo)).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				}))
+
+			// Set up an analogous scenario for a managed cluster.
+			managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 600000, dataTimeRange, false)
+			managedHighL3FlowNamespaces := newNamespaceGroup("managed-high-l3-flows", 1000, 1, dataTimeRange, false)
+			managedLowScaleNamespaces := newNamespaceGroup("managed-low-scale", 5, 10, dataTimeRange, false)
+			managedNsGroups := []namespaceGroup{managedLowScaleNamespaces, managedHighL3FlowNamespaces, managedHighFlowNamespaces}
+			managedTestUser := testUser{Username: "managed-test-sg-user"}
+			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, *managedClusterInfo)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+			teardowns = append(teardowns, managedScenarioTeardowns...)
+
+			// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
+			// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
+			// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
+			licenseTeardown, err := applyLicense(calicoClient)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create license")
+			teardowns = append(teardowns, licenseTeardown)
+			managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
+			teardowns = append(teardowns, managedClusterTeardowns)
+
+			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "managed-high-l3-flows-backend",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
+				}))
+
+			// Teardown the managed cluster. In case we don't reach this point, the functions have already been registered with our AfterEach cleanup, and are idempotent.
+			managedClusterTeardowns()
+			licenseTeardown()
+
+			// We've torn down the managed cluster but kept its namespace group intact.
+			// This is not a valid state to be in, since the managed cluster is disconnected and we should not be able to contact its API server anymore.
+			// This invalid state is facilitated by the fact that we have one API server acting as the API server for both the default cluster and the managed cluster.
+			// Even though this state is invalid, it can be used to show whether we cleared out our cache entry for the namespace.
+			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
+				WithTimeout(3 * time.Minute).
+				WithPolling(3 * time.Second).
+				To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace: "managed-high-l3-flows-backend",
+				}))
 		})
 
 		It("should return correct filtered namespace stats when user is not fully permitted", func() {
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
 			// Create a basic namespace group.
-			nsGroup := newNamespaceGroup("app", 5, 10)
+			nsGroup := newNamespaceGroup("app", 5, 10, dataTimeRange, false)
 
 			// Set up the scenario with a user scoped to app-backend namespace only
 			testUser := testUser{
@@ -537,13 +1117,14 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+
 			// Execute our request
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+			queryTimeRange := &lmav1.TimeRange{
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
-			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
+			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
 			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
 
@@ -554,8 +1135,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(false))
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(1))
 			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-backend",
-				HighVolume: util.BoolPtr(false),
+				Namespace:    "app-backend",
+				HighVolume:   util.BoolPtr(false),
+				Approximated: util.BoolPtr(false),
 			}))
 			for _, ns := range statsResp.NamespacesStatistics {
 				Expect(ns.Namespace).NotTo(Equal("app-frontend-a"))
@@ -566,18 +1148,19 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		It("should return correct stats with 25k unique namespaces", func() {
 			// Create 25k namespaces with one flow each (intra-namespace).
 			// This test will exercise pagination for both namespaced flow log counts and namespaced l3 flow counts.
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
 			numNamespaces := 25000
 			namespaces := make([]string, numNamespaces)
 			flows := make([]lsv1.FlowLog, numNamespaces)
-			baseTime := time.Now().Unix()
 
 			for i := 0; i < numNamespaces; i++ {
 				nsName := fmt.Sprintf("ns-%05d", i)
 				namespaces[i] = nsName
 
 				flows[i] = lsv1.FlowLog{
-					StartTime:       baseTime - 60,
-					EndTime:         baseTime,
 					SourceType:      "wep",
 					SourceNamespace: nsName,
 					SourceNameAggr:  "pod",
@@ -602,20 +1185,21 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 
 			// Create an overridden namespace group. We pass an empty list of namespaces to prevent 25k namespaces from being created.
 			// The pagination we are testing depends on namespace count detected in flow logs, so missing namespaces in k8s does not matter.
-			nsGroup := newOverriddenNamespaceGroup("25k-ns", []string{}, flows)
+			nsGroup := newOverriddenNamespaceGroup("25k-ns", []string{}, flows, dataTimeRange, false)
 			testUser := testUser{
 				Username: "test-sg-user",
 			}
-			now := time.Now().Unix()
-			timeRange := &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+			queryTimeRange := &lmav1.TimeRange{
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, []namespaceGroup{nsGroup}, testUser, clusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 
-			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, sgHandler, userInfo, timeRange, uiapisv1.GraphView{})
+			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
+
+			statsResp, _, _, _, statsErr, sgErr := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
 			Expect(sgErr).NotTo(HaveOccurred(), "Failed to get service graph response")
 
@@ -642,17 +1226,20 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			// Set up a basic scenario and disable cache prefetch to limit the calls we need to mock.
 			var scenarioTeardowns []func()
 			var err error
-			nsGroup := newNamespaceGroup("app", 5, 10)
+			dataTimeRange := &lmav1.TimeRange{
+				From: time.Now().Add(-3 * 24 * time.Hour),
+				To:   time.Now(),
+			}
+			nsGroup := newNamespaceGroup("app", 5, 10, dataTimeRange, false)
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err = setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, []namespaceGroup{nsGroup}, testUser, clusterInfo)
 			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
 			customSgConfig = getDefaultServiceGraphConfig()
 			customSgConfig.ServiceGraphCacheDataPrefetch = false
-			now := time.Now().Unix()
 			timeRange = &lmav1.TimeRange{
-				From: time.Unix(now-300, 0),
-				To:   time.Unix(now, 0),
+				From: dataTimeRange.From.Add(-time.Hour),
+				To:   time.Now(),
 			}
 		})
 
@@ -660,9 +1247,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			fc := newFailingClient(failingClientConfig{
 				flowLogCountShouldFail: true,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).To(HaveOccurred(), "Expected error from service graph stats response")
 			Expect(statsErr.Error()).To(ContainSubstring("mock count error"))
 		})
@@ -671,9 +1258,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			fc := newFailingClient(failingClientConfig{
 				flowLogCountDelay: 10 * time.Second,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).To(HaveOccurred(), "Expected error from service graph stats response")
 			Expect(statsErr.Error()).To(ContainSubstring("context deadline exceeded"))
 		})
@@ -682,9 +1269,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			fc := newFailingClient(failingClientConfig{
 				namespacesShouldFail: true,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(linseedCli, k8sClient, ctrlClient, fc, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, fc, customSgConfig)
 
-			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).To(HaveOccurred(), "Expected error from service graph stats response")
 			Expect(statsErr.Error()).To(ContainSubstring("mock namespace error"))
 		})
@@ -696,24 +1283,28 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				// low scale (at low scale, a call is made to /serviceGraph which we do not have mocked)
 				flowLogCount: 1500000,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Expected no error from service graph stats response")
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
-			// We have no namespaced flow counts, so we can only assert high volume for a namespace if its L3 flows are high.
-			// They are not in this scenario, since aggregations are mocked to return an empty set - so we expect no decision.
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-backend",
-				HighVolume: nil,
+			// We have no namespaced flow counts to service the request or fill the cache.
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "app-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "app-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "app-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
 			}))
 		})
 
@@ -724,24 +1315,28 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				// low scale (at low scale, a call is made to /serviceGraph which we do not have mocked)
 				flowLogCount: 1500000,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			statsResp, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).NotTo(HaveOccurred(), "Expected no error from service graph stats response")
 			Expect(statsResp.TopologyStatistics.HighVolume).To(Equal(true))
-			// We have no namespaced flow counts, so we can only assert high volume for a namespace if its L3 flows are high.
-			// They are not in this scenario, since aggregations are mocked to return an empty set - so we expect no decision.
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-frontend-a",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-frontend-b",
-				HighVolume: nil,
-			}))
-			Expect(statsResp.NamespacesStatistics).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:  "app-backend",
-				HighVolume: nil,
+			// We have no namespaced flow counts to service the request or fill the cache.
+			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+				{
+					Namespace:    "app-frontend-a",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "app-frontend-b",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
+				{
+					Namespace:    "app-backend",
+					HighVolume:   nil,
+					Approximated: nil,
+				},
 			}))
 		})
 
@@ -749,9 +1344,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			fc := newFailingClient(failingClientConfig{
 				l3FlowAggregationShouldFail: true,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).To(HaveOccurred(), "Expected error from service graph stats response")
 			Expect(statsErr.Error()).To(ContainSubstring("mock l3 flows aggregation error"))
 		})
@@ -760,9 +1355,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			fc := newFailingClient(failingClientConfig{
 				l3FlowAggregationDelay: 10 * time.Second,
 			})
-			sgHandler, sgStatsHandler = createServiceGraphHandler(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+			sgHandler, sgStatsHandler = createServiceGraphHandlers(fc, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
 
-			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, timeRange, uiapisv1.GraphView{})
+			_, _, _, _, statsErr, _ := getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, timeRange, uiapisv1.GraphView{})
 			Expect(statsErr).To(HaveOccurred(), "Expected error from service graph stats response")
 			Expect(statsErr.Error()).To(ContainSubstring("context deadline exceeded"))
 		})
@@ -774,25 +1369,31 @@ type namespaceGroup struct {
 	groupName                   string
 	uniqueConnections           int
 	uniqueConnectionOccurrences int
+	timeRange                   *lmav1.TimeRange
+	ignoreNamespaceExistsError  bool
 
 	// Overrides used for specific test cases outside of mainline.
 	namespaceOverrides []string
 	flowLogOverrides   []lsv1.FlowLog
 }
 
-func newNamespaceGroup(groupName string, uniqueConnections int, uniqueConnectionOccurrences int) namespaceGroup {
+func newNamespaceGroup(groupName string, uniqueConnections int, uniqueConnectionOccurrences int, timeRange *lmav1.TimeRange, ignoreNamespaceExistsErr bool) namespaceGroup {
 	return namespaceGroup{
 		groupName:                   groupName,
 		uniqueConnections:           uniqueConnections,
 		uniqueConnectionOccurrences: uniqueConnectionOccurrences,
+		timeRange:                   timeRange,
+		ignoreNamespaceExistsError:  ignoreNamespaceExistsErr,
 	}
 }
 
-func newOverriddenNamespaceGroup(groupName string, namespaceOverrides []string, flowLogOverrides []lsv1.FlowLog) namespaceGroup {
+func newOverriddenNamespaceGroup(groupName string, namespaceOverrides []string, flowLogOverrides []lsv1.FlowLog, timeRange *lmav1.TimeRange, ignoreNamespaceExistsErr bool) namespaceGroup {
 	return namespaceGroup{
-		groupName:          groupName,
-		namespaceOverrides: namespaceOverrides,
-		flowLogOverrides:   flowLogOverrides,
+		groupName:                  groupName,
+		namespaceOverrides:         namespaceOverrides,
+		flowLogOverrides:           flowLogOverrides,
+		timeRange:                  timeRange,
+		ignoreNamespaceExistsError: ignoreNamespaceExistsErr,
 	}
 }
 
@@ -821,57 +1422,109 @@ func (n *namespaceGroup) createNamespaces(ctx context.Context, k8sClient *kubern
 			},
 		}
 		_, err := k8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
-		if err != nil {
+		if err != nil && (!errors.IsAlreadyExists(err) || !n.ignoreNamespaceExistsError) {
 			return nil, fmt.Errorf("failed to create namespace %s: %w", ns, err)
 		}
 		created = append(created, ns)
 	}
 
 	return func() {
-		ctx := context.Background()
 		for _, ns := range created {
-			deleteOptions := metav1.DeleteOptions{}
-			_ = k8sClient.CoreV1().Namespaces().Delete(ctx, ns, deleteOptions)
-
-			// Get the namespace to modify finalizers
-			namespace, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
-			if err != nil {
-				continue
-			}
-
-			// Remove kubernetes finalizer
-			namespace.Spec.Finalizers = nil
-
-			// Use /finalize subresource to properly remove finalizers
-			_ = k8sClient.CoreV1().RESTClient().
-				Put().
-				Resource("namespaces").
-				Name(ns).
-				SubResource("finalize").
-				Body(namespace).
-				Do(ctx).
-				Error()
-
-			// Wait for namespace to be fully deleted
-			Eventually(func() bool {
-				_, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
-				return errors.IsNotFound(err)
-			}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
+			deleteNamespace(context.Background(), k8sClient, ns)
 		}
 	}, nil
 }
 
-func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Client) error {
+func (n *namespaceGroup) expectedCounts() (numL3Flows int64, numFlowLogs int64) {
+	// num frontends (2) * num flow reporters (2) * N
+	numL3Flows = int64(2 * 2 * n.uniqueConnections)
+
+	// num frontends (2) * num flow reporters (2) * N * M
+	numFlowLogs = int64(2 * 2 * n.uniqueConnections * n.uniqueConnectionOccurrences)
+	return
+}
+
+func deleteNamespace(ctx context.Context, k8sClient *kubernetes.Clientset, ns string) {
+	_ = k8sClient.CoreV1().Namespaces().Delete(ctx, ns, metav1.DeleteOptions{})
+
+	// Get the namespace to modify finalizers
+	namespace, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+	if err != nil {
+		return
+	}
+
+	// Remove kubernetes finalizer
+	namespace.Spec.Finalizers = nil
+
+	// Use /finalize subresource to properly remove finalizers
+	_ = k8sClient.CoreV1().RESTClient().
+		Put().
+		Resource("namespaces").
+		Name(ns).
+		SubResource("finalize").
+		Body(namespace).
+		Do(ctx).
+		Error()
+
+	// Wait for namespace to be fully deleted
+	Eventually(func() bool {
+		_, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
+}
+
+func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Client, cluster string) error {
 	// We'll fill the buffer with flows up to the threshold, then flush.
 	flows := []lsv1.FlowLog{}
-	threshold := 30000
+	threshold := 45000
+
+	// We'll flush flows concurrently, through an errgroup.
+	var g errgroup.Group
+	g.SetLimit(6)
+
 	flushFlows := func(flows []lsv1.FlowLog) error {
-		bulk, err := linseedCli.FlowLogs(clusterName).Create(ctx, flows)
+		// Shuffle so that any bias introduced by the order of assembly is removed.
+		rand.Shuffle(len(flows), func(i, j int) {
+			flows[i], flows[j] = flows[j], flows[i]
+		})
+
+		// Now we'll spread the flows across the time range uniformly, treating each second of the time range as a bucket.
+		processedFlows := []lsv1.FlowLog{}
+		numFlowLogs := len(flows)
+		var flowsPerBucket, bucketSpacing int64
+		flowLogsPerSecond := float64(numFlowLogs) / n.timeRange.Duration().Seconds()
+		if flowLogsPerSecond < 0.5 {
+			// If we have less than 0.5 flows per second, we'll need to skip some buckets.
+			bucketSpacing = int64(math.Round(1.0 / flowLogsPerSecond))
+			flowsPerBucket = 1
+		} else {
+			bucketSpacing = 1
+			flowsPerBucket = int64(math.Round(flowLogsPerSecond))
+		}
+
+		currentBucket := n.timeRange.From.Unix()
+		var flowLogsCreatedForBucket int64
+		for _, flow := range flows {
+			if currentBucket < n.timeRange.To.Unix() && flowLogsCreatedForBucket == flowsPerBucket {
+				currentBucket += bucketSpacing
+				if currentBucket > n.timeRange.To.Unix() {
+					currentBucket = n.timeRange.To.Unix()
+				}
+				flowLogsCreatedForBucket = 0
+			}
+
+			flow.StartTime = currentBucket
+			flow.EndTime = currentBucket
+			processedFlows = append(processedFlows, flow)
+			flowLogsCreatedForBucket++
+		}
+
+		bulk, err := linseedCli.FlowLogs(cluster).Create(ctx, processedFlows)
 		if err != nil {
 			return err
 		}
-		if bulk.Succeeded != len(flows) {
-			return fmt.Errorf("failed to create all flows: %d/%d", bulk.Succeeded, len(flows))
+		if bulk.Succeeded != len(processedFlows) {
+			return fmt.Errorf("failed to create all flows: %d/%d", bulk.Succeeded, len(processedFlows))
 		}
 		return nil
 	}
@@ -881,17 +1534,16 @@ func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Cl
 		// This branch is not used in mainline tests.
 		for _, flow := range n.flowLogOverrides {
 			if len(flows) >= threshold {
-				err := flushFlows(flows)
-				if err != nil {
-					return err
-				}
+				flowsCopy := flows
+				g.Go(func() error {
+					return flushFlows(flowsCopy)
+				})
 				flows = []lsv1.FlowLog{}
 			}
 			flows = append(flows, flow)
 		}
 	} else {
 		// Compute flow logs ourselves for the namespace group, and flush.
-		baseTime := time.Now().Unix()
 		backendNamespace := n.backendNamespace()
 		// For each frontend client
 		for cIdx, clientID := range []string{"a", "b"} {
@@ -902,8 +1554,6 @@ func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Cl
 			// For each port (unique connection differentiator)
 			for port := 1; port <= n.uniqueConnections; port++ {
 				srcFlow := lsv1.FlowLog{
-					StartTime:            baseTime - 60,
-					EndTime:              baseTime,
 					SourceType:           "wep",
 					SourceNamespace:      clientNamespace,
 					SourceNameAggr:       clientName,
@@ -922,47 +1572,34 @@ func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Cl
 					Protocol:             "tcp",
 					Action:               "allow",
 					Reporter:             "src",
-					BytesIn:              1024,
-					BytesOut:             2048,
-					PacketsIn:            10,
-					PacketsOut:           20,
 				}
 
 				// Create the dest flow for this unique connection.
 				dstFlow := lsv1.FlowLog{
-					StartTime:            baseTime - 60,
-					EndTime:              baseTime,
-					SourceType:           "wep",
-					SourceNamespace:      clientNamespace,
-					SourceNameAggr:       clientName,
-					SourceName:           fmt.Sprintf("%s-pod", clientName),
-					SourceIP:             ip,
-					SourcePort:           intPtr(50000),
-					DestType:             "wep",
-					DestNamespace:        backendNamespace,
-					DestNameAggr:         "backend",
-					DestName:             "backend-pod",
-					DestIP:               strPtr("10.100.0.10"),
-					DestPort:             intPtr(int64(port)),
-					DestServiceName:      "",
-					DestServiceNamespace: "",
-					DestServicePortNum:   nil,
-					Protocol:             "tcp",
-					Action:               "allow",
-					Reporter:             "dst",
-					BytesIn:              1024,
-					BytesOut:             2048,
-					PacketsIn:            10,
-					PacketsOut:           20,
+					SourceType:      "wep",
+					SourceNamespace: clientNamespace,
+					SourceNameAggr:  clientName,
+					SourceName:      fmt.Sprintf("%s-pod", clientName),
+					SourceIP:        ip,
+					SourcePort:      intPtr(50000),
+					DestType:        "wep",
+					DestNamespace:   backendNamespace,
+					DestNameAggr:    "backend",
+					DestName:        "backend-pod",
+					DestIP:          strPtr("10.100.0.10"),
+					DestPort:        intPtr(int64(port)),
+					Protocol:        "tcp",
+					Action:          "allow",
+					Reporter:        "dst",
 				}
 
 				// Repeat the flows for this unique connection.
 				for i := 0; i < n.uniqueConnectionOccurrences; i++ {
 					if len(flows) >= threshold {
-						err := flushFlows(flows)
-						if err != nil {
-							return err
-						}
+						flowsCopy := flows
+						g.Go(func() error {
+							return flushFlows(flowsCopy)
+						})
 						flows = []lsv1.FlowLog{}
 					}
 					flows = append(flows, srcFlow, dstFlow)
@@ -973,21 +1610,13 @@ func (n *namespaceGroup) createFlows(ctx context.Context, linseedCli lsclient.Cl
 
 	// Flush any remaining flows.
 	if len(flows) > 0 {
-		err := flushFlows(flows)
-		if err != nil {
-			return err
-		}
+		flowsCopy := flows
+		g.Go(func() error {
+			return flushFlows(flowsCopy)
+		})
 	}
-	return nil
-}
 
-func calculateExpectedCountsForNamespaceGroup(n, m int) (numL3Flows, numFlowLogs int64) {
-	// num frontends (2) * num flow reporters (2) * N
-	numL3Flows = int64(2 * 2 * n)
-
-	// num frontends (2) * num flow reporters (2) * N * M
-	numFlowLogs = int64(2 * 2 * n * m)
-	return
+	return g.Wait()
 }
 
 func setupServiceGraphScenario(
@@ -1012,7 +1641,7 @@ func setupServiceGraphScenario(
 
 		// Insert flow logs in chunks. This is required to prevent circuit-breaker exceptions for memory usage in ES.
 		By("Inserting flow logs via Linseed in chunks")
-		err = nsGroup.createFlows(ctx, linseedCli)
+		err = nsGroup.createFlows(ctx, linseedCli, clusterInfo.Cluster)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create flows: %w", err)
 		}
@@ -1031,20 +1660,26 @@ func setupServiceGraphScenario(
 		return nil, nil, fmt.Errorf("failed to refresh ES index: %w", err)
 	}
 
-	// Give ES a moment to process
-	time.Sleep(1 * time.Second)
+	// Wait for the ES index to be ready
+	_, err = lmaClient.Backend().ClusterHealth().
+		Index(flowIndex.Index(clusterInfo)).
+		WaitForStatus("green").
+		Timeout("30s").
+		Do(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ES index failed to reach green status: %w", err)
+	}
 
 	return userInfo, teardowns, nil
 }
 
-func getServiceGraphResponses(
-	sgStatsHandler http.Handler,
+func getServiceGraphResponses(sgStatsHandler http.Handler,
 	sgHandler http.Handler,
 	userInfo *user.DefaultInfo,
+	clusterName string,
 	timeRange *lmav1.TimeRange,
 	sgView uiapisv1.GraphView,
 ) (*uiapisv1.ServiceGraphStatsResponse, *uiapisv1.ServiceGraphResponse, time.Duration, time.Duration, error, error) {
-	clusterName := "cluster"
 	// Execute Service Graph Stats request
 	sgStatsReq := uiapisv1.ServiceGraphStatsRequest{
 		Cluster:               clusterName,
@@ -1259,8 +1894,41 @@ func createTestUser(k8sClient *kubernetes.Clientset, config testUser) (*user.Def
 	}, teardown
 }
 
+func applyLicense(calicoClient calicoclientset.Interface) (func(), error) {
+	licenseKey := utils.ValidEnterpriseTestLicense()
+	_, err := calicoClient.ProjectcalicoV3().LicenseKeys().Create(context.Background(), licenseKey, metav1.CreateOptions{})
+	return func() {
+		_ = calicoClient.ProjectcalicoV3().LicenseKeys().Delete(context.Background(), licenseKey.Name, metav1.DeleteOptions{})
+	}, err
+}
+
+func createManagedCluster(name string, tenant string, calicoClient calicoclientset.Interface, k8sClient *kubernetes.Clientset) (func(), error) {
+	managedClusterCreateTeardowns, err := integration.SetupManagedClusterCreateRequirements(k8sClient)
+	if err != nil {
+		return nil, err
+	}
+
+	mc, err := calicoClient.ProjectcalicoV3().ManagedClusters().Create(context.Background(), &v3.ManagedCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: tenant,
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		_ = calicoClient.ProjectcalicoV3().ManagedClusters().Delete(context.Background(), mc.Name, metav1.DeleteOptions{})
+		managedClusterCreateTeardowns()
+
+		// Force deletion of calico-system using our more aggressive approach.
+		deleteNamespace(context.Background(), k8sClient, "calico-system")
+	}, nil
+}
+
 // createServiceGraphHandler initializes a ServiceGraph handler with all dependencies
-func createServiceGraphHandler(
+func createServiceGraphHandlers(
 	lsClient lsclient.Client,
 	k8sClient *kubernetes.Clientset,
 	ctrlClient client.WithWatch,
@@ -1284,7 +1952,7 @@ func createServiceGraphHandler(
 		cfg,
 	)
 
-	sgStatsHandler := servicegraph.NewServiceGraphStatsHandler(lsClient, clientSetFactory, sgHandler.ServiceGraphCache(), cfg)
+	sgStatsHandler := servicegraph.NewServiceGraphStatsHandler(ctrlClient, lsClient, clientSetFactory, sgHandler.ServiceGraphCache(), cfg)
 
 	return sgHandler, sgStatsHandler
 }
@@ -1309,6 +1977,8 @@ func getDefaultServiceGraphConfig() *servicegraph.Config {
 		LargeFlowLogScaleThreshold:            serverCfg.LargeFlowLogScaleThreshold,
 		LargeL3FlowScaleThreshold:             serverCfg.LargeL3FlowScaleThreshold,
 		GlobalStatsTimeoutSeconds:             serverCfg.GlobalStatsTimeoutSeconds,
+		GraphStatsCacheUpdateInterval:         serverCfg.GraphStatsCacheUpdateInterval,
+		GraphStatsCacheDuration:               serverCfg.GraphStatsCacheDuration,
 		GraphStatsRequestLogging:              serverCfg.GraphStatsRequestLogging,
 		TenantNamespace:                       serverCfg.TenantNamespace,
 		FineGrainedRBAC:                       serverCfg.Impersonate,
@@ -1376,7 +2046,8 @@ func createK8sClients() (*kubernetes.Clientset, client.WithWatch, k8s.ClientSetF
 		return nil, nil, nil, nil, err
 	}
 
-	clientSetFactory := k8s.NewClientSetFactoryWithConfig(config, "", "")
+	// We send any multi-cluster requests to the same API server for test purposes.
+	clientSetFactory := k8s.NewClientSetFactoryWithConfig(config, "", config.Host)
 
 	calicoClient, err := calicoclientset.NewForConfig(config)
 	if err != nil {
@@ -1590,6 +2261,7 @@ func (f failingClient) WAFLogs(s string) lsclient.WAFLogsInterface              
 func (f failingClient) Compliance(s string) lsclient.ComplianceInterface             { return nil }
 func (f failingClient) RuntimeReports(s string) lsclient.RuntimeReportsInterface     { return nil }
 func (f failingClient) ThreatFeeds(s string) lsclient.ThreatFeedsInterface           { return nil }
+func (f failingClient) PolicyActivity(s string) lsclient.PolicyActivityInterface     { return nil }
 
 type clientSetSet struct {
 	kubernetes.Interface

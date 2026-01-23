@@ -22,8 +22,6 @@ import (
 
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/fortimanager"
-	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
-	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -100,44 +98,6 @@ func main() {
 	log.Debug("Starting controllers")
 	for _, controllerType := range enabledControllers {
 		switch controllerType {
-		case "panorama-policy":
-			wg.Add(1)
-			log.Debug("Starting Panorama policy controller")
-			panCli, err := panutils.NewPANWClient(cfg)
-			if err != nil {
-				log.Fatalf("Panorama client not accessible, with error: %s", err.Error())
-				return
-			}
-			fpic, err := panorama.NewFirewallPolicyIntegrationController(ctx, k8sClient, calicoClient, panCli, cfg, h, &wg)
-			if err != nil {
-				log.Fatalf("Failed to configure firewall policy integration controller, with error: %s", err.Error())
-				return
-			}
-			// Run the firewall integration controller.
-			go fpic.Run()
-
-		case "panorama-address-groups":
-			wg.Add(1)
-			log.Debug("Starting Panorama address groups controller")
-			panCli, err := panutils.NewPANWClient(cfg)
-			if err != nil {
-				log.WithError(err).Fatal("Failed to define Panorama address groups controller")
-			}
-			dagc, err := panorama.NewDynamicAddressGroupsController(ctx, k8sClient, calicoClient.GlobalNetworkSets(), panCli, cfg, h, &wg)
-			if err != nil {
-				log.Fatal("Failed to configure Panorama address groups controller")
-				return
-			}
-			// Run the address groups controller.
-			go dagc.Run()
-
-		case "panorama":
-			wg.Add(1)
-			log.Debug("Starting Panorama integration controller")
-			pc := panorama.NewPanoramaController(ctx, cfg, h)
-			pc.Run()
-			wg.Done()
-
 		case "fortinet":
 			wg.Add(1)
 			log.Debugf("Attempting to read FortiGate config at %v", cfg.FwFortiGateConfig)

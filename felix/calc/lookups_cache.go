@@ -134,6 +134,12 @@ func (lc *LookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNA
 	return lc.svcCache.GetServiceFromPreDNATDest(ipPreDNAT, portPreDNAT, proto)
 }
 
+// GetServiceFromEndpointAddr looks up a service by endpoint (pod) IP address.
+// This is useful for resolving service names from backend pod IPs (e.g., from upstream_host in L7 logs).
+func (lc *LookupsCache) GetServiceFromEndpointAddr(ipAddr [16]byte, port int, proto int) (proxy.ServicePortName, bool) {
+	return lc.svcCache.GetServiceFromEndpointAddr(ipAddr, port, proto)
+}
+
 // GetNodePortService looks up a service by port and protocol (assuming a node IP).
 func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePortName, bool) {
 	return lc.svcCache.GetNodePortService(port, proto)
@@ -151,6 +157,7 @@ func (lc *LookupsCache) SetMockData(
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
 	nodes map[string]*v3.Node,
+	gc map[model.PolicyKey]int64,
 ) {
 	for k, v := range nodes {
 		lc.epCache.nodes[k] = v.Spec
@@ -175,4 +182,11 @@ func (lc *LookupsCache) SetMockData(
 	for k, v := range svcs {
 		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
+	for k, v := range gc {
+		lc.polCache.generationCache[k] = v
+	}
+}
+
+func (lc *LookupsCache) GetGeneration(key model.PolicyKey) int64 {
+	return lc.polCache.GetGeneration(key)
 }

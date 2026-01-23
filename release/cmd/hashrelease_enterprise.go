@@ -275,10 +275,16 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithPublishImages(false), // Enterprise does not publish images
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
+				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 			}
 			if len(productRegistries) > 0 {
 				calicoOpts = append(calicoOpts,
 					calico.WithImageRegistries(productRegistries),
+				)
+			}
+			if helmRegistries := c.StringSlice(helmRegistryFlag.Name); len(helmRegistries) > 0 {
+				calicoOpts = append(calicoOpts,
+					calico.WithHelmRegistries(helmRegistries),
 				)
 			}
 			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir)
@@ -290,9 +296,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(hashrel.ChartVersion),
 				calico.WithEnterpriseHashrelease(*hashrel, *serverCfg),
-				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
-				calico.WithHelmRegistry(c.String(helmRegistryFlag.Name)),
 			}
 			if b := c.String(windowsArchiveBucketFlag.Name); b != "" {
 				enterpriseOpts = append(enterpriseOpts, calico.WithWindowsArchiveBucket(b))
@@ -316,7 +320,9 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 
 			// Send a slack message to notify that the hashrelease has been published.
 			if c.Bool(publishHashreleaseFlag.Name) {
-				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
+				if _, err := tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c)); err != nil {
+					logrus.WithError(err).Warn("Failed to send hashrelease announcement to Slack")
+				}
 			}
 			return nil
 		},

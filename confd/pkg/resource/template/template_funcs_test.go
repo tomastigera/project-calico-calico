@@ -307,14 +307,14 @@ func Test_ExternalNetworkBIRDConfig_MultiplePeersSomeWithExternalNetworksSomeWit
 		"protocol pipe {",
 		"  peer table 'T_test-enet-1';",
 		"  export filter {",
-		"    if (ifname ~ \"cali*\") then { ",
-		"      accept; ",
+		"    if (ifname ~ \"cali*\") then {",
+		"      accept;",
 		"    } else {",
-		"      reject; ",
+		"      reject;",
 		"    }",
 		"  };",
-		"  import filter { ",
-		"    reject; ",
+		"  import filter {",
+		"    reject;",
 		"  };",
 		"}",
 		"protocol direct 'D_test-enet-1' from direct_template {",
@@ -341,14 +341,14 @@ func Test_ExternalNetworkBIRDConfig_MultiplePeersSomeWithExternalNetworksSomeWit
 		"protocol pipe {",
 		"  peer table 'T_test-enet-2';",
 		"  export filter {",
-		"    if (ifname ~ \"cali*\") then { ",
-		"      accept; ",
+		"    if (ifname ~ \"cali*\") then {",
+		"      accept;",
 		"    } else {",
-		"      reject; ",
+		"      reject;",
 		"    }",
 		"  };",
-		"  import filter { ",
-		"    reject; ",
+		"  import filter {",
+		"    reject;",
 		"  };",
 		"}",
 		"protocol direct 'D_test-enet-2' from direct_template {",
@@ -393,14 +393,14 @@ func Test_ExternalNetworkBIRDConfig_PeersWithPorts(t *testing.T) {
 		"protocol pipe {",
 		"  peer table 'T_test-enet-1';",
 		"  export filter {",
-		"    if (ifname ~ \"cali*\") then { ",
-		"      accept; ",
+		"    if (ifname ~ \"cali*\") then {",
+		"      accept;",
 		"    } else {",
-		"      reject; ",
+		"      reject;",
 		"    }",
 		"  };",
-		"  import filter { ",
-		"    reject; ",
+		"  import filter {",
+		"    reject;",
 		"  };",
 		"}",
 		"protocol direct 'D_test-enet-1' from direct_template {",
@@ -444,14 +444,20 @@ func Test_ExternalNetworkTableName(t *testing.T) {
 func Test_ValidateHashToIpv4Method(t *testing.T) {
 	expectedRouterId := "207.94.5.27"
 	nodeName := "Testrobin123"
-	actualRouterId := hashToIPv4(nodeName)
+	actualRouterId, err := HashToIPv4(nodeName)
+	if err != nil {
+		t.Fatalf("HashToIPv4(%s) returned unexpected error: %v", nodeName, err)
+	}
 	if expectedRouterId != actualRouterId {
 		t.Errorf("Expected %s to equal %s", expectedRouterId, actualRouterId)
 	}
 
 	expectedRouterId = "109.174.215.226"
 	nodeName = "nodeTest"
-	actualRouterId = hashToIPv4(nodeName)
+	actualRouterId, err = HashToIPv4(nodeName)
+	if err != nil {
+		t.Fatalf("HashToIPv4(%s) returned unexpected error: %v", nodeName, err)
+	}
 	if expectedRouterId != actualRouterId {
 		t.Errorf("Expected %s to equal %s", expectedRouterId, actualRouterId)
 	}

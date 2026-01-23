@@ -25,5 +25,4 @@ make fv ut
 ```
 
 ## Docs
-- [Panorama integration](https://docs.tigera.io/security/panorama-integration)
 - [Fortinet integration](https://docs.tigera.io/security/fortinet-integration)

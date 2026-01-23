@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 8.18.8
+KIBANA_VERSION = 8.19.10
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -33,6 +33,8 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
 	patch -d kibana -p1 < patches/0004-Build-with-ubi10.patch
 	patch -d kibana -p1 < patches/0005-Update-libraries-to-patch-CVE.patch
+	patch -d kibana -p1 < patches/0006-Use-ADD-instead-of-tar-in-Kibana-base-image-build.patch
+	patch -d kibana -p1 < patches/248651.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/googletagmanager kibana/plugins/
 	touch $@
@@ -47,10 +49,13 @@ register:
 build: register $(KIBANA_DOWNLOADED)
 	cd kibana && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
-	BUILD_TS_REFS_CACHE_ENABLE=false yarn kbn bootstrap && \
+	( for i in 1 2 3 4 5; do \
+		BUILD_TS_REFS_CACHE_ENABLE=false yarn kbn bootstrap && exit 0 || \
+		{ echo "bootstrap attempt $$i/5 failed"; sleep 10; }; \
+	done; exit 1 ) && \
 	yarn build \
 		--docker-cross-compile --docker-images \
-		--skip-docker-cloud --skip-docker-contexts --skip-docker-fips \
+		--skip-docker-cloud --skip-docker-cloud-fips --skip-docker-contexts --skip-docker-fips \
 		--skip-docker-serverless --skip-docker-ubuntu --skip-docker-wolfi \
 		--release
 
@@ -59,6 +64,7 @@ build: register $(KIBANA_DOWNLOADED)
 tigera-plugin:
 	cd kibana/plugins/tigera/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
+	yarn --cwd ../.. install && \
 	yarn kbn bootstrap && yarn build --kibana-version $(KIBANA_VERSION)
 
 
@@ -67,6 +73,7 @@ tigera-plugin:
 gtm-plugin:
 	cd kibana/plugins/googletagmanager/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
+	yarn --cwd ../.. install && \
 	yarn kbn bootstrap && yarn build --kibana-version $(KIBANA_VERSION)
 
 

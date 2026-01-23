@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
+	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	lmacache "github.com/projectcalico/calico/lma/pkg/cache"
 )
 
@@ -46,6 +47,9 @@ type AuthorizerConfig struct {
 
 	// EnableNamespacedRBAC controls the namespaced RBAC feature that perform AuthorizationReviews on a managed plane
 	EnableNamespacedRBAC bool
+
+	// ProductMode determines whether the product is running in "enterprise" or "cloud" mode.
+	ProductMode string
 
 	// AuthorizedVerbsCacheHardTTL controls the TTL to expire cached authorizedResourcesVerbsCacheEntry items
 	AuthorizedVerbsCacheHardTTL time.Duration
@@ -178,6 +182,22 @@ func (a *rulesAuthorizer) GetAuthorizedResourceVerbs(ctx Context, managedCluster
 		// an empty or nil slice results in no namespace restrictions (i.e. all namespaces are authorized)
 		// see https://github.com/tigera/calico-private/blob/8d1da1f9e79cdf01a775038202e51f93baf8b1df/linseed/pkg/backend/legacy/logtools/query.go#L32
 		return PermissionsResult{}, nil
+	}
+
+	if a.cfg.ProductMode == config.ProductModeCloud {
+		groupsAuthorizedForAllNamespaces := []string{
+			fmt.Sprintf("tigera-auth-%s-admin", ctx.Tenant()),
+			fmt.Sprintf("tigera-auth-%s-dashboards-admin", ctx.Tenant()),
+			fmt.Sprintf("tigera-auth-%s-read-only", ctx.Tenant()),
+		}
+
+		if tdsslices.AnyMatch(ctx.Groups(), func(group string) bool {
+			return tdsslices.Contains(groupsAuthorizedForAllNamespaces, group)
+		}) {
+			// an empty or nil slice results in no namespace restrictions (i.e. all namespaces are authorized)
+			// see https://github.com/tigera/calico-private/blob/8d1da1f9e79cdf01a775038202e51f93baf8b1df/linseed/pkg/backend/legacy/logtools/query.go#L32
+			return PermissionsResult{}, nil
+		}
 	}
 
 	// Use a buffered channel to prevent goroutines blocking in case this function returns early

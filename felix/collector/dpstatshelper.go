@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/goldmane"
 	"github.com/projectcalico/calico/felix/collector/l7log"
 	"github.com/projectcalico/calico/felix/collector/local"
+	"github.com/projectcalico/calico/felix/collector/policy"
 	p "github.com/projectcalico/calico/felix/collector/prometheus"
 	"github.com/projectcalico/calico/felix/collector/syslog"
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -32,6 +33,7 @@ const (
 	WAFEventsFileReporterName    = "waf"
 	FlowLogsGoldmaneReporterName = "goldmane"
 	FlowLogsLocalReporterName    = "socket"
+	PolicyLogReporterName        = "policyactivity"
 )
 
 // New creates the required dataplane stats collector, reporters and aggregators.
@@ -212,6 +214,25 @@ func New(
 			configParams.WAFEventLogsFlushInterval,
 			healthAggregator,
 		))
+	}
+
+	if configParams.PolicyActivityLogsFileEnabled {
+		policyReport := policy.NewReporter(
+			lookupsCache,
+			map[string]types.Reporter{
+				PolicyLogReporterName: file.NewReporter(
+					configParams.PolicyActivityLogsFileDirectory,
+					file.PolicyActivityLogFilename,
+					configParams.PolicyActivityLogsFileMaxFileSizeMB,
+					configParams.PolicyActivityLogsFileMaxFiles,
+				),
+			},
+			configParams.PolicyActivityLogsFlushInterval,
+			healthAggregator,
+		)
+		if policyReport != nil {
+			statsCollector.RegisterMetricsReporter(policyReport)
+		}
 	}
 
 	return statsCollector

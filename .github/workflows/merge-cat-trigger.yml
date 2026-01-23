@@ -1,0 +1,34 @@
+# This action triggers the Merge Cat bot. Merge Cat will attempt to use Marvin Bot account to automatically approve the PR.
+name: Trigger Merge Cat - Auto Approve for OSS Cherry-Pick
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  trigger-merge-queue-bot:
+#    We only want to trigger Merge Cat when the label 'merge-oss-cherry-pick' is added to the open PR
+#    We also want to avoid triggering on PRs created by the Marvin Bot itself, since PR author can't approve their own PRs.
+    if: >
+      github.event.pull_request.base.ref == 'master' &&
+      github.event.pull_request.state == 'open' &&
+      github.event.label.name == 'merge-oss-cherry-pick' &&
+      github.event.pull_request.user.login != 'marvin-tigera'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Merge Cat
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.TIGERA_BOT_PAT }}" \
+            https://api.github.com/repos/tigera/merge-queue-bot/actions/workflows/221254945/dispatches \
+            -d @- <<'EOF'
+          {
+            "ref": "master",
+            "inputs": {
+              "trigger_pr_number": "${{ github.event.pull_request.number }}",
+              "triggered_by_action": "EE_PICK_CREATED"
+            }
+          }
+          EOF

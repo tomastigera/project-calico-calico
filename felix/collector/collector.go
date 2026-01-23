@@ -157,29 +157,30 @@ type namespacedEpKey interface {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	dataplaneInfoReader   types.DataplaneInfoReader
-	packetInfoReader      types.PacketInfoReader
-	conntrackInfoReader   types.ConntrackInfoReader
-	processInfoCache      types.ProcessInfoCache
-	domainLookup          types.EgressDomainCache
-	luc                   *calc.LookupsCache
-	epStats               map[tuple.Tuple]*Data
-	ticker                jitter.TickerInterface
-	tickerPolicyEval      jitter.TickerInterface
-	sigChan               chan os.Signal
-	config                *Config
-	dumpLog               *log.Logger
-	ds                    chan *proto.DataplaneStats
-	wafEventsBatchC       chan []*proto.WAFEvent
-	wafEvents             []*proto.WAFEvent
-	metricReporters       []types.Reporter
-	dnsLogReporter        types.Reporter
-	l7LogReporter         types.Reporter
-	wafEventsReporter     types.Reporter
-	policyStoreManager    policystore.PolicyStoreManager
-	displayDebugTraceLogs bool
-	felixHostName         string
-	netlinkList           netlinkshim.Interface
+	dataplaneInfoReader    types.DataplaneInfoReader
+	packetInfoReader       types.PacketInfoReader
+	conntrackInfoReader    types.ConntrackInfoReader
+	processInfoCache       types.ProcessInfoCache
+	domainLookup           types.EgressDomainCache
+	luc                    *calc.LookupsCache
+	epStats                map[tuple.Tuple]*Data
+	ticker                 jitter.TickerInterface
+	tickerPolicyEval       jitter.TickerInterface
+	sigChan                chan os.Signal
+	config                 *Config
+	dumpLog                *log.Logger
+	ds                     chan *proto.DataplaneStats
+	wafEventsBatchC        chan []*proto.WAFEvent
+	wafEvents              []*proto.WAFEvent
+	metricReporters        []types.Reporter
+	dnsLogReporter         types.Reporter
+	l7LogReporter          types.Reporter
+	wafEventsReporter      types.Reporter
+	policyActivityReporter types.Reporter
+	policyStoreManager     policystore.PolicyStoreManager
+	displayDebugTraceLogs  bool
+	felixHostName          string
+	netlinkList            netlinkshim.Interface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -280,8 +281,14 @@ func (c *collector) Start() error {
 	}
 
 	if c.wafEventsReporter != nil {
-		go c.wafEventsBatchStart()
 		if err := c.wafEventsReporter.Start(); err != nil {
+			return err
+		}
+		go c.wafEventsBatchStart()
+	}
+
+	if c.policyActivityReporter != nil {
+		if err := c.policyActivityReporter.Start(); err != nil {
 			return err
 		}
 	}
@@ -1170,7 +1177,6 @@ func (c *collector) applyPacketInfo(pktInfo types.PacketInfo) {
 				continue // Found a match in local endpoint, no need to check host endpoints
 			}
 		}
-
 		// If not found in local endpoint, check node endpoint match data
 		if !ok && nodeMatchData != nil {
 			if policyIdx, ok := nodeMatchData.PolicyMatches[ruleID.PolicyID]; ok {
@@ -1576,13 +1582,23 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 	}
 
 	if ip := net.ParseIP(addr); ip != nil {
-		// Address is an IP. Attempt to look up a service name by cluster IP
+		// Address is an IP. First try to look up a service name by cluster IP
 		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(utils.IpStrTo16Byte(addr), port, t.Proto)
 		if found {
 			svcName = k8sSvcPortName.Name
 			svcNamespace = k8sSvcPortName.Namespace
 			svcPortName = k8sSvcPortName.Port
 			validService = true
+		} else {
+			// Cluster IP lookup failed. Try to look up by endpoint (pod) IP.
+			// This is needed for gateway logs where upstream_host contains the backend pod IP.
+			k8sSvcPortName, found = c.luc.GetServiceFromEndpointAddr(utils.IpStrTo16Byte(addr), port, t.Proto)
+			if found {
+				svcName = k8sSvcPortName.Name
+				svcNamespace = k8sSvcPortName.Namespace
+				svcPortName = k8sSvcPortName.Port
+				validService = true
+			}
 		}
 	} else {
 		// Check if the address is a Kubernetes service name
@@ -1697,6 +1713,10 @@ func getNamespaceFromEp(ep calc.EndpointData) (namespace string) {
 	}
 
 	return
+}
+
+func (c *collector) SetPolicyActivityReporter(r types.Reporter) {
+	c.policyActivityReporter = r
 }
 
 // equal returns true if the rule IDs are equal. The order of the content should also the same for

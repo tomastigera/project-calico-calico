@@ -74,12 +74,14 @@ ELASTIC_DNS_INDEX_SHARDS=5
 ELASTIC_L7_INDEX_SHARDS=5
 ELASTIC_RUNTIME_INDEX_SHARDS=5
 ELASTIC_WAF_INDEX_SHARDS=5
+ELASTIC_POLICY_ACTIVITY_INDEX_SHARDS=5
 FLUENTD_FLOW_FILTERS=# not a real filter
 FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 L7_LOG_FILE=/var/log/calico/l7logs/l7.log
 RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 WAF_LOG_FILE=/var/log/calico/waf/waf.log
+POLICY_ACTIVITY_LOG_FILE=/var/log/calico/policy/policy_activity.log
 ELASTIC_HOST=elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
 ELASTIC_PORT=9200
 EOM

@@ -94,6 +94,7 @@ func main() {
 		cfg.LMAAuthorizationCacheTTL,
 		security.AuthorizerConfig{
 			Namespace:                             cfg.TenantNamespace,
+			ProductMode:                           cfg.ProductMode,
 			EnableNamespacedRBAC:                  cfg.NamespacedRBAC,
 			AuthorizedVerbsCacheHardTTL:           cfg.AuthorizedVerbsCacheHardTTL,
 			AuthorizedVerbsCacheSoftTTL:           cfg.AuthorizedVerbsCacheSoftTTL,

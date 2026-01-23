@@ -411,6 +411,33 @@ subcomponents, see Felix's logs.
 
 ## <a id="process-logging">Process: Logging
 
+### `LogActionRateLimit` (config file) / `logActionRateLimit` (YAML)
+
+Sets the rate of hitting a Log action. The value must be in the format "N/unit",
+where N is a number and unit is one of: second, minute, hour, or day. For example: "10/second" or "100/hour".
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_LogActionRateLimit` |
+| Encoding (env var/config file) | String matching regex <code>^([1-9]\d{0,3}/(?:second\|minute\|hour\|day))?$</code> |
+| Default value (above encoding) | none |
+| `FelixConfiguration` field | `logActionRateLimit` (YAML) `LogActionRateLimit` (Go API) |
+| `FelixConfiguration` schema | String matching the regular expression <code>^[1-9]\d{0,3}/(?:second\|minute\|hour\|day)$</code>. |
+| Default value (YAML) | none |
+
+### `LogActionRateLimitBurst` (config file) / `logActionRateLimitBurst` (YAML)
+
+Sets the rate limit burst of hitting a Log action when LogActionRateLimit is enabled.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_LogActionRateLimitBurst` |
+| Encoding (env var/config file) | Integer: [0,2<sup>63</sup>-1], [9999,2<sup>63</sup>-1] |
+| Default value (above encoding) | `5` |
+| `FelixConfiguration` field | `logActionRateLimitBurst` (YAML) `LogActionRateLimitBurst` (Go API) |
+| `FelixConfiguration` schema | Integer: [0,2<sup>63</sup>-1], [9999,2<sup>63</sup>-1] |
+| Default value (YAML) | `5` |
+
 ### `LogDebugFilenameRegex` (config file) / `logDebugFilenameRegex` (YAML)
 
 Controls which source code files have their Debug log output included in the logs.
@@ -455,7 +482,14 @@ The full path to the Felix log. Set to none to disable file logging.
 
 ### `LogPrefix` (config file) / `logPrefix` (YAML)
 
-The log prefix that Felix uses when rendering LOG rules.
+The log prefix that Felix uses when rendering LOG rules. It is possible to use the following specifiers
+to include extra information in the log prefix.
+- %t: Tier name.
+- %k: Kind (short names).
+- %n: Policy or profile name.
+- %p: Policy or profile name (namespace/name for namespaced kinds or just name for non namespaced kinds).
+Calico includes ": " characters at the end of the generated log prefix.
+Note that iptables shows up to 29 characters for the log prefix and nftables up to 127 characters. Extra characters are truncated.
 
 | Detail |   |
 | --- | --- |
@@ -463,7 +497,7 @@ The log prefix that Felix uses when rendering LOG rules.
 | Encoding (env var/config file) | String |
 | Default value (above encoding) | `calico-packet` |
 | `FelixConfiguration` field | `logPrefix` (YAML) `LogPrefix` (Go API) |
-| `FelixConfiguration` schema | String. |
+| `FelixConfiguration` schema | String matching the regular expression <code>^([a-zA-Z0-9%: /_-])*$</code>. |
 | Default value (YAML) | `calico-packet` |
 
 ### `LogSeverityFile` (config file) / `logSeverityFile` (YAML)
@@ -1083,7 +1117,7 @@ network stack is used.
 | Encoding (env var/config file) | Port range: either a single number in [0,65535] or a range of numbers <code>n:m</code> |
 | Default value (above encoding) | none |
 | `FelixConfiguration` field | `natPortRange` (YAML) `NATPortRange` (Go API) |
-| `FelixConfiguration` schema | String. |
+| `FelixConfiguration` schema | Port range: either an integer in [0,65535] or a string, representing a range, in format <code>n:m</code> |
 | Default value (YAML) | `0` |
 
 ### `NFTablesDNSPolicyMode` (config file) / `nftablesDNSPolicyMode` (YAML)
@@ -1150,6 +1184,71 @@ due to a bug in the netlink library.
 | `FelixConfiguration` field | `nfNetlinkBufSize` (YAML) `NfNetlinkBufSize` (Go API) |
 | `FelixConfiguration` schema | String. |
 | Default value (YAML) | `65536` |
+
+### `PolicyActivityLogsFileDirectory` (config file) / `policyActivityLogsFileDirectory` (YAML)
+
+Sets the directory where policy activity log files are stored.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileDirectory` |
+| Encoding (env var/config file) | String |
+| Default value (above encoding) | `/var/log/calico/policy` |
+| `FelixConfiguration` field | `policyActivityLogsFileDirectory` (YAML) `PolicyActivityLogsFileDirectory` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | `/var/log/calico/policy` |
+
+### `PolicyActivityLogsFileEnabled` (config file) / `policyActivityLogsFileEnabled` (YAML)
+
+Controls logging policy activity logs to a file. If false no policy activity logging to file will occur.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileEnabled` |
+| Encoding (env var/config file) | Boolean: <code>true</code>, <code>1</code>, <code>yes</code>, <code>y</code>, <code>t</code> accepted as True; <code>false</code>, <code>0</code>, <code>no</code>, <code>n</code>, <code>f</code> accepted (case insensitively) as False. |
+| Default value (above encoding) | `true` |
+| `FelixConfiguration` field | `policyActivityLogsFileEnabled` (YAML) `PolicyActivityLogsFileEnabled` (Go API) |
+| `FelixConfiguration` schema | Boolean. |
+| Default value (YAML) | `true` |
+
+### `PolicyActivityLogsFileMaxFileSizeMB` (config file) / `policyActivityLogsFileMaxFileSizeMB` (YAML)
+
+Sets the max size in MB of policy activity log files before rotation.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileMaxFileSizeMB` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `100` |
+| `FelixConfiguration` field | `policyActivityLogsFileMaxFileSizeMB` (YAML) `PolicyActivityLogsFileMaxFileSizeMB` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `100` |
+
+### `PolicyActivityLogsFileMaxFiles` (config file) / `policyActivityLogsFileMaxFiles` (YAML)
+
+Sets the number of policy activity log files to keep.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFileMaxFiles` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `5` |
+| `FelixConfiguration` field | `policyActivityLogsFileMaxFiles` (YAML) `PolicyActivityLogsFileMaxFiles` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `5` |
+
+### `PolicyActivityLogsFlushInterval` (config file) / `policyActivityLogsFlushInterval` (YAML)
+
+Configures the interval at which Felix exports policy activity logs.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityLogsFlushInterval` |
+| Encoding (env var/config file) | Seconds (floating point) |
+| Default value (above encoding) | `15` (15s) |
+| `FelixConfiguration` field | `policyActivityLogsFlushInterval` (YAML) `PolicyActivityLogsFlushInterval` (Go API) |
+| `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
+| Default value (YAML) | `15s` |
 
 ### `PolicySyncPathPrefix` (config file) / `policySyncPathPrefix` (YAML)
 
@@ -2325,7 +2424,7 @@ inclusive.
 | Encoding (env var/config file) | Port range: either a single number in [0,65535] or a range of numbers <code>n:m</code> |
 | Default value (above encoding) | `20000:29999` |
 | `FelixConfiguration` field | `bpfPSNATPorts` (YAML) `BPFPSNATPorts` (Go API) |
-| `FelixConfiguration` schema | String. |
+| `FelixConfiguration` schema | Port range: either an integer in [0,65535] or a string, representing a range, in format <code>n:m</code> |
 | Default value (YAML) | `20000:29999` |
 
 ### `BPFPolicyDebugEnabled` (config file) / `bpfPolicyDebugEnabled` (YAML)

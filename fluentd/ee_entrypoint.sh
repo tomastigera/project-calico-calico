@@ -190,6 +190,9 @@ if [ -z "${DISABLE_ES_WAF_LOG}" ] || [ "${DISABLE_ES_WAF_LOG}" == "false" ]; the
     cp "${ROOT_DIR}/fluentd/etc/outputs/out-linseed-waf.conf" "${ROOT_DIR}/fluentd/etc/output_waf/out-linseed-waf.conf"
   fi
 fi
+if [ -z "${DISABLE_ES_POLICY_ACTIVITY_LOG}" ] || [ "${DISABLE_ES_POLICY_ACTIVITY_LOG}" == "false" ]; then
+  cp "${ROOT_DIR}/fluentd/etc/outputs/out-linseed-policy-activity.conf" "${ROOT_DIR}/fluentd/etc/output_policy/out-linseed-policy-activity.conf"
+fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z "${FLUENTD_ES_SECURE}" ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
   for x in flows dns tsee_audit kube_audit bgp l7 runtime waf; do
@@ -276,5 +279,10 @@ if [ "${S3_STORAGE}" == "true" ]; then
 fi
 echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
 
+# Include output destination for policy activity logs.
+if [ -z "${DISABLE_ES_POLICY_ACTIVITY_LOG}" ] || [ "${DISABLE_ES_POLICY_ACTIVITY_LOG}" == "false" ]; then
+  cat "${ROOT_DIR}/fluentd/etc/output_match/policy-activity.conf" >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+  echo >>"${ROOT_DIR}/fluentd/etc/fluent.conf"
+fi
 # Run fluentd
 "$@"
