@@ -769,7 +769,7 @@ blocks:
               value: "true"
   - name: Envoy Gateway
     run:
-      when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -809,7 +809,7 @@ blocks:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
   - name: "Envoy Ratelimit"
     run:
-      when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1110,7 +1110,7 @@ blocks:
         - name: google-service-account-for-gce
   - name: Publish tigera/istio-ztunnel images
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1125,7 +1125,7 @@ blocks:
             - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/istio-ztunnel images - native arm64 runner
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1143,7 +1143,7 @@ blocks:
             - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/istio-ztunnel multi-arch manifests
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Publish tigera/istio-ztunnel images
       - Publish tigera/istio-ztunnel images - native arm64 runner
@@ -1520,7 +1520,7 @@ blocks:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Publish tigera/snort3 images
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1539,7 +1539,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Prerequisites
     task:
@@ -1557,7 +1557,7 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
     dependencies:
       - Publish tigera/snort3 images
       - Publish tigera/snort3 images - native arm64 runner
