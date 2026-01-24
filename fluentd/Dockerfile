@@ -54,7 +54,6 @@ COPY --from=fluentd /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
 COPY --from=fluentd /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
 COPY --from=fluentd /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
 COPY --from=fluentd /lib64/libkrb5support.so.0 /lib64/libkrb5support.so.0
-COPY --from=fluentd /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=fluentd /lib64/libmpfr.so.6 /lib64/libmpfr.so.6
 COPY --from=fluentd /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
 COPY --from=fluentd /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
