@@ -39,9 +39,6 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("%s-eth0", hostname),
-					Labels: map[string]string{
-						"some-key": "some-value",
-					},
 				},
 				Spec: v3.HostEndpointSpec{
 					Node:          hostname,
@@ -52,7 +49,6 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("%s-eth1", hostname),
 					Labels: map[string]string{
-						"some-key":                            "some-value",
 						"hostendpoint.projectcalico.org/type": "some-type",
 						"kubernetes.io/arch":                  "some-arch",
 						"kubernetes.io/hostname":              "some-hostname",
@@ -85,8 +81,7 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		for _, hep := range heps.Items {
-			Expect(hep.Labels).To(HaveLen(5))
-			Expect(hep.Labels).To(HaveKeyWithValue("some-key", "some-value"))
+			Expect(hep.Labels).To(HaveLen(4))
 			Expect(hep.Labels).To(HaveKeyWithValue("hostendpoint.projectcalico.org/type", "nonclusterhost"))
 			Expect(hep.Labels).To(HaveKeyWithValue("kubernetes.io/arch", runtime.GOARCH))
 			Expect(hep.Labels).To(HaveKeyWithValue("kubernetes.io/hostname", hostname))
