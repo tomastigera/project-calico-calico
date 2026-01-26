@@ -107,7 +107,8 @@ func (d *dialer) Timeout() time.Duration {
 func (d *dialer) Dial() (Tunnel, error) {
 	var err error
 	for i := 0; i < d.retryAttempts; i++ {
-		t, err := d.dialerFun()
+		var t Tunnel
+		t, err = d.dialerFun()
 		if err != nil {
 			var xerr x509.UnknownAuthorityError
 			if errors.As(err, &xerr) {
