@@ -79,6 +79,9 @@ func (c DefaultLogConverter) DataplaneStatsFromL7Log(logData collector.EnvoyLog)
 			GatewayRouteHostname:      logData.GatewayRouteHostname,
 			GatewayRouteStatus:        logData.GatewayRouteStatus,
 			GatewayRouteStatusMessage: logData.GatewayRouteStatusMessage,
+			// UpstreamHost contains the backend pod IP:port from Envoy's upstream_host field.
+			// Used by Felix to resolve dest_service_name when Domain is a hostname.
+			UpstreamHost: logData.UpstreamHost,
 		},
 	}
 

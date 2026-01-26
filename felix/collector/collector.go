@@ -1601,23 +1601,43 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 			}
 		}
 	} else {
-		// Check if the address is a Kubernetes service name
-		k8sSvcName, k8sSvcNamespace := utils.ExtractK8sServiceNameAndNamespace(addr)
-		if k8sSvcName != "" {
-			svcName = k8sSvcName
-			svcNamespace = k8sSvcNamespace
+		// Domain is a hostname (not an IP). For gateway logs, try to resolve
+		// service from UpstreamHost (the actual backend pod IP) first.
+		if hd.UpstreamHost != "" {
+			upstreamAddr, upstreamPort := utils.AddressAndPort(hd.UpstreamHost)
+			if upstreamIP := net.ParseIP(upstreamAddr); upstreamIP != nil {
+				// Use endpoint IP lookup to resolve service from backend pod IP
+				k8sSvcPortName, found := c.luc.GetServiceFromEndpointAddr(
+					utils.IpStrTo16Byte(upstreamAddr), upstreamPort, t.Proto)
+				if found {
+					svcName = k8sSvcPortName.Name
+					svcNamespace = k8sSvcPortName.Namespace
+					svcPortName = k8sSvcPortName.Port
+					validService = true
+				}
+			}
 		}
 
-		// Verify that the service name and namespace are valid
-		serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
-			Kind:      model.KindKubernetesService,
-			Name:      svcName,
-			Namespace: svcNamespace,
-		})
-		validService = isValidService
+		// Fall back to K8s service name extraction if UpstreamHost lookup didn't work
+		if !validService {
+			// Check if the address is a Kubernetes service name
+			k8sSvcName, k8sSvcNamespace := utils.ExtractK8sServiceNameAndNamespace(addr)
+			if k8sSvcName != "" {
+				svcName = k8sSvcName
+				svcNamespace = k8sSvcNamespace
+			}
 
-		if isValidService {
-			svcPortName = getPortNameFromServiceSpec(serviceSpec, port)
+			// Verify that the service name and namespace are valid
+			serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
+				Kind:      model.KindKubernetesService,
+				Name:      svcName,
+				Namespace: svcNamespace,
+			})
+			validService = isValidService
+
+			if isValidService {
+				svcPortName = getPortNameFromServiceSpec(serviceSpec, port)
+			}
 		}
 	}
 
