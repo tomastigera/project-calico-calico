@@ -94,6 +94,8 @@ func newBPFTestEpMgr(
 		nil,
 		nil,
 		1500,
+		nil,
+		nil,
 	)
 }
 

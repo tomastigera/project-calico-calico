@@ -466,6 +466,7 @@ func NewBPFEndpointManager(
 	healthAggregator *health.HealthAggregator,
 	dataplanefeatures *environment.Features,
 	bpfIfaceMTU int,
+	workloadRemoveChanV4, workloadRemoveChanV6 chan string,
 ) (*bpfEndpointManager, error) {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
