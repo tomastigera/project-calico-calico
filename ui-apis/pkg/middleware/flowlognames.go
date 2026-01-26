@@ -227,7 +227,7 @@ func buildNamesQuery(params *FlowLogNamesParams) *lapi.L3FlowParams {
 	if params.Unprotected {
 		// Only include flows that are allowed by a profile.
 		allow := lapi.FlowActionAllow
-		fp.PolicyMatches = []lapi.PolicyMatch{
+		fp.PendingPolicyMatches = []lapi.PolicyMatch{
 			{
 				Tier:   "__PROFILE__",
 				Action: &allow,
