@@ -19,6 +19,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -40,6 +41,9 @@ type bgpConfigCache struct {
 // configCache is indexed by IP version (4 or 6)
 var configCache map[int]*bgpConfigCache
 
+// configCacheMutex protects concurrent access to configCache
+var configCacheMutex sync.RWMutex
+
 func init() {
 	configCache = make(map[int]*bgpConfigCache)
 }
@@ -50,10 +54,13 @@ func (c *client) GetBirdBGPConfig(ipVersion int) (*types.BirdBGPConfig, error) {
 	logc := log.WithField("ipVersion", ipVersion)
 	currentRevision := c.GetCurrentRevision()
 
+	configCacheMutex.RLock()
 	if cached, ok := configCache[ipVersion]; ok && cached.revision == currentRevision {
+		configCacheMutex.RUnlock()
 		logc.Debug("BGP config cache hit, returning cached configuration")
 		return cached.config, nil
 	}
+	configCacheMutex.RUnlock()
 
 	logc.Debug("BGP config cache miss or expired, processing new configuration")
 
@@ -97,11 +104,13 @@ func (c *client) GetBirdBGPConfig(ipVersion int) (*types.BirdBGPConfig, error) {
 	}
 	logc.Debugf("Processed BFD config: found %d interfaces", len(config.BFDConfig))
 
-	// Update cache
+	// Update cache with write lock
+	configCacheMutex.Lock()
 	configCache[ipVersion] = &bgpConfigCache{
 		config:   config,
 		revision: currentRevision,
 	}
+	configCacheMutex.Unlock()
 	logc.Debug("Updated BGP config cache")
 
 	return config, nil
