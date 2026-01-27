@@ -2175,8 +2175,8 @@ func convertToGNP(
 	}
 
 	// Assert key fields are correct.
-	policyName, tier := k8sClusterNetPolNameAndTier(cnp)
-	Expect(pol.Key.(model.ResourceKey).Name).To(Equal(policyName))
+	tier := clusterNetworkPolicyTier(cnp)
+	Expect(pol.Key.(model.ResourceKey).Name).To(Equal(cnp.Name))
 
 	gnp, ok := pol.Value.(*apiv3.GlobalNetworkPolicy)
 	Expect(ok).To(BeTrue())

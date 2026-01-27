@@ -19,7 +19,6 @@ const (
 )
 
 func policyTestQueryData() []testQueryData {
-
 	// Create the query Policy resources for the tier 1 policies that have some selectors in the rules.  We create them
 	// and tweak the rule counts to adjust for the selectors that are not all().
 	qcPolicy_gnp2_t1_all_res := qcPolicy(gnp2_t1_o4, 4, 4, 0, 0)
@@ -187,8 +186,7 @@ func policyTestQueryData() []testQueryData {
 				},
 			},
 			errorResponse{
-				text: "Error: the URL does not contain a valid policy name; the final URL segments should be of the " +
-					"format <GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>",
+				text: "Error: invalid policy name format, expected kind/name or kind/namespace/name",
 				code: http.StatusBadRequest,
 			},
 		},
@@ -213,7 +211,7 @@ func policyTestQueryData() []testQueryData {
 				tier2, snp1_t2_o1_ns1, snp2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 			},
 			client.QueryPoliciesReq{
-				Policy: stagedResourceKey(snp1_t2_o1_ns1),
+				Policy: resourceKey(snp1_t2_o1_ns1),
 			},
 			&client.QueryPoliciesResp{
 				Count: 1,
@@ -227,10 +225,10 @@ func policyTestQueryData() []testQueryData {
 				tier2, snp1_t2_o1_ns1_delete, snp2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 			},
 			client.QueryPoliciesReq{
-				Policy: stagedResourceKey(snp1_t2_o1_ns1_delete),
+				Policy: resourceKey(snp1_t2_o1_ns1_delete),
 			},
 			errorResponse{
-				text: "Error: resource does not exist: NetworkPolicy(namespace-1/staged:aaa-tier2.snp1-t2-o1-ns1-delete) with error: <nil>",
+				text: "Error: resource does not exist: StagedNetworkPolicy(namespace-1/aaa-tier2.snp1-t2-o1-ns1-delete) with error: <nil>",
 				code: http.StatusNotFound,
 			},
 		},
@@ -269,7 +267,7 @@ func policyTestQueryData() []testQueryData {
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 			},
 			client.QueryPoliciesReq{
-				Policy: stagedResourceKey(sgnp1_t1_o3),
+				Policy: resourceKey(sgnp1_t1_o3),
 			},
 			&client.QueryPoliciesResp{
 				Count: 1,
@@ -1708,10 +1706,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(sgnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_sgnp2_t1_all_res_with_index,
 					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
 					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
 					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(sgnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_sgnp2_t1_all_res_with_index,
 				},
 			},
 		},

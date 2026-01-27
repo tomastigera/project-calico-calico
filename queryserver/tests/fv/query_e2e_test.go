@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes/fake"
@@ -39,6 +40,8 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
+	// Disable the max length output truncation for these tests.
+	format.MaxLength = 0
 
 	DescribeTable("Query tests (e2e with server)",
 		func(tqds []testQueryData, crossCheck func(tqd testQueryData, addr string, netClient *http.Client)) {
@@ -74,7 +77,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			defer srv.Stop()
 
 			var configured map[model.ResourceKey]resourcemgr.ResourceObject
-			var netClient = &http.Client{Timeout: time.Second * 10}
+			netClient := &http.Client{Timeout: time.Second * 10}
 			for _, tqd := range tqds {
 				By(fmt.Sprintf("Creating the resources for test: %s", tqd.description))
 				configured = createResources(c, tqd.resources, configured)
@@ -112,7 +115,6 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 })
 
 func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
-
 	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
 	return func() interface{} {
 		By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
@@ -184,17 +186,23 @@ func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTP
 	case client.QueryEndpointsReq:
 		u += "endpoints"
 		if qt.Endpoint != nil {
-			u = u + "/" + getNameFromResource(qt.Endpoint)
+			u = u + "/" + namespacedNameFromKey(qt.Endpoint)
 			break
 		}
 
 		httpMethod = authhandler.MethodPOST
 	case client.QueryPoliciesReq:
-		u += "policies"
+		// Base URL
 		if qt.Policy != nil {
-			u = u + "/" + getNameFromResource(qt.Policy)
+			// Single policy
+			u = u + policyIDStringFromkey(qt.Policy)
 			break
+		} else {
+			// List all policies
+			u += "policies"
 		}
+
+		// Add query parameters.
 		parms = appendResourceParm(parms, queryhdr.QueryEndpoint, qt.Endpoint)
 		parms = appendResourceParm(parms, queryhdr.QueryNetworkSet, qt.NetworkSet)
 		if len(qt.Tier) > 0 {
@@ -209,7 +217,7 @@ func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTP
 	case client.QueryNodesReq:
 		u += "nodes"
 		if qt.Node != nil {
-			u = u + "/" + getNameFromResource(qt.Node)
+			u = u + "/" + namespacedNameFromKey(qt.Node)
 			break
 		}
 		parms = appendPageParms(parms, qt.Page)
@@ -229,7 +237,7 @@ func calculateQueryBody(query interface{}) io.Reader {
 	case client.QueryEndpointsReq:
 		var policy []string
 		if qt.Policy != nil {
-			policy = []string{getNameFromResource(qt.Policy)}
+			policy = []string{policyIDStringFromkey(qt.Policy)}
 		}
 		body := client.QueryEndpointsReqBody{
 			Policy:              policy,
@@ -288,15 +296,24 @@ func appendResourceParm(parms []string, key string, value model.Key) []string {
 	if value == nil {
 		return parms
 	}
-	return append(parms, key+"="+getNameFromResource(value))
+	return append(parms, key+"="+namespacedNameFromKey(value))
 }
 
-func getNameFromResource(k model.Key) string {
+func namespacedNameFromKey(k model.Key) string {
 	rk := k.(model.ResourceKey)
 	if rk.Namespace != "" {
 		return rk.Namespace + "/" + rk.Name
 	}
 	return rk.Name
+}
+
+// policyIDStringFromkey returns the policy ID string in the format expected by the query API.
+func policyIDStringFromkey(k model.Key) string {
+	rk := k.(model.ResourceKey)
+	if rk.Namespace != "" {
+		return strings.ToLower(rk.Kind) + "/" + rk.Namespace + "/" + rk.Name
+	}
+	return strings.ToLower(rk.Kind) + "/" + rk.Name
 }
 
 func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Client) {
@@ -306,9 +323,9 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 		return
 	}
 	for _, p := range qpr.Items {
-		policy := p.Name
+		policy := p.Kind + "/" + p.Name
 		if p.Namespace != "" {
-			policy = p.Namespace + "/" + policy
+			policy = p.Kind + "/" + p.Namespace + "/" + p.Name
 		}
 
 		By(fmt.Sprintf("Running endpoint query for policy: %s", policy))
@@ -359,23 +376,37 @@ func crossCheckEndpointQuery(tqd testQueryData, addr string, netClient *http.Cli
 
 		r, err := netClient.Get(qurl)
 		Expect(err).NotTo(HaveOccurred())
+
 		defer func() { _ = r.Body.Close() }()
 		bodyBytes, err := io.ReadAll(r.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.StatusCode).To(Equal(http.StatusOK))
+
 		output := client.QueryPoliciesResp{}
 		err = json.Unmarshal(bodyBytes, &output)
 		Expect(err).NotTo(HaveOccurred())
+
 		var numNps, numGnps int
 		for _, i := range output.Items {
-			if i.Kind == apiv3.KindNetworkPolicy {
+			switch i.Kind {
+			case apiv3.KindNetworkPolicy,
+				apiv3.KindStagedNetworkPolicy,
+				apiv3.KindStagedKubernetesNetworkPolicy,
+				model.KindKubernetesNetworkPolicy:
+				// TODO: These are all counted as NetworkPolicies for now.
 				numNps++
-			} else {
+			case apiv3.KindGlobalNetworkPolicy,
+				apiv3.KindStagedGlobalNetworkPolicy,
+				model.KindKubernetesAdminNetworkPolicy,
+				model.KindKubernetesBaselineAdminNetworkPolicy:
+				// TODO: These are all counted as GlobalNetworkPolicies for now.
 				numGnps++
+			default:
+				Expect(true).To(BeFalse(), fmt.Sprintf("unexpected policy kind: %s", i.Kind))
 			}
 		}
-		Expect(numNps).To(Equal(p.NumNetworkPolicies))
-		Expect(numGnps).To(Equal(p.NumGlobalNetworkPolicies))
+		Expect(numNps).To(Equal(p.NumNetworkPolicies), tqd.description)
+		Expect(numGnps).To(Equal(p.NumGlobalNetworkPolicies), tqd.description)
 	}
 }
 
@@ -390,8 +421,7 @@ func getDummyConfigFromEnvFv(addr, webKey, webCert string) *config.Config {
 	return config
 }
 
-type mockHandler struct {
-}
+type mockHandler struct{}
 
 func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpMethodAllowed authhandler.HTTPMethod) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -409,19 +439,17 @@ func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 	}
 }
 
-type mockAuthorizer struct {
-}
+type mockAuthorizer struct{}
 
-type mockPermissions struct {
-}
+type mockPermissions struct{}
 
 func (p *mockPermissions) IsAuthorized(res api.Resource, tier *string, verbs []rbac.Verb) bool {
 	return true
 }
 
 func (authz *mockAuthorizer) PerformUserAuthorizationReview(ctx context.Context,
-	authReviewattributes []apiv3.AuthorizationReviewResourceAttributes) (auth.Permission, error) {
-
+	authReviewattributes []apiv3.AuthorizationReviewResourceAttributes,
+) (auth.Permission, error) {
 	return &mockPermissions{}, nil
 }
 

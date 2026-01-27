@@ -407,7 +407,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s",
 					idx,
 					r.TierString(),
 					r.NameString(),
@@ -423,7 +423,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.PendingRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s",
 					idx,
 					r.TierString(),
 					r.NameString(),
@@ -439,7 +439,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.TransitRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s",
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s",
 					idx,
 					r.TierString(),
 					r.NameString(),

@@ -190,7 +190,7 @@ func (s *supConverter) ConvertV3ToV1(v3Update *api.Update) *api.Update {
 	v1Updates, err := s.up.Process(&v3Update.KVPair)
 	if err != nil {
 		// Log error and return a nil value.
-		log.WithError(err).Error("Unable to convert v3 value to v1")
+		log.WithError(err).WithField("key", v3Update.KVPair.Key).Warn("Unable to convert v3 value to v1")
 		return nil
 	}
 	if v1Updates == nil {

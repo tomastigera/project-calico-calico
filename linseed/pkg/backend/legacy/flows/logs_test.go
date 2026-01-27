@@ -462,14 +462,14 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog2: false,
 		},
 		{
-			Name: "should support selection with policy tier,name, and namespace match",
+			Name: "should support selection with policy tier, name, and namespace match",
 			Params: v1.FlowLogParams{
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Tier:      "allow-tigera",
 						Namespace: testutils.StringPtr("openshift-dns"),
-						Name:      testutils.StringPtr("cluster-dns"),
+						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
 					},
 				},
 			},
@@ -591,7 +591,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			Params: v1.FlowLogParams{
 				QueryParams: v1.QueryParams{},
 				LogSelectionParams: v1.LogSelectionParams{
-					Selector: "\"policies.pending_policies\" IN {\"*custom-tier2.staged:policy*\"}",
+					Selector: "\"policies.pending_policies\" IN {\"*snp:default/policy*\"}",
 				},
 			},
 			ExpectLog1: false,
@@ -658,14 +658,14 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
-					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
-					WithEnforcedPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithEnforcedPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
-					WithPendingPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithPendingPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
-					WithTransitPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithTransitPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1").
+					WithPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
+					WithEnforcedPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithEnforcedPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
+					WithPendingPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithPendingPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
+					WithTransitPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithTransitPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
 					WithTCPLostPackets(100).
 					WithTCPMeanSendCongestionWindow(101).
 					WithTCPMinSendCongestionWindow(102).
@@ -693,15 +693,15 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("cheese=brie").
-					WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-					WithPolicy("1|custom-tier|custom-tier.my-deployment-dns|deny|1").
+					WithPolicy("0|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+					WithPolicy("1|custom-tier|gnp:custom-tier.my-deployment-dns|deny|1").
 					WithHost("my-host").
 					WithTCPMaxMinRTT(300).
 					WithTCPMaxSmoothRTT(301).
 					WithTCPMeanMinRTT(302).
 					WithTCPMeanSmoothRTT(303).
 					WithDestDomains("tigera.domain").
-					WithPendingPolicy("0|custom-tier2|default/custom-tier2.staged:policy|allow|1")
+					WithPendingPolicy("0|custom-tier2|snp:default/policy|allow|1")
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 
@@ -814,6 +814,171 @@ func TestFlowLogFiltering(t *testing.T) {
 							}
 						}
 						require.Equal(t, numExpected(testcase)*3, count)
+					}
+				})
+			})
+		}
+	}
+}
+
+// TestLegacyPolicyStrings tests that legacy policy strings are still supported, and
+// that queries correctly match both legacy and new style policy strings.
+func TestLegacyPolicyStrings(t *testing.T) {
+	type testCase struct {
+		Name   string
+		Params v1.FlowLogParams
+
+		// Configuration for which logs are expected to match.
+		ExpectLog1 bool
+		ExpectLog2 bool
+
+		// Whether to perform an equality comparison on the returned
+		// logs. Can be useful for tests where stats differ.
+		SkipComparison bool
+	}
+
+	testcases := []testCase{
+		{
+			Name: "should support selection with policy tier and namespace match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:      "allow-tigera",
+						Namespace: testutils.StringPtr("openshift-dns"),
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should support staged policy selection with exact name match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Name:   testutils.StringPtr("custom-tier2.gnp"),
+						Tier:   "custom-tier2",
+						Staged: true,
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+		},
+		{
+			// This should only match the first log.
+			Name: "should support staged namespaced policy selection with exact name match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Name:      testutils.StringPtr("custom-tier2.policy2"),
+						Namespace: testutils.StringPtr("default"),
+						Tier:      "custom-tier2",
+						Staged:    true,
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+		},
+	}
+
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		for _, testcase := range testcases {
+			// Each testcase creates multiple flow logs, and then uses
+			// different filtering parameters provided in the params
+			// to query one or more flow logs.
+			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
+			RunAllModes(t, name, func(t *testing.T) {
+				clusterInfo1 := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+				clusterInfo2 := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+				clusterInfo3 := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
+
+				// Set the time range for the test. We set this per-test
+				// so that the time range captures the windows that the logs
+				// are created in.
+				tr := &lmav1.TimeRange{}
+				tr.From = time.Now().Add(-5 * time.Minute)
+				tr.To = time.Now().Add(5 * time.Minute)
+				params := testcase.Params
+				params.TimeRange = tr
+
+				// Create a flow log builder base template, without any policies.
+				tmpl := backendutils.NewFlowLogBuilder()
+				tmpl.WithType("wep").
+					WithSourceNamespace("tigera-operator").
+					WithDestNamespace("openshift-dns").
+					WithDestName("openshift-dns-*").
+					WithDestIP("192.168.1.1").
+					WithDestService("openshift-dns", 53).
+					WithDestPort(1053).
+					WithSourcePort(1010).
+					WithProtocol("udp").
+					WithSourceName("tigera-operator").
+					WithSourceIP("34.15.66.3").
+					WithRandomFlowStats().WithRandomPacketStats().
+					WithReporter("src").WithAction("allowed").
+					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
+					WithTCPLostPackets(100).
+					WithTCPMeanSendCongestionWindow(101).
+					WithTCPMinSendCongestionWindow(102).
+					WithTCPTotalRetransmissions(103).
+					WithTCPUnrecoveredTo(104).
+					WithTCPMeanMSS(200).
+					WithTCPMinMSS(201)
+
+				// Create a builder that uses legacy style policy strings.
+				leg := tmpl.Copy().
+					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").   // Tier part of the name.
+					WithPolicy("0|allow-tigera|allow-tigera.gnp|pass|1").                          // Tier not part of name.
+					WithPendingPolicy("0|custom-tier2|custom-tier2.staged:gnp|allow|1").           // Tier part of name.
+					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy|deny|1"). // Tier not part of the name.
+					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy2|deny|1") // Only present in old flow.
+				fl1, err := leg.Build()
+				require.NoError(t, err)
+
+				// Template for flow #2, which is the same as flow #1 but with its policy strings
+				// in the new format.
+				bld2 := tmpl.Copy().
+					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").      // Tier part of the name.
+					WithPolicy("0|allow-tigera|gnp|pass|1").                                          // Tier not part of name.
+					WithPendingPolicy("0|custom-tier2|custom-tier2.staged:custom-tier2.gnp|allow|1"). // Tier part of name.
+					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy|deny|1")     // Tier not part of name.
+				fl2, err := bld2.Build()
+				require.NoError(t, err)
+
+				for _, clusterInfo := range []bapi.ClusterInfo{clusterInfo1, clusterInfo2, clusterInfo3} {
+					response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*fl1, *fl2})
+					require.NoError(t, err)
+					require.Equal(t, []v1.BulkError(nil), response.Errors)
+					require.Equal(t, 0, response.Failed)
+
+					err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+					require.NoError(t, err)
+				}
+
+				t.Run("should query single cluster", func(t *testing.T) {
+					// Query for flow logs.
+					r, err := flb.List(ctx, clusterInfo1, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, 2) // We expect both logs to match.
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					if !testcase.SkipComparison {
+						copyOfLogs := backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo1.Cluster, r)
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, *fl1)
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, *fl2)
+						}
 					}
 				})
 			})
@@ -1072,7 +1237,6 @@ func TestPreserveIDs(t *testing.T) {
 			// Refresh before cleaning up data
 			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
-
 		})
 	}
 }

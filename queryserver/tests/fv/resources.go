@@ -3,7 +3,6 @@ package fv
 
 import (
 	"context"
-	"strings"
 
 	"github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -17,7 +16,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
@@ -1769,33 +1767,6 @@ func qcEndpoint(r api.Resource, numGNP, numNP int) client.Endpoint {
 	return e
 }
 
-// qcStagedAdnDefaultTierAdjustment adjusts policy name considering two conversions:
-// 1. Staged policies are converted to Enforced. So adjust original resource
-// 2. Tier should be set to "default" if empty and thus policy name should be updated accordingly.
-func qcStagedAdnDefaultTierAdjustment(p *client.Policy) {
-	if p.Tier == "" {
-		p.Tier = names.DefaultTierName
-	}
-
-	switch p.Kind {
-	case apiv3.KindStagedNetworkPolicy:
-		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
-			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
-		}
-		p.Kind = apiv3.KindNetworkPolicy
-		p.Name = "staged:" + p.Name
-	case apiv3.KindStagedGlobalNetworkPolicy:
-		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
-			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
-		}
-		p.Kind = apiv3.KindGlobalNetworkPolicy
-		p.Name = "staged:" + p.Name
-	case apiv3.KindStagedKubernetesNetworkPolicy:
-		p.Name = "staged:" + names.K8sNetworkPolicyNamePrefix + p.Name
-		p.Kind = apiv3.KindNetworkPolicy
-	}
-}
-
 // qcPolicy returns a client.Policy from an v3.NetworkPolicy or v3.GlobalNetworkPolicy.
 // To keep the interface simple, it assigns the totWEP and totHEP values to all of the
 // rule selectors (i.e. it assumes they simply match all).
@@ -1858,7 +1829,7 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 			p.StagedAction = &er.Spec.StagedAction
 		}
 		p.Selector = getStringPointer(conversion.K8sSelectorToCalico(&er.Spec.PodSelector, conversion.SelectorPod))
-		p.ServiceAccountSelector = testutils.StringPtr("")
+		p.ServiceAccountSelector = nil
 	case *apiv3.StagedGlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
@@ -1871,7 +1842,10 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.ServiceAccountSelector = &er.Spec.ServiceAccountSelector
 	}
 
-	qcStagedAdnDefaultTierAdjustment(&p)
+	// Default tier to "default" if not set.
+	if p.Tier == "" {
+		p.Tier = names.DefaultTierName
+	}
 
 	return p
 }
@@ -1949,21 +1923,6 @@ func resourceKey(res resourcemgr.ResourceObject) model.ResourceKey {
 	return model.ResourceKey{
 		Kind:      res.GetObjectKind().GroupVersionKind().Kind,
 		Name:      res.GetObjectMeta().GetName(),
-		Namespace: res.GetObjectMeta().GetNamespace(),
-	}
-}
-
-func stagedResourceKey(res resourcemgr.ResourceObject) model.ResourceKey {
-	if res.GetObjectKind().GroupVersionKind().Kind == apiv3.KindStagedKubernetesNetworkPolicy {
-		return model.ResourceKey{
-			Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-			Name:      "staged:" + names.K8sNetworkPolicyNamePrefix + res.GetObjectMeta().GetName(),
-			Namespace: res.GetObjectMeta().GetNamespace(),
-		}
-	}
-	return model.ResourceKey{
-		Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-		Name:      "staged:" + res.GetObjectMeta().GetName(),
 		Namespace: res.GetObjectMeta().GetNamespace(),
 	}
 }

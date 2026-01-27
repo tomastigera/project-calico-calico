@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -63,12 +64,31 @@ func (s *Server) Start() error {
 	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg, s.authorizer)
 	sm.HandleFunc("/endpoints", s.authhandler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST))
 	sm.HandleFunc("/endpoints/", s.authhandler.AuthenticationHandler(qh.Endpoint, authhandler.MethodGET))
-	sm.HandleFunc("/policies", s.authhandler.AuthenticationHandler(qh.Policies, authhandler.MethodGET))
-	sm.HandleFunc("/policies/", s.authhandler.AuthenticationHandler(qh.Policy, authhandler.MethodGET))
 	sm.HandleFunc("/nodes", s.authhandler.AuthenticationHandler(qh.Nodes, authhandler.MethodGET))
 	sm.HandleFunc("/nodes/", s.authhandler.AuthenticationHandler(qh.Node, authhandler.MethodGET))
 	sm.HandleFunc("/summary", s.authhandler.AuthenticationHandler(qh.Summary, authhandler.MethodGET))
 	sm.HandleFunc("/metrics", s.authhandler.AuthenticationHandler(qh.Metrics, authhandler.MethodGET))
+
+	// Handler for querying all policies.
+	sm.HandleFunc("/policies", s.authhandler.AuthenticationHandler(qh.Policies, authhandler.MethodGET))
+
+	// Legacy handler for querying a specific policy, kept for backward compatibility.
+	sm.HandleFunc("/policies/", s.authhandler.AuthenticationHandler(qh.LegacyPolicy, authhandler.MethodGET))
+
+	// Handlers for specific network policy kinds.
+	kinds := []string{
+		"networkpolicy",
+		"stagednetworkpolicy",
+		"globalnetworkpolicy",
+		"stagedglobalnetworkpolicy",
+		"kubernetesnetworkpolicy",
+		"stagedkubernetesnetworkpolicy",
+		"adminnetworkpolicy",
+		"baselineadminnetworkpolicy",
+	}
+	for _, kind := range kinds {
+		sm.HandleFunc(fmt.Sprintf("/%s/", kind), s.authhandler.AuthenticationHandler(qh.GetPolicy, authhandler.MethodGET))
+	}
 
 	sm.HandleFunc("/v1/pods/labels",
 		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypePods), authhandler.MethodGET))

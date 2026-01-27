@@ -38,8 +38,10 @@ const (
 	MatchStopped MatchType = "stopped"
 )
 
-type PolicyMatchFn func(matchType MatchType, policy model.Key, endpoint model.Key)
-type RuleMatchFn func(matchType MatchType, selector string, endpoint model.Key)
+type (
+	PolicyMatchFn func(matchType MatchType, policy model.Key, endpoint model.Key)
+	RuleMatchFn   func(matchType MatchType, selector string, endpoint model.Key)
+)
 
 func NewLabelHandler() Interface {
 	cq := &labelHandler{}
@@ -84,11 +86,14 @@ func (c *labelHandler) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interfac
 	dispatcher.RegisterHandler(v3.KindProfile, c.onUpdate)
 	dispatcher.RegisterHandler(apiv3.KindWorkloadEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindHostEndpoint, c.onUpdate)
-	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindStagedNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindStagedGlobalNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindStagedKubernetesNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesAdminNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesBaselineAdminNetworkPolicy, c.onUpdate)
 }
 
 func (c *labelHandler) RegisterPolicyHandler(pcb PolicyMatchFn) {
@@ -185,6 +190,10 @@ func (c *labelHandler) onUpdate(update dispatcherv1v3.Update) {
 	switch rk.Kind {
 	case v3.KindProfile:
 		c.onUpdateProfile(update)
+	case model.KindKubernetesAdminNetworkPolicy,
+		model.KindKubernetesBaselineAdminNetworkPolicy,
+		model.KindKubernetesNetworkPolicy:
+		c.onUpdatePolicy(update)
 	case v3.KindGlobalNetworkPolicy:
 		c.onUpdatePolicy(update)
 	case v3.KindNetworkPolicy:
@@ -253,7 +262,6 @@ func (c *labelHandler) onUpdateProfile(update dispatcherv1v3.Update) {
 }
 
 func (c *labelHandler) onUpdateStagedPolicy(update dispatcherv1v3.Update) {
-	uv1 := update.UpdateV1
 	uv3 := update.UpdateV3
 
 	if utils.DoExcludeStagedPolicy(uv3) {
@@ -262,7 +270,6 @@ func (c *labelHandler) onUpdateStagedPolicy(update dispatcherv1v3.Update) {
 		return
 	}
 
-	utils.StagedToEnforcedConversion(uv1, uv3)
 	c.onUpdatePolicy(update)
 }
 

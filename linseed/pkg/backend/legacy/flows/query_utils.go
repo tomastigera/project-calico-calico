@@ -3,33 +3,34 @@
 package flows
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 func BuildAllPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
-	return buildPolicyMatchQuery(policyMatches, allPolicyQuery)
+	return buildPolicyMatchQuery(policyMatches, allPolicyQuery, allPolicyQueryLegacy)
 }
 
 func BuildEnforcedPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
-	return buildPolicyMatchQuery(policyMatches, enforcedPolicyQuery)
+	return buildPolicyMatchQuery(policyMatches, enforcedPolicyQuery, enforcedPolicyQueryLegacy)
 }
 
 func BuildPendingPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
-	return buildPolicyMatchQuery(policyMatches, pendingPolicyQuery)
+	return buildPolicyMatchQuery(policyMatches, pendingPolicyQuery, pendingPolicyQueryLegacy)
 }
 
 func BuildTransitPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
-	return buildPolicyMatchQuery(policyMatches, transitPolicyQuery)
+	return buildPolicyMatchQuery(policyMatches, transitPolicyQuery, transitPolicyQueryLegacy)
 }
 
-func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, policyQuery func(v1.PolicyMatch) (elastic.Query, error)) (*elastic.BoolQuery, error) {
+func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, builders ...func(v1.PolicyMatch) (elastic.Query, error)) (*elastic.BoolQuery, error) {
 	if len(policyMatches) == 0 {
 		return nil, nil
 	}
@@ -41,11 +42,13 @@ func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, policyQuery func(v1.P
 		if (m == v1.PolicyMatch{}) {
 			return nil, fmt.Errorf("PolicyMatch passed to BuildPolicyMatchQuery cannot be empty")
 		}
-		query, err := policyQuery(m)
-		if err != nil {
-			return nil, err
+		for _, build := range builders {
+			query, err := build(m)
+			if err != nil {
+				return nil, err
+			}
+			b.Should(query)
 		}
-		b.Should(query)
 	}
 	b.MinimumNumberShouldMatch(1)
 	return b, nil
@@ -92,168 +95,87 @@ func transitPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 }
 
 func CompileStringMatch(m v1.PolicyMatch) (string, error) {
-	// replace nil values with empty string "" since they have same meaning.
-	name, namespace := "", ""
-	if m.Name != nil {
-		name = *m.Name
-	}
-	if m.Namespace != nil {
-		namespace = *m.Namespace
-	}
-	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged)
-	if err != nil {
-		return "", err
-	}
-
-	// Set the action if an action is provided, otherwise action should be set to `*` to match against all actions
 	actionMatch := "*"
 	if m.Action != nil && *m.Action != "" {
 		actionMatch = string(*m.Action)
 	}
 
-	// Policy strings are formatted like so:
-	// <index> | <tier> | <nameMatch> | <action> | <ruleID>
-	matchString := fmt.Sprintf("*|%s|%s|%s|*", tier, nameMatch, actionMatch)
-	logrus.WithField("match", matchString).Debugf("Matching on policy string")
+	// Calculate the tier match string.
+	kind := getKindMatch(m)
+	tier := getTierMatch(m)
+	name := getNameMatch(m)
 
+	// Construct the final match string.
+	// Format is "<id>|<tier>|<kind>:[namespace/]:name|<action>|<ruleID>"
+	matchString := fmt.Sprintf("*|%s|%s:%s|%s|*", tier, kind, name, actionMatch)
+	logrus.WithField("match", matchString).Debugf("Matching on policy string")
 	return matchString, nil
 }
 
-// calculateTierAndNameMatch calculates the string match for policy based on the values provided for PolicyType, name,
-// namespace, tier, and staged flag.
-// return tier, nameMatch, and err
-func calculateTierAndNameMatch(policyType v1.PolicyType, name, namespace, tier string, staged bool) (string, string, error) {
-	nameMatch := "*"
-
-	// Set policy name if it is provided, otherwise name should be set to `*` to match against all names
-	if name != "" {
-		nameMatch = name
+func getKindMatch(m v1.PolicyMatch) string {
+	if m.Type == "" && m.Tier != calc.ProfileTierStr && !m.Staged && m.Namespace == nil {
+		// No type, tier, staged, or namespace specified; match all kinds.
+		return "*"
 	}
 
-	// Policy combined-name in flowlogs is constructed differently depending on the type of hit.
-	// The formatting can be found in: https://github.com/tigera/calico-private/blob/master/felix/calc/policy_lookup_cache.go
-	// - non-k8s namespaced policy: <namespace>/<tier>.<name>
-	// - non-k8s global / profile policy: <tier>.<name>
-	// - kubernetes policy (namespaced): <namespace>/knp.default.<name>
-	// - kubernetes admin policy (global): kanp.adminnetworkpolicy.<name>
-	// m.Type defines how the name should be constructed
-	var err error
-	switch policyType {
+	// Handle any explicitly set types first.
+	switch m.Type {
 	case v1.KNP:
-		tier, nameMatch, err = calculateKNPTierAndName(staged, nameMatch, namespace, tier)
-	case v1.KANP:
-		tier, nameMatch, err = calculateKANPTierAndName(staged, nameMatch, namespace, tier)
-	case v1.KBANP:
-		tier, nameMatch, err = calculateKBANPTierAndName(staged, nameMatch, namespace, tier)
-	default:
-		tier, nameMatch, err = calculateCalicoPolicyTierAndName(staged, nameMatch, namespace, tier)
-	}
-	if err != nil {
-		return "", "", err
-	}
-
-	return tier, nameMatch, nil
-}
-
-// calculateTierAndNameMatch calculates the string match for calico policies
-// returns tier, nameMatch, err
-func calculateCalicoPolicyTierAndName(staged bool, name, namespace, tier string) (string, string, error) {
-	if tier == "" {
-		// Match against all tiers if m.Tier is empty
-		tier = "*"
-	}
-
-	nameMatch := name
-
-	// Calico staged policy:
-	// staged namespaced policies: <namespace>/<tier>.<staged:><name>
-	// staged global policies: <tier>.staged:<name>
-	if staged {
-		nameMatch = fmt.Sprintf("staged:%s", nameMatch)
-	}
-	nameMatch = fmt.Sprintf("%s.%s", tier, nameMatch)
-
-	// Set namespace
-	if namespace != "" {
-		if tier == "__PROFILE__" {
-			return "", "", errors.New("namespace cannot be set when tier==__PROFILE__")
+		if m.Staged {
+			return types.ShortKindStagedKubernetesNetworkPolicy
 		}
-
-		nameMatch = fmt.Sprintf("%s/%s", namespace, nameMatch)
+		return types.ShortKindKubernetesNetworkPolicy
+	case v1.KANP:
+		// Legacy Admin Network Policy type - no short kind const defined.
+		return "kanp"
+	case v1.KBANP:
+		// Legacy Baseline Admin Network Policy type - no short kind const defined.
+		return "kbanp"
 	}
-	return tier, nameMatch, nil
+
+	// Handle special profile case.
+	if m.Tier == calc.ProfileTierStr {
+		return types.ShortKindProfile
+	}
+
+	// Derive kind from staged /namespace fields.
+	ns := ""
+	if m.Namespace != nil {
+		ns = *m.Namespace
+	}
+	kind := v1.KindFromHints(false, false, m.Staged, ns)
+
+	// Convert the kind to its short form as used in flow logs.
+	return types.PolicyID{Kind: kind}.KindShortName()
 }
 
-// CalculateKANPTierAndName calculates the string match for admin network policies
-// returns tier, nameMatch, err
-func calculateKANPTierAndName(staged bool, name, namespace, tier string) (string, string, error) {
-	if tier != "" && tier != names.AdminNetworkPolicyTierName {
-		return "", "", fmt.Errorf("tier cannot be set to %s for adminnetworkpolicy", tier)
-	}
-	tier = names.AdminNetworkPolicyTierName
-
-	if namespace != "" {
-		return "", "", errors.New("namespace cannot be set for adminnetworkpolicy")
-	}
-
-	nameMatch := name
-
-	// staged  is not supported for kubernetes admin network policies:
-	// "<index>|adminnetworkpolicy|adminnetworkpolicy.<name>|<action>|<rule>"
-	if staged {
-		return "", "", errors.New("staged is not supported for adminnetworkpolicy")
-	}
-	nameMatch = fmt.Sprintf("%s.%s%s", tier, names.K8sAdminNetworkPolicyNamePrefix, nameMatch)
-
-	return tier, nameMatch, nil
-}
-
-// CalculateKANPTierAndName calculates the string match for admin network policies
-// returns tier, nameMatch, err
-func calculateKBANPTierAndName(staged bool, name, namespace, tier string) (string, string, error) {
-	if tier != "" && tier != names.BaselineAdminNetworkPolicyTierName {
-		return "", "", fmt.Errorf("tier cannot be set to %s for baselineadminnetworkpolicy", tier)
-	}
-	tier = names.BaselineAdminNetworkPolicyTierName
-
-	if namespace != "" {
-		return "", "", errors.New("namespace cannot be set for baselineadminnetworkpolicy")
-	}
-
-	nameMatch := name
-
-	// staged is not supported for kubernetes admin network policies:
-	// "<index>|baselineadminnetworkpolicy|baselineadminnetworkpolicy.<name>|<action>|<rule>"
-	if staged {
-		return "", "", errors.New("staged is not supported for baselineadminnetworkpolicy")
-	}
-	nameMatch = fmt.Sprintf("%s.%s%s", tier, names.K8sBaselineAdminNetworkPolicyNamePrefix, nameMatch)
-
-	return tier, nameMatch, nil
-}
-
-// calculateKNPTierAndName calculates the string match for admin network policies
-// returns tier, nameMatch, err
-func calculateKNPTierAndName(staged bool, name, namespace, tier string) (string, string, error) {
-	if tier != "" && tier != names.DefaultTierName {
-		return "", "", fmt.Errorf("tier cannot be set to %s for kubernetes network policy", tier)
-	}
-	tier = names.DefaultTierName
-
-	nameMatch := fmt.Sprintf("%s%s", names.K8sNetworkPolicyNamePrefix, name)
-
-	// staged kubernetes network policy format:
-	// "<index>|<namespace>|<namespace>/<staged:>knp.default.<name>|<action>|<rule>"
-	if staged {
-		nameMatch = fmt.Sprintf("staged:%s", nameMatch)
+func getNameMatch(m v1.PolicyMatch) string {
+	nameMatch := "*"
+	if m.Name != nil && *m.Name != "" {
+		nameMatch = *m.Name
 	}
 
 	// Set namespace
-	if namespace == "" {
-		return "", "", errors.New("namespace cannot be empty for kubernetes network policy")
-	} else {
-		nameMatch = fmt.Sprintf("%s/%s", namespace, nameMatch)
+	if m.Namespace != nil && *m.Namespace != "" {
+		nameMatch = fmt.Sprintf("%s/%s", *m.Namespace, nameMatch)
 	}
 
-	return tier, nameMatch, nil
+	return nameMatch
+}
+
+func getTierMatch(m v1.PolicyMatch) string {
+	if m.Tier != "" {
+		return m.Tier
+	}
+
+	switch m.Type {
+	case v1.KNP:
+		return names.DefaultTierName
+	case v1.KANP:
+		return names.AdminNetworkPolicyTierName
+	case v1.KBANP:
+		return names.BaselineAdminNetworkPolicyTierName
+	default:
+		return "*"
+	}
 }

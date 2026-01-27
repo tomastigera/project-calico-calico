@@ -540,10 +540,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -558,10 +558,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -576,10 +576,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -594,10 +594,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -612,10 +612,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -631,10 +631,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				})
 
@@ -659,10 +659,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|deny|1": {},
+						"0|tier1|np:default/tier1.np1-1|deny|1": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|deny|1": {},
+						"0|tier1|np:default/tier1.np1-1|deny|1": {},
 					},
 				})
 
@@ -677,10 +677,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp2-2|deny|0": {},
+						"0|tier2|gnp:tier2.gnp2-2|deny|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp2-2|deny|0": {},
+						"0|tier2|gnp:tier2.gnp2-2|deny|0": {},
 					},
 				})
 
@@ -695,12 +695,12 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|allow|0": {},
 					},
 				})
 
@@ -715,10 +715,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|default/tier2.np2-4|deny|0": {},
+						"0|tier2|np:default/tier2.np2-4|deny|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|default/tier2.staged:tier2.np2-3|deny|1": {},
+						"0|tier2|snp:default/tier2.np2-3|deny|1": {},
 					},
 				})
 
@@ -733,12 +733,12 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|1":      {},
-						"1|default|default/default.np3-3|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|1":      {},
+						"1|default|np:default/default.np3-3|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|1":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-3|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|1":   {},
+						"1|tier2|snp:default/tier2.np2-3|allow|0": {},
 					},
 				})
 
@@ -753,10 +753,10 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|allow|0": {},
 					},
 				})
 
@@ -773,12 +773,12 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 					},
 					// Enforced and pending policy sets must be identical.
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.ep2-4|pass|-1":                   {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|gnp:tier1.ep2-4|pass|-1":       {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.ep2-4|pass|-1":                   {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|gnp:tier1.ep2-4|pass|-1":       {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				})
 
@@ -794,12 +794,12 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 					},
 					// Enforced and pending policy sets must be identical.
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.ep2-4|pass|-1":                   {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|gnp:tier1.ep2-4|pass|-1":       {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.ep2-4|pass|-1":                   {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|gnp:tier1.ep2-4|pass|-1":       {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				})
 

@@ -61,7 +61,6 @@ type Converter interface {
 	IsScheduled(pod *kapiv1.Pod) bool
 	IsHostNetworked(pod *kapiv1.Pod) bool
 	HasIPAddress(pod *kapiv1.Pod) bool
-	StagedKubernetesNetworkPolicyToStagedName(stagedK8sName string) string
 	K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*model.KVPair, error)
 	K8sAdminNetworkPolicyToCalico(anp *adminpolicy.AdminNetworkPolicy) (*model.KVPair, error)
 	K8sBaselineAdminNetworkPolicyToCalico(banp *adminpolicy.BaselineAdminNetworkPolicy) (*model.KVPair, error)
@@ -305,11 +304,6 @@ func getPodIPs(pod *kapiv1.Pod) ([]*cnet.IPNet, error) {
 	return podIPNets, nil
 }
 
-// StagedKubernetesNetworkPolicyToStagedName converts a StagedKubernetesNetworkPolicy name into a StagedNetworkPolicy name
-func (c converter) StagedKubernetesNetworkPolicyToStagedName(stagedK8sName string) string {
-	return names.K8sNetworkPolicyNamePrefix + stagedK8sName
-}
-
 // EndpointSliceToKVP converts a k8s EndpointSlice to a model.KVPair.
 func (c converter) EndpointSliceToKVP(slice *discovery.EndpointSlice) (*model.KVPair, error) {
 	return &model.KVPair{
@@ -338,7 +332,7 @@ func (c converter) ServiceToKVP(service *kapiv1.Service) (*model.KVPair, error) 
 // K8sAdminNetworkPolicyToCalico converts a k8s AdminNetworkPolicy to a model.KVPair.
 func (c converter) K8sAdminNetworkPolicyToCalico(anp *adminpolicy.AdminNetworkPolicy) (*model.KVPair, error) {
 	// Pull out important fields.
-	policyName := names.K8sAdminNetworkPolicyNamePrefix + anp.Name
+	policyName := anp.Name
 	order := float64(anp.Spec.Priority)
 	errorTracker := cerrors.ErrorClusterNetworkPolicyConversion{PolicyName: anp.Name}
 
@@ -457,7 +451,7 @@ func k8sANPEgressRuleToCalico(rule adminpolicy.AdminNetworkPolicyEgressRule) ([]
 // K8sBaselineAdminNetworkPolicyToCalico converts a k8s BaselineAdminNetworkPolicy to a model.KVPair.
 func (c converter) K8sBaselineAdminNetworkPolicyToCalico(anp *adminpolicy.BaselineAdminNetworkPolicy) (*model.KVPair, error) {
 	// Pull out important fields.
-	policyName := names.K8sBaselineAdminNetworkPolicyNamePrefix + anp.Name
+	policyName := anp.Name
 	order := float64(1000)
 	errorTracker := cerrors.ErrorClusterNetworkPolicyConversion{PolicyName: anp.Name}
 
@@ -892,9 +886,6 @@ func k8sAdminPolicyPortRangeToCalico(port *adminpolicy.PortRange) (*numorstring.
 
 // K8sNetworkPolicyToCalico converts a k8s NetworkPolicy to a model.KVPair.
 func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*model.KVPair, error) {
-	// Pull out important fields.
-	policyName := names.K8sNetworkPolicyNamePrefix + np.Name
-
 	// We insert all the NetworkPolicy Policies at order 1000.0 after conversion.
 	// This order might change in future.
 	order := float64(1000.0)
@@ -970,7 +961,7 @@ func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 	// Create the NetworkPolicy.
 	policy := apiv3.NewNetworkPolicy()
 	policy.ObjectMeta = metav1.ObjectMeta{
-		Name:              policyName,
+		Name:              np.Name,
 		Namespace:         np.Namespace,
 		CreationTimestamp: np.CreationTimestamp,
 		Annotations:       np.Annotations,
@@ -989,9 +980,9 @@ func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 	// Build the KVPair.
 	kvp := &model.KVPair{
 		Key: model.ResourceKey{
-			Name:      policyName,
+			Name:      np.Name,
 			Namespace: np.Namespace,
-			Kind:      apiv3.KindNetworkPolicy,
+			Kind:      model.KindKubernetesNetworkPolicy,
 		},
 		Value:    policy,
 		Revision: np.ResourceVersion,

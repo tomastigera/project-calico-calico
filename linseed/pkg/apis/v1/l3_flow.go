@@ -2,6 +2,12 @@
 
 package v1
 
+import (
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+)
+
 // StatsType is different types of stats available for querying on an L3 flow.
 type StatsType string
 
@@ -212,6 +218,7 @@ type L3Flow struct {
 
 type Policy struct {
 	Tier         string `json:"tier"`
+	Kind         string `json:"kind"`
 	Namespace    string `json:"namespace"`
 	Name         string `json:"name"`
 	Action       string `json:"action"`
@@ -220,6 +227,39 @@ type Policy struct {
 	IsProfile    bool   `json:"is_profile"`
 	Count        int64  `json:"count"`
 	RuleID       *int   `json:"rule_id"`
+}
+
+func KindFromHints(isKNP, isProfile, isStaged bool, ns string) string {
+	if isProfile {
+		return v3.KindProfile
+	}
+
+	if isKNP {
+		if isStaged {
+			return v3.KindStagedKubernetesNetworkPolicy
+		}
+		if ns == "" {
+			// TODO: CASEY: Remove this once KBANP is fully deprecated.
+			// We don't have a way to distinguish between KBNP and KBANP in flow logs,
+			// so we treat all cluster-scoped KNPs as KANPs for now.
+			return model.KindKubernetesAdminNetworkPolicy
+		}
+		return model.KindKubernetesNetworkPolicy
+	}
+
+	if ns != "" {
+		// Namespaced Calico Network Policy.
+		if isStaged {
+			return v3.KindStagedNetworkPolicy
+		}
+		return v3.KindNetworkPolicy
+	}
+
+	// Global Network Policy.
+	if isStaged {
+		return v3.KindStagedGlobalNetworkPolicy
+	}
+	return v3.KindGlobalNetworkPolicy
 }
 
 // FlowLabels represents a single label and all of its seen values over the course of

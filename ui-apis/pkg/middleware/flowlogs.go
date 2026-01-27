@@ -50,8 +50,8 @@ type FlowLogsParams struct {
 	// Parsed timestamps
 	startDateTime       *time.Time
 	endDateTime         *time.Time
-	startDateTimeESParm interface{}
-	endDateTimeESParm   interface{}
+	startDateTimeESParm any
+	endDateTimeESParm   any
 }
 
 type LabelSelector struct {
@@ -180,7 +180,7 @@ func FlowLogsHandler(
 			flowFilter = lmaelastic.NewFlowFilterIncludeAll()
 		}
 
-		var response interface{}
+		var response any
 		var stat int
 		flowParams := buildFlowParams(params)
 		opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](int(params.Limit))}
@@ -545,8 +545,8 @@ func getFlowLogsFromLinseed(
 	response := lmaelastic.CompositeAggregationResults{
 		Took:     time.Since(start).Milliseconds(),
 		TimedOut: false,
-		Aggregations: map[string]interface{}{
-			"flog_buckets": map[string]interface{}{
+		Aggregations: map[string]any{
+			"flog_buckets": map[string]any{
 				"buckets": convertToBuckets(result, unprotected, filter),
 			},
 		},
@@ -585,7 +585,7 @@ func getPIPFlowLogsFromLinseed(
 	params *FlowLogsParams,
 	pip pippkg.PIP,
 	rbacHelper PolicyImpactRbacHelper,
-) (interface{}, int, error) {
+) (any, int, error) {
 	// Check a NP is supplied in every request.
 	if len(params.PolicyPreviews) == 0 {
 		// Expect the policy preview to contain a network policy.

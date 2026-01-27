@@ -514,11 +514,11 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 	// permissions to see. Convert the others to the proper response format expected by the UI.
 	// TODO: It would be nice to change the response format expected by the UI to match Linseed's API, so we don't need
 	// to maintain multiple structures representing a policy hit.
-	for _, policy := range flow.Policies {
+	for _, p := range flow.Policies {
 		// Create a PolicyHit object to help with RBAC decisions.
-		policyHit, err := api.NewPolicyHit(api.Action(policy.Action), policy.Count, policyIdx, policy.IsStaged, policy.Name, policy.Namespace, policy.Tier, policy.RuleID)
+		policyHit, err := api.NewPolicyHit(api.Action(p.Action), p.Count, policyIdx, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
 		if err != nil {
-			logrus.WithField("policy", policy).Warn("Failed to parse policy, skipping")
+			logrus.WithField("policy", p).Warn("Failed to parse policy, skipping")
 			continue
 		}
 
@@ -527,7 +527,7 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 			// the request so the user knows to try again.
 			return nil, err
 		} else if canListPolicy {
-			logrus.WithFields(logrus.Fields{"name": policy.Name}).Debug("User is authorized to view policy.")
+			logrus.WithFields(logrus.Fields{"name": p.Name}).Debug("User is authorized to view policy.")
 			if obfuscatedPolicy != nil {
 				obfuscatedPolicy.Index = policyIdx
 				policies = append(policies, obfuscatedPolicy)
@@ -538,15 +538,15 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 
 			policies = append(policies, &FlowResponsePolicy{
 				Index:        policyIdx,
-				Action:       policy.Action,
-				Tier:         policy.Tier,
-				Namespace:    policy.Namespace,
-				Name:         policy.Name,
+				Action:       p.Action,
+				Tier:         p.Tier,
+				Namespace:    p.Namespace,
+				Name:         p.Name,
 				Kind:         policyHit.Kind(),
-				IsStaged:     policy.IsStaged,
-				IsKubernetes: policy.IsKubernetes,
-				IsProfile:    policy.IsProfile,
-				Count:        policy.Count,
+				IsStaged:     p.IsStaged,
+				IsKubernetes: p.IsKubernetes,
+				IsProfile:    p.IsProfile,
+				Count:        p.Count,
 			})
 
 			policyIdx++

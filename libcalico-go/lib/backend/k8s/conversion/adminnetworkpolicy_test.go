@@ -15,8 +15,6 @@
 package conversion
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -48,10 +46,6 @@ var _ = Describe("Test AdminNetworkPolicy conversion", func() {
 		} else {
 			Expect(err).To(Equal(*expectedErr))
 		}
-
-		// Assert key fields are correct.
-		policyName := fmt.Sprintf("%v%v", names.K8sAdminNetworkPolicyNamePrefix, anp.Name)
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal(policyName))
 
 		gnp, ok := pol.Value.(*apiv3.GlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
@@ -1981,8 +1975,7 @@ var _ = Describe("Test BaselineAdminNetworkPolicy conversion", func() {
 		}
 
 		// Assert key fields are correct.
-		policyName := fmt.Sprintf("%v%v", names.K8sBaselineAdminNetworkPolicyNamePrefix, banp.Name)
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal(policyName))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal(banp.Name))
 
 		gnp, ok := pol.Value.(*apiv3.GlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())

@@ -371,8 +371,8 @@ var _ = Describe("Test handling of flow splitting", func() {
 		By("Creating a client with a mocked out search results with all allow actions")
 		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:ingress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|np:ns1/default.staged:ingress-defaultdeny|deny|-1", "0|__PROFILE__|pro:kns.ns1|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|pro:kns.ns1|allow"),
 		}
 
 		By("Creating a policy calculator with the required policy updates")
@@ -450,7 +450,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[0], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(before[0], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
 		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -465,7 +465,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[1], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(before[1], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(1))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -480,7 +480,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[0], []string{"default|ns1/default.ingress-defaultdeny|deny|-1"})
+		expectPolicies(after[0], []string{"default|np:ns1/default.ingress-defaultdeny|deny|-1"})
 
 		Expect(after[1].DocCount).To(BeEquivalentTo(1))
 		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -495,7 +495,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[1], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(after[1], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 	})
 
 	It("handles flows with staged egress default-deny before and after", func() {
@@ -512,8 +512,8 @@ var _ = Describe("Test handling of flow splitting", func() {
 		By("Creating a client with a mocked out search results with all allow actions")
 		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:egress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|pro:kns.ns1|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|np:ns1/default.staged:egress-defaultdeny|deny|-1", "0|__PROFILE__|pro:kns.ns1|allow"),
 		}
 
 		By("Creating a policy calculator with the required policy updates")
@@ -591,7 +591,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[0], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(before[0], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
 		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -606,7 +606,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[1], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(before[1], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(1))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -621,7 +621,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "deny"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[0], []string{"default|ns1/default.egress-defaultdeny|deny|-1"})
+		expectPolicies(after[0], []string{"default|np:ns1/default.egress-defaultdeny|deny|-1"})
 	})
 
 	It("handles flows with denied source previewing allow policy with flows before deny policy was added", func() {
@@ -640,9 +640,9 @@ var _ = Describe("Test handling of flow splitting", func() {
 		By("Creating a client with a mocked out search results with all allow actions")
 		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|ns1/default.defaultdeny|deny|-1"),
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|pro:kns.ns2|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|pro:kns.ns1|allow"),
+			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|np:ns1/default.defaultdeny|deny|-1"),
 		}
 
 		By("Creating a policy calculator with the required policy updates")
@@ -746,7 +746,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[0], []string{"__PROFILE__|__PROFILE__.kns.ns2|allow|-"})
+		expectPolicies(before[0], []string{"__PROFILE__|pro:kns.ns2|allow|-"})
 
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
 		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -761,7 +761,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[1], []string{"__PROFILE__|__PROFILE__.kns.ns1|allow|-"})
+		expectPolicies(before[1], []string{"__PROFILE__|pro:kns.ns1|allow|-"})
 
 		Expect(before[2].DocCount).To(BeEquivalentTo(1))
 		Expect(before[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -776,7 +776,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "deny"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[2], []string{"default|ns1/default.defaultdeny|deny|-1"})
+		expectPolicies(before[2], []string{"default|np:ns1/default.defaultdeny|deny|-1"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(2))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -791,7 +791,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[0], []string{"__PROFILE__|__PROFILE__.kns.ns2|allow|-"})
+		expectPolicies(after[0], []string{"__PROFILE__|pro:kns.ns2|allow|-"})
 
 		Expect(after[1].DocCount).To(BeEquivalentTo(2))
 		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -806,7 +806,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|-"})
+		expectPolicies(after[1], []string{"default|np:ns1/default.egress-allow|allow|-"})
 	})
 
 	It("handles flows with denied source previewing allow policy with flows before deny policy was added - recalculate before flows", func() {
@@ -825,9 +825,9 @@ var _ = Describe("Test handling of flow splitting", func() {
 		By("Creating a client with a mocked out search results with all allow actions")
 		flows := []v1.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|ns1/default.defaultdeny|deny|-1"),
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|pro:kns.ns2|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|pro:kns.ns1|allow"),
+			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|np:ns1/default.defaultdeny|deny|-1"),
 		}
 
 		By("Creating a policy calculator with the required policy updates")
@@ -930,7 +930,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "deny"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(before[0], []string{"default|ns1/default.defaultdeny|deny|-1"})
+		expectPolicies(before[0], []string{"default|np:ns1/default.defaultdeny|deny|-1"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(2))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -945,7 +945,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[0], []string{"__PROFILE__|__PROFILE__.kns.ns2|allow|-"})
+		expectPolicies(after[0], []string{"__PROFILE__|pro:kns.ns2|allow|-"})
 
 		Expect(after[1].DocCount).To(BeEquivalentTo(2))
 		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -960,7 +960,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|-"})
+		expectPolicies(after[1], []string{"default|np:ns1/default.egress-allow|allow|-"})
 	})
 
 	It("handles global allowed flows with a CIDR match while previewing a deletion for a global allow policy", func() {
@@ -977,7 +977,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 		By("Creating a client with a mocked out search results with all allow actions")
 		flows := []v1.L3Flow{
 			// before: allow/allow    after: allow/allow
-			flow("dst", "allow", "tcp", wepd("destination", "destinationNamespace", 1), wepd("source", "sourceNamespace", 3), "0|allow-flow|sourceNamespace/allow-flow.cidr-match|allow|0"),
+			flow("dst", "allow", "tcp", wepd("destination", "destinationNamespace", 1), wepd("source", "sourceNamespace", 3), "0|allow-flow|np:sourceNamespace/allow-flow.cidr-match|allow|0"),
 		}
 
 		By("Creating a policy calculator with the required policy updates")
@@ -1125,7 +1125,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: false},
 		}))
-		expectPolicies(before[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
+		expectPolicies(before[0], []string{"allow-flow|np:sourceNamespace/allow-flow.cidr-match|allow|-"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(1))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -1140,7 +1140,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: false},
 		}))
-		expectPolicies(after[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
+		expectPolicies(after[0], []string{"allow-flow|np:sourceNamespace/allow-flow.cidr-match|allow|-"})
 	})
 })
 

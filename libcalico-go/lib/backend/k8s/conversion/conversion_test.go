@@ -1772,7 +1772,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2243,7 +2243,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2277,7 +2277,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		})
 
 		By("generating the correct name and namespace", func() {
-			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.testPolicy"))
+			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("testPolicy"))
 			Expect(pol.Key.(model.ResourceKey).Namespace).To(Equal("default"))
 		})
 
@@ -2346,9 +2346,9 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		By("parsing the policy", func() {
 			pol, err = c.K8sNetworkPolicyToCalico(&np)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 			Expect(pol.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("test.policy"))
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Namespace).To(Equal("default"))
 			Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		})
@@ -2418,7 +2418,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2502,9 +2502,9 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		By("parsing the policy", func() {
 			pol, err = c.K8sNetworkPolicyToCalico(&np)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 			Expect(pol.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("test.policy"))
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Namespace).To(Equal("default"))
 			Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		})
@@ -2557,7 +2557,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2606,7 +2606,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2653,7 +2653,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2701,7 +2701,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2758,7 +2758,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2801,7 +2801,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2846,7 +2846,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2896,7 +2896,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2943,7 +2943,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -2993,7 +2993,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3041,7 +3041,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3089,7 +3089,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3153,7 +3153,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		eightyName, _ := numorstring.PortFromString("80")
 		ninetyName, _ := numorstring.PortFromString("90")
@@ -3283,7 +3283,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3355,7 +3355,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3401,7 +3401,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3458,9 +3458,9 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		By("parsing the policy", func() {
 			pol, err = c.K8sNetworkPolicyToCalico(&np)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 			Expect(pol.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("test.policy"))
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Namespace).To(Equal("default"))
 			Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		})
@@ -3538,9 +3538,9 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		By("parsing the policy", func() {
 			pol, err = c.K8sNetworkPolicyToCalico(&np)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 			Expect(pol.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("knp.default.test.policy"))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Name).To(Equal("test.policy"))
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Namespace).To(Equal("default"))
 			Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		})
@@ -3592,7 +3592,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3632,7 +3632,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
@@ -3676,7 +3676,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
-		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("test.policy"))
 
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))

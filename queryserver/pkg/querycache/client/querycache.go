@@ -56,6 +56,9 @@ func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, st
 		npConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewNetworkPolicyUpdateProcessor(v3.KindNetworkPolicy),
 		),
+		knpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+			updateprocessors.NewNetworkPolicyUpdateProcessor(model.KindKubernetesNetworkPolicy),
+		),
 		sgnpConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
 		),
@@ -156,6 +159,7 @@ type cachedQuery struct {
 	anpConverter  dispatcherv1v3.Converter
 	banpConverter dispatcherv1v3.Converter
 	npConverter   dispatcherv1v3.Converter
+	knpConverter  dispatcherv1v3.Converter
 
 	sgnpConverter   dispatcherv1v3.Converter
 	snpConverter    dispatcherv1v3.Converter
@@ -284,10 +288,9 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 	var err error
 	selector := req.Selector
 	if req.Policy != nil {
-		selector, err = c.getPolicySelector(
-			req.Policy, req.RuleDirection, req.RuleIndex, req.RuleEntity, req.RuleNegatedSelector,
-		)
+		selector, err = c.getPolicySelector(req.Policy, req.RuleDirection, req.RuleIndex, req.RuleEntity, req.RuleNegatedSelector)
 		if err != nil {
+			log.WithError(err).WithField("policy", req.Policy).Error("failed to get policy selector")
 			// When the policy requested from Manager can't be found, we should still return
 			// a 200 OK response with an empty list of items instead of a 400 Bad Request.
 			// It is still a valid request but we just can't find anything requested.
@@ -412,9 +415,10 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 	return e
 }
 
-func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
+func (c *cachedQuery) runQueryPolicies(_ context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
 	// If a policy was specified, just return that (if it exists).
 	if req.Policy != nil {
+		req.Policy = translateLegacyPolicyQuery(req.Policy)
 		p := c.policies.GetPolicy(req.Policy)
 		if p == nil {
 			return nil, errors.ErrorResourceDoesNotExist{
@@ -551,6 +555,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
+// apiPolicyToQueryPolicy converts an api.Policy as stored in the querysever cache to a Policy appropriate for
+// returning in a query response.
 func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelector map[string]bool) (*Policy, error) {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
@@ -561,7 +567,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		Index:                  idx,
 		Name:                   res.GetObjectMeta().GetName(),
 		Namespace:              res.GetObjectMeta().GetNamespace(),
-		Kind:                   res.GetObjectKind().GroupVersionKind().Kind,
+		Kind:                   p.Kind(),
 		Tier:                   p.GetTier(),
 		Annotations:            p.GetAnnotations(),
 		NumHostEndpoints:       ep.NumHostEndpoints,
@@ -637,7 +643,7 @@ func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection
 	return r
 }
 
-func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*QueryNodesResp, error) {
+func (c *cachedQuery) runQueryNodes(_ context.Context, req QueryNodesReq) (*QueryNodesResp, error) {
 	// If a policy was specified, just return that (if it exists).
 	if req.Node != nil {
 		n := c.nodes.GetNode(req.Node.(model.ResourceKey).Name)
@@ -867,6 +873,7 @@ func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []
 	results := set.New[model.Key]()
 	for _, p := range policies {
 		if filterIn != nil && !filterIn.Contains(p) {
+			log.WithField("Policy", p).Debug("Filtering out policy not in filterIn set")
 			continue
 		}
 		results.Add(p)
@@ -898,6 +905,7 @@ func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string,
 }
 
 func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index int, entity string, negatedSelector bool) (string, error) {
+	key = translateLegacyPolicyQuery(key)
 	p := c.policies.GetPolicy(key)
 	if p == nil {
 		return "", errors.ErrorResourceDoesNotExist{
@@ -906,8 +914,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 	}
 	pr := p.GetResource()
 
-	// We need to convert the policy to the v1 equivalent so that we get the correct converted
-	// selector.
+	// We need to convert the policy to the v1 equivalent so that we get the correct converted selector.
 	var converted *bapi.Update
 	switch pr.GetObjectKind().GroupVersionKind().Kind {
 	case v3.KindNetworkPolicy:
@@ -944,6 +951,30 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		})
 	case v3.KindStagedKubernetesNetworkPolicy:
 		converted = c.sk8snpConverter.ConvertV3ToV1(&bapi.Update{
+			UpdateType: bapi.UpdateTypeKVNew,
+			KVPair: model.KVPair{
+				Key:   key,
+				Value: pr,
+			},
+		})
+	case model.KindKubernetesNetworkPolicy:
+		converted = c.knpConverter.ConvertV3ToV1(&bapi.Update{
+			UpdateType: bapi.UpdateTypeKVNew,
+			KVPair: model.KVPair{
+				Key:   key,
+				Value: pr,
+			},
+		})
+	case model.KindKubernetesAdminNetworkPolicy:
+		converted = c.anpConverter.ConvertV3ToV1(&bapi.Update{
+			UpdateType: bapi.UpdateTypeKVNew,
+			KVPair: model.KVPair{
+				Key:   key,
+				Value: pr,
+			},
+		})
+	case model.KindKubernetesBaselineAdminNetworkPolicy:
+		converted = c.banpConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
 			KVPair: model.KVPair{
 				Key:   key,
@@ -997,6 +1028,35 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		}
 	}
 	return "", fmt.Errorf("rule entity not valid: %s", entity)
+}
+
+// translateLegacyPolicyQuery translates legacy staged policy names into the new format. This is a
+// best effort attempt to support older clients that may still be using queries with the legacy
+// staged policy name format (e.g., staged:foo).
+func translateLegacyPolicyQuery(k model.Key) model.Key {
+	p, ok := k.(model.ResourceKey)
+	if !ok {
+		// This is not a ResourceKey, so we can't translate it.	Just return it unchanged
+		// and let the caller handle any errors.
+		log.Warnf("Cannot translate legacy policy query for non-ResourceKey: %T", k)
+		return k
+	}
+
+	// We translate legacy staged policy names into the new format, and leave other names unchanged.
+	if n, ok := strings.CutPrefix(p.Name, "staged:knp.default."); ok {
+		p.Name = n
+		p.Kind = v3.KindStagedKubernetesNetworkPolicy
+	} else if n, ok := strings.CutPrefix(p.Name, "staged:"); ok {
+		p.Name = n
+		p.Kind = v3.KindStagedNetworkPolicy
+		if p.Namespace == "" {
+			p.Kind = v3.KindStagedGlobalNetworkPolicy
+		}
+	} else if n, ok := strings.CutPrefix(p.Name, "knp.default."); ok {
+		p.Name = n
+		p.Kind = model.KindKubernetesNetworkPolicy
+	}
+	return p
 }
 
 func getPageFromToIdx(p *Page, numItems int) (int, int, error) {
@@ -1053,7 +1113,7 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		{
 			// Convert the KubernetesNetworkPolicy to NP.
 			Kind:      model.KindKubernetesNetworkPolicy,
-			Converter: cq.npConverter,
+			Converter: cq.knpConverter,
 		},
 		{
 			// We need to convert the NP for use with the policy sorter, and to get the

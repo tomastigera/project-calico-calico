@@ -18,12 +18,10 @@ import (
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/labelhandler"
 )
 
-var (
-	matchTypeToDelta = map[labelhandler.MatchType]int{
-		labelhandler.MatchStarted: 1,
-		labelhandler.MatchStopped: -1,
-	}
-)
+var matchTypeToDelta = map[labelhandler.MatchType]int{
+	labelhandler.MatchStarted: 1,
+	labelhandler.MatchStopped: -1,
+}
 
 // EndpointsCache implements the cache interface for both WorkloadEndpoint and HostEndpoint resource types collectively.
 // This interface consists of both the query and the event update interface.
@@ -234,9 +232,21 @@ func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, p
 	}
 	prk := polKey.(model.ResourceKey)
 	switch prk.Kind {
-	case apiv3.KindGlobalNetworkPolicy:
+	case apiv3.KindGlobalNetworkPolicy,
+		apiv3.KindStagedGlobalNetworkPolicy,
+		model.KindKubernetesAdminNetworkPolicy,
+		model.KindKubernetesBaselineAdminNetworkPolicy:
+		// For historical reasons we lump staged and Kubernetes policies in with global network policies.
+		// TODO: Separate these kinds out into their own counters.
+		// https://tigera.atlassian.net/browse/CORE-12225
 		epd.policies.NumGlobalNetworkPolicies += matchTypeToDelta[matchType]
-	case apiv3.KindNetworkPolicy:
+	case apiv3.KindNetworkPolicy,
+		apiv3.KindStagedNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		model.KindKubernetesNetworkPolicy:
+		// For historical reasons we lump staged and Kubernetes NetworkPolicies in with Calico NetworkPolicies.
+		// TODO: Separate these kinds out into their own counters.
+		// https://tigera.atlassian.net/browse/CORE-12225
 		epd.policies.NumNetworkPolicies += matchTypeToDelta[matchType]
 	default:
 		log.WithField("key", prk).Error("Unexpected resource in event type, expecting a v3 policy type")
@@ -293,7 +303,6 @@ func (c *endpointsCache) getAllEndpoints() []*endpointData {
 		for _, ep := range epcache.endpoints {
 			endpointsResult = append(endpointsResult, ep)
 		}
-
 	}
 
 	// add hostendpoints

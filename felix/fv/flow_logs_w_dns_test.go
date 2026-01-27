@@ -271,7 +271,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|0")
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|gnp:tier2.ep1-1-allow-netset2|allow|0")
 					if len(flowLog.FlowEnforcedPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
@@ -307,7 +307,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|deny|-1")
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|gnp:tier2.ep1-1-allow-netset2|deny|-1")
 					if len(flowLog.FlowEnforcedPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
@@ -329,7 +329,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowEnforcedPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|tier2.ep1-1-allow-netset2|allow|1")
+					delete(flowLog.FlowEnforcedPolicySet, "0|tier2|gnp:tier2.ep1-1-allow-netset2|allow|1")
 					if len(flowLog.FlowEnforcedPolicySet) != 0 {
 						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowEnforcedPolicySet))
 					}

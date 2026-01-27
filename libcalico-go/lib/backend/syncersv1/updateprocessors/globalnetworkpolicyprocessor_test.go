@@ -15,8 +15,6 @@
 package updateprocessors_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -352,7 +350,7 @@ var (
 	expectedModel1 = []*model.KVPair{
 		{
 			Key: model.PolicyKey{
-				Name: fmt.Sprintf("%vtest.policy", names.K8sCNPAdminTierNamePrefix),
+				Name: "test.policy",
 				Kind: model.KindKubernetesClusterNetworkPolicy,
 			},
 			Value: &model.Policy{
@@ -407,7 +405,7 @@ var expectedModel2 = []*model.KVPair{
 	{
 		Key: model.PolicyKey{
 			Kind: model.KindKubernetesClusterNetworkPolicy,
-			Name: fmt.Sprintf("%vtest.policy", names.K8sCNPBaselineTierNamePrefix),
+			Name: "test.policy",
 		},
 		Value: &model.Policy{
 			Tier:           names.KubeBaselineTierName,

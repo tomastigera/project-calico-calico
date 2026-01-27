@@ -177,12 +177,12 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 
 // Define network policies and the corresponding expected v1 KVPairs.
 //
-// np1 is a NetworkPolicy with a single Egress rule, which contains ports only,
+// knp1 is a NetworkPolicy with a single Egress rule, which contains ports only,
 // and no selectors.
 var (
 	protocol = kapiv1.ProtocolTCP
 	port     = intstr.FromInt(80)
-	np1      = networkingv1.NetworkPolicy{
+	knp1     = networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test.policy",
 			Namespace: "default",
@@ -205,15 +205,15 @@ var (
 	}
 )
 
-// expected1 is the expected v1 KVPair representation of np1 from above.
+// expectedKNP1 is the expected v1 KVPair representation of np1 from above.
 var (
-	tcp       = numorstring.ProtocolFromStringV1("tcp")
-	expected1 = []*model.KVPair{
+	tcp          = numorstring.ProtocolFromStringV1("tcp")
+	expectedKNP1 = []*model.KVPair{
 		{
 			Key: model.PolicyKey{
-				Name:      "knp.default.test.policy",
+				Name:      "test.policy",
 				Namespace: "default",
-				Kind:      apiv3.KindNetworkPolicy,
+				Kind:      model.KindKubernetesNetworkPolicy,
 			},
 			Value: &model.Policy{
 				Tier:           "default",
@@ -236,8 +236,8 @@ var (
 	}
 )
 
-// np2 is a NetworkPolicy with a single Ingress rule which allows from all namespaces.
-var np2 = networkingv1.NetworkPolicy{
+// knp2 is a NetworkPolicy with a single Ingress rule which allows from all namespaces.
+var knp2 = networkingv1.NetworkPolicy{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "test.policy",
 		Namespace: "default",
@@ -258,12 +258,12 @@ var np2 = networkingv1.NetworkPolicy{
 	},
 }
 
-var expected2 = []*model.KVPair{
+var expectedKNP2 = []*model.KVPair{
 	{
 		Key: model.PolicyKey{
-			Name:      "knp.default.test.policy",
+			Name:      "test.policy",
 			Namespace: "default",
-			Kind:      apiv3.KindNetworkPolicy,
+			Kind:      model.KindKubernetesNetworkPolicy,
 		},
 		Value: &model.Policy{
 			Tier:           "default",
@@ -285,8 +285,8 @@ var expected2 = []*model.KVPair{
 	},
 }
 
-// np3 is a NetworkPolicy set to allow to a selection of security groups.
-var np3 = networkingv1.NetworkPolicy{
+// knp3 is a NetworkPolicy set to allow to a selection of security groups.
+var knp3 = networkingv1.NetworkPolicy{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "test.policy",
 		Namespace: "default",
@@ -314,18 +314,18 @@ var np3 = networkingv1.NetworkPolicy{
 	},
 }
 
-// expected3 is the expected v1 KVPair representation of np3 from above.
+// expectedKNP3 is the expected v1 KVPair representation of np3 from above.
 var (
 	originalSelector = "projectcalico.org/orchestrator == 'k8s' && sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
 	sgSelector       = "sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
 	nsSelector       = "projectcalico.org/namespace == 'default'"
 	expectedSelector = fmt.Sprintf("(%s) && (%s) || (%s)", nsSelector, originalSelector, sgSelector)
-	expected3        = []*model.KVPair{
+	expectedKNP3     = []*model.KVPair{
 		{
 			Key: model.PolicyKey{
-				Name:      "knp.default.test.policy",
+				Name:      "test.policy",
 				Namespace: "default",
-				Kind:      apiv3.KindNetworkPolicy,
+				Kind:      model.KindKubernetesNetworkPolicy,
 			},
 			Value: &model.Policy{
 				Namespace:      "default",
@@ -348,8 +348,8 @@ var (
 	}
 )
 
-var _ = Describe("Test the NetworkPolicy update processor + conversion", func() {
-	up := updateprocessors.NewNetworkPolicyUpdateProcessor(apiv3.KindNetworkPolicy)
+var _ = Describe("Test KubernetesNetworkPolicy update processor + conversion", func() {
+	up := updateprocessors.NewNetworkPolicyUpdateProcessor(model.KindKubernetesNetworkPolicy)
 
 	DescribeTable("NetworkPolicy update processor + conversion tests",
 		func(np networkingv1.NetworkPolicy, expected []*model.KVPair) {
@@ -366,9 +366,9 @@ var _ = Describe("Test the NetworkPolicy update processor + conversion", func() 
 			Expect(out).To(Equal(expected))
 		},
 
-		Entry("should handle a NetworkPolicy with no rule selectors", np1, expected1),
-		Entry("should handle a NetworkPolicy with an empty ns selector", np2, expected2),
-		Entry("should handle a NetworkPolicy with annotation overrides", np3, expected3),
+		Entry("should handle a NetworkPolicy with no rule selectors", knp1, expectedKNP1),
+		Entry("should handle a NetworkPolicy with an empty ns selector", knp2, expectedKNP2),
+		Entry("should handle a NetworkPolicy with annotation overrides", knp3, expectedKNP3),
 	)
 })
 

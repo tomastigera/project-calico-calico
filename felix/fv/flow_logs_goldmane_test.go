@@ -375,7 +375,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -398,7 +398,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -422,7 +422,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -437,7 +437,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default/default.np-1|deny|0": {},
+						"0|default|np:default/default.np-1|deny|0": {},
 					},
 				})
 
@@ -454,7 +454,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|gnp-1|allow|0": {},
+						"0|default|gnp:gnp-1|allow|0": {},
 					},
 				})
 
@@ -470,7 +470,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -997,7 +997,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 						DstService: flowlog.FlowService{Namespace: flowlog.FieldNotIncluded, Name: flowlog.FieldNotIncluded, PortName: flowlog.FieldNotIncluded, PortNum: 0},
 						Action:     "allow", Reporter: "src",
 					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|allow-all|allow|0": {}},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|gnp:allow-all|allow|0": {}},
 				})
 			}
 

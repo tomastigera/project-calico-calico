@@ -63,8 +63,6 @@ var (
 		" or " + QueryPolicy + ", or specify one of " + QueryPolicy + " or " + QueryUnprotected)
 	ErrorInvalidEndpointName = errors.New("invalid query: the endpoint name is not valid; it should be of the format " +
 		"<HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
-	ErrorInvalidPolicyName = errors.New("invalid query: the policy name is not valid; it should be of the format " +
-		"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
 	ErrorInvalidNetworkSetName = errors.New("invalid query: the networkset name is not valid; it should be of the format " +
 		"<GlobalNetworkSet name> or <namespace>/<NetworkSet name>")
 	ErrorInvalidEndpointURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
@@ -76,7 +74,8 @@ var (
 )
 
 type Query interface {
-	Policy(w http.ResponseWriter, r *http.Request)
+	GetPolicy(w http.ResponseWriter, r *http.Request)
+	LegacyPolicy(w http.ResponseWriter, r *http.Request)
 	Policies(w http.ResponseWriter, r *http.Request)
 	Node(w http.ResponseWriter, r *http.Request)
 	Nodes(w http.ResponseWriter, r *http.Request)
@@ -322,7 +321,31 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	}, false)
 }
 
-func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
+// GetPolicy handles GET requests to /<kind>/<namespace>/<name> api to get a specific policy.
+func (q *query) GetPolicy(w http.ResponseWriter, r *http.Request) {
+	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
+	if err != nil {
+		q.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	key, err := getPolicyKeyFromIDString(r.URL.Path)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	log.WithField("policy", key).Info("Getting policy by kind/namespace/name")
+
+	q.runQuery(w, r, client.QueryPoliciesReq{
+		Policy:      key,
+		Permissions: permissions,
+	}, true)
+}
+
+// LegacyPolicy handles GET requests to /policies/{policy name} api for backward compatibility. Most callers
+// should use GetPolicy instead.
+func (q *query) LegacyPolicy(w http.ResponseWriter, r *http.Request) {
 	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
 	if err != nil {
 		q.writeError(w, err, http.StatusInternalServerError)
@@ -334,7 +357,7 @@ func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 		q.writeError(w, ErrorInvalidPolicyURL, http.StatusBadRequest)
 		return
 	}
-	policy, ok := getPolicyKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
+	policy, ok := getPolicyKeyFromName(urlParts[numURLSegmentsWithName-1])
 	if !ok {
 		q.writeError(w, ErrorInvalidPolicyURL, http.StatusBadRequest)
 		return
@@ -438,9 +461,10 @@ func getEndpoints(r *http.Request) ([]model.Key, error) {
 func getPolicies(pols []string) ([]model.Key, error) {
 	rpols := make([]model.Key, 0, len(pols))
 	for _, pol := range pols {
-		rpol, ok := getPolicyKeyFromCombinedName(pol)
-		if !ok {
-			return nil, ErrorInvalidPolicyName
+		// TODO: support legacy policy name format for backward compatibility?
+		rpol, err := getPolicyKeyFromIDString(pol)
+		if err != nil {
+			return nil, err
 		}
 		rpols = append(rpols, rpol)
 	}
@@ -473,23 +497,83 @@ func getNameAndNamespaceFromCombinedName(combined string) ([]string, bool) {
 	return parts, true
 }
 
-func getPolicyKeyFromCombinedName(combined string) (model.Key, bool) {
+func getPolicyKeyFromIDString(combined string) (model.Key, error) {
+	// Trim leading slash if present.
+	combined = strings.TrimPrefix(combined, "/")
+
 	logCxt := log.WithField("name", combined)
 	logCxt.Info("Extracting policy key from combined name")
-	parts, ok := getNameAndNamespaceFromCombinedName(combined)
-	if !ok {
-		logCxt.Info("Unable to extract name or namespace and name")
+
+	// Split the combined name into parts. This is either:
+	// - kind/name
+	// - kind/namespace/name
+	parts := strings.Split(combined, "/")
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("invalid policy name format, expected kind/name or kind/namespace/name")
+	}
+
+	kind, err := parseKind(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine kind for request: %s", err)
+	}
+
+	switch len(parts) {
+	case 2:
+		return model.ResourceKey{
+			Kind: kind,
+			Name: parts[1],
+		}, nil
+	case 3:
+		return model.ResourceKey{
+			Kind:      kind,
+			Namespace: parts[1],
+			Name:      parts[2],
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid policy name format, expected kind/name or kind/namespace/name")
+}
+
+// parseKind converts a string representation of a policy kind as seen on a URL to the corresponding model.Key kind value.
+func parseKind(kindStr string) (string, error) {
+	switch strings.ToLower(kindStr) {
+	case "networkpolicy":
+		return apiv3.KindNetworkPolicy, nil
+	case "globalnetworkpolicy":
+		return apiv3.KindGlobalNetworkPolicy, nil
+	case "kubernetesnetworkpolicy":
+		return model.KindKubernetesNetworkPolicy, nil
+	case "stagednetworkpolicy":
+		return apiv3.KindStagedNetworkPolicy, nil
+	case "stagedglobalnetworkpolicy":
+		return apiv3.KindStagedGlobalNetworkPolicy, nil
+	case "stagedkubernetesnetworkpolicy":
+		return apiv3.KindStagedKubernetesNetworkPolicy, nil
+	case "adminnetworkpolicy":
+		return model.KindKubernetesAdminNetworkPolicy, nil
+	case "baselineadminnetworkpolicy":
+		return model.KindKubernetesBaselineAdminNetworkPolicy, nil
+	default:
+		return "", fmt.Errorf("unknown policy kind: %s", kindStr)
+	}
+}
+
+// getPolicyKeyFromName extracts a policy key from a legacy name string.
+func getPolicyKeyFromName(combined string) (model.Key, bool) {
+	// Split the combined name into parts. This is either:
+	// - <name>
+	// - <namespace>/<name-with-prefix>
+	parts := strings.Split(combined, "/")
+	if len(parts) < 1 || len(parts) > 2 {
 		return nil, false
 	}
+
 	switch len(parts) {
 	case 1:
-		logCxt.Info("Returning GNP")
 		return model.ResourceKey{
 			Kind: apiv3.KindGlobalNetworkPolicy,
 			Name: parts[0],
 		}, true
 	case 2:
-		logCxt.Info("Returning NP")
 		return model.ResourceKey{
 			Kind:      apiv3.KindNetworkPolicy,
 			Namespace: parts[0],

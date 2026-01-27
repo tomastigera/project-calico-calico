@@ -529,7 +529,7 @@ func addPolicyToResponse(r *EndpointResponse, tier string, k model.ResourceKey, 
 			action = api.ActionDeny
 		}
 
-		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, staged, k.Name, k.Namespace, tier, ruleIdIndex)
+		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, k.Name, k.Namespace, k.Kind, tier, ruleIdIndex)
 		if err != nil {
 			log.WithError(err).Errorf("failed to create new policy hit")
 			continue

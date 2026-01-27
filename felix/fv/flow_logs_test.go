@@ -557,8 +557,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-							{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
+							{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; source %s; flow 1: %v", source.Name, err))
@@ -568,7 +568,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 							{}, // ""
 						})
 					if err != nil {
@@ -581,8 +581,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					flowlogs.NoService, 3, 1,
 					[]flowlogs.ExpectedPolicy{
-						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp-1|allow|0"}},
+						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
+						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp:gnp-1|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow hep: %v", err))
@@ -595,7 +595,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -604,7 +604,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -617,8 +617,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-							{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
+							{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; source %s; flow 1: %v", source.Name, err))
@@ -628,7 +628,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 							{},
 						})
 					if err != nil {
@@ -641,8 +641,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					flowlogs.NoService, 1, 3,
 					[]flowlogs.ExpectedPolicy{
-						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp-1|allow|0"}},
+						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
+						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp:gnp-1|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; hep: %v", err))
@@ -655,7 +655,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -664,7 +664,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -676,7 +676,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					"wep default - wl-host2-*", "",
 					flowlogs.NoService, 1, 24,
 					[]flowlogs.ExpectedPolicy{
-						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						{}, // ""
 					})
 				if err != nil {
@@ -688,7 +688,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					flowlogs.NoService, 1, 12,
 					[]flowlogs.ExpectedPolicy{
 						{}, // ""
-						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+						{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
@@ -697,8 +697,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				var policies []flowlogs.ExpectedPolicy
 
 				policies = []flowlogs.ExpectedPolicy{
-					{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
-					{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp-1|allow|0"}},
+					{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
+					{Reporter: "dst", Action: "allow", EnforcedPolicies: []string{"0|default|gnp:gnp-1|allow|0"}},
 				}
 
 				err = flowTester.CheckFlow(
@@ -716,7 +716,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				} else {
 					err = flowTester.CheckFlow(
@@ -725,7 +725,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
+							{Reporter: "src", Action: "allow", EnforcedPolicies: []string{"0|__PROFILE__|pro:default|allow|0"}},
 						})
 				}
 				if err != nil {
@@ -742,7 +742,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 3, 1,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|default/default.np-1|deny|0"}},
+							{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|np:default/default.np-1|deny|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for denied; agg none: %v", err))
@@ -756,7 +756,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 						flowlogs.NoService, 1, 3,
 						[]flowlogs.ExpectedPolicy{
 							{}, // ""
-							{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|default/default.np-1|deny|0"}},
+							{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|np:default/default.np-1|deny|0"}},
 						})
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Error agg for denied; agg source port: %v", err))
@@ -769,7 +769,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					flowlogs.NoService, 1, 12,
 					[]flowlogs.ExpectedPolicy{
 						{}, // ""
-						{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|default/default.np-1|deny|0"}},
+						{Reporter: "dst", Action: "deny", EnforcedPolicies: []string{"0|default|np:default/default.np-1|deny|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
@@ -1426,13 +1426,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						Reporter:   "src,fwd",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|allow|0": {},
+						"0|tier1|gnp:tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -1462,13 +1462,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						Reporter:   "dst,fwd",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp-ep2-1-allow-ingress|allow|0": {},
+						"0|tier2|gnp:tier2.gnp-ep2-1-allow-ingress|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp-ep2-1-allow-ingress|allow|0": {},
+						"0|tier2|gnp:tier2.gnp-ep2-1-allow-ingress|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|allow|1": {},
+						"0|tier1|gnp:tier1.forward-policy1|allow|1": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -1551,13 +1551,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						Reporter:   "src,fwd",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|allow|0": {},
+						"0|tier1|gnp:tier1.forward-policy1|allow|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -1587,10 +1587,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with Forward polic
 						Reporter:   "fwd",
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowTransitPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|tier1.forward-policy1|deny|0": {},
+						"0|tier1|gnp:tier1.forward-policy1|deny|0": {},
 					},
 					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 						FlowReportedStats: flowlog.FlowReportedStats{
@@ -1940,7 +1940,7 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "fwd",
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+								"0|tier1|gnp:tier1.default-allow-prednat-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -1959,13 +1959,13 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "dst,fwd",
 							},
 							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowPendingPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+								"0|tier1|gnp:tier1.default-allow-prednat-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -1986,7 +1986,7 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "fwd",
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+								"0|tier1|gnp:tier1.default-allow-prednat-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2005,13 +2005,13 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "dst,fwd",
 							},
 							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowPendingPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.default-allow-prednat-policy|allow|0": {},
+								"0|tier1|gnp:tier1.default-allow-prednat-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2088,7 +2088,7 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "fwd",
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.prednat-deny-service-port-81-policy|allow|0": {},
+								"0|tier1|gnp:tier1.prednat-deny-service-port-81-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2107,13 +2107,13 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "dst,fwd",
 							},
 							FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowPendingPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.prednat-deny-service-port-81-policy|allow|0": {},
+								"0|tier1|gnp:tier1.prednat-deny-service-port-81-policy|allow|0": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2134,7 +2134,7 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "fwd",
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.prednat-deny-service-port-81-policy|deny|1": {},
+								"0|tier1|gnp:tier1.prednat-deny-service-port-81-policy|deny|1": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2153,10 +2153,10 @@ var _ = infrastructure.DatastoreDescribe(
 								Reporter:   "fwd",
 							},
 							FlowPendingPolicySet: flowlog.FlowPolicySet{
-								"0|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+								"0|__PROFILE__|pro:kns.default|allow|0": {},
 							},
 							FlowTransitPolicySet: flowlog.FlowPolicySet{
-								"0|tier1|tier1.prednat-deny-service-port-81-policy|deny|1": {},
+								"0|tier1|gnp:tier1.prednat-deny-service-port-81-policy|deny|1": {},
 							},
 							FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
 								FlowReportedStats: flowlog.FlowReportedStats{
@@ -2379,7 +2379,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log networkset precede
 						DstService: flowlog.FlowService{Namespace: flowlog.FieldNotIncluded, Name: flowlog.FieldNotIncluded, PortName: flowlog.FieldNotIncluded, PortNum: 0},
 						Action:     "allow", Reporter: "src",
 					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|allow-all|allow|0": {}},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|gnp:allow-all|allow|0": {}},
 				})
 			}
 

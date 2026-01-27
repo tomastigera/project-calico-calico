@@ -11,12 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
-	knpPrefix = "knp"
-
 	// Backward compatible - handle mixed entries of policy strings,
 	// old format "index|tier|name|action" (count=4) and
 	// new format "index|tier|name|aciton|ruleidindex" (count=5).
@@ -34,7 +36,7 @@ const (
 // implementation is a representation of a log that is not changing. Certain Set actions have bee added, however they
 // return a changed copy of the underlying policy hit to maintain the immutable properties.
 type PolicyHit interface {
-	// Action returns the action for this policy hit. See AllActions() for a list of possible values that could be returned.
+	// Action returns the action for this policy hit.
 	Action() Action
 
 	// Count returns the number of flow logs that this policy hit was applied to.
@@ -72,12 +74,6 @@ type PolicyHit interface {
 	// policy is not namespaced.
 	Namespace() string
 
-	// SetAction sets the action on a copy of the underlying PolicyHit and returns it.
-	SetAction(Action) PolicyHit
-
-	// SetCount sets the count on a copy of the underlying PolicyHit and returns it.
-	SetCount(int64) PolicyHit
-
 	// SetIndex sets the index on a copy of the underlying PolicyHit and returns it.
 	SetIndex(int) PolicyHit
 
@@ -95,6 +91,15 @@ type PolicyHit interface {
 
 // PolicyHitKey identifies a policy.
 type policyHit struct {
+	// The policy name.
+	name string
+
+	// The policy namespace (if namespaced).
+	namespace string
+
+	// The policy kind.
+	kind string
+
 	// The action for this policy hit.
 	action Action
 
@@ -103,21 +108,6 @@ type policyHit struct {
 
 	// The index for this hit.
 	index int
-
-	// Whether or not this is a kubernetes policy.
-	isKNP bool
-
-	// Whether or not this is a profile.
-	isProfile bool
-
-	// Whether or not this is a staged policy.
-	isStaged bool
-
-	// The policy name. This is the raw policy name, and will not contain tier or knp prefixes.
-	name string
-
-	// The policy namespace (if namespaced).
-	namespace string
 
 	// The tier name (or __PROFILE__ for profile match)
 	tier string
@@ -128,31 +118,10 @@ type policyHit struct {
 
 // Kind returns the kind of policy (NetworkPolicy, GlobalNetworkPolicy, etc).
 func (p policyHit) Kind() string {
-	if p.isProfile {
-		return v3.KindProfile
-	}
-
-	if p.isKNP {
-		return model.KindKubernetesNetworkPolicy
-	}
-
-	if p.namespace != "" {
-		// Namespaced Calico Network Policy.
-		if p.isStaged {
-			return v3.KindStagedNetworkPolicy
-		}
-		return v3.KindNetworkPolicy
-	}
-
-	// Global Network Policy. This includes AdminNetworkPolicy and BaselineAdminNetworkPolicy.
-	if p.isStaged {
-		return v3.KindStagedGlobalNetworkPolicy
-	}
-	return v3.KindGlobalNetworkPolicy
+	return p.kind
 }
 
-// Action returns the action for this policy hit. See AllActions() for a list of possible values
-// that could be returned.
+// Action returns the action for this policy hit.
 func (p policyHit) Action() Action {
 	return p.action
 }
@@ -162,54 +131,24 @@ func (p policyHit) Count() int64 {
 	return p.count
 }
 
-// legacyStagedPrefix is the prefix used in flow logs to indicate a staged policy.
-// This is kept because flow logs still include this prefix for staged policies, even though it is no longer
-// used as part of the policy name.
-//
-// TODO: Remove this when we update the flow log format to include Kind explicitly.
-var legacyStagedPrefix = "staged:"
-
-// FlowLogName returns the name as it would appear in the flow log. This is unique for a specific
-// policy instance.
-// -  <tier>.<name>
-// -  <namespace>/<tier>.<name>
-// -  <namespace>/<tier>.staged:<name>
-// -  <namespace>/knp.default.<name>
-// -  <namespace>/staged:knp.default.<name>
-// -  <namespace>/staged:knp.default.<name>
-// -  __PROFILE__.kns.<namespace>
-//
-// See policy_lookup_cache.go in Felix for the code that generates flow log strings. This
-// implementation should match that code.
+// FlowLogName returns the name part as it would appear in the flow log.
 func (p policyHit) FlowLogName() string {
-	name := p.name
+	// Use the same logic as calc.NewRuleID to generate the flow log policy name, ensuring consistency with
+	// how flow logs are generated in Felix.
+	rid := calc.NewRuleID(
+		p.kind,
+		p.tier,
+		p.name,
+		p.namespace,
+		-1,                    // ruleIndex is not part of flow log name
+		rules.RuleDirEgress,   // ruleDirection is not part of flow log name
+		rules.RuleActionAllow, // ruleAction is not part of flow log name
+	)
 
-	if p.isProfile {
-		// Profile.
-		// Format is __PROFILE__.kns.<namespace>
-		name = fmt.Sprintf("__PROFILE__.%s", name)
-	} else if p.isKNP {
-		name = fmt.Sprintf("knp.default.%s", name)
-		if p.isStaged {
-			// Staged Kubernetes NetworkPolicy.
-			// Format is staged:knp.default:<name>
-			name = fmt.Sprintf("%s%s", legacyStagedPrefix, name)
-		}
-	} else {
-		if p.isStaged {
-			// Staged Calico NetworkPolicy or GlobalNetworkPolicy.
-			// Format is <tier>.staged:<name>
-			// TODO: Remove the <tier> and staged: prefix when flow log format is
-			// updated to include Kind.
-			name = fmt.Sprintf("%s.%s%s", p.tier, legacyStagedPrefix, name)
-		}
-	}
-
-	if len(p.namespace) > 0 {
-		name = fmt.Sprintf("%s/%s", p.namespace, name)
-	}
-
-	return name
+	// We only want the ID part of the flow log name, not the full RuleID.
+	policyStr := rid.GetFlowLogPolicyName()
+	splits := strings.Split(policyStr, "|")
+	return splits[1]
 }
 
 // Index returns the index for this hit.
@@ -219,17 +158,28 @@ func (p policyHit) Index() int {
 
 // IsKubernetes returns whether or not this policy is a staged policy.
 func (p policyHit) IsKubernetes() bool {
-	return p.isKNP
+	switch p.Kind() {
+	case v3.KindStagedKubernetesNetworkPolicy,
+		model.KindKubernetesNetworkPolicy:
+		return true
+	}
+	return false
 }
 
 // IsProfile returns whether or not this policy is a profile.
 func (p policyHit) IsProfile() bool {
-	return p.isProfile
+	return p.Kind() == v3.KindProfile
 }
 
 // IsStaged returns whether or not this policy is a staged policy.
 func (p policyHit) IsStaged() bool {
-	return p.isStaged
+	switch p.Kind() {
+	case v3.KindStagedKubernetesNetworkPolicy,
+		v3.KindStagedNetworkPolicy,
+		v3.KindStagedGlobalNetworkPolicy:
+		return true
+	}
+	return false
 }
 
 // Name returns the raw name of the policy without any tier or knp prefixes.
@@ -241,54 +191,6 @@ func (p policyHit) Name() string {
 // policy is not namespaced.
 func (p policyHit) Namespace() string {
 	return p.namespace
-}
-
-// parseName parses the given full policy name (which includes tier, knp, or kns prefixes and may
-// or may not contain the staged: pre / mid fix) and sets the appropriate policy hit fields
-// (isKNP, isProfile...).
-func (p *policyHit) parseName(name string) {
-	// First, check for the stagged prefix, which may show up in a couple of different places.
-	if strings.Contains(name, legacyStagedPrefix) {
-		p.isStaged = true
-
-		// Remove the staged prefix. Calico NPs are prefixed with "tier.staged:" whereas
-		// KNPs are prefixed with "staged:", so split on the legacyStagedPrefix to handle both cases.
-		splits := strings.Split(name, legacyStagedPrefix)
-		name = splits[1]
-		if strings.HasPrefix((splits[0]), p.tier) && !strings.HasPrefix(name, p.tier) {
-			// TODO: This is a best-effort hack to handle both new-style and old-style staged policy
-			// names in flow logs. In older versions of Calico Enterprise, users were forced to create
-			// policies of the form "tier.name", which showed up in flow logs as "tier.staged:name". In newer
-			// versions, users can create policies without the tier prefix, which would show up in flow logs
-			// as "tier.staged:name". To handle both cases, we check if the part before the staged prefix
-			// matches the tier, and if so, we re-add the tier prefix to the name. This is imperfect, and should be removed
-			// in the future once we no longer need to support old-style staged policy names.
-			name = fmt.Sprintf("%s.%s", p.tier, name)
-		}
-	}
-
-	if strings.HasPrefix(name, fmt.Sprintf("%s.default.", knpPrefix)) {
-		p.isKNP = true
-		name = strings.TrimPrefix(name, fmt.Sprintf("%s.default.", knpPrefix))
-	}
-
-	if strings.HasPrefix(name, "__PROFILE__.") {
-		p.isProfile = true
-		name = strings.TrimPrefix(name, "__PROFILE__.")
-	}
-	p.name = name
-}
-
-// SetAction sets the action on a copy of the underlying PolicyHit and returns it.
-func (p policyHit) SetAction(action Action) PolicyHit {
-	p.action = action
-	return &p
-}
-
-// SetCount sets the count on a copy of the underlying PolicyHit and returns it.
-func (p policyHit) SetCount(count int64) PolicyHit {
-	p.count = count
-	return &p
 }
 
 // SetIndex sets the index on a copy of the underlying PolicyHit and returns it.
@@ -330,37 +232,23 @@ func (p policyHit) Fields() logrus.Fields {
 		"action":      p.action,
 		"count":       p.count,
 		"index":       p.index,
-		"isKNP":       p.isKNP,
-		"isProfile":   p.isProfile,
-		"isStaged":    p.isStaged,
 		"name":        p.name,
 		"namespace":   p.namespace,
+		"kind":        p.kind,
 		"tier":        p.tier,
 		"ruleIdIndex": p.ruleIdIndex,
 	}
 }
 
 // NewPolicyHit creates and returns a new PolicyHit. This will mainly be used for PIP, where we
-// "generate" policy hit logsfor the user to see how their flows change with new policies.
+// "generate" policy hit logs for the user to see how their flows change with new policies.
 func NewPolicyHit(
 	action Action,
 	count int64,
 	index int,
-	isStaged bool,
-	name, namespace, tier string,
+	name, namespace, kind, tier string,
 	ruleIdIndex *int,
 ) (PolicyHit, error) {
-	logrus.WithFields(logrus.Fields{
-		"action":      action,
-		"count":       count,
-		"index":       index,
-		"isStaged":    isStaged,
-		"name":        name,
-		"namespace":   namespace,
-		"tier":        tier,
-		"ruleIdIndex": ruleIdIndex,
-	}).Warn("CASEY Creating new PolicyHit")
-
 	if action == ActionInvalid {
 		return nil, fmt.Errorf("a none empty Action must be provided")
 	}
@@ -375,21 +263,42 @@ func NewPolicyHit(
 	}
 
 	isProfile := tier == "__PROFILE__" || tier == ""
+	if isProfile && kind != v3.KindProfile {
+		return nil, fmt.Errorf("tier '__PROFILE__' can only be used with kind 'Profile'")
+	}
+
+	if err := ValidateKind(kind); err != nil {
+		return nil, err
+	}
 
 	p := &policyHit{
+		kind:        kind,
+		namespace:   namespace,
+		name:        name,
 		action:      action,
 		count:       count,
 		index:       index,
-		isStaged:    isStaged,
-		isProfile:   isProfile,
 		tier:        tier,
-		namespace:   namespace,
 		ruleIdIndex: ruleIdIndex,
 	}
 
-	p.parseName(name)
-
 	return p, nil
+}
+
+// ValidateKind validates that the given kind is a valid policy kind. When new kinds are added,
+// this function must be updated as well as shortKindToFullKind below.
+func ValidateKind(kind string) error {
+	switch kind {
+	case model.KindKubernetesNetworkPolicy,
+		v3.KindStagedKubernetesNetworkPolicy,
+		v3.KindNetworkPolicy,
+		v3.KindStagedNetworkPolicy,
+		v3.KindGlobalNetworkPolicy,
+		v3.KindStagedGlobalNetworkPolicy,
+		v3.KindProfile:
+		return nil
+	}
+	return fmt.Errorf("invalid policy kind '%s'", kind)
 }
 
 // PolicyHitFromFlowLogPolicyString creates a PolicyHit from a flow log policy string.
@@ -415,16 +324,18 @@ func PolicyHitFromFlowLogPolicyString(policyString string, count int64) (PolicyH
 	}
 	p.tier = parts[policyStrTierIdx]
 
-	var name string
-	nameParts := strings.SplitN(parts[policyStrNameIdx], "/", 2)
-	if len(nameParts) == 2 {
-		p.namespace = nameParts[0]
-		name = nameParts[1]
+	// The name part can be one of two formats:
+	// - legacy format, which varies based on policy kind.
+	// - modern format, which is always <kind>:[<namespace>/]<name>
+	namePart := parts[policyStrNameIdx]
+	if !isLegacyName(namePart) {
+		p.kind, p.namespace, p.name, err = parseModernName(namePart)
+		if err != nil {
+			return nil, fmt.Errorf("invalid modern policy name: %w", err)
+		}
 	} else {
-		name = nameParts[0]
+		p.kind, p.namespace, p.name = parseLegacyName(namePart, p.tier)
 	}
-
-	p.parseName(name)
 
 	p.action = ActionFromString(parts[policyStrActionIdx])
 	if p.action == ActionInvalid {
@@ -440,6 +351,117 @@ func PolicyHitFromFlowLogPolicyString(policyString string, count int64) (PolicyH
 	}
 
 	return p, nil
+}
+
+func isLegacyName(namePart string) bool {
+	// Legacy names do not contain a colon separating kind from name, although they may contain
+	// colons as part of a 'staged:' prefix.
+	if !strings.Contains(namePart, ":") {
+		return true
+	}
+
+	// Next, check if the part before the colon is a known short kind.
+	splits := strings.SplitN(namePart, ":", 2)
+	if len(splits) != 2 {
+		return true
+	}
+	kindShort := splits[0]
+	return shortKindToFullKind(kindShort) == ""
+}
+
+func shortKindToFullKind(short string) string {
+	switch short {
+	case types.ShortKindKubernetesNetworkPolicy:
+		return model.KindKubernetesNetworkPolicy
+	case types.ShortKindStagedKubernetesNetworkPolicy:
+		return v3.KindStagedKubernetesNetworkPolicy
+	case types.ShortKindNetworkPolicy:
+		return v3.KindNetworkPolicy
+	case types.ShortKindStagedNetworkPolicy:
+		return v3.KindStagedNetworkPolicy
+	case types.ShortKindGlobalNetworkPolicy:
+		return v3.KindGlobalNetworkPolicy
+	case types.ShortKindStagedGlobalNetworkPolicy:
+		return v3.KindStagedGlobalNetworkPolicy
+	case types.ShortKindProfile:
+		return v3.KindProfile
+	case types.ShortKindKubernetesClusterNetworkPolicy:
+		return model.KindKubernetesClusterNetworkPolicy
+	case "kbanp":
+		return model.KindKubernetesBaselineAdminNetworkPolicy
+	case "kanp":
+		return model.KindKubernetesAdminNetworkPolicy
+	}
+	return ""
+}
+
+func parseModernName(namePart string) (string, string, string, error) {
+	var namespace string
+	var name string
+	var shortKind string
+
+	// First, separate out the kind.
+	splits := strings.SplitN(namePart, ":", 2)
+	if len(splits) != 2 {
+		return "", "", "", fmt.Errorf("invalid modern policy name '%s': missing kind prefix", namePart)
+	}
+	shortKind = splits[0]
+	nameWithOptionalNamespace := splits[1]
+
+	// Next, separate out the namespace if it exists.
+	splits = strings.SplitN(nameWithOptionalNamespace, "/", 2)
+	if len(splits) == 2 {
+		namespace = splits[0]
+		name = splits[1]
+	} else {
+		name = splits[0]
+	}
+
+	return shortKindToFullKind(shortKind), namespace, name, nil
+}
+
+// parseLegacyName parses the given full policy name (which includes tier, knp, or kns prefixes and may
+// or may not contain the staged: pre / mid fix) and sets the appropriate policy hit fields
+// (isKNP, isProfile...).
+func parseLegacyName(namePart, tier string) (string, string, string) {
+	var staged, knp, profile bool
+	var namespace string
+	var name string
+
+	// First, separate out the namespace if it exists.
+	splits := strings.SplitN(namePart, "/", 2)
+	if len(splits) == 2 {
+		namespace = splits[0]
+		name = splits[1]
+	} else {
+		name = splits[0]
+	}
+
+	// legacyStagedPrefix is the prefix used in flow logs to indicate a staged policy.
+	legacyStagedPrefix := "staged:"
+
+	// First, check for the staged prefix, which may show up in a couple of different places.
+	if strings.Contains(name, legacyStagedPrefix) {
+		staged = true
+
+		// Remove the staged prefix. Calico NPs are prefixed with "tier.staged:" whereas
+		// KNPs are prefixed with "staged:", so split on the legacyStagedPrefix to handle both cases.
+		splits := strings.Split(name, legacyStagedPrefix)
+		name = splits[1]
+	}
+
+	if strings.HasPrefix(name, "knp.default.") {
+		knp = true
+		name = strings.TrimPrefix(name, "knp.default.")
+	} else if strings.HasPrefix(name, "__PROFILE__.") {
+		profile = true
+		name = strings.TrimPrefix(name, "__PROFILE__.")
+	} else if !strings.HasPrefix(name, tier+".") {
+		// Add the tier prefix to the name - this used to be required.
+		name = fmt.Sprintf("%s.%s", tier, name)
+	}
+
+	return v1.KindFromHints(knp, profile, staged, namespace), namespace, name
 }
 
 // SortablePolicyHits is a sortable slice of PolicyHits.

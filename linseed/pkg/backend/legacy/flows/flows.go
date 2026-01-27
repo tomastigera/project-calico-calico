@@ -10,6 +10,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/types"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -763,7 +764,9 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 	if terms, found := terms[termKey]; found {
 		// Policies aren't necessarily ordered in the flow log, so we parse out the
 		// policies from the flow log and sort them first.
-		var policyHits api.SortablePolicyHits
+		//
+		// We use a set to ensure uniqueness, as the same policy could be represented in different syntaxes in the flow log.
+		uniquePolicies := make(map[types.PolicyID]api.PolicyHit)
 		for k, count := range terms.Buckets {
 			key, ok := k.(string)
 			if !ok {
@@ -781,9 +784,21 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 				continue
 			}
 
-			policyHits = append(policyHits, policyHit)
+			k := types.PolicyID{
+				Name:      policyHit.Name(),
+				Namespace: policyHit.Namespace(),
+				Kind:      policyHit.Kind(),
+			}
+			if _, exists := uniquePolicies[k]; !exists {
+				uniquePolicies[k] = policyHit
+			}
 		}
 
+		// Now sort the policies.
+		var policyHits api.SortablePolicyHits
+		for _, policyHit := range uniquePolicies {
+			policyHits = append(policyHits, policyHit)
+		}
 		sort.Sort(policyHits)
 
 		// Note: Linseed returns all policies, regardless of RBAC. It's the responsibility of the client code to
@@ -793,6 +808,7 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 			policies = append(policies, v1.Policy{
 				Action:       string(policyHit.Action()),
 				Tier:         policyHit.Tier(),
+				Kind:         policyHit.Kind(),
 				Namespace:    policyHit.Namespace(),
 				Name:         policyHit.Name(),
 				IsStaged:     policyHit.IsStaged(),
