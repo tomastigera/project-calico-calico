@@ -30,6 +30,8 @@ blocks:
           # Log in to container registries needed for release.
           - docker login --username marvin@tigera.io -u _json_key -p "$(cat ~/secrets/marvin-gcr-credentials.json)" https://gcr.io
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
+          # Install the tools our release depends on
+          - install-package createrepo-c
       jobs:
         - name: "Release on Semaphore VM"
           commands:
