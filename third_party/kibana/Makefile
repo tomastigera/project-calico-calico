@@ -33,7 +33,6 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
 	patch -d kibana -p1 < patches/0004-Build-with-ubi10.patch
 	patch -d kibana -p1 < patches/0005-Update-libraries-to-patch-CVE.patch
-	patch -d kibana -p1 < patches/0006-Use-ADD-instead-of-tar-in-Kibana-base-image-build.patch
 	patch -d kibana -p1 < patches/248651.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/googletagmanager kibana/plugins/
@@ -43,7 +42,7 @@ $(KIBANA_DOWNLOADED):
 # always register because build target will build images for all supported arches
 .PHONY: register
 register:
-	docker run --privileged --rm tonistiigi/binfmt --install all || true
+	docker run --privileged --rm calico/binfmt:qemu-v10.1.3 --install all || true
 
 .PHONY: build
 build: register $(KIBANA_DOWNLOADED)
