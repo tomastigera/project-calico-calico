@@ -234,40 +234,8 @@ chartVersion:=$(GIT_VERSION)
 appVersion:=$(GIT_VERSION)
 endif
 
-PUBLISH_TARGETS := chart-release release-archive multi-tenant-crds selinux non-cluster-host-rpms
-
-publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY $(addprefix publish-,$(PUBLISH_TARGETS))
-
-# TODO: We're moving selinux RPMs into the same repository
-# as non-cluster host RPMs. We may want to remove this
-# location in the future, but we should keep it here in case
-# users actually use it.
-publish-selinux:
-	$(MAKE) -C selinux publish
-
-chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
-	mv $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
-
-publish-chart-release: chart-release
-	@aws --profile helm s3 cp $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/charts/ --acl public-read
-
-publish-release-archive: release-archive
-	$(MAKE) -f release-archive.mk publish-release-archive
 release-archive: manifests/ocp.tgz
 	$(MAKE) -f release-archive.mk release-archive
-
-.PHONY: build-non-cluster-host-rpms publish-non-cluster-host-rpms
-
-# Build the non-cluster host RPMs for a given sub-project
-# TODO: find a concise way to check if things are built already and skip if they are
-build-non-cluster-host-rpms-%:
-	@$(MAKE) -C $* package
-
-# Ensure that all of our non-cluster host RPMs are built before we try to publish them
-build-non-cluster-host-rpms: $(addprefix build-non-cluster-host-rpms-,$(NON_CLUSTER_HOST_SUBDIRS))
-
-publish-non-cluster-host-rpms: var-require-all-VERSION build-non-cluster-host-rpms
-	VERSION=$(RELEASE_STREAM) hack/publish_rpms_to_repo.sh
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 CHART_DESTINATION ?= ./bin
@@ -285,15 +253,6 @@ $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	--destination $(CHART_DESTINATION) \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
-
-publish-multi-tenant-crds: multi-tenant-crds-release
-	mv $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
-	aws --profile helm \
-		s3 cp \
-		$(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz \
-		s3://tigera-public/ee/charts/ \
-		--acl public-read
-
 
 # If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
 tigera-operator-master:

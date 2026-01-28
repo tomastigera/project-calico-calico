@@ -100,7 +100,6 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			// Define the hashrelease directory using the hash from the pinned file.
-			hashreleaseDir := filepath.Join(baseHashreleaseDir, data.Hash())
 			hashrel, err := pinnedversion.LoadEnterpriseHashrelease(cfg.RepoRootDir, cfg.TmpDir, baseHashreleaseDir, c.Bool(latestFlag.Name))
 			if err != nil {
 				return fmt.Errorf("failed to load hashrelease from pinned file: %v", err)
@@ -121,7 +120,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithVersion(data.OperatorVersion()),
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
 				operator.WithTempDirectory(cfg.TmpDir),
-				operator.WithOutputDirectory(hashreleaseDir),
+				operator.WithOutputDirectory(hashrel.Source),
 			}
 			if reg := c.String(operatorRegistryFlag.Name); reg != "" {
 				operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
@@ -143,7 +142,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithRepoRoot(cfg.RepoRootDir),
 				calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 				calico.IsHashRelease(),
-				calico.WithOutputDir(hashreleaseDir),
+				calico.WithOutputDir(hashrel.Source),
 				calico.WithTmpDir(cfg.TmpDir),
 				calico.WithBuildImages(c.Bool(buildHashreleaseImagesFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
@@ -167,7 +166,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				return err
 			}
 
-			return tasks.ReformatEnterpriseHashrelease(hashreleaseDir, cfg.TmpDir)
+			return tasks.ReformatEnterpriseHashrelease(hashrel.Source, cfg.TmpDir)
 		},
 	}
 }
@@ -274,6 +273,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithOutputDir(filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), hashrel.Hash)),
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithPublishImages(false), // Enterprise does not publish images
+				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 			}

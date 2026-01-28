@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	defaultEnterpriseRegistry = registry.DefaultEnterpriseRegistry
+	defaultEnterpriseRegistry     = registry.DefaultEnterpriseRegistry
+	defaultEnterpriseHelmRegistry = registry.DefaultEnterpriseHelmRegistry
 
 	enterpriseWindowsGCSBucket = utils.EnterpriseWindowsGCSBucketName
 
@@ -42,6 +43,7 @@ var (
 	enterpriseS3Bucket = "tigera-public/ee"
 
 	enterpriseImageReleaseDirs = utils.EnterpriseImageReleaseDirs
+	enterpriseHelmCharts       = utils.EnterpriseHelmCharts
 
 	// Directories that publish images for cloud.
 	cloudImageReleaseDirs = []string{
@@ -75,6 +77,8 @@ var (
 func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
 	defaultCalicoOpts := []Option{
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
+		WithHelmRegistries([]string{defaultEnterpriseHelmRegistry}),
+		WithHelmRepo(utils.EnterpriseHelmRepoURL),
 		WithBuildImages(false),
 		WithArchiveImages(false),
 		WithPublishGithubRelease(false),
@@ -216,14 +220,34 @@ func (m *EnterpriseManager) BuildHelm() error {
 		return err
 	}
 
-	// Rename charts to include chart version.
-	if m.chartVersion != "" {
-		charts, err := listCharts(chartsDest, m.calicoVersion)
+	// Verify that we have the expected charts.
+	charts := []string{}
+	err := filepath.Walk(chartsDest, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("list of built charts: %s", err)
+			return fmt.Errorf("accessing path %s: %w", path, err)
 		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".tgz") && strings.Contains(info.Name(), m.calicoVersion) {
+			for _, chart := range enterpriseHelmCharts {
+				if strings.HasPrefix(info.Name(), chart+"-") {
+					charts = append(charts, path)
+					return nil
+				}
+			}
+			return fmt.Errorf("unexpected chart found: %s", info.Name())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if len(charts) != len(enterpriseHelmCharts) {
+		return fmt.Errorf("expected %d charts, found %d: %v", len(enterpriseHelmCharts), len(charts), charts)
+	}
+
+	// Charts are builts with the calico version. If a chart version is specified, rename the charts to include it.
+	if m.calicoVersion != m.helmChartVersion() {
 		for _, chart := range charts {
-			newChartName := strings.Replace(chart, fmt.Sprintf("-%s.tgz", m.calicoVersion), fmt.Sprintf("-%s-%s.tgz", m.calicoVersion, m.chartVersion), 1)
+			newChartName := strings.Replace(chart, fmt.Sprintf("-%s.tgz", m.calicoVersion), fmt.Sprintf("-%s.tgz", m.helmChartVersion()), 1)
 			if err := utils.MoveFile(chart, newChartName); err != nil {
 				return fmt.Errorf("renaming chart %s to %s: %s", chart, newChartName, err)
 			}
@@ -731,21 +755,6 @@ func (m *EnterpriseManager) collectArtifacts() error {
 	return nil
 }
 
-func listCharts(dir, version string) ([]string, error) {
-	matchingFiles := []string{}
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			logrus.WithField("path", path).WithError(err).Error("Error accessing path")
-			return nil
-		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".tgz") && strings.Contains(info.Name(), version) {
-			matchingFiles = append(matchingFiles, path)
-		}
-		return nil
-	})
-	return matchingFiles, err
-}
-
 func (m *EnterpriseManager) scriptsDir() string {
 	return filepath.Join(m.uploadDir(), "scripts")
 }
@@ -785,6 +794,15 @@ func (m *EnterpriseManager) publishPrereqs() error {
 	if err := m.validateGitVersion(); err != nil {
 		return err
 	}
+	if m.publishCharts {
+		if len(m.helmRegistries) == 0 {
+			return fmt.Errorf("no helm chart registries specified")
+		}
+		if !m.isHashRelease && m.s3Bucket == "" {
+			return fmt.Errorf("no S3 bucket specified for pushing helm index")
+		}
+	}
+
 	if m.isHashRelease {
 		return m.hashreleasePrereqs()
 	}
@@ -1013,6 +1031,10 @@ func (m *EnterpriseManager) publishArtifactsToS3() error {
 	if err := m.s3Cp(filepath.Join(m.uploadDir(), "binaries")+"/", fmt.Sprintf("s3://%s/binaries/%s/", m.s3Bucket, m.calicoVersion), s3ACLPublicRead...); err != nil {
 		return fmt.Errorf("failed to publish binaries: %s", err)
 	}
+	logrus.WithField("artifact", "helm charts").Info("Publishing artifacts to S3")
+	if err := m.s3Cp(filepath.Join(m.uploadDir(), "charts")+"/", fmt.Sprintf("s3://%s/charts/", m.s3Bucket), s3ACLPublicRead...); err != nil {
+		return fmt.Errorf("failed to publish charts: %s", err)
+	}
 	logrus.WithField("artifact", "release archive").Info("Publishing artifacts to S3")
 	if err := m.s3Cp(filepath.Join(m.uploadDir(), fmt.Sprintf("release-%s-%s.tgz", m.calicoVersion, m.operatorVersion)), fmt.Sprintf("s3://%s/archives/", m.s3Bucket), s3ACLPublicRead...); err != nil {
 		return fmt.Errorf("failed to publish release archive: %s", err)
@@ -1055,21 +1077,17 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 		return nil
 	}
 	logrus.Info("Start publishing helm charts")
-	charts, err := listCharts(filepath.Join(m.uploadDir(), "charts"), m.helmChartVersion())
-	if err != nil {
-		return fmt.Errorf("failed to list charts: %s", err)
-	}
-	for _, chart := range charts {
-		if m.isHashRelease {
-			if err := m.publishHelmChart(chart, m.helmRegistries[0]); err != nil {
+	for _, c := range enterpriseHelmCharts {
+		c := filepath.Join(m.uploadDir(), "charts", fmt.Sprintf("%s-%s.tgz", c, m.helmChartVersion()))
+		for _, reg := range m.helmRegistries {
+			if err := m.publishHelmChart(c, reg); err != nil {
 				return err
 			}
-		} else {
-			if err := m.s3Cp(chart, fmt.Sprintf("s3://%s/charts/", m.s3Bucket), s3ACLPublicRead...); err != nil {
-				return fmt.Errorf("failed to push chart %s: %w", chart, err)
-			}
+			logrus.WithFields(logrus.Fields{
+				"chart":    filepath.Base(c),
+				"registry": reg,
+			}).Info("Published helm chart")
 		}
-		logrus.WithField("chart", chart).Info("Published helm chart")
 	}
 	logrus.Info("Finished publishing helm charts")
 	return nil

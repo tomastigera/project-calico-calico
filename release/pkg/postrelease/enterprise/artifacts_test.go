@@ -12,6 +12,7 @@ import (
 	"cloud.google.com/go/storage"
 
 	"github.com/projectcalico/calico/release/internal/command"
+	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
@@ -99,7 +100,12 @@ func TestHelmChart(t *testing.T) {
 		t.Fatal("No chart version provided")
 	}
 
-	validateURL(t, fmt.Sprintf("%s/charts/tigera-operator-%s-%s.tgz", artifactsBaseURL, releaseVersion, chartVersion), "Helm chart")
+	for _, chart := range utils.EnterpriseHelmCharts {
+		t.Run(chart, func(t *testing.T) {
+			t.Parallel()
+			validateURL(t, fmt.Sprintf("%s/charts/%s-%s-%s.tgz", artifactsBaseURL, releaseVersion, chart, chartVersion), chart+" Helm chart")
+		})
+	}
 }
 
 func TestReleaseArchive(t *testing.T) {

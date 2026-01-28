@@ -52,7 +52,7 @@ hashrelease: hashrelease-build hashrelease-publish
 hashrelease-build: bin/release var-require-all-GITHUB_TOKEN
 	@bin/release hashrelease build
 
-hashrelease-publish: bin/helm bin/release var-require-all-GITHUB_TOKEN ../bin/helm
+hashrelease-publish: bin/release var-require-all-GITHUB_TOKEN ../bin/helm ../bin/helm
 	@bin/release hashrelease publish
 
 hashrelease-svr-gc: bin/release

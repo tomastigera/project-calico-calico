@@ -29,7 +29,15 @@ const (
 
 	// EnterpriseArtifactsBaseURL is the base URL for accessing enterprise artifacts.
 	EnterpriseArtifactsBaseURL = "https://downloads.tigera.io/ee"
+
+	EnterpriseHelmRepoURL = EnterpriseArtifactsBaseURL + "/charts"
 )
+
+var EnterpriseHelmCharts = []string{
+	TigeraOperatorChart,
+	"tigera-prometheus-operator",
+	"multi-tenant-crds",
+}
 
 var onceEnterprise sync.Once
 
