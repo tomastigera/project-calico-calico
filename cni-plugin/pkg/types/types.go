@@ -82,6 +82,8 @@ type NetConf struct {
 		// of the given AWS subnets.
 		AWSSubnetIDs []string `json:"aws_subnet_ids"`
 	} `json:"ipam,omitempty"`
+	QPS                  int                    `json:"qps,omitempty"`
+	Burst                int                    `json:"burst,omitempty"`
 	Args                 Args                   `json:"args"`
 	MTU                  int                    `json:"mtu"`
 	NumQueues            int                    `json:"num_queues"`

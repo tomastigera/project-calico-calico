@@ -33,6 +33,8 @@ import (
 
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	licutils "github.com/projectcalico/calico/licensing/utils"
@@ -129,7 +131,6 @@ func DefaultTopologyOptions() TopologyOptions {
 		TyphaLogSeverity:      "info",
 		IPIPMode:              api.IPIPModeAlways,
 		IPIPStrategy:          NewDefaultTunnelStrategy(DefaultIPPoolCIDR, DefaultIPv6PoolCIDR),
-		SimulateBIRDRoutes:    true,
 		IPPoolCIDR:            DefaultIPPoolCIDR,
 		IPv6PoolCIDR:          DefaultIPv6PoolCIDR,
 		UseIPPools:            true,
@@ -236,6 +237,10 @@ func StartNNodeTopology(
 
 	if opts.IPIPMode == "" {
 		opts.IPIPMode = api.IPIPModeNever
+	}
+
+	if !opts.SimulateBIRDRoutes {
+		opts.ExtraEnvVars["FELIX_ProgramClusterRoutes"] = "Enabled"
 	}
 
 	// Get client.
@@ -571,4 +576,17 @@ func ApplyExpiredLicense(client client.Interface) {
 
 func ApplyGracePeriodLicense(client client.Interface) {
 	applyLicense(client, licutils.GracePeriodTestLicense())
+}
+
+func AssignIP(workload, addr, hostname string, client client.Interface) {
+	// Assign the workload's IP in IPAM, this will trigger calculation of routes.
+	err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
+		IP:       cnet.MustParseIP(addr),
+		HandleID: &workload,
+		Attrs: map[string]string{
+			ipam.AttributeNode: hostname,
+		},
+		Hostname: hostname,
+	})
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 }

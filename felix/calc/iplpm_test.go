@@ -83,8 +83,8 @@ var _ = DescribeTable("Test by finding Longest Prefix Match CIDR's name for give
 			it.InsertKey(cidrb, key2)
 		}
 
-		key, ok := it.GetLongestPrefixCidr(ipaddr)
-		Expect(ok).To(Equal(true))
+		key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(ipaddr, "")
+		Expect(match).ToNot(Equal(MatchNone))
 		Expect(key).To(Equal(res))
 	},
 	Entry("Longest Prefix Match find ns name", netSet1Key, netSet3Key, &netSet1, &netSet3, netset3Ip1a, netSet1Key),
@@ -118,17 +118,17 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, ns2Key)
 
 			// Test namespace-specific retrieval
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns1Key))
 
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace2")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace2")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns2Key))
 
 			// Test fallback to global when namespace not found
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey))
 		})
 
@@ -141,8 +141,8 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, secondKey)
 
 			// Should return the lexicographically smallest key
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(firstKey)) // "first-netset" < "second-netset"
 		})
 
@@ -156,12 +156,12 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(ns2CIDR, ns2Key)
 
 			// Test that the correct namespace is returned based on the IP
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns1Key))
 
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP2, "namespace2")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP2, "namespace2")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns2Key))
 		})
 
@@ -172,8 +172,8 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, nsKey)
 			it.InsertKey(testCIDR, otherNsKey)
 
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(nsKey))
 		})
 	})
@@ -184,13 +184,13 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, legacyKey)
 
 			// Should work with legacy method
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(legacyKey))
 
 			// Should also work with namespace method (treats as global)
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(legacyKey))
 		})
 
@@ -218,13 +218,13 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.DeleteKey(testCIDR, ns1Key)
 
 			// Should no longer find namespace1 key
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey)) // Should fallback to global
 
 			// Should still find namespace2 key
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace2")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace2")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns2Key))
 		})
 
@@ -235,10 +235,10 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.DeleteKey(testCIDR, ns2Key)
 
 			// Should not find anything
-			_, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeFalse())
+			_, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchNone))
 
-			_, found = it.GetKeys(testCIDR)
+			_, found := it.GetKeys(testCIDR)
 			Expect(found).To(BeFalse())
 		})
 	})
@@ -249,16 +249,16 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, emptyNsKey)
 
 			// Should be treated as global
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(emptyNsKey))
 		})
 
 		It("should handle non-existent CIDR gracefully", func() {
 			nonExistentIP := ip.FromNetIP(mustParseIP("192.168.1.1").IP)
 
-			_, found := it.GetLongestPrefixCidrWithNamespaceIsolation(nonExistentIP, "namespace1")
-			Expect(found).To(BeFalse())
+			_, match := it.GetLongestPrefixCidrWithNamespaceIsolation(nonExistentIP, "namespace1")
+			Expect(match).To(Equal(MatchNone))
 		})
 
 		It("should handle unknown key types", func() {
@@ -266,8 +266,8 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, unknownKey)
 
 			// Should not be found since key type is unexpected
-			_, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
-			Expect(found).To(BeFalse())
+			_, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
+			Expect(match).To(Equal(MatchNone))
 		})
 	})
 
@@ -295,18 +295,18 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(narrowCIDR, narrowNs2Key)
 
 			// For IP in both: should prefer namespace match over longer prefix
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInBoth, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInBoth, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(broadNs1Key)) // Namespace1 key wins due to namespace isolation
 
 			// For IP in narrow only: should prefer namespace2 match when requesting namespace2
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInBoth, "namespace2")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInBoth, "namespace2")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(narrowNs2Key)) // Namespace2 key wins due to namespace isolation
 
 			// For IP in broad only: should return broad CIDR
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInNarrowOnly, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIPInNarrowOnly, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(broadNs1Key))
 		})
 
@@ -325,21 +325,21 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(testCIDR, otherNsKey)
 
 			// Test 1: When preferred namespace exists, it should win
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "target-namespace")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "target-namespace")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(preferredNsKey))
 
 			// Test 2: When preferred namespace doesn't exist, global should win over other namespace
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey))
 
 			// Test 3: When neither preferred nor global exists, other namespace should be returned
 			it2 := NewIpTrie()
 			it2.InsertKey(testCIDR, otherNsKey)
 
-			key, found = it2.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
-			Expect(found).To(BeTrue())
+			key, match = it2.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
+			Expect(match).To(Equal(MatchOtherNamespace))
 			Expect(key).To(Equal(otherNsKey))
 		})
 
@@ -359,21 +359,21 @@ var _ = Describe("IpTrie Namespace-Aware Functionality", func() {
 			it.InsertKey(narrowCIDR, otherNsKey)
 
 			// Preferred namespace should still win despite having broader prefix
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "target-namespace")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "target-namespace")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(preferredNsKey)) // Namespace priority over prefix length
 
 			// When preferred namespace doesn't exist, global should win (longer prefix)
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey)) // Global over other namespace
 
 			// Test other namespace fallback by removing global
 			it3 := NewIpTrie()
 			it3.InsertKey(narrowCIDR, otherNsKey)
 
-			key, found = it3.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
-			Expect(found).To(BeTrue())
+			key, match = it3.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent-namespace")
+			Expect(match).To(Equal(MatchOtherNamespace))
 			Expect(key).To(Equal(otherNsKey)) // Other namespace as last resort
 		})
 	})
@@ -399,8 +399,8 @@ var _ = Describe("Collector Integration Tests", func() {
 			Expect(lc).To(BeAssignableToTypeOf(&LookupsCache{}))
 
 			// Test that the method exists and has the right signature
-			_, found := lc.GetNetworkSetWithNamespace(testIP, "test-namespace")
-			Expect(found).To(BeFalse()) // Should be false since no data loaded
+			_, match := lc.GetNetworkSetWithNamespace(testIP, "test-namespace")
+			Expect(match).To(Equal(MatchNone)) // Should be none since no data loaded
 
 			// Verify the method is available for collector usage
 			Expect(lc.GetNetworkSetWithNamespace).ToNot(BeNil())
@@ -433,13 +433,13 @@ var _ = Describe("Collector Integration Tests", func() {
 			})
 
 			// Test direct NetworkSetLookupsCache usage (what collector uses)
-			ed, found := nsCache.GetNetworkSetFromIPWithNamespace(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			ed, match := nsCache.GetNetworkSetFromIPWithNamespace(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(ed.Key()).To(Equal(ns1Key))
 
 			// Test fallback behavior
-			ed, found = nsCache.GetNetworkSetFromIPWithNamespace(testIP, "nonexistent")
-			Expect(found).To(BeTrue())
+			ed, match = nsCache.GetNetworkSetFromIPWithNamespace(testIP, "nonexistent")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(ed.Key()).To(Equal(globalKey)) // Should return global as fallback
 
 			// Verify legacy method still works
@@ -474,8 +474,8 @@ var _ = Describe("Collector Integration Tests", func() {
 				loopIP := mustParseIP(fmt.Sprintf("10.%d.1.1", i%10)).IP
 				copy(testIPLoop[:], loopIP.To16())
 
-				_, found := nsCache.GetNetworkSetFromIPWithNamespace(testIPLoop, namespace)
-				Expect(found).To(BeTrue())
+				_, match := nsCache.GetNetworkSetFromIPWithNamespace(testIPLoop, namespace)
+				Expect(match).ToNot(Equal(MatchNone))
 			}
 			elapsed := time.Since(start)
 
@@ -509,8 +509,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, betaKey)
 			it.InsertKey(testCIDR, alphaKey)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(alphaKey)) // Should return alpha (lexicographically smallest)
 		})
 
@@ -531,8 +531,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 					it.InsertKey(testCIDR, keys[j%len(keys)])
 				}
 
-				key, found := it.GetLongestPrefixCidr(testIP)
-				Expect(found).To(BeTrue())
+				key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+				Expect(match).ToNot(Equal(MatchNone))
 				Expect(key).To(Equal(model.NetworkSetKey{Name: "alpha-netset"}))
 			}
 		})
@@ -541,8 +541,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			singleKey := model.NetworkSetKey{Name: "single-netset"}
 			it.InsertKey(testCIDR, singleKey)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(singleKey))
 		})
 
@@ -555,8 +555,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, key2)
 			it.InsertKey(testCIDR, key3)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(key2)) // "a-special_netset" is lexicographically smallest
 		})
 	})
@@ -571,8 +571,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, ns1Key2)
 			it.InsertKey(testCIDR, ns1Key3)
 
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns1Key2)) // namespace1/alpha-netset is lexicographically smallest
 		})
 
@@ -586,8 +586,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, globalKey)
 
 			// Request a namespace that doesn't exist, should prefer global over other namespaces
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey)) // Global key should be returned over other namespaces
 
 			// Test fallback to other namespace when no global exists
@@ -595,8 +595,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it2.InsertKey(testCIDR, ns1Key)
 			it2.InsertKey(testCIDR, ns2Key)
 
-			key, found = it2.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
-			Expect(found).To(BeTrue())
+			key, match = it2.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
+			Expect(match).To(Equal(MatchOtherNamespace))
 			// Should return one of the namespace keys (lexicographically smallest)
 			Expect(key).To(Equal(ns2Key)) // namespace1/some-netset is lexicographically smaller
 		})
@@ -608,8 +608,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, globalKey1)
 			it.InsertKey(testCIDR, globalKey2)
 
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "any-namespace")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey2)) // alpha-global is lexicographically smallest
 		})
 
@@ -620,8 +620,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, globalKey)
 			it.InsertKey(testCIDR, nsKey)
 
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(nsKey)) // Namespace match takes priority
 		})
 
@@ -638,13 +638,13 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, ns1Key2)
 
 			// When requesting namespace1, should get the lexicographically smallest within namespace1
-			key, found := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "namespace1")
+			Expect(match).To(Equal(MatchSameNamespace))
 			Expect(key).To(Equal(ns1Key2)) // namespace1/alpha-netset
 
 			// When requesting non-existent namespace, should get lexicographically smallest global
-			key, found = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
-			Expect(found).To(BeTrue())
+			key, match = it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "nonexistent")
+			Expect(match).To(Equal(MatchGlobal))
 			Expect(key).To(Equal(globalKey2)) // alpha-global
 		})
 	})
@@ -661,8 +661,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(broadCIDR, broadKey)
 			it.InsertKey(narrowCIDR, narrowKey)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(narrowKey)) // Longer prefix wins despite larger name
 		})
 
@@ -681,8 +681,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(narrowCIDR, narrowKey1)
 			it.InsertKey(narrowCIDR, narrowKey2)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			// Should get alpha-narrow (lexicographically smallest among the longest prefix matches)
 			Expect(key).To(Equal(narrowKey2))
 		})
@@ -690,8 +690,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 
 	Context("when testing edge cases", func() {
 		It("should handle empty trie", func() {
-			_, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeFalse())
+			_, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).To(Equal(MatchNone))
 		})
 
 		It("should handle keys that differ only in casing", func() {
@@ -701,8 +701,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, key1)
 			it.InsertKey(testCIDR, key2)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			// "Alpha-netset" comes before "alpha-netset" in ASCII ordering
 			Expect(key).To(Equal(key1))
 		})
@@ -716,8 +716,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, key2)
 			it.InsertKey(testCIDR, key3)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			// String comparison: "netset-10" < "netset-2" < "netset-20"
 			Expect(key).To(Equal(key1))
 		})
@@ -729,8 +729,8 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			it.InsertKey(testCIDR, shortKey)
 			it.InsertKey(testCIDR, longKey)
 
-			key, found := it.GetLongestPrefixCidr(testIP)
-			Expect(found).To(BeTrue())
+			key, match := it.GetLongestPrefixCidrWithNamespaceIsolation(testIP, "")
+			Expect(match).ToNot(Equal(MatchNone))
 			Expect(key).To(Equal(longKey)) // Long key starting with "a" is lexicographically smaller
 		})
 	})

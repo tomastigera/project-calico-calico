@@ -21,10 +21,10 @@ type Context interface {
 	UserInfo() user.Info
 	Authorization() string
 
-	// IsAnyPermitted Verify if the user has lma.tigera.io authorization for any resource
+	// IsAnyPermitted Verify whether the user has lma.tigera.io authorization for any resource
 	IsAnyPermitted(apiGroup string, resourceNames []string) (bool, error)
 
-	// IsResourcePermitted Verify if the user has lma.tigera.io authorization for a particular resource
+	// IsResourcePermitted Verify whether the user has lma.tigera.io authorization for a particular resource
 	IsResourcePermitted(apiGroup, resourceName, resource string) (bool, error)
 
 	// GetPermissions Returns AuthorizedResourceVerbs permissions for namespaced RBAC
@@ -35,6 +35,12 @@ type Context interface {
 
 	// ClientSetFactory Returns a ClientSetFactory for managed cluster k8s API
 	ClientSetFactory() k8s.ClientSetFactory
+
+	// Groups Returns authorization token OIDC groups
+	Groups() []string
+
+	// Tenant returns the current tenant
+	Tenant() string
 }
 
 type userAuthContext struct {
@@ -44,6 +50,8 @@ type userAuthContext struct {
 	authorizer       Authorizer
 	authorization    string
 	clientSetFactory k8s.ClientSetFactory
+	groups           []string
+	tenant           string
 }
 
 func NewUserAuthContext(
@@ -53,9 +61,13 @@ func NewUserAuthContext(
 	k8sClient kubernetes.Interface,
 	authorization string,
 	clientSetFactory k8s.ClientSetFactory,
+	tenant string,
+	groups []string,
 ) Context {
 
 	return &userAuthContext{
+		groups:           groups,
+		tenant:           tenant,
 		Context:          parent,
 		userInfo:         userInfo,
 		k8sClient:        k8sClient,
@@ -91,4 +103,12 @@ func (u *userAuthContext) IsResourcePermitted(apiGroup, resourceName, resource s
 
 func (u *userAuthContext) GetPermissions(managedClusterNames []string) (PermissionsResult, error) {
 	return u.authorizer.GetAuthorizedResourceVerbs(u, managedClusterNames)
+}
+
+func (u *userAuthContext) Groups() []string {
+	return u.groups
+}
+
+func (u *userAuthContext) Tenant() string {
+	return u.tenant
 }

@@ -1,10 +1,10 @@
-# Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.19.10-${THIRD_PARTY_RELEASE_BRANCH} AS elastic
 
 RUN mkdir -p /rootfs/usr/bin
 RUN ln -sf usr/bin /rootfs/bin
@@ -45,14 +45,7 @@ COPY --from=elastic /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=elastic /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 
 # Required by jvm
-COPY --from=elastic /lib64/libdl.so.2 /lib64/libdl.so.2
-COPY --from=elastic /lib64/libm.so.6 /lib64/libm.so.6
-COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/libz.so.1 /lib64/libz.so.1
-
-# Required by elasticsearch/lib/platform/linux-x64/*.so
-COPY --from=elastic /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
-COPY --from=elastic /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
 # User and groups
 COPY --from=elastic /etc/group /etc/group

@@ -1,6 +1,6 @@
 module github.com/projectcalico/calico/hack/cub-generator
 
-go 1.25.3
+go 1.25.6
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0

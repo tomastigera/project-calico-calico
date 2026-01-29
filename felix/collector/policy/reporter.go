@@ -152,6 +152,10 @@ func (r *PolicyActivityReporter) processRule(rule *calc.RuleID) {
 		// This is a profile rule, skip logging.
 		return
 	}
+	if rule.IndexStr == "-1" {
+		// This is not a user's rule, skip logging.
+		return
+	}
 
 	generation := r.luc.GetGeneration(
 		model.PolicyKey{
@@ -163,13 +167,18 @@ func (r *PolicyActivityReporter) processRule(rule *calc.RuleID) {
 
 	r.buf.mu.Lock()
 	defer r.buf.mu.Unlock()
+
+	ruleIdx := rule.IndexStr
+	if ruleIdx == "-2" {
+		ruleIdx = calc.UnknownStr
+	}
 	r.buf.logs = append(r.buf.logs, &ActivityLog{
 		Policy: PolicyInfo{
 			Kind:      kind,
 			Namespace: rule.Namespace,
 			Name:      rule.Name,
 		},
-		Rule:          fmt.Sprintf("%d-%s-%s", generation, rule.DirectionString(), rule.IndexStr),
+		Rule:          fmt.Sprintf("%d-%s-%s", generation, rule.DirectionString(), ruleIdx),
 		LastEvaluated: time.Now(),
 	})
 }

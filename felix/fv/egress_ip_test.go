@@ -36,8 +36,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libcalicoapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
@@ -73,15 +71,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	overlay := OV_NONE
 
 	makeGatewayWithLabel := func(felix *infrastructure.Felix, wIP, wName, egwLable string) *workload.Workload {
-		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-			IP:       net.MustParseIP(wIP),
-			HandleID: &wName,
-			Attrs: map[string]string{
-				ipam.AttributeNode: felix.Hostname,
-			},
-			Hostname: felix.Hostname,
-		})
-		Expect(err).NotTo(HaveOccurred())
+		infrastructure.AssignIP(wName, wIP, felix.Hostname, client)
 		gw := workload.RunEgressGateway(felix, wName, "default", wIP)
 		gw.WorkloadEndpoint.Labels["egress-code"] = egwLable
 		gw.ConfigureInInfra(infra)
@@ -193,15 +183,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	makeClient := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
-		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-			IP:       net.MustParseIP(wIP),
-			HandleID: &wName,
-			Attrs: map[string]string{
-				ipam.AttributeNode: felix.Hostname,
-			},
-			Hostname: felix.Hostname,
-		})
-		Expect(err).NotTo(HaveOccurred())
+		infrastructure.AssignIP(wName, wIP, felix.Hostname, client)
 		app := workload.Run(felix, wName, "default", wIP, "8055", "tcp")
 		app.WorkloadEndpoint.Spec.EgressGateway = &api.EgressGatewaySpec{
 			Gateway: &api.EgressSpec{
@@ -213,15 +195,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	makeClientWithEGWPolicy := func(felix *infrastructure.Felix, wIP, wName, policy string) *workload.Workload {
-		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
-			IP:       net.MustParseIP(wIP),
-			HandleID: &wName,
-			Attrs: map[string]string{
-				ipam.AttributeNode: felix.Hostname,
-			},
-			Hostname: felix.Hostname,
-		})
-		Expect(err).NotTo(HaveOccurred())
+		infrastructure.AssignIP(wName, wIP, felix.Hostname, client)
 		app := workload.Run(felix, wName, "default", wIP, "8055", "tcp")
 		app.WorkloadEndpoint.Spec.EgressGateway = &api.EgressGatewaySpec{
 			Policy: policy,
@@ -331,7 +305,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		}
 		if overlay != OV_IPIP {
 			topologyOptions.IPIPMode = api.IPIPModeNever
-			topologyOptions.SimulateBIRDRoutes = true
 		}
 		tc, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
@@ -628,7 +601,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								gw = makeGatewayWithLabel(tc.Felixes[0], gwAddr, gwName, l)
 							} else {
 								gw = makeGatewayWithLabel(tc.Felixes[1], gwAddr, gwName, l)
-								tc.Felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
 							}
 							if l == "blue" {
 								blueGWs = append(blueGWs, gw)

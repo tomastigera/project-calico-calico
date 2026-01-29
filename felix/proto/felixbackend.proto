@@ -957,6 +957,11 @@ message HTTPData {
   string gateway_route_hostname = 33;
   string gateway_route_status = 34;
   string gateway_route_status_message = 35;
+
+  // Upstream host field (for gateway service resolution)
+  // Contains the actual backend service address that Envoy routed to (e.g., "10.96.1.5:8080")
+  // Used for service resolution in Felix when domain contains external hostname
+  string upstream_host = 36;
 }
 
 message WireguardEndpointUpdate {

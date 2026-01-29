@@ -365,6 +365,8 @@ type FelixConfigurationSpec struct {
 	// - %k: Kind (short names).
 	// - %n: Policy or profile name.
 	// - %p: Policy or profile name (namespace/name for namespaced kinds or just name for non namespaced kinds).
+	// Calico includes ": " characters at the end of the generated log prefix.
+	// Note that iptables shows up to 29 characters for the log prefix and nftables up to 127 characters. Extra characters are truncated.
 	// [Default: calico-packet]
 	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9%: /_-])*$`
 	LogPrefix string `json:"logPrefix,omitempty"`
@@ -375,12 +377,13 @@ type FelixConfigurationSpec struct {
 	// LogActionRateLimit sets the rate of hitting a Log action. The value must be in the format "N/unit",
 	// where N is a number and unit is one of: second, minute, hour, or day. For example: "10/second" or "100/hour".
 	// +optional
-	// +kubebuilder:validation:Pattern=`^\d+/(?:second|minute|hour|day)$`
+	// +kubebuilder:validation:Pattern=`^[1-9]\d{0,3}/(?:second|minute|hour|day)$`
 	LogActionRateLimit *string `json:"logActionRateLimit,omitempty"`
 
 	// LogActionRateLimitBurst sets the rate limit burst of hitting a Log action when LogActionRateLimit is enabled.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=9999
 	LogActionRateLimitBurst *int `json:"logActionRateLimitBurst,omitempty"`
 
 	// LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]

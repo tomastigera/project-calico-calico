@@ -16478,15 +16478,19 @@ spec:
                                       name:
                                         description: |-
                                           Name is an enum which identifies the calico-node-windows DaemonSet container by name.
-                                          Supported values are: calico-node-windows
+                                          Supported values are: node, felix, confd
+                                          calico-node-windows is allowed because it was previously allowed.
                                         enum:
                                           - calico-node-windows
+                                          - node
+                                          - felix
+                                          - confd
                                         type: string
                                       resources:
                                         description: |-
                                           Resources allows customization of limits and requests for compute resources such as cpu and memory.
-                                          If specified, this overrides the named calico-node-windows DaemonSet container's resources.
-                                          If omitted, the calico-node-windows DaemonSet will use its default value for this container's resources.
+                                          If specified, this overrides the named DaemonSet container's resources.
+                                          If omitted, the DaemonSet will use its default value for this container's resources.
                                           If used in conjunction with the deprecated ComponentResources, then this value takes precedence.
                                         properties:
                                           claims:
@@ -18018,6 +18022,9 @@ spec:
                           - Node
                           - Typha
                           - KubeControllers
+                          - NodeWindows
+                          - FelixWindows
+                          - ConfdWindows
                         type: string
                       resourceRequirements:
                         description:
@@ -25333,15 +25340,19 @@ spec:
                                           name:
                                             description: |-
                                               Name is an enum which identifies the calico-node-windows DaemonSet container by name.
-                                              Supported values are: calico-node-windows
+                                              Supported values are: node, felix, confd
+                                              calico-node-windows is allowed because it was previously allowed.
                                             enum:
                                               - calico-node-windows
+                                              - node
+                                              - felix
+                                              - confd
                                             type: string
                                           resources:
                                             description: |-
                                               Resources allows customization of limits and requests for compute resources such as cpu and memory.
-                                              If specified, this overrides the named calico-node-windows DaemonSet container's resources.
-                                              If omitted, the calico-node-windows DaemonSet will use its default value for this container's resources.
+                                              If specified, this overrides the named DaemonSet container's resources.
+                                              If omitted, the DaemonSet will use its default value for this container's resources.
                                               If used in conjunction with the deprecated ComponentResources, then this value takes precedence.
                                             properties:
                                               claims:
@@ -26898,6 +26909,9 @@ spec:
                               - Node
                               - Typha
                               - KubeControllers
+                              - NodeWindows
+                              - FelixWindows
+                              - ConfdWindows
                             type: string
                           resourceRequirements:
                             description:
@@ -42593,12 +42607,13 @@ spec:
                   description: |-
                     LogActionRateLimit sets the rate of hitting a Log action. The value must be in the format "N/unit",
                     where N is a number and unit is one of: second, minute, hour, or day. For example: "10/second" or "100/hour".
-                  pattern: ^\d+/(?:second|minute|hour|day)$
+                  pattern: ^[1-9]\d{0,3}/(?:second|minute|hour|day)$
                   type: string
                 logActionRateLimitBurst:
                   description:
                     LogActionRateLimitBurst sets the rate limit burst of
                     hitting a Log action when LogActionRateLimit is enabled.
+                  maximum: 9999
                   minimum: 0
                   type: integer
                 logDebugFilenameRegex:
@@ -42625,6 +42640,8 @@ spec:
                     - %k: Kind (short names).
                     - %n: Policy or profile name.
                     - %p: Policy or profile name (namespace/name for namespaced kinds or just name for non namespaced kinds).
+                    Calico includes ": " characters at the end of the generated log prefix.
+                    Note that iptables shows up to 29 characters for the log prefix and nftables up to 127 characters. Extra characters are truncated.
                     [Default: calico-packet]
                   pattern: "^([a-zA-Z0-9%: /_-])*$"
                   type: string

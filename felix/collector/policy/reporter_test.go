@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ import (
 // MockDispatcher implements types.Reporter for testing purposes.
 type MockDispatcher struct {
 	mu           sync.Mutex
-	ReportedLogs []interface{}
+	ReportedLogs []any
 	StartErr     error
 	Started      bool
 }
@@ -179,7 +180,7 @@ func TestPolicyActivityReporter_IgnoreProfileRules(t *testing.T) {
 
 	profileRule := &calc.RuleID{
 		PolicyID: calc.PolicyID{
-			Kind:      "", // Empty Kind indicates profile
+			Kind:      "",
 			Name:      "some-profile-rule",
 			Namespace: "default",
 		},
@@ -293,4 +294,102 @@ func TestPolicyActivityReporter_GracefulStop(t *testing.T) {
 	_, ok := <-reporter.updateQueue
 	assert.False(t, ok, "Update queue should be closed")
 	assert.False(t, reporter.running, "Reporter should not be marked as running")
+}
+
+func TestProcessRule(t *testing.T) {
+	luc := calc.NewLookupsCache()
+	mockDisp := &MockDispatcher{}
+	dispatchers := map[string]types.Reporter{"mock": mockDisp}
+
+	reporter := NewReporter(luc, dispatchers, 100*time.Millisecond, nil)
+
+	tests := []struct {
+		name         string
+		rule         *calc.RuleID
+		mockGenID    int64
+		expectLog    bool
+		expectedName string
+		expectedRule string
+	}{
+		{
+			name: "Skip system rule (rule index -1)",
+			rule: &calc.RuleID{
+				PolicyID: calc.PolicyID{
+					Kind:      apiv3.KindNetworkPolicy,
+					Name:      "system-rule",
+					Namespace: "default",
+				},
+				IndexStr: "-1",
+			},
+			mockGenID: 99,
+			expectLog: false,
+		},
+		{
+			name: "Log valid rule with generation",
+			rule: &calc.RuleID{
+				PolicyID: calc.PolicyID{
+					Kind:      apiv3.KindNetworkPolicy,
+					Name:      "backend-policy",
+					Namespace: "prod",
+				},
+				Direction: rules.RuleDirIngress,
+				IndexStr:  "5",
+			},
+			mockGenID:    42,
+			expectLog:    true,
+			expectedName: "backend-policy",
+			expectedRule: "42-ingress-5",
+		},
+		{
+			name: "Log unknown index with generation",
+			rule: &calc.RuleID{
+				PolicyID: calc.PolicyID{
+					Kind:      apiv3.KindNetworkPolicy,
+					Name:      "catch-all",
+					Namespace: "default",
+				},
+				Direction: rules.RuleDirEgress,
+				IndexStr:  "-2",
+			},
+			mockGenID:    101,
+			expectLog:    true,
+			expectedName: "catch-all",
+			expectedRule: fmt.Sprintf("101-egress-%s", calc.UnknownStr),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockGenMap := map[model.PolicyKey]int64{
+				{
+					Kind:      tt.rule.Kind,
+					Name:      tt.rule.Name,
+					Namespace: tt.rule.Namespace,
+				}: tt.mockGenID,
+			}
+
+			luc.SetMockData(nil, nil, nil, nil, nil, mockGenMap)
+
+			reporter.buf.mu.Lock()
+			reporter.buf.logs = []*ActivityLog{}
+			reporter.buf.mu.Unlock()
+
+			reporter.processRule(tt.rule)
+
+			reporter.buf.mu.Lock()
+			defer reporter.buf.mu.Unlock()
+
+			if !tt.expectLog {
+				assert.Empty(t, reporter.buf.logs, "Log should be empty for skipped rules")
+			} else {
+				assert.Len(t, reporter.buf.logs, 1, "Should have exactly 1 log entry")
+
+				logEntry := reporter.buf.logs[0]
+
+				assert.Equal(t, tt.expectedName, logEntry.Policy.Name)
+				assert.Equal(t, tt.rule.Namespace, logEntry.Policy.Namespace)
+				assert.Equal(t, tt.expectedRule, logEntry.Rule)
+			}
+		})
+	}
 }

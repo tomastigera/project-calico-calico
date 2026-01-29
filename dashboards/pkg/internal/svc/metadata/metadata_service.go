@@ -12,7 +12,9 @@ import (
 
 	"github.com/projectcalico/calico/dashboards/pkg/client"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/map/orderedmap"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
+	staticmetadata "github.com/projectcalico/calico/dashboards/pkg/internal/svc/metadata/static"
 )
 
 type RemoteMetadataService struct {
@@ -20,14 +22,45 @@ type RemoteMetadataService struct {
 	logger           logging.Logger
 	collections      []collections.Collection
 	metadataEndpoint string
+	staticDashboards *orderedmap.OrderedMap[client.DashboardID, client.Dashboard]
 }
 
-func NewRemoteMetadataService(logger logging.Logger, metadataEndpoint string, enabledCollections []collections.Collection) *RemoteMetadataService {
+const (
+	packageNamePro  types.PackageName = "pro"
+	packageNameFree types.PackageName = "free"
+)
+
+var (
+	cloudPackagePathMap = map[types.PackageName]string{
+		packageNamePro:  "global",
+		packageNameFree: "global/free",
+	}
+)
+
+func NewRemoteMetadataService(
+	logger logging.Logger,
+	cloudPackage types.PackageName,
+	metadataEndpoint string,
+	enabledCollections []collections.Collection,
+	disabledDashboards map[string][]string,
+) (*RemoteMetadataService, error) {
+
+	staticDashboardsDirPrefix, ok := cloudPackagePathMap[cloudPackage]
+	if !ok {
+		return nil, fmt.Errorf("cloudPackage %s is not supported. must be one of [%s, %s]", cloudPackage, packageNamePro, packageNameFree)
+	}
+
+	staticDashboards, err := staticmetadata.LoadDashboards(staticDashboardsDirPrefix, disabledDashboards[staticDashboardsDirPrefix])
+	if err != nil {
+		return nil, err
+	}
+
 	return &RemoteMetadataService{
 		logger:           logger,
 		collections:      enabledCollections,
 		metadataEndpoint: metadataEndpoint,
-	}
+		staticDashboards: staticDashboards,
+	}, nil
 }
 
 func (s *RemoteMetadataService) authorize(ctx security.Context) error {
@@ -42,6 +75,11 @@ func (s *RemoteMetadataService) authorize(ctx security.Context) error {
 }
 
 func (s *RemoteMetadataService) Get(ctx security.Context, projectID types.ProjectID, dashboardID types.DashboardID) (client.Dashboard, error) {
+	dashboard, ok := s.staticDashboards.Get(client.DashboardID(dashboardID))
+	if ok {
+		return dashboard, nil
+	}
+
 	dashboard, err := executeRequest[ghttp.Nothing, client.Dashboard](ctx, s, projectID, http.MethodGet, dashboardID, ghttp.Nothing{})
 	if err != nil {
 		return client.Dashboard{}, err
@@ -51,12 +89,25 @@ func (s *RemoteMetadataService) Get(ctx security.Context, projectID types.Projec
 }
 
 func (s *RemoteMetadataService) List(ctx security.Context, projectID types.ProjectID) (client.DashboardListResponse, error) {
+	// Convert static dashboards to []client.DashboardSummary
+	staticDashboards := slices.Map(s.staticDashboards.ValuesInOrder(), func(dashboard client.Dashboard) client.DashboardSummary {
+		return client.DashboardSummary{
+			ID:          dashboard.ID,
+			Title:       dashboard.Title,
+			IsImmutable: true,
+		}
+	})
+
 	dashboardListResponse, err := executeRequest[ghttp.Nothing, client.DashboardListResponse](ctx, s, projectID, http.MethodGet, "", ghttp.Nothing{})
 	if err != nil {
 		return client.DashboardListResponse{}, err
 	}
 
-	return dashboardListResponse, nil
+	return client.DashboardListResponse{
+		Dashboards: append(staticDashboards, slices.FilterBy(dashboardListResponse.Dashboards, func(dashboardSummary client.DashboardSummary) bool {
+			return !dashboardSummary.IsImmutable
+		})...),
+	}, nil
 }
 
 func (s *RemoteMetadataService) Create(ctx security.Context, projectID types.ProjectID, req client.DashboardCreateRequest) (client.Dashboard, error) {

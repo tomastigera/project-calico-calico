@@ -10,7 +10,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
@@ -254,6 +256,8 @@ func uniqueService(svcs []proxy.ServicePortName) proxy.ServicePortName {
 // cache appropriately.
 type ServiceLookupsCache struct {
 	suh *ServiceAddrIndexer
+	// esai tracks endpoint slices to enable lookup of services by endpoint (pod) IP.
+	esai *EndpointSliceAddrIndexer
 
 	mutex sync.RWMutex
 }
@@ -261,6 +265,7 @@ type ServiceLookupsCache struct {
 func NewServiceLookupsCache() *ServiceLookupsCache {
 	slc := &ServiceLookupsCache{
 		suh:   NewServiceAddrIndexer(),
+		esai:  NewEndpointSliceAddrIndexer(),
 		mutex: sync.RWMutex{},
 	}
 	return slc
@@ -271,7 +276,7 @@ func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 }
 
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
-// kubernetes services updates.
+// kubernetes services and endpoint slices updates.
 func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
@@ -279,8 +284,11 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 		case model.KindKubernetesService:
 			log.Debugf("Processing update for service %s", k)
 			slc.onServiceUpdate(update, k)
+		case model.KindKubernetesEndpointSlice:
+			log.Debugf("Processing update for endpoint slice %s", k)
+			slc.onEndpointSliceUpdate(update, k)
 		default:
-			log.Debugf("Ignoring update for resource: %s", k)
+			log.Tracef("Ignoring update for resource: %s", k)
 		}
 	default:
 		log.Errorf("Ignoring unexpected update: %v %#v",
@@ -296,6 +304,16 @@ func (slc *ServiceLookupsCache) onServiceUpdate(update api.Update, k model.Resou
 		slc.suh.RemoveService(k)
 	} else {
 		slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
+	}
+}
+
+func (slc *ServiceLookupsCache) onEndpointSliceUpdate(update api.Update, k model.ResourceKey) {
+	slc.mutex.Lock()
+	defer slc.mutex.Unlock()
+	if update.Value == nil {
+		slc.esai.RemoveEndpointSlice(k)
+	} else {
+		slc.esai.AddOrUpdateEndpointSlice(k, update.Value.(*discovery.EndpointSlice))
 	}
 }
 
@@ -342,6 +360,56 @@ func (slc *ServiceLookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, po
 		log.Debugf("Port/Protocol (%d/%d) combination matches %d service(s)", portPreDNAT, proto, len(nps))
 		return uniqueService(nps), true
 	}
+}
+
+// GetServiceFromEndpointAddr returns the service associated with an endpoint (pod) IP address.
+// This is used to resolve service names from backend pod IPs, such as the upstream_host field
+// in L7 logs from ingress gateways.
+func (slc *ServiceLookupsCache) GetServiceFromEndpointAddr(ipAddr [16]byte, port int, proto int) (svc proxy.ServicePortName, found bool) {
+	slc.mutex.RLock()
+	defer slc.mutex.RUnlock()
+
+	svcKey, ok := slc.esai.GetServiceFromEndpointAddr(ipAddr, port, proto)
+	if !ok {
+		log.Debugf("Endpoint IP/Port/Protocol (%v/%d/%d) does not match a known endpoint", ipAddr, port, proto)
+		return proxy.ServicePortName{}, false
+	}
+
+	log.Debugf("Endpoint IP matches service %s/%s", svcKey.Namespace, svcKey.Name)
+
+	// Look up the service spec to get the port name
+	svcSpec, specFound := slc.suh.services[svcKey]
+	portName := ""
+	if specFound {
+		portName = getPortNameFromServiceSpec(svcSpec, port)
+	}
+
+	return proxy.ServicePortName{
+		NamespacedName: types.NamespacedName{
+			Name:      svcKey.Name,
+			Namespace: svcKey.Namespace,
+		},
+		Port:     portName,
+		Protocol: k8sutils.GetProtocolFromInt(proto),
+	}, true
+}
+
+// getPortNameFromServiceSpec finds the port name for a given port number in a service spec.
+// It matches against both TargetPort (if numeric) and Port (service port).
+// Note: If TargetPort is defined as a named port string, we can only match via the service Port,
+// since resolving named ports would require access to the pod's container spec.
+func getPortNameFromServiceSpec(spec kapiv1.ServiceSpec, port int) string {
+	for _, p := range spec.Ports {
+		// Check if the port matches the service port
+		if int(p.Port) == port {
+			return p.Name
+		}
+		// Check if the port matches the target port (only if target port is numeric)
+		if p.TargetPort.Type == intstr.Int && int(p.TargetPort.IntVal) == port {
+			return p.Name
+		}
+	}
+	return ""
 }
 
 // IPStringToArray converts the cluster IP into a [16]bytes array.  Returns nil if not a valid IP.

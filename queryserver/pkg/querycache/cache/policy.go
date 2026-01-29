@@ -3,18 +3,16 @@ package cache
 
 import (
 	"fmt"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v1 "k8s.io/api/networking/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/dispatcherv1v3"
@@ -115,30 +113,7 @@ func (c *policiesCache) GetOrderedPolicies(keys set.Set[model.Key]) []api.Tier {
 				name:     t.name,
 			}
 			for _, p := range t.orderedPolicies {
-				// Temporary fix for policy name inconsistency between label inheritance and policy cache.
-				//
-				// Problem: When retrieving policies via label inheritance, they include the tier prefix
-				// (e.g., "default.policy1"), but the policy cache stores them with their original CRD name
-				// (e.g., "policy1"). This causes lookups like keys.Contains(p.getKey()) to fail.
-				// For staged policies, label inheritance returns "staged:default.policy1" whereas in
-				// policy cache we have "staged:policy1".
-				//
-				// Solution:  For policies that don't contain a period, prepend "default." to match the format
-				// used by the label inheritance mechanism. This works because:
-				//   1. Calico policy names cannot contain periods except as tier separators.
-				//   2. Policies without a period must be in the default tier.
-				//   3. All other tiers explicitly include the tier name in the policy identifier.
-				//   4. "Staged:" prefix comes before tier prefix.
 				k := p.getKey().(model.ResourceKey)
-				if !strings.Contains(k.Name, ".") {
-					if strings.HasPrefix(k.Name, "staged:") {
-						policyNameWithOutTags := strings.TrimPrefix(k.Name, "staged:")
-						k.Name = fmt.Sprintf("staged:default.%s", policyNameWithOutTags)
-					} else {
-						k.Name = fmt.Sprintf("default.%s", k.Name)
-					}
-				}
-
 				if keys.Contains(k) {
 					td.orderedPolicies = append(td.orderedPolicies, p)
 				}
@@ -171,6 +146,9 @@ func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interfa
 	dispatcher.RegisterHandler(apiv3.KindStagedGlobalNetworkPolicy, c.onStagedUpdate)
 	dispatcher.RegisterHandler(apiv3.KindStagedNetworkPolicy, c.onStagedUpdate)
 	dispatcher.RegisterHandler(apiv3.KindStagedKubernetesNetworkPolicy, c.onStagedUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesAdminNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(model.KindKubernetesBaselineAdminNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(apiv3.KindTier, c.onUpdate)
 }
 
@@ -233,7 +211,6 @@ func (c *policiesCache) ruleEndpointMatch(matchType labelhandler.MatchType, sele
 }
 
 func (c *policiesCache) onStagedUpdate(update dispatcherv1v3.Update) {
-	uv1 := update.UpdateV1
 	uv3 := update.UpdateV3
 
 	if utils.DoExcludeStagedPolicy(uv3) {
@@ -242,7 +219,6 @@ func (c *policiesCache) onStagedUpdate(update dispatcherv1v3.Update) {
 		return
 	}
 
-	utils.StagedToEnforcedConversion(uv1, uv3)
 	c.onUpdate(update)
 }
 
@@ -277,6 +253,7 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			pd := &policyData{
 				resource: uv3.Value.(api.Resource),
 				v1Policy: pv1,
+				kind:     v1k.Kind,
 			}
 			pc.policies[uv3.Key] = pd
 			pc.unmatchedPolicies.Add(uv3.Key)
@@ -514,42 +491,8 @@ func (c *policiesCache) orderPolicies() {
 }
 
 func (c *policiesCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
-	switch key.Kind {
-	case apiv3.KindStagedGlobalNetworkPolicy:
-		// We merge all staged policies into their enforced counterparts in the cache. Staged policies
-		// receive a "staged:" prefix on their name to disambiguate them.
-		// TODO: Refactor to use the "real" name and rely on key.Kind to disambiguate. See
-		// StagedToEnforcedConversion in staged.go for the corresponding conversion.
-		log.WithField("key", key).Debug("Looking for staged policy - merged into enforced policy")
-		key.Name = "staged:" + key.Name
-		fallthrough
-	case apiv3.KindGlobalNetworkPolicy:
-		v3k := model.ResourceKey{
-			Kind: apiv3.KindGlobalNetworkPolicy,
-			Name: key.Name,
-		}
-		log.WithField("v3key", v3k).Debug("Looking for global network policy")
-		return c.globalNetworkPolicies.policies[v3k]
-	case apiv3.KindStagedNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicy:
-		// We merge all staged policies into their enforced counterparts in the cache. Staged policies
-		// receive a "staged:" prefix on their name to disambiguate them.
-		// TODO: Refactor to use the "real" name and rely on key.Kind to disambiguate. See
-		// StagedToEnforcedConversion in staged.go for the corresponding conversion.
-		log.WithField("key", key).Debug("Looking for staged policy - merged into enforced policy")
-		key.Name = "staged:" + key.Name
-		fallthrough
-	case apiv3.KindNetworkPolicy:
-		v3k := model.ResourceKey{
-			Kind:      apiv3.KindNetworkPolicy,
-			Namespace: key.Namespace,
-			Name:      key.Name,
-		}
-		log.WithField("v3key", v3k).Debug("Looking for network policy")
-		return c.networkPoliciesByNamespace[key.Namespace].policies[v3k]
-	default:
-		log.WithField("key", key).Error("Unexpected resource in event type, expecting a v3 policy type")
-	}
-	return nil
+	v3k := model.ResourceKey(key)
+	return c.getPolicy(v3k)
 }
 
 func (c *policiesCache) getPolicy(key model.Key) *policyData {
@@ -565,9 +508,20 @@ func (c *policiesCache) getPolicy(key model.Key) *policyData {
 func (c *policiesCache) getPolicyCache(polKey model.Key, create bool) *policyCache {
 	if rKey, ok := polKey.(model.ResourceKey); ok {
 		switch rKey.Kind {
-		case apiv3.KindGlobalNetworkPolicy:
+		case apiv3.KindGlobalNetworkPolicy,
+			apiv3.KindStagedGlobalNetworkPolicy,
+			model.KindKubernetesAdminNetworkPolicy,
+			model.KindKubernetesBaselineAdminNetworkPolicy:
+			// Global policy kind. Use the global cache.
 			return c.globalNetworkPolicies
-		case apiv3.KindNetworkPolicy:
+		case apiv3.KindNetworkPolicy,
+			model.KindKubernetesNetworkPolicy,
+			apiv3.KindStagedNetworkPolicy,
+			apiv3.KindStagedKubernetesNetworkPolicy:
+
+			// Namespaced policy kind - get or create the namespace cache.
+			// We can safely store staged and non-staged policies in the same cache since
+			// we disambiguate them using the `key.Kind` field.
 			networkPolicies := c.networkPoliciesByNamespace[rKey.Namespace]
 			if networkPolicies == nil && create {
 				networkPolicies = newPolicyCache()
@@ -587,6 +541,11 @@ type policyData struct {
 	resource  api.Resource
 	endpoints api.EndpointCounts
 	v1Policy  *model.Policy
+	kind      string
+}
+
+func (d *policyData) Kind() string {
+	return d.kind
 }
 
 func (d *policyData) GetAnnotations() map[string]string {
@@ -615,6 +574,12 @@ func (d *policyData) GetTier() string {
 		tier = r.Spec.Tier
 	case *apiv3.GlobalNetworkPolicy:
 		tier = r.Spec.Tier
+	case *apiv3.StagedNetworkPolicy:
+		tier = r.Spec.Tier
+	case *apiv3.StagedGlobalNetworkPolicy:
+		tier = r.Spec.Tier
+	default:
+		log.Debugf("tier is not defined for policy of type: %v", r.GetObjectKind())
 	}
 
 	if tier == "" {
@@ -650,8 +615,11 @@ func (d *policyData) GetSelector() *string {
 		return &r.Spec.Selector
 	case *apiv3.StagedGlobalNetworkPolicy:
 		return &r.Spec.Selector
+	case *apiv3.StagedKubernetesNetworkPolicy:
+		sel := conversion.K8sSelectorToCalico(&r.Spec.PodSelector, conversion.SelectorPod)
+		return &sel
 	default:
-		log.Debugf("selector is not defined for policy of type: %v", r.GetObjectKind())
+		log.Debugf("pod selector is not defined for policy of type: %T", r)
 	}
 	return nil
 }
@@ -698,81 +666,22 @@ func (d *policyData) IsUnmatched() bool {
 
 func (d *policyData) getKey() model.Key {
 	return model.ResourceKey{
-		Kind:      d.resource.GetObjectKind().GroupVersionKind().Kind,
+		Kind:      d.kind,
 		Name:      d.resource.GetObjectMeta().GetName(),
 		Namespace: d.resource.GetObjectMeta().GetNamespace(),
 	}
 }
 
-func (d *policyData) GetResourceType() api.Resource {
-	cachedResource := d.resource
-	name := cachedResource.GetObjectMeta().GetName()
-	kind := cachedResource.GetObjectKind().GroupVersionKind().Kind
-
-	isStaged := model.KindIsStaged(kind)
-	isK8s := strings.Contains(name, "knp")
-	isGlobal := kind == apiv3.KindGlobalNetworkPolicy
-
-	switch {
-	case isStaged && isK8s:
-		return &apiv3.StagedKubernetesNetworkPolicy{
-			TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
-		}
-	case !isStaged && isK8s:
-		return &v1.NetworkPolicy{
-			TypeMeta: resources.TypeK8sNetworkPolicies,
-		}
-	case isStaged && isGlobal:
-		return &apiv3.StagedGlobalNetworkPolicy{
-			TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
-			Spec: apiv3.StagedGlobalNetworkPolicySpec{
-				Tier: d.GetTier(),
-			},
-		}
-	case isStaged:
-		return &apiv3.StagedNetworkPolicy{
-			TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
-			Spec: apiv3.StagedNetworkPolicySpec{
-				Tier: d.GetTier(),
-			},
-		}
-	case isGlobal:
-		return &apiv3.GlobalNetworkPolicy{
-			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
-			Spec: apiv3.GlobalNetworkPolicySpec{
-				Tier: d.GetTier(),
-			},
-		}
-	default:
-		return &apiv3.NetworkPolicy{
-			TypeMeta: resources.TypeCalicoNetworkPolicies,
-			Spec: apiv3.NetworkPolicySpec{
-				Tier: d.GetTier(),
-			},
-		}
-	}
-}
-
 func (d *policyData) IsKubernetesType() (bool, error) {
-	// since GroupVersionKind is all converted to calico types, we need to check the name prefix
-	// for identifying the kubernetes types.
-	name := d.GetResource().GetObjectMeta().GetName()
-
-	// remove the staged: tag from the name (if exists)
-	if strings.Contains(name, "staged:") {
-		name = strings.Split(name, "staged:")[1]
-	}
-
-	if strings.HasPrefix(name, "knp.default.") || strings.HasPrefix(name, "kanp.adminnetworkpolicy.") || strings.HasPrefix(name, "kbanp.baselineadminnetworkpolicy.") {
+	switch d.Kind() {
+	case model.KindKubernetesNetworkPolicy,
+		model.KindKubernetesAdminNetworkPolicy,
+		model.KindKubernetesBaselineAdminNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy:
 		return true, nil
+	case "":
+		return false, fmt.Errorf("policy kind is empty")
 	}
-
-	// calico policy names cannot include a '.', thus the format should either be <tier>.<name> or <name>
-	nameParts := strings.Split(name, ".")
-	if len(nameParts) > 2 {
-		return false, fmt.Errorf("policy name structure is unknown: %s", name)
-	}
-
 	return false, nil
 }
 
@@ -797,6 +706,9 @@ type ruleSelectorInfo struct {
 	endpoints   api.EndpointCounts
 	policies    set.Set[model.Key]
 }
+
+// Ensure policyDataWithRuleData implements the api.Policy interface.
+var _ api.Policy = &policyDataWithRuleData{}
 
 // policyDataWithRuleData is a non-cached version of the policy data, but it includes
 // the rule endpoint stats that are dynamically created.

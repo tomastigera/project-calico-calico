@@ -281,10 +281,10 @@ func (c *collector) Start() error {
 	}
 
 	if c.wafEventsReporter != nil {
-		go c.wafEventsBatchStart()
 		if err := c.wafEventsReporter.Start(); err != nil {
 			return err
 		}
+		go c.wafEventsBatchStart()
 	}
 
 	if c.policyActivityReporter != nil {
@@ -564,36 +564,39 @@ func (c *collector) getNodeIP() [16]byte {
 	return ipv6FormattedNodeIP
 }
 
-// lookupNetworkSetWithNamespace looks up NetworkSets for the given IP address.
-// If canCheckEgressDomains is true, then egress domain lookups will be performed if no
-// NetworkSet is found for the IP. If preferredNamespace is set, then it will be used for
-// namespace-aware NetworkSet resolution.
+// lookupNetworkSetWithNamespace returns the best matching NetworkSet for the given IP.
+//
+// It starts with an IP/CIDR-based lookup using preferredNamespace (if set). If domain
+// lookups are enabled, it then checks any watched domains associated with the IP and
+// upgrades the result only if a domain-backed NetworkSet has a strictly higher
+// namespace match (Preferred > Global > Other). Ties keep the IP/CIDR result.
+//
+// If an IP match is found in the preferred namespace (the highest possible priority),
+// domain lookups are skipped.
 func (c *collector) lookupNetworkSetWithNamespace(clientIPBytes, ip [16]byte, canCheckEgressDomains bool, preferredNamespace string) calc.EndpointData {
 	if !c.config.EnableNetworkSets {
 		return nil
 	}
 
-	// Check if the IP matches a NetworkSet
-	if ep, ok := c.luc.GetNetworkSetWithNamespace(ip, preferredNamespace); ok {
-		return ep
+	bestEp, bestMatch := c.luc.GetNetworkSetWithNamespace(ip, preferredNamespace)
+
+	if bestMatch == calc.MatchSameNamespace || !canCheckEgressDomains || c.domainLookup == nil {
+		// Best possible match, no need to do a domain query (or we're forbidden from doing a domain query).
+		return bestEp
 	}
 
-	if !canCheckEgressDomains || c.domainLookup == nil {
-		return nil
-	}
-
-	// No NetworkSet matches the IP, if canCheckEgressDomains is true, then check for egress domain
-	// and lookup NetworkSet from that
-	var ep calc.EndpointData
-	var ok bool
 	clientIP := c.getClientIP(clientIPBytes)
 	c.domainLookup.IterWatchedDomainsForIP(clientIP, ip, func(domain string) bool {
-		ep, ok = c.luc.GetNetworkSetFromEgressDomainWithNamespace(domain, preferredNamespace)
-		// Returning true stops the iteration, so stop as soon as we locate a network set
-		return ok
+		domainEp, domainMatch := c.luc.GetNetworkSetFromEgressDomainWithNamespace(domain, preferredNamespace)
+		if domainMatch > bestMatch {
+			bestMatch = domainMatch
+			bestEp = domainEp
+		}
+		// Stop if we know we can't find a better match than what we've got.
+		return bestMatch == calc.MatchSameNamespace
 	})
 
-	return ep
+	return bestEp
 }
 
 // findEndpointBestMatch performs endpoint lookups for both source and destination. It first tries
@@ -1582,32 +1585,62 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 	}
 
 	if ip := net.ParseIP(addr); ip != nil {
-		// Address is an IP. Attempt to look up a service name by cluster IP
+		// Address is an IP. First try to look up a service name by cluster IP
 		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(utils.IpStrTo16Byte(addr), port, t.Proto)
 		if found {
 			svcName = k8sSvcPortName.Name
 			svcNamespace = k8sSvcPortName.Namespace
 			svcPortName = k8sSvcPortName.Port
 			validService = true
+		} else {
+			// Cluster IP lookup failed. Try to look up by endpoint (pod) IP.
+			// This is needed for gateway logs where upstream_host contains the backend pod IP.
+			k8sSvcPortName, found = c.luc.GetServiceFromEndpointAddr(utils.IpStrTo16Byte(addr), port, t.Proto)
+			if found {
+				svcName = k8sSvcPortName.Name
+				svcNamespace = k8sSvcPortName.Namespace
+				svcPortName = k8sSvcPortName.Port
+				validService = true
+			}
 		}
 	} else {
-		// Check if the address is a Kubernetes service name
-		k8sSvcName, k8sSvcNamespace := utils.ExtractK8sServiceNameAndNamespace(addr)
-		if k8sSvcName != "" {
-			svcName = k8sSvcName
-			svcNamespace = k8sSvcNamespace
+		// Domain is a hostname (not an IP). For gateway logs, try to resolve
+		// service from UpstreamHost (the actual backend pod IP) first.
+		if hd.UpstreamHost != "" {
+			upstreamAddr, upstreamPort := utils.AddressAndPort(hd.UpstreamHost)
+			if upstreamIP := net.ParseIP(upstreamAddr); upstreamIP != nil {
+				// Use endpoint IP lookup to resolve service from backend pod IP
+				k8sSvcPortName, found := c.luc.GetServiceFromEndpointAddr(
+					utils.IpStrTo16Byte(upstreamAddr), upstreamPort, t.Proto)
+				if found {
+					svcName = k8sSvcPortName.Name
+					svcNamespace = k8sSvcPortName.Namespace
+					svcPortName = k8sSvcPortName.Port
+					validService = true
+				}
+			}
 		}
 
-		// Verify that the service name and namespace are valid
-		serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
-			Kind:      model.KindKubernetesService,
-			Name:      svcName,
-			Namespace: svcNamespace,
-		})
-		validService = isValidService
+		// Fall back to K8s service name extraction if UpstreamHost lookup didn't work
+		if !validService {
+			// Check if the address is a Kubernetes service name
+			k8sSvcName, k8sSvcNamespace := utils.ExtractK8sServiceNameAndNamespace(addr)
+			if k8sSvcName != "" {
+				svcName = k8sSvcName
+				svcNamespace = k8sSvcNamespace
+			}
 
-		if isValidService {
-			svcPortName = getPortNameFromServiceSpec(serviceSpec, port)
+			// Verify that the service name and namespace are valid
+			serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
+				Kind:      model.KindKubernetesService,
+				Name:      svcName,
+				Namespace: svcNamespace,
+			})
+			validService = isValidService
+
+			if isValidService {
+				svcPortName = getPortNameFromServiceSpec(serviceSpec, port)
+			}
 		}
 	}
 

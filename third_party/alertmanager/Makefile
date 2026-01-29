@@ -5,7 +5,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/alertmanager
 ALERTMANAGER_IMAGE    ?=alertmanager
 BUILD_IMAGES          ?=$(ALERTMANAGER_IMAGE) 
 
-ALERTMANAGER_VERSION = v0.28.1
+ALERTMANAGER_VERSION = v0.30.1
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -24,7 +24,6 @@ init-source: $(ALERTMANAGER_DOWNLOADED)
 $(ALERTMANAGER_DOWNLOADED):
 	mkdir -p alertmanager
 	curl -sfL https://github.com/prometheus/alertmanager/archive/refs/tags/$(ALERTMANAGER_VERSION).tar.gz | tar xz --strip-components 1 -C alertmanager
-	patch -d alertmanager -p1 < patches/0001-Update-libraries.patch
 	touch $@
 
 .PHONY: build

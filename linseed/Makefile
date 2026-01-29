@@ -97,12 +97,13 @@ MOCKERY_FILE_PATHS= \
 #############################################
 # Run unit level tests
 #############################################
+UT_WHAT=./pkg... ./cmd/...
 
 .PHONY: ut
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
 ut-fast: gen-certs
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... ./cmd/... -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test $(UT_WHAT) -cover -count 1'
 
 st:
 	@echo "No STs"
@@ -190,7 +191,7 @@ gen-certs:
 	openssl req -x509 -new -nodes -key $(REPO_ROOT)/linseed/fv/cert/RootCA.key -days 3 -sha256 \
 		-out $(REPO_ROOT)/linseed/fv/cert/RootCA.crt \
 		-subj "/C=US/CN=linseed-fv-ca"
-	
+
 	openssl genrsa -out $(REPO_ROOT)/linseed/fv/cert/localhost.key 2048
 	openssl req -new -key $(REPO_ROOT)/linseed/fv/cert/localhost.key \
 		-out $(REPO_ROOT)/linseed/fv/cert/localhost.csr \

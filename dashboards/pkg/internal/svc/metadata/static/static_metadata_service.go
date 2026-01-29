@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"net/http"
+	"path"
 
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	tdsslices "github.com/tigera/tds-apiserver/lib/slices"
@@ -20,7 +21,7 @@ type StaticMetadataService struct {
 }
 
 func NewStaticMetadataService() (*StaticMetadataService, error) {
-	globalDashboards, err := loadDashboards()
+	globalDashboards, err := LoadDashboards("global", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func NewStaticMetadataService() (*StaticMetadataService, error) {
 	}, nil
 }
 
-func loadDashboards() (*orderedmap.OrderedMap[client.DashboardID, client.Dashboard], error) {
+func LoadDashboards(pathPrefix string, disabledDashboardIDs []string) (*orderedmap.OrderedMap[client.DashboardID, client.Dashboard], error) {
 	globalDashboards := orderedmap.New[client.DashboardID, client.Dashboard]()
 	return globalDashboards, fs.WalkDir(dashboards.GlobalDashboardsEmbed, ".", func(fsPath string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -38,6 +39,9 @@ func loadDashboards() (*orderedmap.OrderedMap[client.DashboardID, client.Dashboa
 			return nil
 		}
 		if d.IsDir() {
+			return nil
+		}
+		if path.Dir(fsPath) != pathPrefix {
 			return nil
 		}
 
@@ -49,6 +53,10 @@ func loadDashboards() (*orderedmap.OrderedMap[client.DashboardID, client.Dashboa
 		var dashboard client.Dashboard
 		if err := json.Unmarshal(dashboardBytes, &dashboard); err != nil {
 			return err
+		}
+
+		if tdsslices.Contains(disabledDashboardIDs, string(dashboard.ID)) {
+			return nil
 		}
 
 		dashboard.IsImmutable = true

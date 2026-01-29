@@ -1,20 +1,20 @@
 # Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
+ARG UBI_IMAGE
 
-FROM alpine:3 AS builder
+FROM ${UBI_IMAGE} AS builder
 
-ARG K8S_VERSION
 ARG KUBE_BENCH_VERSION
 ARG TARGETARCH
 
-RUN apk add --no-cache curl
+RUN microdnf install -y gzip tar
 
 # install kube-bench configs
 # ref: https://github.com/aquasecurity/kube-bench/blob/main/docs/installation.md
-RUN curl -sfL https://github.com/aquasecurity/kube-bench/archive/refs/tags/${KUBE_BENCH_VERSION}.tar.gz -o /tmp/kube-bench.tar.gz && \
-	mkdir -p /tmp/kube-bench && tar -xf /tmp/kube-bench.tar.gz --strip-components 1 -C /tmp/kube-bench && \
-	mkdir -p /etc/kube-bench && mv /tmp/kube-bench/cfg /etc/kube-bench/
+RUN mkdir /kube-bench-src && \
+	curl -sfL https://github.com/aquasecurity/kube-bench/archive/refs/tags/${KUBE_BENCH_VERSION}.tar.gz | tar xz --strip-components 1 -C /kube-bench-src && \
+	mkdir -p /etc/kube-bench && mv /kube-bench-src/cfg/ /etc/kube-bench/
 
 FROM scratch AS source
 

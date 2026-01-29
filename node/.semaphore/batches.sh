@@ -41,5 +41,5 @@ run_batch() {
       ;;
   esac
 
-  VM_NAME="$vm_name" ${remote_exec} "${cmd[@]}" >& "$log_file"
+  VM_NAME="$vm_name" ${remote_exec} SEMAPHORE_GIT_BRANCH="${SEMAPHORE_GIT_BRANCH}" "${cmd[@]}" >& "$log_file"
 }

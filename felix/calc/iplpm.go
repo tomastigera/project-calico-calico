@@ -103,36 +103,17 @@ func DefaultNamespaceFilter(key model.Key, preferredNamespace string) (isNamespa
 	return false, true, true
 }
 
-// GetLongestPrefixCidr finds the longest prefix match CIDR for the given IP and if successful returns the
-// lexicographically lowest key associated with that CIDR.
-func (trie *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (model.Key, bool) {
-	var longestPrefix patricia.Prefix
-	var longestItem patricia.Item
-	ptrie := trie.lpmCache
-
-	err := ptrie.VisitPrefixes(patricia.Prefix(ipAddr.AsBinary()),
-		func(prefix patricia.Prefix, item patricia.Item) error {
-			if len(prefix) > len(longestPrefix) {
-				longestPrefix = prefix
-				longestItem = item
-			}
-			return nil
-		})
-
-	if err != nil || len(longestPrefix) == 0 {
-		return nil, false
-	}
-
-	node := longestItem.(*IPTrieNode)
-	return getLowestSortingKey(node.keys), true
-}
-
 // GetLongestPrefixCidrWithNamespaceIsolation finds the best prefix match with namespace isolation.
 // Priority order:
 // 1) preferred namespace match
 // 2) global match
 // 3) any other namespace match
-func (trie *IpTrie) GetLongestPrefixCidrWithNamespaceIsolation(ipAddr ip.Addr, preferredNamespace string) (model.Key, bool) {
+//
+// Returns:
+//   - model.Key:    the selected key for the best matching CIDR, or nil if no match is found.
+//   - MatchType:    indicates which priority level produced the match (MatchSameNamespace, MatchGlobal,
+//     MatchOtherNamespace), or MatchNone if no match is found.
+func (trie *IpTrie) GetLongestPrefixCidrWithNamespaceIsolation(ipAddr ip.Addr, preferredNamespace string) (model.Key, MatchType) {
 	ptrie := trie.lpmCache
 	searchPrefix := patricia.Prefix(ipAddr.AsBinary())
 
@@ -178,18 +159,18 @@ func (trie *IpTrie) GetLongestPrefixCidrWithNamespaceIsolation(ipAddr ip.Addr, p
 		}
 		return nil
 	}); err != nil {
-		return nil, false
+		return nil, MatchNone
 	}
 
 	switch {
 	case len(bestPreferred.keys) > 0:
-		return getLowestSortingKey(bestPreferred.keys), true
+		return getLowestSortingKey(bestPreferred.keys), MatchSameNamespace
 	case len(bestGlobal.keys) > 0:
-		return getLowestSortingKey(bestGlobal.keys), true
+		return getLowestSortingKey(bestGlobal.keys), MatchGlobal
 	case len(bestOther.keys) > 0:
-		return getLowestSortingKey(bestOther.keys), true
+		return getLowestSortingKey(bestOther.keys), MatchOtherNamespace
 	default:
-		return nil, false
+		return nil, MatchNone
 	}
 }
 

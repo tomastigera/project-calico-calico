@@ -61,6 +61,7 @@ func TestAuthService(t *testing.T) {
 		subject, err := NewAuthService(
 			cfg,
 			logger,
+			"fake-tenant-id",
 			"fake-tenant",
 			authorizer,
 			fakeClient,
@@ -152,6 +153,30 @@ func TestAuthService(t *testing.T) {
 				},
 				Groups: []string{},
 			}, authContext.UserInfo())
+
+			t.Run("with groups claim", func(t *testing.T) {
+				keySet := &testKeySet{}
+				subject, _, _ := newSubject(t, &config.Config{
+					OIDCAuthIssuer:      "fake-issuer",
+					OIDCAuthClientID:    "fake-client-id",
+					OIDCAuthGroupsClaim: "fake-groups-claim",
+					ProductMode:         config.ProductModeCloud,
+				}, lmaauth.WithKeySet(keySet))
+
+				fakeJWT := lmatesting.NewFakeJWT("fake-issuer", "fake-user").
+					WithClaim(lmaauth.ClaimNameAud, "fake-client-id").
+					WithClaim("https://calicocloud.io/tenantIDs", []string{"fake-tenant"}).
+					WithClaim("fake-groups-claim", []string{"fake-group1", "fake-group2"})
+				keySet.On("VerifySignature", mock.Anything, fakeJWT.ToString()).Return([]byte(fakeJWT.PayloadJSON), nil)
+
+				authContext, err := subject.authenticateRequest(&http.Request{
+					Header: http.Header{
+						"Authorization": []string{fakeJWT.BearerTokenHeader()},
+					},
+				})
+				require.NoError(t, err)
+				require.Equal(t, []string{"fake-group1", "fake-group2"}, authContext.Groups())
+			})
 		})
 	})
 }

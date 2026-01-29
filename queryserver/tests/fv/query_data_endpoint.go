@@ -439,8 +439,7 @@ func endpointTestQueryData() []testQueryData {
 				},
 			},
 			errorResponse{
-				text: "Error: invalid query: the policy name is not valid; it should be of the format " +
-					"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>",
+				text: "Error: invalid policy name format, expected kind/name or kind/namespace/name",
 				code: http.StatusBadRequest,
 			},
 		},
@@ -596,7 +595,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "egress",
 				RuleIndex:           1000000,
 				RuleEntity:          "source",
@@ -632,7 +631,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "foobarbaz",
 				RuleIndex:           0,
 				RuleEntity:          "source",
@@ -668,7 +667,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "egress",
 				RuleIndex:           0,
 				RuleEntity:          "foobarbaz",
@@ -706,7 +705,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "egress",
 				RuleIndex:           1,
 				RuleEntity:          "source",
@@ -746,7 +745,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "ingress",
 				RuleIndex:           0,
 				RuleEntity:          "destination",
@@ -787,7 +786,7 @@ func endpointTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, sgnp1_t1_o3, sgnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
-				Policy:              stagedResourceKey(sgnp2_t1_o4),
+				Policy:              resourceKey(sgnp2_t1_o4),
 				RuleDirection:       "ingress",
 				RuleIndex:           1,
 				RuleEntity:          "destination",
@@ -1458,7 +1457,6 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
-
 			description: "multiple heps, weps, no policy - query by pod name prefix, return all if podPrefix is empty",
 			resources: []resourcemgr.ResourceObject{
 				wep1_n1_ns1, wep3_n1_ns2, hep1_n2,
@@ -1479,7 +1477,6 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
-
 			description: "multiple heps, weps, no policy - query by pod name prefix, return all if podPrefix is nil",
 			resources: []resourcemgr.ResourceObject{
 				wep1_n1_ns1, wep3_n1_ns2, hep1_n2,
@@ -1501,6 +1498,7 @@ func endpointTestQueryData() []testQueryData {
 		},
 	}
 }
+
 func getStringPointer(s string) *string {
 	return &s
 }

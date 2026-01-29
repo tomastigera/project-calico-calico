@@ -82,6 +82,7 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 
 		flow.Policies = append(flow.Policies, v1.Policy{
 			Tier:         hit.Tier(),
+			Kind:         hit.Kind(),
 			Namespace:    hit.Namespace(),
 			Name:         hit.Name(),
 			Action:       string(hit.Action()),

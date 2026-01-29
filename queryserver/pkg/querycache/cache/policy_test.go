@@ -23,21 +23,9 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return true for admin network policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "kanp.adminnetworkpolicy.test",
+				Name:      "test",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
-			})
-
-			isKubPolicy, err := policyData.IsKubernetesType()
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(isKubPolicy).To(BeTrue())
-		})
-
-		It("should return true for admin network policy with '.' in the name", func() {
-			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "kanp.adminnetworkpolicy.test.1",
-				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesAdminNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -47,21 +35,9 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return true for baseline admin network policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "kbanp.baselineadminnetworkpolicy.test",
+				Name:      "test",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
-			})
-
-			isKubPolicy, err := policyData.IsKubernetesType()
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(isKubPolicy).To(BeTrue())
-		})
-
-		It("should return true for baseline admin network policy with '.' in the name", func() {
-			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "kbanp.baselineadminnetworkpolicy.test.1",
-				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -71,21 +47,9 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return true for kubernetes network policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "knp.default.test",
+				Name:      "test",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
-			})
-
-			isKubPolicy, err := policyData.IsKubernetesType()
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(isKubPolicy).To(BeTrue())
-		})
-
-		It("should return true for kubernetes network policy with '.' in the name", func() {
-			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "knp.default.test.1",
-				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      model.KindKubernetesNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -95,9 +59,9 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return true for staged kubernetes network policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "staged:knp.default.test.1",
+				Name:      "test.1",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      v3.KindStagedKubernetesNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -109,7 +73,7 @@ var _ = Describe("Querycache policy tests", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
 				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      v3.KindNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -119,9 +83,9 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return false for staged calico policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "staged:default.test",
+				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      v3.KindStagedNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -133,7 +97,7 @@ var _ = Describe("Querycache policy tests", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
 				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      v3.KindGlobalNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
@@ -143,25 +107,14 @@ var _ = Describe("Querycache policy tests", func() {
 
 		It("should return false for staged global calico policy", func() {
 			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "staged:default.test",
+				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      v3.KindStagedGlobalNetworkPolicy,
 			})
 
 			isKubPolicy, err := policyData.IsKubernetesType()
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(isKubPolicy).To(BeFalse())
-		})
-
-		It("should return err for unknown policy structure", func() {
-			policyData := policiesCache.GetPolicy(model.ResourceKey{
-				Name:      "abc.default.test",
-				Namespace: "default",
-				Kind:      "NetworkPolicy",
-			})
-
-			_, err := policyData.IsKubernetesType()
-			Expect(err).Should(HaveOccurred())
 		})
 	})
 })
@@ -179,6 +132,9 @@ func populateCache() cache.PoliciesCache {
 	)
 	npConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 		updateprocessors.NewNetworkPolicyUpdateProcessor(v3.KindNetworkPolicy),
+	)
+	knpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
+		updateprocessors.NewNetworkPolicyUpdateProcessor(model.KindKubernetesNetworkPolicy),
 	)
 	sgnpConverter := dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 		updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
@@ -211,7 +167,7 @@ func populateCache() cache.PoliciesCache {
 		{
 			// Convert the KubernetesNetworkPolicy to NP.
 			Kind:      model.KindKubernetesNetworkPolicy,
-			Converter: npConverter,
+			Converter: knpConverter,
 		},
 		{
 			// We need to convert the NP for use with the policy sorter, and to get the
@@ -243,13 +199,12 @@ func populateCache() cache.PoliciesCache {
 	dispatcher := dispatcherv1v3.New(dispatcherTypes)
 	policiesCache.RegisterWithDispatcher(dispatcher)
 
-	//
 	newKANPUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "kanp.adminnetworkpolicy.test",
+				Name:      "test",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesAdminNetworkPolicy,
 			},
 			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -257,7 +212,7 @@ func populateCache() cache.PoliciesCache {
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name: "kanp.adminnetworkpolicy.test",
+					Name: "test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
 				Spec: v3.GlobalNetworkPolicySpec{
@@ -277,9 +232,9 @@ func populateCache() cache.PoliciesCache {
 	newKANPUpdate2 := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "kanp.adminnetworkpolicy.test.1",
+				Name:      "test.1",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesAdminNetworkPolicy,
 			},
 			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -287,7 +242,7 @@ func populateCache() cache.PoliciesCache {
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name: "kanp.adminnetworkpolicy.test",
+					Name: "test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
 				Spec: v3.GlobalNetworkPolicySpec{
@@ -307,9 +262,9 @@ func populateCache() cache.PoliciesCache {
 	newKBANPUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "kbanp.baselineadminnetworkpolicy.test",
+				Name:      "test",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
 			},
 			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -317,7 +272,7 @@ func populateCache() cache.PoliciesCache {
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name: "kbanp.baselineadminnetworkpolicy.test",
+					Name: "test",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
 				Spec: v3.GlobalNetworkPolicySpec{
@@ -337,9 +292,9 @@ func populateCache() cache.PoliciesCache {
 	newKBANPUpdate2 := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "kbanp.baselineadminnetworkpolicy.test.1",
+				Name:      "test.1",
 				Namespace: "",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
 			},
 			Value: &v3.GlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -347,7 +302,7 @@ func populateCache() cache.PoliciesCache {
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name: "kbanp.baselineadminnetworkpolicy.test",
+					Name: "test.1",
 					UID:  "e398dea3-328b-48ca-b152-1efcafaccc24",
 				},
 				Spec: v3.GlobalNetworkPolicySpec{
@@ -367,9 +322,9 @@ func populateCache() cache.PoliciesCache {
 	newKNPUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "knp.default.test",
+				Name:      "test",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      "KubernetesNetworkPolicy",
 			},
 			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -377,7 +332,7 @@ func populateCache() cache.PoliciesCache {
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "knp.default.test",
+					Name:      "test",
 					Namespace: "default",
 					UID:       "62cb2a82-77ff-44ed-8aab-fabab0a3b521",
 				},
@@ -393,9 +348,9 @@ func populateCache() cache.PoliciesCache {
 	newKNPUpdate2 := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "knp.default.test.1",
+				Name:      "test.1",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      "KubernetesNetworkPolicy",
 			},
 			Value: &v3.NetworkPolicy{
 				TypeMeta: v1.TypeMeta{
@@ -419,23 +374,20 @@ func populateCache() cache.PoliciesCache {
 	stagedKNPUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "staged:knp.default.test.1",
+				Name:      "test.1",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      "StagedKubernetesNetworkPolicy",
 			},
-			Value: &v3.NetworkPolicy{
+			Value: &v3.StagedKubernetesNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
-					Kind:       "NetworkPolicy",
+					Kind:       "StagedKubernetesNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "knp.default.test",
+					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: v3.NetworkPolicySpec{
-					Tier:  "",
-					Types: []v3.PolicyType{"Ingress"},
-				},
+				Spec: v3.StagedKubernetesNetworkPolicySpec{},
 			},
 		},
 		UpdateType: api.UpdateTypeKVNew,
@@ -471,21 +423,21 @@ func populateCache() cache.PoliciesCache {
 	stagedCalicoUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "staged:default.test",
+				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "NetworkPolicy",
+				Kind:      "StagedNetworkPolicy",
 			},
-			Value: &v3.NetworkPolicy{
+			Value: &v3.StagedNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
 					Kind:       "NetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "staged:default.test",
+					Name:      "default.test",
 					Namespace: "default",
 					UID:       "00ffcda7-1506-43da-a8f5-138cb46df515",
 				},
-				Spec: v3.NetworkPolicySpec{
+				Spec: v3.StagedNetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
 					Types:    []v3.PolicyType{"Ingress"},
@@ -525,47 +477,21 @@ func populateCache() cache.PoliciesCache {
 	stagedGlobalCalicoUpdate := api.Update{
 		KVPair: model.KVPair{
 			Key: model.ResourceKey{
-				Name:      "staged:default.test",
+				Name:      "default.test",
 				Namespace: "default",
-				Kind:      "GlobalNetworkPolicy",
+				Kind:      "StagedGlobalNetworkPolicy",
 			},
-			Value: &v3.GlobalNetworkPolicy{
+			Value: &v3.StagedGlobalNetworkPolicy{
 				TypeMeta: v1.TypeMeta{
-					Kind:       "GlobalNetworkPolicy",
+					Kind:       "StagedGlobalNetworkPolicy",
 					APIVersion: "projectcalico.org/v3",
 				},
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "staged:default.test",
+					Name:      "default.test",
 					Namespace: "default",
 					UID:       "afbb0565-7bc7-43f9-9dda-1126212eac41",
 				},
-				Spec: v3.GlobalNetworkPolicySpec{
-					Tier:     "default",
-					Selector: "all()",
-					Types:    []v3.PolicyType{"Ingress"},
-				},
-			},
-		},
-		UpdateType: api.UpdateTypeKVNew,
-	}
-
-	newRandomUpdate := api.Update{
-		KVPair: model.KVPair{
-			Key: model.ResourceKey{
-				Name:      "abc.default.test",
-				Namespace: "default",
-				Kind:      "NetworkPolicy",
-			},
-			Value: &v3.NetworkPolicy{
-				TypeMeta: v1.TypeMeta{
-					Kind:       "NetworkPolicy",
-					APIVersion: "projectcalico.org/v3",
-				},
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "abc.default.test",
-					Namespace: "default",
-				},
-				Spec: v3.NetworkPolicySpec{
+				Spec: v3.StagedGlobalNetworkPolicySpec{
 					Tier:     "default",
 					Selector: "all()",
 					Types:    []v3.PolicyType{"Ingress"},
@@ -587,7 +513,6 @@ func populateCache() cache.PoliciesCache {
 		stagedCalicoUpdate,
 		newGlobalCalicoUpdate,
 		stagedGlobalCalicoUpdate,
-		newRandomUpdate,
 	}
 
 	dispatcher.OnUpdates(updates)

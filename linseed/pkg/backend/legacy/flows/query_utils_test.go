@@ -489,7 +489,7 @@ func TestCompileStringMatch(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		stringMatch, err := flows.CompileStringMatch(tt.policyMatch)
+		stringMatch, err := flows.CompileLegacyStringMatch(tt.policyMatch)
 		if tt.testResult.error {
 			assert.Error(t, err)
 			assert.Equal(t, tt.testResult.errorMsg, err.Error())

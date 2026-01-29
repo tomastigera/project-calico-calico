@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,6 +109,7 @@ func init() {
 	registerResourceInfo[apiv3.GlobalNetworkSet](apiv3.KindGlobalNetworkSet, "globalnetworksets")
 	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesAdminNetworkPolicy, "kubernetesadminnetworkpolicies")
 	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesBaselineAdminNetworkPolicy, "kubernetesbaselineadminnetworkpolicies")
+	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesClusterNetworkPolicy, "kubernetesclusternetworkpolicies")
 	registerResourceInfo[apiv3.IPPool](apiv3.KindIPPool, "ippools")
 	registerResourceInfo[apiv3.IPReservation](apiv3.KindIPReservation, "ipreservations")
 	registerResourceInfo[apiv3.NetworkPolicy](apiv3.KindNetworkPolicy, "networkpolicies")

@@ -4,6 +4,7 @@ package api
 import v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 type Policy interface {
+	Kind() string
 	GetAnnotations() map[string]string
 	GetResource() Resource
 	GetTier() string
@@ -15,7 +16,6 @@ type Policy interface {
 	GetSelector() *string
 	GetNamespaceSelector() *string
 	GetServiceAccountSelector() *string
-	GetResourceType() Resource
 	IsKubernetesType() (bool, error)
 }
 

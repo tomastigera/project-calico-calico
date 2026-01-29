@@ -124,6 +124,8 @@ type State struct {
 	SrcAddrMasq1        uint32
 	SrcAddrMasq2        uint32
 	SrcAddrMasq3        uint32
+	NATSvcID            uint32
+	_                   uint32
 	// Pad the v4 struct to match the v6 one.
 	// While many v4/v6 fields are unioned (will always be v6-sized),
 	// some are explicitly one or the other, leading to the size discrepancy.
@@ -131,7 +133,7 @@ type State struct {
 	_ [56]byte
 }
 
-const expectedSize = 504
+const expectedSize = 512
 
 func (s *State) AsBytes() []byte {
 	bPtr := (*[expectedSize]byte)(unsafe.Pointer(s))
@@ -153,7 +155,7 @@ var MapParameters = maps.MapParameters{
 	ValueSize:  expectedSize,
 	MaxEntries: 2,
 	Name:       "cali_state",
-	Version:    4,
+	Version:    5,
 }
 
 func Map() maps.Map {

@@ -111,17 +111,23 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-1", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-2", "10.65.1.1", tc.Felixes[1].Hostname, client)
 		ep2_2 = workload.Run(tc.Felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
 		ep2_2.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-3", "10.65.1.2", tc.Felixes[1].Hostname, client)
 		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
+
+		ensureRoutesProgrammed(tc.Felixes)
 
 		// Create tiers tier1 and tier2
 		tier := api.NewTier()
@@ -455,10 +461,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				},
 			)
@@ -475,10 +481,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				},
 			)
@@ -495,10 +501,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				},
 			)
@@ -515,10 +521,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|default|default.ep1-1-allow-all|allow|0": {},
+						"0|default|gnp:default.ep1-1-allow-all|allow|0": {},
 					},
 				},
 			)
@@ -544,10 +550,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|default/tier2.np2-4|deny|0": {},
+						"0|tier2|np:default/tier2.np2-4|deny|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|default/tier2.staged:tier2.np2-3|deny|1": {},
+						"0|tier2|snp:default/tier2.np2-3|deny|1": {},
 					},
 				},
 			)
@@ -564,10 +570,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp2-2|deny|0": {},
+						"0|tier2|gnp:tier2.gnp2-2|deny|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier2|tier2.gnp2-2|deny|0": {},
+						"0|tier2|gnp:tier2.gnp2-2|deny|0": {},
 					},
 				},
 			)
@@ -584,10 +590,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|deny|1": {},
+						"0|tier1|np:default/tier1.np1-1|deny|1": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|deny|1": {},
+						"0|tier1|np:default/tier1.np1-1|deny|1": {},
 					},
 				},
 			)
@@ -604,12 +610,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|1":      {},
-						"1|default|default/default.np3-3|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|1":      {},
+						"1|default|np:default/default.np3-3|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|1":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-3|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|1":   {},
+						"1|tier2|snp:default/tier2.np2-3|allow|0": {},
 					},
 				},
 			)
@@ -626,10 +632,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|allow|0": {},
 					},
 				},
 			)
@@ -646,12 +652,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|allow|0": {},
 					},
 				},
 			)
@@ -727,9 +733,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-1", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
@@ -960,8 +968,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				},
 			)
@@ -986,8 +994,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				},
 			)
@@ -1074,12 +1082,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1094,13 +1102,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|pass|-1": {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0":    {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|pass|-1": {},
+						"2|__PROFILE__|pro:kns.default|allow|0":   {},
 					},
 				},
 			)
@@ -1125,12 +1133,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1145,13 +1153,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|pass|-1": {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0":    {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|pass|-1": {},
+						"2|__PROFILE__|pro:kns.default|allow|0":   {},
 					},
 				},
 			)
@@ -1237,8 +1245,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				},
 			)
@@ -1263,8 +1271,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 				},
 			)
@@ -1336,9 +1344,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
+		infrastructure.AssignIP("ep1-1", "10.65.0.0", tc.Felixes[0].Hostname, client)
 		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
+		infrastructure.AssignIP("ep2-1", "10.65.1.0", tc.Felixes[1].Hostname, client)
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
@@ -1640,12 +1650,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1661,12 +1671,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|allow|2": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|allow|2": {},
 					},
 				},
 			)
@@ -1691,12 +1701,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1712,12 +1722,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|allow|1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|allow|1": {},
 					},
 				},
 			)
@@ -1799,12 +1809,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1819,13 +1829,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":              {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|pass|0": {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0":   {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":  {},
+						"1|tier2|snp:default/tier2.np2-1|pass|0": {},
+						"2|__PROFILE__|pro:kns.default|allow|0":  {},
 					},
 				},
 			)
@@ -1850,12 +1860,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":               {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|deny|-1": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":   {},
+						"1|tier2|snp:default/tier2.np2-1|deny|-1": {},
 					},
 				},
 			)
@@ -1870,13 +1880,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":            {},
-						"1|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
+						"0|tier1|np:default/tier1.np1-1|pass|0": {},
+						"1|__PROFILE__|pro:kns.default|allow|0": {},
 					},
 					FlowPendingPolicySet: flowlog.FlowPolicySet{
-						"0|tier1|default/tier1.np1-1|pass|0":              {},
-						"1|tier2|default/tier2.staged:tier2.np2-1|pass|0": {},
-						"2|__PROFILE__|__PROFILE__.kns.default|allow|0":   {},
+						"0|tier1|np:default/tier1.np1-1|pass|0":  {},
+						"1|tier2|snp:default/tier2.np2-1|pass|0": {},
+						"2|__PROFILE__|pro:kns.default|allow|0":  {},
 					},
 				},
 			)

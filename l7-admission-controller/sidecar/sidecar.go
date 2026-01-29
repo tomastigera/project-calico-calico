@@ -350,16 +350,20 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 		envoyResources: pod.Annotations["applicationlayer.projectcalico.org/sidecarResources"],
 	}
 
-	pt := admissionv1.PatchTypeJSONPatch
-	res.PatchType = &pt
-
 	additionalPatches := relocateRunAsNonRoot(&pod)
 
 	patchBytes, err := cfg.patchBytes(additionalPatches...)
 	if err != nil {
 		return err
 	}
-	res.Patch = patchBytes
+
+	// Only set PatchType when we have an actual patch to apply.
+	// Returning patchType without patch is an invalid admission response.
+	if patchBytes != nil {
+		pt := admissionv1.PatchTypeJSONPatch
+		res.PatchType = &pt
+		res.Patch = patchBytes
+	}
 
 	return nil
 }

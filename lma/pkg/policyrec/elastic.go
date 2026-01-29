@@ -53,7 +53,7 @@ func BuildQuery(params *PolicyRecommendationParams) *lapi.L3FlowParams {
 	// specifically only pick flows that are allowed by a profile.
 	allow := lapi.FlowActionAllow
 	if params.Unprotected {
-		fp.PolicyMatches = []lapi.PolicyMatch{
+		fp.PendingPolicyMatches = []lapi.PolicyMatch{
 			{
 				Tier:   "__PROFILE__",
 				Action: &allow,
@@ -62,7 +62,7 @@ func BuildQuery(params *PolicyRecommendationParams) *lapi.L3FlowParams {
 	} else {
 		// Otherwise, return any flows that are seen by the default tier
 		// or allowed by a profile.
-		fp.PolicyMatches = []lapi.PolicyMatch{
+		fp.PendingPolicyMatches = []lapi.PolicyMatch{
 			{
 				Tier: "default",
 			},

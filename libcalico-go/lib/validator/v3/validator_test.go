@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,8 +60,8 @@ func init() {
 	Vx100000000 := 0x100000000
 	tierOrder := float64(100.0)
 	defaultTierOrder := api.DefaultTierOrder
-	anpTierOrder := api.AdminNetworkPolicyTierOrder
-	banpTierOrder := api.BaselineAdminNetworkPolicyTierOrder
+	adminTierOrder := api.KubeAdminTierOrder
+	baselineTierOrder := api.KubeBaselineTierOrder
 	defaultTierBadOrder := float64(10.0)
 
 	// We need pointers to bools, so define the values here.
@@ -3225,9 +3225,8 @@ func init() {
 		Entry("Tier: allow adminnetworkpolicy tier with the predefined order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.AdminNetworkPolicyTierName},
 			Spec: api.TierSpec{
-				Order: &anpTierOrder,
-			},
-		}, true),
+				Order: &adminTierOrder,
+			}}, true),
 		Entry("Tier: disallow baselineadminnetworkpolicy tier with an invalid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.BaselineAdminNetworkPolicyTierName},
 			Spec: api.TierSpec{
@@ -3237,9 +3236,28 @@ func init() {
 		Entry("Tier: allow baselineadminnetworkpolicy tier with the predefined order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.BaselineAdminNetworkPolicyTierName},
 			Spec: api.TierSpec{
-				Order: &banpTierOrder,
-			},
-		}, true),
+				Order: &baselineTierOrder,
+			}}, true),
+		Entry("Tier: disallow kube-admin tier with an invalid order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeAdminTierName},
+			Spec: api.TierSpec{
+				Order: &defaultTierBadOrder,
+			}}, false),
+		Entry("Tier: allow kube-admin tier with the predefined order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeAdminTierName},
+			Spec: api.TierSpec{
+				Order: &adminTierOrder,
+			}}, true),
+		Entry("Tier: disallow kube-baseline tier with an invalid order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeBaselineTierName},
+			Spec: api.TierSpec{
+				Order: &defaultTierBadOrder,
+			}}, false),
+		Entry("Tier: allow kube-baseline tier with the predefined order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeBaselineTierName},
+			Spec: api.TierSpec{
+				Order: &baselineTierOrder,
+			}}, true),
 		Entry("Tier: allow a tier with a valid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "platform"},
 			Spec: api.TierSpec{

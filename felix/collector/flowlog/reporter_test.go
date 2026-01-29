@@ -107,7 +107,17 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				}
 			}
 		}
-		Expect(count).Should(Equal(len(fls)))
+
+		// Build a failure message showing expected vs found flow logs.
+		msg := "Expected flow logs not found in event stream.\n\nExpected:\n\n"
+		for _, fl := range fls {
+			msg += fmt.Sprintf("%+v\n", fl)
+		}
+		msg += "\nFound:\n\n"
+		for _, flog := range flogs {
+			msg += fmt.Sprintf("%+v\n", flog)
+		}
+		Expect(count).Should(Equal(len(fls)), msg)
 	}
 
 	calculatePacketStats := func(mus ...metric.Update) (epi, epo, ebi, ebo int) {
@@ -155,7 +165,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -169,7 +179,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.PendingRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),
@@ -183,7 +193,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.TransitRuleIDs {
-				name := fmt.Sprintf("%d|%s|%s|%s|%s", idx,
+				name := fmt.Sprintf("%d|%s|gnp:%s|%s|%s", idx,
 					r.TierString(),
 					r.NameString(),
 					r.ActionString(),

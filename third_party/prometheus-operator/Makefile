@@ -6,7 +6,7 @@ PROMETHEUS_OPERATOR_IMAGE ?= prometheus-operator
 PROMETHEUS_CONFIG_RELOADER_IMAGE ?= prometheus-config-reloader
 BUILD_IMAGES ?= $(PROMETHEUS_OPERATOR_IMAGE) ${PROMETHEUS_CONFIG_RELOADER_IMAGE}
 
-PROMETHEUS_OPERATOR_VERSION = v0.84.0
+PROMETHEUS_OPERATOR_VERSION = v0.88.0
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -25,7 +25,6 @@ init-source: $(PROMETHEUS_OPERATOR_DOWNLOADED)
 $(PROMETHEUS_OPERATOR_DOWNLOADED):
 	mkdir -p prometheus-operator
 	curl -sfL https://github.com/prometheus-operator/prometheus-operator/archive/refs/tags/$(PROMETHEUS_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C prometheus-operator
-	patch -d prometheus-operator -p1 < patches/0001-Update-libraries.patch
 	touch $@
 
 build: bin/prometheus-operator-$(ARCH) bin/prometheus-config-reloader-$(ARCH)

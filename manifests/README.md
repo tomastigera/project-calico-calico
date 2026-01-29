@@ -41,7 +41,5 @@ commit your changes. **The following manifests are not auto generated:**
 - ocp/tigera-prometheus-operator.yaml
 - rancher/*
 - threatdef/*
-- tigera-panorama-address-groups.yaml
-- tigera-policy-integration.yaml
 - tigera-prometheus-operator.yaml
 - operator-crds.yaml

@@ -1,0 +1,9 @@
+dashboards:
+- id: "1"
+  isImmutable: true
+  title: Traffic Volume
+- id: "3"
+  isImmutable: true
+  title: Flow Logs
+- id: fake-dashboard-id2
+  title: fake-dashboard2

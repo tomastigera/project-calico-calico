@@ -8,19 +8,23 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/utils/ptr"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
-type testPolicyHit struct {
+type expectedHit struct {
+	name        string
+	namespace   string
+	kind        string
+	tier        string
 	action      api.Action
 	index       int
-	name        string
 	flowLogName string
-	namespace   string
-	tier        string
 	isKNP       bool
-	isKNS       bool
+	isProfile   bool
 	isStaged    bool
 	count       int64
 	ruleIdIndex *int
@@ -28,32 +32,37 @@ type testPolicyHit struct {
 
 var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 	DescribeTable("Successful PolicyHit parsing",
-		func(policyStr string, docCount int, expectedPolicyHit testPolicyHit, expectedPolicyString string) {
+		func(policyStr string, docCount int, expected expectedHit, expectedPolicyString string) {
+			// Parse the policy string.
 			policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(docCount))
 			Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(policyHit.Action()).Should(Equal(expectedPolicyHit.action))
-			Expect(policyHit.Index()).Should(Equal(expectedPolicyHit.index))
-			Expect(policyHit.Tier()).Should(Equal(expectedPolicyHit.tier))
-			Expect(policyHit.RuleIdIndex()).Should(Equal(expectedPolicyHit.ruleIdIndex))
-			Expect(policyHit.FlowLogName()).Should(Equal(expectedPolicyHit.flowLogName))
-			Expect(policyHit.Namespace()).Should(Equal(expectedPolicyHit.namespace))
-			Expect(policyHit.Count()).Should(Equal(expectedPolicyHit.count))
-			Expect(policyHit.IsKubernetes()).Should(Equal(expectedPolicyHit.isKNP))
-			Expect(policyHit.IsProfile()).Should(Equal(expectedPolicyHit.isKNS))
-			Expect(policyHit.IsStaged()).Should(Equal(expectedPolicyHit.isStaged))
-			Expect(policyHit.ToFlowLogPolicyString()).Should(Equal(expectedPolicyString))
+			// Verify the fields.
+			Expect(policyHit.Name()).Should(Equal(expected.name), policyStr)
+			Expect(policyHit.Action()).Should(Equal(expected.action), policyStr)
+			Expect(policyHit.Index()).Should(Equal(expected.index), policyStr)
+			Expect(policyHit.Tier()).Should(Equal(expected.tier), policyStr)
+			Expect(policyHit.RuleIdIndex()).Should(Equal(expected.ruleIdIndex), policyStr)
+			Expect(policyHit.FlowLogName()).Should(Equal(expected.flowLogName), policyStr)
+			Expect(policyHit.Namespace()).Should(Equal(expected.namespace), policyStr)
+			Expect(policyHit.Count()).Should(Equal(expected.count), policyStr)
+			Expect(policyHit.IsKubernetes()).Should(Equal(expected.isKNP), policyStr)
+			Expect(policyHit.IsProfile()).Should(Equal(expected.isProfile), policyStr)
+			Expect(policyHit.IsStaged()).Should(Equal(expected.isStaged), policyStr)
+			Expect(policyHit.ToFlowLogPolicyString()).Should(Equal(expectedPolicyString), policyStr)
+			Expect(policyHit.Kind()).Should(Equal(expected.kind), policyStr)
 		},
+
 		Entry(
-			"properly handles a network policy",
+			"properly handles a (legacy) network policy",
 			"4|tierName|namespaceName/tierName.policyName|allow",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isKNS: false, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindNetworkPolicy,
+				flowLogName: "np:namespaceName/tierName.policyName", namespace: "namespaceName",
+				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: false,
 			},
-			"4|tierName|namespaceName/tierName.policyName|allow|-",
+			"4|tierName|np:namespaceName/tierName.policyName|allow|-",
 		),
 
 		// Older versions of Calico used tier.staged:name, but newer versions do not include
@@ -63,180 +72,169 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 			"properly handles a (legacy) staged network policy",
 			"4|tierName|namespaceName/tierName.staged:policyName|deny",
 			5,
-			testPolicyHit{
-				action: api.ActionDeny, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "namespaceName/tierName.staged:tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
+				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
+				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: true,
 			},
-			"4|tierName|namespaceName/tierName.staged:tierName.policyName|deny|-",
+			"4|tierName|snp:namespaceName/tierName.policyName|deny|-",
 		),
 		Entry(
 			"properly handles a (legacy) staged global network policy",
 			"4|tierName|tierName.staged:policyName|allow",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "tierName.staged:tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5,
-				isKNP: false, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedGlobalNetworkPolicy,
+				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5,
+				isKNP: false, isProfile: false, isStaged: true,
 			},
-			"4|tierName|tierName.staged:tierName.policyName|allow|-",
+			"4|tierName|sgnp:tierName.policyName|allow|-",
 		),
 		Entry(
 			"properly handles a (legacy) staged network policy",
 			"4|tierName|namespaceName/tierName.staged:policyName|deny|-1",
 			5,
-			testPolicyHit{
-				action: api.ActionDeny, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "namespaceName/tierName.staged:tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: getRefToInt(-1), count: 5, isKNP: false, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
+				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
+				ruleIdIndex: ptr.To(-1), count: 5, isKNP: false, isProfile: false, isStaged: true,
 			},
-			"4|tierName|namespaceName/tierName.staged:tierName.policyName|deny|-1",
+			"4|tierName|snp:namespaceName/tierName.policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a (legacy) staged global network policy",
 			"4|tierName|tierName.staged:policyName|allow|1",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "tierName.staged:tierName.policyName", namespace: "", ruleIdIndex: getRefToInt(1), count: 5,
-				isKNP: false, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedGlobalNetworkPolicy,
+				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIdIndex: ptr.To(1), count: 5,
+				isKNP: false, isProfile: false, isStaged: true,
 			},
-			"4|tierName|tierName.staged:tierName.policyName|allow|1",
+			"4|tierName|sgnp:tierName.policyName|allow|1",
 		),
 
-		// Same test from above, but with new style input - should give us the same output.
+		// Same tests from above, but with new style input - should give us the same output.
 		Entry(
 			"properly handles a staged network policy",
-			"4|tierName|namespaceName/tierName.staged:tierName.policyName|deny",
+			"4|tierName|snp:namespaceName/tierName.policyName|deny",
 			5,
-			testPolicyHit{
-				action: api.ActionDeny, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "namespaceName/tierName.staged:tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
+				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
+				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: true,
 			},
-			"4|tierName|namespaceName/tierName.staged:tierName.policyName|deny|-",
+			"4|tierName|snp:namespaceName/tierName.policyName|deny|-",
 		),
 
 		Entry(
 			"properly handles a global network policy",
-			"4|tierName|tierName.policyName|allow",
+			"4|tierName|gnp:tierName.policyName|allow",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5, isKNP: false,
-				isKNS: false, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindGlobalNetworkPolicy,
+				flowLogName: "gnp:tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5, isKNP: false,
+				isProfile: false, isStaged: false,
 			},
-			"4|tierName|tierName.policyName|allow|-",
+			"4|tierName|gnp:tierName.policyName|allow|-",
 		),
 		Entry(
 			"properly handles a kubernetes network policy",
-			"4|default|namespaceName/knp.default.policyName|allow",
+			"4|default|knp:namespaceName/policyName|allow",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "default", name: "policyName",
-				flowLogName: "namespaceName/knp.default.policyName", namespace: "namespaceName",
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "default", name: "policyName", kind: model.KindKubernetesNetworkPolicy,
+				flowLogName: "knp:namespaceName/policyName", namespace: "namespaceName",
 				ruleIdIndex: nil, count: 5, isKNP: true, isStaged: false,
 			},
-			"4|default|namespaceName/knp.default.policyName|allow|-",
+			"4|default|knp:namespaceName/policyName|allow|-",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
-			"4|default|namespaceName/staged:knp.default.policyName|deny",
+			"4|default|sknp:namespaceName/policyName|deny",
 			5,
-			testPolicyHit{
-				action: api.ActionDeny, index: 4, tier: "default", name: "policyName",
-				flowLogName: "namespaceName/staged:knp.default.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: true, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionDeny, index: 4, tier: "default", name: "policyName", kind: v3.KindStagedKubernetesNetworkPolicy,
+				flowLogName: "sknp:namespaceName/policyName", namespace: "namespaceName",
+				ruleIdIndex: nil, count: 5, isKNP: true, isProfile: false, isStaged: true,
 			},
-			"4|default|namespaceName/staged:knp.default.policyName|deny|-",
+			"4|default|sknp:namespaceName/policyName|deny|-",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow",
+			"4|__PROFILE__|pro:kns.namespaceName|allow",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "namespaceName",
-				flowLogName: "__PROFILE__.kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
-				isKNP: false, isKNS: true, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
+				isKNP: false, isProfile: true, isStaged: false,
 			},
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|-",
-		),
-		Entry(
-			"properly handles a kubernetes namespace profile",
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow",
-			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "namespaceName",
-				flowLogName: "__PROFILE__.kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
-				isKNP: false, isKNS: true, isStaged: false,
-			},
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|-",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
 		),
 		Entry(
 			"properly handles a network policy",
-			"4|tierName|namespaceName/tierName.policyName|allow|1",
+			"4|tierName|np:namespaceName/policyName|allow|1",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: getRefToInt(1), count: 5, isKNP: false, isKNS: false, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", kind: v3.KindNetworkPolicy,
+				flowLogName: "np:namespaceName/policyName", namespace: "namespaceName",
+				ruleIdIndex: ptr.To(1), count: 5, isKNP: false, isProfile: false, isStaged: false,
 			},
-			"4|tierName|namespaceName/tierName.policyName|allow|1",
+			"4|tierName|np:namespaceName/policyName|allow|1",
 		),
 		Entry(
 			"properly handles a global network policy",
-			"4|tierName|tierName.policyName|allow|0",
+			"4|tierName|gnp:policyName|allow|0",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName",
-				flowLogName: "tierName.policyName", namespace: "", ruleIdIndex: getRefToInt(0), count: 5,
-				isKNP: false, isKNS: false, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", kind: v3.KindGlobalNetworkPolicy,
+				flowLogName: "gnp:policyName", namespace: "", ruleIdIndex: ptr.To(0), count: 5,
+				isKNP: false, isProfile: false, isStaged: false,
 			},
-			"4|tierName|tierName.policyName|allow|0",
+			"4|tierName|gnp:policyName|allow|0",
 		),
 		Entry(
 			"properly handles a kubernetes network policy",
-			"4|default|namespaceName/knp.default.policyName|allow|2",
+			"4|default|knp:namespaceName/policyName|allow|2",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "default", name: "policyName",
-				flowLogName: "namespaceName/knp.default.policyName", namespace: "namespaceName",
-				ruleIdIndex: getRefToInt(2), count: 5, isKNP: true, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "default", name: "policyName", kind: model.KindKubernetesNetworkPolicy,
+				flowLogName: "knp:namespaceName/policyName", namespace: "namespaceName",
+				ruleIdIndex: ptr.To(2), count: 5, isKNP: true, isStaged: false,
 			},
-			"4|default|namespaceName/knp.default.policyName|allow|2",
+			"4|default|knp:namespaceName/policyName|allow|2",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
-			"4|default|namespaceName/staged:knp.default.policyName|deny|10",
+			"4|default|sknp:namespaceName/policyName|deny|10",
 			5,
-			testPolicyHit{
-				action: api.ActionDeny, index: 4, tier: "default", name: "policyName",
-				flowLogName: "namespaceName/staged:knp.default.policyName", namespace: "namespaceName",
-				ruleIdIndex: getRefToInt(10), count: 5, isKNP: true, isKNS: false, isStaged: true,
+			expectedHit{
+				action: api.ActionDeny, index: 4, tier: "default", name: "policyName", kind: v3.KindStagedKubernetesNetworkPolicy,
+				flowLogName: "sknp:namespaceName/policyName", namespace: "namespaceName",
+				ruleIdIndex: ptr.To(10), count: 5, isKNP: true, isProfile: false, isStaged: true,
 			},
-			"4|default|namespaceName/staged:knp.default.policyName|deny|10",
+			"4|default|sknp:namespaceName/policyName|deny|10",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|4",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|4",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "namespaceName",
-				flowLogName: "__PROFILE__.kns.namespaceName", namespace: "", ruleIdIndex: getRefToInt(4),
-				count: 5, isKNP: false, isKNS: true, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: ptr.To(4),
+				count: 5, isKNP: false, isProfile: true, isStaged: false,
 			},
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|4",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|4",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|-",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
 			5,
-			testPolicyHit{
-				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "namespaceName",
-				flowLogName: "__PROFILE__.kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
-				isKNP: false, isKNS: true, isStaged: false,
+			expectedHit{
+				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
+				isKNP: false, isProfile: true, isStaged: false,
 			},
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|-",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
 		),
 	)
 
@@ -296,56 +294,14 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 				&strconv.NumError{Func: "Atoi", Num: "", Err: fmt.Errorf("invalid syntax")}),
 		),
 	)
-
-	When("changing fields with the Set functions", func() {
-		It("returns an updated copy of the original PolicyHit, created from an old policy string "+
-			"(parts size==4), while keep the original unmodified", func() {
-			policyHit, err := api.PolicyHitFromFlowLogPolicyString(
-				"4|tierName|namespaceName/tierName.policyName|allow", int64(7),
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			updatedPolicyHit := policyHit.SetIndex(2).SetAction(api.ActionDeny).SetCount(20)
-
-			Expect(updatedPolicyHit.Index()).Should(Equal(2))
-			Expect(updatedPolicyHit.Action()).Should(Equal(api.ActionDeny))
-			Expect(updatedPolicyHit.Count()).Should(Equal(int64(20)))
-
-			Expect(policyHit.Index()).Should(Equal(4))
-			Expect(policyHit.Action()).Should(Equal(api.ActionAllow))
-			Expect(policyHit.Count()).Should(Equal(int64(7)))
-
-			var nilpointer *int
-			Expect(policyHit.RuleIdIndex()).Should(Equal(nilpointer))
-		})
-
-		It("returns an updated copy of the original PolicyHit, created from a new policy string "+
-			"(parts size==5), while keep the original unmodified", func() {
-			policyHit, err := api.PolicyHitFromFlowLogPolicyString(
-				"4|tierName|namespaceName/tierName.policyName|allow|-1", int64(7),
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			updatedPolicyHit := policyHit.SetIndex(2).SetAction(api.ActionDeny).SetCount(20)
-
-			Expect(updatedPolicyHit.Index()).Should(Equal(2))
-			Expect(updatedPolicyHit.Action()).Should(Equal(api.ActionDeny))
-			Expect(updatedPolicyHit.Count()).Should(Equal(int64(20)))
-
-			Expect(policyHit.Index()).Should(Equal(4))
-			Expect(policyHit.Action()).Should(Equal(api.ActionAllow))
-			Expect(policyHit.Count()).Should(Equal(int64(7)))
-			Expect(*policyHit.RuleIdIndex()).Should(Equal(int(-1)))
-		})
-	})
 })
 
 var _ = Describe("NewPolicyHit", func() {
 	DescribeTable("Creating a valid policy hit", func(
-		action api.Action, count int, index int, isStaged bool, name, namespace, tier string,
-		ruleIdIndex *int, fullName, policyString string,
+		action api.Action, count int, index int, name, namespace, kind, tier string,
+		ruleIndex *int, fullName, policyString string,
 	) {
-		policyHit, err := api.NewPolicyHit(action, int64(count), index, isStaged, name, namespace, tier, ruleIdIndex)
+		policyHit, err := api.NewPolicyHit(action, int64(count), index, name, namespace, kind, tier, ruleIndex)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(policyHit.FlowLogName()).Should(Equal(fullName))
@@ -355,86 +311,85 @@ var _ = Describe("NewPolicyHit", func() {
 	},
 		Entry(
 			"properly handles a network policy",
-			api.ActionAllow, 5, 4, false, "foo.policyName", "namespaceName", "tierName",
-			getRefToInt(0), "namespaceName/foo.policyName",
-			"4|tierName|namespaceName/foo.policyName|allow|0",
+			api.ActionAllow, 5, 4, "foo.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(0),
+			"np:namespaceName/foo.policyName",
+			"4|tierName|np:namespaceName/foo.policyName|allow|0",
 		),
-
-		// Older versions of Calico used tier.staged:name, but newer versions do not include
-		// the tier in the ID section of the policy string. This test reads the old style but
-		// the policy hit code now outputs the new style.
 		Entry(
 			"properly handles a staged network policy",
-			api.ActionDeny, 5, 4, true, "tierName.staged:policyName", "namespaceName", "tierName",
-			getRefToInt(-1), "namespaceName/tierName.staged:tierName.policyName",
-			"4|tierName|namespaceName/tierName.staged:tierName.policyName|deny|-1",
+			api.ActionDeny, 5, 4, "tierName.policyName", "namespaceName", v3.KindStagedNetworkPolicy, "tierName", ptr.To(-1),
+			"snp:namespaceName/tierName.policyName",
+			"4|tierName|snp:namespaceName/tierName.policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a staged global network policy",
-			api.ActionAllow, 5, 4, true, "tierName.policyName", "", "tierName", getRefToInt(2),
-			"tierName.staged:tierName.policyName", "4|tierName|tierName.staged:tierName.policyName|allow|2",
+			api.ActionAllow, 5, 4, "tierName.policyName", "", v3.KindStagedGlobalNetworkPolicy, "tierName", ptr.To(2),
+			"sgnp:tierName.policyName",
+			"4|tierName|sgnp:tierName.policyName|allow|2",
 		),
-
 		Entry(
 			"properly handles a global network policy",
-			api.ActionAllow, 5, 4, false, "policyName", "", "tierName", getRefToInt(1),
-			"policyName", "4|tierName|policyName|allow|1",
+			api.ActionAllow, 5, 4, "policyName", "", v3.KindGlobalNetworkPolicy, "tierName", ptr.To(1),
+			"gnp:policyName",
+			"4|tierName|gnp:policyName|allow|1",
 		),
 		Entry(
 			"properly handles a kubernetes network policy",
-			api.ActionAllow, 5, 4, false, "knp.default.policyName", "namespaceName", "default",
-			getRefToInt(3), "namespaceName/knp.default.policyName",
-			"4|default|namespaceName/knp.default.policyName|allow|3",
+			api.ActionAllow, 5, 4, "policyName", "namespaceName", model.KindKubernetesNetworkPolicy, "default", ptr.To(3),
+			"knp:namespaceName/policyName",
+			"4|default|knp:namespaceName/policyName|allow|3",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
-			api.ActionDeny, 5, 4, true, "knp.default.policyName", "namespaceName", "default",
-			getRefToInt(-1), "namespaceName/staged:knp.default.policyName",
-			"4|default|namespaceName/staged:knp.default.policyName|deny|-1",
+			api.ActionDeny, 5, 4, "policyName", "namespaceName", v3.KindStagedKubernetesNetworkPolicy, "default",
+			ptr.To(-1), "sknp:namespaceName/policyName",
+			"4|default|sknp:namespaceName/policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
-			api.ActionAllow, 5, 4, false, "__PROFILE__.kns.namespaceName", "", "__PROFILE__",
-			getRefToInt(0), "__PROFILE__.kns.namespaceName",
-			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|0",
+			api.ActionAllow, 5, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", ptr.To(0),
+			"pro:kns.namespaceName",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|0",
 		),
 		Entry(
-			"properly handles a kubernetes namespace profile",
-			api.ActionAllow, 5, 4, false, "__PROFILE__.kns.namespaceName", "", "__PROFILE__", nil,
-			"__PROFILE__.kns.namespaceName", "4|__PROFILE__|__PROFILE__.kns.namespaceName|allow|-",
+			"properly handles a kubernetes namespace profile with no rule index",
+			api.ActionAllow, 5, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", nil,
+			"pro:kns.namespaceName",
+			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
 		),
 	)
 
 	DescribeTable("Creating an invalid policy hit", func(
-		action api.Action, count int, index int, isStaged bool, name, namespace, tier string,
+		action api.Action, count int, index int, name, namespace, kind, tier string,
 		ruleIdIndex *int, expectedErr error,
 	) {
-		_, err := api.NewPolicyHit(action, int64(count), index, isStaged, name, namespace, tier, ruleIdIndex)
+		_, err := api.NewPolicyHit(action, int64(count), index, name, namespace, kind, tier, ruleIdIndex)
 		Expect(err).Should(Equal(expectedErr))
 	},
 		Entry(
 			"returns an error when action the is empty",
-			api.ActionInvalid, 5, 4, false, "tierName.policyName", "namespaceName", "tierName",
-			getRefToInt(0),
+			api.ActionInvalid, 5, 4, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
+			ptr.To(0),
 			fmt.Errorf("a none empty Action must be provided"),
 		),
 		Entry(
 			"returns an error when the index is negative",
-			api.ActionDeny, 5, -1, false, "tierName.policyName", "namespaceName", "tierName",
-			getRefToInt(-1),
+			api.ActionDeny, 5, -1, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
+			ptr.To(-1),
 			fmt.Errorf("index must be a positive integer"),
 		),
 		Entry(
 			"returns an error when the count is negative",
-			api.ActionAllow, -1, 4, false, "policyName", "namespaceName", "tierName", getRefToInt(1),
+			api.ActionAllow, -1, 4, "policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(1),
 			fmt.Errorf("count must be a positive integer"),
 		),
 		Entry(
 			"returns an error when the rule id index is not -1 and negative",
-			api.ActionAllow, 5, 4, false, "policyName", "namespaceName", "tierName", getRefToInt(-2),
+			api.ActionAllow, 5, 4, "policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(-2),
 			fmt.Errorf("rule id index must be a positive integer or -1"),
 		),
 	)
+
 	When("comparing PolicyHits (mixed of old and new policy string types)", func() {
 		var pstrings1 [10]string
 		var pstrings2 [10]string
@@ -645,16 +600,16 @@ var _ = Describe("NewPolicyHit", func() {
 
 			expectedCounts = [10]int64{1, 19, 0, 1, 19, 0, 7, 5, 18, 16}
 			expectedSortedPolicyStrings = [10]string{
-				"0|tierName3|ns1/tierName3.p1|allow|-",
-				"1|tierName3|ns1/tierName3.p5|allow|2",
-				"2|tierName1|ns2/tierName1.p3|allow|2",
-				"3|tierName1|ns2/tierName1.p3|deny|-1",
-				"4|tierName1|ns2/tierName1.staged:tierName1.p3.|allow|2",
-				"5|tierName0|ns3/tierName0.p0|pass|0",
-				"6|tierName1|ns4/tierName1.p7|pass|-1",
-				"7|tierName6|ns5/tierName6.p4|deny|3",
-				"8|tierName5|ns4/tierName5.p8|deny|-",
-				"9|tierName6|ns3/tierName6.p0|allow|-1",
+				"0|tierName3|np:ns1/tierName3.p1|allow|-",
+				"1|tierName3|np:ns1/tierName3.p5|allow|2",
+				"2|tierName1|np:ns2/tierName1.p3|allow|2",
+				"3|tierName1|np:ns2/tierName1.p3|deny|-1",
+				"4|tierName1|snp:ns2/tierName1.p3.|allow|2",
+				"5|tierName0|np:ns3/tierName0.p0|pass|0",
+				"6|tierName1|np:ns4/tierName1.p7|pass|-1",
+				"7|tierName6|np:ns5/tierName6.p4|deny|3",
+				"8|tierName5|np:ns4/tierName5.p8|deny|-",
+				"9|tierName6|np:ns3/tierName6.p0|allow|-1",
 			}
 
 			By("creating expected sorted policy hits from a list of sorted policy strings")
@@ -693,12 +648,15 @@ var _ = Describe("NewPolicyHit", func() {
 			By("verifying the sorted list of policy hits")
 
 			for i, sphit := range sortablePolicyHits {
+				// Get the string.
+				str := expectedSortedPolicyStrings[i]
+
 				Expect(sphit.Action()).Should(Equal(expectedSortedPolicyHits[i].Action()))
 				Expect(sphit.Count()).Should(Equal(expectedSortedPolicyHits[i].Count()))
 				Expect(sphit.FlowLogName()).Should(Equal(expectedSortedPolicyHits[i].FlowLogName()))
 				Expect(sphit.IsKubernetes()).Should(Equal(expectedSortedPolicyHits[i].IsKubernetes()))
 				Expect(sphit.IsProfile()).Should(Equal(expectedSortedPolicyHits[i].IsProfile()))
-				Expect(sphit.IsStaged()).Should(Equal(expectedSortedPolicyHits[i].IsStaged()))
+				Expect(sphit.IsStaged()).Should(Equal(expectedSortedPolicyHits[i].IsStaged()), str)
 				Expect(sphit.Name()).Should(Equal(expectedSortedPolicyHits[i].Name()))
 				Expect(sphit.Namespace()).Should(Equal(expectedSortedPolicyHits[i].Namespace()))
 				Expect(sphit.RuleIdIndex()).Should(Equal(expectedSortedPolicyHits[i].RuleIdIndex()))
@@ -707,7 +665,3 @@ var _ = Describe("NewPolicyHit", func() {
 		})
 	})
 })
-
-func getRefToInt(input int) *int {
-	return &input
-}

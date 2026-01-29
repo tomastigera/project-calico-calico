@@ -103,7 +103,6 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 				Namespace:      b.activeLog.DestNamespace,
 				Type:           v1.EndpointType(b.activeLog.DestType),
 				AggregatedName: b.activeLog.DestNameAggr,
-				Port:           *b.activeLog.DestPort,
 			},
 		},
 		TrafficStats: &v1.TrafficStats{},
@@ -112,9 +111,15 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 		Service: &v1.Service{
 			Name:      b.activeLog.DestServiceName,
 			Namespace: b.activeLog.DestServiceNamespace,
-			Port:      *b.activeLog.DestServicePortNum,
 			PortName:  b.activeLog.DestServicePortName,
 		},
+	}
+
+	if b.activeLog.DestPort != nil {
+		f.Key.Destination.Port = *b.activeLog.DestPort
+	}
+	if b.activeLog.DestServicePortNum != nil {
+		f.Service.Port = *b.activeLog.DestServicePortNum
 	}
 
 	if b.activeLog.ProcessName != "" {
@@ -221,12 +226,21 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 			if *targetPolicy == nil {
 				*targetPolicy = make([]v1.Policy, 0)
 			}
+
+			// Parse each string into a policy hit.
+			// Then, sort the hits to ensure deterministic order.
+			var hits lmaapi.SortablePolicyHits
 			for _, p := range pols {
 				h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
 				require.NoError(t, err)
+				hits = append(hits, h)
+			}
+			sort.Sort(hits)
 
+			for _, h := range hits {
 				*targetPolicy = append(*targetPolicy, v1.Policy{
 					Tier:         h.Tier(),
+					Kind:         h.Kind(),
 					Name:         h.Name(),
 					Namespace:    h.Namespace(),
 					Action:       string(h.Action()),

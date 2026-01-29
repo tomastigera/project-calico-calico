@@ -1,10 +1,10 @@
-# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.19.8-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
+FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.19.10-${THIRD_PARTY_RELEASE_BRANCH} AS kibana
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
@@ -50,15 +50,9 @@ COPY --from=kibana /usr/bin/yes /usr/bin/yes
 COPY --from=kibana /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=kibana /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=kibana /lib64/libcap.so.2 /lib64/libcap.so.2
-COPY --from=kibana /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=kibana /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=kibana /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=kibana /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
-
-# additional node dependencies
-COPY --from=kibana /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
-COPY --from=kibana /lib64/libm.so.6 /lib64/libm.so.6
-COPY --from=kibana /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
 # kibana node binaries and packages
 COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker

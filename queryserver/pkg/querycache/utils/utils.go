@@ -5,12 +5,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/network-policy-api/apis/v1alpha1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 )
 
@@ -37,8 +38,10 @@ func BuildSubstringRegexMatcher(list []string) (*regexp.Regexp, error) {
 func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource, string) {
 	resource := p.GetResource()
 	tier := p.GetTier()
-	resourceName := p.GetResource().GetObjectMeta().GetName()
-	if strings.HasPrefix(resourceName, names.K8sNetworkPolicyNamePrefix) {
+	kind := p.Kind()
+
+	switch kind {
+	case model.KindKubernetesNetworkPolicy:
 		resource = &v1.NetworkPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "NetworkPolicy",
@@ -46,7 +49,7 @@ func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource
 			},
 		}
 		tier = ""
-	} else if strings.HasPrefix(resourceName, "staged:"+names.K8sNetworkPolicyNamePrefix) {
+	case apiv3.KindStagedKubernetesNetworkPolicy:
 		resource = &apiv3.StagedKubernetesNetworkPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "StagedKubernetesNetworkPolicy",
@@ -54,7 +57,7 @@ func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource
 			},
 		}
 		tier = ""
-	} else if strings.HasPrefix(resourceName, names.K8sAdminNetworkPolicyNamePrefix) {
+	case "AdminNetworkPolicy":
 		resource = &v1alpha1.AdminNetworkPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "AdminNetworkPolicy",
@@ -62,13 +65,18 @@ func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource
 			},
 		}
 		tier = ""
-	} else if strings.HasPrefix(resourceName, names.K8sBaselineAdminNetworkPolicyNamePrefix) {
+	case "BaselineAdminNetworkPolicy":
 		resource = &v1alpha1.AdminNetworkPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "BaselineAdminNetworkPolicy",
 				APIVersion: "policy.networking.k8s.io/v1alpha1",
 			},
 		}
+	case "":
+		// This shouldn't happen.
+		logrus.WithFields(logrus.Fields{
+			"res": p.GetResource(),
+		}).Warn("Empty kind found on cached policy when determining RBAC resource and tier")
 	}
 
 	return resource, tier

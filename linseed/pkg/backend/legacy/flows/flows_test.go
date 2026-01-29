@@ -131,10 +131,10 @@ func TestListFlows(t *testing.T) {
 			WithRandomFlowStats().WithRandomPacketStats().
 			WithReporter("src").WithAction("allowed").
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-			WithPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
-			WithEnforcedPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
-			WithPendingPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
-			WithTransitPolicies("0|allow-tigera|calico-system/allow-tigera.apiserver-access|allow|1").
+			WithPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
+			WithEnforcedPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
+			WithPendingPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
+			WithTransitPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
 			WithProcessName("/usr/bin/curl")
 		expected1 := populateFlowData(t, ctx, bld.Copy(), client, cluster1Info)
 		expected2 := populateFlowData(t, ctx, bld.Copy(), client, cluster2Info)
@@ -358,13 +358,13 @@ func TestFlowMultiplePolicies(t *testing.T) {
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
 			// Add in a couple of policies, as well as the default profile hit.
 			WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-			WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
 			WithEnforcedPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-			WithEnforcedPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithEnforcedPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
 			WithPendingPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-			WithPendingPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0").
+			WithPendingPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
 			WithTransitPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-			WithTransitPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
+			WithTransitPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0")
 
 		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
@@ -372,6 +372,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		expected.Policies = []v1.Policy{
 			{
 				Tier:      "allow-tigera",
+				Kind:      "NetworkPolicy",
 				Name:      "allow-tigera.cluster-dns",
 				Namespace: "kube-system",
 				Action:    "pass",
@@ -380,6 +381,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 			},
 			{
 				Tier:      "__PROFILE__",
+				Kind:      "Profile",
 				Name:      "kns.kube-system",
 				Namespace: "",
 				Action:    "allow",
@@ -792,7 +794,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("cluster-dns"),
+						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -807,7 +809,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("cluster-dns"),
+						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
 					},
 				},
 			},
@@ -1025,7 +1027,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("cluster-dns"),
+						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1040,7 +1042,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("cluster-dns"),
+						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
 					},
 				},
 			},
@@ -1221,7 +1223,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("cluster-dns"),
+						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1236,7 +1238,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("cluster-dns"),
+						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
 					},
 				},
 			},
@@ -1417,7 +1419,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("cluster-dns"),
+						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1432,7 +1434,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("cluster-dns"),
+						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
 					},
 				},
 			},
@@ -1484,6 +1486,20 @@ func TestFlowFiltering(t *testing.T) {
 			},
 			ExpectFlow1: true,
 			ExpectFlow2: false,
+		},
+		{
+			Name: "should not return flows with a staged k8s policy hit in transit policies",
+			Params: v1.L3FlowParams{
+				TransitPolicyMatches: []v1.PolicyMatch{
+					{
+						Staged:    true,
+						Type:      "knp",
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
 		},
 		{
 			Name: "should return flows with a staged policy hit in transit policies",
@@ -1599,29 +1615,29 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src,fwd").WithAction("allow").
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 				// Pass followed by a profile allow.
-				WithPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
-				WithPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
-				WithPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
-				WithPolicy("3|default|default.test-global-policy|pass|1").
-				WithPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
-				WithPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
-				WithEnforcedPolicy("0|custom-tier|default/custom-tier.test-policy|pass|2").
-				WithEnforcedPolicy("1|default|default/knp.default.test-k8s-policy|pass|2").
-				WithEnforcedPolicy("2|default|default.test-global-policy|pass|1").
-				WithEnforcedPolicy("3|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
-				WithEnforcedPolicy("4|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
-				WithPendingPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
-				WithPendingPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
-				WithPendingPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
-				WithPendingPolicy("3|default|default.test-global-policy|pass|1").
-				WithPendingPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
-				WithPendingPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
-				WithTransitPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
-				WithTransitPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
-				WithTransitPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
-				WithTransitPolicy("3|default|default.test-global-policy|pass|1").
-				WithTransitPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
-				WithTransitPolicy("5|adminnetworkpolicy|adminnetworkpolicy.kanp.adminnetworkpolicy.test-kanp|pass|1").
+				WithPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
+				WithPolicy("2|default|knp:default/test-k8s-policy|pass|2").
+				WithPolicy("3|default|gnp:default.test-global-policy|pass|1").
+				WithPolicy("4|__PROFILE__|pro:kns.openshift-dns|allow|0").
+				WithPolicy("5|adminnetworkpolicy|kanp:test-kanp|pass|1").
+				WithEnforcedPolicy("0|custom-tier|np:default/custom-tier.test-policy|pass|2").
+				WithEnforcedPolicy("1|default|knp:default/test-k8s-policy|pass|2").
+				WithEnforcedPolicy("2|default|gnp:default.test-global-policy|pass|1").
+				WithEnforcedPolicy("3|__PROFILE__|pro:kns.openshift-dns|allow|0").
+				WithEnforcedPolicy("4|adminnetworkpolicy|kanp:test-kanp|pass|1").
+				WithPendingPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithPendingPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
+				WithPendingPolicy("2|default|knp:default/test-k8s-policy|pass|2").
+				WithPendingPolicy("3|default|gnp:default.test-global-policy|pass|1").
+				WithPendingPolicy("4|__PROFILE__|pro:kns.openshift-dns|allow|0").
+				WithPendingPolicy("5|adminnetworkpolicy|kanp:test-kanp|pass|1").
+				WithTransitPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithTransitPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
+				WithTransitPolicy("2|default|knp:default/test-k8s-policy|pass|2").
+				WithTransitPolicy("3|default|gnp:default.test-global-policy|pass|1").
+				WithTransitPolicy("4|__PROFILE__|pro:kns.openshift-dns|allow|0").
+				WithTransitPolicy("5|adminnetworkpolicy|kanp:test-kanp|pass|1").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
 
@@ -1642,34 +1658,38 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src,fwd").WithAction("deny").
 				WithSourceLabels("cheese=brie").
 				// Explicit allow.
-				WithPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
-				WithPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-				WithPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
-				WithPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
-				WithPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
-				WithPolicy("5|default|default.cluster-dns|allow|1").
-				WithPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
-				WithEnforcedPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
-				WithEnforcedPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-				WithEnforcedPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
-				WithEnforcedPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
-				WithEnforcedPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
-				WithEnforcedPolicy("5|default|default.cluster-dns|allow|1").
-				WithEnforcedPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
-				WithPendingPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
-				WithPendingPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-				WithPendingPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
-				WithPendingPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
-				WithPendingPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
-				WithPendingPolicy("5|default|default.cluster-dns|allow|1").
-				WithPendingPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
-				WithTransitPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
-				WithTransitPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-				WithTransitPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
-				WithTransitPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
-				WithTransitPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
-				WithTransitPolicy("5|default|default.cluster-dns|allow|1").
-				WithTransitPolicy("6|baselineadminnetworkpolicy|baselineadminnetworkpolicy.kbanp.baselineadminnetworkpolicy.test-kbanp|pass|1").
+				WithPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
+				WithPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+				WithPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
+				WithPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
+				WithPolicy("5|default|gnp:default.cluster-dns|allow|1").
+				WithPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
+				WithPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
+				WithEnforcedPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
+				WithEnforcedPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+				WithEnforcedPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithEnforcedPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
+				WithEnforcedPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
+				WithEnforcedPolicy("5|default|gnp:default.cluster-dns|allow|1").
+				WithEnforcedPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
+				WithEnforcedPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
+				WithPendingPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
+				WithPendingPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+				WithPendingPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithPendingPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
+				WithPendingPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
+				WithPendingPolicy("5|default|gnp:default.cluster-dns|allow|1").
+				WithPendingPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
+				WithPendingPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
+				WithTransitPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
+				WithTransitPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+				WithTransitPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithTransitPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
+				WithTransitPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
+				WithTransitPolicy("5|default|gnp:default.cluster-dns|allow|1").
+				WithTransitPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
+				WithTransitPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)
@@ -1696,10 +1716,167 @@ func TestFlowFiltering(t *testing.T) {
 	}
 }
 
+// TestMixedModernLegacyFlows tests that when both modern and legacy policy strings
+// are present in flows, that they are both properly interpreted when querying flows. It creates two flow logs -
+// one with modern policy strings and one with the equivalent legacy policy strings - and then makes a Linseed query,
+// expecting that both logs are aggregated into a single flow in the response.
+func TestMixedModernLegacyFlows(t *testing.T) {
+	type testCase struct {
+		Name   string
+		Params v1.L3FlowParams
+	}
+
+	testcases := []testCase{
+		{
+			Name: "should query based on unprotected flows",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows in all namespaces.
+						Tier:   "__PROFILE__",
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+		},
+		{
+			Name: "should query based on a specific policy hit tier",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "tier",
+					},
+				},
+			},
+		},
+		{
+			Name: "should query based on a staged global network policy",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:   "allow-tigera",
+						Staged: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "should query based on a namespaced staged network policy",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Namespace: testutils.StringPtr("namespace"),
+						Staged:    true,
+						Tier:      "tier",
+					},
+				},
+			},
+		},
+		{
+			Name: "should query based on a staged network policy name",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Name:   testutils.StringPtr("allow-tigera.staged-cluster-dns"),
+						Staged: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "should query based on a network policy name",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Name:      testutils.StringPtr("tier.cluster-dns"),
+						Namespace: testutils.StringPtr("namespace"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		// Each testcase creates multiple flows, and then uses
+		// different filtering parameters provided in the L3FlowParams
+		// to query one or more flows.
+		RunAllModes(t, testcase.Name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
+
+			// Set the time range for the test. We set this per-test
+			// so that the time range captures the windows that the logs
+			// are created in.
+			tr := &lmav1.TimeRange{}
+			tr.From = time.Now().Add(-5 * time.Minute)
+			tr.To = time.Now().Add(5 * time.Minute)
+			testcase.Params.TimeRange = tr
+
+			// Policy mappings, mapping modern policy strings to their legacy equivalents.
+			pols := map[string]string{
+				// GlobalNetworkPolicy
+				"0|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1": "0|allow-tigera|allow-tigera.cluster-dns|pass|1",
+
+				// NetworkPolicy
+				"1|tier|np:namespace/tier.cluster-dns|pass|1": "1|tier|namespace/tier.cluster-dns|pass|1",
+
+				// StagedGlobalNetworkPolicy
+				"2|allow-tigera|sgnp:allow-tigera.staged-cluster-dns|pass|1": "2|allow-tigera|allow-tigera.staged:staged-cluster-dns|pass|1",
+
+				// StagedNetworkPolicy
+				"3|tier|snp:namespace/tier.staged-cluster-dns|pass|1": "3|tier|namespace/tier.staged:staged-cluster-dns|pass|1",
+
+				// Profile
+				"4|__PROFILE__|pro:kns.openshift-dns|allow|0": "4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0",
+			}
+
+			// Template for flow #1.
+			modernBld := backendutils.NewFlowLogBuilder()
+			modernBld.WithRandomFlowStats().WithRandomPacketStats().WithDestPort(80)
+			legacyBld := backendutils.NewFlowLogBuilder()
+			legacyBld.WithRandomFlowStats().WithRandomPacketStats().WithDestPort(80)
+
+			for modern, legacy := range pols {
+				modernBld.WithPolicy(modern)
+				legacyBld.WithPolicy(legacy)
+			}
+
+			exp1 := populateFlowDataN(t, ctx, modernBld, client, clusterInfo, 1)
+			exp2 := populateFlowDataN(t, ctx, legacyBld, client, clusterInfo, 1)
+
+			// Query for flows.
+			r, err := fb.List(ctx, clusterInfo, &testcase.Params)
+
+			// We expect a single aggregated flow to be returned.
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+
+			// Assert that the stats from both flows are present in the single returned flow.
+			// Both flows should be identical except for their stats, which should be summed.
+			got := r.Items[0]
+
+			require.Equal(t, exp1.TrafficStats.PacketsIn+exp2.TrafficStats.PacketsIn, got.TrafficStats.PacketsIn)
+			require.Equal(t, exp1.TrafficStats.PacketsOut+exp2.TrafficStats.PacketsOut, got.TrafficStats.PacketsOut)
+			require.Equal(t, exp1.TrafficStats.BytesIn+exp2.TrafficStats.BytesIn, got.TrafficStats.BytesIn)
+			require.Equal(t, exp1.TrafficStats.BytesOut+exp2.TrafficStats.BytesOut, got.TrafficStats.BytesOut)
+
+			// The policies should match the modern flow's policies.
+			require.Equal(t, exp1.Policies, got.Policies)
+		})
+	}
+}
+
 func msg(got []v1.L3Flow, exp v1.L3Flow) string {
 	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
 	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
-	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n", expJSON, gotJSON)
+	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n\nFull Exp Structure:\n%#v\n\nFull Got Structure:\n%#v", expJSON, gotJSON, exp, got)
 }
 
 // TestPagination tests that we return multiple flows properly using pagination.

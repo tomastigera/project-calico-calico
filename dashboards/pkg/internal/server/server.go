@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/pkg/otel"
+	"github.com/tigera/tds-apiserver/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -52,6 +53,7 @@ func Start(
 	authService, err := auth.NewAuthService(
 		cfg,
 		logger,
+		cfg.TenantID,
 		tenantClaim,
 		authorizer,
 		k8sClient,
@@ -95,13 +97,20 @@ func Start(
 
 	var metadataService metadata.Storer
 	if cfg.ProductMode == config.ProductModeCloud {
-		metadataService = metadata.NewRemoteMetadataService(logger, cfg.MetadataAPIEndpoint, enabledCollections)
+		metadataService, err = metadata.NewRemoteMetadataService(
+			logger,
+			types.PackageName(cfg.CalicoCloudPackage),
+			cfg.MetadataAPIEndpoint,
+			enabledCollections,
+			cfg.DisabledDashboards,
+		)
 	} else {
 		metadataService, err = staticmetadata.NewStaticMetadataService()
-		if err != nil {
-			return err
-		}
 	}
+	if err != nil {
+		return err
+	}
+
 	collectionsService := svccollections.NewCollectionsService(logger, enabledCollections)
 
 	handlerRegistry, err := handler.NewHandler(

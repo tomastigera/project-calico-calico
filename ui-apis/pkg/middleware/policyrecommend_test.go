@@ -453,7 +453,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -492,7 +492,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 				},
@@ -540,7 +540,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 				},
@@ -587,7 +587,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -626,7 +626,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -665,7 +665,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -704,7 +704,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -743,7 +743,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -782,7 +782,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 
@@ -821,7 +821,7 @@ var (
 							},
 						},
 						Policies: []lapi.Policy{
-							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+							{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 						},
 					},
 				},

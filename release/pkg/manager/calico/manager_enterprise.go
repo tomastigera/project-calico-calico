@@ -1,8 +1,8 @@
 package calico
 
 import (
-	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -13,11 +13,11 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/sirupsen/logrus"
 	"go.yaml.in/yaml/v3"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	defaultEnterpriseRegistry = registry.DefaultEnterpriseRegistry
+	defaultEnterpriseRegistry     = registry.DefaultEnterpriseRegistry
+	defaultEnterpriseHelmRegistry = registry.DefaultEnterpriseHelmRegistry
 
 	enterpriseWindowsGCSBucket = utils.EnterpriseWindowsGCSBucketName
 
@@ -40,9 +41,9 @@ var (
 	enterpriseArtifactsBaseURL = utils.EnterpriseArtifactsBaseURL
 
 	enterpriseS3Bucket = "tigera-public/ee"
-	s3ACLPublicRead    = []string{"--acl", "public-read"}
 
 	enterpriseImageReleaseDirs = utils.EnterpriseImageReleaseDirs
+	enterpriseHelmCharts       = utils.EnterpriseHelmCharts
 
 	// Directories that publish images for cloud.
 	cloudImageReleaseDirs = []string{
@@ -76,9 +77,12 @@ var (
 func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
 	defaultCalicoOpts := []Option{
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
+		WithHelmRegistries([]string{defaultEnterpriseHelmRegistry}),
+		WithHelmRepo(utils.EnterpriseHelmRepoURL),
 		WithBuildImages(false),
 		WithArchiveImages(false),
 		WithPublishGithubRelease(false),
+		WithS3Bucket(enterpriseS3Bucket),
 	}
 	calicoOpts = append(defaultCalicoOpts, calicoOpts...)
 	calicoManager := NewManager(calicoOpts...)
@@ -88,10 +92,7 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		CalicoManager:                 *calicoManager,
 		publishWindowsArchive:         true,
 		windowsArchiveBucket:          enterpriseWindowsGCSBucket,
-		publishCharts:                 true,
-		helmRegistry:                  registry.HelmDevRegistry, // Defaults to dev registry as currently only used for hashreleases.
 		enterpriseHashreleaseRegistry: registry.DefaultEnterpriseHashreleaseRegistry,
-		s3Bucket:                      enterpriseS3Bucket,
 		baseArtifactsURL:              enterpriseArtifactsBaseURL,
 		imageReleaseDirs:              enterpriseImageReleaseDirs,
 		includeManager:                true,
@@ -131,15 +132,11 @@ type EnterpriseManager struct {
 	// publishing options
 	dryRun                bool
 	publishWindowsArchive bool
-	publishCharts         bool
 	publishToS3           bool
 
 	rpm bool
 
-	helmRegistry         string
 	windowsArchiveBucket string
-	awsProfile           string
-	s3Bucket             string
 	baseArtifactsURL     string
 }
 
@@ -211,13 +208,50 @@ func (m *EnterpriseManager) BuildHelm() error {
 	}
 
 	// Build the helm chart, passing the version to use.
-	env := append(os.Environ(), fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion))
-	env = append(env, fmt.Sprintf("RELEASE_STREAM=%s", m.calicoVersion))
-	if m.chartVersion != "" {
-		env = append(env, fmt.Sprintf("CHART_RELEASE=%s", m.chartVersion))
+	chartsDest := filepath.Join(m.outputDir, "charts")
+	if err := os.MkdirAll(chartsDest, utils.DirPerms); err != nil {
+		return fmt.Errorf("create chart destination dir: %s", err)
 	}
+	env := append(os.Environ(),
+		fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion),
+		fmt.Sprintf("CHART_DESTINATION=%s", chartsDest),
+		fmt.Sprintf("RELEASE_STREAM=%s", m.calicoVersion))
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "chart", env...); err != nil {
 		return err
+	}
+
+	// Verify that we have the expected charts.
+	charts := []string{}
+	err := filepath.Walk(chartsDest, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("accessing path %s: %w", path, err)
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".tgz") && strings.Contains(info.Name(), m.calicoVersion) {
+			for _, chart := range enterpriseHelmCharts {
+				if strings.HasPrefix(info.Name(), chart+"-") {
+					charts = append(charts, path)
+					return nil
+				}
+			}
+			return fmt.Errorf("unexpected chart found: %s", info.Name())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if len(charts) != len(enterpriseHelmCharts) {
+		return fmt.Errorf("expected %d charts, found %d: %v", len(enterpriseHelmCharts), len(charts), charts)
+	}
+
+	// Charts are builts with the calico version. If a chart version is specified, rename the charts to include it.
+	if m.calicoVersion != m.helmChartVersion() {
+		for _, chart := range charts {
+			newChartName := strings.Replace(chart, fmt.Sprintf("-%s.tgz", m.calicoVersion), fmt.Sprintf("-%s.tgz", m.helmChartVersion()), 1)
+			if err := utils.MoveFile(chart, newChartName); err != nil {
+				return fmt.Errorf("renaming chart %s to %s: %s", chart, newChartName, err)
+			}
+		}
 	}
 
 	logrus.Info("Done building helm charts")
@@ -682,30 +716,6 @@ func (m *EnterpriseManager) collectArtifacts() error {
 		return fmt.Errorf("failed to move Windows archive: %w", err)
 	}
 
-	// Add helm charts
-	charts, err := listCharts(filepath.Join(m.repoRoot, "bin"), m.calicoVersion)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to get list of charts")
-	}
-	chartsDir := filepath.Join(uploadDir, "charts")
-	if err := os.MkdirAll(chartsDir, utils.DirPerms); err != nil {
-		return fmt.Errorf("failed to create charts directory: %s", err)
-	}
-	for _, chart := range charts {
-		logrus.WithField("chart", chart).Debug("Copying chart")
-		chartName := filepath.Base(chart)
-		chartDest := filepath.Join(chartsDir, strings.ReplaceAll(chartName, m.calicoVersion, m.helmChartVersion()))
-		if err := utils.CopyFile(chart, chartDest); err != nil {
-			logrus.WithError(err).Error("Failed to copy chart")
-			return err
-		}
-		if strings.Contains(chartName, "tigera-operator") {
-			if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{chartDest, uploadDir}, nil); err != nil {
-				return err
-			}
-		}
-	}
-
 	// Add the binaries
 	rsyncArgs = []string{"-av"}
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -743,21 +753,6 @@ func (m *EnterpriseManager) collectArtifacts() error {
 	}
 
 	return nil
-}
-
-func listCharts(dir, version string) ([]string, error) {
-	matchingFiles := []string{}
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			logrus.WithField("path", path).WithError(err).Error("Error accessing path")
-			return nil
-		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".tgz") && strings.Contains(info.Name(), version) {
-			matchingFiles = append(matchingFiles, path)
-		}
-		return nil
-	})
-	return matchingFiles, err
 }
 
 func (m *EnterpriseManager) scriptsDir() string {
@@ -799,6 +794,15 @@ func (m *EnterpriseManager) publishPrereqs() error {
 	if err := m.validateGitVersion(); err != nil {
 		return err
 	}
+	if m.publishCharts {
+		if len(m.helmRegistries) == 0 {
+			return fmt.Errorf("no helm chart registries specified")
+		}
+		if !m.isHashRelease && m.s3Bucket == "" {
+			return fmt.Errorf("no S3 bucket specified for pushing helm index")
+		}
+	}
+
 	if m.isHashRelease {
 		return m.hashreleasePrereqs()
 	}
@@ -883,29 +887,25 @@ type makeInDirectoryWithOutputFn func(dir, target string, env ...string) (string
 // cutReleaseImage attempts to cut release images in specified directory
 // by using the provided make function to run "cut-release-image" make target
 // in the provided dir with the specified environment variables.
-func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir string, env []string) error {
+func cutReleaseImage(makeInDirectoryWithOutput makeInDirectoryWithOutputFn, dir string, env []string) error {
 	// We allow for a certain number of retries when publishing each directory, since
 	// network flakes can occasionally result in images failing to push.
+	desc := dir
 	log := logrus.WithField("directory", dir)
 	for _, e := range env {
 		if strings.HasPrefix(e, "TESLA") {
+			desc = fmt.Sprintf("%s cloud", dir)
 			log = log.WithField("cloud_image", strings.SplitN(e, "=", 2)[1])
 		} else if strings.HasPrefix(e, "WINDOWS_RELEASE") {
+			desc = fmt.Sprintf("%s windows", dir)
 			log = log.WithField("windows_image", strings.SplitN(e, "=", 2)[1])
 		}
 	}
 	maxRetries := 1
 	attempt := 0
 	for {
-		// Check if the context has been cancelled
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
 		// Attempt to cut the release image
-		out, err := fn(dir, "cut-release-image", env...)
+		out, err := makeInDirectoryWithOutput(dir, "cut-release-image", env...)
 		if err != nil {
 			if attempt < maxRetries {
 				log.WithField("attempt", attempt).WithError(err).Error("Publish failed, retrying")
@@ -914,13 +914,31 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 			}
 			// Log the output and return a formatted error
 			log.Error(out)
-			return fmt.Errorf("failed to publish %s images: %w", dir, err)
+			return fmt.Errorf("publish %s images: %w", desc, err)
 		}
 		// Success - move on
-		log.Info(out)
+		log.Debug(out)
 		break
 	}
 	return nil
+}
+
+// concurrentErrors collates errors from multiple goroutines.
+type concurrentErrors struct {
+	errs []error
+	mu   sync.Mutex
+}
+
+func (ce *concurrentErrors) Add(err error) {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
+	ce.errs = append(ce.errs, err)
+}
+
+func (ce *concurrentErrors) Error() error {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
+	return errors.Join(ce.errs...)
 }
 
 // publishReleaseImages publishes the release images for enterprise
@@ -928,16 +946,15 @@ func cutReleaseImage(ctx context.Context, fn makeInDirectoryWithOutputFn, dir st
 //
 // It uses concurrency to publish images from multiple directories in parallel.
 // The actual publishing is done by the cutReleaseImage function.
-// Using sync.errgroup to manage goroutines, this ensures that all publishing
-// tasks are completed before returning.
-// If any of the publishing fails, the error is returned and the entire process is halted.
+// Any errors encountered during publishing are collected and returned as a single error.
 func (m *EnterpriseManager) publishReleaseImages() error {
 	if !m.publishImages {
 		logrus.Info("Skipping publishing release images")
 		return nil
 	}
 
-	eg, ctx := errgroup.WithContext(context.Background())
+	var wg sync.WaitGroup
+	var wgErrs concurrentErrors
 
 	// Publish release images.
 	logrus.Info("Start publishing release images")
@@ -958,29 +975,43 @@ func (m *EnterpriseManager) publishReleaseImages() error {
 		env = append(env, "SKIP_DEV_IMAGE_RETAG=true")
 	}
 	for _, dir := range enterpriseImageReleaseDirs {
-		baseEnv := slices.Clone(env)
 		current := dir
 		d := filepath.Join(m.repoRoot, current)
-		eg.Go(func() error {
-			return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, baseEnv)
-		})
+
+		wg.Add(1)
+		go func(baseEnv []string, dir string) {
+			defer wg.Done()
+			if err := cutReleaseImage(m.makeInDirectoryWithOutput, dir, baseEnv); err != nil {
+				wgErrs.Add(err)
+			}
+		}(slices.Clone(env), d)
 
 		// Publish images for cloud if the directory produces Calico Cloud images
-		if slices.Contains(cloudImageReleaseDirs, dir) {
-			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "TESLA=true"))
-			})
+		if slices.Contains(cloudImageReleaseDirs, current) {
+			wg.Add(1)
+			go func(baseEnv []string, dir string) {
+				defer wg.Done()
+				if err := cutReleaseImage(m.makeInDirectoryWithOutput, dir, append(baseEnv, "TESLA=true")); err != nil {
+					wgErrs.Add(err)
+				}
+			}(slices.Clone(env), d)
 		}
 
 		// Publish images for Windows if the directory produces Windows images
 		if slices.Contains(enterpriseWindowsReleaseDirs, current) {
-			eg.Go(func() error {
-				return cutReleaseImage(ctx, m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true"))
-			})
+			wg.Add(1)
+			go func(baseEnv []string, dir string) {
+				defer wg.Done()
+				if err := cutReleaseImage(m.makeInDirectoryWithOutput, d, append(baseEnv, "WINDOWS_RELEASE=true")); err != nil {
+					wgErrs.Add(err)
+				}
+			}(slices.Clone(env), d)
 		}
 	}
-	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("failed to publish release images: %s", err)
+	wg.Wait()
+
+	if err := wgErrs.Error(); err != nil {
+		return fmt.Errorf("publish release images: %s", err)
 	}
 	logrus.Info("Finished publishing release images")
 	return nil
@@ -999,6 +1030,10 @@ func (m *EnterpriseManager) publishArtifactsToS3() error {
 	logrus.WithField("artifact", "binaries").Info("Publishing artifacts to S3")
 	if err := m.s3Cp(filepath.Join(m.uploadDir(), "binaries")+"/", fmt.Sprintf("s3://%s/binaries/%s/", m.s3Bucket, m.calicoVersion), s3ACLPublicRead...); err != nil {
 		return fmt.Errorf("failed to publish binaries: %s", err)
+	}
+	logrus.WithField("artifact", "helm charts").Info("Publishing artifacts to S3")
+	if err := m.s3Cp(filepath.Join(m.uploadDir(), "charts")+"/", fmt.Sprintf("s3://%s/charts/", m.s3Bucket), s3ACLPublicRead...); err != nil {
+		return fmt.Errorf("failed to publish charts: %s", err)
 	}
 	logrus.WithField("artifact", "release archive").Info("Publishing artifacts to S3")
 	if err := m.s3Cp(filepath.Join(m.uploadDir(), fmt.Sprintf("release-%s-%s.tgz", m.calicoVersion, m.operatorVersion)), fmt.Sprintf("s3://%s/archives/", m.s3Bucket), s3ACLPublicRead...); err != nil {
@@ -1042,21 +1077,17 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 		return nil
 	}
 	logrus.Info("Start publishing helm charts")
-	charts, err := listCharts(filepath.Join(m.uploadDir(), "charts"), m.helmChartVersion())
-	if err != nil {
-		return fmt.Errorf("failed to list charts: %s", err)
-	}
-	for _, chart := range charts {
-		if m.isHashRelease {
-			if _, err := m.runner.Run("helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
+	for _, c := range enterpriseHelmCharts {
+		c := filepath.Join(m.uploadDir(), "charts", fmt.Sprintf("%s-%s.tgz", c, m.helmChartVersion()))
+		for _, reg := range m.helmRegistries {
+			if err := m.publishHelmChart(c, reg); err != nil {
 				return err
 			}
-		} else {
-			if err := m.s3Cp(chart, fmt.Sprintf("s3://%s/charts/", m.s3Bucket), s3ACLPublicRead...); err != nil {
-				return fmt.Errorf("failed to push chart %s: %w", chart, err)
-			}
+			logrus.WithFields(logrus.Fields{
+				"chart":    filepath.Base(c),
+				"registry": reg,
+			}).Info("Published helm chart")
 		}
-		logrus.WithField("chart", chart).Info("Published helm chart")
 	}
 	logrus.Info("Finished publishing helm charts")
 	return nil
@@ -1206,35 +1237,23 @@ func (m *EnterpriseManager) PrepareRelease() error {
 }
 
 func (m *EnterpriseManager) s3Cp(src, dest string, additionalFlags ...string) error {
-	args := []string{
-		"--profile", m.awsProfile,
-		"s3", "cp",
-		src, dest,
-	}
-	if len(additionalFlags) > 0 {
-		args = append(args, additionalFlags...)
-	}
-	if strings.HasSuffix(src, "/") {
-		args = append(args, "--recursive")
-	}
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		args = append(args, "--debug")
-	}
 	if m.dryRun {
-		args = append(args, "--dryrun")
-		logrus.WithField("cmd", fmt.Sprintf("aws %s", strings.Join(args, " "))).Info("Dry-run: upload to S3")
+		additionalFlags = append(additionalFlags, "--dryrun")
+		logrus.WithFields(logrus.Fields{
+			"src":  src,
+			"dest": dest,
+		}).Info("Dry-run: upload to S3")
 	}
-	if _, err := m.runner.Run("aws", args, nil); err != nil {
-		return err
-	}
-	return nil
+	return m.CalicoManager.s3Cp(src, dest, additionalFlags...)
 }
 
 func (m *EnterpriseManager) s3Sync(src, dest string, additionalFlags ...string) error {
 	args := []string{
-		"--profile", m.awsProfile,
 		"s3", "sync",
 		src, dest,
+	}
+	if m.awsProfile != "" {
+		args = append(args, "--profile", m.awsProfile)
 	}
 	if len(additionalFlags) > 0 {
 		args = append(args, additionalFlags...)

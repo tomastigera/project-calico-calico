@@ -156,7 +156,6 @@ func getIPs(rawIPs []string) []net.IP {
 // getVersion will return the ip version across all IPs
 // if this version is consistent or nil (marking it as unknown)
 func getVersion(ips []net.IP) *int {
-
 	if len(ips) == 0 {
 		return nil
 	}
@@ -180,9 +179,13 @@ func getVersion(ips []net.IP) *int {
 func GetPolicyHits(pols []lapi.Policy) []PolicyHit {
 	hits := []PolicyHit{}
 	for i, p := range pols {
-		hit, err := NewPolicyHit(Action(p.Action), p.Count, i, p.IsStaged, p.Name, p.Namespace, p.Tier, p.RuleID)
+		hit, err := NewPolicyHit(Action(p.Action), p.Count, i, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
 		if err != nil {
-			logrus.WithError(err).Warn("Skipping invalid policy")
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name":      p.Name,
+				"namespace": p.Namespace,
+				"kind":      p.Kind,
+			}).Warn("Skipping invalid policy")
 			continue
 		}
 		hits = append(hits, hit)

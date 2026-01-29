@@ -67,8 +67,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 		routeSource := testConfig.RouteSource
 		brokenXSum := testConfig.BrokenXSum
 		enableIPv6 := testConfig.EnableIPv6
+		description := fmt.Sprintf("with topology set to IPIPMode %s, routeSource %s, brokenXSum: %v, enableIPv6: %v", ipipMode, routeSource, brokenXSum, enableIPv6)
 
-		Describe(fmt.Sprintf("with topology set to IPIPMode %s, routeSource %s, brokenXSum: %v, enableIPv6: %v", ipipMode, routeSource, brokenXSum, enableIPv6), func() {
+		Describe(description, func() {
 			var (
 				infra           infrastructure.DatastoreInfra
 				tc              infrastructure.TopologyContainers
@@ -835,7 +836,68 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 			})
 		})
 
-		Describe("with a borrowed tunnel IP on one host", func() {
+		Describe(description+" and borrowed workload IPs", func() {
+			var (
+				infra           infrastructure.DatastoreInfra
+				tc              infrastructure.TopologyContainers
+				felixes         []*infrastructure.Felix
+				client          client.Interface
+				w               [3]*workload.Workload
+				w6              [3]*workload.Workload
+				cc              *connectivity.Checker
+				topologyOptions infrastructure.TopologyOptions
+				timeout         = time.Second * 30
+			)
+
+			BeforeEach(func() {
+				infra = getInfra()
+
+				if (NFTMode() || BPFMode()) && getDataStoreType(infra) == "etcdv3" {
+					Skip("Skipping NFT / BPF tests for etcdv3 backend.")
+				}
+
+				topologyOptions = createIPIPBaseTopologyOptions(ipipMode, enableIPv6, routeSource, brokenXSum)
+
+				cc = &connectivity.Checker{}
+
+				// Deploy the topology.
+				tc, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+
+				// Assign tunnel addresses in IPAM based on the topology.
+				// This will assign blocks to particular nodes so that the
+				// workload IP assignments below will borrow.
+				assignTunnelAddresses(infra, tc, client)
+
+				// Offset of +1 means that felix[0]'s workload borrows its IP from
+				// felix[1]'s block and so on.
+				w, w6, _, _ = setupWorkloadsWithOffset(infra, tc, topologyOptions, client, enableIPv6, 1)
+				felixes = tc.Felixes
+			})
+
+			It("should have connectivity", func() {
+				if !ipipTunnelSupported(ipipMode, routeSource) {
+					Skip("Skipping due to known issue with tunnel IPs not being programmed in WEP mode")
+				}
+
+				for i := 0; i < 3; i++ {
+					f := felixes[i]
+					cc.ExpectSome(f, w[i])          // Host to local workload.
+					cc.ExpectSome(f, w[(i+1)%3])    // Host to next node's workload
+					cc.ExpectSome(w[i], w[(i+1)%3]) // Local workload to next node's workload.
+
+					if enableIPv6 {
+						cc.ExpectSome(f, w6[i])
+						cc.ExpectSome(f, w6[(i+1)%3])
+						cc.ExpectSome(w6[i], w6[(i+1)%3])
+					}
+
+				}
+
+				cc.CheckConnectivityWithTimeout(timeout)
+			})
+		})
+
+		Describe(description+" and a borrowed tunnel IP on one host", func() {
 			var (
 				infra           infrastructure.DatastoreInfra
 				tc              infrastructure.TopologyContainers
@@ -1035,10 +1097,8 @@ func createIPIPBaseTopologyOptions(
 	topologyOptions.IPIPMode = ipipMode
 	topologyOptions.IPIPStrategy = infrastructure.NewDefaultTunnelStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 	topologyOptions.VXLANMode = api.VXLANModeNever
-	topologyOptions.SimulateBIRDRoutes = false
 	topologyOptions.EnableIPv6 = enableIPv6
 	topologyOptions.FelixLogSeverity = "Debug"
-	topologyOptions.ExtraEnvVars["FELIX_ProgramClusterRoutes"] = "Enabled"
 	topologyOptions.ExtraEnvVars["FELIX_ROUTESOURCE"] = routeSource
 	// We force the broken checksum handling on or off so that we're not dependent on kernel version
 	// for these tests.  Since we're testing in containers anyway, checksum offload can't really be
@@ -1075,4 +1135,33 @@ func allHostsIPSetSize(felixes []*infrastructure.Felix, ipipMode api.IPIPMode) i
 
 func ipipTunnelSupported(ipipMode api.IPIPMode, routeSource string) bool {
 	return ipipMode != api.IPIPModeAlways || routeSource != "WorkloadIPs"
+}
+
+func ensureRoutesProgrammed(felixes []*infrastructure.Felix) {
+	for _, felix := range felixes {
+		ensureFelixRoutesProgrammed(felix)
+	}
+}
+
+func ensureFelixRoutesProgrammed(felix *infrastructure.Felix) {
+	routesExist := func() bool {
+		cmdv4 := []string{"ip", "route", "show"}
+		outv4, err := felix.ExecOutput(cmdv4...)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Check for the default route protocol used in Felix or Calico vxlan devices.
+		if strings.Contains(outv4, fmt.Sprintf("proto %v", dataplanedefs.DefaultRouteProto)) ||
+			strings.Contains(outv4, dataplanedefs.VXLANIfaceNameV4) {
+			return true
+		}
+
+		cmdv6 := []string{"ip", "-6", "route", "show"}
+		outv6, err := felix.ExecOutput(cmdv6...)
+		Expect(err).NotTo(HaveOccurred())
+		// Check for the default route protocol used in Felix or Calico vxlan devices.
+		return strings.Contains(outv6, fmt.Sprintf("proto %v", dataplanedefs.DefaultRouteProto)) ||
+			strings.Contains(outv6, dataplanedefs.VXLANIfaceNameV6)
+	}
+	EventuallyWithOffset(2, routesExist, "30s", "500ms").Should(BeTrue())
+	ConsistentlyWithOffset(2, routesExist, "3s", "1s").Should(BeTrue())
 }

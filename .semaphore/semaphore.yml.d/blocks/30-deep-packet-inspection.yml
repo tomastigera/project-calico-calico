@@ -1,6 +1,6 @@
 - name: Publish tigera/snort3 images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -19,7 +19,7 @@
           - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/snort3 images - native arm64 runner
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -37,7 +37,7 @@
           - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/snort3 multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Publish tigera/snort3 images
     - Publish tigera/snort3 images - native arm64 runner

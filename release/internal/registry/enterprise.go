@@ -8,8 +8,8 @@ const (
 	// DefaultEnterpriseHashreleaseRegistry is the default registry for hashrelease images.
 	DefaultEnterpriseHashreleaseRegistry = "gcr.io/unique-caldron-775/cnx/tigera"
 
-	// HelmDevRegistry is the registry for hashrelease Helm charts.
-	HelmDevRegistry = "oci://us-central1-docker.pkg.dev/unique-caldron-775/hashrelease-charts"
+	// DefaultEnterpriseHelmRegistry is the default registry for hashrelease Helm charts.
+	DefaultEnterpriseHelmRegistry = "quay.io/tigera/charts"
 )
 
 // EnterpriseImageMap maps the component name to its image for enterprise.

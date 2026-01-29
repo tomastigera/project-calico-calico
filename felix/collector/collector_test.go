@@ -7,6 +7,7 @@ package collector
 import (
 	"fmt"
 	net2 "net"
+	"strings"
 	"testing"
 	"time"
 
@@ -3704,6 +3705,309 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			Expect(result.Labels().String()).To(ContainSubstring("narrow"))
 		})
 
+		It("should respect the full precedence order of NetworkSet lookups", func() {
+			// Precedence: IP(Same) > Domain(Same) > IP(Global) > Domain(Global) > IP(Other) > Domain(Other)
+
+			// Setup keys for each level
+			// Namespaced names are "namespace/name" for NetworkSetKey
+			netsSameKey := model.NetworkSetKey{Name: "ns-preferred/nets-same"}
+			domainSameKey := model.NetworkSetKey{Name: "ns-preferred/domain-same"}
+			netsGlobalKey := model.NetworkSetKey{Name: "nets-global"}
+			domainGlobalKey := model.NetworkSetKey{Name: "domain-global"}
+			netsOtherKey := model.NetworkSetKey{Name: "ns-other/nets-other"}
+			domainOtherKey := model.NetworkSetKey{Name: "ns-other/domain-other"}
+
+			// Setup NetworkSets
+			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
+				netsSameKey:     {Nets: []net.IPNet{utils.MustParseNet("10.1.1.1/32")}},
+				domainSameKey:   {AllowedEgressDomains: []string{"domain-same.com"}},
+				netsGlobalKey:   {Nets: []net.IPNet{utils.MustParseNet("10.2.1.1/32"), utils.MustParseNet("10.3.1.1/32")}},
+				domainGlobalKey: {AllowedEgressDomains: []string{"domain-global.com"}},
+				netsOtherKey:    {Nets: []net.IPNet{utils.MustParseNet("10.4.1.1/32"), utils.MustParseNet("10.5.1.1/32")}},
+				domainOtherKey:  {AllowedEgressDomains: []string{"domain-other.com"}},
+			}
+
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
+
+			c = newCollector(lm, &Config{
+				EnableNetworkSets:         true,
+				EnableDestDomainsByClient: true,
+				ExportingInterval:         time.Second,
+				FlowLogsFlushInterval:     time.Second,
+			}).(*collector)
+
+			// Setup Mock Domains
+			clientIPStr := "192.168.1.1"
+			clientIPBytes := ipToBytes(clientIPStr)
+
+			ip1 := ipToBytes("10.1.1.1") // Nets(Same) vs Domain(Same)
+			ip2 := ipToBytes("10.2.1.1") // Domain(Same) vs Nets(Global)
+			ip3 := ipToBytes("10.3.1.1") // Nets(Global) vs Domain(Global)
+			ip4 := ipToBytes("10.4.1.1") // Domain(Global) vs Nets(Other)
+			ip5 := ipToBytes("10.5.1.1") // Nets(Other) vs Domain(Other)
+
+			mockDomainLookup := &mockEgressDomainCache{
+				domains: map[string]map[[16]byte][]string{
+					clientIPStr: {
+						ip1: {"domain-same.com"},
+						ip2: {"domain-same.com"},
+						ip3: {"domain-global.com"},
+						ip4: {"domain-global.com"},
+						ip5: {"domain-other.com"},
+					},
+				},
+			}
+			c.domainLookup = mockDomainLookup
+
+			preferredNs := "ns-preferred"
+
+			// Case 1: Nets(Same) vs Domain(Same)
+			result := testLookupEndpoint(c, clientIPBytes, ip1, true, preferredNs)
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(netsSameKey), "Nets(Same) should beat Domain(Same)")
+
+			// Case 2: Domain(Same) vs Nets(Global)
+			result = testLookupEndpoint(c, clientIPBytes, ip2, true, preferredNs)
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainSameKey), "Domain(Same) should beat Nets(Global)")
+
+			// Case 3: Nets(Global) vs Domain(Global)
+			result = testLookupEndpoint(c, clientIPBytes, ip3, true, preferredNs)
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(netsGlobalKey), "Nets(Global) should beat Domain(Global)")
+
+			// Case 4: Domain(Global) vs Nets(Other)
+			result = testLookupEndpoint(c, clientIPBytes, ip4, true, preferredNs)
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainGlobalKey), "Domain(Global) should beat Nets(Other)")
+
+			// Case 5: Nets(Other) vs Domain(Other)
+			result = testLookupEndpoint(c, clientIPBytes, ip5, true, preferredNs)
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(netsOtherKey), "Nets(Other) should beat Domain(Other)")
+		})
+
+		It("should prefer IP over Domain when both match at the same priority level", func() {
+			// Iterate over the three priority levels: Global, Same Namespaced, Other Namespaced
+			testCases := []struct {
+				desc          string
+				netsKey       model.NetworkSetKey
+				domainKey     model.NetworkSetKey
+				lookupNs      string
+				domainName    string
+				netsCidr      string
+				fallbackLabel string
+			}{
+				{
+					desc:          "Global",
+					netsKey:       model.NetworkSetKey{Name: "nets-global"},
+					domainKey:     model.NetworkSetKey{Name: "domain-global"},
+					lookupNs:      "", // Global lookup
+					domainName:    "global-level.com",
+					netsCidr:      "10.99.1.1/32",
+					fallbackLabel: "Global",
+				},
+				{
+					desc:          "Same Namespace",
+					netsKey:       model.NetworkSetKey{Name: "ns-test/nets-same"},
+					domainKey:     model.NetworkSetKey{Name: "ns-test/domain-same"},
+					lookupNs:      "ns-test",
+					domainName:    "same-ns-level.com",
+					netsCidr:      "10.99.2.2/32",
+					fallbackLabel: "Namespaced",
+				},
+				{
+					desc:          "Other Namespace",
+					netsKey:       model.NetworkSetKey{Name: "ns-other/nets-other"},
+					domainKey:     model.NetworkSetKey{Name: "ns-other/domain-other"},
+					lookupNs:      "ns-client", // Lookup from a different namespace
+					domainName:    "other-ns-level.com",
+					netsCidr:      "10.99.3.3/32",
+					fallbackLabel: "Other Namespaced",
+				},
+			}
+
+			for _, tc := range testCases {
+				By(fmt.Sprintf("Running test case: %s", tc.desc))
+				testIP := ipToBytes(strings.Split(tc.netsCidr, "/")[0])
+
+				// Setup NetworkSets where the same IP matches both an IP-based and Domain-based NetworkSet
+				nsMap := map[model.NetworkSetKey]*model.NetworkSet{
+					tc.netsKey:   {Nets: []net.IPNet{utils.MustParseNet(tc.netsCidr)}},
+					tc.domainKey: {AllowedEgressDomains: []string{tc.domainName}},
+				}
+
+				lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
+
+				c = newCollector(lm, &Config{
+					EnableNetworkSets:         true,
+					EnableDestDomainsByClient: true,
+					ExportingInterval:         time.Second,
+					FlowLogsFlushInterval:     time.Second,
+				}).(*collector)
+
+				clientIPStr := "192.168.1.1"
+				clientIPBytes := ipToBytes(clientIPStr)
+
+				// Domain lookup maps to the same IP
+				mockDomainLookup := &mockEgressDomainCache{
+					domains: map[string]map[[16]byte][]string{
+						clientIPStr: {
+							testIP: {tc.domainName},
+						},
+					},
+				}
+				c.domainLookup = mockDomainLookup
+
+				// IP should win at the same priority level
+				result := testLookupEndpoint(c, clientIPBytes, testIP, true, tc.lookupNs)
+				Expect(result).ToNot(BeNil())
+				Expect(result.Key()).To(Equal(tc.netsKey), fmt.Sprintf("IP should beat Domain at same priority level (%s)", tc.desc))
+
+				// Remove the IP-based NetworkSet
+				lm.MockDeleteNetworkSet(tc.netsKey)
+
+				// Now IP match is gone, should fall back to Domain match
+				result = testLookupEndpoint(c, clientIPBytes, testIP, true, tc.lookupNs)
+				Expect(result).ToNot(BeNil())
+				Expect(result.Key()).To(Equal(tc.domainKey), fmt.Sprintf("Should fallback to Domain at same priority level (%s)", tc.desc))
+			}
+		})
+
+		It("should prioritize matches from a higher priority scope regardless of type (IP vs Domain)", func() {
+			// This test covers cross-priority comparisons where the winner is determined by
+			// scope priority (Same > Global > Other) rather than type.
+
+			// Setup Keys
+			// Same Namespace Keys
+			domainSameKey := model.NetworkSetKey{Name: "ns/domain-same"}
+			ipSameKey := model.NetworkSetKey{Name: "ns/ip-same"}
+
+			// Global Keys
+			domainGlobalKey := model.NetworkSetKey{Name: "domain-global"}
+			ipGlobalKey := model.NetworkSetKey{Name: "ip-global"}
+			ipGlobalKey2 := model.NetworkSetKey{Name: "ip-global-2"}
+
+			// Other Namespace Keys
+			domainOtherKey := model.NetworkSetKey{Name: "ns-other/domain-other"}
+			ipOtherKey := model.NetworkSetKey{Name: "ns-other/ip-other"}
+
+			nsMap := map[model.NetworkSetKey]*model.NetworkSet{
+				domainSameKey: {AllowedEgressDomains: []string{"domain-same.com"}},
+				ipSameKey:     {Nets: []net.IPNet{utils.MustParseNet("40.40.40.40/32"), utils.MustParseNet("50.50.50.50/32")}},
+
+				domainGlobalKey: {AllowedEgressDomains: []string{"domain-global.com"}},
+				ipGlobalKey:     {Nets: []net.IPNet{utils.MustParseNet("10.10.10.10/32")}},
+				ipGlobalKey2:    {Nets: []net.IPNet{utils.MustParseNet("60.60.60.60/32")}},
+
+				domainOtherKey: {AllowedEgressDomains: []string{"domain-other.com"}},
+				ipOtherKey:     {Nets: []net.IPNet{utils.MustParseNet("20.20.20.20/32"), utils.MustParseNet("30.30.30.30/32")}},
+			}
+
+			lm := newMockLookupsCache(nil, nil, nsMap, nil, nil, nil)
+			c = newCollector(lm, &Config{
+				EnableNetworkSets:         true,
+				EnableDestDomainsByClient: true,
+				ExportingInterval:         time.Second,
+				FlowLogsFlushInterval:     time.Second,
+			}).(*collector)
+
+			clientIPStr := "192.168.1.1"
+			clientIPBytes := ipToBytes(clientIPStr)
+
+			ip1 := ipToBytes("10.10.10.10")
+			ip2 := ipToBytes("20.20.20.20")
+			ip3 := ipToBytes("30.30.30.30")
+			ip4 := ipToBytes("40.40.40.40")
+			ip5 := ipToBytes("50.50.50.50")
+			ip6 := ipToBytes("60.60.60.60")
+			ip7 := ipToBytes("70.70.70.70")
+			ip8 := ipToBytes("80.80.80.80")
+			ip9 := ipToBytes("90.90.90.90")
+
+			mockDomainLookup := &mockEgressDomainCache{
+				domains: map[string]map[[16]byte][]string{
+					clientIPStr: {
+						ip4: {"domain-global.com"}, // Case 1: IP(Same) vs Domain(Global)
+						ip1: {"domain-same.com"},   // Case 2: Domain(Same) vs IP(Global)
+						ip5: {"domain-other.com"},  // Case 3: IP(Same) vs Domain(Other)
+						ip3: {"domain-same.com"},   // Case 4: Domain(Same) vs IP(Other)
+						ip6: {"domain-other.com"},  // Case 5: IP(Global) vs Domain(Other)
+						ip2: {"domain-global.com"}, // Case 6: Domain(Global) vs IP(Other)
+						ip7: {"domain-same.com"},   // Case 7: IP(None) vs Domain(Same)
+						ip8: {"domain-global.com"}, // Case 8: IP(None) vs Domain(Global)
+						ip9: {"domain-other.com"},  // Case 9: IP(None) vs Domain(Other)
+					},
+				},
+			}
+			c.domainLookup = mockDomainLookup
+
+			// Lookup with preferred namespace "ns"
+			// MatchType Priority: SameNamespace > Global > OtherNamespace > None
+
+			// --- Comparison: Same Namespace vs Global ---
+
+			// Case 1: IP(Same) vs Domain(Global)
+			// Expect: IP(Same)
+			result := testLookupEndpoint(c, clientIPBytes, ip4, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(ipSameKey), "Case 1: IP(Same) should beat Domain(Global)")
+
+			// Case 2: Domain(Same) vs IP(Global)
+			// Expect: Domain(Same)
+			result = testLookupEndpoint(c, clientIPBytes, ip1, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainSameKey), "Case 2: Domain(Same) should beat IP(Global)")
+
+			// --- Comparison: Same Namespace vs Other Namespace ---
+
+			// Case 3: IP(Same) vs Domain(Other)
+			// Expect: IP(Same)
+			result = testLookupEndpoint(c, clientIPBytes, ip5, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(ipSameKey), "Case 3: IP(Same) should beat Domain(Other)")
+
+			// Case 4: Domain(Same) vs IP(Other)
+			// Expect: Domain(Same)
+			result = testLookupEndpoint(c, clientIPBytes, ip3, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainSameKey), "Case 4: Domain(Same) should beat IP(Other)")
+
+			// --- Comparison: Global vs Other Namespace ---
+
+			// Case 5: IP(Global) vs Domain(Other)
+			// Expect: IP(Global)
+			result = testLookupEndpoint(c, clientIPBytes, ip6, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(ipGlobalKey2), "Case 5: IP(Global) should beat Domain(Other)")
+
+			// Case 6: Domain(Global) vs IP(Other)
+			// Expect: Domain(Global)
+			result = testLookupEndpoint(c, clientIPBytes, ip2, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainGlobalKey), "Case 6: Domain(Global) should beat IP(Other)")
+
+			// --- Comparison: No IP Match vs Any Domain ---
+
+			// Case 7: IP(None) vs Domain(Same)
+			// Expect: Domain(Same)
+			result = testLookupEndpoint(c, clientIPBytes, ip7, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainSameKey), "Case 7: Domain(Same) should beat IP(None)")
+
+			// Case 8: IP(None) vs Domain(Global)
+			// Expect: Domain(Global)
+			result = testLookupEndpoint(c, clientIPBytes, ip8, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainGlobalKey), "Case 8: Domain(Global) should beat IP(None)")
+
+			// Case 9: IP(None) vs Domain(Other)
+			// Expect: Domain(Other)
+			result = testLookupEndpoint(c, clientIPBytes, ip9, true, "ns")
+			Expect(result).ToNot(BeNil())
+			Expect(result.Key()).To(Equal(domainOtherKey), "Case 9: Domain(Other) should beat IP(None)")
+		})
+
 		It("should handle performance efficiently with multiple NetworkSets", func() {
 			// Create multiple NetworkSets for performance testing
 			nsMap := make(map[model.NetworkSetKey]*model.NetworkSet)
@@ -4481,7 +4785,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			// Test with egress domain lookups enabled
 			result := c.lookupNetworkSetWithNamespace([16]byte{}, testIPLocal, true, "test-namespace")
 
-			// Since our mock doesn't implement GetNetworkSetFromEgressDomain properly,
+			// Since our mock doesn't implement domain lookups properly,
 			// this will return nil, but the code path is tested
 			Expect(result).To(BeNil())
 		})

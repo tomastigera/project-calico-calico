@@ -13,8 +13,9 @@
 # limitations under the License.
 
 ARG CALICO_BASE
+ARG UBI_IMAGE
 
-FROM alpine:3 AS builder
+FROM ${UBI_IMAGE} AS builder
 
 RUN mkdir /status /profiles
 
@@ -41,6 +42,14 @@ LABEL org.opencontainers.image.title="Calico Kubernetes controllers"
 LABEL org.opencontainers.image.vendor="Project Calico"
 LABEL org.opencontainers.image.version="${GIT_VERSION}"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+LABEL description="Calico Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico Kubernetes controllers"
+LABEL release=1
+LABEL summary="Calico Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state"
+LABEL vendor="Project Calico"
+LABEL version="${GIT_VERSION}"
 
 COPY --from=source / /
 

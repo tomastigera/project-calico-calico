@@ -28,7 +28,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -50,7 +50,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -78,7 +78,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -100,7 +100,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -128,7 +128,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -150,7 +150,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -178,7 +178,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -200,7 +200,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -228,7 +228,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -250,7 +250,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -278,7 +278,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -300,7 +300,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -328,7 +328,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -350,7 +350,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -378,7 +378,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -400,7 +400,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -428,7 +428,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -450,7 +450,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -478,7 +478,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -500,7 +500,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -528,7 +528,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -550,7 +550,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -578,7 +578,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -600,7 +600,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -628,7 +628,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -650,7 +650,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -678,7 +678,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -700,7 +700,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -728,7 +728,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -750,7 +750,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -778,7 +778,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -800,7 +800,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -828,7 +828,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -850,7 +850,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -878,7 +878,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -900,7 +900,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -928,7 +928,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -950,7 +950,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -978,7 +978,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1000,7 +1000,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1028,7 +1028,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1050,7 +1050,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1078,7 +1078,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1100,7 +1100,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1128,7 +1128,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1150,7 +1150,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1178,7 +1178,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1200,7 +1200,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1228,7 +1228,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1250,7 +1250,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1278,7 +1278,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1300,7 +1300,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1328,7 +1328,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1350,7 +1350,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1378,7 +1378,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1400,7 +1400,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1428,7 +1428,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1450,7 +1450,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1478,7 +1478,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1500,7 +1500,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1528,7 +1528,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1550,7 +1550,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1578,7 +1578,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1600,7 +1600,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1628,7 +1628,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1650,7 +1650,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1678,7 +1678,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1700,7 +1700,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1728,7 +1728,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1750,7 +1750,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1778,7 +1778,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1800,7 +1800,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1828,7 +1828,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1850,7 +1850,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1878,7 +1878,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1900,7 +1900,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1928,7 +1928,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -1950,7 +1950,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -1978,7 +1978,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2000,7 +2000,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2028,7 +2028,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2050,7 +2050,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2078,7 +2078,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2100,7 +2100,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2128,7 +2128,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2150,7 +2150,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2178,7 +2178,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2200,7 +2200,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2228,7 +2228,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2250,7 +2250,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2278,7 +2278,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2300,7 +2300,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2328,7 +2328,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2350,7 +2350,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2378,7 +2378,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2400,7 +2400,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2428,7 +2428,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2450,7 +2450,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2478,7 +2478,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2500,7 +2500,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2528,7 +2528,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2550,7 +2550,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2578,7 +2578,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2600,7 +2600,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2628,7 +2628,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2650,7 +2650,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2678,7 +2678,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2700,7 +2700,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2728,7 +2728,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2750,7 +2750,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2778,7 +2778,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2800,7 +2800,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2828,7 +2828,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2850,7 +2850,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2878,7 +2878,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2900,7 +2900,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2928,7 +2928,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -2950,7 +2950,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -2978,7 +2978,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3000,7 +3000,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3028,7 +3028,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3050,7 +3050,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3078,7 +3078,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3100,7 +3100,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3128,7 +3128,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3150,7 +3150,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3178,7 +3178,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3200,7 +3200,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3228,7 +3228,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3250,7 +3250,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3278,7 +3278,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3300,7 +3300,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3328,7 +3328,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3350,7 +3350,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3378,7 +3378,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3400,7 +3400,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3428,7 +3428,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3450,7 +3450,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3478,7 +3478,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3500,7 +3500,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3528,7 +3528,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3550,7 +3550,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3578,7 +3578,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3600,7 +3600,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3628,7 +3628,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3650,7 +3650,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3678,7 +3678,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3700,7 +3700,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3728,7 +3728,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3750,7 +3750,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3778,7 +3778,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3800,7 +3800,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3828,7 +3828,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3850,7 +3850,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3878,7 +3878,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3900,7 +3900,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3928,7 +3928,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -3950,7 +3950,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -3978,7 +3978,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4000,7 +4000,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4028,7 +4028,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4050,7 +4050,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4078,7 +4078,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4100,7 +4100,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4128,7 +4128,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4150,7 +4150,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4178,7 +4178,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4200,7 +4200,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4228,7 +4228,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4250,7 +4250,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4278,7 +4278,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4300,7 +4300,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4328,7 +4328,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4350,7 +4350,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},
@@ -4378,7 +4378,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace1", Action: "allow", IsProfile: true},
 					},
 				},
 				// Second flow - this is the flow as reported by the destination.
@@ -4400,7 +4400,7 @@ var MockPolicyRecFlows1 = []rest.MockResult{
 						Action:   lapi.FlowActionAllow,
 					},
 					Policies: []lapi.Policy{
-						{Tier: "__PROFILE__", Name: "kns.namespace2", Action: "allow", IsProfile: true},
+						{Tier: "__PROFILE__", Kind: "Profile", Name: "kns.namespace2", Action: "allow", IsProfile: true},
 					},
 				},
 			},

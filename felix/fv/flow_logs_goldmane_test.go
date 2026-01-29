@@ -17,7 +17,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -116,6 +115,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 		for ii := range wlHost1 {
 			wIP := fmt.Sprintf("10.65.0.%d", ii)
 			wName := fmt.Sprintf("wl-host1-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[0].Hostname, client)
 			wlHost1[ii] = workload.Run(tc.Felixes[0], wName, "default", wIP, "8055", "tcp")
 			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
 			wlHost1[ii].ConfigureInInfra(infra)
@@ -125,6 +125,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 		for ii := range wlHost2 {
 			wIP := fmt.Sprintf("10.65.1.%d", ii)
 			wName := fmt.Sprintf("wl-host2-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[1].Hostname, client)
 			wlHost2[ii] = workload.Run(tc.Felixes[1], wName, "default", wIP, "8055", "tcp")
 			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
 			wlHost2[ii].ConfigureInInfra(infra)
@@ -374,7 +375,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -397,7 +398,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -421,7 +422,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -436,7 +437,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|default/default.np-1|deny|0": {},
+						"0|default|np:default/default.np-1|deny|0": {},
 					},
 				})
 
@@ -453,7 +454,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "dst",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|default|gnp-1|allow|0": {},
+						"0|default|gnp:gnp-1|allow|0": {},
 					},
 				})
 
@@ -469,7 +470,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log tests", [
 						Reporter:   "src",
 					},
 					FlowEnforcedPolicySet: flowlog.FlowPolicySet{
-						"0|__PROFILE__|__PROFILE__.default|allow|0": {},
+						"0|__PROFILE__|pro:default|allow|0": {},
 					},
 				})
 
@@ -509,8 +510,7 @@ var _ = infrastructure.DatastoreDescribe("goldmane flow log ipv6 tests", []apico
 		opts.FlowLogSource = infrastructure.FlowLogSourceLocalSocket
 
 		opts.EnableIPv6 = true
-		opts.IPIPMode = api.IPIPModeNever
-		opts.SimulateBIRDRoutes = true
+		opts.IPIPMode = api.IPIPModeAlways
 		opts.NATOutgoingEnabled = true
 		opts.AutoHEPsEnabled = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
@@ -520,33 +520,33 @@ var _ = infrastructure.DatastoreDescribe("goldmane flow log ipv6 tests", []apico
 
 		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
-		addWorkload := func(run bool, ii, wi, port int, labels map[string]string) *workload.Workload {
+		addWorkload := func(hostname string, ii, wi, port int, labels map[string]string) *workload.Workload {
 			if labels == nil {
 				labels = make(map[string]string)
 			}
 
 			wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
+			wIPv6 := fmt.Sprintf("dead:beef::%d:%d", ii, wi+2)
 			wName := fmt.Sprintf("w%d%d", ii, wi)
 
+			infrastructure.AssignIP(wName, wIP, hostname, client)
+			infrastructure.AssignIP(wName, wIPv6, hostname, client)
 			w := workload.New(tc.Felixes[ii], wName, "default",
-				wIP, strconv.Itoa(port), "tcp", workload.WithIPv6Address(net.ParseIP(fmt.Sprintf("dead:beef::%d:%d", ii, wi+2)).String()))
+				wIP, strconv.Itoa(port), "tcp", workload.WithIPv6Address(wIPv6))
 
 			labels["name"] = w.Name
 			labels["workload"] = "regular"
-
 			w.WorkloadEndpoint.Labels = labels
-			if run {
-				err := w.Start(infra)
-				Expect(err).NotTo(HaveOccurred())
-				w.ConfigureInInfra(infra)
-			}
+			err := w.Start(infra)
+			Expect(err).NotTo(HaveOccurred())
+			w.ConfigureInInfra(infra)
 			return w
 		}
 
 		for ii := range tc.Felixes {
 			// Two workloads on each host so we can check the same host and other host cases.
-			w[ii][0] = addWorkload(true, ii, 0, 8055, map[string]string{"port": "8055"})
-			w[ii][1] = addWorkload(true, ii, 1, 8056, nil)
+			w[ii][0] = addWorkload(tc.Felixes[ii].Hostname, ii, 0, 8055, map[string]string{"port": "8055"})
+			w[ii][1] = addWorkload(tc.Felixes[ii].Hostname, ii, 1, 8056, nil)
 		}
 
 		err = infra.AddDefaultDeny()
@@ -688,6 +688,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane local server tests
 		wlHost1 [2]*workload.Workload
 		wlHost2 [2]*workload.Workload
 		cc      *connectivity.Checker
+		client  client.Interface
 	)
 
 	BeforeEach(func() {
@@ -703,7 +704,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane local server tests
 		opts.ExtraEnvVars["FELIX_FLOWLOGSLOCALREPORTER"] = "Enabled"
 
 		numNodes := 2
-		tc, _ = infrastructure.StartNNodeTopology(numNodes, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(numNodes, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -712,6 +713,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane local server tests
 		for ii := range wlHost1 {
 			wIP := fmt.Sprintf("10.65.0.%d", ii)
 			wName := fmt.Sprintf("wl-host1-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[0].Hostname, client)
 			wlHost1[ii] = workload.Run(tc.Felixes[0], wName, "default", wIP, "8055", "tcp")
 			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
 			wlHost1[ii].ConfigureInInfra(infra)
@@ -721,6 +723,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane local server tests
 		for ii := range wlHost2 {
 			wIP := fmt.Sprintf("10.65.1.%d", ii)
 			wName := fmt.Sprintf("wl-host2-%d", ii)
+			infrastructure.AssignIP(wName, wIP, tc.Felixes[1].Hostname, client)
 			wlHost2[ii] = workload.Run(tc.Felixes[1], wName, "default", wIP, "8055", "tcp")
 			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
 			wlHost2[ii].ConfigureInInfra(infra)
@@ -824,7 +827,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		infra = getInfra()
 		opts.FelixLogSeverity = "Debug"
 		opts = infrastructure.DefaultTopologyOptions()
-		opts.IPIPMode = api.IPIPModeNever
+		//opts.IPIPMode = api.IPIPModeNever
 		opts.FlowLogSource = infrastructure.FlowLogSourceLocalSocket
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
@@ -847,24 +850,28 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 
 		// Source workloads on Node 0
 		// swl1 in ns1
+		infrastructure.AssignIP("swl1", "10.65.0.2", tc.Felixes[0].Hostname, client)
 		swl1 = workload.Run(tc.Felixes[0], "swl1", "ns1", "10.65.0.2", "8055", "tcp")
 		swl1.WorkloadEndpoint.GenerateName = "swl1-"
 		swl1.WorkloadEndpoint.Namespace = "ns1"
 		swl1.ConfigureInInfra(infra)
 
 		// swl2 in ns2
+		infrastructure.AssignIP("swl2", "10.65.0.3", tc.Felixes[0].Hostname, client)
 		swl2 = workload.Run(tc.Felixes[0], "swl2", "ns2", "10.65.0.3", "8055", "tcp")
 		swl2.WorkloadEndpoint.GenerateName = "swl2-"
 		swl2.WorkloadEndpoint.Namespace = "ns2"
 		swl2.ConfigureInInfra(infra)
 
 		// swl3 in ns3
+		infrastructure.AssignIP("swl3", "10.65.0.4", tc.Felixes[0].Hostname, client)
 		swl3 = workload.Run(tc.Felixes[0], "swl3", "ns3", "10.65.0.4", "8055", "tcp")
 		swl3.WorkloadEndpoint.GenerateName = "swl3-"
 		swl3.WorkloadEndpoint.Namespace = "ns3"
 		swl3.ConfigureInInfra(infra)
 
 		// swl4 in ns3
+		infrastructure.AssignIP("swl4", "10.65.0.5", tc.Felixes[0].Hostname, client)
 		swl4 = workload.Run(tc.Felixes[0], "swl4", "ns3", "10.65.0.5", "8055", "tcp")
 		swl4.WorkloadEndpoint.GenerateName = "swl4-"
 		swl4.WorkloadEndpoint.Namespace = "ns3"
@@ -873,6 +880,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		// Destination workloads on Node 1 (Host Networked to simulate external/non-WEP IPs)
 
 		// dwl1
+		infrastructure.AssignIP("dwl1", "10.65.1.2", tc.Felixes[1].Hostname, client)
 		dwl1 = workload.New(tc.Felixes[1], "dwl1", "", "10.65.1.2", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.2/32", "dev", "lo")
@@ -880,6 +888,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 		Expect(dwl1.Start(tc.Felixes[1])).NotTo(HaveOccurred())
 
 		// dwl2
+		infrastructure.AssignIP("dwl2", "10.65.1.3", tc.Felixes[1].Hostname, client)
 		dwl2 = workload.New(tc.Felixes[1], "dwl2", "", "10.65.1.3", "8055", "tcp", workload.WithHostNetworked())
 		// Add IP before starting workload so it can bind
 		err = tc.Felixes[1].ExecMayFail("ip", "addr", "add", "10.65.1.3/32", "dev", "lo")
@@ -988,7 +997,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log networkse
 						DstService: flowlog.FlowService{Namespace: flowlog.FieldNotIncluded, Name: flowlog.FieldNotIncluded, PortName: flowlog.FieldNotIncluded, PortNum: 0},
 						Action:     "allow", Reporter: "src",
 					},
-					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|allow-all|allow|0": {}},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|gnp:allow-all|allow|0": {}},
 				})
 			}
 

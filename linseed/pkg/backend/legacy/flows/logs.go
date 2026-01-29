@@ -80,7 +80,7 @@ type flowLogWithExtras struct {
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *flowLogBackend) prepareForWrite(i bapi.ClusterInfo, f v1.FlowLog) interface{} {
+func (b *flowLogBackend) prepareForWrite(i bapi.ClusterInfo, f v1.FlowLog) any {
 	f.Cluster = i.Cluster
 	if b.singleIndex {
 		return flowLogWithExtras{
@@ -205,7 +205,7 @@ func (b *flowLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	}, nil
 }
 
-func (b *flowLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *flowLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
 	useDeepPagination := b.migrationMode
@@ -422,8 +422,8 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) 
 
 	if len(opts.IPMatches) > 0 {
 		for _, match := range opts.IPMatches {
-			// Get the list of values as an interface{}, as needed for a terms query.
-			values := []interface{}{}
+			// Get the list of values as an any, as needed for a terms query.
+			values := []any{}
 			for _, t := range match.IPs {
 				values = append(values, t)
 			}

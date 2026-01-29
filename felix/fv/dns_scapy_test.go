@@ -961,7 +961,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Precise DNS logging", []api
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			wName := "w" + iiStr
+			wIP := "10.65.0.1" + iiStr
+			infrastructure.AssignIP(wName, wIP, felix.Hostname, client)
+			w[ii] = workload.Run(felix, wName, "default", wIP, "8055", "tcp")
 			w[ii].Configure(client)
 			expectedInterfaces = append(expectedInterfaces, w[ii].InterfaceName)
 		}

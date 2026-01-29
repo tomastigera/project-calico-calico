@@ -85,8 +85,7 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 				calico.WithManager(!c.Bool(skipManagerFlag.Name)),
 				calico.WithEnterpriseHashrelease(hashreleaseserver.EnterpriseHashrelease{
 					Hashrelease: hashreleaseserver.Hashrelease{
-						Name:    c.String(hashreleaseNameFlag.Name),
-						Product: utils.EnterpriseProductCode,
+						Name: c.String(hashreleaseNameFlag.Name),
 					},
 				}, hashreleaseserver.Config{}),
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
@@ -163,13 +162,12 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				calico.WithChartVersion(versions.HelmRelease),
 				calico.WithDryRun(false),
 				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
-				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 			}
-			if v := c.String(baseArtifactsURLFlag.Name); v != "" {
-				entOpts = append(entOpts, calico.WithBaseArtifactsURL(v))
+			if v := c.String(awsProfileFlag.Name); v != "" {
+				opts = append(opts, calico.WithAWSProfile(v))
 			}
 			if v := c.String(s3BucketFlag.Name); v != "" {
-				entOpts = append(entOpts, calico.WithS3Bucket(v))
+				opts = append(opts, calico.WithS3Bucket(v))
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 			return m.Build()
@@ -188,6 +186,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		registryFlag,
 		hashReleaseRegistryFlag,
 		publishImagesFlag,
+		helmRegistryFlag,
+		publishChartsFlag,
 		awsProfileFlag,
 		s3BucketFlag,
 		publishToS3Flag,
@@ -296,17 +296,19 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithTmpDir(cfg.TmpDir),
 				calico.WithComponents(versions.ImageComponents(true)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
+				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 			}
 			if len(registries) > 0 {
 				opts = append(opts, calico.WithImageRegistries(registries))
 			}
+			if reg := c.StringSlice(helmRegistryFlag.Name); len(reg) > 0 {
+				opts = append(opts, calico.WithHelmRegistries(reg))
+			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(versions.HelmRelease),
-				calico.WithAWSProfile(c.String(awsProfileFlag.Name)),
 				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
-				calico.WithPublishCharts(c.Bool(publishToS3Flag.Name)), // Release charts are published to S3
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
 			}
@@ -316,8 +318,11 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 			if v := c.String(windowsArchiveBucketFlag.Name); v != "" {
 				entOpts = append(entOpts, calico.WithWindowsArchiveBucket(v))
 			}
+			if v := c.String(awsProfileFlag.Name); v != "" {
+				opts = append(opts, calico.WithAWSProfile(v))
+			}
 			if v := c.String(s3BucketFlag.Name); v != "" {
-				entOpts = append(entOpts, calico.WithS3Bucket(v))
+				opts = append(opts, calico.WithS3Bucket(v))
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 

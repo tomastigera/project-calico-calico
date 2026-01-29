@@ -36,9 +36,9 @@ components:
     version: v3.22.0
     image: compliance-snapshotter
   coreos-alertmanager:
-    version: v0.28.0
+    version: v0.30.1
   coreos-prometheus:
-    version: v3.4.1
+    version: v3.9.1
   csi:
     version: v3.22.0
     image: csi
@@ -55,11 +55,11 @@ components:
     version: v3.22.0
     image: dikastes
   eck-elasticsearch:
-    version: 8.18.8
+    version: 8.19.10
   eck-elasticsearch-operator:
     version: 2.16.0
   eck-kibana:
-    version: 8.18.8
+    version: 8.19.10
   egress-gateway:
     version: v3.22.0
     image: egress-gateway

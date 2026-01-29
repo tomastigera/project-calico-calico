@@ -74,6 +74,10 @@ func (lu *LabelUpdater) UpdateLabels() error {
 	}
 
 	for _, hep := range hepList.Items {
+		if hep.Labels == nil {
+			hep.Labels = make(map[string]string)
+		}
+
 		// Update the labels to include the new host endpoint type
 		hep.Labels[names.HostEndpointTypeLabelKey] = string(names.HostEndpointTypeNonClusterHost)
 		// Simulate the kubelet behavior of adding the node labels to the host endpoint

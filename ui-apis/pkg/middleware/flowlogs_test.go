@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -820,22 +821,24 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, api.GlobalEndpointType).Return(false, nil)
 			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 
+			// Run the search.
 			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, flowFilter, params, pipClient, rbacHelper)
-
-			mockFlowHelper.AssertExpectations(GinkgoT())
-
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Check the results.
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
-			// the took field won't always match the expected response since it is timer based so overwrite it here
+			// The took field won't always match the expected response since it is timer based so overwrite it here
 			convertedResults.Took = 3
+
 			searchData, err := json.Marshal(convertedResults)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(searchData).To(MatchJSON(aggResponse))
+			Expect(searchData).To(MatchJSON(aggResponse), cmp.Diff(string(aggResponse), string(searchData)))
+
+			// Assert the expected calls were made.
+			mockFlowHelper.AssertExpectations(GinkgoT())
 		})
 	})
 })

@@ -626,41 +626,42 @@ var _ = Describe("FlowLog middleware", func() {
 					}
 					Expect(flResponse).Should(Equal(exp), cmp.Diff(flResponse, exp))
 				},
+
 				Entry("single policy hit allowed at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
+						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					}, nil,
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace2/policy2|allow|0", "doc_count": 1},
+						{"key": "0|tier2|namespace2/tier2.policy2|allow|0", "doc_count": 1},
 					}, nil,
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "tier1.policy1", Action: "allow", Count: 1},
 						},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "tier2.policy2", Action: "allow", Count: 1},
 						},
 					},
 				),
 
 				Entry("single policy hit allowed at src and denied at dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
+						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					}, nil,
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace2/policy2|deny", "doc_count": 1},
+						{"key": "0|tier2|namespace2/tier2.policy2|deny", "doc_count": 1},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "tier1.policy1", Action: "allow", Count: 1},
 						},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "tier2.policy2", Action: "deny", Count: 1},
 						},
 					},
 				),
@@ -668,12 +669,12 @@ var _ = Describe("FlowLog middleware", func() {
 				Entry("single policy hit denied at src and denied on dst",
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|deny", "doc_count": 1},
+						{"key": "0|tier1|namespace1/tier1.policy1|deny", "doc_count": 1},
 					},
 					nil, nil,
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "tier1.policy1", Action: "deny", Count: 1},
 						},
 					},
 					nil,
@@ -681,31 +682,31 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("single policy hit allowed and denied at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
+						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier4|namespace4/policy4|deny|-1", "doc_count": 1},
+						{"key": "0|tier4|namespace4/tier4.policy4|deny|-1", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier3|namespace3/policy3|allow|0", "doc_count": 1},
+						{"key": "0|tier3|namespace3/tier3.policy3|allow|0", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace2/policy2|deny|-1", "doc_count": 1},
+						{"key": "0|tier2|namespace2/tier2.policy2|deny|-1", "doc_count": 1},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace1", Tier: "tier1", Name: "tier1.policy1", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace4", Tier: "tier4", Name: "policy4", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace4", Tier: "tier4", Name: "tier4.policy4", Action: "deny", Count: 1},
 						},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace3", Tier: "tier3", Name: "policy3", Action: "allow", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace3", Tier: "tier3", Name: "tier3.policy3", Action: "allow", Count: 1},
 						},
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+							{Index: 0, Kind: "NetworkPolicy", Namespace: "namespace2", Tier: "tier2", Name: "tier2.policy2", Action: "deny", Count: 1},
 						},
 					},
 				),
@@ -779,18 +780,46 @@ var _ = Describe("FlowLog middleware", func() {
 				Entry("Parses Kubernetes policy",
 					nil,
 					[]map[string]interface{}{
+						{"key": "4|default|knp:namespace/policy|deny", "doc_count": 1},
+					},
+					nil, nil,
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Kind: "KubernetesNetworkPolicy", IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
+						},
+					},
+					nil,
+				),
+
+				Entry("Parses Kubernetes policy (legacy format)",
+					nil,
+					[]map[string]interface{}{
 						{"key": "4|default|namespace/knp.default.policy|deny", "doc_count": 1},
 					},
 					nil, nil,
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
-							{Index: 0, Kind: "NetworkPolicy", IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
+							{Index: 0, Kind: "KubernetesNetworkPolicy", IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
 						},
 					},
 					nil,
 				),
 
 				Entry("Parses Profile policy",
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|__PROFILE__|pro:kns.namespace|deny", "doc_count": 1},
+					},
+					nil, nil,
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Kind: "Profile", IsProfile: true, Namespace: "", Tier: "__PROFILE__", Name: "kns.namespace", Action: "deny", Count: 1},
+						},
+					},
+					nil,
+				),
+
+				Entry("Parses Profile policy (legacy format)",
 					nil,
 					[]map[string]interface{}{
 						{"key": "0|__PROFILE__|__PROFILE__.kns.namespace|deny", "doc_count": 1},
@@ -1052,6 +1081,7 @@ func policiesToV1(policies []map[string]interface{}) []v1.Policy {
 		pol := v1.Policy{
 			Action:       string(policyHit.Action()),
 			Tier:         policyHit.Tier(),
+			Kind:         policyHit.Kind(),
 			Namespace:    policyHit.Namespace(),
 			Name:         policyHit.Name(),
 			IsStaged:     policyHit.IsStaged(),
