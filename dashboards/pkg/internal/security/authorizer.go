@@ -307,7 +307,8 @@ func (a *rulesAuthorizer) getOrLoadAuthorizedResourceVerbs(
 
 	if cacheItem.isStale(a.cfg.AuthorizedVerbsCacheSoftTTL) {
 		if err := cacheItem.Revalidate(ctx, a.logger, managedClusterName, a.cfg.AuthorizedVerbsCacheSoftTTL, a.cfg.AuthorizedVerbsCacheRevalidateTimeout); err != nil {
-			return nil, err
+			// avoid returning error to ensure stale cacheItem is reused for authorization
+			a.logger.WarnC(ctx, "AuthorizedResourceVerbs revalidation failed", logging.Error(err))
 		}
 	}
 
