@@ -111,7 +111,6 @@ for FILE in $VALUES_FILES; do
     --set tigeraOperator.registry=$OPERATOR_REGISTRY \
     --set calicoctl.image=$REGISTRY/calicoctl \
     --set calicoctl.tag=$CALICO_VERSION \
-    --include-crds \
     --no-hooks \
     -f ../charts/values/$FILE >$FILE
 done
@@ -120,12 +119,12 @@ done
 # Build manifest which includes both Calico and Operator CRDs.
 ##########################################################################
 echo "# Tigera Operator and Calico Enterprise CRDs" >operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/*.yaml; do
+(for file in ../charts/crd.projectcalico.org.v1/templates/*.yaml; do
   echo "---"
   echo "# Source: tigera-operator/crds/$(basename $file)"
   cat $file
 done) >>operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/calico/*.yaml; do
+(for file in ../charts/crd.projectcalico.org.v1/templates/calico/*.yaml; do
   echo "---"
   echo "# Source: tigera-operator/crds/calico/$(basename $file)"
   cat $file

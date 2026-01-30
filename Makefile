@@ -168,10 +168,10 @@ gen-eck-crds:
 	@echo "Generating ECK operator CRDs..."
 	$(MAKE) -C third_party/eck-operator init-source
 	$(MAKE) -C third_party/eck-operator/cloud-on-k8s generate-manifests
-	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml
+	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml
 	# Strip all description fields to reduce manifest size.
-	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml"
-	cp charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
+	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml"
+	cp charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
 	$(MAKE) -C third_party/eck-operator clean
 
 gen-manifests: bin/helm bin/yq gen-prometheus-crds
@@ -191,9 +191,9 @@ get-operator-crds: var-require-all-OPERATOR_ORGANIZATION-OPERATOR_GIT_REPO-OPERA
 	@echo ==============================================================================================================
 	@echo === Pulling new operator CRDs from $(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO) branch $(OPERATOR_BRANCH) ===
 	@echo ==============================================================================================================
-	cd ./charts/tigera-operator/crds/ && \
+	cd ./charts/crd.projectcalico.org.v1/templates/ && \
 	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
-	cp -vLR ./charts/tigera-operator/crds/ ./charts/multi-tenant-crds/. && \
+	cp -vLR ./charts/crd.projectcalico.org.v1/templates/* ./charts/multi-tenant-crds/crds/ && \
 	cd ./charts/multi-tenant-crds/crds && \
 	curl -fsSOL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
 	for file in $(MULTI_TENANCY_CRDS_FILE_CHANGES); do \
@@ -243,7 +243,7 @@ CHART_DESTINATION ?= ./bin
 # Build helm charts.
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
-tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz
+tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz $(CHART_DESTINATION)/crd.projectcalico.org.v1-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
 multi-tenant-crds-release: $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz
@@ -254,10 +254,12 @@ $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
-# If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
+# If we run CD as master from semaphore, we want to also publish bin/<CHART>-v0.0.tgz for the master docs.
+.PHONY: tigera-operator-master
 tigera-operator-master:
 ifeq ($(SEMAPHORE_GIT_BRANCH), master)
 	$(MAKE) $(CHART_DESTINATION)/tigera-operator-v0.0.tgz
+	$(MAKE) $(CHART_DESTINATION)/crd.projectcalico.org.v1-v0.0.tgz
 endif
 
 $(CHART_DESTINATION)/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
@@ -280,6 +282,14 @@ $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz: bin/helm
 charts/tigera-operator/charts/tigera-prometheus-operator.tgz: $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz
 	mkdir -p $(@D)
 	cp $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz $@
+
+# Build the crd.projectcalico.org.v1 helm chart.
+$(CHART_DESTINATION)/crd.projectcalico.org.v1-%.tgz: bin/helm $(shell find ./charts/crd.projectcalico.org.v1/ -type f)
+	mkdir -p $(CHART_DESTINATION)
+	bin/helm package ./charts/crd.projectcalico.org.v1/ \
+	--destination $(CHART_DESTINATION)/ \
+	--version $(chartVersion) \
+	--app-version $(appVersion)
 
 # Build all Calico images for the current architecture.
 image:
