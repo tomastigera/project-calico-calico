@@ -48,6 +48,9 @@ const (
 	Configuration Category = "Configuration"
 	Operator      Category = "Operator"
 	Networking    Category = "Networking"
+
+	// Visibility is used for tests that verify visibility features like dashboards and logging.
+	Visibility Category = "Visibility"
 )
 
 func WithCategory(cat Category) any {
@@ -70,6 +73,7 @@ var features = map[string]bool{
 	"Maglev":          true,
 	"BGPPeer":         true,
 	"IPIP":            true,
+	"Dashboards":      true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.

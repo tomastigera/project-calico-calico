@@ -21,6 +21,7 @@ import (
 	v1 "github.com/tigera/operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/discovery"
 	"k8s.io/kubernetes/test/e2e/framework"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,4 +54,12 @@ func WhiskerInstalled(cli ctrlclient.Client) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+// GatewayAPIInstalled checks if the Gateway API CRDs are available in the cluster.
+// This is useful for tests that need to wait for Gateway API resources to be available,
+// such as after creating a GatewayAPI CR that triggers the operator to install the CRDs.
+func GatewayAPIInstalled(discoveryClient discovery.DiscoveryInterface) bool {
+	_, err := discoveryClient.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1")
+	return err == nil
 }
