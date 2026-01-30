@@ -192,7 +192,8 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 		{Name: "dest_domains"},
 		{Name: "source_ip"},
 		{Name: "dest_ip"},
-		{Name: policiesField, Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField)},
+
+		{Name: allPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField)},
 		{Name: enforcedPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, enforcedPoliciesSubField)},
 		{Name: pendingPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField)},
 		{Name: transitPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, transitPoliciesSubField)},
@@ -415,10 +416,29 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
 
 	// Add in policies.
-	flow.Policies = getPoliciesFromAggregation(log, policiesField, bucket.AggregatedTerms)
 	flow.EnforcedPolicies = getPoliciesFromAggregation(log, enforcedPoliciesSubField, bucket.AggregatedTerms)
 	flow.PendingPolicies = getPoliciesFromAggregation(log, pendingPoliciesSubField, bucket.AggregatedTerms)
 	flow.TransitPolicies = getPoliciesFromAggregation(log, transitPoliciesSubField, bucket.AggregatedTerms)
+
+	// Determine all policies, preferring all_policies when present.
+	allPolicies := getPoliciesFromAggregation(log, allPoliciesSubField, bucket.AggregatedTerms)
+	if len(allPolicies) > 0 {
+		flow.Policies = allPolicies
+	} else {
+		// Fallback: combine enforced, and the staged policies from pending for backward compatibility.
+		if len(flow.EnforcedPolicies) > 0 || len(flow.PendingPolicies) > 0 {
+			allPolicies = append(allPolicies, flow.EnforcedPolicies...)
+			for _, p := range flow.PendingPolicies {
+				if p.IsStaged {
+					allPolicies = append(allPolicies, p)
+				}
+			}
+			flow.Policies = allPolicies
+		} else {
+			// No policies of any kind.
+			flow.Policies = nil
+		}
+	}
 
 	// Add in the destination domains.
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
