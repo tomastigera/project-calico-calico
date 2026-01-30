@@ -177,8 +177,6 @@
             "type": "keyword"
         },
         "policies": {
-                /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
-                "type": "nested",
                 "properties": {
                         "all_policies": {"type": "keyword"},
                         "enforced_policies": {"type": "keyword"},
