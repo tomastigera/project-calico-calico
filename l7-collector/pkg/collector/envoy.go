@@ -425,12 +425,20 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 					return EnvoyLog{}, fmt.Errorf("error parsing port from downstream_direct_remote_address: %w", err)
 				}
 				srcWithPort := net.JoinHostPort(firstXFFHost, sp)
-				return parseFiveTupleInformationFromFields(envoyLog, envoyLog.UpstreamHost, srcWithPort)
+				dest, err := getGatewayDestinationAddress(envoyLog)
+				if err != nil {
+					return EnvoyLog{}, err
+				}
+				return parseFiveTupleInformationFromFields(envoyLog, dest, srcWithPort)
 			}
 		}
 		fallthrough // if no XFF is present, we fall through to the next case which is the Gateway Edge Reporter
 	case EnvoyGatewayReporter, EnvoyGatewayEdgeReporter:
-		return parseFiveTupleInformationFromFields(envoyLog, envoyLog.UpstreamHost, envoyLog.DSDirectRemoteAddress)
+		dest, err := getGatewayDestinationAddress(envoyLog)
+		if err != nil {
+			return EnvoyLog{}, err
+		}
+		return parseFiveTupleInformationFromFields(envoyLog, dest, envoyLog.DSDirectRemoteAddress)
 	case DestinationEnvoyReporter:
 		return parseFiveTupleInformationFromFields(envoyLog, envoyLog.DSLocalAddress, envoyLog.DSRemoteAddress)
 	default:
@@ -439,6 +447,28 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 		log.Warnf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
 		return EnvoyLog{}, fmt.Errorf("log of reporter type %v are not processed at this time", envoyLog.Reporter)
 	}
+}
+
+// getGatewayDestinationAddress returns the destination address for gateway reporters.
+// When UpstreamHost is available (request was forwarded to a backend), it returns UpstreamHost.
+// When UpstreamHost is empty (e.g., no matching route returned 404, or backend unavailable
+// returned 503), it falls back to DSLocalAddress (the gateway's listener address).
+// This ensures L7 logs are still collected for gateway-level errors, preserving gateway
+// and route metadata for dashboard visibility into misconfigurations.
+// Returns an error if both UpstreamHost and DSLocalAddress are empty.
+func getGatewayDestinationAddress(envoyLog EnvoyLog) (string, error) {
+	if envoyLog.UpstreamHost != "" {
+		return envoyLog.UpstreamHost, nil
+	}
+	// Fallback to downstream local address (gateway listener) when no upstream was selected.
+	// This happens when:
+	// - No HTTPRoute matches the request (404 from gateway)
+	// - Route exists but backend service is unavailable (503 from gateway)
+	if envoyLog.DSLocalAddress == "" {
+		return "", fmt.Errorf("cannot determine gateway destination: both upstream_host and downstream_local_address are empty")
+	}
+	log.Debugf("UpstreamHost is empty, falling back to DSLocalAddress: %s", envoyLog.DSLocalAddress)
+	return envoyLog.DSLocalAddress, nil
 }
 
 func parseFiveTupleInformationFromFields(envoyLog EnvoyLog, dest, src string) (EnvoyLog, error) {

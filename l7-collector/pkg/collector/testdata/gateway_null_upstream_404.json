@@ -1,0 +1,19 @@
+{
+  "downstream_remote_address": "127.0.0.1:35074",
+  "type": "HTTP/1.1",
+  "duration": 0,
+  "downstream_local_address": "127.0.0.1:10080",
+  "user_agent": "curl/8.5.0",
+  "response_code": 404,
+  "start_time": "2026-01-23T20:58:55.130Z",
+  "request_id": "24078c8e-8480-4133-98e4-ee2c4d268eac",
+  "upstream_host": null,
+  "bytes_received": 0,
+  "request_path": "/",
+  "domain": "localhost:30135",
+  "downstream_direct_remote_address": "127.0.0.1:35074",
+  "reporter": "gateway",
+  "bytes_sent": 0,
+  "request_method": "GET",
+  "route_name": null
+}
