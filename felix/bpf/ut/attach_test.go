@@ -81,7 +81,7 @@ func newBPFTestEpMgr(
 			VXLANPort:              4789,
 			VXLANVNI:               4096,
 			FlowLogsEnabled:        config.FlowLogsEnabled,
-		}),
+		}, false),
 		generictables.NewNoopTable(),
 		generictables.NewNoopTable(),
 		nil,

@@ -405,6 +405,9 @@ type DefaultRuleRenderer struct {
 	// maxNameLength is the maximum length of a chain name.
 	maxNameLength int
 
+	// nft is true if we are generating NFTables rules.
+	nft bool
+
 	nfqueueRuleDelayDeniedPacket *generictables.Rule
 
 	// The idallocators are used for getting the ipset ID from ipset name
@@ -535,7 +538,7 @@ type Config struct {
 
 	ServiceLoopPrevention string
 
-	NFTables        bool
+	NFTablesMode    string
 	FlowLogsEnabled bool
 
 	EnableNflogSize bool
@@ -614,7 +617,7 @@ func (c *Config) validate() {
 	}
 }
 
-func NewRenderer(config Config) RuleRenderer {
+func NewRenderer(config Config, nft bool) RuleRenderer {
 	log.WithField("config", config).Info("Creating rule renderer.")
 	config.validate()
 
@@ -624,7 +627,7 @@ func NewRenderer(config Config) RuleRenderer {
 	var drop generictables.Action = iptables.DropAction{}
 	var ret generictables.Action = iptables.ReturnAction{}
 
-	if config.NFTables {
+	if nft {
 		actions = nftables.Actions()
 		reject = nftables.RejectAction{}
 		accept = nftables.AcceptAction{}
@@ -633,13 +636,13 @@ func NewRenderer(config Config) RuleRenderer {
 	}
 
 	newMatchFn := func() generictables.MatchCriteria {
-		if config.NFTables {
+		if nft {
 			return nftables.Match()
 		}
 		return iptables.Match()
 	}
 	combineMatches := iptables.Combine
-	if config.NFTables {
+	if nft {
 		combineMatches = nftables.Combine
 	}
 
@@ -679,7 +682,7 @@ func NewRenderer(config Config) RuleRenderer {
 			Action: actions.Allow(),
 		})
 	} else {
-		if config.IsDNSPolicyModeDelayDeniedPacket() && config.MarkDNSPolicy != 0x0 {
+		if config.IsDNSPolicyModeDelayDeniedPacket(nft) && config.MarkDNSPolicy != 0x0 {
 			nfqueueRuleDelayDeniedPacket = &generictables.Rule{
 				Match: newMatchFn().
 					MarkSingleBitSet(config.MarkDNSPolicy).
@@ -746,7 +749,7 @@ func NewRenderer(config Config) RuleRenderer {
 
 	maxNameLength := iptables.MaxChainNameLength
 	wildcard := iptables.Wildcard
-	if config.NFTables {
+	if nft {
 		wildcard = nftables.Wildcard
 		maxNameLength = nftables.MaxChainNameLength
 	}
@@ -765,6 +768,7 @@ func NewRenderer(config Config) RuleRenderer {
 		wildcard:                     wildcard,
 		maxNameLength:                maxNameLength,
 		CombineMatches:               combineMatches,
+		nft:                          nft,
 	}
 }
 
@@ -772,38 +776,41 @@ func (c *Config) TPROXYModeEnabled() bool {
 	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }
 
-func (c *Config) IsDNSPolicyModeDelayDNSResponse() bool {
+func (c *Config) IsDNSPolicyModeDelayDNSResponse(useNftables bool) bool {
 	if c.BPFEnabled {
 		return false
 	}
-	if c.NFTables {
+	if useNftables {
 		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeDelayDNSResponse
 	}
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse
 }
 
-func (c *Config) IsDNSPolicyModeDelayDeniedPacket() bool {
+func (c *Config) IsDNSPolicyModeDelayDeniedPacket(useNftables bool) bool {
 	if c.BPFEnabled {
 		return false
 	}
-	if c.NFTables {
+	if useNftables {
 		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
 	}
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket
 }
 
-func (c *Config) IsDNSPolicyModeNoDelay() bool {
+func (c *Config) IsDNSPolicyModeNoDelay(useNftables bool) bool {
 	if c.BPFEnabled {
 		return false
 	}
-	if c.NFTables {
+	if useNftables {
 		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeNoDelay
 	}
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeNoDelay
 }
 
-func (c *Config) IsDNSPolicyModeInline() bool {
-	if c.NFTables || c.BPFEnabled {
+func (c *Config) IsDNSPolicyModeInline(useNftables bool) bool {
+	if c.BPFEnabled {
+		return false
+	}
+	if useNftables {
 		return false
 	}
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeInline

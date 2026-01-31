@@ -255,6 +255,8 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	if os.Getenv("FELIX_FV_NFTABLES") == "Enabled" {
 		logrus.Info("Enabling nftables with env var")
 		envVars["FELIX_NFTABLESMODE"] = "Enabled"
+	} else {
+		envVars["FELIX_NFTABLESMODE"] = "Disabled"
 	}
 
 	if strings.ToLower(os.Getenv("FELIX_FV_BPFATTACHTYPE")) == "tc" {

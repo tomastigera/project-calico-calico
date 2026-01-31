@@ -38,7 +38,7 @@ var _ = Describe("Static", func() {
 	var conf Config
 	JustBeforeEach(func() {
 		// Cast back to the expected type so we can access a finer-grained API for testing.
-		rr = NewRenderer(conf).(*DefaultRuleRenderer)
+		rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 	})
 
 	checkManglePostrouting := func(ipVersion uint8, ipvs bool) {
@@ -2313,7 +2313,7 @@ var _ = Describe("Static", func() {
 
 				It("should not generate Istio DSCP rules when Istio is disabled", func() {
 					conf.IstioAmbientModeEnabled = false
-					rr = NewRenderer(conf).(*DefaultRuleRenderer)
+					rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 
 					chain := rr.StaticManglePostroutingChain(ipVersion)
 					Expect(chain).NotTo(BeNil())
@@ -2702,7 +2702,7 @@ var _ = Describe("DropRules", func() {
 
 	JustBeforeEach(func() {
 		// Cast back to the expected type so we can access a finer-grained API for testing.
-		rr = NewRenderer(conf).(*DefaultRuleRenderer)
+		rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 	})
 
 	for _, trueOrFalse := range []bool{true, false} {

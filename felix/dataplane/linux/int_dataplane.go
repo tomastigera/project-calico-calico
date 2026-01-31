@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/knftables"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -374,7 +373,7 @@ type Config struct {
 	KubernetesProvider felixconfig.Provider
 
 	// For testing purposes - allows unit tests to mock out the creation of the nftables dataplane.
-	NewNftablesDataplane func(knftables.Family, string, ...knftables.Option) (knftables.Interface, error)
+	NewNftablesDataplane nftables.NewNftablesDataplaneFn
 }
 
 type UpdateBatchResolver interface {
@@ -507,6 +506,16 @@ type InternalDataplane struct {
 	actions  generictables.ActionFactory
 	newMatch func() generictables.MatchCriteria
 
+	// nftablesEnabled tracks whether we are using nftables on this node.
+	nftablesEnabled bool
+
+	// kubeProxyNftablesEnabled tracks whether kube-proxy is running in nftables mode on this node.
+	kubeProxyNftablesEnabled bool
+
+	// getKubeProxyNftablesEnabled is a function that can be called to re-check whether kube-proxy
+	// is running in nftables mode.
+	getKubeProxyNftablesEnabled func() (bool, error)
+
 	// Fields used to accumulate counts of messages of various types before we report them to
 	// prometheus.
 	datastoreBatchSize   int
@@ -553,6 +562,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.BPFLogLevel = "off"
 	}
 
+	// Decide whether to use nftables or iptables based on configuration and kube-proxy mode.
+	detectKubeProxyNftablesMode := nftables.KubeProxyNftablesEnabledFn(config.NewNftablesDataplane)
+	kubeProxyNftablesEnabled, err := detectKubeProxyNftablesMode()
+	if err != nil {
+		logrus.WithError(err).Panic("Unable to detect kube-proxy nftables mode, shutting down")
+	}
+	nftablesEnabled := useNftables(config.RulesConfig.NFTablesMode, kubeProxyNftablesEnabled)
+
 	// Get the feature detector and feature set upfront.
 	featureDetector := environment.NewFeatureDetector(
 		config.FeatureDetectOverrides,
@@ -564,11 +581,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 bpfmaps.Map
 	if !config.BPFEnabled {
 		setDefault := false
-		if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse() && !dataplaneFeatures.NFQueueBypass {
+		if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse(nftablesEnabled) && !dataplaneFeatures.NFQueueBypass {
 			logrus.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			setDefault = true
 		}
-		if config.RulesConfig.IsDNSPolicyModeInline() {
+		if config.RulesConfig.IsDNSPolicyModeInline(nftablesEnabled) {
 			bpfIPSetsMap, dnsMpx, dnsSets = createDNSBpfMaps(proto.IPVersion_IPV4)
 			if config.IPv6Enabled {
 				bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 = createDNSBpfMaps(proto.IPVersion_IPV6)
@@ -580,7 +597,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 		}
 		if setDefault {
-			if !config.RulesConfig.NFTables {
+			if !nftablesEnabled {
 				config.RulesConfig.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 			} else {
 				config.RulesConfig.NFTablesDNSPolicyMode = apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
@@ -589,8 +606,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	logrus.WithField("config", config).Info("Creating internal dataplane driver.")
-	ruleRenderer := config.RuleRendererOverride
 
+	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
 		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
 			var err error
@@ -601,7 +618,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 		}
 
-		ruleRenderer = rules.NewRenderer(config.RulesConfig)
+		ruleRenderer = rules.NewRenderer(config.RulesConfig, nftablesEnabled)
 	}
 	epMarkMapper := rules.NewEndpointMarkMapper(
 		config.RulesConfig.MarkEndpoint,
@@ -627,23 +644,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	// Determine the action set and new match function based on the underlying generictables implementation.
 	actionSet := iptables.Actions()
 	newMatchFn := iptables.Match
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		actionSet = nftables.Actions()
 		newMatchFn = nftables.Match
 	}
 
 	dp := &InternalDataplane{
-		toDataplane:    make(chan interface{}, msgPeekLimit),
-		fromDataplane:  make(chan interface{}, 100),
-		ruleRenderer:   ruleRenderer,
-		ifaceMonitor:   ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
-		ifaceUpdates:   make(chan any, 100),
-		config:         config,
-		applyThrottle:  throttle.New(10),
-		loopSummarizer: logutils.NewSummarizer("dataplane reconciliation loops"),
-		stopChan:       stopChan,
-		actions:        actionSet,
-		newMatch:       newMatchFn,
+		toDataplane:                 make(chan interface{}, msgPeekLimit),
+		fromDataplane:               make(chan interface{}, 100),
+		ruleRenderer:                ruleRenderer,
+		ifaceMonitor:                ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
+		ifaceUpdates:                make(chan any, 100),
+		config:                      config,
+		applyThrottle:               throttle.New(10),
+		loopSummarizer:              logutils.NewSummarizer("dataplane reconciliation loops"),
+		stopChan:                    stopChan,
+		actions:                     actionSet,
+		newMatch:                    newMatchFn,
+		nftablesEnabled:             nftablesEnabled,
+		kubeProxyNftablesEnabled:    kubeProxyNftablesEnabled,
+		getKubeProxyNftablesEnabled: detectKubeProxyNftablesMode,
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -671,7 +691,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		LookPathOverride: config.LookPathOverride,
 		OnStillAlive:     dp.reportHealth,
 		OpRecorder:       dp.loopSummarizer,
-		Disabled:         !config.RulesConfig.NFTables,
+		Disabled:         !nftablesEnabled,
 		NewDataplane:     config.NewNftablesDataplane,
 	}
 
@@ -702,9 +722,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var mangleTableV4IPT, natTableV4IPT, rawTableV4IPT, filterTableV4IPT generictables.Table
 
 	// This is required when nftables mode is configured; but also useful for cleanup in other modes.
-	nftablesV4RootTable := nftables.NewTable("calico", 4, rules.RuleHashPrefix, featureDetector, nftablesOptions, config.RulesConfig.NFTables)
+	nftablesV4RootTable := nftables.NewTable("calico", 4, rules.RuleHashPrefix, featureDetector, nftablesOptions, nftablesEnabled)
 
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		// Create nftables Table implementations.
 		mangleTableV4NFT = nftables.NewTableLayer("mangle", nftablesV4RootTable)
 		natTableV4NFT = nftables.NewTableLayer("nat", nftablesV4RootTable)
@@ -723,7 +743,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var ipSetsV4 dpsets.IPSetsDataplane
 	var cleanupTables []generictables.Table
 	var cleanupIPSets []dpsets.IPSetsDataplane
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		// Enable nftables.
 		mangleTableV4 = mangleTableV4NFT
 		natTableV4 = natTableV4NFT
@@ -940,7 +960,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	if config.RulesConfig.IsDNSPolicyModeDelayDeniedPacket() &&
+	if config.RulesConfig.IsDNSPolicyModeDelayDeniedPacket(nftablesEnabled) &&
 		config.RulesConfig.MarkDNSPolicy != 0x0 &&
 		!config.DisableDNSPolicyPacketProcessor {
 
@@ -961,7 +981,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.dnsDeniedPacketProcessor = packetProcessor
 	}
 
-	if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse() &&
+	if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse(nftablesEnabled) &&
 		config.RulesConfig.DNSPacketsNfqueueID != 0 {
 		packetProcessor := dnsresponsepacket.New(
 			uint16(config.DNSPacketsNfqueueID),
@@ -1050,7 +1070,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var filterTableV6NFT, filterTableV6IPT generictables.Table
 
 	// Create nftables Table implementations for IPv6.
-	nftablesV6RootTable := nftables.NewTable("calico", 6, rules.RuleHashPrefix, featureDetector, nftablesOptions, config.RulesConfig.NFTables)
+	nftablesV6RootTable := nftables.NewTable("calico", 6, rules.RuleHashPrefix, featureDetector, nftablesOptions, nftablesEnabled)
 	filterTableV6NFT = nftables.NewTableLayer("filter", nftablesV6RootTable)
 
 	// Create iptables Table implementations for IPv6.
@@ -1058,7 +1078,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	// Select the correct table implementation based on whether we're using nftables or iptables.
 	var filterTableV6 generictables.Table
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		filterTableV6 = filterTableV6NFT
 	} else {
 		filterTableV6 = filterTableV6IPT
@@ -1076,14 +1096,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsV4,
 			config.MaxIPSetSize,
 			rules.IPSetIDAllTunnelNets))
-		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4, config.RulesConfig.NFTables))
-		cleanupBPFState(config)
+		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4, nftablesEnabled))
+		cleanupBPFState(config, nftablesEnabled)
 	} else {
 		// In BPF mode we still use iptables for raw egress policy, but we
 		// filter the IP sets that we render to the dataplane.  Set an empty
 		// filter now so that the IP sets driver does a lot less logging.
 		ipSetsV4.SetFilter(set.New[string]())
-		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter, config.RulesConfig.NFTables))
+		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter, nftablesEnabled))
 		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
 		// the main Tc program.
 		tc.CleanUpTcpStatsPrograms()
@@ -1423,7 +1443,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		logrus.Info("conntrackScanner started")
-	} else if config.RulesConfig.IsDNSPolicyModeInline() {
+	} else if config.RulesConfig.IsDNSPolicyModeInline(nftablesEnabled) {
 		logrus.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
 		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, ruleRenderer, dp, bpfIPSetsMap, dnsMpx, dnsSets)
 		if config.IPv6Enabled {
@@ -1485,7 +1505,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var filterMaps, rawMaps nftables.MapsDataplane
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		filterMaps = filterTableV4.(nftables.MapsDataplane)
 		rawMaps = rawTableV4.(nftables.MapsDataplane)
 	}
@@ -1520,7 +1540,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.FlowLogsCollectTcpStats,
 		config.BPFLogLevel,
 		config.FloatingIPsEnabled,
-		config.RulesConfig.NFTables,
+		nftablesEnabled,
 		linkAddrsManagerV4,
 	)
 	dp.RegisterManager(epManager)
@@ -1625,7 +1645,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		var mangleTableV6NFT, natTableV6NFT, rawTableV6NFT generictables.Table
 		var mangleTableV6IPT, natTableV6IPT, rawTableV6IPT generictables.Table
 
-		if config.RulesConfig.NFTables {
+		if nftablesEnabled {
 			// Define nftables table implementations for IPv6.
 			mangleTableV6NFT = nftables.NewTableLayer("mangle", nftablesV6RootTable)
 			natTableV6NFT = nftables.NewTableLayer("nat", nftablesV6RootTable)
@@ -1640,7 +1660,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// Select the correct table implementation based on whether we're using nftables or iptables.
 		var mangleTableV6, natTableV6, rawTableV6 generictables.Table
 		var ipSetsV6 dpsets.IPSetsDataplane
-		if config.RulesConfig.NFTables {
+		if nftablesEnabled {
 			// Enable nftables.
 			mangleTableV6 = mangleTableV6NFT
 			natTableV6 = natTableV6NFT
@@ -1732,13 +1752,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				ipSetsV6,
 				config.MaxIPSetSize,
 				rules.IPSetIDAllTunnelNets))
-			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6, config.RulesConfig.NFTables))
+			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6, nftablesEnabled))
 		} else {
-			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter, config.RulesConfig.NFTables))
+			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter, nftablesEnabled))
 		}
 
 		var filterMapsV6, rawMapsV6 nftables.MapsDataplane
-		if config.RulesConfig.NFTables {
+		if nftablesEnabled {
 			filterMapsV6 = filterTableV6.(nftables.MapsDataplane)
 			rawMapsV6 = rawTableV6.(nftables.MapsDataplane)
 		}
@@ -1767,7 +1787,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.FlowLogsCollectTcpStats,
 			config.BPFLogLevel,
 			config.FloatingIPsEnabled,
-			config.RulesConfig.NFTables,
+			nftablesEnabled,
 			linkAddrsManagerV6,
 		))
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6, config.FloatingIPsEnabled))
@@ -1800,7 +1820,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.wireguardManagerV6)
 	}
 
-	if config.RulesConfig.NFTables {
+	if nftablesEnabled {
 		// In nftables mode, we use a single underlying table to implement all tables. Only add the base table here
 		// to avoid duplicating Apply() calls.
 		dp.allTables = append(dp.allTables, nftablesV4RootTable)
@@ -1960,6 +1980,27 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	return dp
+}
+
+// useNftables determines whether to use nftables based on the FelixConfig setting and
+// kube-proxy mode.
+func useNftables(mode string, proxyEnabled bool) bool {
+	use := false
+
+	switch mode {
+	case "Auto":
+		// Detect based on kube-proxy mode.
+		use = proxyEnabled
+	case "Enabled":
+		use = true
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"kubeProxyEnabled": proxyEnabled,
+		"calicoMode":       mode,
+		"useNftables":      use,
+	}).Info("Determined whether or not to use nftables")
+	return use
 }
 
 // findHostMTU auto-detects the smallest host interface MTU.
@@ -2287,6 +2328,7 @@ func (d *InternalDataplane) Start() {
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
 	go d.monitorHostMTU()
+	go d.monitorKubeProxyNftablesMode()
 
 	// Start the domain info store (for periodically saving DNS info).
 	d.domainInfoStore.Start()
@@ -2380,6 +2422,38 @@ func (d *InternalDataplane) checkIPVSConfigOnStateUpdate(state ifacemonitor.Stat
 	}
 }
 
+// monitorKubeProxyNftablesMode monitors kube-proxy's nftables mode has changed and
+// triggers a Felix restart if it has. This is only active if the nftables mode is set to "Auto".
+func (d *InternalDataplane) monitorKubeProxyNftablesMode() {
+	if d.config.RulesConfig.NFTablesMode != "Auto" {
+		// We can skip this check if nftables is not configured to Auto.
+		logrus.Debug("Skipping kube-proxy nftables mode monitoring as NFTablesMode is not set to Auto.")
+		return
+	}
+	if d.getKubeProxyNftablesEnabled == nil {
+		logrus.Panic("BUG: kube-proxy nftables mode check function is nil")
+	}
+
+	// Loop forever, checking kube proxy status at intervals.
+	t := time.Tick(15 * time.Second)
+	for range t {
+		previous := d.kubeProxyNftablesEnabled
+		current, err := d.getKubeProxyNftablesEnabled()
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to detect kube-proxy nftables mode.")
+			continue
+		}
+
+		if previous != current {
+			logrus.WithFields(logrus.Fields{
+				"previous": previous,
+				"current":  current,
+			}).Info("kube-proxy nftables mode changed. Restart felix.")
+			d.config.ConfigChangedRestartCallback()
+		}
+	}
+}
+
 // onIfaceAddrsChange is our interface address monitor callback.  It gets called
 // from the monitor's thread.
 func (d *InternalDataplane) onIfaceAddrsChange(ifaceName string, addrs set.Set[string]) {
@@ -2458,7 +2532,7 @@ func (d *InternalDataplane) bpfMarkPreestablishedFlowsRules() []generictables.Ru
 func (d *InternalDataplane) setUpIptablesBPF() {
 	// Wildcard matching varies based on iptables vs nftables.
 	wildcard := iptables.Wildcard
-	if d.config.RulesConfig.NFTables {
+	if d.nftablesEnabled {
 		wildcard = nftables.Wildcard
 	}
 
@@ -3732,14 +3806,14 @@ func createDNSBpfMaps(ipFamily proto.IPVersion) (bpfmaps.Map, bpfmaps.Map, bpfma
 	return ipsetsMap, dnsMpx, dnsSets
 }
 
-func cleanupBPFState(config Config) {
+func cleanupBPFState(config Config, nftablesEnabled bool) {
 	// Clean up any leftover BPF state.
 	err := bpfnat.RemoveConnectTimeLoadBalancer(true, "")
 	if err != nil {
 		logrus.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 	}
 	bpfutils.RemoveBPFSpecialDevices()
-	if !config.RulesConfig.IsDNSPolicyModeInline() {
+	if !config.RulesConfig.IsDNSPolicyModeInline(nftablesEnabled) {
 		// Cleanup all bpf pins including those needed for iptables DNS inline policy.
 		tc.CleanUpProgramsAndPins()
 		bpfiptables.Cleanup()

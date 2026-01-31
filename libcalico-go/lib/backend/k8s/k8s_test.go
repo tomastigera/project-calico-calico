@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	adminpolicy "sigs.k8s.io/network-policy-api/apis/v1alpha1"
 	adminpolicyclient "sigs.k8s.io/network-policy-api/pkg/client/clientset/versioned/typed/apis/v1alpha1"
@@ -2611,7 +2612,6 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 	})
 
 	It("should support setting and getting FelixConfig", func() {
-		enabled := apiv3.FloatingIPsEnabled
 		configName := "node.calico-node-1"
 		fc := &model.KVPair{
 			Key: model.ResourceKey{
@@ -2628,7 +2628,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 				},
 				Spec: apiv3.FelixConfigurationSpec{
 					InterfacePrefix: "xali-",
-					FloatingIPs:     &enabled,
+					FloatingIPs:     ptr.To(apiv3.FloatingIPsEnabled),
+					NFTablesMode:    ptr.To(apiv3.NFTablesModeAuto),
 				},
 			},
 		}
@@ -2968,7 +2969,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		c         *k8s.KubeClient
 		ctx       context.Context
 		anpClient *adminpolicyclient.PolicyV1alpha1Client
-		//kcnpClient *netpolicyclient.PolicyV1alpha2Client
+		// kcnpClient *netpolicyclient.PolicyV1alpha2Client
 	)
 
 	BeforeEach(func() {
@@ -2985,8 +2986,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		anpClient, err = k8s.BuildK8SAdminPolicyClient(config)
 		Expect(err).NotTo(HaveOccurred())
 		// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
-		//kcnpClient, err = k8s.BuildK8SCNPClient(config)
-		//Expect(err).NotTo(HaveOccurred())
+		// kcnpClient, err = k8s.BuildK8SCNPClient(config)
+		// Expect(err).NotTo(HaveOccurred())
 
 		ctx = context.Background()
 	})
@@ -3110,7 +3111,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 	})
 
 	// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
-	//Describe("watching ClusterNetworkPolicies", func() {
+	// Describe("watching ClusterNetworkPolicies", func() {
 	//	createTestClusterNetworkPolicy := func(name string, tier clusternetpolicy.Tier) {
 	//		cnp := &clusternetpolicy.ClusterNetworkPolicy{
 	//			ObjectMeta: metav1.ObjectMeta{
@@ -3384,8 +3385,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		BeforeEach(func() {
 			// Create 2x Calico NP and 2x k8s NP, 2x k8s ANP and 2x k8s CNP
 			// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
-			//createTestClusterNetworkPolicy("test-cluster-net-policy-1")
-			//createTestClusterNetworkPolicy("test-cluster-net-policy-2")
+			// createTestClusterNetworkPolicy("test-cluster-net-policy-1")
+			// createTestClusterNetworkPolicy("test-cluster-net-policy-2")
 			createTestAdminNetworkPolicy("test-admin-net-policy-1")
 			createTestAdminNetworkPolicy("test-admin-net-policy-2")
 			createCalicoNetworkPolicy("test-net-policy-1")
@@ -3399,7 +3400,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			deleteAllNetworkPolicies()
 			deleteAllAdminNetworkPolicies()
 			// TODO(mazdak): Enable when ClusterNetworkPolicy is fully supported.
-			//deleteAllClusterNetworkPolicies()
+			// deleteAllClusterNetworkPolicies()
 		})
 
 		It("supports resuming watch from previous revision (calico)", func() {
@@ -3595,7 +3596,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		})
 
 		// TODO(mazdak): Enable this test when ClusterNetworkPolicy is supported.
-		//It("supports resuming watch from previous revision k8s cluster network policy", func() {
+		// It("supports resuming watch from previous revision k8s cluster network policy", func() {
 		//	// Should only return k8s CNPs
 		//	l, err := c.List(ctx, model.ResourceListOptions{Kind: model.KindKubernetesClusterNetworkPolicy}, "")
 		//	Expect(err).NotTo(HaveOccurred())
@@ -3728,7 +3729,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		})
 
 		// TODO(mazdak): Enable this test when ClusterNetworkPolicy is supported.
-		//It("supports watching from part way through a list of Cluster Network Policies", func() {
+		// It("supports watching from part way through a list of Cluster Network Policies", func() {
 		//	// Only 2 k8s CNPs
 		//	l, err := c.List(ctx, model.ResourceListOptions{Kind: model.KindKubernetesClusterNetworkPolicy}, "")
 		//	Expect(err).ToNot(HaveOccurred())

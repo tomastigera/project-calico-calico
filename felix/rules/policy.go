@@ -52,7 +52,7 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *types.PolicyID, p
 	}
 
 	inbound := generictables.Chain{
-		Name: PolicyChainName(PolicyInboundPfx, policyID, r.NFTables),
+		Name: PolicyChainName(PolicyInboundPfx, policyID, r.nft),
 		Rules: r.ProtoRulesToIptablesRules(
 			policy.InboundRules,
 			ipVersion, RuleOwnerTypePolicy,
@@ -64,7 +64,7 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *types.PolicyID, p
 		),
 	}
 	outbound := generictables.Chain{
-		Name: PolicyChainName(PolicyOutboundPfx, policyID, r.NFTables),
+		Name: PolicyChainName(PolicyOutboundPfx, policyID, r.nft),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
 		Rules: r.ProtoRulesToIptablesRules(
 			policy.OutboundRules,
@@ -83,7 +83,7 @@ func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *types.ProfileID
 	// Profiles are not related to any tier.
 	tier := ""
 	inbound = &generictables.Chain{
-		Name: ProfileChainName(ProfileInboundPfx, profileID, r.NFTables),
+		Name: ProfileChainName(ProfileInboundPfx, profileID, r.nft),
 		Rules: r.ProtoRulesToIptablesRules(
 			profile.InboundRules,
 			ipVersion,
@@ -96,7 +96,7 @@ func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *types.ProfileID
 		),
 	}
 	outbound = &generictables.Chain{
-		Name: ProfileChainName(ProfileOutboundPfx, profileID, r.NFTables),
+		Name: ProfileChainName(ProfileOutboundPfx, profileID, r.nft),
 		Rules: r.ProtoRulesToIptablesRules(
 			profile.OutboundRules,
 			ipVersion, RuleOwnerTypeProfile,
@@ -342,7 +342,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		if r.IsDNSPolicyModeInline() {
+		if r.IsDNSPolicyModeInline(r.nft) {
 			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				logrus.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
@@ -690,7 +690,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	var mark uint32
 
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
-	markDNSPolicyRule := isDNSPolicyRule && r.IsDNSPolicyModeDelayDeniedPacket()
+	markDNSPolicyRule := isDNSPolicyRule && r.IsDNSPolicyModeDelayDeniedPacket(r.nft)
 
 	if pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -963,7 +963,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		if r.IsDNSPolicyModeInline() {
+		if r.IsDNSPolicyModeInline(r.nft) {
 			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				logrus.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
