@@ -1,0 +1,19 @@
+{
+  "downstream_remote_address": "192.168.148.174:55550",
+  "type": "HTTP/1.1",
+  "duration": 0,
+  "downstream_local_address": "192.168.148.178:10080",
+  "user_agent": "curl/8.18.0",
+  "response_code": 503,
+  "start_time": "2026-01-29T12:27:49.531Z",
+  "request_id": "68e2655c-5cdc-4073-a18c-78665a3bbffb",
+  "upstream_host": null,
+  "bytes_received": 0,
+  "request_path": "/",
+  "domain": "broken.example.com",
+  "downstream_direct_remote_address": "192.168.148.174:55550",
+  "reporter": "gateway",
+  "bytes_sent": 0,
+  "request_method": "GET",
+  "route_name": "httproute/gateway-test-2/broken-route/rule/0/match/0/broken_example_com"
+}

@@ -25,6 +25,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // New returns a new controller-runtime client configured to use the projectcalico.org/v3 API group.
@@ -104,6 +106,14 @@ func newScheme() (*runtime.Scheme, error) {
 		return nil, err
 	}
 	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	// Add Gateway API types.
+	if err := gatewayv1.Install(scheme); err != nil {
+		return nil, err
+	}
+	if err := gatewayv1beta1.Install(scheme); err != nil {
 		return nil, err
 	}
 	return scheme, nil

@@ -186,6 +186,8 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 		registryFlag,
 		hashReleaseRegistryFlag,
 		publishImagesFlag,
+		helmRegistryFlag,
+		publishChartsFlag,
 		awsProfileFlag,
 		s3BucketFlag,
 		publishToS3Flag,
@@ -294,10 +296,13 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithTmpDir(cfg.TmpDir),
 				calico.WithComponents(versions.ImageComponents(true)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
-				calico.WithPublishCharts(c.Bool(publishToS3Flag.Name)),
+				calico.WithPublishCharts(c.Bool(publishChartsFlag.Name)),
 			}
 			if len(registries) > 0 {
 				opts = append(opts, calico.WithImageRegistries(registries))
+			}
+			if reg := c.StringSlice(helmRegistryFlag.Name); len(reg) > 0 {
+				opts = append(opts, calico.WithHelmRegistries(reg))
 			}
 			entOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),

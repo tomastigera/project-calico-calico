@@ -642,75 +642,108 @@ func TestAuthorizer(t *testing.T) {
 			})
 		})
 
-		t.Run("reuse stale cache item on revalidate timeout", func(t *testing.T) {
-			ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
+		t.Run("reuse stale cache item", func(t *testing.T) {
+			testCases := []struct {
+				name                     string
+				subsequentAuthReviewFunc func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error)
+			}{
+				{
+					name: "revalidate timeout",
+					subsequentAuthReviewFunc: func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
+						authReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
+							Resource: "fake-resource",
+							APIGroup: "projectcalico.org",
+							Verbs: []v3.AuthorizedResourceVerb{{
+								Verb:           "list",
+								ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: "fake-namespace2"}},
+							}},
+						}}
 
-			callIndex := 0
-			fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &k8sfake.NewClientset().Fake}
-			fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
-				createAction, ok := action.(k8stesting.CreateAction)
-				if !ok {
-					return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
-				}
+						// delay subsequent revalidation
+						time.Sleep(authorizedVerbsCacheRevalidateTimeout + 1*time.Second)
+						return true, authReview, nil
+					},
+				},
+				{
+					name: "revalidate error",
+					subsequentAuthReviewFunc: func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
+						// fail revalidation
+						return true, nil, fmt.Errorf("authorizationreview error")
+					},
+				},
+			}
 
-				object := createAction.GetObject().DeepCopyObject()
-				authReview, ok := object.(*v3.AuthorizationReview)
-				if !ok {
-					return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
-				}
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
 
-				authReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
-					Resource: "fake-resource",
-					APIGroup: "projectcalico.org",
-					Verbs: []v3.AuthorizedResourceVerb{{
-						Verb:           "list",
-						ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: fmt.Sprintf("fake-namespace%d", 1+callIndex)}},
-					}},
-				}}
+					authReviewFunc := func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
+						authReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
+							Resource: "fake-resource",
+							APIGroup: "projectcalico.org",
+							Verbs: []v3.AuthorizedResourceVerb{{
+								Verb:           "list",
+								ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: "fake-namespace1"}},
+							}},
+						}}
 
-				// delay 2nd revalidation
-				if callIndex > 0 {
-					time.Sleep(authorizedVerbsCacheRevalidateTimeout + 1*time.Second)
-				}
+						return true, authReview, nil
+					}
 
-				callIndex++
-				return true, authReview, nil
-			})
+					fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &k8sfake.NewClientset().Fake}
+					fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+						createAction, ok := action.(k8stesting.CreateAction)
+						if !ok {
+							return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
+						}
 
-			mockClientSet := k8s.NewMockClientSet(t)
-			mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Twice()
-			mockClientSetFactory.
-				On("NewClientSetForApplication", "fake-managed-cluster1").
-				Return(mockClientSet, nil).
-				Twice()
+						object := createAction.GetObject().DeepCopyObject()
+						authReview, ok := object.(*v3.AuthorizationReview)
+						if !ok {
+							return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
+						}
 
-			expected := []v3.AuthorizedResourceVerbs{{
-				APIGroup: "projectcalico.org",
-				Resource: "fake-resource",
-				Verbs: []v3.AuthorizedResourceVerb{{
-					Verb: "list",
-					ResourceGroups: []v3.AuthorizedResourceGroup{{
-						Namespace:      "fake-namespace1",
-						ManagedCluster: "fake-managed-cluster1",
-					}},
-				}},
-			}}
+						return authReviewFunc(authReview)
+					})
 
-			authVerbs, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1"})
-			require.NoError(t, err)
-			require.Equal(t, expected, authVerbs.AuthorizedResourceVerbs)
+					mockClientSet := k8s.NewMockClientSet(t)
+					mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Twice()
+					mockClientSetFactory.
+						On("NewClientSetForApplication", "fake-managed-cluster1").
+						Return(mockClientSet, nil).
+						Twice()
 
-			// expire revalidateAt
-			cacheKey := toAuthorizeCacheKeyForResource(ctx.UserInfo(), "fake-managed-cluster1")
-			cacheEntry, err := authorizer.(*rulesAuthorizer).authorizedResourceVerbsCache.GetOrLoad(cacheKey, func() (*authorizedResourcesVerbsCacheEntry, error) {
-				return nil, fmt.Errorf("expected cache item to already exist but it did not")
-			})
-			require.NoError(t, err)
-			cacheEntry.expireRevalidateAt()
+					expected := []v3.AuthorizedResourceVerbs{{
+						APIGroup: "projectcalico.org",
+						Resource: "fake-resource",
+						Verbs: []v3.AuthorizedResourceVerb{{
+							Verb: "list",
+							ResourceGroups: []v3.AuthorizedResourceGroup{{
+								Namespace:      "fake-namespace1",
+								ManagedCluster: "fake-managed-cluster1",
+							}},
+						}},
+					}}
 
-			authVerbs, err = authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1"})
-			require.NoError(t, err)
-			require.Equal(t, expected, authVerbs.AuthorizedResourceVerbs)
+					authVerbs, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1"})
+					require.NoError(t, err)
+					require.Equal(t, expected, authVerbs.AuthorizedResourceVerbs)
+
+					// expire revalidateAt
+					cacheKey := toAuthorizeCacheKeyForResource(ctx.UserInfo(), "fake-managed-cluster1")
+					cacheEntry, err := authorizer.(*rulesAuthorizer).authorizedResourceVerbsCache.GetOrLoad(cacheKey, func() (*authorizedResourcesVerbsCacheEntry, error) {
+						return nil, fmt.Errorf("expected cache item to already exist but it did not")
+					})
+					require.NoError(t, err)
+					cacheEntry.expireRevalidateAt()
+
+					authReviewFunc = tc.subsequentAuthReviewFunc
+
+					authVerbs, err = authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1"})
+					require.NoError(t, err)
+					require.Equal(t, expected, authVerbs.AuthorizedResourceVerbs)
+				})
+			}
 		})
 	})
 }

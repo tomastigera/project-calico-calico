@@ -58,7 +58,7 @@ var _ = Describe("Masquerade manager", func() {
 			MarkEndpoint:             0x11110000,
 			MarkDNSPolicy:            0x80,
 			MarkSkipDNSPolicyNfqueue: 0x400000,
-		})
+		}, false)
 		masqMgr = newMasqManager(ipSets, natTable, ruleRenderer, 1024, 4)
 	})
 

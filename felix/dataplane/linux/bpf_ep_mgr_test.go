@@ -480,7 +480,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			VXLANPort:                4789,
 			VXLANVNI:                 4096,
 		}
-		ruleRenderer = rules.NewRenderer(rrConfigNormal)
+		ruleRenderer = rules.NewRenderer(rrConfigNormal, false)
 		filterTableV4 = newMockTable("filter")
 		lookupsCache = calc.NewLookupsCache()
 		actionOnDrop = "DROP"

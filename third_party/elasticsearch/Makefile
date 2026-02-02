@@ -31,6 +31,7 @@ $(ELASTIC_DOWNLOADED):
 	mkdir -p build
 	curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v$(ELASTIC_VERSION).tar.gz | tar xz -C build/
 	patch -d build/elasticsearch-$(ELASTIC_VERSION) -p1 < patches/0001-Bump-packages-for-CVE-fixes.patch
+	patch -d build/elasticsearch-$(ELASTIC_VERSION) -p1 < patches/141390.patch
 	touch $@
 
 GRADLE_TASK=:distribution:archives:linux-tar:assemble

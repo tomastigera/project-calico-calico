@@ -168,10 +168,10 @@ gen-eck-crds:
 	@echo "Generating ECK operator CRDs..."
 	$(MAKE) -C third_party/eck-operator init-source
 	$(MAKE) -C third_party/eck-operator/cloud-on-k8s generate-manifests
-	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml
+	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml
 	# Strip all description fields to reduce manifest size.
-	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml"
-	cp charts/tigera-operator/crds/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
+	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml"
+	cp charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
 	$(MAKE) -C third_party/eck-operator clean
 
 gen-manifests: bin/helm bin/yq gen-prometheus-crds
@@ -191,9 +191,9 @@ get-operator-crds: var-require-all-OPERATOR_ORGANIZATION-OPERATOR_GIT_REPO-OPERA
 	@echo ==============================================================================================================
 	@echo === Pulling new operator CRDs from $(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO) branch $(OPERATOR_BRANCH) ===
 	@echo ==============================================================================================================
-	cd ./charts/tigera-operator/crds/ && \
+	cd ./charts/crd.projectcalico.org.v1/templates/ && \
 	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
-	cp -vLR ./charts/tigera-operator/crds/ ./charts/multi-tenant-crds/. && \
+	cp -vLR ./charts/crd.projectcalico.org.v1/templates/* ./charts/multi-tenant-crds/crds/ && \
 	cd ./charts/multi-tenant-crds/crds && \
 	curl -fsSOL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
 	for file in $(MULTI_TENANCY_CRDS_FILE_CHANGES); do \
@@ -234,40 +234,8 @@ chartVersion:=$(GIT_VERSION)
 appVersion:=$(GIT_VERSION)
 endif
 
-PUBLISH_TARGETS := chart-release release-archive multi-tenant-crds selinux non-cluster-host-rpms
-
-publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY $(addprefix publish-,$(PUBLISH_TARGETS))
-
-# TODO: We're moving selinux RPMs into the same repository
-# as non-cluster host RPMs. We may want to remove this
-# location in the future, but we should keep it here in case
-# users actually use it.
-publish-selinux:
-	$(MAKE) -C selinux publish
-
-chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
-	mv $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
-
-publish-chart-release: chart-release
-	@aws --profile helm s3 cp $(CHART_DESTINATION)/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/charts/ --acl public-read
-
-publish-release-archive: release-archive
-	$(MAKE) -f release-archive.mk publish-release-archive
 release-archive: manifests/ocp.tgz
 	$(MAKE) -f release-archive.mk release-archive
-
-.PHONY: build-non-cluster-host-rpms publish-non-cluster-host-rpms
-
-# Build the non-cluster host RPMs for a given sub-project
-# TODO: find a concise way to check if things are built already and skip if they are
-build-non-cluster-host-rpms-%:
-	@$(MAKE) -C $* package
-
-# Ensure that all of our non-cluster host RPMs are built before we try to publish them
-build-non-cluster-host-rpms: $(addprefix build-non-cluster-host-rpms-,$(NON_CLUSTER_HOST_SUBDIRS))
-
-publish-non-cluster-host-rpms: var-require-all-VERSION build-non-cluster-host-rpms
-	VERSION=$(RELEASE_STREAM) hack/publish_rpms_to_repo.sh
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 CHART_DESTINATION ?= ./bin
@@ -275,7 +243,7 @@ CHART_DESTINATION ?= ./bin
 # Build helm charts.
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
-tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz
+tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz $(CHART_DESTINATION)/crd.projectcalico.org.v1-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
 multi-tenant-crds-release: $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz
@@ -286,19 +254,12 @@ $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
-publish-multi-tenant-crds: multi-tenant-crds-release
-	mv $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM).tgz $(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
-	aws --profile helm \
-		s3 cp \
-		$(CHART_DESTINATION)/multi-tenant-crds-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz \
-		s3://tigera-public/ee/charts/ \
-		--acl public-read
-
-
-# If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
+# If we run CD as master from semaphore, we want to also publish bin/<CHART>-v0.0.tgz for the master docs.
+.PHONY: tigera-operator-master
 tigera-operator-master:
 ifeq ($(SEMAPHORE_GIT_BRANCH), master)
 	$(MAKE) $(CHART_DESTINATION)/tigera-operator-v0.0.tgz
+	$(MAKE) $(CHART_DESTINATION)/crd.projectcalico.org.v1-v0.0.tgz
 endif
 
 $(CHART_DESTINATION)/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
@@ -321,6 +282,14 @@ $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz: bin/helm
 charts/tigera-operator/charts/tigera-prometheus-operator.tgz: $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz
 	mkdir -p $(@D)
 	cp $(CHART_DESTINATION)/tigera-prometheus-operator-$(chartVersion).tgz $@
+
+# Build the crd.projectcalico.org.v1 helm chart.
+$(CHART_DESTINATION)/crd.projectcalico.org.v1-%.tgz: bin/helm $(shell find ./charts/crd.projectcalico.org.v1/ -type f)
+	mkdir -p $(CHART_DESTINATION)
+	bin/helm package ./charts/crd.projectcalico.org.v1/ \
+	--destination $(CHART_DESTINATION)/ \
+	--version $(chartVersion) \
+	--app-version $(appVersion)
 
 # Build all Calico images for the current architecture.
 image:

@@ -44,7 +44,7 @@ var _ = Describe("NodeLocalDNSCache", func() {
 			VXLANPort:                4789,
 			VXLANVNI:                 4096,
 		}
-		ruleRenderer = rules.NewRenderer(rrConfigNormal)
+		ruleRenderer = rules.NewRenderer(rrConfigNormal, false)
 
 		rawTable = newMockTable("raw")
 

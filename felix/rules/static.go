@@ -871,7 +871,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 			// DNS response INPUT to host-networked client workload, so there is no outgoing interface.
 			baseMatch = r.NewMatch()
 		}
-		if r.IsDNSPolicyModeDelayDNSResponse() && r.DNSPacketsNfqueueID != 0 {
+		if r.IsDNSPolicyModeDelayDNSResponse(r.nft) && r.DNSPacketsNfqueueID != 0 {
 			// We are delaying the DNS response by queueing the response packet.
 			rules = append(rules,
 				generictables.Rule{
@@ -882,7 +882,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 					Action: r.NfqueueWithBypass(r.DNSPacketsNfqueueID),
 				},
 			)
-		} else if r.IsDNSPolicyModeInline() {
+		} else if r.IsDNSPolicyModeInline(r.nft) {
 			// We are parsing the DNS response inline by passing the response packet to a BPF Parser.
 			// BPF parser, parses the DNS response and fills the BPF IPSets.
 			// Add an NFLOG rule to snoop responses to felix.

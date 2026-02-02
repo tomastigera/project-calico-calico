@@ -292,7 +292,7 @@ var _ = Describe("Raw egress policy manager", func() {
 			MarkDNSPolicy:            0x00001,
 			MarkSkipDNSPolicyNfqueue: 0x400000,
 			DNSPolicyNfqueueID:       100,
-		})
+		}, false)
 		policyMgr = newRawEgressPolicyManager(
 			rawTable,
 			ruleRenderer,
