@@ -2833,3 +2833,93 @@ func TestFlowFilteringEndpointTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertPoliciesCompatibility(t *testing.T) {
+	// 1. Get the bucket converter (a flowBackend with nil client)
+	converter := flows.NewBucketConverter()
+	entry := logrus.NewEntry(logrus.StandardLogger())
+
+	// Helper to create bucket with specific terms
+	createBucket := func(terms map[string]*lmaelastic.AggregatedTerm) *lmaelastic.CompositeAggregationBucket {
+		// Initialize dummy key
+		dummyKey := make(lmaelastic.CompositeAggregationKey, 50)
+		for i := range dummyKey {
+			dummyKey[i] = lmaelastic.CompositeAggregationSourceValue{Value: ""}
+		}
+
+		// Initialize required empty terms to avoid panics
+		requiredTerms := []string{
+			"dest_labels", "source_labels", "dest_domains",
+			"source_ip", "dest_ip",
+			"enforced_policies", "pending_policies", "transit_policies", "all_policies",
+		}
+
+		for _, term := range requiredTerms {
+			if _, exists := terms[term]; !exists {
+				terms[term] = &lmaelastic.AggregatedTerm{Buckets: map[interface{}]int64{}}
+			}
+		}
+
+		return &lmaelastic.CompositeAggregationBucket{
+			DocCount:                10,
+			CompositeAggregationKey: dummyKey,
+			AggregatedTerms:         terms,
+			AggregatedSums:          make(map[string]float64),
+			AggregatedMin:           make(map[string]float64),
+			AggregatedMax:           make(map[string]float64),
+			AggregatedMean:          make(map[string]float64),
+		}
+	}
+
+	t.Run("should fallback to enforced_policies when all_policies is empty", func(t *testing.T) {
+		enforcedBuckets := make(map[interface{}]int64)
+		enforcedBuckets["0|default|test-policy|allow|0"] = 10
+
+		aggTerms := map[string]*lmaelastic.AggregatedTerm{
+			"enforced_policies": {Buckets: enforcedBuckets},
+		}
+
+		bucket := createBucket(aggTerms)
+		flow := converter.ConvertBucket(entry, bucket)
+
+		require.NotEmpty(t, flow.EnforcedPolicies)
+		require.Equal(t, "default.test-policy", flow.EnforcedPolicies[0].Name)
+
+		// Policies should match EnforcedPolicies
+		require.Equal(t, flow.EnforcedPolicies, flow.Policies)
+	})
+
+	t.Run("should use all_policies when present", func(t *testing.T) {
+		allPolicyBuckets := make(map[interface{}]int64)
+		allPolicyBuckets["0|default|all-policy|allow|0"] = 10
+
+		enforcedBuckets := make(map[interface{}]int64)
+		enforcedBuckets["0|default|enforced-policy|allow|0"] = 10
+
+		aggTerms := map[string]*lmaelastic.AggregatedTerm{
+			"all_policies":      {Buckets: allPolicyBuckets},
+			"enforced_policies": {Buckets: enforcedBuckets},
+		}
+
+		bucket := createBucket(aggTerms)
+		flow := converter.ConvertBucket(entry, bucket)
+
+		// Check EnforcedPolicies is populated from its own term
+		require.NotEmpty(t, flow.EnforcedPolicies)
+		require.Equal(t, "default.enforced-policy", flow.EnforcedPolicies[0].Name)
+
+		// Check Policies matches all_policies, NOT enforced_policies
+		require.NotEmpty(t, flow.Policies)
+		require.Len(t, flow.Policies, 1)
+		require.Equal(t, "default.all-policy", flow.Policies[0].Name)
+		require.NotEqual(t, flow.EnforcedPolicies, flow.Policies)
+	})
+
+	t.Run("should respond with empty policies if both are empty", func(t *testing.T) {
+		bucket := createBucket(map[string]*lmaelastic.AggregatedTerm{})
+		flow := converter.ConvertBucket(entry, bucket)
+
+		require.Empty(t, flow.EnforcedPolicies)
+		require.Empty(t, flow.Policies)
+	})
+}

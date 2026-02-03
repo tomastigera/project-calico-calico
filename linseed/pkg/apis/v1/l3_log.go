@@ -153,7 +153,7 @@ type FlowLog struct {
 }
 
 type FlowLogPolicy struct {
-	AllPolicies      []string `json:"all_policies"`
+	AllPolicies      []string `json:"all_policies,omitempty"`
 	EnforcedPolicies []string `json:"enforced_policies"`
 	PendingPolicies  []string `json:"pending_policies"`
 	TransitPolicies  []string `json:"transit_policies"`
