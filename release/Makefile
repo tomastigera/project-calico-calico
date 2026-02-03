@@ -42,7 +42,7 @@ ci: static-checks ut
 ###############################################################################
 # Hashrelease
 ###############################################################################
-.PHONY: hashrelease hashrelease-build hashrelease-publish hashrelease-enterprise-smoke-test
+.PHONY: hashrelease hashrelease-build hashrelease-publish hashrelease-validate
 hashrelease: hashrelease-build hashrelease-publish
 
 # Ensures helm is in the bin dir relative to repo root
@@ -58,12 +58,9 @@ hashrelease-publish: bin/release var-require-all-GITHUB_TOKEN ../bin/helm ../bin
 hashrelease-svr-gc: bin/release
 	@bin/release hashrelease garbage-collect
 
-# Run hashrelease smoke tests
-hashrelease-enterprise-smoke-test:
-	@mkdir -p report
-	@echo "Running smoke tests hashrelease enterprise ..."
-	@EXTRA_DOCKER_ARGS="-e SKIP_SMOKE_TESTS=$(SKIP_SMOKE_TESTS) -e REPO_ROOT=/go/src/github.com/projectcalico/calico" $(DOCKER_GO_BUILD) gotestsum --junitfile report/hashrelease-smoke-tests.xml \
-		-- -v -timeout 4h $(POSTRELEASE_TEST_PACKAGE)/enterprise -run TestHashreleaseSmokeTests
+# Run hashrelease validation (smoke tests)
+hashrelease-validate: bin/release
+	@bin/release hashrelease enterprise validate
 
 ###############################################################################
 # Release

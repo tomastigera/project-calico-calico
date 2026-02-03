@@ -5,12 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/release/internal/command"
 )
 
 // Test configuration constants
@@ -30,6 +31,7 @@ const (
 
 var (
 	hashreleaseMetadataFile string
+	skipSmokeTests          bool
 	
 	// hashreleaseMetadata stores the parsed metadata from the hashrelease metadata file
 	hashreleaseMetadata map[string]string
@@ -37,6 +39,7 @@ var (
 
 func init() {
 	flag.StringVar(&hashreleaseMetadataFile, "hashrelease-metadata-file", "hashrelease-metadata-file.txt", "Path to hashrelease metadata file for setting URL environment variables")
+	flag.BoolVar(&skipSmokeTests, "skip-smoke-tests", false, "Skip running smoke tests")
 }
 
 // TestHashreleaseSmokeTests runs the smoke tests specifically for enterprise hashreleases.
@@ -59,10 +62,13 @@ func init() {
 // the integrity and functionality of enterprise hashrelease builds before production deployment.
 func TestHashreleaseSmokeTests(t *testing.T) {
 	// Check if we should skip smoke tests before any other initialization
-	if os.Getenv("SKIP_SMOKE_TESTS") == "true" {
-		t.Skip("Skipping smoke tests as SKIP_SMOKE_TESTS is set")
+	if skipSmokeTests {
+		t.Skip("Skipping smoke tests as skip-smoke-tests flag is set")
 		return
 	}
+
+	// Validate environment setup
+	checkEnvironmentSetup(t)
 
 	// Define test configuration using constants
 	// Hashrelease smoke tests use a single, standardized cluster configuration
@@ -95,10 +101,10 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	if hashreleaseMetadataFile != "" {
 		// Check if the file exists before parsing
 		if _, err := os.Stat(hashreleaseMetadataFile); err == nil {
-			if err := parseHashreleaseMetadataFile(hashreleaseMetadataFile); err != nil {
+			if err := parseHashreleaseMetadataFile(t, hashreleaseMetadataFile); err != nil {
 				t.Fatalf("Failed to parse hashrelease metadata: %v", err)
 			}
-			if err := setURLEnvironmentVariables(); err != nil {
+			if err := setURLEnvironmentVariables(t); err != nil {
 				t.Fatalf("Failed to set URL environment variables: %v", err)
 			}
 		} else {
@@ -108,18 +114,16 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 
 	// Set common environment variables
 	for key, value := range commonEnvVars {
-		if err := os.Setenv(key, value); err != nil {
-			t.Fatalf("Failed to set environment variable %s: %v", key, err)
-		}
+		t.Setenv(key, value)
 	}
 
 	// Run each test configuration
 	for _, tc := range testConfigs {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set test-specific environment variables
-			os.Setenv("PROVISIONER", tc.provisioner)
-			os.Setenv("K8S_VERSION", tc.k8sVersion)
-			os.Setenv("DATAPLANE", tc.dataplane)
+			t.Setenv("PROVISIONER", tc.provisioner)
+			t.Setenv("K8S_VERSION", tc.k8sVersion)
+			t.Setenv("DATAPLANE", tc.dataplane)
 
 			logrus.Infof("Running smoke test: %s", tc.name)
 			logrus.Infof("  Provisioner: %s", tc.provisioner)
@@ -177,7 +181,8 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 
 // parseHashreleaseMetadataFile parses the hashrelease metadata text file
 // and stores the key-value pairs in the global hashreleaseMetadata variable
-func parseHashreleaseMetadataFile(metadataFilePath string) error {
+func parseHashreleaseMetadataFile(t *testing.T, metadataFilePath string) error {
+	t.Helper()
 	logrus.Infof("Parsing hashrelease metadata from: %s", metadataFilePath)
 
 	// Check if file exists
@@ -253,7 +258,8 @@ func parseHashreleaseMetadataFile(metadataFilePath string) error {
 
 // setURLEnvironmentVariables sets the URL-related environment variables
 // using the url value from the global hashreleaseMetadata variable
-func setURLEnvironmentVariables() error {
+func setURLEnvironmentVariables(t *testing.T) error {
+	t.Helper()
 	logrus.Info("Setting URL environment variables from hashrelease metadata")
 
 	// Check if metadata has been parsed
@@ -275,15 +281,9 @@ func setURLEnvironmentVariables() error {
 	docsManifestURL := url + "/" + "manifests"
 	docsURL := url + "/"
 
-	if err := os.Setenv("RELEASE_ARTIFACTS_URL", releaseArtifactsURL); err != nil {
-		return fmt.Errorf("failed to set RELEASE_ARTIFACTS_URL: %w", err)
-	}
-	if err := os.Setenv("DOCS_MANIFEST_URL", docsManifestURL); err != nil {
-		return fmt.Errorf("failed to set DOCS_MANIFEST_URL: %w", err)
-	}
-	if err := os.Setenv("DOCS_URL", docsURL); err != nil {
-		return fmt.Errorf("failed to set DOCS_URL: %w", err)
-	}
+	t.Setenv("RELEASE_ARTIFACTS_URL", releaseArtifactsURL)
+	t.Setenv("DOCS_MANIFEST_URL", docsManifestURL)
+	t.Setenv("DOCS_URL", docsURL)
 
 	logrus.WithFields(logrus.Fields{
 		"RELEASE_ARTIFACTS_URL": releaseArtifactsURL,
@@ -301,14 +301,14 @@ func runScript(scriptPath string) error {
 		return fmt.Errorf("script not found: %s", scriptPath)
 	}
 
-	// Execute the script
-	cmd := exec.Command("/bin/bash", scriptPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-
 	logrus.Infof("Executing: %s", scriptPath)
-	if err := cmd.Run(); err != nil {
+	// Execute the script using command.RunInDirNoCapture which properly handles env vars
+	// Get the directory containing the script
+	scriptDir := filepath.Dir(scriptPath)
+	scriptName := filepath.Base(scriptPath)
+	
+	// Use /bin/bash to execute the script, passing current environment
+	if err := command.RunInDirNoCapture(scriptDir, "/bin/bash", []string{scriptName}, os.Environ()); err != nil {
 		return fmt.Errorf("script execution failed: %w", err)
 	}
 
@@ -326,23 +326,17 @@ func runCleanup() error {
 	// 3. Running bz destroy to clean up clusters
 	// 4. Deleting the cache
 	
-	// For now, we'll execute a simplified cleanup that calls the banzai cleanup
-	cleanupCmd := `
-		if command -v bz &> /dev/null; then
-			echo "Running banzai cleanup..."
-			bz destroy || echo "Cleanup command failed or no resources to clean"
-		else
-			echo "bz command not found, skipping cleanup"
-		fi
-	`
-	
-	cmd := exec.Command("/bin/bash", "-c", cleanupCmd)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-	
 	logrus.Info("Executing cleanup commands...")
-	if err := cmd.Run(); err != nil {
+	// For now, we'll execute a simplified cleanup that calls the banzai cleanup
+	cleanupCmd := `if command -v bz &> /dev/null; then
+		echo "Running banzai cleanup..."
+		bz destroy || echo "Cleanup command failed or no resources to clean"
+	else
+		echo "bz command not found, skipping cleanup"
+	fi`
+	
+	// Use command.RunInDirNoCapture which properly handles environment variables
+	if err := command.RunInDirNoCapture("", "/bin/bash", []string{"-c", cleanupCmd}, os.Environ()); err != nil {
 		return fmt.Errorf("cleanup execution failed: %w", err)
 	}
 	
@@ -350,12 +344,11 @@ func runCleanup() error {
 	return nil
 }
 
-// TestHashreleaseSmokeTestsValidation validates that required environment is set up
+// checkEnvironmentSetup validates that required environment is set up
 // for enterprise hashrelease smoke tests.
-func TestHashreleaseSmokeTestsValidation(t *testing.T) {
-	// This test validates that the environment is properly configured for enterprise hashrelease smoke testing.
-	// It can be run independently to check setup before running the full test suite.
-
+func checkEnvironmentSetup(t *testing.T) {
+	t.Helper()
+	
 	requiredEnvVars := []string{
 		"INSTALLER",
 		"K8S_E2E_FLAGS",
