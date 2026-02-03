@@ -161,16 +161,23 @@ func NewScanner(ctMap maps.Map, kfb func([]byte) KeyInterface, vfb func([]byte) 
 		revNATKeyToFwdNATInfo: make(map[KeyInterface]cleanupv1.ValueInterface),
 	}
 
+	switch ipVersion {
+	case 4:
+		s.versionHelper = ipv4Helper{}
+	case 6:
+		s.versionHelper = ipv6Helper{}
+	default:
+		return nil
+	}
+
 	if bpfCleaner != nil {
 		switch ipVersion {
 		case 4:
 			s.ctCleanupMap = cachingmap.New[KeyInterface, cleanupv1.ValueInterface](ctCleanupMap.GetName(),
 				maps.NewTypedMap[KeyInterface, cleanupv1.ValueInterface](ctCleanupMap, kfb, CleanupValueFromBytes))
-			s.versionHelper = ipv4Helper{}
 		case 6:
 			s.ctCleanupMap = cachingmap.New[KeyInterface, cleanupv1.ValueInterface](ctCleanupMap.GetName(),
 				maps.NewTypedMap[KeyInterface, cleanupv1.ValueInterface](ctCleanupMap, kfb, CleanupValueV6FromBytes))
-			s.versionHelper = ipv6Helper{}
 		default:
 			return nil
 
@@ -298,7 +305,7 @@ func (s *Scanner) Scan() {
 					// RST already set, no need to update.
 					continue
 				}
-				updatedVal := setRSTFlagInValue(ctVal)
+				updatedVal := s.versionHelper.setRSTFlagInValue(ctVal)
 				batchK = append(batchK, ctKey.AsBytes())
 				batchV = append(batchV, updatedVal.AsBytes())
 				if len(batchK) >= rstBatchSize {
@@ -478,9 +485,7 @@ func (s *Scanner) get(k KeyInterface) (ValueInterface, error) {
 	return s.valueFromBytes(v), nil
 }
 
-func setRSTFlagInValue(v ValueInterface) ValueInterface {
-	flags := v.Flags()
-	flags |= v4.FlagSendRST
+func createNewV4Value(v ValueInterface, flags uint32) ValueInterface {
 	var newVal ValueInterface
 	if v.Type() == TypeNATForward {
 		newVal = v4.NewValueNATForward(time.Duration(v.LastSeen()), flags, (v.ReverseNATKey()).(v4.Key))
@@ -489,6 +494,20 @@ func setRSTFlagInValue(v ValueInterface) ValueInterface {
 			v.Data().A2B, v.Data().B2A, v.Data().TunIP, v.OrigIP(), v.OrigPort())
 	} else {
 		newVal = v4.NewValueNormal(time.Duration(v.LastSeen()), flags, v.Data().A2B, v.Data().B2A)
+	}
+	return newVal
+}
+
+func createNewV6Value(v ValueInterface, flags uint32) ValueInterface {
+	var newVal ValueInterface
+	if v.Type() == TypeNATForward {
+		newVal = v4.NewValueV6NATForward(time.Duration(v.LastSeen()), flags, v.ReverseNATKey().(v4.KeyV6))
+	} else if v.Type() == TypeNATReverse {
+		newVal = v4.NewValueV6NATReverse(time.Duration(v.LastSeen()), flags,
+			v.Data().A2B, v.Data().B2A, v.Data().TunIP, v.OrigIP(), v.OrigPort())
+	} else {
+		newVal = v4.NewValueV6Normal(time.Duration(v.LastSeen()), flags, v.Data().A2B, v.Data().B2A)
+		log.Infof("Sridhar : createNewV6Value: created new v6 normal value: %v", newVal)
 	}
 	return newVal
 }
@@ -570,6 +589,7 @@ type Cleaner interface {
 type ipVersionHelper interface {
 	newCleanupValue(revKeyBytes []byte, ts, rev_ts uint64) cleanupv1.ValueInterface
 	dummyKey() KeyInterface
+	setRSTFlagInValue(v ValueInterface) ValueInterface
 }
 
 type ipv4Helper struct{}
@@ -582,6 +602,10 @@ func (h ipv4Helper) dummyKey() KeyInterface {
 	return dummyKey
 }
 
+func (h ipv4Helper) setRSTFlagInValue(v ValueInterface) ValueInterface {
+	return createNewV4Value(v, v.Flags()|v4.FlagSendRST)
+}
+
 type ipv6Helper struct{}
 
 func (h ipv6Helper) newCleanupValue(revKeyBytes []byte, ts, rev_ts uint64) cleanupv1.ValueInterface {
@@ -590,4 +614,8 @@ func (h ipv6Helper) newCleanupValue(revKeyBytes []byte, ts, rev_ts uint64) clean
 
 func (h ipv6Helper) dummyKey() KeyInterface {
 	return dummyKeyV6
+}
+
+func (h ipv6Helper) setRSTFlagInValue(v ValueInterface) ValueInterface {
+	return createNewV6Value(v, v.Flags()|v4.FlagSendRST)
 }
