@@ -13,17 +13,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Test configuration constants
+// These define the standardized cluster configuration for hashrelease smoke tests
+const (
+	installerType      = "operator"
+	k8sE2EFlags        = `--ginkgo.focus=(\[SmokeTest\]) --ginkgo.skip=(\[Disabled\]|\[Slow\]|\[Disruptive\])`
+	enableSkimble      = "false"
+	functionalArea     = "smoke"
+	releaseStream      = "master"
+	useHashRelease     = "true"
+	useLatestRelease   = "false"
+	provisionerType    = "gcp-kubeadm"
+	k8sVersionStable   = "stable-1"
+	dataplaneType      = "CalicoIptables"
+)
+
 var (
-	installer         string
-	k8sE2EFlags       string
-	enableSkimble     string
-	functionalArea    string
-	releaseStream     string
-	useHashRelease    string
-	useLatestRelease  string
-	provisioner       string
-	k8sVersion        string
-	dataplane         string
 	hashreleaseMetadataFile string
 	
 	// hashreleaseMetadata stores the parsed metadata from the hashrelease metadata file
@@ -31,22 +36,24 @@ var (
 )
 
 func init() {
-	flag.StringVar(&installer, "installer", "operator", "Installer type for smoke tests")
-	flag.StringVar(&k8sE2EFlags, "k8s-e2e-flags", `--ginkgo.focus=(\[SmokeTest\]) --ginkgo.skip=(\[Disabled\]|\[Slow\]|\[Disruptive\])`, "Ginkgo flags for E2E tests")
-	flag.StringVar(&enableSkimble, "enable-skimble", "false", "Enable skimble for tests")
-	flag.StringVar(&functionalArea, "functional-area", "smoke", "Functional area being tested")
-	flag.StringVar(&releaseStream, "release-stream", "master", "Release stream to test")
-	flag.StringVar(&useHashRelease, "use-hash-release", "true", "Use hash release for testing")
-	flag.StringVar(&useLatestRelease, "use-latest-release", "false", "Use latest release for testing")
-	flag.StringVar(&provisioner, "provisioner", "gcp-kubeadm", "Kubernetes provisioner to use")
-	flag.StringVar(&k8sVersion, "k8s-version", "stable-1", "Kubernetes version to test")
-	flag.StringVar(&dataplane, "dataplane", "CalicoIptables", "Dataplane to use for tests")
 	flag.StringVar(&hashreleaseMetadataFile, "hashrelease-metadata-file", "hashrelease-metadata-file.txt", "Path to hashrelease metadata file for setting URL environment variables")
 }
 
 // TestHashreleaseSmokeTests runs the smoke tests specifically for enterprise hashreleases.
 // This test validates the enterprise hashrelease by executing end-to-end smoke test scenarios
 // that were previously configured in the Semaphore YAML file (.semaphore/release/hashrelease_enterprise.yml).
+//
+// The test uses a single, standardized cluster configuration (defined as constants) to validate
+// the hashrelease. This ensures consistent testing across all hashrelease builds.
+//
+// Configuration:
+//   - Provisioner: gcp-kubeadm
+//   - K8s Version: stable-1
+//   - Dataplane: CalicoIptables
+//   - Installer: operator
+//
+// The only configurable parameter is the hashrelease-metadata-file flag, which points to the
+// metadata file containing the hashrelease URL and other information needed for testing.
 //
 // NOTE: This is an enterprise-specific hashrelease smoke test and is designed to verify
 // the integrity and functionality of enterprise hashrelease builds before production deployment.
@@ -57,7 +64,8 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 		return
 	}
 
-	// Define test configurations using flag parameters
+	// Define test configuration using constants
+	// Hashrelease smoke tests use a single, standardized cluster configuration
 	testConfigs := []struct {
 		name        string
 		provisioner string
@@ -65,16 +73,16 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 		dataplane   string
 	}{
 		{
-			name:        fmt.Sprintf("%s %s %s", provisioner, k8sVersion, dataplane),
-			provisioner: provisioner,
-			k8sVersion:  k8sVersion,
-			dataplane:   dataplane,
+			name:        fmt.Sprintf("%s %s %s", provisionerType, k8sVersionStable, dataplaneType),
+			provisioner: provisionerType,
+			k8sVersion:  k8sVersionStable,
+			dataplane:   dataplaneType,
 		},
 	}
 
-	// Set environment variables from flag parameters
+	// Set environment variables from constants
 	commonEnvVars := map[string]string{
-		"INSTALLER":          installer,
+		"INSTALLER":          installerType,
 		"K8S_E2E_FLAGS":      k8sE2EFlags,
 		"ENABLE_SKIMBLE":     enableSkimble,
 		"FUNCTIONAL_AREA":    functionalArea,
