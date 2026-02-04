@@ -304,7 +304,7 @@ func (h aggregationHandler[A]) Aggregate() http.HandlerFunc {
 				// Apply recursive transformation for nested policies aggregation structure.
 				// Temporary fix for issue until policies aggregations [EV-6215] is resolved in the
 				// frontend.
-				transformPoliciesAggregation(p.Aggregations[k])
+				p.Aggregations[k] = transformPoliciesAggregation(p.Aggregations[k])
 			}
 		}
 
