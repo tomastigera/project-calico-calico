@@ -6,8 +6,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -16,20 +14,13 @@ const (
 	AlertExceptionCRDName      = "alertexceptions.crd.projectcalico.org"
 )
 
-func NewAlertExceptionClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewAlertExceptionClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            AlertExceptionCRDName,
 		resource:        AlertExceptionResourceName,
-		description:     "Tigera Alert Exceptions",
 		k8sResourceType: reflect.TypeOf(apiv3.AlertException{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindAlertException,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.AlertExceptionList{}),
-		resourceKind: apiv3.KindAlertException,
-		namespaced:   false,
+		k8sListType:     reflect.TypeOf(apiv3.AlertExceptionList{}),
+		kind:            apiv3.KindAlertException,
+		apiGroup:        group,
 	}
 }

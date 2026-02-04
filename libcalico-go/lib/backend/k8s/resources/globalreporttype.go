@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,20 +26,13 @@ const (
 	GlobalReportTypeCRDName      = "globalreporttypes.crd.projectcalico.org"
 )
 
-func NewGlobalReportTypeClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewGlobalReportTypeClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            GlobalReportTypeCRDName,
 		resource:        GlobalReportTypeResourceName,
-		description:     "Tigera Global Compliance Report Types",
 		k8sResourceType: reflect.TypeOf(apiv3.GlobalReportType{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindGlobalReportType,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.GlobalReportTypeList{}),
-		resourceKind: apiv3.KindGlobalReportType,
-		namespaced:   false,
+		k8sListType:     reflect.TypeOf(apiv3.GlobalReportTypeList{}),
+		kind:            apiv3.KindGlobalReportType,
+		apiGroup:        group,
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +41,7 @@ const (
 type cacheRequest struct {
 	requestType      CacheRequestType
 	responseChannel  chan CacheResponse
-	globalThreatFeed *apiV3.GlobalThreatFeed
+	globalThreatFeed *apiv3.GlobalThreatFeed
 }
 
 // CacheResponse is the data structure returned by GlobalThreatFeedCacher when we try to get/update GlobalThreatFeed CR
@@ -49,7 +49,7 @@ type cacheRequest struct {
 // updating the cache failed due to a recoverable failure, it would be left nil when any unrecoverable failure happens.
 // Err field is populated whenever the get/update the cache failed, and would be populated with the reason of failure.
 type CacheResponse struct {
-	GlobalThreatFeed *apiV3.GlobalThreatFeed
+	GlobalThreatFeed *apiv3.GlobalThreatFeed
 	Err              error
 }
 
@@ -63,9 +63,9 @@ type GlobalThreatFeedCacher interface {
 	// GetGlobalThreatFeed returns a copy of the cached GlobalThreatFeed CR
 	GetGlobalThreatFeed() CacheResponse
 	// UpdateGlobalThreatFeed updates the cached GlobalThreatFeed CR
-	UpdateGlobalThreatFeed(globalThreatFeed *apiV3.GlobalThreatFeed) CacheResponse
+	UpdateGlobalThreatFeed(globalThreatFeed *apiv3.GlobalThreatFeed) CacheResponse
 	// UpdateGlobalThreatFeedStatus updates the GlobalThreatFeedStatus subresource of the cached GlobalThreatFeed CR
-	UpdateGlobalThreatFeedStatus(globalThreatFeed *apiV3.GlobalThreatFeed) CacheResponse
+	UpdateGlobalThreatFeedStatus(globalThreatFeed *apiv3.GlobalThreatFeed) CacheResponse
 }
 
 // globalThreatFeedCacher is a lazy-loaded cache that implements the GlobalThreatFeedCacher interface, the cached
@@ -74,7 +74,7 @@ type GlobalThreatFeedCacher interface {
 type globalThreatFeedCacher struct {
 	once                   sync.Once
 	feedName               string
-	cachedGlobalThreatFeed *apiV3.GlobalThreatFeed
+	cachedGlobalThreatFeed *apiv3.GlobalThreatFeed
 	globalThreatFeedClient clientV3.GlobalThreatFeedInterface
 	requestChannel         chan cacheRequest
 	stop                   chan struct{}
@@ -113,7 +113,7 @@ func (c *globalThreatFeedCacher) GetGlobalThreatFeed() CacheResponse {
 
 // UpdateGlobalThreatFeed wraps the passed-in globalThreatFeed into a cacheRequest and sends the request to the requestChannel.
 // It returns an error when the update failed or the cache failed to load in the first place.
-func (c *globalThreatFeedCacher) UpdateGlobalThreatFeed(globalThreatFeed *apiV3.GlobalThreatFeed) CacheResponse {
+func (c *globalThreatFeedCacher) UpdateGlobalThreatFeed(globalThreatFeed *apiv3.GlobalThreatFeed) CacheResponse {
 	responseChannel := make(chan CacheResponse)
 	c.requestChannel <- cacheRequest{requestType: RequestTypeUpdate, globalThreatFeed: globalThreatFeed, responseChannel: responseChannel}
 	return <-responseChannel
@@ -121,7 +121,7 @@ func (c *globalThreatFeedCacher) UpdateGlobalThreatFeed(globalThreatFeed *apiV3.
 
 // UpdateGlobalThreatFeedStatus wraps the passed-in globalThreatFeed into a cacheRequest and sends the request to the requestChannel.
 // It returns an error when the update status failed or the cache failed to load in the first place.
-func (c *globalThreatFeedCacher) UpdateGlobalThreatFeedStatus(globalThreatFeed *apiV3.GlobalThreatFeed) CacheResponse {
+func (c *globalThreatFeedCacher) UpdateGlobalThreatFeedStatus(globalThreatFeed *apiv3.GlobalThreatFeed) CacheResponse {
 	responseChannel := make(chan CacheResponse)
 	c.requestChannel <- cacheRequest{requestType: RequestTypeUpdateStatus, globalThreatFeed: globalThreatFeed, responseChannel: responseChannel}
 	return <-responseChannel

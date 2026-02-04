@@ -98,6 +98,7 @@ func AllResourcePlurals() []string {
 }
 
 func init() {
+	// Register projectcalico.org/v3 resources.
 	registerResourceInfo[apiv3.BGPPeer](apiv3.KindBGPPeer, "bgppeers")
 	registerResourceInfo[apiv3.BGPConfiguration](apiv3.KindBGPConfiguration, "bgpconfigurations")
 	registerResourceInfo[apiv3.ClusterInformation](apiv3.KindClusterInformation, "clusterinformations")
@@ -107,9 +108,6 @@ func init() {
 	registerResourceInfo[apiv3.StagedGlobalNetworkPolicy](apiv3.KindStagedGlobalNetworkPolicy, "stagedglobalnetworkpolicies")
 	registerResourceInfo[apiv3.HostEndpoint](apiv3.KindHostEndpoint, "hostendpoints")
 	registerResourceInfo[apiv3.GlobalNetworkSet](apiv3.KindGlobalNetworkSet, "globalnetworksets")
-	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesAdminNetworkPolicy, "kubernetesadminnetworkpolicies")
-	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesBaselineAdminNetworkPolicy, "kubernetesbaselineadminnetworkpolicies")
-	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesClusterNetworkPolicy, "kubernetesclusternetworkpolicies")
 	registerResourceInfo[apiv3.IPPool](apiv3.KindIPPool, "ippools")
 	registerResourceInfo[apiv3.IPReservation](apiv3.KindIPReservation, "ipreservations")
 	registerResourceInfo[apiv3.NetworkPolicy](apiv3.KindNetworkPolicy, "networkpolicies")
@@ -119,14 +117,15 @@ func init() {
 	registerResourceInfo[discovery.EndpointSlice](KindKubernetesEndpointSlice, "kubernetesendpointslices")
 	registerResourceInfo[apiv3.NetworkSet](apiv3.KindNetworkSet, "networksets")
 	registerResourceInfo[apiv3.Tier](apiv3.KindTier, "tiers")
-	registerResourceInfo[apiv3.UISettingsGroup](apiv3.KindUISettingsGroup, "uisettingsgroups")
-	registerResourceInfo[apiv3.UISettings](apiv3.KindUISettings, "uisettings")
-	registerResourceInfo[libapiv3.Node](libapiv3.KindNode, "nodes")
 	registerResourceInfo[apiv3.CalicoNodeStatus](apiv3.KindCalicoNodeStatus, "caliconodestatuses")
 	registerResourceInfo[apiv3.Profile](apiv3.KindProfile, "profiles")
-	registerResourceInfo[libapiv3.WorkloadEndpoint](libapiv3.KindWorkloadEndpoint, "workloadendpoints")
-	registerResourceInfo[libapiv3.IPAMConfig](libapiv3.KindIPAMConfig, "ipamconfigs")
 	registerResourceInfo[apiv3.KubeControllersConfiguration](apiv3.KindKubeControllersConfiguration, "kubecontrollersconfigurations")
+	registerResourceInfo[apiv3.BGPFilter](apiv3.KindBGPFilter, "BGPFilters")
+	registerResourceInfo[apiv3.IPAMConfiguration](apiv3.KindIPAMConfiguration, "ipamconfigurations")
+
+	// Register enterprise-only projectcalico.org/v3 resources.
+	registerResourceInfo[apiv3.UISettingsGroup](apiv3.KindUISettingsGroup, "uisettingsgroups")
+	registerResourceInfo[apiv3.UISettings](apiv3.KindUISettings, "uisettings")
 	registerResourceInfo[apiv3.RemoteClusterConfiguration](apiv3.KindRemoteClusterConfiguration, "remoteclusterconfigurations")
 	registerResourceInfo[apiv3.GlobalAlert](apiv3.KindGlobalAlert, "globalalerts")
 	registerResourceInfo[apiv3.GlobalAlertTemplate](apiv3.KindGlobalAlertTemplate, "globalalerttemplates")
@@ -136,18 +135,26 @@ func init() {
 	registerResourceInfo[apiv3.ManagedCluster](apiv3.KindManagedCluster, "managedclusters")
 	registerResourceInfo[apiv3.PacketCapture](apiv3.KindPacketCapture, "packetcaptures")
 	registerResourceInfo[apiv3.DeepPacketInspection](apiv3.KindDeepPacketInspection, "deeppacketinspections")
-	// Resources that are translations of Kubernetes resources and effectively read-only representations.
-	registerResourceInfo[kapiv1.Endpoints](apiv3.KindK8sEndpoints, "k8s-endpoints")
-	registerResourceInfo[kapiv1.Service](KindKubernetesService, "kubernetesservice")
-	registerResourceInfo[libapiv3.BlockAffinity](libapiv3.KindBlockAffinity, "blockaffinities")
-	registerResourceInfo[apiv3.BGPFilter](apiv3.KindBGPFilter, "BGPFilters")
-	registerResourceInfo[apiv3.ExternalNetwork](apiv3.KindExternalNetwork, "ExternalNetworks")
-	registerResourceInfo[apiv3.EgressGatewayPolicy](apiv3.KindEgressGatewayPolicy, "EgressGatewayPolicies")
-	registerResourceInfo[apiv3.SecurityEventWebhook](apiv3.KindSecurityEventWebhook, "SecurityEventWebhooks")
+	registerResourceInfo[apiv3.ExternalNetwork](apiv3.KindExternalNetwork, "externalnetworks")
+	registerResourceInfo[apiv3.EgressGatewayPolicy](apiv3.KindEgressGatewayPolicy, "egressgatewaypolicies")
+	registerResourceInfo[apiv3.SecurityEventWebhook](apiv3.KindSecurityEventWebhook, "securityeventwebhooks")
 	registerResourceInfo[apiv3.BFDConfiguration](apiv3.KindBFDConfiguration, "bfdconfigurations")
 
-	// Resources that may be transported in a ResourceKey but are not part of the public API, for use-cases like Federation.
+	// Register libcalico-go/v3 resources.
+	registerResourceInfo[libapiv3.Node](libapiv3.KindNode, "nodes")
+	registerResourceInfo[libapiv3.WorkloadEndpoint](libapiv3.KindWorkloadEndpoint, "workloadendpoints")
+	registerResourceInfo[libapiv3.IPAMConfig](libapiv3.KindIPAMConfig, "ipamconfigs")
+	registerResourceInfo[libapiv3.BlockAffinity](libapiv3.KindBlockAffinity, "blockaffinities")
 	registerResourceInfo[libapiv3.IPAMBlock](libapiv3.KindIPAMBlock, "ipamblocks")
+
+	// Register Kubernetes resources.
+	registerResourceInfo[kapiv1.Service](KindKubernetesService, "kubernetesservice")
+	registerResourceInfo[apiv3.NetworkPolicy](KindKubernetesNetworkPolicy, "kubernetesnetworkpolicies")
+	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesClusterNetworkPolicy, "kubernetesclusternetworkpolicies")
+	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesAdminNetworkPolicy, "kubernetesadminnetworkpolicies")
+	registerResourceInfo[apiv3.GlobalNetworkPolicy](KindKubernetesBaselineAdminNetworkPolicy, "kubernetesbaselineadminnetworkpolicies")
+	registerResourceInfo[kapiv1.Endpoints](apiv3.KindK8sEndpoints, "k8s-endpoints")
+	registerResourceInfo[kapiv1.Service](KindKubernetesService, "kubernetesservice")
 }
 
 type ResourceKey struct {
@@ -166,7 +173,7 @@ func (key ResourceKey) defaultPath() (string, error) {
 func (key ResourceKey) defaultDeletePath() (string, error) {
 	ri, ok := resourceInfoByKindLower[strings.ToLower(key.Kind)]
 	if !ok {
-		return "", fmt.Errorf("couldn't convert key: %+v", key)
+		return "", fmt.Errorf("unknown resource kind: %s", key.Kind)
 	}
 	if namespace.IsNamespaced(key.Kind) {
 		return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s/%s", ri.Plural(), key.Namespace, escapeName(key.Name)), nil

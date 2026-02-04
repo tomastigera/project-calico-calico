@@ -337,7 +337,9 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
 			case model.BlockKey:
-				// Convert the v1 object to the internal v3 Resource object.
+				// For historical reasons, we receive Block updates as model/v1 resources but we convert them to
+				// libcalico-go/lib/api/v3.IPAMBlock resources here. Felix then translates them back to v1 on receipt.
+				// This could be cleaned up in future, but requires care to support version skew during upgrades.
 				v3KVPair := resources.IPAMBlockV1toV3(&updates[i].KVPair)
 				v3Block := v3KVPair.Value.(*libapiv3.IPAMBlock)
 				v3Block.APIVersion = apiv3.GroupVersionCurrent

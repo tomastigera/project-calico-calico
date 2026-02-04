@@ -332,7 +332,8 @@ current-context: test-context`
 
 				// Since there are no environment variables, the running config
 				// should be exactly the API Spec
-				Expect(s.RunningConfig).To(Equal(m.get.Spec))
+				Expect(s.RunningConfig).NotTo(BeNil())
+				Expect(*s.RunningConfig).To(Equal(m.get.Spec))
 				close(done)
 			})
 		})

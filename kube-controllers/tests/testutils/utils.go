@@ -163,12 +163,16 @@ func RunEtcd() *containers.Container {
 }
 
 func GetCalicoClient(dsType apiconfig.DatastoreType, etcdIP, kcfg string) client.Interface {
-	cfg := apiconfig.NewCalicoAPIConfig()
+	// Load the config from the environment.
+	cfg, err := apiconfig.LoadClientConfigFromEnvironment()
+	Expect(err).NotTo(HaveOccurred())
+
+	// Override with the given config.
 	cfg.Spec.DatastoreType = dsType
 	cfg.Spec.EtcdEndpoints = fmt.Sprintf("http://%s:2379", etcdIP)
 	cfg.Spec.Kubeconfig = kcfg
-	client, err := client.New(*cfg)
 
+	client, err := client.New(*cfg)
 	Expect(err).NotTo(HaveOccurred())
 	return client
 }
@@ -184,11 +188,15 @@ func GetCalicoKubernetesClient(kubeconfig string) client.Interface {
 }
 
 func GetBackendClient(etcdIP string) api.Client {
-	cfg := apiconfig.NewCalicoAPIConfig()
+	// Load the config from the environment.
+	cfg, err := apiconfig.LoadClientConfigFromEnvironment()
+	Expect(err).NotTo(HaveOccurred())
+
+	// Override with the given config.
 	cfg.Spec.DatastoreType = apiconfig.EtcdV3
 	cfg.Spec.EtcdEndpoints = fmt.Sprintf("http://%s:2379", etcdIP)
-	be, err := backend.NewClient(*cfg)
 
+	be, err := backend.NewClient(*cfg)
 	Expect(err).NotTo(HaveOccurred())
 	return be
 }

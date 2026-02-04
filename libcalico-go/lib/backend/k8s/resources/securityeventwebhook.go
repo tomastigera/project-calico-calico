@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,20 +26,13 @@ const (
 	SecurityEventWebhookCRDName      = "securityeventwebhooks.crd.projectcalico.org"
 )
 
-func NewSecurityEventWebhookClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewSecurityEventWebhookClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            SecurityEventWebhookCRDName,
 		resource:        SecurityEventWebhookResourceName,
-		description:     "Tigera Security Event Webhooks",
 		k8sResourceType: reflect.TypeOf(apiv3.SecurityEventWebhook{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindSecurityEventWebhook,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.SecurityEventWebhookList{}),
-		resourceKind: apiv3.KindSecurityEventWebhook,
-		namespaced:   false,
+		k8sListType:     reflect.TypeOf(apiv3.SecurityEventWebhookList{}),
+		kind:            apiv3.KindSecurityEventWebhook,
+		apiGroup:        group,
 	}
 }

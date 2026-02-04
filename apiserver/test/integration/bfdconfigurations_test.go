@@ -31,7 +31,7 @@ func TestBFDConfigurationClient(t *testing.T) {
 	const name = "test-bfdconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.BFDConfiguration{}
 			}, true)
 			defer shutdownServer()

@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,19 +26,13 @@ const (
 	ExternalNetworkCRDName      = "ExternalNetworks.crd.projectcalico.org"
 )
 
-func NewExternalNetworkClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewExternalNetworkClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            ExternalNetworkCRDName,
 		resource:        ExternalNetworkResourceName,
-		description:     "ExternalNetwork",
 		k8sResourceType: reflect.TypeOf(apiv3.ExternalNetwork{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindExternalNetwork,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.ExternalNetworkList{}),
-		resourceKind: apiv3.KindExternalNetwork,
+		k8sListType:     reflect.TypeOf(apiv3.ExternalNetworkList{}),
+		kind:            apiv3.KindExternalNetwork,
+		apiGroup:        group,
 	}
 }

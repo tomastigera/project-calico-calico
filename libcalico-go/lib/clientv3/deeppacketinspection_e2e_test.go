@@ -268,8 +268,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			res, outError = c.DeepPacketInspections().Update(ctx, res, options.SetOptions{})
 			log.Infof("After update status %#v", res)
 			Expect(outError).ToNot(HaveOccurred())
-			Expect(res).ToNot(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2, emptyStatus))
-
+			Expect(res.Status).NotTo(Equal(emptyStatus))
 		}
 
 		// Track the version of the updated name1 data.

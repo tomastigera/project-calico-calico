@@ -55,7 +55,7 @@ class TestBase(TestCase):
             try:
                 cleanup()
             except Exception as e:
-                logger.exception("Error during cleanup")
+                logger.error("Error during cleanup: %s", e)
                 errors.append(e)
         super(TestBase, self).tearDown()
         if errors:

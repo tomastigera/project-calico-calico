@@ -192,7 +192,11 @@ get-operator-crds: var-require-all-OPERATOR_ORGANIZATION-OPERATOR_GIT_REPO-OPERA
 	@echo === Pulling new operator CRDs from $(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO) branch $(OPERATOR_BRANCH) ===
 	@echo ==============================================================================================================
 	cd ./charts/crd.projectcalico.org.v1/templates/ && \
-	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
+	for file in operator.tigera.io_*.yaml; do \
+		echo "downloading $$file from operator repo"; \
+		curl -fsSL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; \
+		cp $${file} ../../projectcalico.org.v3/templates/$${file}; \
+	done
 	cp -vLR ./charts/crd.projectcalico.org.v1/templates/* ./charts/multi-tenant-crds/crds/ && \
 	cd ./charts/multi-tenant-crds/crds && \
 	curl -fsSOL https://raw.githubusercontent.com/$(OPERATOR_ORGANIZATION)/$(OPERATOR_GIT_REPO)/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
@@ -243,7 +247,7 @@ CHART_DESTINATION ?= ./bin
 # Build helm charts.
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
-tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz $(CHART_DESTINATION)/crd.projectcalico.org.v1-$(chartVersion).tgz
+tigera-operator-release: $(CHART_DESTINATION)/tigera-operator-$(chartVersion).tgz $(CHART_DESTINATION)/crd.projectcalico.org.v1-$(chartVersion).tgz $(CHART_DESTINATION)/projectcalico.org.v3-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
 multi-tenant-crds-release: $(CHART_DESTINATION)/multi-tenant-crds-$(chartVersion).tgz
@@ -290,6 +294,13 @@ $(CHART_DESTINATION)/crd.projectcalico.org.v1-%.tgz: bin/helm $(shell find ./cha
 	--destination $(CHART_DESTINATION)/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+
+$(CHART_DESTINATION)/projectcalico.org.v3-$(GIT_VERSION).tgz: bin/helm $(shell find ./charts/projectcalico.org.v3/ -type f)
+	mkdir -p $(CHART_DESTINATION)
+	bin/helm package ./charts/projectcalico.org.v3/ \
+	--destination $(CHART_DESTINATION)/ \
+	--version $(GIT_VERSION) \
+	--app-version $(GIT_VERSION)
 
 # Build all Calico images for the current architecture.
 image:

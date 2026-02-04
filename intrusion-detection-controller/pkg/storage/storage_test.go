@@ -14,14 +14,14 @@ import (
 
 	"github.com/araddon/dateparse"
 	. "github.com/onsi/gomega"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	v1scheme "github.com/projectcalico/calico/libcalico-go/lib/apis/crd.projectcalico.org/v1/scheme"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -37,7 +37,7 @@ func Test_GetIPSet(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -75,7 +75,7 @@ func Test_GetIPSetModified(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -154,7 +154,7 @@ func Test_QueryIPSet(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -163,7 +163,7 @@ func Test_QueryIPSet(t *testing.T) {
 	defer cancel()
 
 	oneMinuteAgo = time.Now().Add(-1 * time.Minute)
-	toBeUpdated := &apiV3.GlobalThreatFeed{}
+	toBeUpdated := &apiv3.GlobalThreatFeed{}
 	toBeUpdated.Name = "test"
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
@@ -227,7 +227,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -236,7 +236,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	defer cancel()
 
 	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
-	toBeUpdated := &apiV3.GlobalThreatFeed{}
+	toBeUpdated := &apiv3.GlobalThreatFeed{}
 	toBeUpdated.Name = "test"
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
@@ -282,7 +282,7 @@ func Test_QueryIPSet_Big(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -290,7 +290,7 @@ func Test_QueryIPSet_Big(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test_big"
 	i, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
@@ -316,7 +316,7 @@ func Test_ListSets(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -368,7 +368,7 @@ func Test_Put_Set(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -429,7 +429,7 @@ func Test_Delete_Set(t *testing.T) {
 
 	// mock controller runtime client.
 	scheme := scheme.Scheme
-	err := v3.AddToScheme(scheme)
+	err := v1scheme.AddCalicoResourcesToScheme(scheme)
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 

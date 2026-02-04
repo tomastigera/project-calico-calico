@@ -177,6 +177,9 @@ build-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning
 ###############################################################################
 # Unit Tests
 ###############################################################################
+fv:
+	@echo "No FV tests for CNI plugin"
+
 ## Run the unit tests.
 ut: run-k8s-controller-manager $(BIN)/install $(BIN)/host-local $(BIN)/calico-ipam $(BIN)/calico
 	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
@@ -194,6 +197,7 @@ ut-datastore:
 	-e CNI_SPEC_VERSION=$(CNI_SPEC_VERSION) \
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+	-e CALICO_API_GROUP=$(CALICO_API_GROUP) \
 	-e KUBECONFIG=/home/user/certs/kubeconfig \
 	-v $(CURDIR)/../:/go/src/github.com/projectcalico/calico:rw \
 	-v $(CERTS_PATH):/home/user/certs \

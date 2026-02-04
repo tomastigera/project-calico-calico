@@ -169,7 +169,7 @@ func (f fakeCalicoClient) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface 
 	panic("implement me")
 }
 
-func (f fakeCalicoClient) IPAMConfig() clientv3.IPAMConfigInterface {
+func (f fakeCalicoClient) IPAMConfiguration() clientv3.IPAMConfigurationInterface {
 	panic("implement me")
 }
 

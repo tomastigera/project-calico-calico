@@ -1616,8 +1616,8 @@ func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, calico
 }
 
 // IPAMConfig returns an interface for managing the IPAMConfig resource.
-func (c shimClient) IPAMConfig() client.IPAMConfigInterface {
-	return c.client.IPAMConfig()
+func (c shimClient) IPAMConfiguration() client.IPAMConfigurationInterface {
+	return c.client.IPAMConfiguration()
 }
 
 // BlockAffinities returns an interface for managing the block affinity resources.

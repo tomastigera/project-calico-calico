@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -36,7 +36,7 @@ type DomainNameSet interface {
 }
 
 type SuspiciousSet interface {
-	QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error)
+	QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error)
 }
 
 type Events interface {

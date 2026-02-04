@@ -11,13 +11,13 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	v1scheme "github.com/projectcalico/calico/libcalico-go/lib/apis/crd.projectcalico.org/v1/scheme"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -35,7 +35,7 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 
 		// mock controller runtime client.
 		scheme := scheme.Scheme
-		err := v3.AddToScheme(scheme)
+		err := v1scheme.AddCalicoResourcesToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
@@ -216,7 +216,7 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 
 			// Run the search
 			domains := storage.DomainNameSetSpec{"xx.yy.zzz", "dd.ee.fff", "jj.kk.lll"}
-			testFeed := &apiV3.GlobalThreatFeed{}
+			testFeed := &apiv3.GlobalThreatFeed{}
 			testFeed.Name = "test-feed"
 			iter, _, err := uut.QueryDomainNameSet(ctx, domains, testFeed)
 			Expect(err).ToNot(HaveOccurred())

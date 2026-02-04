@@ -115,6 +115,7 @@ func NewClient() (clientv3.Interface, error) {
 	cfg := apiconfig.NewCalicoAPIConfig()
 	cfg.Spec.DatastoreType = apiconfig.Kubernetes
 	cfg.Spec.Kubeconfig = `c:\k\config`
+	cfg.Spec.CalicoAPIGroup = os.Getenv("CALICO_API_GROUP")
 	client, err := clientv3.New(*cfg)
 	if err != nil {
 		return nil, err
@@ -188,7 +189,7 @@ func (f *WinFV) RestoreConfig() error {
 		}
 		return nil
 	}
-	err := os.WriteFile(f.configFile, []byte(f.originalConfig), 0644)
+	err := os.WriteFile(f.configFile, []byte(f.originalConfig), 0o644)
 	if err != nil {
 		return err
 	}
@@ -198,6 +199,7 @@ func (f *WinFV) RestoreConfig() error {
 func (f *WinFV) GetDatastoreFelixConfig() (*apiv3.FelixConfiguration, error) {
 	return getDatastoreFelixConfig(f.client)
 }
+
 func getDatastoreFelixConfig(client clientv3.Interface) (*apiv3.FelixConfiguration, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -279,7 +281,7 @@ func (f *WinFV) AddConfigItems(configs map[string]any) error {
 		items = fmt.Sprintf("%s\n%s\n", items, entry)
 	}
 
-	err := os.WriteFile(f.configFile, []byte(items), 0644)
+	err := os.WriteFile(f.configFile, []byte(items), 0o644)
 	if err != nil {
 		return err
 	}

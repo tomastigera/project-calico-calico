@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -136,7 +137,6 @@ var _ = ginkgo.AfterSuite(func() {
 })
 
 func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
-
 	config, err := clientcmd.NewNonInteractiveClientConfig(*api.NewConfig(),
 		"",
 		&clientcmd.ConfigOverrides{
@@ -164,6 +164,7 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 				KubeConfig: apiconfig.KubeConfig{
 					K8sAPIEndpoint:           k8sServerEndpoint,
 					K8sInsecureSkipTLSVerify: true,
+					CalicoAPIGroup:           os.Getenv("CALICO_API_GROUP"),
 				},
 			},
 		})
@@ -201,7 +202,6 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 }
 
 func create1000Pods(clientset *kubernetes.Clientset, nsPrefix string) error {
-
 	d = NewDeployment(clientset, 49, true)
 	nsName := nsPrefix + "test"
 

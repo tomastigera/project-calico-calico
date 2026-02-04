@@ -53,6 +53,8 @@ type config struct {
 	MultiInterface string `envconfig:"MULTI_INTERFACE_MODE" default:""`
 
 	ServiceAccountToken []byte
+
+	CalicoAPIGroup string `envconfig:"CALICO_API_GROUP" default:"crd.projectcalico.org/v1"`
 }
 
 func getEnv(env, def string) string {
@@ -351,6 +353,8 @@ func writeCNIConfig(c config) {
 	netconf = strings.ReplaceAll(netconf, "__KUBERNETES_SERVICE_PORT__", getEnv("KUBERNETES_SERVICE_PORT", ""))
 
 	netconf = strings.ReplaceAll(netconf, "__SERVICEACCOUNT_TOKEN__", string(c.ServiceAccountToken))
+
+	netconf = strings.ReplaceAll(netconf, "__CALICO_API_GROUP__", string(c.CalicoAPIGroup))
 
 	// Replace etcd datastore variables.
 	hostSecretsDir := c.CNINetDir + "/calico-tls"

@@ -282,7 +282,7 @@ func (f *FakeCalicoClient) EgressGatewayPolicy() clientv3.EgressGatewayPolicyInt
 	panic("not implemented")
 }
 
-func (f *FakeCalicoClient) IPAMConfig() clientv3.IPAMConfigInterface {
+func (f *FakeCalicoClient) IPAMConfiguration() clientv3.IPAMConfigurationInterface {
 	panic("not implemented")
 }
 

@@ -54,6 +54,12 @@ CHART=../bin/tigera-operator-$GIT_VERSION.tgz
 # Path to Enteprise product license
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/license.yaml}
 
+# Determine the helm values file to use based on the CALICO_API_GROUP env var.
+VALUES_FILE=$TEST_DIR/infra/values.yaml
+if [ "$CALICO_API_GROUP" == "projectcalico.org/v3" ]; then
+  VALUES_FILE=$TEST_DIR/infra/values-v3-crds.yaml
+fi
+
 # kubectl binary.
 : ${kubectl:=../hack/test/kind/kubectl}
 
@@ -87,7 +93,7 @@ echo
 # CRDs are already created prior to reaching this script from within lib.Makefile as part
 # of kind cluster creation.
 echo "Install Calico using the helm chart"
-$HELM install calico $CHART -f $TEST_DIR/infra/values.yaml -n tigera-operator --create-namespace
+$HELM install calico $CHART -f $VALUES_FILE -n tigera-operator --create-namespace
 
 echo "Install calicoctl as a pod"
 ${kubectl} apply -f $TEST_DIR/infra/calicoctl.yaml
@@ -111,9 +117,15 @@ if ! ( ${kubectl} wait --for=create --timeout=60s tigerastatus/calico &&
   ${kubectl} describe po -n calico-system
   exit 1
 fi
-if ! ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/apiserver; then
-  ${kubectl} get -o yaml tigerastatus/apiserver
-  exit 1
+
+# Wait for the Calico API server to be available, if not using the projectcalico.org/v3 CRDs.
+# If using the projectcalico.org/v3 CRDs, there is no Calico API server to wait for.
+if [ "$CALICO_API_GROUP" != "projectcalico.org/v3" ]; then
+  echo "Wait for the Calico API server to be ready"
+  if ! ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/apiserver; then
+    ${kubectl} get -o yaml tigerastatus/apiserver
+    exit 1
+  fi
 fi
 
 echo "Wait for Calico to be ready..."

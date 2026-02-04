@@ -2900,13 +2900,16 @@
           "ParsedDefaultJSON": "\"auto\"",
           "ParsedType": "string",
           "YAMLType": "string",
-          "YAMLSchema": "One of: `Auto`, `Legacy`, `NFT`.",
+          "YAMLSchema": "One of: `\"Auto\"`, `\"Legacy\"`, `\"NFT\"`.",
           "YAMLEnumValues": [
             "Auto",
+            "Auto",
             "Legacy",
+            "Legacy",
+            "NFT",
             "NFT"
           ],
-          "YAMLSchemaHTML": "One of: <code>Auto</code>, <code>Legacy</code>, <code>NFT</code>.",
+          "YAMLSchemaHTML": "One of: <code>\"Auto\"</code>, <code>\"Legacy\"</code>, <code>\"NFT\"</code>.",
           "YAMLDefault": "Auto",
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
