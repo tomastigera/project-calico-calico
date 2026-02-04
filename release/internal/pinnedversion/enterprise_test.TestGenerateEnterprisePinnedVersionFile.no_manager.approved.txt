@@ -73,8 +73,6 @@
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     firewall-integration:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
-    flannel-migration-controller:
-      version: v3.22.1-calient-0.dev-741-gde13c547862d
     flexvol:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
       image: pod2daemon-flexvol

@@ -73,8 +73,6 @@
       version: v3.22.0-1.0
     firewall-integration:
       version: v3.22.0-1.0
-    flannel-migration-controller:
-      version: v3.22.0-1.0
     flexvol:
       version: v3.22.0-1.0
       image: pod2daemon-flexvol

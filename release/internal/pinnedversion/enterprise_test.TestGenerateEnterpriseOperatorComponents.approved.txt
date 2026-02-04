@@ -84,9 +84,6 @@ components:
   firewall-integration:
     version: v3.22.0
     image: firewall-integration
-  flannel-migration-controller:
-    version: v3.22.0
-    image: flannel-migration-controller
   flexvol:
     version: v3.22.0
     image: pod2daemon-flexvol
