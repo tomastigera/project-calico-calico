@@ -35,6 +35,7 @@ const (
 
 var EnterpriseHelmCharts = []string{
 	TigeraOperatorChart,
+	CalicoCRDsChart,
 	"tigera-prometheus-operator",
 	"multi-tenant-crds",
 }
