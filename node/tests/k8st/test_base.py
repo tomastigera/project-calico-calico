@@ -24,7 +24,7 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
-from utils.utils import retry_until_success, run, kubectl, copy_cnx_pull_secret
+from tests.k8st.utils.utils import retry_until_success, run, kubectl, copy_cnx_pull_secret
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class TestBase(TestCase):
         Compares two things.  Debug logs the differences between them before
         asserting that they are the same.
         """
-        assert cmp(thing1, thing2) == 0, \
+        assert thing1 == thing2, \
             "Items are not the same.  Difference is:\n %s" % \
             pformat(DeepDiff(thing1, thing2), indent=2)
 
@@ -96,8 +96,8 @@ class TestBase(TestCase):
         if first_log_time is None:
             first_log_time = time_now
         time_now -= first_log_time
-        elapsed_hms = "%02d:%02d:%02d " % (time_now / 3600,
-                                           (time_now % 3600) / 60,
+        elapsed_hms = "%02d:%02d:%02d " % (time_now // 3600,
+                                           (time_now % 3600) // 60,
                                            time_now % 60)
 
         level = kwargs.pop("level", logging.INFO)
