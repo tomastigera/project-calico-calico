@@ -2,7 +2,7 @@
 This file contains the list of modules that this package depends on
 in order to trigger CI on changes
 
-go 1.25.6
+go 1.25.7
 github.com/alecthomas/kingpin/v2 v2.4.0
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
