@@ -20,7 +20,7 @@ import enum
 
 from tests.k8st.test_base import TestBase, Pod
 from tests.k8st.utils.utils import start_external_node_with_bgp, \
-    run, calicoctl, kubectl, node_info, retry_until_success, calico_node_pod_name, update_ds_env
+    run, calicoctl, kubectl, node_info, retry_until_success, calico_node_pod_name
 
 _log = logging.getLogger(__name__)
 
@@ -127,12 +127,6 @@ class _TestLocalBGPPeer(TestBase):
             bird_peer_config=self.get_bird_conf_tor(),
         )
         self.add_cleanup(self.delete_extra_node)
-
-        # Enable debug logging on BGP and set endpointStatusPathPrefix
-        update_ds_env("calico-node",
-                      "calico-system",
-                      {"BGP_LOGSEVERITYSCREEN": "debug",
-                      "FELIX_EndpointStatusPathPrefix": "/var/run/calico"})
 
         # Create the BGP filter to export to the ToR.
         kubectl("""apply -f - << EOF
