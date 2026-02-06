@@ -203,7 +203,7 @@ class FailoverTestConfig(object):
                 self.rb_server_dev = get_dev(f.server_plane)
 
 
-@pytest.mark.skip
+@pytest.mark.non_vanilla
 class _FailoverTest(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -557,7 +557,6 @@ class FailoverCluster(object):
         )
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.dual_tor
 class TestFailoverPodIP(_FailoverTest):
 
@@ -569,7 +568,6 @@ class TestFailoverPodIP(_FailoverTest):
         ])
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.dual_tor
 class TestFailoverServiceIP(_FailoverTest):
 
@@ -582,8 +580,6 @@ class TestFailoverServiceIP(_FailoverTest):
 
 
 @pytest.mark.non_vanilla
-@pytest.mark.dual_tor
-@pytest.mark.skip
 class _TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):
@@ -607,7 +603,6 @@ class _TestFailoverNodePort(_FailoverTest):
         self.check_early_container_noticed_restart("kind-worker2", old_log_count)
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.dual_tor
 class TestFailoverHostAccess(_FailoverTest):
 

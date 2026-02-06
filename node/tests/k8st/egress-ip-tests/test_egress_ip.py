@@ -36,7 +36,7 @@ def patch_ippool(name, vxlanMode=None, ipipMode=None):
     _log.info("Updated vxlanMode of %s from %s to %s, ipipMode from %s to %s",
               name, old_vxlanMode, vxlanMode, old_ipipMode, ipipMode)
 
-@pytest.mark.skip
+@pytest.mark.non_vanilla
 class _TestEgressIP(TestBase):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
@@ -1503,7 +1503,6 @@ spec:
         return pod.ip, svc_ip, 8080, int(node_port)
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlay(_TestEgressIP):
@@ -1521,7 +1520,6 @@ class TestEgressIPNoOverlay(_TestEgressIP):
         super(_TestEgressIP, self).setUp()
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIP(_TestEgressIP):
@@ -1537,7 +1535,6 @@ class TestEgressIPWithIPIP(_TestEgressIP):
         super(_TestEgressIP, self).setUp()
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLAN(_TestEgressIP):
@@ -1553,7 +1550,6 @@ class TestEgressIPWithVXLAN(_TestEgressIP):
         super(_TestEgressIP, self).setUp()
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
@@ -1569,7 +1565,6 @@ class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
         super(_TestEgressIP, self).setUp()
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
@@ -1585,7 +1580,6 @@ class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
         super(_TestEgressIP, self).setUp()
 
 
-@pytest.mark.non_vanilla
 @pytest.mark.egress_ip
 @pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
