@@ -1507,12 +1507,12 @@ spec:
 @pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlay(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         """This method runs once for each class before any tests are run"""
         _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         """This method runs once for each class _after_ all tests are run"""
         calicoctl("delete ippool egress-ippool-1")
 
@@ -1524,11 +1524,11 @@ class TestEgressIPNoOverlay(_TestEgressIP):
 @pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIP(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
@@ -1539,11 +1539,11 @@ class TestEgressIPWithIPIP(_TestEgressIP):
 @pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLAN(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
@@ -1554,11 +1554,11 @@ class TestEgressIPWithVXLAN(_TestEgressIP):
 @pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
@@ -1569,11 +1569,11 @@ class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
 @pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
@@ -1584,11 +1584,11 @@ class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
 @pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
