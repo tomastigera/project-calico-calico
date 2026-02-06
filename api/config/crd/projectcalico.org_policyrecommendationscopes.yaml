@@ -12,7 +12,7 @@ spec:
     plural: policyrecommendationscopes
     singular: policyrecommendationscope
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -69,6 +69,9 @@ spec:
                     type: object
                   type: array
               type: object
+          required:
+            - metadata
+            - spec
           type: object
       served: true
       storage: true

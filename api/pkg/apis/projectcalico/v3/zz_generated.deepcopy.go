@@ -6924,6 +6924,7 @@ func (in *SecurityEventWebhook) DeepCopyInto(out *SecurityEventWebhook) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	in.Spec.DeepCopyInto(&out.Spec)
 	if in.Status != nil {
 		in, out := &in.Status, &out.Status
 		*out = make([]v1.Condition, len(*in))
@@ -6931,7 +6932,6 @@ func (in *SecurityEventWebhook) DeepCopyInto(out *SecurityEventWebhook) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 

@@ -12,7 +12,7 @@ spec:
     plural: externalnetworks
     singular: externalnetwork
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -32,6 +32,9 @@ spec:
               required:
                 - routeTableIndex
               type: object
+          required:
+            - metadata
+            - spec
           type: object
       served: true
       storage: true

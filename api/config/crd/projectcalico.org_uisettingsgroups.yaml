@@ -12,7 +12,7 @@ spec:
     plural: uisettingsgroups
     singular: uisettingsgroup
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -36,6 +36,9 @@ spec:
               required:
                 - description
               type: object
+          required:
+            - metadata
+            - spec
           type: object
       served: true
       storage: true

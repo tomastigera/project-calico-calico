@@ -12,7 +12,7 @@ spec:
     plural: managedclusters
     singular: managedcluster
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -53,6 +53,10 @@ spec:
                     type: object
                   type: array
               type: object
+          required:
+            - metadata
+            - spec
+            - status
           type: object
       served: true
       storage: true

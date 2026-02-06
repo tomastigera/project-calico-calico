@@ -12,7 +12,7 @@ spec:
     plural: securityeventwebhooks
     singular: securityeventwebhook
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -115,6 +115,7 @@ spec:
                 type: object
               type: array
           required:
+            - metadata
             - spec
           type: object
       served: true

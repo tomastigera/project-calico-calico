@@ -24,6 +24,7 @@ const (
 )
 
 // +genclient:nonNamespaced
+// +kubebuilder:resource:scope=Cluster
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // BGPFilterList is a list of BGPFilter resources.

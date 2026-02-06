@@ -12,7 +12,7 @@ spec:
     plural: authenticationreviews
     singular: authenticationreview
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -41,6 +41,8 @@ spec:
                 uid:
                   type: string
               type: object
+          required:
+            - metadata
           type: object
       served: true
       storage: true

@@ -643,6 +643,7 @@ func schema_pkg_apis_projectcalico_v3_AlertException(ref common.ReferenceCallbac
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -937,6 +938,7 @@ func schema_pkg_apis_projectcalico_v3_AuthenticationReview(ref common.ReferenceC
 						},
 					},
 				},
+				Required: []string{"metadata"},
 			},
 		},
 		Dependencies: []string{
@@ -985,7 +987,7 @@ func schema_pkg_apis_projectcalico_v3_AuthenticationReviewList(ref common.Refere
 						},
 					},
 				},
-				Required: []string{"items"},
+				Required: []string{"metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1092,6 +1094,7 @@ func schema_pkg_apis_projectcalico_v3_AuthorizationReview(ref common.ReferenceCa
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1140,7 +1143,7 @@ func schema_pkg_apis_projectcalico_v3_AuthorizationReviewList(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"items"},
+				Required: []string{"metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1502,6 +1505,7 @@ func schema_pkg_apis_projectcalico_v3_BFDConfiguration(ref common.ReferenceCallb
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1550,7 +1554,7 @@ func schema_pkg_apis_projectcalico_v3_BFDConfigurationList(ref common.ReferenceC
 						},
 					},
 				},
-				Required: []string{"items"},
+				Required: []string{"metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -4429,6 +4433,7 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicy(ref common.ReferenceCa
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -4497,7 +4502,7 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyList(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"items"},
+				Required: []string{"metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -5295,6 +5300,7 @@ func schema_pkg_apis_projectcalico_v3_ExternalNetwork(ref common.ReferenceCallba
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -5343,7 +5349,7 @@ func schema_pkg_apis_projectcalico_v3_ExternalNetworkList(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"items"},
+				Required: []string{"metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -7661,16 +7667,14 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlert(ref common.ReferenceCallback) 
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalAlert.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSpec"),
 						},
 					},
 					"status": {
@@ -7680,6 +7684,7 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlert(ref common.ReferenceCallback) 
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -7984,19 +7989,18 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertTemplate(ref common.ReferenceCa
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalAlert.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSpec"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -8465,16 +8469,14 @@ func schema_pkg_apis_projectcalico_v3_GlobalReport(ref common.ReferenceCallback)
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalReport.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ReportSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ReportSpec"),
 						},
 					},
 					"status": {
@@ -8484,6 +8486,7 @@ func schema_pkg_apis_projectcalico_v3_GlobalReport(ref common.ReferenceCallback)
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -8563,19 +8566,18 @@ func schema_pkg_apis_projectcalico_v3_GlobalReportType(ref common.ReferenceCallb
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalReport.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ReportTypeSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ReportTypeSpec"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -8655,16 +8657,14 @@ func schema_pkg_apis_projectcalico_v3_GlobalThreatFeed(ref common.ReferenceCallb
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalThreatFeed.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalThreatFeedSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalThreatFeedSpec"),
 						},
 					},
 					"status": {
@@ -8674,6 +8674,7 @@ func schema_pkg_apis_projectcalico_v3_GlobalThreatFeed(ref common.ReferenceCallb
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -10375,26 +10376,24 @@ func schema_pkg_apis_projectcalico_v3_LicenseKey(ref common.ReferenceCallback) c
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.  This resource is a singleton, always named \"default\".",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the LicenseKey.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeySpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeySpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Status of the LicenseKey.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeyStatus"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeyStatus"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -10572,26 +10571,24 @@ func schema_pkg_apis_projectcalico_v3_ManagedCluster(ref common.ReferenceCallbac
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the ManagedCluster.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Status of the ManagedCluster",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterStatus"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterStatus"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec", "status"},
 			},
 		},
 		Dependencies: []string{
@@ -11542,6 +11539,7 @@ func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScope(ref common.Refer
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -12080,19 +12078,18 @@ func schema_pkg_apis_projectcalico_v3_RemoteClusterConfiguration(ref common.Refe
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the RemoteClusterConfiguration.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterConfigurationSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterConfigurationSpec"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -12988,6 +12985,12 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhook(ref common.ReferenceC
 							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec"),
+						},
+					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
@@ -13001,14 +13004,8 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhook(ref common.ReferenceC
 							},
 						},
 					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec"),
-						},
-					},
 				},
-				Required: []string{"spec"},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -14566,19 +14563,18 @@ func schema_pkg_apis_projectcalico_v3_UISettings(ref common.ReferenceCallback) c
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the UISettings.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.UISettingsSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.UISettingsSpec"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -14609,19 +14605,18 @@ func schema_pkg_apis_projectcalico_v3_UISettingsGroup(ref common.ReferenceCallba
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the UISettingsGroup.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.UISettingsGroupSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.UISettingsGroupSpec"),
 						},
 					},
 				},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{

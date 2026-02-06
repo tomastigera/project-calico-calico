@@ -12,7 +12,7 @@ spec:
     plural: globalalerts
     singular: globalalert
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -109,6 +109,9 @@ spec:
                 - active
                 - healthy
               type: object
+          required:
+            - metadata
+            - spec
           type: object
       served: true
       storage: true

@@ -12,7 +12,7 @@ spec:
     plural: licensekeys
     singular: licensekey
   preserveUnknownFields: false
-  scope: Namespaced
+  scope: Cluster
   versions:
     - name: v3
       schema:
@@ -53,6 +53,9 @@ spec:
                     - Enterprise
                   type: string
               type: object
+          required:
+            - metadata
+            - spec
           type: object
       served: true
       storage: true
