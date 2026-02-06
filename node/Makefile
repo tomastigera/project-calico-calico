@@ -758,7 +758,7 @@ external-network-setup: .calico_test.created external-network-cleanup kubectl di
 	STEPS=setup \
 	  ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
-EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --nocapture --nologcapture
+EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py
 .PHONY: external-network-run-test
 external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	@echo "Starting to run external network tests..."
@@ -770,7 +770,7 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started..." && \
-			cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+			cd /code/tests/k8st && PYTHONPATH=/code pytest $(EXTERNAL_NETWORK_ST_TO_RUN) -sv --junit-xml="/code/report/k8s-enet-tests.xml"'
 
 .PHONY: external-network-cleanup
 external-network-cleanup:
