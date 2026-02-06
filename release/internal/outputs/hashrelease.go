@@ -31,6 +31,7 @@ var hashreleaseOutputFileName = "hashrelease.yaml"
 type PublishedHashrelease struct {
 	Hashrelease    *hashreleaseserver.Hashrelease `yaml:",inline"`
 	HashreleaseURL string                         `yaml:"url"`
+	CIURL          string                         `yaml:"ciURL,omitempty"`
 	SlackResponse  *slack.MessageResponse         `yaml:"slack,omitempty"`
 }
 
