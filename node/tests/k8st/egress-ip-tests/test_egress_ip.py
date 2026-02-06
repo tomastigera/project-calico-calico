@@ -1498,7 +1498,8 @@ spec:
         self.add_cleanup(lambda: kubectl("delete service %s -n %s" % (name, ns)))
 
         svc_ip = run("kubectl get service " + name + " -n %s -o json | jq -r '.spec.clusterIP'" % ns).strip()
-        node_port = run("kubectl get service " + name + r" -n %s -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'" % ns).strip()
+        jq_expr = r'.spec.ports[] | "\(.nodePort)"'
+        node_port = run(f"kubectl get service {name} -n {ns} -o json 2> /dev/null | jq -r '{jq_expr}'").strip()
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
