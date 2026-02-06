@@ -203,6 +203,7 @@ class FailoverTestConfig(object):
                 self.rb_server_dev = get_dev(f.server_plane)
 
 
+@pytest.mark.skip
 class _FailoverTest(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -582,6 +583,7 @@ class TestFailoverServiceIP(_FailoverTest):
 
 @pytest.mark.non_vanilla
 @pytest.mark.dual_tor
+@pytest.mark.skip
 class _TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):

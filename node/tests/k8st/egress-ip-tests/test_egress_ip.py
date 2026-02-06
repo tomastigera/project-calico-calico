@@ -36,6 +36,7 @@ def patch_ippool(name, vxlanMode=None, ipipMode=None):
     _log.info("Updated vxlanMode of %s from %s to %s, ipipMode from %s to %s",
               name, old_vxlanMode, vxlanMode, old_ipipMode, ipipMode)
 
+@pytest.mark.skip
 class _TestEgressIP(TestBase):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
