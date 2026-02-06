@@ -62,7 +62,7 @@ class Flow(object):
 
 
 def get_pod_ip(ns, key, value):
-    cmd="kubectl get pods -n " + ns + " --selector=\"" + key + "=" + value + "\"" + " -o json 2> /dev/null " + " | jq -r '.items[] | \"\(.metadata.name) \(.status.podIP)\"'"
+    cmd="kubectl get pods -n " + ns + " --selector=\"" + key + "=" + value + "\"" + " -o json 2> /dev/null " + r" | jq -r '.items[] | \"\(.metadata.name) \(.status.podIP)\"'"
     output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
     s=output.split()
     if len(s) != 2:
@@ -78,7 +78,7 @@ def get_service_ip(ns, name):
 
 
 def get_node_port(ns, name):
-    cmd="kubectl get service " + name + " -n " + ns + " -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'"
+    cmd="kubectl get service " + name + " -n " + ns + r" -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'"
     output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
     return output.strip()
 
@@ -134,7 +134,7 @@ def get_plane(ns, src_pod_name, dst_ip):
     #  1  *  *  172.31.12.1  0.013 ms  *
     # And so on.
     for l in trlines:
-        m = re.search(str(route_order) + ' ( \* )* 172\.31\..(\d)', l)
+        m = re.search(str(route_order) + r' ( \* )* 172\.31\..(\d)', l)
         if m:
             return m.group(2)
 
@@ -589,7 +589,7 @@ class _TestFailoverNodePort(_FailoverTest):
     def setUp(self):
         super(TestFailoverNodePort, self).setUp()
         # Find node loopback address for kind-worker2.
-        cmd='''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
+        cmd=r'''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
         node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True).strip()
         self.config = FailoverTestConfig(self.namespace(), 2000, 10, [
             Flow(self.namespace(), "client", "ra-server", node_port_ip, get_node_port(self.namespace(), "ra-server"), node_port_ip, get_node_port(self.namespace(), "ra-server-short")),
