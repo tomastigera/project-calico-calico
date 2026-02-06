@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 from random import randint
 
+import pytest
+
 from tests.k8st.test_base import NetcatServerTCP, NetcatClientTCP, Pod, TestBase
 from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, \
         node_info, retry_until_success, stop_for_debug, update_ds_env
@@ -1499,9 +1501,10 @@ spec:
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
-_TestEgressIP.vanilla = False
-_TestEgressIP.egress_ip = True
 
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlay(_TestEgressIP):
     @classmethod
     def setupClass(klass):
@@ -1515,8 +1518,11 @@ class TestEgressIPNoOverlay(_TestEgressIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPNoOverlay.egress_ip_no_overlay = True
 
+
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIP(_TestEgressIP):
     @classmethod
     def setupClass(klass):
@@ -1528,8 +1534,11 @@ class TestEgressIPWithIPIP(_TestEgressIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithIPIP.egress_ip_ipip = True
 
+
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLAN(_TestEgressIP):
     @classmethod
     def setupClass(klass):
@@ -1541,8 +1550,11 @@ class TestEgressIPWithVXLAN(_TestEgressIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithVXLAN.egress_ip_vxlan = True
 
+
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
     @classmethod
     def setupClass(klass):
@@ -1554,8 +1566,11 @@ class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPNoOverlayAndWireguard.egress_ip_no_overlay = True
 
+
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
     @classmethod
     def setupClass(klass):
@@ -1567,8 +1582,11 @@ class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithIPIPAndWireguard.egress_ip_ipip = True
 
+
+@pytest.mark.non_vanilla
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
     @classmethod
     def setupClass(klass):
@@ -1580,4 +1598,3 @@ class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithVXLANAndWireguard.egress_ip_vxlan = True

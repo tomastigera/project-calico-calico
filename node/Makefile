@@ -706,7 +706,7 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
 ## on a test environment which doesn't support dual tor, and excludes egress IP tests which
 ## reconfigure the cluster configuration.
-K8ST_TO_RUN ?= -A vanilla
+K8ST_TO_RUN ?= -m "not non_vanilla"
 K8ST_REPORT_FILENAME ?= k8s-tests.xml
 
 .PHONY: k8s-test

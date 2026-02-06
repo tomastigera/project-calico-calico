@@ -393,12 +393,9 @@ spec:
         return calicoPod
 
 
-# Default is for K8ST tests to run vanilla tests, and not to run
-# specialized tests (e.g., dual_dor, egress_ip).
-# Individual test classes can override this.
-TestBase.vanilla = True
-TestBase.dual_tor = False
-TestBase.egress_ip = False
+# Default is for K8ST tests to run vanilla tests (which are all those that *don't* have
+# the "non_vanilla" marker), and not to run specialized tests (e.g., dual_tor,
+# egress_ip).  Individual test classes can override this.
 
 
 class Container(object):

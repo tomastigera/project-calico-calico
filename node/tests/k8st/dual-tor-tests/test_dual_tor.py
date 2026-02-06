@@ -9,6 +9,8 @@ import threading
 import time
 import logging
 
+import pytest
+
 from kubernetes import client, config
 
 from tests.k8st.test_base import TestBase
@@ -554,6 +556,8 @@ class FailoverCluster(object):
         )
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class TestFailoverPodIP(_FailoverTest):
 
     def setUp(self):
@@ -564,6 +568,8 @@ class TestFailoverPodIP(_FailoverTest):
         ])
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class TestFailoverServiceIP(_FailoverTest):
 
     def setUp(self):
@@ -574,6 +580,8 @@ class TestFailoverServiceIP(_FailoverTest):
         ])
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class _TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):
@@ -597,6 +605,8 @@ class _TestFailoverNodePort(_FailoverTest):
         self.check_early_container_noticed_restart("kind-worker2", old_log_count)
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class TestFailoverHostAccess(_FailoverTest):
 
     def setUp(self):
@@ -625,6 +635,8 @@ def ensureCalicoReady():
     retry_until_success(assertCalicoReady, retries=12, wait_time=10)
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class TestRestartCalicoNodes(TestBase):
 
     def get_restart_node_pod_name(self):
@@ -658,15 +670,3 @@ class TestRestartCalicoNodes(TestBase):
 
             # Wait another 2s before moving on.
             time.sleep(2)
-
-
-TestFailoverPodIP.vanilla = False
-TestFailoverPodIP.dual_tor = True
-TestFailoverServiceIP.vanilla = False
-TestFailoverServiceIP.dual_tor = True
-_TestFailoverNodePort.vanilla = False
-_TestFailoverNodePort.dual_tor = True
-TestFailoverHostAccess.vanilla = False
-TestFailoverHostAccess.dual_tor = True
-TestRestartCalicoNodes.vanilla = False
-TestRestartCalicoNodes.dual_tor = True
