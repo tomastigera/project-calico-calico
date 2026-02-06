@@ -259,7 +259,7 @@ class TestBase(TestCase):
     def get_ds_env(self, ds, ns, key):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
+        node_ds = api.read_namespaced_daemon_set(ds, ns)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for env in container.env:

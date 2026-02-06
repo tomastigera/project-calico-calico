@@ -335,7 +335,7 @@ def calico_node_pod_name(nodename):
 def update_ds_env(ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
+        node_ds = api.read_namespaced_daemon_set(ds, ns)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for k, v in env_vars.items():
