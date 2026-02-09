@@ -56,15 +56,15 @@ func init() {
 	prometheus.MustRegister(conntrackCounterStaleNAT)
 }
 
-type WorkloadRemoveScanner struct {
+type WorkloadRemoveScannerTCP struct {
 	mutex      sync.Mutex
 	ips        set.Set[string]
 	removedIPs set.Set[string]
 	ipCh       chan string
 }
 
-func NewWorkloadRemoveScanner(ipCh chan string) *WorkloadRemoveScanner {
-	wrs := &WorkloadRemoveScanner{
+func NewWorkloadRemoveScannerTCP(ipCh chan string) *WorkloadRemoveScannerTCP {
+	wrs := &WorkloadRemoveScannerTCP{
 		ips:        set.New[string](),
 		removedIPs: set.New[string](),
 		ipCh:       ipCh,
@@ -73,7 +73,7 @@ func NewWorkloadRemoveScanner(ipCh chan string) *WorkloadRemoveScanner {
 	return wrs
 }
 
-func (w *WorkloadRemoveScanner) run() {
+func (w *WorkloadRemoveScannerTCP) run() {
 	for {
 		ip, ok := <-w.ipCh
 		if !ok {
@@ -86,7 +86,7 @@ func (w *WorkloadRemoveScanner) run() {
 	}
 }
 
-func (w *WorkloadRemoveScanner) IterationStart() {
+func (w *WorkloadRemoveScannerTCP) IterationStart() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	w.removedIPs = w.ips.Copy()
@@ -94,13 +94,13 @@ func (w *WorkloadRemoveScanner) IterationStart() {
 }
 
 // IterationEnd satisfies EntryScannerSynced
-func (w *WorkloadRemoveScanner) IterationEnd() {
+func (w *WorkloadRemoveScannerTCP) IterationEnd() {
 	w.mutex.Lock()
 	w.removedIPs = set.New[string]()
 	w.mutex.Unlock()
 }
 
-func (w *WorkloadRemoveScanner) Check(ctKey KeyInterface, ctVal ValueInterface, get EntryGet) (ScanVerdict, int64) {
+func (w *WorkloadRemoveScannerTCP) Check(ctKey KeyInterface, ctVal ValueInterface, get EntryGet) (ScanVerdict, int64) {
 	srcIP := ctKey.AddrA().String()
 	dstIP := ctKey.AddrB().String()
 	if ctKey.Proto() == ProtoTCP &&
@@ -111,6 +111,12 @@ func (w *WorkloadRemoveScanner) Check(ctKey KeyInterface, ctVal ValueInterface, 
 		return ScanVerdictSendRST, ctVal.LastSeen()
 	}
 	return ScanVerdictOK, ctVal.LastSeen()
+}
+
+func (w *WorkloadRemoveScannerTCP) NumIPsPending() int {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	return w.ips.Len()
 }
 
 type LivenessScanner struct {
