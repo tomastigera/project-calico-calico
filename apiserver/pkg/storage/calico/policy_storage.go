@@ -15,7 +15,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	features "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewNetworkPolicyStorage creates a new libcalico-based k8sStorage.Interface implementation for Policy
@@ -48,8 +47,7 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 		return c.NetworkPolicies().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		res := obj.(*v3.NetworkPolicy)
-		return !opts.LicenseMonitor.GetFeatureStatus(features.EgressAccessControl) && rulesHaveDNSDomain(res.Spec.Egress)
+		return false
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

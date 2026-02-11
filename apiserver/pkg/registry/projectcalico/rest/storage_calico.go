@@ -556,7 +556,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: ipReservationRESTOptions,
+			RESTOptions:    ipReservationRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -897,7 +898,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: caliconodestatusRESTOptions,
+			RESTOptions:    caliconodestatusRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -919,7 +921,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: ipamconfigRESTOptions,
+			RESTOptions:    ipamconfigRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -941,7 +944,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: securityeventRESTOptions,
+			RESTOptions:    securityeventRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -963,7 +967,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: blockAffinityRESTOptions,
+			RESTOptions:    blockAffinityRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -985,7 +990,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: externalnetworkRESTOptions,
+			RESTOptions:    externalnetworkRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -1007,7 +1013,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: egressGatewayPolicyRESTOptions,
+			RESTOptions:    egressGatewayPolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,

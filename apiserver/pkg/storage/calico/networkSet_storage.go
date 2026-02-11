@@ -15,7 +15,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	"github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewNetworkSetStorage creates a new libcalico-based storage.Interface implementation for NetworkSets
@@ -48,8 +47,7 @@ func NewNetworkSetStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		return c.NetworkSets().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		res := obj.(*api.NetworkSet)
-		return !opts.LicenseMonitor.GetFeatureStatus(features.EgressAccessControl) && len(res.Spec.AllowedEgressDomains) > 0
+		return false
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
