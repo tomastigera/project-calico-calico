@@ -5,11 +5,14 @@ import logging
 import re
 import time
 
+import pytest
+
 from tests.k8st.test_base import NetcatClientTCP, Container, Pod, TestBase
 from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, retry_until_success, update_ds_env
 
 _log = logging.getLogger(__name__)
 
+@pytest.mark.non_vanilla
 class TestExternalNetwork(TestBase):
     def setUp(self):
         super(TestExternalNetwork, self).setUp()
@@ -510,5 +513,3 @@ EOF
 
     def test_external_net_multihop_no_overlay(self):
         self._test_external_net_multihop(ipv4_encap="None")
-
-TestExternalNetwork.vanilla = False

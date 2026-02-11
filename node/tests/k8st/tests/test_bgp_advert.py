@@ -19,7 +19,7 @@ import time
 
 from tests.k8st.test_base import TestBase
 from tests.k8st.utils.utils import start_external_node_with_bgp, \
-        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info, NGINX_IMAGE, update_ds_env
+        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info, NGINX_IMAGE
 
 _log = logging.getLogger(__name__)
 
@@ -111,11 +111,6 @@ class _TestBGPAdvert(TestBase):
             "kube-node-extra",
             bird_peer_config=self.get_bird_conf(),
         )
-
-        # Enable debug logging
-        update_ds_env("calico-node",
-                           "calico-system",
-                           {"BGP_LOGSEVERITYSCREEN": "debug"})
 
         # Establish BGPPeer from cluster nodes to node-extra
         calicoctl("""apply -f - << EOF

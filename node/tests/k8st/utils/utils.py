@@ -232,6 +232,8 @@ def run(command, logerr=True, allow_fail=False, allow_codes=[], returnerr=False)
 
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
+    out = out.decode()
+    err = err.decode()
     _log.info("Out:\n%s", out)
     _log.info("Err:\n%s", err)
 
@@ -333,7 +335,7 @@ def calico_node_pod_name(nodename):
 def update_ds_env(ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
+        node_ds = api.read_namespaced_daemon_set(ds, ns)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for k, v in env_vars.items():

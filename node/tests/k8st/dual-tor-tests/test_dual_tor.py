@@ -9,6 +9,8 @@ import threading
 import time
 import logging
 
+import pytest
+
 from kubernetes import client, config
 
 from tests.k8st.test_base import TestBase
@@ -60,8 +62,8 @@ class Flow(object):
 
 
 def get_pod_ip(ns, key, value):
-    cmd="kubectl get pods -n " + ns + " --selector=\"" + key + "=" + value + "\"" + " -o json 2> /dev/null " + " | jq -r '.items[] | \"\(.metadata.name) \(.status.podIP)\"'"
-    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    cmd="kubectl get pods -n " + ns + " --selector=\"" + key + "=" + value + "\"" + " -o json 2> /dev/null " + r" | jq -r '.items[] | \"\(.metadata.name) \(.status.podIP)\"'"
+    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
     s=output.split()
     if len(s) != 2:
         _log.exception("failed to get pod ip for label %s==%s", key, value)
@@ -71,13 +73,13 @@ def get_pod_ip(ns, key, value):
 
 def get_service_ip(ns, name):
     cmd = "kubectl get service " + name + " -n " + ns + " -o json | jq -r '.spec.clusterIP'"
-    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
     return output.strip()
 
 
 def get_node_port(ns, name):
-    cmd="kubectl get service " + name + " -n " + ns + " -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'"
-    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    cmd="kubectl get service " + name + " -n " + ns + r" -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'"
+    output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
     return output.strip()
 
 
@@ -99,7 +101,7 @@ def traceroute(ns, src_pod_name, dst_ip, timeout):
     cmd = "kubectl exec " + src_pod_name + " -n " + ns + " -- timeout " + timeout + " traceroute -n " + dst_ip
     _log.info("run: %s", cmd)
     try:
-        output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("output:\n%s", output)
     except subprocess.CalledProcessError as e:
         _log.info("rc %s output:\n%s", e.returncode, e.output)
@@ -121,7 +123,7 @@ def get_plane(ns, src_pod_name, dst_ip):
     try:
         trlines = traceroute(ns, src_pod_name, dst_ip, "5s")
     except Exception:
-        print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
+        _log.warning("For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later.")
         trlines = traceroute(ns, src_pod_name, dst_ip, "25s")
 
     # We are looking for a line like this:
@@ -132,7 +134,7 @@ def get_plane(ns, src_pod_name, dst_ip):
     #  1  *  *  172.31.12.1  0.013 ms  *
     # And so on.
     for l in trlines:
-        m = re.search(str(route_order) + ' ( \* )* 172\.31\..(\d)', l)
+        m = re.search(str(route_order) + r' ( \* )* 172\.31\..(\d)', l)
         if m:
             return m.group(2)
 
@@ -201,6 +203,7 @@ class FailoverTestConfig(object):
                 self.rb_server_dev = get_dev(f.server_plane)
 
 
+@pytest.mark.non_vanilla
 class _FailoverTest(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -361,46 +364,46 @@ class _FailoverTest(TestBase):
         # break tor2tor link via eth1 of tor router.
         # client to rb-server is currently via client_rb_plane.
         cmd="docker exec bird-a" + self.config.client_rb_plane + " ip link set dev eth1 down"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: break tor2tor")
 
     def link_func_restore_tor2tor(self):
         cmd="docker exec bird-a" + self.config.client_rb_plane + " ip link set dev eth1 up"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: restore tor2tor")
 
     def link_func_break_tor2node(self):
         # break tor2node link via eth0 of tor router.
         # client to rb-server is currently via client_rb_plane.
         cmd="docker exec bird-b" + self.config.client_rb_plane + " ip link set dev eth0 down"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: break tor2node")
 
     def link_func_restore_tor2node(self):
         cmd="docker exec bird-b" + self.config.client_rb_plane + " ip link set dev eth0 up"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: restore tor2node")
 
     def link_func_drop_client_node(self):
         # drop packets silently on client node on interface to rb-server.
         cmd="docker exec kind-worker tc qdisc add dev " +  self.config.client_rb_dev + " root netem loss 100%"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: drop client node")
 
     def link_func_restore_client_node(self):
         cmd="docker exec kind-worker tc qdisc del dev " +  self.config.client_rb_dev + " root"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: restore client node")
 
     def link_func_drop_server_node(self):
         # drop packets silently on rb-server node on interface to client.
         cmd="docker exec kind-worker3 tc qdisc add dev " +  self.config.rb_server_dev + " root netem loss 100%"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: drop server node")
 
     def link_func_restore_server_node(self):
         cmd="docker exec kind-worker3 tc qdisc del dev " +  self.config.rb_server_dev + " root"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True)
         _log.info("link function: restore server node")
 
     def do_nothing(self):
@@ -554,6 +557,7 @@ class FailoverCluster(object):
         )
 
 
+@pytest.mark.dual_tor
 class TestFailoverPodIP(_FailoverTest):
 
     def setUp(self):
@@ -564,6 +568,7 @@ class TestFailoverPodIP(_FailoverTest):
         ])
 
 
+@pytest.mark.dual_tor
 class TestFailoverServiceIP(_FailoverTest):
 
     def setUp(self):
@@ -574,13 +579,14 @@ class TestFailoverServiceIP(_FailoverTest):
         ])
 
 
+@pytest.mark.non_vanilla
 class _TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):
         super(TestFailoverNodePort, self).setUp()
         # Find node loopback address for kind-worker2.
-        cmd='''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
-        node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).strip()
+        cmd=r'''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
+        node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, text=True).strip()
         self.config = FailoverTestConfig(self.namespace(), 2000, 10, [
             Flow(self.namespace(), "client", "ra-server", node_port_ip, get_node_port(self.namespace(), "ra-server"), node_port_ip, get_node_port(self.namespace(), "ra-server-short")),
             Flow(self.namespace(), "client", "rb-server", node_port_ip, get_node_port(self.namespace(), "rb-server"), node_port_ip, get_node_port(self.namespace(), "rb-server-short")),
@@ -597,6 +603,7 @@ class _TestFailoverNodePort(_FailoverTest):
         self.check_early_container_noticed_restart("kind-worker2", old_log_count)
 
 
+@pytest.mark.dual_tor
 class TestFailoverHostAccess(_FailoverTest):
 
     def setUp(self):
@@ -625,6 +632,8 @@ def ensureCalicoReady():
     retry_until_success(assertCalicoReady, retries=12, wait_time=10)
 
 
+@pytest.mark.non_vanilla
+@pytest.mark.dual_tor
 class TestRestartCalicoNodes(TestBase):
 
     def get_restart_node_pod_name(self):
@@ -658,15 +667,3 @@ class TestRestartCalicoNodes(TestBase):
 
             # Wait another 2s before moving on.
             time.sleep(2)
-
-
-TestFailoverPodIP.vanilla = False
-TestFailoverPodIP.dual_tor = True
-TestFailoverServiceIP.vanilla = False
-TestFailoverServiceIP.dual_tor = True
-_TestFailoverNodePort.vanilla = False
-_TestFailoverNodePort.dual_tor = True
-TestFailoverHostAccess.vanilla = False
-TestFailoverHostAccess.dual_tor = True
-TestRestartCalicoNodes.vanilla = False
-TestRestartCalicoNodes.dual_tor = True
