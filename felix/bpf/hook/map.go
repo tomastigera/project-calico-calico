@@ -283,6 +283,10 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 		// Disable autoload for the IP defrag program
 		obj.SetProgramAutoload("calico_tc_skb_ipv4_frag", false)
 	}
+	if !at.hasDNSParser() {
+		// Disable autoload for the DNS parser program
+		obj.SetProgramAutoload("calico_tc_dns_parser", false)
+	}
 	skipIPDefrag := false
 	if err := obj.Load(); err != nil {
 		// If load fails and this attach type has IP defrag, try loading without the IP defrag program
@@ -302,6 +306,10 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 
 			// Disable autoload for the IP defrag program
 			obj.SetProgramAutoload("calico_tc_skb_ipv4_frag", false)
+			if !at.hasDNSParser() {
+				// Disable autoload for the DNS parser program
+				obj.SetProgramAutoload("calico_tc_dns_parser", false)
+			}
 			skipIPDefrag = true
 
 			// Try loading again

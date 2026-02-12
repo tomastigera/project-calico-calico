@@ -3872,6 +3872,7 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 			LogLevel:   aptc.LogLevel,
 			ToHostDrop: aptc.ToHostDrop,
 			DSR:        aptc.DSR,
+			DNSInline:  aptc.DNSInlineProcessing,
 		}
 
 		at.Family = int(ipFamily)

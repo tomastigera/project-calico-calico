@@ -74,6 +74,7 @@ type AttachType struct {
 	LogLevel   string
 	ToHostDrop bool
 	DSR        bool
+	DNSInline  bool
 }
 
 func (at AttachType) ObjectFile() string {
@@ -104,6 +105,10 @@ func (at AttachType) hasIPDefrag() bool {
 
 func (at AttachType) hasMaglev() bool {
 	return at.Type == tcdefs.EpTypeHost && at.Hook == Ingress
+}
+
+func (at AttachType) hasDNSParser() bool {
+	return at.DNSInline
 }
 
 type DefPolicy int
