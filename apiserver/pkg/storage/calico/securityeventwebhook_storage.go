@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	features "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewSecurityEventWebhookStorage creates a new libcalico-based storage.Interface implementation for SecurityEventWebhooks
@@ -47,7 +48,7 @@ func NewSecurityEventWebhookStorage(opts Options) (registry.DryRunnableStorage, 
 		return c.SecurityEventWebhook().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return false
+		return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

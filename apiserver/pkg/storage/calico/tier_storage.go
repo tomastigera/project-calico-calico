@@ -15,7 +15,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	"github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewTierStorage creates a new libcalico-based storage.Interface implementation for Tiers
@@ -48,7 +47,7 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		return c.Tiers().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.Tiers)
+		return false
 	}
 
 	// TODO(doublek): Inject codec, client for nicer testing.
