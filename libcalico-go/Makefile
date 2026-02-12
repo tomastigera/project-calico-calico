@@ -15,7 +15,7 @@ NETPOL_BANP_CRD = policy.networking.k8s.io_baselineadminnetworkpolicies.yaml
 # NETPOL_CNP_REF = refs/heads/main
 # For a commit, just use the commit ID:
 # NETPOL_CNP_REF = <commit ID>
-NETPOL_CNP_REF = 196cf8e0d449e108f4bb36cb97e127a37d24e428
+NETPOL_CNP_REF = 412bf65729a56bc9f0569a5e5a95685ac22350d9
 NETPOL_CNP_CRD_URL = https://raw.githubusercontent.com/kubernetes-sigs/network-policy-api/$(NETPOL_CNP_REF)/config/crd/standard
 NETPOL_CNP_CRD = policy.networking.k8s.io_clusternetworkpolicies.yaml
 
