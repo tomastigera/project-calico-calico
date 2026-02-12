@@ -159,10 +159,20 @@ type ValueInterface interface {
 	Data() EntryData
 	IsForwardDSR() bool
 	String() string
+	SetFlags(flags uint32) ValueInterface
 }
 
 func (e Value) RSTSeen() int64 {
 	return int64(binary.LittleEndian.Uint64(e[VoRSTSeen : VoRSTSeen+8]))
+}
+
+// SetFlags sets the flags in the value, replacing any existing flags
+func (e Value) SetFlags(flags uint32) ValueInterface {
+	e[VoFlags] = byte(flags & 0xff)
+	e[VoFlags2] = byte((flags >> 8) & 0xff)
+	e[VoFlags3] = byte((flags >> 16) & 0xff)
+	e[VoFlags4] = byte((flags >> 24) & 0xff)
+	return e
 }
 
 func (e Value) LastSeen() int64 {
