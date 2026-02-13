@@ -57,20 +57,19 @@ func init() {
 				// License is empty or invalid. Don't apply it.
 				return nil, errors.New("the license you're trying to create is empty or invalid")
 			}
-			if licStatus == licClient.Expired {
-				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())
-			}
-			if licStatus == licClient.InGracePeriod {
+			expiryTime := licClaims.Expiry.Time()
+			switch licStatus {
+			case licClient.InGracePeriod:
 				// License is already expired but in grace period.
-				expiryTime := licClaims.Expiry.Time()
 				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
 				log.Warningf("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
-			} else {
+			case licClient.Expired:
+				log.Warningf("The license you're creating expired on %s. Cluster will run in limited mode.", expiryTime.Local())
+			default:
 				log.Debug("License is valid")
 			}
 
-			// License is not corrupt or expired, so we create it.
+			// License is not corrupt, so we create it.
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
@@ -86,18 +85,17 @@ func init() {
 			licStatus := licClaims.Validate()
 			if licStatus == licClient.NoLicenseLoaded {
 				// License is empty or invalid. Don't apply it.
-				return nil, errors.New("the license you're trying to create is empty or invalid")
+				return nil, errors.New("the license you're trying to apply is empty or invalid")
 			}
-			if licStatus == licClient.Expired {
-				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to apply expired on %s", licClaims.Expiry.Time().Local())
-			}
-			if licStatus == licClient.InGracePeriod {
+			expiryTime := licClaims.Expiry.Time()
+			switch licStatus {
+			case licClient.InGracePeriod:
 				// License is already expired but in grace period.
-				expiryTime := licClaims.Expiry.Time()
 				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
-				log.Warningf("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
-			} else {
+				log.Warningf("The license you're trying to apply expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
+			case licClient.Expired:
+				log.Warningf("The license you're applying expired on %s. Cluster will run in limited mode.", expiryTime.Local())
+			default:
 				log.Debug("License is valid")
 			}
 

@@ -92,8 +92,7 @@ func New(client bapiClient) LicenseMonitor {
 func (l *licenseMonitor) GetFeatureStatus(feature string) bool {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
-	// Use the ValidateFeatureAtTime variant so that we use mocked time in the UTs.
-	return l.activeLicense.ValidateFeatureAtTime(l.now(), feature)
+	return l.activeLicense.ValidateFeature(feature)
 }
 
 func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {

@@ -59,7 +59,8 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 	}
 
 	aapiLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() == licClient.Valid {
+	switch licClaims.Validate() {
+	case licClient.Valid, licClient.InGracePeriod, licClient.Expired:
 		aapiLicenseKey.Status = calico.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(licClaims.Features),
@@ -75,7 +76,8 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	}
 
 	newLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() == licClient.Valid {
+	switch licClaims.Validate() {
+	case licClient.Valid, licClient.InGracePeriod, licClient.Expired:
 		newLicenseKey.Status = calico.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes,
@@ -173,22 +175,16 @@ func convertToLibcalico(aapiObj runtime.Object) *calico.LicenseKey {
 	return lcgLicenseKey
 }
 
-// Ensure licenseKey is decodable and valid (not expired)
+// Ensure licenseKey is decodable. Expired licenses are allowed so customers can
+// run in degraded mode (dataplane continues, logs/metrics disabled).
 func validateLicenseKey(aapiObj runtime.Object) field.ErrorList {
 	allErrs := field.ErrorList{}
 	lcgLicenseKey := convertToLibcalico(aapiObj)
 
 	// Decode the license to make sure it's not corrupt.
-	licClaims, err := licClient.Decode(*lcgLicenseKey)
-	if err != nil {
+	if _, err := licClient.Decode(*lcgLicenseKey); err != nil {
 		allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("license"),
 			fmt.Errorf("license is corrupted: %s", err)))
-	} else {
-		// Check if the license is expired
-		if licClaims.Validate() != licClient.Valid {
-			allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("token"),
-				fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())))
-		}
 	}
 
 	return allErrs
