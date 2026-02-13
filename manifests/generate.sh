@@ -89,7 +89,6 @@ ${HELM} -n tigera-operator template \
   ../charts/tigera-operator >>tigera-operator.yaml
 
 ##########################################################################
-
 # Build other Tigera operator manifests.
 #
 # To add a new manifest to this directory, define
@@ -118,17 +117,37 @@ done
 ##########################################################################
 # Build manifest which includes both Calico and Operator CRDs.
 ##########################################################################
-echo "# Tigera Operator and Calico Enterprise CRDs" >operator-crds.yaml
+echo "# crd.projectcalico.org/v1 and operator.tigera.io/v1 APIs" >v1_crd_projectcalico_org.yaml
 (for file in ../charts/crd.projectcalico.org.v1/templates/*.yaml; do
   echo "---"
-  echo "# Source: tigera-operator/crds/$(basename $file)"
+  echo "# Source: crd.projectcalico.org.v1/templates/$(basename $file)"
   cat $file
-done) >>operator-crds.yaml
+done) >>v1_crd_projectcalico_org.yaml
 (for file in ../charts/crd.projectcalico.org.v1/templates/calico/*.yaml; do
   echo "---"
-  echo "# Source: tigera-operator/crds/calico/$(basename $file)"
+  echo "# Source: crd.projectcalico.org.v1/templates/$(basename $file)"
   cat $file
-done) >>operator-crds.yaml
+done) >>v1_crd_projectcalico_org.yaml
+
+# Maintain legacy operator-crds.yaml for a while.
+cp v1_crd_projectcalico_org.yaml operator-crds.yaml
+
+echo "# projectcalico.org/v3 and operator.tigera.io/v1 APIs" >v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/calico/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/calico/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/admission/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/admission/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
 
 ##########################################################################
 # Build CRDs files used in docs.
