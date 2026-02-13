@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package authorizationreview_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -27,7 +27,9 @@ func init() {
 	testutils.HookLogrusForGinkgo()
 }
 
-func TestRules(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "AuthorizationReview Suite")
+func TestAuthorizationReview(t *testing.T) {
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../report/authorizationreview.xml"
+	ginkgo.RunSpecs(t, "AuthorizationReview Suite", suiteConfig, reporterConfig)
 }

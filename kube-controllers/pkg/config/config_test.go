@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -158,7 +158,7 @@ current-context: test-context`
 				cancel()
 			})
 
-			It("should return default RunConfig", func(done Done) {
+			It("should return default RunConfig", func() {
 				runCfg := <-ctrl.ConfigChan()
 				Expect(runCfg.LogLevelScreen).To(Equal(log.InfoLevel))
 				Expect(runCfg.HealthEnabled).To(BeTrue())
@@ -197,10 +197,9 @@ current-context: test-context`
 				Expect(rc.Migration).To(Equal(&config.MigrationControllerConfig{
 					PolicyNameMigrator: "Enabled",
 				}))
-				close(done)
 			})
 
-			It("should write status", func(done Done) {
+			It("should write status", func() {
 				<-ctrl.ConfigChan()
 				Expect(m.update).ToNot(BeNil())
 				s := m.update.Status
@@ -230,7 +229,6 @@ current-context: test-context`
 				Expect(c.LoadBalancer).To(Equal(&v3.LoadBalancerControllerConfig{
 					AssignIPs: v3.AllServices,
 				}))
-				close(done)
 			})
 		})
 
@@ -283,7 +281,7 @@ current-context: test-context`
 				cancel()
 			})
 
-			It("should return RunConfig matching API", func(done Done) {
+			It("should return RunConfig matching API", func() {
 				runCfg := <-ctrl.ConfigChan()
 				Expect(runCfg.LogLevelScreen).To(Equal(log.WarnLevel))
 				Expect(runCfg.HealthEnabled).To(BeFalse())
@@ -321,10 +319,9 @@ current-context: test-context`
 				Expect(rc.Migration).To(Equal(&config.MigrationControllerConfig{
 					PolicyNameMigrator: "Disabled",
 				}))
-				close(done)
 			})
 
-			It("should write status matching API", func(done Done) {
+			It("should write status matching API", func() {
 				<-ctrl.ConfigChan()
 				Expect(m.update).ToNot(BeNil())
 				s := m.update.Status
@@ -334,7 +331,6 @@ current-context: test-context`
 				// should be exactly the API Spec
 				Expect(s.RunningConfig).NotTo(BeNil())
 				Expect(*s.RunningConfig).To(Equal(m.get.Spec))
-				close(done)
 			})
 		})
 
@@ -354,15 +350,15 @@ current-context: test-context`
 				cancel()
 			})
 
-			It("should create a default KubeControllersConfig", func(done Done) {
+			It("should create a default KubeControllersConfig", func() {
 				<-ctrl.ConfigChan()
 				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.create.Spec).To(Equal(initialConfig.Spec))
 				close(done)
-			}, 600)
+			})
 
-			It("should send new update when API values change", func(done Done) {
+			It("should send new update when API values change", func() {
 				// initial config
 				<-ctrl.ConfigChan()
 
@@ -384,10 +380,9 @@ current-context: test-context`
 
 				// get the update
 				<-ctrl.ConfigChan()
-				close(done)
 			})
 
-			It("should not send new update when Spec is unchanged", func(done Done) {
+			It("should not send new update when Spec is unchanged", func() {
 				// initial config
 				<-ctrl.ConfigChan()
 
@@ -412,10 +407,9 @@ current-context: test-context`
 					update = true
 				}
 				Expect(update).To(BeFalse())
-				close(done)
-			}, 2)
+			})
 
-			It("should handle watch closed by remote", func(done Done) {
+			It("should handle watch closed by remote", func() {
 				// initial config
 				<-ctrl.ConfigChan()
 
@@ -464,9 +458,7 @@ current-context: test-context`
 
 				// this should trigger an update
 				<-ctrl.ConfigChan()
-
-				close(done)
-			}, 3)
+			})
 		})
 
 		It("should send new update when FederatedServices is added", func(done Done) {
@@ -582,7 +574,7 @@ current-context: test-context`
 				cancel()
 			})
 
-			It("should return RunConfig matching env", func(done Done) {
+			It("should return RunConfig matching env", func() {
 				runCfg := <-ctrl.ConfigChan()
 				Expect(runCfg.LogLevelScreen).To(Equal(log.DebugLevel))
 				Expect(runCfg.HealthEnabled).To(BeFalse())
@@ -602,10 +594,9 @@ current-context: test-context`
 				Expect(rc.Namespace).To(BeNil())
 				Expect(rc.WorkloadEndpoint).To(BeNil())
 				Expect(rc.ServiceAccount).To(BeNil())
-				close(done)
-			}, 600)
+			})
 
-			It("should write status", func(done Done) {
+			It("should write status", func() {
 				<-ctrl.ConfigChan()
 				Expect(m.update).ToNot(BeNil())
 				s := m.update.Status
@@ -634,7 +625,6 @@ current-context: test-context`
 				Expect(c.WorkloadEndpoint).To(BeNil())
 				Expect(c.Namespace).To(BeNil())
 				Expect(c.ServiceAccount).To(BeNil())
-				close(done)
 			})
 		})
 
@@ -683,7 +673,7 @@ current-context: test-context`
 				cancel()
 			})
 
-			It("should return RunConfig matching API environment", func(done Done) {
+			It("should return RunConfig matching API environment", func() {
 				runCfg := <-ctrl.ConfigChan()
 				Expect(runCfg.LogLevelScreen).To(Equal(log.DebugLevel))
 				Expect(runCfg.HealthEnabled).To(BeFalse())
@@ -705,10 +695,9 @@ current-context: test-context`
 				Expect(rc.WorkloadEndpoint).To(BeNil())
 				Expect(rc.Namespace).To(BeNil())
 				Expect(rc.ServiceAccount).To(BeNil())
-				close(done)
 			})
 
-			It("should write status matching environment", func(done Done) {
+			It("should write status matching environment", func() {
 				<-ctrl.ConfigChan()
 				Expect(m.update).ToNot(BeNil())
 				s := m.update.Status
@@ -736,7 +725,6 @@ current-context: test-context`
 				Expect(c.WorkloadEndpoint).To(BeNil())
 				Expect(c.Namespace).To(BeNil())
 				Expect(c.ServiceAccount).To(BeNil())
-				close(done)
 			})
 		})
 	})
@@ -776,7 +764,7 @@ current-context: test-context`
 			unsetEnv()
 		})
 
-		It("should use reconciler periods from API", func(done Done) {
+		It("should use reconciler periods from API", func() {
 			cfg := new(config.Config)
 			err := cfg.Parse()
 			Expect(err).ToNot(HaveOccurred())
@@ -814,7 +802,6 @@ current-context: test-context`
 			Expect(runCfg.Controllers.WorkloadEndpoint.ReconcilerPeriod).To(Equal(time.Second * 31))
 			Expect(runCfg.Controllers.Namespace.ReconcilerPeriod).To(Equal(time.Second * 32))
 			Expect(runCfg.Controllers.ServiceAccount.ReconcilerPeriod).To(Equal(time.Second * 33))
-			close(done)
 		})
 	})
 })

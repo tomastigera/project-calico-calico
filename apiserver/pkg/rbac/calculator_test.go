@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -244,7 +244,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)), "one result for each resource type")
 
-		Describe("all resources", func() {
+		By("all resources", func() {
 			for _, resourceType := range defaultResourceTypes {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceNamespaces]).To(haveMatchAllForVerbs(
@@ -263,7 +263,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("tiered policies", func() {
+		By("tiered policies", func() {
 			for _, resourceType := range tieredPolicyResources {
 				Expect(res[resourceType]).To(haveOnlyMatchesForVerbs([]Match{
 					{Tier: "default"},
@@ -275,7 +275,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaces", func() {
+		By("namespaces", func() {
 			Expect(res[resourceNamespaces]).To(haveMatchForVerbs([]Match{
 				{Namespace: "ns1"},
 				{Namespace: "ns2"},
@@ -285,7 +285,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("get tiers", func() {
+		By("get tiers", func() {
 			Expect(res[resourceTiers]).To(haveMatchForVerbs([]Match{
 				{Tier: "default"},
 				{Tier: "tier1"},
@@ -339,7 +339,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		res, err := calc.CalculatePermissions(myUser, allResourceVerbs)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
-		Describe("all resources", func() {
+		By("all resources", func() {
 			for _, resourceType := range defaultResourceTypes {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
@@ -351,7 +351,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(haveMatchNoneForVerbs(VerbWatch, VerbCreate, VerbList, VerbUpdate))
 			Expect(res[resourceTiers]).To(haveMatchAllForVerbs(VerbDelete, VerbPatch))
 			Expect(res[resourceTiers]).To(haveMatchForVerbs([]Match{
@@ -360,7 +360,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettingsgroup", func() {
+		By("uisettingsgroup", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveMatchNoneForVerbs(VerbWatch, VerbCreate, VerbList, VerbUpdate))
 			Expect(res[resourceUISettingsGroup]).To(haveMatchAllForVerbs(VerbDelete, VerbPatch))
 			Expect(res[resourceUISettingsGroup]).To(haveMatchForVerbs([]Match{
@@ -369,7 +369,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettings", func() {
+		By("uisettings", func() {
 			// UISettings, expect delete/patch for each group.
 			Expect(res[resourceUISettings]).To(haveOnlyMatchesForVerbs([]Match{
 				{UISettingsGroup: "group1"},
@@ -377,7 +377,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbDelete, VerbPatch))
 		})
 
-		Describe("tiered policies", func() {
+		By("tiered policies", func() {
 			// Matches for tiered policy should only contain the gettable Tiers.
 			for _, resourceType := range tieredPolicyResources {
 				Expect(res[resourceType]).To(haveOnlyMatchesForVerbs([]Match{
@@ -387,7 +387,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("all other resources", func() {
+		By("all other resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceHostEndpoints,
 				resourceNamespaces,
@@ -431,7 +431,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
-		Describe("cluster-scoped resources", func() {
+		By("cluster-scoped resources", func() {
 			for _, resourceType := range clusterScopedResources {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
@@ -445,11 +445,11 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaces", func() {
+		By("namespaces", func() {
 			Expect(res[resourceNamespaces]).To(haveMatchNoneForAllVerbs())
 		})
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(haveOnlyMatchesForVerbs([]Match{
 				{Tier: "default"},
 				{Tier: "tier1"},
@@ -459,7 +459,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettingsgroups", func() {
+		By("uisettingsgroups", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveOnlyMatchesForVerbs([]Match{
 				{UISettingsGroup: "group1"},
 				{UISettingsGroup: "group2"},
@@ -468,7 +468,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("cluster-scoped tiered policy resources", func() {
+		By("cluster-scoped tiered policy resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceGlobalNetworkPolicies,
 				resourceStagedGlobalNetworkPolicies,
@@ -477,7 +477,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaced tiered policy resources", func() {
+		By("namespaced tiered policy resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceCalicoNetworkPolicies,
 				resourceStagedCalicoNetworkPolicies,
@@ -493,12 +493,12 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)))
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{
 							{Namespace: "ns1", Tier: "default"},
 							{Namespace: "ns1", Tier: "tier1"},
@@ -509,7 +509,7 @@ var _ = Describe("RBAC calculator tests", func() {
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch), resourceType.String())
 					})
 				} else {
-					Describe("resources (excluding tiered-policy resources", func() {
+					By("resources (excluding tiered-policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{{Namespace: "ns1"}}, VerbUpdate, VerbCreate, VerbList), resourceType.String())
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch), resourceType.String())
 					})
@@ -533,16 +533,16 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
 		// namespaced resources that aren't tiered policies should have ns matchers
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchNoneForAllVerbs(), resourceType.String())
 					})
 				} else {
-					Describe("resources (except tiered-policies)", func() {
+					By("resources (except tiered-policies)", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{{Namespace: "ns1"}}, VerbUpdate, VerbCreate, VerbList))
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch))
 					})
@@ -550,7 +550,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("cluster-scoped", func() {
+		By("cluster-scoped", func() {
 			for _, resourceType := range clusterScopedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				Expect(res[resourceType]).To(haveMatchNoneForAllVerbs())
@@ -587,7 +587,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(Equal(map[Verb][]Match{
 				VerbGet: {
 					{Tier: "tier2"},
@@ -603,12 +603,12 @@ var _ = Describe("RBAC calculator tests", func() {
 		})
 
 		// namespaced resources that aren't tiered policies should have ns matchers
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(Equal(map[Verb][]Match{
 							VerbCreate: nil,
 							VerbPatch:  {{Tier: "tier2", Namespace: "ns1"}, {Tier: "tier3", Namespace: "ns1"}},
@@ -620,7 +620,7 @@ var _ = Describe("RBAC calculator tests", func() {
 						}), resourceType.String())
 					})
 				} else {
-					Describe("resources (except tiered-policies)", func() {
+					By("resources (except tiered-policies)", func() {
 						Expect(res[resourceType]).To(Equal(map[Verb][]Match{
 							VerbCreate: nil,
 							VerbPatch:  {{Namespace: "ns1"}},
@@ -635,7 +635,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("cluster-scoped", func() {
+		By("cluster-scoped", func() {
 			for _, resourceType := range clusterScopedResources {
 				if resourceType == resourceTiers {
 					// handle tiers separately as they have different GET permissions

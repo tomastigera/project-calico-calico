@@ -26,7 +26,7 @@ import (
 
 	"github.com/Microsoft/hcsshim"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
