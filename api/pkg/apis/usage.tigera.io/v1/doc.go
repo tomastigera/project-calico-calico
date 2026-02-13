@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Tigera, Inc. All rights reserved.
+
 // +k8s:deepcopy-gen=package,register
 // +groupName=usage.tigera.io
 package v1

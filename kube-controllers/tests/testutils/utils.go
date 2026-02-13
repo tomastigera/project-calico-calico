@@ -181,8 +181,8 @@ func GetCalicoKubernetesClient(kubeconfig string) client.Interface {
 	cfg := apiconfig.NewCalicoAPIConfig()
 	cfg.Spec.DatastoreType = apiconfig.Kubernetes
 	cfg.Spec.Kubeconfig = kubeconfig
-	client, err := client.New(*cfg)
 
+	client, err := client.New(*cfg)
 	Expect(err).NotTo(HaveOccurred())
 	return client
 }

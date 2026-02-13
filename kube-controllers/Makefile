@@ -150,7 +150,7 @@ TEST_BINARIES=$(addsuffix /ut.test,$(WHAT))
 
 ## Run the unit tests in a container.
 test: ut
-ut fv: $(TEST_BINARIES) image
+ut fv: $(TEST_BINARIES) $(KUBE_CONTROLLER_CONTAINER_CREATED)
 	KUBE_IMAGE=$(CALICO_BUILD) \
 		   ETCD_IMAGE=$(ETCD_IMAGE) \
 		   CALICO_API_GROUP=$(CALICO_API_GROUP) \

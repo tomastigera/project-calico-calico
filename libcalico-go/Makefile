@@ -29,9 +29,6 @@ BINDIR?=bin
 # Create a list of files upon which the generated file depends, skip the generated file itself
 APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go, $(wildcard ./lib/apis/v3/*.go))
 
-USAGE_APIS_SRCS := $(filter-out ./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go, $(wildcard ./lib/apis/usage.tigera.io/v1/*.go))
-
-
 .PHONY: clean
 clean:
 	rm -rf $(BINDIR) checkouts
@@ -43,8 +40,7 @@ clean:
 GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 	./lib/apis/v3/generated.openapi.go \
 	./lib/apis/v1/generated.openapi.go \
-	./lib/selector/tokenizer/kind_string.go \
-	./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go
+	./lib/selector/tokenizer/kind_string.go
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -68,6 +64,8 @@ gen-crds:
 	rm -f config/crd/_nodes.yaml
 	# Remove the first yaml separator line.
 	$(DOCKER_GO_BUILD) sh -c 'find ./config/crd -name "*.yaml" | xargs sed -i 1d'
+	# Add usage.tigera.io_licenseusagereports CRD, which is not generated from libcalico-go.
+	$(MAKE) ./config/crd/usage.tigera.io_licenseusagereports.yaml
 	# Add K8S AdminNetworkPolicy CRD
 	curl -sSfL --retry 3 $(NETPOL_CRD_URL)/$(NETPOL_ANP_CRD) -o ./config/crd/$(NETPOL_ANP_CRD)
 	curl -sSfL --retry 3 $(NETPOL_CRD_URL)/$(NETPOL_BANP_CRD) -o ./config/crd/$(NETPOL_BANP_CRD)
@@ -79,6 +77,9 @@ gen-crds:
 	# Patch in manual tweaks to the generated CRDs.
 	patch -p2 < patches/0001-Add-nullable-to-IPAM-block-allocations-field.patch
 
+./config/crd/usage.tigera.io_licenseusagereports.yaml:
+	cp ../api/config/crd/usage.tigera.io_licenseusagereports.yaml $@
+
 ./lib/apis/v3/zz_generated.deepcopy.go: $(APIS_SRCS)
 	$(DOCKER_GO_BUILD) sh -c 'deepcopy-gen \
 		--v 1 --logtostderr \
@@ -86,14 +87,6 @@ gen-crds:
 		--bounding-dirs "github.com/projectcalico/calico/libcalico-go" \
 		--output-file zz_generated.deepcopy.go \
 		"$(PACKAGE_NAME)/lib/apis/v3"'
-
-./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go: $(USAGE_APIS_SRCS)
-	$(DOCKER_GO_BUILD) sh -c 'deepcopy-gen \
-		--v 1 --logtostderr \
-		--go-header-file "./docs/boilerplate.go.txt" \
-		--bounding-dirs "github.com/projectcalico/calico/libcalico-go" \
-		--output-file zz_generated.deepcopy.go \
-		"$(PACKAGE_NAME)/lib/apis/usage.tigera.io/v1"'
 
 # Generate OpenAPI spec
 ./lib/apis/v3/generated.openapi.go: $(APIS_SRCS)

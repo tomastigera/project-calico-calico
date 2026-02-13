@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Tigera, Inc. All rights reserved.
+
 package v1
 
 import (
@@ -9,8 +11,8 @@ import (
 // +kubebuilder:resource:scope=Cluster
 type LicenseUsageReport struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              LicenseUsageReportSpec `json:"spec,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              LicenseUsageReportSpec `json:"spec"`
 }
 
 type LicenseUsageReportSpec struct {

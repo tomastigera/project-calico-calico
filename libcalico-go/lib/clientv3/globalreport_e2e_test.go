@@ -485,7 +485,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 
 			By("Cleaning the datastore and expecting deletion events for each configured resource (tests prefix deletes results in individual events for each key)")
 			be.Clean()
-			testWatcher4.ExpectEvents(apiv3.KindGlobalReport, []watch.Event{
+			testWatcher4.ExpectEventsAnyOrder(apiv3.KindGlobalReport, []watch.Event{
 				{
 					Type:     watch.Deleted,
 					Previous: outRes1,

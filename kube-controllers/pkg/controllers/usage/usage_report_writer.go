@@ -10,12 +10,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	usagev1 "github.com/tigera/api/pkg/apis/usage.tigera.io/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	usagev1 "github.com/projectcalico/calico/libcalico-go/lib/apis/usage.tigera.io/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/licensing/client"
@@ -23,8 +23,10 @@ import (
 
 const apiServerOperationAttempts = 3
 
-var hmacKey = []byte("e94818465e656dc3082610a08c300cdf30f3d3a2c2fb8505f83406befe7bce83ba028b6862ebc8aaa473063fc03a7b4ccb5a9a34426a85b563457d68befdde96")
-var rfc1123Base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
+var (
+	hmacKey               = []byte("e94818465e656dc3082610a08c300cdf30f3d3a2c2fb8505f83406befe7bce83ba028b6862ebc8aaa473063fc03a7b4ccb5a9a34426a85b563457d68befdde96")
+	rfc1123Base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
+)
 
 // newReportWriter observes the basicLicenseUsageReport objects sent on the reports channel, and enriches them with context from the cluster
 // to create LicenseUsageReport objects. These objects are then written to the datastore, with retries if appropriate.
@@ -142,7 +144,6 @@ func (w *reportWriter) writeDatastoreReport(datastoreReport *usagev1.LicenseUsag
 	err := w.performAPIServerOperationWithRetries("create", func() error {
 		return w.usageClient.Create(w.ctx, datastoreReport)
 	})
-
 	if err != nil {
 		return err
 	}
