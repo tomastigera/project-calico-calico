@@ -271,7 +271,16 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, libcalicoClient, calicoClient, dataFeed, esClientBuilder)
+		controllerCtrl.InitControllers(
+			ctx,
+			runCfg,
+			k8sClientset,
+			libcalicoClient,
+			calicoClient,
+			dataFeed,
+			esClientBuilder,
+			cfg.KubeControllersConfigName == "default",
+		)
 	}
 
 	if cfg.DatastoreType == utils.Etcdv3 {
@@ -617,6 +626,7 @@ func (cc *controllerControl) InitControllers(
 	v3c clientset.Interface,
 	dataFeed *utils.DataFeed,
 	esClientBuilder elasticsearch.ClientBuilder,
+	isDefaultInstance bool,
 ) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
@@ -682,8 +692,9 @@ func (cc *controllerControl) InitControllers(
 		cc.registerInformers(serviceInformer, namespaceInformer)
 	}
 
-	if cfg.Controllers.Migration != nil && cfg.Controllers.Migration.PolicyNameMigrator == "Enabled" {
-		// Register the policy name migrator controller.
+	if cfg.Controllers.Migration != nil && cfg.Controllers.Migration.PolicyNameMigrator == "Enabled" && isDefaultInstance {
+		// Register the policy name migrator controller
+		// Never run this controller as part of es-kube-controllers, though.
 		policyMigrator := networkpolicy.NewMigratorController(ctx, k8sClientset, libcalicoClient, dataFeed)
 		cc.controllerStates["NetworkPolicyMigrator"] = &controllerState{controller: policyMigrator}
 	}
