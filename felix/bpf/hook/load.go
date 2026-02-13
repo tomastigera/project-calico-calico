@@ -77,6 +77,12 @@ type AttachType struct {
 	DNSInline  bool
 }
 
+func (at AttachType) key() AttachType {
+	k := at
+	k.DNSInline = false
+	return k
+}
+
 func (at AttachType) ObjectFile() string {
 	return ObjectFile(at)
 }
@@ -140,7 +146,7 @@ func ObjectFile(at AttachType) string {
 	objectFilesLock.Lock()
 	defer objectFilesLock.Unlock()
 
-	return objectFiles[at]
+	return objectFiles[at.key()]
 }
 
 func SetObjectFile(at AttachType, file string) {
