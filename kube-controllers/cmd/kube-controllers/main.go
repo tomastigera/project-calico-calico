@@ -915,6 +915,14 @@ func (cc *controllerControl) RunControllers(dataFeed *utils.DataFeed, cfg config
 				close(cc.stop)
 				return
 			}
+			if cs.running && cs.licenseFeature != "" {
+				switch cc.licenseMonitor.GetLicenseStatus() {
+				case lclient.InGracePeriod:
+					log.Warnf("[LICENSE] %s controller running with grace-period license", controllerType)
+				case lclient.Expired:
+					log.Warnf("[LICENSE] %s controller running with expired license", controllerType)
+				}
+			}
 		}
 
 		// Block until we are cancelled, get new license info, or get a new configuration
