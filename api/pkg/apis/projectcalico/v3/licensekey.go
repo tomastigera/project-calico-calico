@@ -37,6 +37,7 @@ const (
 // +genclient:nonNamespaced
 // +kubebuilder:resource:scope=Cluster
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 // LicenseKey contains the Calico Enterprise license key for the cluster.
 type LicenseKey struct {

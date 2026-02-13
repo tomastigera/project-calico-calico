@@ -68,6 +68,7 @@ var (
 	calicoAllowPolicyModelSpec = apiv3.GlobalNetworkPolicySpec{
 		Tier:  "default",
 		Order: &zeroOrder,
+		Types: []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 		Ingress: []apiv3.Rule{
 			{
 				Action: "Allow",
@@ -82,6 +83,7 @@ var (
 	calicoDisallowPolicyModelSpec = apiv3.GlobalNetworkPolicySpec{
 		Tier:  "default",
 		Order: &zeroOrder,
+		Types: []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 		Ingress: []apiv3.Rule{
 			{
 				Action: "Deny",
@@ -98,6 +100,7 @@ var (
 	calicoAllowPolicyModelV1 = model.Policy{
 		Tier:  "default",
 		Order: &zeroOrder,
+		Types: []string{"ingress", "egress"},
 		InboundRules: []model.Rule{
 			{
 				Action: "allow",
@@ -113,6 +116,7 @@ var (
 	calicoDisallowPolicyModelV1 = model.Policy{
 		Tier:  "default",
 		Order: &zeroOrder,
+		Types: []string{"ingress", "egress"},
 		InboundRules: []model.Rule{
 			{
 				Action: "deny",
@@ -448,9 +452,12 @@ var _ = testutils.E2eDatastoreDescribe("Test UIDs and owner references", testuti
 		// The Pod UID should be unchanged, but the NetworkPolicy UID behavior varies based on API group:
 		// - crd.projectcalico.org: UID belonging to the Calico resource has been translated.
 		// - projectcalico.org/v3: UID belonging to the Calico resource is unchanged.
+		// Do this in a retry since the controller runtime client is cache driven and may not have
+		// received the update yet.
 		crd := &apiv3.NetworkPolicy{}
-		err = cli.Get(ctx, types.NamespacedName{Name: name, Namespace: "default"}, crd)
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() error {
+			return cli.Get(ctx, types.NamespacedName{Name: name, Namespace: "default"}, crd)
+		}, "5s", "100ms").ShouldNot(HaveOccurred())
 
 		var meta metav1.ObjectMeta
 		if v3CRD {
@@ -1315,6 +1322,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			Tier:         "default",
 			StagedAction: apiv3.StagedActionSet,
 			Order:        &zeroOrder,
+			Types:        []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			Ingress: []apiv3.Rule{
 				{
 					Action: "Allow",
@@ -1330,6 +1338,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			Tier:         "default",
 			StagedAction: apiv3.StagedActionSet,
 			Order:        &zeroOrder,
+			Types:        []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
 			Ingress: []apiv3.Rule{
 				{
 					Action: "Deny",

@@ -731,7 +731,7 @@ EOF
             # Create auto HEPs
             patchStr = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Enabled\"}}}}}"
             patchStr_disable = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Disabled\"}}}}}"
-            kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr)).strip()
+            kubectl("patch --type=merge kubecontrollersconfiguration default --patch '%s'" % (patchStr)).strip()
 
             calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
@@ -816,7 +816,7 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-control-plane-heps"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-all-heps"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-all-heps"))
-            self.add_cleanup(lambda: kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
+            self.add_cleanup(lambda: kubectl("patch --type=merge kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
             retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
             self.validate_egress_ip(client, server, gw.ip)
 

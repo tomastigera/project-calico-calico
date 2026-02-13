@@ -11,7 +11,8 @@
       commands:
         - cd libcalico-go
     jobs:
-      - name: "libcalico-go: CI"
+      # Run the tests twice, once for each backing API version.
+      - name: "libcalico-go: CI (crd.projectcalico.org/v1)"
         commands:
           - ../.semaphore/run-and-monitor make-ci.log make ci
         env_vars:

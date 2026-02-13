@@ -51,6 +51,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/flannelmigration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/ippool"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/namespace"
@@ -632,6 +633,7 @@ func (cc *controllerControl) InitControllers(
 		calicoFactory := externalversions.NewSharedInformerFactory(v3c, 5*time.Minute)
 		poolInformer := calicoFactory.Projectcalico().V3().IPPools().Informer()
 		blockInformer := calicoFactory.Projectcalico().V3().IPAMBlocks().Informer()
+		licenseInformer := calicoFactory.Projectcalico().V3().LicenseKeys().Informer()
 
 		// Determine if we are running in v3 CRD mode, and enable controllers accordingly.
 		config, _ := apiconfig.LoadClientConfigFromEnvironment()
@@ -642,6 +644,11 @@ func (cc *controllerControl) InitControllers(
 			poolController := ippool.NewController(ctx, v3c, poolInformer, blockInformer, libcalicoClient.IPAM())
 			cc.controllerStates["IPPool"] = &controllerState{controller: poolController}
 			cc.registerInformers(poolInformer, blockInformer)
+
+			// Enable the license status controller, which validates and updates LicenseKey status fields.
+			licenseController := license.NewStatusController(ctx, v3c, licenseInformer)
+			cc.controllerStates["LicenseStatus"] = &controllerState{controller: licenseController}
+			cc.registerInformers(licenseInformer)
 		}
 	}
 

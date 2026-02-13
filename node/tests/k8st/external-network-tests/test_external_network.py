@@ -31,10 +31,10 @@ class TestExternalNetwork(TestBase):
 
     def _patch_peer_external_net(self, peer, external_network):
         if external_network != "":
-            kubectl("patch bgppeer %s --patch '{\"spec\": {\"externalNetwork\": \"%s\"}}'" % (peer, external_network))
-            self.add_cleanup(lambda: kubectl("patch bgppeer %s --type json --patch '[{\"op\": \"remove\", \"path\": \"/spec/externalNetwork\"}]'" % peer, allow_fail=True))
+            kubectl("patch --type=merge bgppeer %s --patch '{\"spec\": {\"externalNetwork\": \"%s\"}}'" % (peer, external_network))
+            self.add_cleanup(lambda: kubectl("patch --type=merge bgppeer %s --type json --patch '[{\"op\": \"remove\", \"path\": \"/spec/externalNetwork\"}]'" % peer, allow_fail=True))
         else:
-            kubectl("patch bgppeer %s --type json --patch '[{\"op\": \"remove\", \"path\": \"/spec/externalNetwork\"}]'" % peer)
+            kubectl("patch --type=merge bgppeer %s --type json --patch '[{\"op\": \"remove\", \"path\": \"/spec/externalNetwork\"}]'" % peer)
 
     def _setup_ippools(self, ipv4_encap, egress_pool_cidr, block_size):
         assert ipv4_encap in ["IPIP", "VXLAN", "None"]
@@ -45,7 +45,7 @@ class TestExternalNetwork(TestBase):
         if ipv4_encap == "VXLAN":
             vxlan_mode = "Always"
         # Patch default IPv4 to change IPIP mode depending on encap
-        kubectl("patch ippool default-ipv4-ippool --patch '{\"spec\": {\"ipipMode\": \"%s\", \"vxlanMode\": \"%s\"}}'" % (ipip_mode, vxlan_mode))
+        kubectl("patch --type=merge ippool default-ipv4-ippool --patch '{\"spec\": {\"ipipMode\": \"%s\", \"vxlanMode\": \"%s\"}}'" % (ipip_mode, vxlan_mode))
 
         # Create egress gateway IP pool.
         kubectl("""apply -f - << EOF
@@ -207,12 +207,12 @@ spec:
     action: Reject
 EOF
 """)
-            kubectl("patch bgppeer peer-b1 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
-            self.add_cleanup(lambda: kubectl("patch bgppeer peer-b1 --patch '{\"spec\": {\"filters\": []}}'"))
-            kubectl("patch bgppeer peer-b2 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
-            self.add_cleanup(lambda: kubectl("patch bgppeer peer-b2 --patch '{\"spec\": {\"filters\": []}}'"))
-            kubectl("patch bgppeer peer-c1 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
-            self.add_cleanup(lambda: kubectl("patch bgppeer peer-c1 --patch '{\"spec\": {\"filters\": []}}'"))
+            kubectl("patch --type=merge bgppeer peer-b1 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
+            self.add_cleanup(lambda: kubectl("patch --type=merge bgppeer peer-b1 --patch '{\"spec\": {\"filters\": []}}'"))
+            kubectl("patch --type=merge bgppeer peer-b2 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
+            self.add_cleanup(lambda: kubectl("patch --type=merge bgppeer peer-b2 --patch '{\"spec\": {\"filters\": []}}'"))
+            kubectl("patch --type=merge bgppeer peer-c1 --patch '{\"spec\": {\"filters\": [\"test-filter-export-1\"]}}'")
+            self.add_cleanup(lambda: kubectl("patch --type=merge bgppeer peer-c1 --patch '{\"spec\": {\"filters\": []}}'"))
             self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-export-1"))
 
             # Assert that a route to the service IP range is present in bird-a1, which is not filtered
