@@ -175,6 +175,10 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		By("Creating default FelixConfiguration")
 		teardownFelixConfig := createDefaultFelixConfig(calicoClient)
 		teardowns = append(teardowns, teardownFelixConfig)
+
+		By("Applying 4-shard ES index template for bulk indexing throughput")
+		teardownBulkTemplate := createBulkOptimizeIndexTemplate(esClient)
+		teardowns = append(teardowns, teardownBulkTemplate)
 	})
 
 	AfterEach(func() {
@@ -779,256 +783,67 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			}))
 		})
 
-		// The tests above validate namespace stats approximation when the query duration is shorter than the cache duration.
-		// This test validates that stats are scaled appropriately when the query duration is longer than the cache duration.
-		It("should approximate namespace stats correctly when the cache duration is lower than the query duration", func() {
-			// Distribute the data evenly over the past 7 days.
-			dataTimeRange := &lmav1.TimeRange{
-				From: time.Now().Add(-7 * 24 * time.Hour),
-				To:   time.Now(),
-			}
-			// We pick n=1 and m=300000, as we know this will result in 1.2 million in the backend namespace of the group, and the threshold for high flow logs is 1 million.
-			// We want the backend namespace to be above the high mark at 7 days (we expect 1.2 mil), and below the high mark at our cache duration of 3 days (we expect ~500k)
-			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 300000, dataTimeRange, false)
+		Context("cache-specific tests", func() {
+			var customSgConfig *servicegraph.Config
 
-			// We pick n=800 and m=1, as we know this will result in 3200 L3 flows globally, and the threshold for high l3 flows is 2000.
-			// L3 flows do not scale with time: they represent the shape of traffic, not the scale of it. We expect the frontend namespaces
-			// to be 'low', as they will each have half of the L3 flows (1.6k). The backend namespace will be 'high'.
-			// Namespace groups spread all L3 flows over the time range, whereas real L3 flows are typically repeated within time ranges.
-			// To simulate real L3 flows better, we repeat the same L3 flows so that the cache will see the whole picture in its 3-day duration.
-			// This discrepancy didn't matter for previous tests since this is the first test where the cache duration does not cover the data duration.
-			l3FlowTimeRange1 := &lmav1.TimeRange{
-				From: time.Now().Add(-3 * 24 * time.Hour),
-				To:   dataTimeRange.To,
-			}
-			l3FlowTimeRange2 := &lmav1.TimeRange{
-				From: dataTimeRange.From,
-				To:   time.Now().Add(-3 * 24 * time.Hour),
-			}
-			highL3FlowNamespaces1 := newNamespaceGroup("high-l3-flows", 800, 1, l3FlowTimeRange1, false)
-			highL3FlowNamespaces2 := newNamespaceGroup("high-l3-flows", 800, 1, l3FlowTimeRange2, true)
+			// These tests focus on isolated cache behaviours. We can lower the thresholds here since the mainline tests above cover the core production behaviour under normal thresholds.
+			BeforeEach(func() {
+				customSgConfig = getDefaultServiceGraphConfig()
+				customSgConfig.XLargeFlowLogScaleThreshold = 100000
+				customSgConfig.LargeFlowLogScaleThreshold = 10000
+				customSgConfig.LargeL3FlowScaleThreshold = 20
+			})
 
-			// Include a low-scale namespace group to validate non-approximation behaviour too.
-			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
-
-			// Include a final namespace group to push us into the 'very high' mark for total flow logs. We pick n=1 and m=2250000 as this should give an extra 9 million
-			// flow logs, pushing us over 10 million total.
-			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 2250000, dataTimeRange, false)
-
-			// Set up our scenario.
-			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces1, highL3FlowNamespaces2, lowScaleNamespaces, veryHighFlowNamespaces}
-			testUser := testUser{Username: "test-sg-user"}
-			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
-			teardowns = append(teardowns, scenarioTeardowns...)
-
-			// Query against the last seven days. This allows us to check the behaviour of cache approximation when the request duration exceeds the cache duration.
-			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
-			var statsResp *uiapisv1.ServiceGraphStatsResponse
-			var statsErr error
-			queryLastSevenDays := func() []uiapisv1.NamespaceStatistics {
-				queryTimeRange := &lmav1.TimeRange{
-					From: dataTimeRange.From.Add(-1 * time.Hour),
+			// The tests above validate namespace stats approximation when the query duration is shorter than the cache duration.
+			// This test validates that stats are scaled appropriately when the query duration is longer than the cache duration.
+			It("should approximate namespace stats correctly when the cache duration is lower than the query duration", func() {
+				// Distribute the data evenly over the past 7 days.
+				dataTimeRange := &lmav1.TimeRange{
+					From: time.Now().Add(-7 * 24 * time.Hour),
 					To:   time.Now(),
 				}
-				statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
-				Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
-				Expect(statsResp).NotTo(BeNil(), "Expected stats response")
-				return statsResp.NamespacesStatistics
-			}
+				// We pick n=1 and m=3000, as we know this will result in 12000 flows in the backend namespace of the group, and the threshold for high flow logs is 10000.
+				// We want the backend namespace to be above the high mark at 7 days (we expect 12000), and below the high mark at our cache duration of 3 days (we expect ~5000)
+				highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 3000, dataTimeRange, false)
 
-			Eventually(queryLastSevenDays).
-				WithTimeout(3 * time.Minute).
-				WithPolling(3 * time.Second).
-				To(ContainElements([]uiapisv1.NamespaceStatistics{
-					// For the high-flow-logs namespace group: our query time range matches the full data set, so approximation should yield us
-					// a count that matches the total count. Therefore, we expect the backend namespace to be high volume at ~1.2 million, and
-					// the frontend namespaces to be low volume at ~600k.
-					{
-						Namespace:    "high-flow-logs-backend",
-						HighVolume:   util.BoolPtr(true),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "high-flow-logs-frontend-a",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "high-flow-logs-frontend-b",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					// For the high-l3-flows namespace group: both the full query range and the cache range should contain ~3200 L3 flows.
-					// Therefore, we expect the backend namespace to be high volume at ~3200 L3 flows, and the frontend namespaces to be
-					// low volume at ~1600 L3 flows.
-					{
-						Namespace:    "high-l3-flows-backend",
-						HighVolume:   util.BoolPtr(true),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "high-l3-flows-frontend-a",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "high-l3-flows-frontend-b",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					// The low-scale namespace group should have all of its namespaces approximated for low volume.
-					{
-						Namespace:    "low-scale-frontend-a",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "low-scale-frontend-b",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					{
-						Namespace:    "low-scale-backend",
-						HighVolume:   util.BoolPtr(false),
-						Approximated: util.BoolPtr(true),
-					},
-					// Namespaces with no flows should have no approximation.
-					{
-						Namespace:    "default",
-						HighVolume:   nil,
-						Approximated: nil,
-					},
-				}))
-			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
-			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
-			// The cache count of flow logs for the high-flow-logs backend namespace should be less than half of the global count for the namespace, since the cache is only 3 days.
-			Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumFlowLogs["high-flow-logs-backend"]).To(BeNumerically("<", 600000))
-			// The cache count of L3 flows for the high-l3-flows backend namespace should be roughly equal to the total count of L3 flows for the namespace.
-			Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumL3Flows["high-l3-flows-backend"]).To(BeNumerically("~", 3200, 5))
-		})
-
-		// This test validates that the cache is responsive to changes in flow log storage. It sets up a default cluster and a managed
-		// cluster at 'very high' flow log scale, to ensure namespace stats are computed from the cache. It expects certain namespaces
-		// in the created groups to be low volume via approximation, and then doubles their flows, expecting the cache to update and
-		// result in a high volume approximation.
-		It("should react to changes in the cached window", func() {
-			// Set up a namespace group that we expect to have very high flow logs, along with a high flow logs namespace group and low scale namespace group.
-			// Distribute the data evenly over the past 3 days.
-			dataTimeRange := &lmav1.TimeRange{
-				From: time.Now().Add(-3 * 24 * time.Hour),
-				To:   time.Now(),
-			}
-
-			// We need a namespace that is low volume at first, but become high volume when doubled. We choose n=1 and m=600000.
-			// When this cluster is queried over 2 days, rather than 3, we expect the global count (and the backend namespace count) to be 1.6 million and thus 'high'
-			// For the same 3-day period, we expect the frontend namespace counts to be 0.8 million and thus 'low'. When these namespaces are doubled, the counts will be 1.6 million, and thus 'high'.
-			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000, dataTimeRange, false)
-			// The cluster should have very high flows total, so that the all namespace computations are done via the cache. This namespace group pushes the global flow count over 10 million.
-			veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 3200000, dataTimeRange, false)
-
-			// Set up our default cluster scenario.
-			nsGroups := []namespaceGroup{veryHighFlowNamespaces, highFlowNamespaces}
-			u := testUser{Username: "test-sg-user"}
-			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
-			teardowns = append(teardowns, scenarioTeardowns...)
-
-			// Replicate the same scenario as above, in a managed cluster.
-			managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 600000, dataTimeRange, false)
-			managedVeryHighFlowNamespaces := newNamespaceGroup("managed-very-high-flow-logs", 1, 3200000, dataTimeRange, false)
-			managedNsGroups := []namespaceGroup{managedVeryHighFlowNamespaces, managedHighFlowNamespaces}
-			mu := testUser{Username: "managed-test-sg-user"}
-			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
-			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, *managedClusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
-			teardowns = append(teardowns, managedScenarioTeardowns...)
-
-			// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
-			// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
-			// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
-			licenseTeardown, err := applyLicense(calicoClient)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create license")
-			teardowns = append(teardowns, licenseTeardown)
-			managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
-			teardowns = append(teardowns, managedClusterTeardowns)
-
-			// Execute our request.
-			var statsResp *uiapisv1.ServiceGraphStatsResponse
-			var statsErr error
-			customSgConfig := getDefaultServiceGraphConfig()
-			customSgConfig.GraphStatsCacheUpdateInterval = 5 * time.Second
-			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
-			queryLastTwoDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
-				return func() []uiapisv1.NamespaceStatistics {
-					queryTimeRange := &lmav1.TimeRange{
-						From: time.Now().Add(-2 * 24 * time.Hour),
-						To:   time.Now(),
-					}
-					statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
-					Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
-					return statsResp.NamespacesStatistics
+				// We pick n=8 and m=1, as we know this will result in 32 L3 flows globally, and the threshold for high l3 flows is 20.
+				// L3 flows do not scale with time: they represent the shape of traffic, not the scale of it. We expect the frontend namespaces
+				// to be 'low', as they will each have half of the L3 flows (16). The backend namespace will be 'high'.
+				// Namespace groups spread all L3 flows over the time range, whereas real L3 flows are typically repeated within time ranges.
+				// To simulate real L3 flows better, we repeat the same L3 flows so that the cache will see the whole picture in its 3-day duration.
+				// This discrepancy didn't matter for previous tests since this is the first test where the cache duration does not cover the data duration.
+				l3FlowTimeRange1 := &lmav1.TimeRange{
+					From: time.Now().Add(-3 * 24 * time.Hour),
+					To:   dataTimeRange.To,
 				}
-			}
-			// We expect the high-flow-logs frontend namespaces to both be approximated as low volume, as described earlier.
-			Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:    "high-flow-logs-frontend-a",
-				HighVolume:   util.BoolPtr(false),
-				Approximated: util.BoolPtr(true),
-			}))
-			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:    "managed-high-flow-logs-frontend-a",
-				HighVolume:   util.BoolPtr(false),
-				Approximated: util.BoolPtr(true),
-			}))
+				l3FlowTimeRange2 := &lmav1.TimeRange{
+					From: dataTimeRange.From,
+					To:   time.Now().Add(-3 * 24 * time.Hour),
+				}
+				highL3FlowNamespaces1 := newNamespaceGroup("high-l3-flows", 8, 1, l3FlowTimeRange1, false)
+				highL3FlowNamespaces2 := newNamespaceGroup("high-l3-flows", 8, 1, l3FlowTimeRange2, true)
 
-			// Double the flows for high-flow namespaces. This should push the frontend high-flow-logs namespaces into high volume in the cache, as described earlier.
-			err = highFlowNamespaces.createFlows(context.Background(), linseedCli, clusterInfo.Cluster)
-			Expect(err).NotTo(HaveOccurred(), "Failed to double flows for high l3 flow namespaces")
-			err = managedHighFlowNamespaces.createFlows(context.Background(), linseedCli, managedClusterInfo.Cluster)
-			Expect(err).NotTo(HaveOccurred(), "Failed to double flows for managed high l3 flow namespaces")
-			Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:    "high-flow-logs-frontend-a",
-				HighVolume:   util.BoolPtr(true),
-				Approximated: util.BoolPtr(true),
-			}))
-			Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
-				Namespace:    "managed-high-flow-logs-frontend-a",
-				HighVolume:   util.BoolPtr(true),
-				Approximated: util.BoolPtr(true),
-			}))
-		})
+				// Include a low-scale namespace group to validate non-approximation behaviour too.
+				lowScaleNamespaces := newNamespaceGroup("low-scale", 1, 10, dataTimeRange, false)
 
-		// This test validates that the cache is responsive to changes in managed cluster lifecycle, specifically addition and deletion.
-		// It adds a managed cluster to a base setup that has a default cluster, and validates that the cache fills with the managed cluster data.
-		// It also validates that when the managed cluster is deleted, the cached data is cleared. It also conducts some baseline testing
-		// to validate that the default cluster cache queries as expected in the presence of the managed cluster.
-		It("should support queries from different clusters and maintain a per-cluster cache", func() {
-			// For the default cluster, set up a namespace group that we expect to have high flow logs, along with a high l3 flows namespace group and low scale namespace group.
-			// This follows the same count choices as previous test cases, refer to them for detailed rationale.
-			dataTimeRange := &lmav1.TimeRange{
-				From: time.Now().Add(-3 * 24 * time.Hour),
-				To:   time.Now(),
-			}
-			highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 600000, dataTimeRange, false)
-			highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 1000, 1, dataTimeRange, false)
-			lowScaleNamespaces := newNamespaceGroup("low-scale", 5, 10, dataTimeRange, false)
+				// Include a final namespace group to push us into the 'very high' mark for total flow logs. We pick n=1 and m=22500 as this should give an extra 90000
+				// flow logs, pushing us over 100k total.
+				veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 22500, dataTimeRange, false)
 
-			// Set up our scenario for the default cluster.
-			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
-			u := testUser{Username: "test-sg-user"}
-			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
-			teardowns = append(teardowns, scenarioTeardowns...)
+				// Set up our scenario.
+				nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces1, highL3FlowNamespaces2, lowScaleNamespaces, veryHighFlowNamespaces}
+				testUser := testUser{Username: "test-sg-user"}
+				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+				teardowns = append(teardowns, scenarioTeardowns...)
 
-			// Execute our request against the default cluster, validating that we see a response derived from the cache.
-			var statsResp *uiapisv1.ServiceGraphStatsResponse
-			var statsErr error
-			queryLastThreeDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
-				return func() []uiapisv1.NamespaceStatistics {
+				// Query against the last seven days. This allows us to check the behaviour of cache approximation when the request duration exceeds the cache duration.
+				_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+				var statsResp *uiapisv1.ServiceGraphStatsResponse
+				var statsErr error
+				queryLastSevenDays := func() []uiapisv1.NamespaceStatistics {
 					queryTimeRange := &lmav1.TimeRange{
-						From: time.Now().Add(-3 * 24 * time.Hour),
+						From: dataTimeRange.From.Add(-1 * time.Hour),
 						To:   time.Now(),
 					}
 					statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
@@ -1036,61 +851,261 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 					Expect(statsResp).NotTo(BeNil(), "Expected stats response")
 					return statsResp.NamespacesStatistics
 				}
-			}
-			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
-			Eventually(queryLastThreeDays(userInfo, clusterInfo)).
-				WithTimeout(3 * time.Minute).
-				WithPolling(3 * time.Second).
-				To(ContainElement(uiapisv1.NamespaceStatistics{
-					Namespace:    "high-l3-flows-backend",
-					HighVolume:   util.BoolPtr(true),
+
+				Eventually(queryLastSevenDays).
+					WithTimeout(3 * time.Minute).
+					WithPolling(3 * time.Second).
+					To(ContainElements([]uiapisv1.NamespaceStatistics{
+						// For the high-flow-logs namespace group: our query time range matches the full data set, so approximation should yield us
+						// a count that matches the total count. Therefore, we expect the backend namespace to be high volume at 12k, and
+						// the frontend namespaces to be low volume at ~6k.
+						{
+							Namespace:    "high-flow-logs-backend",
+							HighVolume:   util.BoolPtr(true),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "high-flow-logs-frontend-a",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "high-flow-logs-frontend-b",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						// For the high-l3-flows namespace group: both the full query range and the cache range should contain 32 L3 flows.
+						// Therefore, we expect the backend namespace to be high volume at 32 L3 flows, and the frontend namespaces to be
+						// low volume at 16 L3 flows.
+						{
+							Namespace:    "high-l3-flows-backend",
+							HighVolume:   util.BoolPtr(true),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "high-l3-flows-frontend-a",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "high-l3-flows-frontend-b",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						// The low-scale namespace group should have all of its namespaces approximated for low volume.
+						{
+							Namespace:    "low-scale-frontend-a",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "low-scale-frontend-b",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						{
+							Namespace:    "low-scale-backend",
+							HighVolume:   util.BoolPtr(false),
+							Approximated: util.BoolPtr(true),
+						},
+						// Namespaces with no flows should have no approximation.
+						{
+							Namespace:    "default",
+							HighVolume:   nil,
+							Approximated: nil,
+						},
+					}))
+				Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
+				Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
+				// The cache count of flow logs for the high-flow-logs backend namespace should be less than half of the global count for the namespace, since the cache is only 3 days.
+				Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumFlowLogs["high-flow-logs-backend"]).To(BeNumerically("<", 6000))
+				// The cache count of L3 flows for the high-l3-flows backend namespace should be roughly equal to the total count of L3 flows for the namespace.
+				Expect(statsResp.DeveloperStatistics.NamespaceCacheCounts.NumL3Flows["high-l3-flows-backend"]).To(BeNumerically("~", 32, 5))
+			})
+
+			// This test validates that the cache is responsive to changes in flow log storage. It sets up a default cluster and a managed
+			// cluster at 'very high' flow log scale, to ensure namespace stats are computed from the cache. It expects certain namespaces
+			// in the created groups to be low volume via approximation, and then doubles their flows, expecting the cache to update and
+			// result in a high volume approximation.
+			It("should react to changes in the cached window", func() {
+				// Set up a namespace group that we expect to have very high flow logs, along with a high flow logs namespace group and low scale namespace group.
+				// Distribute the data evenly over the past 3 days.
+				dataTimeRange := &lmav1.TimeRange{
+					From: time.Now().Add(-3 * 24 * time.Hour),
+					To:   time.Now(),
+				}
+
+				// We need a namespace that is low volume at first, but become high volume when doubled. We choose n=1 and m=6000.
+				// When this cluster is queried over 2 days, rather than 3, we expect the global count (and the backend namespace count) to be 16000 and thus 'high'
+				// For the same 3-day period, we expect the frontend namespace counts to be 8000 and thus 'low'. When these namespaces are doubled, the counts will be 16000, and thus 'high'.
+				highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 6000, dataTimeRange, false)
+				// The cluster should have very high flows total, so that the all namespace computations are done via the cache. This namespace group pushes the global flow count over 100k.
+				veryHighFlowNamespaces := newNamespaceGroup("very-high-flow-logs", 1, 32000, dataTimeRange, false)
+
+				// Set up our default cluster scenario.
+				nsGroups := []namespaceGroup{veryHighFlowNamespaces, highFlowNamespaces}
+				u := testUser{Username: "test-sg-user"}
+				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+				teardowns = append(teardowns, scenarioTeardowns...)
+
+				// Replicate the same scenario as above, in a managed cluster.
+				managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 6000, dataTimeRange, false)
+				managedVeryHighFlowNamespaces := newNamespaceGroup("managed-very-high-flow-logs", 1, 32000, dataTimeRange, false)
+				managedNsGroups := []namespaceGroup{managedVeryHighFlowNamespaces, managedHighFlowNamespaces}
+				mu := testUser{Username: "managed-test-sg-user"}
+				managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+				managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, *managedClusterInfo)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+				teardowns = append(teardowns, managedScenarioTeardowns...)
+
+				// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
+				// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
+				// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
+				licenseTeardown, err := applyLicense(calicoClient)
+				Expect(err).NotTo(HaveOccurred(), "Failed to create license")
+				teardowns = append(teardowns, licenseTeardown)
+				managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
+				Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
+				teardowns = append(teardowns, managedClusterTeardowns)
+
+				// Execute our request.
+				var statsResp *uiapisv1.ServiceGraphStatsResponse
+				var statsErr error
+				customSgConfig.GraphStatsCacheUpdateInterval = 5 * time.Second
+				_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+				queryLastTwoDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
+					return func() []uiapisv1.NamespaceStatistics {
+						queryTimeRange := &lmav1.TimeRange{
+							From: time.Now().Add(-2 * 24 * time.Hour),
+							To:   time.Now(),
+						}
+						statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+						Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+						return statsResp.NamespacesStatistics
+					}
+				}
+				// We expect the high-flow-logs frontend namespaces to both be approximated as low volume, as described earlier.
+				Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(false),
+					Approximated: util.BoolPtr(true),
+				}))
+				Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "managed-high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(false),
 					Approximated: util.BoolPtr(true),
 				}))
 
-			// Set up an analogous scenario for a managed cluster.
-			managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 600000, dataTimeRange, false)
-			managedHighL3FlowNamespaces := newNamespaceGroup("managed-high-l3-flows", 1000, 1, dataTimeRange, false)
-			managedLowScaleNamespaces := newNamespaceGroup("managed-low-scale", 5, 10, dataTimeRange, false)
-			managedNsGroups := []namespaceGroup{managedLowScaleNamespaces, managedHighL3FlowNamespaces, managedHighFlowNamespaces}
-			managedTestUser := testUser{Username: "managed-test-sg-user"}
-			managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
-			managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, *managedClusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
-			teardowns = append(teardowns, managedScenarioTeardowns...)
-
-			// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
-			// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
-			// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
-			licenseTeardown, err := applyLicense(calicoClient)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create license")
-			teardowns = append(teardowns, licenseTeardown)
-			managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
-			teardowns = append(teardowns, managedClusterTeardowns)
-
-			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
-				WithTimeout(3 * time.Minute).
-				WithPolling(3 * time.Second).
-				To(ContainElement(uiapisv1.NamespaceStatistics{
-					Namespace:    "managed-high-l3-flows-backend",
+				// Double the flows for high-flow namespaces. This should push the frontend high-flow-logs namespaces into high volume in the cache, as described earlier.
+				err = highFlowNamespaces.createFlows(context.Background(), linseedCli, clusterInfo.Cluster)
+				Expect(err).NotTo(HaveOccurred(), "Failed to double flows for high l3 flow namespaces")
+				err = managedHighFlowNamespaces.createFlows(context.Background(), linseedCli, managedClusterInfo.Cluster)
+				Expect(err).NotTo(HaveOccurred(), "Failed to double flows for managed high l3 flow namespaces")
+				Eventually(queryLastTwoDays(userInfo, clusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "high-flow-logs-frontend-a",
 					HighVolume:   util.BoolPtr(true),
 					Approximated: util.BoolPtr(true),
 				}))
-
-			// Teardown the managed cluster. In case we don't reach this point, the functions have already been registered with our AfterEach cleanup, and are idempotent.
-			managedClusterTeardowns()
-			licenseTeardown()
-
-			// We've torn down the managed cluster but kept its namespace group intact.
-			// This is not a valid state to be in, since the managed cluster is disconnected and we should not be able to contact its API server anymore.
-			// This invalid state is facilitated by the fact that we have one API server acting as the API server for both the default cluster and the managed cluster.
-			// Even though this state is invalid, it can be used to show whether we cleared out our cache entry for the namespace.
-			Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
-				WithTimeout(3 * time.Minute).
-				WithPolling(3 * time.Second).
-				To(ContainElement(uiapisv1.NamespaceStatistics{
-					Namespace: "managed-high-l3-flows-backend",
+				Eventually(queryLastTwoDays(managedUserInfo, *managedClusterInfo)).WithTimeout(3 * time.Minute).WithPolling(3 * time.Second).To(ContainElement(uiapisv1.NamespaceStatistics{
+					Namespace:    "managed-high-flow-logs-frontend-a",
+					HighVolume:   util.BoolPtr(true),
+					Approximated: util.BoolPtr(true),
 				}))
+			})
+
+			// This test validates that the cache is responsive to changes in managed cluster lifecycle, specifically addition and deletion.
+			// It adds a managed cluster to a base setup that has a default cluster, and validates that the cache fills with the managed cluster data.
+			// It also validates that when the managed cluster is deleted, the cached data is cleared. It also conducts some baseline testing
+			// to validate that the default cluster cache queries as expected in the presence of the managed cluster.
+			It("should support queries from different clusters and maintain a per-cluster cache", func() {
+				// For the default cluster, set up a namespace group that we expect to have high flow logs, along with a high l3 flows namespace group and low scale namespace group.
+				// This follows the same count choices as previous test cases, refer to them for detailed rationale.
+				dataTimeRange := &lmav1.TimeRange{
+					From: time.Now().Add(-3 * 24 * time.Hour),
+					To:   time.Now(),
+				}
+				highFlowNamespaces := newNamespaceGroup("high-flow-logs", 1, 6000, dataTimeRange, false)
+				highL3FlowNamespaces := newNamespaceGroup("high-l3-flows", 10, 1, dataTimeRange, false)
+				lowScaleNamespaces := newNamespaceGroup("low-scale", 1, 10, dataTimeRange, false)
+
+				// Set up our scenario for the default cluster.
+				nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
+				u := testUser{Username: "test-sg-user"}
+				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+				teardowns = append(teardowns, scenarioTeardowns...)
+
+				// Execute our request against the default cluster, validating that we see a response derived from the cache.
+				var statsResp *uiapisv1.ServiceGraphStatsResponse
+				var statsErr error
+				queryLastThreeDays := func(userInfo *user.DefaultInfo, clusterInfo bapi.ClusterInfo) func() []uiapisv1.NamespaceStatistics {
+					return func() []uiapisv1.NamespaceStatistics {
+						queryTimeRange := &lmav1.TimeRange{
+							From: time.Now().Add(-3 * 24 * time.Hour),
+							To:   time.Now(),
+						}
+						statsResp, _, _, _, statsErr, _ = getServiceGraphResponses(sgStatsHandler, nil, userInfo, clusterInfo.Cluster, queryTimeRange, uiapisv1.GraphView{})
+						Expect(statsErr).NotTo(HaveOccurred(), "Failed to get service graph stats response")
+						Expect(statsResp).NotTo(BeNil(), "Expected stats response")
+						return statsResp.NamespacesStatistics
+					}
+				}
+				_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
+				Eventually(queryLastThreeDays(userInfo, clusterInfo)).
+					WithTimeout(3 * time.Minute).
+					WithPolling(3 * time.Second).
+					To(ContainElement(uiapisv1.NamespaceStatistics{
+						Namespace:    "high-l3-flows-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					}))
+
+				// Set up an analogous scenario for a managed cluster.
+				managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 6000, dataTimeRange, false)
+				managedHighL3FlowNamespaces := newNamespaceGroup("managed-high-l3-flows", 10, 1, dataTimeRange, false)
+				managedLowScaleNamespaces := newNamespaceGroup("managed-low-scale", 1, 10, dataTimeRange, false)
+				managedNsGroups := []namespaceGroup{managedLowScaleNamespaces, managedHighL3FlowNamespaces, managedHighFlowNamespaces}
+				managedTestUser := testUser{Username: "managed-test-sg-user"}
+				managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
+				managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, *managedClusterInfo)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
+				teardowns = append(teardowns, managedScenarioTeardowns...)
+
+				// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
+				// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
+				// flows allows us to clearly see that the /stats endpoint has responded to managed cluster creation and filled its cache for it.
+				licenseTeardown, err := applyLicense(calicoClient)
+				Expect(err).NotTo(HaveOccurred(), "Failed to create license")
+				teardowns = append(teardowns, licenseTeardown)
+				managedClusterTeardowns, err := createManagedCluster("managed-cluster", clusterInfo.Tenant, calicoClient, k8sClient)
+				Expect(err).NotTo(HaveOccurred(), "Failed to create managed cluster")
+				teardowns = append(teardowns, managedClusterTeardowns)
+
+				Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
+					WithTimeout(3 * time.Minute).
+					WithPolling(3 * time.Second).
+					To(ContainElement(uiapisv1.NamespaceStatistics{
+						Namespace:    "managed-high-l3-flows-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					}))
+
+				// Teardown the managed cluster. In case we don't reach this point, the functions have already been registered with our AfterEach cleanup, and are idempotent.
+				managedClusterTeardowns()
+				licenseTeardown()
+
+				// We've torn down the managed cluster but kept its namespace group intact.
+				// This is not a valid state to be in, since the managed cluster is disconnected and we should not be able to contact its API server anymore.
+				// This invalid state is facilitated by the fact that we have one API server acting as the API server for both the default cluster and the managed cluster.
+				// Even though this state is invalid, it can be used to show whether we cleared out our cache entry for the namespace.
+				Eventually(queryLastThreeDays(managedUserInfo, *managedClusterInfo)).
+					WithTimeout(3 * time.Minute).
+					WithPolling(3 * time.Second).
+					To(ContainElement(uiapisv1.NamespaceStatistics{
+						Namespace: "managed-high-l3-flows-backend",
+					}))
+			})
 		})
 
 		It("should return correct filtered namespace stats when user is not fully permitted", func() {
@@ -2075,6 +2090,27 @@ func createDefaultFelixConfig(calicoClient *calicoclientset.Clientset) func() {
 	return func() {
 		ctx := context.Background()
 		_ = calicoClient.ProjectcalicoV3().FelixConfigurations().Delete(ctx, "default", metav1.DeleteOptions{})
+	}
+}
+
+// createBulkOptimizeIndexTemplate creates an index template that will be merged with the index template created by Linseed.
+// Raising the shard count increases the insertion throughput (and therefore test speed) by ~15% while lowering memory
+// usage by ~10%.
+func createBulkOptimizeIndexTemplate(esClient *elastic.Client) func() {
+	ctx := context.Background()
+
+	_, err := esClient.IndexPutTemplate("fv-bulk-optimize").
+		BodyJson(map[string]interface{}{
+			"index_patterns": []string{"tigera_secure_ee_flows*"},
+			"order":          1000,
+			"settings": map[string]interface{}{
+				"index.number_of_shards": 4,
+			},
+		}).Do(ctx)
+	Expect(err).NotTo(HaveOccurred(), "Failed to create bulk optimization index template")
+
+	return func() {
+		_, _ = esClient.IndexDeleteTemplate("fv-bulk-optimize").Do(context.Background())
 	}
 }
 
