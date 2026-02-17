@@ -10,9 +10,9 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapifake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/licensing/utils"
-	"k8s.io/client-go/tools/cache"
 )
 
 type mockInformer struct {
