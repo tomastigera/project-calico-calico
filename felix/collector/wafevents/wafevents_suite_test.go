@@ -5,9 +5,8 @@ package wafevents
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -21,7 +20,8 @@ func init() {
 }
 
 func TestWafevents(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/wafevents_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/collector/wafevents", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/wafevents_suite.xml"
+	ginkgo.RunSpecs(t, "UT: felix/collector/wafevents", suiteConfig, reporterConfig)
 }

@@ -89,7 +89,7 @@ ut: report-dir
 
 .PHONY: fv
 fv: image report-dir run-prometheus-service-proxy fv/fv.test
-		cd fv && ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
+		cd fv && ./fv.test $(GINKGO_ARGS) --ginkgo.slow-spec-threshold=30
 		$(MAKE) clean
 
 fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)

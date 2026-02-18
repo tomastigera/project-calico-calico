@@ -5,7 +5,7 @@ package license
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapifake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"

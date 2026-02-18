@@ -17,8 +17,8 @@ package rbac_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -28,6 +28,6 @@ func init() {
 }
 
 func TestRules(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "RBAC Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "RBAC Suite")
 }

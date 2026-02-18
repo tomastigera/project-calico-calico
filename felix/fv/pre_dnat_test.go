@@ -211,7 +211,7 @@ var _ = infrastructure.DatastoreDescribe("pre-dnat with initialized Felix, 2 wor
 					})
 
 					AfterEach(func() {
-						if CurrentGinkgoTestDescription().Failed {
+						if CurrentSpecReport().Failed() {
 							logrus.WithFields(logrus.Fields{
 								"filter": tc.Felixes[0].IPTablesChains("filter"),
 								"mangle": tc.Felixes[0].IPTablesChains("mangle"),

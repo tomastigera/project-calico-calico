@@ -5,9 +5,8 @@ package authorization
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -19,7 +18,8 @@ func init() {
 }
 
 func TestConfig(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("./report/authorization.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Authorization controller Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "./report/authorization.xml"
+	ginkgo.RunSpecs(t, "Authorization controller Suite", suiteConfig, reporterConfig)
 }

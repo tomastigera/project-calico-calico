@@ -5,13 +5,13 @@ package users
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestConfig(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("./report/elasticsearch_users_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Elasticsearch Users Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "./report/elasticsearch_users_suite.xml"
+	ginkgo.RunSpecs(t, "Elasticsearch Users Suite", suiteConfig, reporterConfig)
 }

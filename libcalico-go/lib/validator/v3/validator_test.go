@@ -23,6 +23,7 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -5475,45 +5476,45 @@ func init() {
 		Entry("should accept a valid BFDConfiguration", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, true),
 		Entry("should reject a BFDConfiguration with invalid NodeSelector", api.BFDConfigurationSpec{NodeSelector: "all", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with MinimumRecvInterval less than 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Microsecond},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Microsecond},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with MinimumSendInterval not a multiple of 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1*time.Millisecond + 1*time.Microsecond},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1*time.Millisecond + 1*time.Microsecond},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with zero multiplier", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          0,
 			},
 		}}, false),

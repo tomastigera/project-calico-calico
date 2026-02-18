@@ -2,149 +2,149 @@
 package xrefcache_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/internal/testutils"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 )
 
 var _ = Describe("Basic CRUD of network sets with no other resources present", func() {
-	var tester *XrefCacheTester
+	var tester *testutils.XrefCacheTester
 
 	BeforeEach(func() {
-		tester = NewXrefCacheTester()
+		tester = testutils.NewXrefCacheTester()
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 	})
 
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("should handle basic CRUD and identify a network set with internet exposed", func() {
 		By("applying a network set with no nets")
-		tester.SetGlobalNetworkSet(Name1, NoLabels, 0)
+		tester.SetGlobalNetworkSet(testutils.Name1, testutils.NoLabels, 0)
 
 		By("checking the cache settings")
-		ns := tester.GetGlobalNetworkSet(Name1)
+		ns := tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a network set with one public net")
-		tester.SetGlobalNetworkSet(Name1, Label1, Public)
+		tester.SetGlobalNetworkSet(testutils.Name1, testutils.Label1, testutils.Public)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying a network set with one private net")
-		tester.SetGlobalNetworkSet(Name1, Label1, Private)
+		tester.SetGlobalNetworkSet(testutils.Name1, testutils.Label1, testutils.Private)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a network set with one private and one public net")
-		tester.SetGlobalNetworkSet(Name1, Label1, Public|Private)
+		tester.SetGlobalNetworkSet(testutils.Name1, testutils.Label1, testutils.Public|testutils.Private)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying another network set with no nets")
-		tester.SetGlobalNetworkSet(Name2, NoLabels, 0)
+		tester.SetGlobalNetworkSet(testutils.Name2, testutils.NoLabels, 0)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
-		ns = tester.GetGlobalNetworkSet(Name2)
+		ns = tester.GetGlobalNetworkSet(testutils.Name2)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("deleting the first network set")
-		tester.DeleteGlobalNetworkSet(Name1)
+		tester.DeleteGlobalNetworkSet(testutils.Name1)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).To(BeNil())
-		ns = tester.GetGlobalNetworkSet(Name2)
+		ns = tester.GetGlobalNetworkSet(testutils.Name2)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("deleting the second network set")
-		tester.DeleteGlobalNetworkSet(Name2)
+		tester.DeleteGlobalNetworkSet(testutils.Name2)
 
 		By("checking the cache settings")
-		ns = tester.GetGlobalNetworkSet(Name1)
+		ns = tester.GetGlobalNetworkSet(testutils.Name1)
 		Expect(ns).To(BeNil())
-		ns = tester.GetGlobalNetworkSet(Name2)
+		ns = tester.GetGlobalNetworkSet(testutils.Name2)
 		Expect(ns).To(BeNil())
 	})
 
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("should handle basic CRUD and identify a namespaced network set with internet exposed", func() {
 		By("applying a network set with no nets")
-		tester.SetNetworkSet(Name1, Namespace1, NoLabels, 0)
+		tester.SetNetworkSet(testutils.Name1, testutils.Namespace1, testutils.NoLabels, 0)
 
 		By("checking the cache settings")
-		ns := tester.GetNetworkSet(Name1, Namespace1)
+		ns := tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a namespaced network set with one public net")
-		tester.SetNetworkSet(Name1, Namespace1, Label1, Public)
+		tester.SetNetworkSet(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.Public)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying a network set with one private net")
-		tester.SetNetworkSet(Name1, Namespace1, Label1, Private)
+		tester.SetNetworkSet(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.Private)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a network set with one private and one public net")
-		tester.SetNetworkSet(Name1, Namespace1, Label1, Public|Private)
+		tester.SetNetworkSet(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.Public|testutils.Private)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying another network set with no nets")
-		tester.SetNetworkSet(Name2, Namespace1, NoLabels, 0)
+		tester.SetNetworkSet(testutils.Name2, testutils.Namespace1, testutils.NoLabels, 0)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
-		ns = tester.GetNetworkSet(Name2, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name2, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("deleting the first network set")
-		tester.DeleteNetworkSet(Name1, Namespace1)
+		tester.DeleteNetworkSet(testutils.Name1, testutils.Namespace1)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).To(BeNil())
-		ns = tester.GetNetworkSet(Name2, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name2, testutils.Namespace1)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())
 
 		By("deleting the second network set")
-		tester.DeleteNetworkSet(Name2, Namespace1)
+		tester.DeleteNetworkSet(testutils.Name2, testutils.Namespace1)
 
 		By("checking the cache settings")
-		ns = tester.GetNetworkSet(Name1, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name1, testutils.Namespace1)
 		Expect(ns).To(BeNil())
-		ns = tester.GetNetworkSet(Name2, Namespace1)
+		ns = tester.GetNetworkSet(testutils.Name2, testutils.Namespace1)
 		Expect(ns).To(BeNil())
 	})
 })

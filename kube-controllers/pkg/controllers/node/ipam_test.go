@@ -767,7 +767,7 @@ var _ = Describe("IPAM controller UTs", func() {
 		}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
 	})
 
-	table.DescribeTable("should NOT clean up host-owned IPs of existing nodes.",
+	DescribeTable("should NOT clean up host-owned IPs of existing nodes.",
 		func(allocType string) {
 			// Create a valid node, should keep the host-owned IPs alive.
 			n := libapiv3.Node{}
@@ -839,10 +839,10 @@ var _ = Describe("IPAM controller UTs", func() {
 			}, 3*time.Second, 100*time.Millisecond).Should(BeEmpty())
 			Expect(fakeClient.affinityReleased("cnode")).To(BeFalse())
 		},
-		table.Entry(ipam.AttributeTypeIPIP, ipam.AttributeTypeIPIP),
-		table.Entry(ipam.AttributeTypeVXLAN, ipam.AttributeTypeVXLAN),
-		table.Entry(ipam.AttributeTypeWireguard, ipam.AttributeTypeWireguard),
-		table.Entry(ipam.AttributeTypeAWSSecondary, ipam.AttributeTypeAWSSecondary),
+		Entry(ipam.AttributeTypeIPIP, ipam.AttributeTypeIPIP),
+		Entry(ipam.AttributeTypeVXLAN, ipam.AttributeTypeVXLAN),
+		Entry(ipam.AttributeTypeWireguard, ipam.AttributeTypeWireguard),
+		Entry(ipam.AttributeTypeAWSSecondary, ipam.AttributeTypeAWSSecondary),
 	)
 
 	It("should clean up leaked IP addresses", func() {

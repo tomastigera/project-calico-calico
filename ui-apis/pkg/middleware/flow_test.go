@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -575,7 +574,7 @@ var _ = Describe("FlowLog middleware", func() {
 					DstLabels: FlowResponseLabels{},
 					SrcLabels: expectedSrcLabels,
 				}))
-			}, labelTestCases...)
+			}, labelTestCases)
 
 			DescribeTable("parses the destination labels", func(buckets []map[string]interface{}, expectedDstLabels FlowResponseLabels) {
 				setResponse(linseedLabelResponse(buckets, "dst"))
@@ -594,7 +593,7 @@ var _ = Describe("FlowLog middleware", func() {
 					SrcLabels: FlowResponseLabels{},
 					DstLabels: expectedDstLabels,
 				}))
-			}, labelTestCases...)
+			}, labelTestCases)
 		})
 
 		Context("for policies", func() {

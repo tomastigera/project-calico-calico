@@ -10,7 +10,7 @@ import (
 	"net/url"
 
 	"github.com/jarcoal/httpmock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	fn "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"

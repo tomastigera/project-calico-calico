@@ -214,7 +214,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 					})
 
 					JustAfterEach(func() {
-						if CurrentGinkgoTestDescription().Failed {
+						if CurrentSpecReport().Failed() {
 							externalClient.Exec("ip", "r")
 							externalClient.Exec("ip", "l")
 							externalClient.Exec("ip", "a")

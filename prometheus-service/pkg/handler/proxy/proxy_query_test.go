@@ -7,7 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	authzv1 "k8s.io/api/authorization/v1"

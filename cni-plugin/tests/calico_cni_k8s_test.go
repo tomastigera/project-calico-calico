@@ -3864,13 +3864,14 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				_, err = testutils.DeleteContainer(netconf, contNs.Path(), testNodeName, testutils.K8S_TEST_NS)
 				Expect(err).ShouldNot(HaveOccurred())
-			}, TableEntry{
-				Description: "uses that annotation for the default interface",
-				Parameters:  []interface{}{"eth0", cnet.MustParseCIDR(extraPool)},
-			}, TableEntry{
-				Description: "ignores the annotation for additional interfaces",
-				Parameters:  []interface{}{"net1", cnet.MustParseCIDR(pool)},
-			})
+			},
+				Entry("uses that annotation for the default interface",
+					"eth0", cnet.MustParseCIDR(extraPool),
+				),
+				Entry("ignores the annotation for additional interfaces",
+					"net1", cnet.MustParseCIDR(pool),
+				),
+			)
 		})
 	})
 

@@ -7,8 +7,8 @@ package wafevents
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/collector/types"
@@ -19,7 +19,7 @@ import (
 // Performance test that's excluded when running with race detector
 // since the race detector adds 5-10x overhead making the timing
 // requirements impossible to meet.
-var _ = Describe("WAFEvent Log Reporter Performance", func() {
+var _ = ginkgo.Describe("WAFEvent Log Reporter Performance", func() {
 	var (
 		dispatcher   *testWAFEventReporter
 		r            *WAFEventReporter
@@ -27,11 +27,11 @@ var _ = Describe("WAFEvent Log Reporter Performance", func() {
 		r0, r1       *Report
 	)
 
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		dispatcher = &testWAFEventReporter{logs: make(chan []*v1.WAFLog, 1)}
 		flushTrigger = make(chan time.Time, 1)
 		r = NewReporterWithShims([]types.Reporter{dispatcher}, flushTrigger, nil)
-		Expect(r.Start()).NotTo(HaveOccurred())
+		gomega.Expect(r.Start()).NotTo(gomega.HaveOccurred())
 
 		r0 = &Report{
 			Src: &v1.WAFEndpoint{
@@ -91,26 +91,26 @@ var _ = Describe("WAFEvent Log Reporter Performance", func() {
 		}
 	})
 
-	It("should perform on huge loads", func() {
+	ginkgo.It("should perform on huge loads", func() {
 		// get start time
 		start := time.Now()
 
 		// report the 100k events
 		for i := 0; i < 25000; i++ {
 			err := r.Report(r0)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 		for i := 0; i < 75000; i++ {
 			err := r.Report(r1)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 
 		// flush and verify logs
 		flushTrigger <- time.Now()
 		logs := <-dispatcher.logs
-		Expect(logs).To(HaveLen(2))
+		gomega.Expect(logs).To(gomega.HaveLen(2))
 
 		// test if it takes less than 10 secs
-		Expect(time.Since(start)).To(BeNumerically("<", 10*time.Second))
+		gomega.Expect(time.Since(start)).To(gomega.BeNumerically("<", 10*time.Second))
 	})
 })

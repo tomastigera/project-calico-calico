@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"

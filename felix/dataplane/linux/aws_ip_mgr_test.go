@@ -8,8 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
@@ -632,12 +631,12 @@ func describeAWSIPMgrCommonTests(mode string) {
 				expectSecondaryLinkConfigured()
 			})
 
-			errEntry := func(name string) table.TableEntry {
-				return table.Entry(name, name)
+			errEntry := func(name string) TableEntry {
+				return Entry(name, name)
 			}
-			var errEntries []table.TableEntry
+			var errEntries []TableEntry
 			if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
-				errEntries = []table.TableEntry{
+				errEntries = []TableEntry{
 					errEntry("LinkList"),
 					errEntry("LinkSetMTU"),
 					errEntry("LinkSetUp"),
@@ -646,7 +645,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 					errEntry("NeighSet"),
 				}
 			} else {
-				errEntries = []table.TableEntry{
+				errEntries = []TableEntry{
 					errEntry("LinkList"),
 					errEntry("LinkSetMTU"),
 					errEntry("LinkSetUp"),
@@ -657,7 +656,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 					errEntry("NeighList"),
 				}
 			}
-			table.DescribeTable("with queued error",
+			DescribeTable("with queued error",
 				func(name string) {
 					fakes.Errors.QueueError(name)
 
@@ -688,7 +687,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 					fakes.Errors.ExpectAllErrorsConsumed()
 				},
-				errEntries...,
+				errEntries,
 			)
 
 			It("should handle an interface flap.", func() {

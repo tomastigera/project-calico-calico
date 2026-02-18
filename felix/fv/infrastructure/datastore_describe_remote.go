@@ -16,7 +16,7 @@ package infrastructure
 import (
 	"fmt"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -85,7 +85,7 @@ func DatastoreDescribeRemoteOnly(description string, body func(factories LocalRe
 				afterCoreFiles.Discard(item)
 			}
 			if afterCoreFiles.Len() != 0 {
-				if ginkgo.CurrentGinkgoTestDescription().Failed {
+				if ginkgo.CurrentSpecReport().Failed() {
 					ginkgo.Fail(fmt.Sprintf("Test FAILED and new core files were detected during tear-down: %v.  "+
 						"Felix must have panicked during the test.", afterCoreFiles.Slice()))
 					return

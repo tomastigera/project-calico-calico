@@ -16,8 +16,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -201,7 +200,7 @@ var _ = Describe("Service graph data tests", func() {
 	AfterEach(func() {
 		// If the test failed then write out the actual contents of the file. We can verify the data by hand and if
 		// correct rename (by removing the .actual from the name).
-		if CurrentGinkgoTestDescription().Failed && actualData != nil && actualDataFilename != "" {
+		if CurrentSpecReport().Failed() && actualData != nil && actualDataFilename != "" {
 			sort.Slice(actualData.Nodes, func(i, j int) bool {
 				return actualData.Nodes[i].ID < actualData.Nodes[j].ID
 			})

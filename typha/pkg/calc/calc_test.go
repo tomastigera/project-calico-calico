@@ -108,16 +108,12 @@ var _ = Describe("ValidationFilter", func() {
 			expectedCount = 1
 		}
 		Expect(s.countUpdates).To(Equal(expectedCount))
-	}, []TableEntry{
-		remoteClusterStatusCase(model.RemoteClusterConnecting, true),
-		remoteClusterStatusCase(model.RemoteClusterConnectionFailed, true),
-		remoteClusterStatusCase(model.RemoteClusterResyncInProgress, true),
-		remoteClusterStatusCase(model.RemoteClusterInSync, true),
-		remoteClusterStatusCase(model.RemoteClusterConfigIncomplete, true),
-		remoteClusterStatusCase(model.RemoteClusterConfigChangeRestartRequired, false),
-	}...)
+	},
+		Entry(model.RemoteClusterConnecting.String(), model.RemoteClusterConnecting, true),
+		Entry(model.RemoteClusterConnectionFailed.String(), model.RemoteClusterConnectionFailed, true),
+		Entry(model.RemoteClusterResyncInProgress.String(), model.RemoteClusterResyncInProgress, true),
+		Entry(model.RemoteClusterInSync.String(), model.RemoteClusterInSync, true),
+		Entry(model.RemoteClusterConfigIncomplete.String(), model.RemoteClusterConfigIncomplete, true),
+		Entry(model.RemoteClusterConfigChangeRestartRequired.String(), model.RemoteClusterConfigChangeRestartRequired, false),
+	)
 })
-
-func remoteClusterStatusCase(statusType model.RemoteClusterStatusType, shouldFilter bool) TableEntry {
-	return TableEntry{Description: statusType.String(), Parameters: []interface{}{statusType, shouldFilter}}
-}

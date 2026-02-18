@@ -4,8 +4,7 @@ package policyrec_test
 import (
 	"net/http"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	appsv1 "k8s.io/api/apps/v1"

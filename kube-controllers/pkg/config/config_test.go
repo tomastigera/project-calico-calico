@@ -355,7 +355,6 @@ current-context: test-context`
 				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.create.Spec).To(Equal(initialConfig.Spec))
-				close(done)
 			})
 
 			It("should send new update when API values change", func() {
