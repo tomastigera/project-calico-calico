@@ -103,7 +103,7 @@ type SubProgInfo struct {
 // excludes programs based on the AttachType's characteristics.
 // The skipIPDefrag parameter allows skipping IP defrag even if the AttachType
 // normally supports it (used when loading fails and retrying without IP defrag).
-func GetApplicableSubProgs(at AttachType, skipIPDefrag bool) []SubProgInfo {
+func GetApplicableSubProgs(at AttachType, skipIPDefrag, dnsInline bool) []SubProgInfo {
 	var result []SubProgInfo
 
 	subs := GetSubProgNames(at.Hook)
@@ -122,6 +122,10 @@ func GetApplicableSubProgs(at AttachType, skipIPDefrag bool) []SubProgInfo {
 		}
 
 		if SubProg(idx) == SubProgMaglev && !at.hasMaglev() {
+			continue
+		}
+
+		if SubProg(idx) == SubProgDNSParser && !dnsInline {
 			continue
 		}
 
@@ -220,7 +224,7 @@ func NewXDPProgramsMap() bpfmaps.Map {
 	}
 }
 
-func (pm *ProgramsMap) LoadObj(at AttachType, progType string) (Layout, error) {
+func (pm *ProgramsMap) LoadObj(at AttachType, progType string, dnsInline bool) (Layout, error) {
 	file := ObjectFile(at)
 	if file == "" {
 		return nil, fmt.Errorf("no object for attach type %+v", at)
@@ -238,13 +242,13 @@ func (pm *ProgramsMap) LoadObj(at AttachType, progType string) (Layout, error) {
 
 	var err error
 	if pi.layout == nil {
-		la, err := pm.loadObj(at, path.Join(bpfdefs.ObjectDir, file), progType)
+		la, err := pm.loadObj(at, path.Join(bpfdefs.ObjectDir, file), progType, dnsInline)
 		if err != nil && strings.Contains(file, "_co-re") {
 			log.WithError(err).Warn("Failed to load CO-RE object, kernel too old? Falling back to non-CO-RE.")
 			file := strings.ReplaceAll(file, "_co-re", "")
 			// Skip trying the same file again, as it will fail with the same error.
 			SetObjectFile(at, file)
-			la, err = pm.loadObj(at, path.Join(bpfdefs.ObjectDir, file), progType)
+			la, err = pm.loadObj(at, path.Join(bpfdefs.ObjectDir, file), progType, dnsInline)
 		}
 		if err == nil {
 			log.WithField("layout", la).Debugf("Loaded generic object file %s", file)
@@ -269,7 +273,7 @@ func (pm *ProgramsMap) getOrCreateProgramInfo(at AttachType) *program {
 	return pi
 }
 
-func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layout, error) {
+func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string, dnsInline bool) (Layout, error) {
 	obj, err := libbpf.OpenObject(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open obj file %s: %w", file, err)
@@ -283,7 +287,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 		// Disable autoload for the IP defrag program
 		obj.SetProgramAutoload("calico_tc_skb_ipv4_frag", false)
 	}
-	if !at.hasDNSParser() {
+	if !dnsInline {
 		// Disable autoload for the DNS parser program
 		obj.SetProgramAutoload("calico_tc_dns_parser", false)
 	}
@@ -306,7 +310,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 
 			// Disable autoload for the IP defrag program
 			obj.SetProgramAutoload("calico_tc_skb_ipv4_frag", false)
-			if !at.hasDNSParser() {
+			if !dnsInline {
 				// Disable autoload for the DNS parser program
 				obj.SetProgramAutoload("calico_tc_dns_parser", false)
 			}
@@ -323,7 +327,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file, progAttachType string) (Layo
 		}
 	}
 
-	layout, err := pm.allocateLayout(at, obj, skipIPDefrag)
+	layout, err := pm.allocateLayout(at, obj, skipIPDefrag, dnsInline)
 	log.WithError(err).WithField("layout", layout).Debugf("load generic object file %s", file)
 
 	return layout, err
@@ -367,7 +371,7 @@ func (pm *ProgramsMap) setMapSize(m *libbpf.Map) error {
 	return nil
 }
 
-func (pm *ProgramsMap) allocateLayout(at AttachType, obj *libbpf.Obj, skipIPDefrag bool) (Layout, error) {
+func (pm *ProgramsMap) allocateLayout(at AttachType, obj *libbpf.Obj, skipIPDefrag bool, dnsInline bool) (Layout, error) {
 	mapName := pm.GetName()
 
 	l := make(Layout)
@@ -378,7 +382,7 @@ func (pm *ProgramsMap) allocateLayout(at AttachType, obj *libbpf.Obj, skipIPDefr
 		offset = int(SubProgTCMainDebug)
 	}
 
-	applicableProgs := GetApplicableSubProgs(at, skipIPDefrag)
+	applicableProgs := GetApplicableSubProgs(at, skipIPDefrag, dnsInline)
 
 	for _, progInfo := range applicableProgs {
 		pmIdx := pm.allocIdx()
