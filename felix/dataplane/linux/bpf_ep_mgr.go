@@ -4245,6 +4245,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 	if hk == hook.XDP {
 		polProgsMap = m.commonMaps.XDPJumpMap
 		stride = jump.XDPMaxEntryPoints
+		attachType = libbpf.AttachTypeXDP
 	}
 	opts = append(opts, polprog.WithPolicyMapIndexAndStride(polJumpMapIdx, stride))
 
