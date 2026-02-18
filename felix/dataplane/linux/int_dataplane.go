@@ -1299,6 +1299,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// Important that we create the maps before we load a BPF program with TC since we make sure the map
 		// metadata name is set whereas TC doesn't set that field.
 		var conntrackScannerV4, conntrackScannerV6 *bpfconntrack.Scanner
+		var workloadRemoveChanV4, workloadRemoveChanV6 chan string
 		var ipSetIDAllocatorV4, ipSetIDAllocatorV6 *idalloc.IDAllocator
 		ipSetIDAllocatorV4 = idalloc.New()
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
@@ -1308,7 +1309,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		// Start IPv4 BPF dataplane components
-		conntrackScannerV4, bpfIPSetsV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, &config, ipsetsManager, dp)
+		conntrackScannerV4, bpfIPSetsV4, workloadRemoveChanV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, &config, ipsetsManager, dp)
 		if config.BPFIpv6Enabled {
 			// Start IPv6 BPF dataplane components
 			ipSetIDAllocatorV6 = idalloc.New()
@@ -1316,7 +1317,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			if config.RulesConfig.IstioAmbientModeEnabled {
 				ipSetIDAllocatorV6.ReserveWellKnownID(rules.IPSetIDAllIstioWEPs, bpfipsets.AllIstioWEPsID)
 			}
-			conntrackScannerV6, _ = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, &config, ipsetsManagerV6, dp)
+			conntrackScannerV6, _, workloadRemoveChanV6 = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, &config, ipsetsManagerV6, dp)
 		}
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
@@ -1353,6 +1354,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.HealthAggregator,
 			dataplaneFeatures,
 			podMTU,
+			workloadRemoveChanV4,
+			workloadRemoveChanV6,
 		)
 		if err != nil {
 			logrus.WithError(err).Panic("Failed to create BPF endpoint manager.")
@@ -3616,7 +3619,7 @@ func startBPFDataplaneComponents(
 	config *Config,
 	ipSetsMgr *dpsets.IPSetsManager,
 	dp *InternalDataplane,
-) (*bpfconntrack.Scanner, egressIPSets) {
+) (*bpfconntrack.Scanner, egressIPSets, chan string) {
 	ipSetConfig := config.RulesConfig.IPSetConfigV4
 	ipSetEntry := bpfipsets.IPSetEntryFromBytes
 	ipSetProtoEntry := bpfipsets.ProtoIPSetMemberToBPFEntry
@@ -3733,12 +3736,13 @@ func startBPFDataplaneComponents(
 		logrus.Errorf("error creating the bpf cleaner %v", err)
 	}
 
+	workloadRemoveChan := make(chan string, 1000)
 	conntrackScanner := bpfconntrack.NewScanner(maps.CtMap, ctKey, ctVal,
 		config.ConfigChangedRestartCallback,
 		config.BPFMapSizeConntrackScaling, maps.CtCleanupMap.(bpfmaps.MapWithExistsCheck),
 		int(ipFamily),
 		bpfCleaner,
-		livenessScanner)
+		livenessScanner, bpfconntrack.NewWorkloadRemoveScannerTCP(workloadRemoveChan))
 
 	// Before we start, scan for all finished / timed out connections to
 	// free up the conntrack table asap as it may take time to sync up the
@@ -3762,7 +3766,7 @@ func startBPFDataplaneComponents(
 	} else {
 		logrus.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 	}
-	return conntrackScanner, ipSets
+	return conntrackScanner, ipSets, workloadRemoveChan
 }
 
 func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
