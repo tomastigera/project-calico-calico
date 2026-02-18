@@ -61,7 +61,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 	spec2 := apiv3.EgressGatewayPolicySpec{}
 	spec2.Rules = []apiv3.EgressGatewayRule{ruleLocal, ruleInternet}
 
-	DescribeTable("EgressGatewayPolicy e2e CRUD tests", func() {
+	It("EgressGatewayPolicy e2e CRUD tests", func() {
 		c, err := clientv3.New(config)
 		Expect(err).NotTo(HaveOccurred())
 
