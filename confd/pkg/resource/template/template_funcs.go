@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"maps"
 	"net"
-	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -34,7 +33,6 @@ func newFuncMap() map[string]any {
 	m["jsonArray"] = UnmarshalJsonArray
 	m["dir"] = path.Dir
 	m["map"] = CreateMap
-	m["getenv"] = Getenv
 	m["join"] = strings.Join
 	m["datetime"] = time.Now
 	m["toUpper"] = strings.ToUpper
@@ -723,22 +721,6 @@ func formatComment(comment string) string {
 func hashToIPv4(nodeName string) string {
 	result, _ := HashToIPv4(nodeName)
 	return result
-}
-
-// Getenv retrieves the value of the environment variable named by the key.
-// It returns the value, which will the default value if the variable is not present.
-// If no default value was given - returns "".
-func Getenv(key string, v ...string) string {
-	defaultValue := ""
-	if len(v) > 0 {
-		defaultValue = v[0]
-	}
-
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
 }
 
 // CreateMap creates a key-value map of string -> interface{}
