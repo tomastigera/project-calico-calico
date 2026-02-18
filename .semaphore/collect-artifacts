@@ -50,6 +50,11 @@ elif [ "$COMPONENT" = "node" ]; then
   mkdir -p "artifacts/report"
   cp node/report/*.xml "artifacts/report" || echo "Failed to copy reports."
 
+elif [ "$COMPONENT" = "e2e" ]; then
+
+  echo "Collecting artifacts for e2e..."
+  mkdir -p "artifacts/report"
+
 fi
 
 exit 0

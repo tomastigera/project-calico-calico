@@ -734,6 +734,8 @@ blocks:
         - name: "E2E script & pipeline validations: validate yaml"
           commands:
             - ./.semaphore/end-to-end/scripts/test_scripts/e2e-validation.sh
+  # In OSS, we run these tests directly on the Semaphore runner. However, Enterprise uses substantially more
+  # resources, so we run them on GCP VMs.
   - name: E2E tests
     run:
       when: "true"
@@ -743,9 +745,15 @@ blocks:
       env_vars:
         - name: BUILD_CACHE_GROUP
           value: "e2e-tests"
+        - name: CI_GROUP_LABEL
+          value: "e2e"
+        - name: CI_JOB_LABEL
+          value: "conformance"
       secrets:
-        # Since we create a local kind cluster, we need the test license.
         - name: test-customer-license
+        - name: google-service-account-for-gcr
+        - name: google-service-account-for-gce
+        - name: tigera-dev-ci-pull-credentials
       prologue:
         commands:
           # Log in to GCR - deploying the kind cluster currently requires pulling
@@ -754,6 +762,16 @@ blocks:
           # We need to log in to GCP in order to build intrusion detection.
           - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
           - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+          - gcloud config set project unique-caldron-775
+          - cd e2e
+          - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+          - export ZONE=europe-west3-c
+          - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-e2e-
+          - echo VM_PREFIX=${VM_PREFIX}
+          - export COMPONENT=e2e
+          - export VM_DISK_SIZE=120GB
+          - mkdir artifacts
+          - ./.semaphore/cache-test-artifacts
       agent:
         machine:
           type: f1-standard-4
@@ -761,12 +779,14 @@ blocks:
       jobs:
         - name: "E2E tests: Conformance"
           execution_time_limit:
-            minutes: 60
+            minutes: 120
           commands:
-            - .semaphore/run-and-monitor e2e-test.log make e2e-test
-          env_vars:
-            - name: STORE_BUILD_CACHE
-              value: "true"
+            - ../.semaphore/vms/run-tests-on-vms ${VM_PREFIX}
+      epilogue:
+        always:
+          commands:
+            - '../.semaphore/vms/publish-reports "E2E: Conformance"'
+            - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
   - name: Envoy Gateway
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
