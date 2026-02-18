@@ -323,23 +323,21 @@ PuB/TL+u2y+iQUyXxLy3
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should write the value of MULTI_INTERFACE_MODE to disk", func(done Done) {
+	It("should write the value of MULTI_INTERFACE_MODE to disk", func() {
 		err := runCniContainer(tempDir, true, "-e", "MULTI_INTERFACE_MODE=test")
 		Expect(err).NotTo(HaveOccurred())
 		content, err := os.ReadFile(tempDir + "/net.d/calico_multi_interface_mode")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(strings.TrimSpace(string(content))).Should(Equal("test"))
-		close(done)
-	}, 60)
+	})
 
-	It("should remove the calico_multi_interface_mode file if MULTI_INTERFACE_MODE isn't set", func(done Done) {
+	It("should remove the calico_multi_interface_mode file if MULTI_INTERFACE_MODE isn't set", func() {
 		Expect(os.WriteFile(tempDir+"/net.d/calico_multi_interface_mode", []byte("test"), 0755)).ShouldNot(HaveOccurred())
 		Expect(runCniContainer(tempDir, true)).NotTo(HaveOccurred())
 		_, err := os.Stat(tempDir + "/net.d/calico_multi_interface_mode")
 		Expect(err).Should(HaveOccurred())
 		Expect(os.IsNotExist(err)).Should(BeTrue())
-		close(done)
-	}, 60)
+	})
 
 	It("should use CNI_NETWORK_CONFIG_FILE over CNI_NETWORK_CONFIG", func() {
 		// Write the alternate configuration to disk so it can be picked up by
@@ -362,7 +360,6 @@ PuB/TL+u2y+iQUyXxLy3
 		Expect(err).NotTo(HaveOccurred())
 
 		done := make(chan bool)
-		defer close(done)
 
 		// Run the portmap plugin in a loop to simulate it being used.
 		plug := tempDir + "/bin/portmap"

@@ -71,14 +71,14 @@ clean:
 .PHONY: ut
 ut: bin/l7-collector-$(ARCH)
 	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
-	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	    ginkgo -r --skip-package deps,fv --focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
 fv: bin/l7-collector-$(ARCH)
 	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \
 	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
-	    ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	    ginkgo fv -r --skip-package deps --focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
 # CI/CD

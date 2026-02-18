@@ -85,7 +85,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	var ctx context.Context
 	var calicoClient client.Interface
 	var err error
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		log.Infof("CONTAINER_RUNTIME=%v", os.Getenv("CONTAINER_RUNTIME"))
 
 		// Clean-up Networks if left over in previous run

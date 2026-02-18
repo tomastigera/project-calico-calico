@@ -80,11 +80,10 @@ var _ = Describe("Test Expiring", func() {
 		execute("qux", "b", true, 2, 2, 2)
 		execute("qux", "b", true, 3, 2, 2)
 
-		When("time passes the cache will empty", func() {
-			requireSizeMetricEventually(0)
-			execute("baz", "x", false, 3, 3, 1)
-			execute("baz", "x", true, 4, 3, 1)
-		})
+		By("waiting for the cache to empty after time passes")
+		requireSizeMetricEventually(0)
+		execute("baz", "x", false, 3, 3, 1)
+		execute("baz", "x", true, 4, 3, 1)
 	})
 
 	It("should panic when a value of the wrong type is encountered", func() {

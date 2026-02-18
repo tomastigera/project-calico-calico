@@ -3069,9 +3069,9 @@ var _ = Describe("DNS policy rules", func() {
 
 			Expect(iptableRules).Should(Equal(expected), cmp.Diff(iptableRules, expected))
 		},
-		Entry(v3.DNSPolicyModeDelayDeniedPacket, v3.DNSPolicyModeDelayDeniedPacket, true),
-		Entry(v3.DNSPolicyModeNoDelay, v3.DNSPolicyModeNoDelay, false),
-		Entry(v3.DNSPolicyModeDelayDNSResponse, v3.DNSPolicyModeDelayDNSResponse, false),
-		Entry(v3.DNSPolicyModeInline, v3.DNSPolicyModeInline, false),
+		Entry(string(v3.DNSPolicyModeDelayDeniedPacket), v3.DNSPolicyModeDelayDeniedPacket, true),
+		Entry(string(v3.DNSPolicyModeNoDelay), v3.DNSPolicyModeNoDelay, false),
+		Entry(string(v3.DNSPolicyModeDelayDNSResponse), v3.DNSPolicyModeDelayDNSResponse, false),
+		Entry(string(v3.DNSPolicyModeInline), v3.DNSPolicyModeInline, false),
 	)
 })

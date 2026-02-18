@@ -348,7 +348,7 @@ GINKGO = ginkgo
 UT_PACKAGES_TO_SKIP?=pkg/lifecycle/startup,pkg/allocateip,pkg/status
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r -skipPackage=$(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skip-package=$(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
 
 # download BIRD source to include in image.
 $(BIRD_SOURCE): .bird-source.created

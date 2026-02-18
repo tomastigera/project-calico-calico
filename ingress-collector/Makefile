@@ -65,11 +65,11 @@ GINKGO_FOCUS?=.*
 
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skipPackage fv -focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skip-package fv --focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
 
 .PHONY: fv
 fv:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r -focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
 
 ###############################################################################
 # CI

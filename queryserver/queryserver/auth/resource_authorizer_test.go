@@ -22,9 +22,9 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 
 	BeforeEach(func() {
 		mockClientSet := &lmak8s.MockClientSet{}
-		mockClientSetFactory = lmak8s.NewMockClientSetFactory(GinkgoT())
-		mockClientSetFactory.On("NewClientSetForApplication", mock.Anything, mock.Anything).Return(mockClientSet, nil)
-		mockClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSetFactory = &lmak8s.MockClientSetFactory{}
+		mockClientSetFactory.On("NewClientSetForApplication", mock.Anything, mock.Anything).Return(mockClientSet, nil).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3()).Maybe()
 
 		authz = NewAuthorizer(mockClientSetFactory)
 	})

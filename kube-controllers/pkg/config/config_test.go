@@ -460,7 +460,7 @@ current-context: test-context`
 			})
 		})
 
-		It("should send new update when FederatedServices is added", func(done Done) {
+		It("should send new update when FederatedServices is added", func() {
 			kcc := v3.NewKubeControllersConfiguration()
 			kcc.Name = cfg.KubeControllersConfigName
 			kcc.Spec = v3.KubeControllersConfigurationSpec{
@@ -512,7 +512,6 @@ current-context: test-context`
 			runCfg = <-ctrl.ConfigChan()
 			Expect(runCfg.Controllers.FederatedServices).NotTo(BeNil())
 
-			close(done)
 		})
 	})
 

@@ -113,7 +113,7 @@ test-etcd: bin/confd-$(ARCH) bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/
 .PHONY: ut
 ## Run the fast set of unit tests in a container.
 ut:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r -race .'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r --race .'
 
 
 bin/kubectl:

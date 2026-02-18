@@ -126,7 +126,7 @@ var _ = Describe("Server", func() {
 			var output chan *proto.ToDataplane
 			syncDone := make(chan bool)
 
-			BeforeEach(func(done Done) {
+			BeforeEach(func() {
 				output = make(chan *proto.ToDataplane)
 				stream = &testSyncStream{output: output}
 				go func() {
@@ -137,10 +137,9 @@ var _ = Describe("Server", func() {
 				jr := j.(policysync.JoinRequest)
 				Expect(jr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 				updates = jr.C
-				close(done)
 			})
 
-			It("should stream route messages", func(done Done) {
+			It("should stream route messages", func() {
 				msgs := []*proto.ToDataplane{
 					{Payload: &proto.ToDataplane_RouteUpdate{}},
 					{Payload: &proto.ToDataplane_InSync{}},
@@ -151,7 +150,6 @@ var _ = Describe("Server", func() {
 					Expect(googleproto.Equal(g, msg)).To(BeTrue())
 				}
 
-				close(done)
 			})
 		})
 	})

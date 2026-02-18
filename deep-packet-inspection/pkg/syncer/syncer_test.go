@@ -40,11 +40,10 @@ var _ = Describe("Syncer", func() {
 	var calicoClient clientv3.Interface
 	var k8sClientset *kubernetes.Clientset
 	namespace := "test-dpi"
-	var err error
 	name1 := "test-dpi-1"
 	name2 := "test-dpi-2"
 
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		ctx = context.Background()
 		cfg = apiconfig.CalicoAPIConfig{
 			Spec: apiconfig.CalicoAPIConfigSpec{
@@ -111,15 +110,13 @@ var _ = Describe("Syncer", func() {
 		},
 			metav1.CreateOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-	})
 
-	BeforeEach(func() {
 		// Create a client.
 		calicoClient, err = clientv3.New(cfg)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	AfterSuite(func() {
+	AfterEach(func() {
 		// Remove the test namespace
 		_ = k8sClientset.CoreV1().Pods(namespace).Delete(ctx, "pod1", metav1.DeleteOptions{})
 		_ = k8sClientset.CoreV1().Pods(namespace).Delete(ctx, "pod2", metav1.DeleteOptions{})
@@ -328,7 +325,7 @@ var _ = Describe("Syncer", func() {
 		mockDispatcher.On("Close").Return()
 		// StopGeneratingEventsForWEP the syncerCallbacks by cancelling the context
 		cancelFn()
-	}, 10)
+	})
 })
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
