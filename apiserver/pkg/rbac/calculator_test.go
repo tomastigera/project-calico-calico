@@ -295,7 +295,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("get uisettingsgroup", func() {
+		By("get uisettingsgroup", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveMatchForVerbs([]Match{
 				{UISettingsGroup: "group1"},
 				{UISettingsGroup: "group2"},
@@ -304,7 +304,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("managed clusters", func() {
+		By("managed clusters", func() {
 			Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
 				{ManagedCluster: "cluster1"},
 				{ManagedCluster: "cluster2"},
@@ -722,38 +722,36 @@ var _ = Describe("RBAC calculator tests", func() {
 		By("adding two managed clusters")
 		mock.ClusterRoleBindings = []string{"get-ManagedClusters"}
 
-		Context("wildcard access", func() {
-			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-				"get-ManagedClusters": {{
-					Verbs:     []string{"get", "watch"},
-					Resources: []string{"managedclusters"},
-					APIGroups: []string{"projectcalico.org"},
-				}},
-			}
-			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(res).To(HaveKey(resourceManagedClusters))
-			Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
-			Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
-				{ManagedCluster: "cluster1"},
-				{ManagedCluster: "cluster2"},
-			}, VerbGet), "get always expanded to all resources")
-		})
+		By("wildcard access")
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-ManagedClusters": {{
+				Verbs:     []string{"get", "watch"},
+				Resources: []string{"managedclusters"},
+				APIGroups: []string{"projectcalico.org"},
+			}},
+		}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(resourceManagedClusters))
+		Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
+		Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
+			{ManagedCluster: "cluster1"},
+			{ManagedCluster: "cluster2"},
+		}, VerbGet), "get always expanded to all resources")
 
-		Context("individual access", func() {
-			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-				"get-ManagedClusters": {{
-					Verbs:         []string{"get", "watch"},
-					Resources:     []string{"managedclusters"},
-					APIGroups:     []string{"projectcalico.org"},
-					ResourceNames: []string{"cluster1"},
-				}},
-			}
-			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(res).To(HaveKey(resourceManagedClusters))
-			Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1"}}, VerbGet, VerbWatch))
-		})
+		By("individual access")
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-ManagedClusters": {{
+				Verbs:         []string{"get", "watch"},
+				Resources:     []string{"managedclusters"},
+				APIGroups:     []string{"projectcalico.org"},
+				ResourceNames: []string{"cluster1"},
+			}},
+		}
+		res, err = calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(resourceManagedClusters))
+		Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1"}}, VerbGet, VerbWatch))
 	})
 
 	It("has fully gettable and watchable Tiers, but not listable", func() {
@@ -1165,41 +1163,39 @@ var _ = Describe("RBAC calculator tests", func() {
 		})
 
 		It("managed clusters", func() {
-			Context("wildcard access", func() {
-				mock.ClusterRoleBindings = []string{
-					"watch-ManagedClusters",
-				}
-				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-					"watch-ManagedClusters": {{
-						Verbs:     []string{"watch"},
-						Resources: []string{"managedclusters"},
-						APIGroups: []string{"projectcalico.org"},
-					}},
-				}
-				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(HaveKey(resourceManagedClusters))
-				Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
-			})
+			By("wildcard access")
+			mock.ClusterRoleBindings = []string{
+				"watch-ManagedClusters",
+			}
+			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+				"watch-ManagedClusters": {{
+					Verbs:     []string{"watch"},
+					Resources: []string{"managedclusters"},
+					APIGroups: []string{"projectcalico.org"},
+				}},
+			}
+			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(HaveKey(resourceManagedClusters))
+			Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
 
-			Context("individual access", func() {
-				mock.RoleBindings = map[string][]string{
-					"tenant-A": {"watch-ManagedClusters"},
-					"tenant-B": {"watch-ManagedClusters"},
-				}
-				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-					"watch-ManagedClusters": {{
-						Verbs:         []string{"watch"},
-						Resources:     []string{"managedclusters"},
-						APIGroups:     []string{"projectcalico.org"},
-						ResourceNames: []string{"cluster1"},
-					}},
-				}
-				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(HaveKey(resourceManagedClusters))
-				Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1", Namespace: "tenant-A"}}, VerbWatch))
-			})
+			By("individual access")
+			mock.RoleBindings = map[string][]string{
+				"tenant-A": {"watch-ManagedClusters"},
+				"tenant-B": {"watch-ManagedClusters"},
+			}
+			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+				"watch-ManagedClusters": {{
+					Verbs:         []string{"watch"},
+					Resources:     []string{"managedclusters"},
+					APIGroups:     []string{"projectcalico.org"},
+					ResourceNames: []string{"cluster1"},
+				}},
+			}
+			res, err = calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(HaveKey(resourceManagedClusters))
+			Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1", Namespace: "tenant-A"}}, VerbWatch))
 		})
 	})
 })
