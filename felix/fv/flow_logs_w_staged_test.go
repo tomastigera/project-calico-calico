@@ -1126,6 +1126,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		// Configured tier pass.
 		confugureTier2Pass()
 
+		// Wait for at least one flow log flush so the deny-pending flows from the first batch of
+		// connections are written to the log file before the second batch generates metric updates
+		// with pass-pending. With AggrBySourcePort aggregation all connections share a single
+		// FlowSpec, and pending policies use replace semantics, so without this wait the deny
+		// entry can be overwritten before it is ever flushed.
+		time.Sleep(6 * time.Second)
+
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
