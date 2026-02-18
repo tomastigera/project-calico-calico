@@ -100,7 +100,7 @@ var _ = Describe("BPF Conntrack LivenessCalculator", func() {
 })
 
 var _ = Describe("BPF workload remove conntrack scanner", func() {
-	var wrs *conntrack.WorkloadRemoveScanner
+	var wrs *conntrack.WorkloadRemoveScannerTCP
 	var scanner *conntrack.Scanner
 	var ctMap, ctCleanupMap *mock.Map
 	var ipCh chan string
