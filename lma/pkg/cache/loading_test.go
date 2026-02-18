@@ -168,26 +168,25 @@ var _ = Describe("Test Loading", func() {
 			ExpectedLoadCalls:    3,
 		})
 
-		When("time passes the cache will empty", func() {
-			requireSizeMetricEventually(0, "after TTL")
-			execute(TestCase{
-				Description:          "first key should miss after TTL",
-				Key:                  "baz",
-				Value:                "BAZ",
-				ExpectedHitsMetric:   3,
-				ExpectedMissesMetric: 4,
-				ExpectedSizeMetric:   1,
-				ExpectedLoadCalls:    4,
-			})
-			execute(TestCase{
-				Description:          "first key should hit again",
-				Key:                  "baz",
-				Value:                "BAZ",
-				ExpectedHitsMetric:   4,
-				ExpectedMissesMetric: 4,
-				ExpectedSizeMetric:   1,
-				ExpectedLoadCalls:    4,
-			})
+		By("time passes the cache will empty")
+		requireSizeMetricEventually(0, "after TTL")
+		execute(TestCase{
+			Description:          "first key should miss after TTL",
+			Key:                  "baz",
+			Value:                "BAZ",
+			ExpectedHitsMetric:   3,
+			ExpectedMissesMetric: 4,
+			ExpectedSizeMetric:   1,
+			ExpectedLoadCalls:    4,
+		})
+		execute(TestCase{
+			Description:          "first key should hit again",
+			Key:                  "baz",
+			Value:                "BAZ",
+			ExpectedHitsMetric:   4,
+			ExpectedMissesMetric: 4,
+			ExpectedSizeMetric:   1,
+			ExpectedLoadCalls:    4,
 		})
 	})
 
