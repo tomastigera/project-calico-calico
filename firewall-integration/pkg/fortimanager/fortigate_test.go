@@ -424,11 +424,9 @@ var _ = Describe("Fortigate URL construction", func() {
 			Expect(values.Get("access_token")).Should(Equal("test"))
 			Expect(values.Get("vdom")).Should(Equal(vdom))
 		}
-		Context("With VDOM", func() {
-			check("morpheus")
-		})
-		Context("Without VDOM", func() {
-			check("")
-		})
+		By("With VDOM")
+		check("morpheus")
+		By("Without VDOM")
+		check("")
 	})
 })
