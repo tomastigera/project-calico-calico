@@ -228,4 +228,4 @@ st:
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean test static-checks
+ci: clean static-checks test

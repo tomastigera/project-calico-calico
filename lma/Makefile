@@ -62,4 +62,4 @@ st:
 
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: ut static-checks
+ci: static-checks ut

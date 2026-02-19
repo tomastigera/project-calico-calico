@@ -81,7 +81,7 @@ fv:
 # the ci target will always run a clean.
 # This change should be reverted when common Makefile runs the ci target
 # in a way that always runs the "clean" target.
-ci: clean image ut fv static-checks
+ci: clean static-checks image ut fv
 
 ###############################################################################
 # CD

@@ -157,4 +157,4 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean build test static-checks
+ci: clean static-checks build test

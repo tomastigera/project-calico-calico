@@ -128,7 +128,7 @@ copy-es-cacert:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean image ut fv static-checks
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

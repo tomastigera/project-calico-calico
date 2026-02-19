@@ -194,7 +194,7 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean clean-registrar image ut static-checks
+ci: clean clean-registrar static-checks image ut
 
 ###############################################################################
 # CD

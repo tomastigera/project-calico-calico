@@ -234,7 +234,7 @@ stop-kubernetes-control-plane:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean image test static-checks
+ci: clean static-checks image test
 
 ###############################################################################
 # CD

@@ -62,7 +62,7 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
 .PHONY: ci
 ## Run what CI runs
-ci: clean image test static-checks
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common
