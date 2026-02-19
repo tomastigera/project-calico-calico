@@ -26,6 +26,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gmeasure"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/sync/errgroup"
@@ -238,8 +239,11 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			log.SetLevel(origLogLevel)
 		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 32", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("It should be able to allocate a single address quickly - blocksize 32", func() {
+			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 32")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -252,11 +256,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 26", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("It should be able to allocate a single address quickly - blocksize 26", func() {
+			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 26")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -269,11 +276,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 20", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("It should be able to allocate a single address quickly - blocksize 20", func() {
+			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 20")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -286,11 +296,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		Measure("It should be able to allocate a lot of addresses quickly", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("It should be able to allocate a lot of addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("It should be able to allocate a lot of addresses quickly")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -303,7 +316,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(64))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
 		Context("with 1000 nodes", func() {
@@ -371,22 +384,31 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(eg.Wait()).To(Succeed())
 			}
 
-			Measure("time to allocate first IP per node across 1000 nodes", func(b Benchmarker) {
-				b.Time("runtime", func() {
+			It("time to allocate first IP per node across 1000 nodes", func() {
+				experiment := gmeasure.NewExperiment("time to allocate first IP per node across 1000 nodes")
+				AddReportEntry(experiment.Name, experiment)
+
+				experiment.MeasureDuration("runtime", func() {
 					allocOneIPPerNode()
 				})
 			})
 
-			Measure("time to allocate second IP per node across 1000 nodes", func(b Benchmarker) {
+			It("time to allocate second IP per node across 1000 nodes", func() {
+				experiment := gmeasure.NewExperiment("time to allocate second IP per node across 1000 nodes")
+				AddReportEntry(experiment.Name, experiment)
+
 				allocOneIPPerNode() // Pre-create one IPAM block per node.
-				b.Time("runtime", func() {
+				experiment.MeasureDuration("runtime", func() {
 					allocOneIPPerNode()
 				})
 			})
 		})
 
-		Measure("It should be able to allocate and release addresses quickly", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("It should be able to allocate and release addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("It should be able to allocate and release addresses quickly")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -407,7 +429,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(rel)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 	})
 
