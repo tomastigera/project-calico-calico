@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	policyDelim     = "."
 	uiSettingsDelim = "."
 )
 
@@ -142,15 +141,6 @@ func buildSelectorFromTiers(tiers []string) (*labels.Requirement, error) {
 	}
 
 	return requirement, nil
-}
-
-// GetTierFromPolicyName extracts the Tier name from the policy name.
-func GetTierFromPolicyName(policyName string) (string, string) {
-	policySlice := strings.Split(policyName, policyDelim)
-	if len(policySlice) < 2 {
-		return "default", policySlice[0]
-	}
-	return policySlice[0], policySlice[1]
 }
 
 func GetUISettingsGroupNameFromSelector(options *metainternalversion.ListOptions) (string, error) {
