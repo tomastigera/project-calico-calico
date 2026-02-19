@@ -18,8 +18,7 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -1118,10 +1117,10 @@ func init() {
 		Entry("should reject an invalid MTUIfacePattern value '*'", api.FelixConfigurationSpec{MTUIfacePattern: "*"}, false),
 		Entry("should accept a valid MTUIfacePattern value 'eth.*'", api.FelixConfigurationSpec{MTUIfacePattern: "eth.*"}, true),
 
-		Entry("should allow HealthTimeoutOverride 0", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "Valid", Timeout: metav1.Duration{Duration: 0}}}}, true),
-		Entry("should reject HealthTimeoutOverride -1", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "Valid", Timeout: metav1.Duration{Duration: -1}}}}, false),
-		Entry("should reject HealthTimeoutOverride with bad name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "%", Timeout: metav1.Duration{Duration: 10}}}}, false),
-		Entry("should reject HealthTimeoutOverride with no name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "", Timeout: metav1.Duration{Duration: 10}}}}, false),
+		Entry("should allow HealthTimeoutOverride 0", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "Valid", Timeout: v1.Duration{Duration: 0}}}}, true),
+		Entry("should reject HealthTimeoutOverride -1", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "Valid", Timeout: v1.Duration{Duration: -1}}}}, false),
+		Entry("should reject HealthTimeoutOverride with bad name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "%", Timeout: v1.Duration{Duration: 10}}}}, false),
+		Entry("should reject HealthTimeoutOverride with no name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "", Timeout: v1.Duration{Duration: 10}}}}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
@@ -5477,45 +5476,45 @@ func init() {
 		Entry("should accept a valid BFDConfiguration", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, true),
 		Entry("should reject a BFDConfiguration with invalid NodeSelector", api.BFDConfigurationSpec{NodeSelector: "all", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with MinimumRecvInterval less than 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Microsecond},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Microsecond},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with MinimumSendInterval not a multiple of 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1*time.Millisecond + 1*time.Microsecond},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1*time.Millisecond + 1*time.Microsecond},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          3,
 			},
 		}}, false),
 		Entry("should reject a BFDConfiguration with zero multiplier", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
 			{
 				MatchPattern:        "eth0",
-				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
-				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
-				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				MinimumRecvInterval: &v1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &v1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &v1.Duration{Duration: 1 * time.Second},
 				Multiplier:          0,
 			},
 		}}, false),

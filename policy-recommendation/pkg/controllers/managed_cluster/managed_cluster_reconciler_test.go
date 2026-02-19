@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
@@ -35,13 +35,13 @@ var _ = Describe("ManagedClusterReconciler", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 
-		mockClientSet = lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockClientSet = &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
 
-		mockClientSetFactory = lmak8s.NewMockClientSetFactory(GinkgoT())
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil)
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil)
+		mockClientSetFactory = &lmak8s.MockClientSetFactory{}
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil).Maybe()
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil).Maybe()
 		scheme := kscheme.Scheme
 		err := v3.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())

@@ -7,7 +7,7 @@ package testutils
 
 const (
 	// Zero values with contextual meaning.
-	NoLabels            = Label(0)
+	NoLabels            = TestLabel(0)
 	NoSelector          = Selector(0)
 	NoNamespaceSelector = Selector(0)
 	NoNamespace         = Namespace(0)
@@ -18,11 +18,12 @@ const (
 	SelectAll = Selector(255)
 )
 
-// Label value. This is a bit-mask and so may encapsulate multiple labels.
-type Label byte
+// TestLabel value. This is a bit-mask and so may encapsulate multiple labels.
+// Named TestLabel to avoid conflict with ginkgo v2's Label function.
+type TestLabel byte
 
 const (
-	Label1 Label = 1 << iota
+	Label1 TestLabel = 1 << iota
 	Label2
 	Label3
 	Label4

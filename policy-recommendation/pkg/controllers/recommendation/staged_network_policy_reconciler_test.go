@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -44,9 +44,9 @@ var _ = Describe("StagedNetworkPolicyReconciler", func() {
 
 		ctx := context.TODO()
 
-		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockClientSet := &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
 
 		_, err := mockClientSet.ProjectcalicoV3().ManagedClusters().Create(ctx, &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -55,9 +55,9 @@ var _ = Describe("StagedNetworkPolicyReconciler", func() {
 		}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		mockClientSetFactory := lmak8s.NewMockClientSetFactory(GinkgoT())
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil)
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil)
+		mockClientSetFactory := &lmak8s.MockClientSetFactory{}
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil).Maybe()
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil).Maybe()
 
 		// Define the list of items handled by the policy recommendation cache.
 		listFunc := func() (map[string]interface{}, error) {

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -263,8 +263,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		State:        proto.PacketCaptureStatusUpdate_FINISHED,
 	}
 
-	It("Updates the status of the packet capture", func(done Done) {
-		defer close(done)
+	It("Updates the status of the packet capture", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -296,8 +295,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
-	It("Retries to updates the status of the packet capture when failing to get capture", func(done Done) {
-		defer close(done)
+	It("Retries to updates the status of the packet capture when failing to get capture", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -332,8 +330,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Get", "Update"}))
 	})
 
-	It("Retries to updates the status of the packet capture when failing to update capture", func(done Done) {
-		defer close(done)
+	It("Retries to updates the status of the packet capture when failing to update capture", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -368,8 +365,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update", "Get", "Update"}))
 	})
 
-	It("Overrides the status of the packet capture", func(done Done) {
-		defer close(done)
+	It("Overrides the status of the packet capture", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -402,8 +398,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
-	It("Does not override the status from other hosts", func(done Done) {
-		defer close(done)
+	It("Does not override the status from other hosts", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -436,8 +431,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
-	It("Continues to retry when receiving updates", func(done Done) {
-		defer close(done)
+	It("Continues to retry when receiving updates", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -477,8 +471,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update", "Get", "Update", "Get", "Update"}))
 	})
 
-	It("Updates the status of the packet capture with no files", func(done Done) {
-		defer close(done)
+	It("Updates the status of the packet capture with no files", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -510,8 +503,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
-	It("Updates the status of the packet capture with a different state", func(done Done) {
-		defer close(done)
+	It("Updates the status of the packet capture with a different state", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
@@ -543,8 +535,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
-	It("Does not retry to update a deleted resource", func(done Done) {
-		defer close(done)
+	It("Does not retry to update a deleted resource", func() {
 
 		var calicoClient = new(mockedCalicoClient)
 		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)

@@ -6,8 +6,7 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +61,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 	spec2 := apiv3.EgressGatewayPolicySpec{}
 	spec2.Rules = []apiv3.EgressGatewayRule{ruleLocal, ruleInternet}
 
-	DescribeTable("EgressGatewayPolicy e2e CRUD tests", func() {
+	It("EgressGatewayPolicy e2e CRUD tests", func() {
 		c, err := clientv3.New(config)
 		Expect(err).NotTo(HaveOccurred())
 

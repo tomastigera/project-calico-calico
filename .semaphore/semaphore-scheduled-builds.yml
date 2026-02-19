@@ -389,6 +389,7 @@ blocks:
             - name: STORE_BUILD_CACHE
               value: "true"
           commands:
+            - make check-ginkgo-v2
             - make check-go-mod
             - make verify-go-mods
             - make gen-deps-files
@@ -906,7 +907,18 @@ blocks:
       epilogue:
         always:
           commands:
+            # test-results publish (via os.MkdirTemp) writes intermediate JSON
+            # to /tmp, which is a tmpfs (RAM-backed) and can OOM on f1-standard-2
+            # machines when reports are large.  We add swap and redirect TMPDIR to
+            # a disk-backed path so we don't need to upgrade to f1-standard-4,
+            # which is limited and would clog the Semaphore build pipeline.  The
+            # tests themselves run fine on f1-standard-2; only report generation
+            # needs extra space.
+            - sudo ../.semaphore/create-swapfile 4G
+            - export TMPDIR=${HOME}/${SEMAPHORE_JOB_ID}
+            - mkdir -p ${TMPDIR}
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
+            - rm -rf ${TMPDIR}
   - name: "Felix: Build - native arm64 runner"
     run:
       when: "true"

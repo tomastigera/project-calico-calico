@@ -18,8 +18,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-cmp/cmp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	googleproto "google.golang.org/protobuf/proto"
@@ -266,7 +265,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, defaultTier, false)
 			Expect(rules2).To(Equal(rules))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -310,7 +309,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, defaultTier, false)
 			Expect(rules2).To(Equal(rules))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -346,7 +345,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -389,7 +388,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -413,7 +412,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, defaultTier, false)
 			Expect(rules2).To(Equal(rules))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -439,7 +438,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, defaultTier, false)
 			Expect(rules2).To(Equal(rules))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -488,7 +487,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			logPrefix = fmt.Sprintf("calico-packet %s:%s:%%%%y%s%%%s", profileID.Name, "pro", tier, "profile1")
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: logPrefix}))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -528,7 +527,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, fooPolicyID, defaultTier, false)
 			Expect(rules2).To(Equal(rules))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -565,7 +564,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -609,7 +608,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -669,7 +668,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -736,7 +735,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -794,7 +793,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -859,7 +858,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -893,7 +892,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Staged policies should be skipped.
 			Expect(chainsWithFlowLogs).To(HaveLen(0))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -927,7 +926,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Staged policies should be skipped.
 			Expect(chainsWithFlowLogs).To(HaveLen(0))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -960,7 +959,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Staged policies should be skipped.
 			Expect(chainsWithFlowLogs).To(HaveLen(0))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -993,7 +992,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// Staged policies should be skipped.
 			Expect(chainsWithFlowLogs).To(HaveLen(0))
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1040,7 +1039,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1094,7 +1093,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1137,7 +1136,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1187,7 +1186,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1223,7 +1222,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1266,7 +1265,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1305,7 +1304,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	DescribeTable(
@@ -1351,7 +1350,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				}))
 			}
 		},
-		ruleTestData...,
+		ruleTestData,
 	)
 
 	const (
@@ -2584,7 +2583,7 @@ var _ = Describe("Filtered rules (negated catch-all CIDR validation)", func() {
 			// Rules with catch-all negated CIDRs should be completely filtered out
 			Expect(len(rules)).To(Equal(0))
 		},
-		filteredRuleTestData...,
+		filteredRuleTestData,
 	)
 })
 
@@ -3070,9 +3069,9 @@ var _ = Describe("DNS policy rules", func() {
 
 			Expect(iptableRules).Should(Equal(expected), cmp.Diff(iptableRules, expected))
 		},
-		Entry(v3.DNSPolicyModeDelayDeniedPacket, v3.DNSPolicyModeDelayDeniedPacket, true),
-		Entry(v3.DNSPolicyModeNoDelay, v3.DNSPolicyModeNoDelay, false),
-		Entry(v3.DNSPolicyModeDelayDNSResponse, v3.DNSPolicyModeDelayDNSResponse, false),
-		Entry(v3.DNSPolicyModeInline, v3.DNSPolicyModeInline, false),
+		Entry(string(v3.DNSPolicyModeDelayDeniedPacket), v3.DNSPolicyModeDelayDeniedPacket, true),
+		Entry(string(v3.DNSPolicyModeNoDelay), v3.DNSPolicyModeNoDelay, false),
+		Entry(string(v3.DNSPolicyModeDelayDNSResponse), v3.DNSPolicyModeDelayDNSResponse, false),
+		Entry(string(v3.DNSPolicyModeInline), v3.DNSPolicyModeInline, false),
 	)
 })

@@ -22,8 +22,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/mcuadros/go-version"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -3865,18 +3864,19 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				_, err = testutils.DeleteContainer(netconf, contNs.Path(), testNodeName, testutils.K8S_TEST_NS)
 				Expect(err).ShouldNot(HaveOccurred())
-			}, TableEntry{
-				Description: "uses that annotation for the default interface",
-				Parameters:  []interface{}{"eth0", cnet.MustParseCIDR(extraPool)},
-			}, TableEntry{
-				Description: "ignores the annotation for additional interfaces",
-				Parameters:  []interface{}{"net1", cnet.MustParseCIDR(pool)},
-			})
+			},
+				Entry("uses that annotation for the default interface",
+					"eth0", cnet.MustParseCIDR(extraPool),
+				),
+				Entry("ignores the annotation for additional interfaces",
+					"net1", cnet.MustParseCIDR(pool),
+				),
+			)
 		})
 	})
 
 	Describe("testConnection tests", func() {
-		It("successfully connects to the datastore", func(done Done) {
+		It("successfully connects to the datastore", func() {
 			netconf := fmt.Sprintf(`
 			{
 			  "cniVersion": "%s",
@@ -3909,14 +3909,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			_, err = c.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
-			close(done)
-		}, 10)
+		})
 
 		// This test fails because etcd client doesn't respect our context
 		// timeout.  Works in open source so will have to investigate different
 		// versions of the client.
 		// Remove this "P" as part of https://tigera.atlassian.net/browse/OS-5705
-		PIt("reports it cannot connect to the datastore", func(done Done) {
+		PIt("reports it cannot connect to the datastore", func() {
 			// wrong port(s).
 			netconf := fmt.Sprintf(`
 			{
@@ -3951,8 +3950,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			_, err = c.CombinedOutput()
 			Expect(err).To(HaveOccurred())
-			close(done)
-		}, 10)
+		})
 	})
 
 	Describe("using hwAddr annotations to assign a fixed MAC address to a container veth", func() {

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/olivere/elastic/v7"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 

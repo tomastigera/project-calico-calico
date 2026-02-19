@@ -20,7 +20,7 @@ import (
 
 	"github.com/elazarl/goproxy"
 	pauth "github.com/elazarl/goproxy/ext/auth"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"

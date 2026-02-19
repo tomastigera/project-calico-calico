@@ -26,7 +26,7 @@ import (
 
 	"github.com/Microsoft/hcsshim"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -85,7 +85,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	var ctx context.Context
 	var calicoClient client.Interface
 	var err error
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		log.Infof("CONTAINER_RUNTIME=%v", os.Getenv("CONTAINER_RUNTIME"))
 
 		// Clean-up Networks if left over in previous run

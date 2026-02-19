@@ -4,11 +4,11 @@ package list
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestResourceListing(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "List Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "List Suite")
 }

@@ -102,7 +102,7 @@ $(CALICO_VERSION_HELPER_BIN): $(CALICO_VERSION_HELPER_SRC)
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev.
 ut: bin/calicoctl-linux-$(ARCH)
-	$(DOCKER_RUN) -e CALICO_API_GROUP=$(CALICO_API_GROUP) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -cover -r $(GINKGO_ARGS) calicoctl/*'
+	$(DOCKER_RUN) -e CALICO_API_GROUP=$(CALICO_API_GROUP) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo --cover -r $(GINKGO_ARGS) calicoctl/*'
 
 ###############################################################################
 # FVs
@@ -234,7 +234,7 @@ stop-kubernetes-control-plane:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean image test static-checks
+ci: clean static-checks image test
 
 ###############################################################################
 # CD

@@ -4,14 +4,14 @@ package fv_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
 func TestFv(t *testing.T) {
-	RegisterFailHandler(Fail)
+	gomega.RegisterFailHandler(ginkgo.Fail)
 	testutils.HookLogrusForGinkgo()
-	RunSpecs(t, "[FV] Voltron-Guardian e2e Suite")
+	ginkgo.RunSpecs(t, "[FV] Voltron-Guardian e2e Suite")
 }

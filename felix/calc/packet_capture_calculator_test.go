@@ -3,8 +3,7 @@
 package calc_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/felix/calc"

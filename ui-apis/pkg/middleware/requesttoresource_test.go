@@ -6,8 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

@@ -16,7 +16,7 @@ package remotecluster
 
 import (
 	"github.com/aws/smithy-go/ptr"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"

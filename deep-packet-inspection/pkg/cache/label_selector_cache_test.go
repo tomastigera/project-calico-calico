@@ -3,7 +3,7 @@
 package cache_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
@@ -21,7 +21,7 @@ var _ = Describe("SelectorAndLabelCache", func() {
 	var c cache.SelectorAndLabelCache
 	var onMatchStartedCount, onMatchStoppedCount int
 
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		dpiKey1 = model.ResourceKey{Namespace: "test-dpi-ns", Name: "test-dpi-1", Kind: "DeepPacketInspection"}
 		dpiKey2 = model.ResourceKey{Namespace: "test-dpi-ns", Name: "test-dpi-2", Kind: "DeepPacketInspection"}
 		dpiSelector1, err = selector.Parse("label == 'a'")
@@ -38,12 +38,9 @@ var _ = Describe("SelectorAndLabelCache", func() {
 			"label":                       "b",
 			"projectcalico.org/namespace": "default",
 		})
-	})
 
-	BeforeEach(func() {
 		onMatchStartedCount = 0
 		onMatchStoppedCount = 0
-
 	})
 
 	Context("UpdateSelector", func() {

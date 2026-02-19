@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -83,9 +83,9 @@ var _ = Describe("RecommendationEngine", func() {
 		parsedSelector, err := libcselector.Parse(`projectcalico.org/name == 'default'`)
 		Expect(err).NotTo(HaveOccurred())
 
-		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockClientSet := &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
 
 		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("test-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())

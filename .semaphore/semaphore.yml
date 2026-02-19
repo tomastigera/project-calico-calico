@@ -389,6 +389,7 @@ blocks:
             - name: STORE_BUILD_CACHE
               value: "true"
           commands:
+            - make check-ginkgo-v2
             - make check-go-mod
             - make verify-go-mods
             - make gen-deps-files
@@ -906,7 +907,18 @@ blocks:
       epilogue:
         always:
           commands:
+            # test-results publish (via os.MkdirTemp) writes intermediate JSON
+            # to /tmp, which is a tmpfs (RAM-backed) and can OOM on f1-standard-2
+            # machines when reports are large.  We add swap and redirect TMPDIR to
+            # a disk-backed path so we don't need to upgrade to f1-standard-4,
+            # which is limited and would clog the Semaphore build pipeline.  The
+            # tests themselves run fine on f1-standard-2; only report generation
+            # needs extra space.
+            - sudo ../.semaphore/create-swapfile 4G
+            - export TMPDIR=${HOME}/${SEMAPHORE_JOB_ID}
+            - mkdir -p ${TMPDIR}
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
+            - rm -rf ${TMPDIR}
   - name: "Felix: Build - native arm64 runner"
     run:
       when: "change_in(['/.semaphore/semaphore.yml.d/01-preamble.yml','/.semaphore/semaphore.yml.d/02-global_job_config.yml','/.semaphore/semaphore.yml.d/03-promotions.yml','/.semaphore/semaphore.yml.d/09-blocks.yml','/.semaphore/semaphore.yml.d/99-after_pipeline.yml','/.semaphore/semaphore.yml.d/blocks/20-felix.yml','/app-policy/checker/*.go','/app-policy/policystore/*.go','/app-policy/statscache/*.go','/app-policy/types/*.go','/cni-plugin/pkg/dataplane/linux/*.go','/cni-plugin/pkg/types/*.go','/compliance/pkg/hashutils/*.go','/crypto/pkg/tls/*.go','/felix/**','/goldmane/pkg/client/*.go','/goldmane/pkg/goldmane/*.go','/goldmane/pkg/internal/flowcache/*.go','/goldmane/pkg/server/*.go','/goldmane/pkg/storage/*.go','/goldmane/pkg/stream/*.go','/goldmane/pkg/types/*.go','/goldmane/proto/*.go','/hack/test/certs/','/key-cert-provisioner/pkg/cfg/*.go','/key-cert-provisioner/pkg/k8s/*.go','/key-cert-provisioner/pkg/tls/*.go','/lib.Makefile','/lib/std/chanutil/*.go','/lib/std/time/*.go','/lib/std/uniquelabels/*.go','/lib/std/uniquestr/*.go','/libcalico-go/config/*.go','/libcalico-go/lib/apiconfig/*.go','/libcalico-go/lib/apis/crd.projectcalico.org/v1/scheme/*.go','/libcalico-go/lib/apis/v1/*.go','/libcalico-go/lib/apis/v1/unversioned/*.go','/libcalico-go/lib/apis/v3/*.go','/libcalico-go/lib/backend/*.go','/libcalico-go/lib/backend/api/*.go','/libcalico-go/lib/backend/encap/*.go','/libcalico-go/lib/backend/etcdv3/*.go','/libcalico-go/lib/backend/k8s/*.go','/libcalico-go/lib/backend/k8s/conversion/*.go','/libcalico-go/lib/backend/k8s/resources/*.go','/libcalico-go/lib/backend/model/*.go','/libcalico-go/lib/backend/syncersv1/dedupebuffer/*.go','/libcalico-go/lib/backend/syncersv1/felixsyncer/*.go','/libcalico-go/lib/backend/syncersv1/remotecluster/*.go','/libcalico-go/lib/backend/syncersv1/updateprocessors/*.go','/libcalico-go/lib/backend/watchersyncer/*.go','/libcalico-go/lib/clientv3/*.go','/libcalico-go/lib/compliance/*.go','/libcalico-go/lib/consistenthash/*.go','/libcalico-go/lib/debugserver/*.go','/libcalico-go/lib/dispatcher/*.go','/libcalico-go/lib/epstatusfile/*.go','/libcalico-go/lib/errors/*.go','/libcalico-go/lib/hash/*.go','/libcalico-go/lib/health/*.go','/libcalico-go/lib/ipam/*.go','/libcalico-go/lib/jitter/*.go','/libcalico-go/lib/json/*.go','/libcalico-go/lib/labels/*.go','/libcalico-go/lib/logutils/*.go','/libcalico-go/lib/metricsserver/*.go','/libcalico-go/lib/names/*.go','/libcalico-go/lib/namespace/*.go','/libcalico-go/lib/net/*.go','/libcalico-go/lib/netlinkutils/*.go','/libcalico-go/lib/options/*.go','/libcalico-go/lib/packedmap/*.go','/libcalico-go/lib/prometheus/*.go','/libcalico-go/lib/readlogger/*.go','/libcalico-go/lib/resources/*.go','/libcalico-go/lib/scope/*.go','/libcalico-go/lib/selector/*.go','/libcalico-go/lib/selector/parser/*.go','/libcalico-go/lib/selector/tokenizer/*.go','/libcalico-go/lib/set/*.go','/libcalico-go/lib/testutils/stacktrace/*.go','/libcalico-go/lib/validator/v1/*.go','/libcalico-go/lib/validator/v3/*.go','/libcalico-go/lib/validator/v3/query/*.go','/libcalico-go/lib/watch/*.go','/libcalico-go/lib/winutils/*.go','/licensing/client/*.go','/licensing/client/features/*.go','/licensing/crypto/*.go','/licensing/monitor/*.go','/licensing/utils/*.go','/linseed/pkg/apis/v1/*.go','/lma/pkg/apis/v1/*.go','/lma/pkg/httputils/*.go','/lma/pkg/list/*.go','/lma/pkg/timeutils/*.go','/metadata.mk','/node/pkg/bgp/*.go','/node/pkg/lifecycle/utils/*.go','/node/pkg/metrics/*.go','/pkg/buildinfo/*.go','/pkg/nonclusterhost/*.go','/pod2daemon/binder/*.go','/typha/pkg/discovery/*.go','/typha/pkg/syncclient/*.go','/typha/pkg/syncproto/*.go','/typha/pkg/tlsutils/*.go'], {pipeline_file: 'ignore', exclude: ['/**/*.md','/**/.gitignore','/**/AUTHORS*','/**/CONTRIBUTING*','/**/DEVELOPER_GUIDE*','/**/LICENSE*','/**/README*','/**/SECURITY.md','/app-policy/**/*_test.go','/cni-plugin/**/*_test.go','/compliance/**/*_test.go','/crypto/**/*_test.go','/goldmane/**/*_test.go','/key-cert-provisioner/**/*_test.go','/lib/**/*_test.go','/libcalico-go/**/*_test.go','/licensing/**/*_test.go','/linseed/**/*_test.go','/lma/**/*_test.go','/node/**/*_test.go','/pkg/**/*_test.go','/pod2daemon/**/*_test.go','/typha/**/*_test.go']})"

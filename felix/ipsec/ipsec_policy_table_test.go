@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -490,7 +490,7 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			// Useful on failure.
 			polTable.DumpStateToLog()
 		}
@@ -580,7 +580,7 @@ var _ = Describe("IpsecPolicyTable with IPsec disabled", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			// Useful on failure.
 			polTable.DumpStateToLog()
 		}

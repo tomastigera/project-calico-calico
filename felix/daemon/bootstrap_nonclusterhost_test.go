@@ -5,8 +5,7 @@ package daemon
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -90,7 +89,7 @@ var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
 			Expect(addr).To(BeElementOf([]string{"127.0.0.1:5678", "[::1]:5678"}))
 		})
 
-		table.DescribeTable("should return error when typhaEndpoint is invalid",
+		DescribeTable("should return error when typhaEndpoint is invalid",
 			func(endpoint string) {
 				obj := &unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -119,11 +118,11 @@ var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
 				Expect(addr).To(BeEmpty())
 			},
 
-			table.Entry("endpoint is not a valid ip:port format", "some-random-format"),
-			table.Entry("endpoint is missing IP address", ":5678"),
-			table.Entry("endpoint is missing port number", "1.2.3.4:"),
-			table.Entry("invalid IP address", "333.444.555.666:5678"),
-			table.Entry("invalid port number", "1.2.3.4:abcd"),
+			Entry("endpoint is not a valid ip:port format", "some-random-format"),
+			Entry("endpoint is missing IP address", ":5678"),
+			Entry("endpoint is missing port number", "1.2.3.4:"),
+			Entry("invalid IP address", "333.444.555.666:5678"),
+			Entry("invalid port number", "1.2.3.4:abcd"),
 		)
 	})
 })

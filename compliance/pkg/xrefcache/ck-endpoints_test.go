@@ -2,21 +2,21 @@
 package xrefcache_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/internal/testutils"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var _ = Describe("Pods cache verification", func() {
-	var tester *XrefCacheTester
+	var tester *testutils.XrefCacheTester
 
 	BeforeEach(func() {
-		tester = NewXrefCacheTester()
+		tester = testutils.NewXrefCacheTester()
 	})
 
 	It("should handle basic CRUD of a pod with no other resources", func() {
@@ -24,59 +24,59 @@ var _ = Describe("Pods cache verification", func() {
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		By("applying a pod")
-		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.NoLabels, testutils.IP1, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("checking the cache settings")
-		ep := tester.GetPod(Name1, Namespace1)
+		ep := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
 		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
 
 		By("applying another pod in a different namespace")
-		tester.SetPod(Name1, Namespace2, NoLabels, IP2, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name1, testutils.Namespace2, testutils.NoLabels, testutils.IP2, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("checking the cache settings")
-		ep = tester.GetPod(Name1, Namespace2)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace2)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
 		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
 
 		By("deleting the first pod")
-		tester.DeletePod(Name1, Namespace1)
+		tester.DeletePod(testutils.Name1, testutils.Namespace1)
 
 		By("checking the cache settings")
-		ep = tester.GetPod(Name1, Namespace1)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).To(BeNil())
 
 		By("deleting the second pod")
-		tester.DeletePod(Name1, Namespace2)
+		tester.DeletePod(testutils.Name1, testutils.Namespace2)
 
 		By("checking the cache settings")
-		ep = tester.GetPod(Name1, Namespace2)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace2)
 		Expect(ep).To(BeNil())
 	})
 
 	It("should handle a pod with Envoy enabled", func() {
 		By("applying a pod")
-		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptEnvoyEnabled)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.NoLabels, testutils.IP1, testutils.NoServiceAccount, testutils.PodOptEnvoyEnabled)
 
 		By("sending in-sync")
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		By("checking the cache settings")
-		ep := tester.GetPod(Name1, Namespace1)
+		ep := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(Equal(xrefcache.CacheEntryEnvoyEnabled))
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
 		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
 
 		By("deleting the first pod")
-		tester.DeletePod(Name1, Namespace1)
+		tester.DeletePod(testutils.Name1, testutils.Namespace1)
 
 		By("checking the cache settings")
-		ep = tester.GetPod(Name1, Namespace1)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).To(BeNil())
 	})
 
@@ -85,20 +85,20 @@ var _ = Describe("Pods cache verification", func() {
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		By("applying a pod")
-		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptSetGenerateName)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.NoLabels, testutils.IP1, testutils.NoServiceAccount, testutils.PodOptSetGenerateName)
 
 		By("checking the cache settings")
-		ep := tester.GetPod(Name1, Namespace1)
+		ep := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
 		Expect(ep.GetFlowLogAggregationName()).To(Equal("pod-*"))
 
 		By("deleting the first pod")
-		tester.DeletePod(Name1, Namespace1)
+		tester.DeletePod(testutils.Name1, testutils.Namespace1)
 
 		By("checking the cache settings")
-		ep = tester.GetPod(Name1, Namespace1)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).To(BeNil())
 	})
 
@@ -107,10 +107,10 @@ var _ = Describe("Pods cache verification", func() {
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		By("applying a host endpoint")
-		tester.SetHostEndpoint(Name1, NoLabels, IP1)
+		tester.SetHostEndpoint(testutils.Name1, testutils.NoLabels, testutils.IP1)
 
 		By("checking the cache settings")
-		ep := tester.GetHostEndpoint(Name1)
+		ep := tester.GetHostEndpoint(testutils.Name1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
@@ -118,10 +118,10 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep.GetFlowLogAggregationName()).To(Equal("node1"))
 
 		By("applying a different host endpoint")
-		tester.SetHostEndpoint(Name2, NoLabels, IP2)
+		tester.SetHostEndpoint(testutils.Name2, testutils.NoLabels, testutils.IP2)
 
 		By("checking the cache settings")
-		ep = tester.GetHostEndpoint(Name2)
+		ep = tester.GetHostEndpoint(testutils.Name2)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
@@ -129,68 +129,68 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep.GetFlowLogAggregationName()).To(Equal("node1"))
 
 		By("deleting the first host endpoint")
-		tester.DeleteHostEndpoint(Name1)
+		tester.DeleteHostEndpoint(testutils.Name1)
 
 		By("checking the cache settings")
-		ep = tester.GetHostEndpoint(Name1)
+		ep = tester.GetHostEndpoint(testutils.Name1)
 		Expect(ep).To(BeNil())
 
 		By("deleting the second host endpoint")
-		tester.DeleteHostEndpoint(Name2)
+		tester.DeleteHostEndpoint(testutils.Name2)
 
 		By("checking the cache settings")
-		ep = tester.GetHostEndpoint(Name2)
+		ep = tester.GetHostEndpoint(testutils.Name2)
 		Expect(ep).To(BeNil())
 	})
 
 	It("should track the set of applied policies and overall settings", func() {
 		By("applying np1 select1 with an ingress allow select1 rule")
-		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
+		tester.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Select1,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Source, testutils.Select1, testutils.NoNamespaceSelector),
 			},
 			nil,
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("applying np2 select2 with an ingress allow select2 rule")
-		tester.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
+		tester.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name2, testutils.Select2,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Source, Select2, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Source, testutils.Select2, testutils.NoNamespaceSelector),
 			},
 			nil,
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("applying np1 select1 with an egress allow select1 rule")
-		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Destination, testutils.Select1, testutils.NoNamespaceSelector),
 			},
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("creating ns1 with label3 and internet exposed")
-		tester.SetGlobalNetworkSet(Name1, Label1, Public)
+		tester.SetGlobalNetworkSet(testutils.Name1, testutils.Label1, testutils.Public)
 
 		By("creating ns2 with label2 and all addresses private")
-		tester.SetGlobalNetworkSet(Name2, Label2, Private)
+		tester.SetGlobalNetworkSet(testutils.Name2, testutils.Label2, testutils.Private)
 
 		By("creating a pod1 with label 1")
-		tester.SetPod(Name1, Namespace1, Label1, IP1, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.IP1, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("checking pod1 xref with two policies in the cache")
-		pod := tester.GetPod(Name1, Namespace1)
+		pod := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(pod).NotTo(BeNil())
 		Expect(pod.AppliedPolicies.Len()).To(Equal(2))
-		gnp1 := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
+		gnp1 := tester.GetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1)
 		Expect(gnp1).NotTo(BeNil())
 		Expect(gnp1.SelectedPods.Len()).To(Equal(1))
-		gnp2 := tester.GetGlobalNetworkPolicy(TierDefault, Name2)
+		gnp2 := tester.GetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name2)
 		Expect(gnp2).NotTo(BeNil())
 		Expect(gnp2.SelectedPods.Len()).To(Equal(0))
-		np1 := tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		np1 := tester.GetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 
@@ -217,16 +217,16 @@ var _ = Describe("Pods cache verification", func() {
 		))
 
 		By("updating np1 to include a namespace selector")
-		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Destination, Select1, Select1),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Destination, testutils.Select1, testutils.Select1),
 			},
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("checking the np1 flags have been updated")
-		np1 = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		np1 = tester.GetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 		Expect(np1.Flags).To(Equal(
@@ -234,7 +234,7 @@ var _ = Describe("Pods cache verification", func() {
 		))
 
 		By("checking the pod settings have inherited the expected policy configuration from gnp1 and np1")
-		pod = tester.GetPod(Name1, Namespace1)
+		pod = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(pod).NotTo(BeNil())
 		Expect(pod.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress |
@@ -245,52 +245,52 @@ var _ = Describe("Pods cache verification", func() {
 
 	It("should track the set of applied policies and overall settings (with namespaced networkset)", func() {
 		By("applying np1 select1 with an ingress allow select1 rule")
-		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
+		tester.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Select1,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Source, testutils.Select1, testutils.NoNamespaceSelector),
 			},
 			nil,
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("applying np2 select2 with an ingress allow select2 rule")
-		tester.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
+		tester.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name2, testutils.Select2,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Source, Select2, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Source, testutils.Select2, testutils.NoNamespaceSelector),
 			},
 			nil,
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("applying np1 select1 with an egress allow select1 rule")
-		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Destination, testutils.Select1, testutils.NoNamespaceSelector),
 			},
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("creating ns1 with label1 and internet exposed")
-		tester.SetNetworkSet(Name1, Namespace1, Label1, Public)
+		tester.SetNetworkSet(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.Public)
 
 		By("creating ns2 with label2 and all addresses private")
-		tester.SetNetworkSet(Name2, Namespace1, Label2, Private)
+		tester.SetNetworkSet(testutils.Name2, testutils.Namespace1, testutils.Label2, testutils.Private)
 
 		By("creating a pod1 with label 1")
-		tester.SetPod(Name1, Namespace1, Label1, IP1, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.IP1, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("checking pod1 xref with two policies in the cache")
-		pod := tester.GetPod(Name1, Namespace1)
+		pod := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(pod).NotTo(BeNil())
 		Expect(pod.AppliedPolicies.Len()).To(Equal(2))
-		gnp1 := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
+		gnp1 := tester.GetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1)
 		Expect(gnp1).NotTo(BeNil())
 		Expect(gnp1.SelectedPods.Len()).To(Equal(1))
-		gnp2 := tester.GetGlobalNetworkPolicy(TierDefault, Name2)
+		gnp2 := tester.GetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name2)
 		Expect(gnp2).NotTo(BeNil())
 		Expect(gnp2.SelectedPods.Len()).To(Equal(0))
-		np1 := tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		np1 := tester.GetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 
@@ -319,16 +319,16 @@ var _ = Describe("Pods cache verification", func() {
 		))
 
 		By("updating np1 to include a namespace selector")
-		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleSelectors(Allow, Destination, Select1, Select1),
+				testutils.CalicoRuleSelectors(testutils.Allow, testutils.Destination, testutils.Select1, testutils.Select1),
 			},
-			&Order1,
+			&testutils.Order1,
 		)
 
 		By("checking the np1 flags have been updated")
-		np1 = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		np1 = tester.GetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 		Expect(np1.Flags).To(Equal(
@@ -336,7 +336,7 @@ var _ = Describe("Pods cache verification", func() {
 		))
 
 		By("checking the pod settings have inherited the expected policy configuration from gnp1 and np1")
-		pod = tester.GetPod(Name1, Namespace1)
+		pod = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(pod).NotTo(BeNil())
 		Expect(pod.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress |
@@ -350,17 +350,17 @@ var _ = Describe("Pods cache verification", func() {
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		By("applying pod1 IP1")
-		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name1, testutils.Namespace1, testutils.NoLabels, testutils.IP1, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("applying pod2 IP2")
-		tester.SetPod(Name2, Namespace1, NoLabels, IP2, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name2, testutils.Namespace1, testutils.NoLabels, testutils.IP2, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("applying pod3 with no IP")
-		pod3 := tester.SetPod(Name2, Namespace2, NoLabels, 0, NoServiceAccount, NoPodOptions)
+		pod3 := tester.SetPod(testutils.Name2, testutils.Namespace2, testutils.NoLabels, 0, testutils.NoServiceAccount, testutils.NoPodOptions)
 		pod3Id := resources.GetResourceID(pod3)
 
 		By("applying service1 with IP1 IP2 IP3")
-		svcEps1 := tester.SetEndpoints(Name1, Namespace1, IP1|IP2|IP3)
+		svcEps1 := tester.SetEndpoints(testutils.Name1, testutils.Namespace1, testutils.IP1|testutils.IP2|testutils.IP3)
 		svcEpsID1 := resources.GetResourceID(svcEps1)
 		svc1 := apiv3.ResourceID{
 			TypeMeta:  resources.TypeK8sServices,
@@ -369,7 +369,7 @@ var _ = Describe("Pods cache verification", func() {
 		}
 
 		By("applying service2 with IP1 IP3 and pod3Id ref")
-		svcEps2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3, pod3Id)
+		svcEps2 := tester.SetEndpoints(testutils.Name2, testutils.Namespace1, testutils.IP1|testutils.IP3, pod3Id)
 		svcEpsID2 := resources.GetResourceID(svcEps2)
 		svc2 := apiv3.ResourceID{
 			TypeMeta:  resources.TypeK8sServices,
@@ -378,96 +378,96 @@ var _ = Describe("Pods cache verification", func() {
 		}
 
 		By("checking that pod1 refs service1 and service2")
-		ep := tester.GetPod(Name1, Namespace1)
+		ep := tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(2))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("checking that pod2 refs service1")
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 
 		By("checking that pod3 refs service2")
-		ep = tester.GetPod(Name2, Namespace2)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace2)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("updating service2 with IP2 IP3 and removing pod3")
-		tester.SetEndpoints(Name2, Namespace1, IP2|IP3)
+		tester.SetEndpoints(testutils.Name2, testutils.Namespace1, testutils.IP2|testutils.IP3)
 
 		By("checking that pod1 no longer refs service2")
-		ep = tester.GetPod(Name1, Namespace1)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeFalse())
 
 		By("checking that pod2 refs service1 and service2")
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(2))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("checking that pod3 no longer refs service2")
-		ep = tester.GetPod(Name2, Namespace2)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace2)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(0))
 
 		By("deleting and re-adding pod2 and checking services are the same")
-		tester.DeletePod(Name2, Namespace1)
-		Expect(tester.GetPod(Name2, Namespace1)).To(BeNil())
-		tester.SetPod(Name2, Namespace1, NoLabels, IP2, NoServiceAccount, NoPodOptions)
-		ep = tester.GetPod(Name2, Namespace1)
+		tester.DeletePod(testutils.Name2, testutils.Namespace1)
+		Expect(tester.GetPod(testutils.Name2, testutils.Namespace1)).To(BeNil())
+		tester.SetPod(testutils.Name2, testutils.Namespace1, testutils.NoLabels, testutils.IP2, testutils.NoServiceAccount, testutils.NoPodOptions)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(2))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("updating service1 with IP3")
-		tester.SetEndpoints(Name1, Namespace1, IP3)
+		tester.SetEndpoints(testutils.Name1, testutils.Namespace1, testutils.IP3)
 
 		By("checking that pod2 no longer refs service1")
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc1)).To(BeFalse())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("updating pod2 with IP3")
-		tester.SetPod(Name2, Namespace1, NoLabels, IP3, NoServiceAccount, NoPodOptions)
+		tester.SetPod(testutils.Name2, testutils.Namespace1, testutils.NoLabels, testutils.IP3, testutils.NoServiceAccount, testutils.NoPodOptions)
 
 		By("checking that pod2 no refs service1 and service2")
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(2))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
 
 		By("deleting service2")
-		tester.DeleteEndpoints(Name2, Namespace1)
-		Expect(tester.GetEndpoints(Name2, Namespace1)).To(BeNil())
+		tester.DeleteEndpoints(testutils.Name2, testutils.Namespace1)
+		Expect(tester.GetEndpoints(testutils.Name2, testutils.Namespace1)).To(BeNil())
 
 		By("checking that pod2 no refs service2")
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeFalse())
 
 		By("deleting service1")
-		tester.DeleteEndpoints(Name1, Namespace1)
-		Expect(tester.GetEndpoints(Name1, Namespace1)).To(BeNil())
+		tester.DeleteEndpoints(testutils.Name1, testutils.Namespace1)
+		Expect(tester.GetEndpoints(testutils.Name1, testutils.Namespace1)).To(BeNil())
 
 		By("checking both pods reference no services")
-		ep = tester.GetPod(Name1, Namespace1)
+		ep = tester.GetPod(testutils.Name1, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(BeZero())
-		ep = tester.GetPod(Name2, Namespace1)
+		ep = tester.GetPod(testutils.Name2, testutils.Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(BeZero())
 	})

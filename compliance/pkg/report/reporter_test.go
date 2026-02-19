@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/internal/testutils"
 	api "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/flow"
@@ -123,7 +123,7 @@ func (f *fakeLogDispatcher) Dispatch(data interface{}) error {
 
 var _ = Describe("Report tests", func() {
 	var r *reporter
-	var xc *XrefCacheTester
+	var xc *testutils.XrefCacheTester
 	var healthCnt int
 	var replayer *fakeReplayer
 	var auditer *fakeAuditer
@@ -163,7 +163,7 @@ var _ = Describe("Report tests", func() {
 		}
 
 		// We'll use an xrefcache tester to feed in config.
-		xc = NewXrefCacheTester()
+		xc = testutils.NewXrefCacheTester()
 
 		// Create a reporter "by hand" passing in test interfaces.
 		replayer = &fakeReplayer{}
@@ -237,56 +237,56 @@ var _ = Describe("Report tests", func() {
 
 	It("should handle filtering policy based on endpoints", func() {
 		By("applying pod1 IP1 (this matches the EP selector)")
-		pod1 := xc.SetPod(Name1, Namespace1, Label1, IP1, Name1, NoPodOptions)
+		pod1 := xc.SetPod(testutils.Name1, testutils.Namespace1, testutils.Label1, testutils.IP1, testutils.Name1, testutils.NoPodOptions)
 		pod1ID := resources.GetResourceID(pod1)
 
 		By("applying pod2 IP2 (this does not match the EP selector)")
-		xc.SetPod(Name2, Namespace1, Label2, IP2, Name2, NoPodOptions)
+		xc.SetPod(testutils.Name2, testutils.Namespace1, testutils.Label2, testutils.IP2, testutils.Name2, testutils.NoPodOptions)
 
 		By("Setting GNP1, NP1 and k8sNP1 to match pod1 only")
-		gnp1 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
+		gnp1 := xc.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Select1,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		np1 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+		np1 := xc.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		knp1 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select1,
+		knp1 := xc.SetK8sNetworkPolicy(testutils.Name1, testutils.Namespace1, testutils.Select1,
 			nil,
 			[]networkingv1.NetworkPolicyEgressRule{},
 		)
 
 		By("Setting GNP2, NP2 and k8sNP2 to match pod2 only")
-		gnp2 := xc.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
+		gnp2 := xc.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name2, testutils.Select2,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		np2 := xc.SetNetworkPolicy(TierDefault, Name2, Namespace1, Select2,
+		np2 := xc.SetNetworkPolicy(testutils.TierDefault, testutils.Name2, testutils.Namespace1, testutils.Select2,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		knp2 := xc.SetK8sNetworkPolicy(Name2, Namespace1, Select2,
+		knp2 := xc.SetK8sNetworkPolicy(testutils.Name2, testutils.Namespace1, testutils.Select2,
 			nil,
 			[]networkingv1.NetworkPolicyEgressRule{},
 		)
 
 		By("Updating GNP1, NP1 and k8sNP1 to match pod2 only -  they should all remain in-scope though")
-		gnp1_2 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select2,
+		gnp1_2 := xc.SetGlobalNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Select2,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		np1_2 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select2,
+		np1_2 := xc.SetNetworkPolicy(testutils.TierDefault, testutils.Name1, testutils.Namespace1, testutils.Select2,
 			nil,
 			[]v3.Rule{},
-			&Order1,
+			&testutils.Order1,
 		)
-		knp1_2 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select2,
+		knp1_2 := xc.SetK8sNetworkPolicy(testutils.Name1, testutils.Namespace1, testutils.Select2,
 			nil,
 			[]networkingv1.NetworkPolicyEgressRule{},
 		)

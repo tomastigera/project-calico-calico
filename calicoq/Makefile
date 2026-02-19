@@ -62,7 +62,7 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
 
 .PHONY: ci
 ## Run what CI runs
-ci: clean image test static-checks
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -73,7 +73,7 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 
 .PHONY: ut
 ut:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -cover -r --skipPackage calicoq/*'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo --cover -r --skip-package calicoq/*'
 
 bin/calicoctl:
 	make -C ../calicoctl build

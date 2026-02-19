@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
