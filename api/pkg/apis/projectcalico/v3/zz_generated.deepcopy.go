@@ -5530,6 +5530,13 @@ func (in *LicenseKeyStatus) DeepCopyInto(out *LicenseKeyStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
+		*out = make([]v1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

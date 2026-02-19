@@ -97,8 +97,13 @@ var _ = Describe("LicenseStatusController tests", func() {
 		updated, err := cli.ProjectcalicoV3().LicenseKeys().Get(ctx, "default", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(updated.Status.Expiry.IsZero()).To(BeFalse())
+		Expect(updated.Status.GracePeriod).NotTo(BeEmpty())
 		Expect(updated.Status.MaxNodes).To(BeNumerically(">", 0))
 		Expect(updated.Status.Package).NotTo(BeEmpty())
+		Expect(updated.Status.Conditions).To(HaveLen(1))
+		Expect(updated.Status.Conditions[0].Type).To(Equal(v3.LicenseKeyConditionValid))
+		Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+		Expect(updated.Status.Conditions[0].Reason).To(Equal(v3.LicenseKeyReasonValidLicense))
 	})
 
 	It("should stop when the stop channel is closed", func() {
@@ -115,6 +120,32 @@ var _ = Describe("LicenseStatusController tests", func() {
 
 		close(stopCh)
 		Eventually(done).Should(BeClosed())
+	})
+
+	It("should set a condition for an expired LicenseKey", func() {
+		licenseKey := utils.ExpiredTestLicense()
+		licenseKey.Name = "expired"
+
+		_, err := cli.ProjectcalicoV3().LicenseKeys().Create(ctx, licenseKey, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ctrl.Reconcile(licenseKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		updated, err := cli.ProjectcalicoV3().LicenseKeys().Get(ctx, "expired", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Expired licenses still get status fields populated.
+		Expect(updated.Status.Expiry.IsZero()).To(BeFalse())
+		Expect(updated.Status.GracePeriod).NotTo(BeEmpty())
+		Expect(updated.Status.MaxNodes).To(BeNumerically(">", 0))
+		Expect(updated.Status.Package).NotTo(BeEmpty())
+
+		// Condition should indicate the license is expired.
+		Expect(updated.Status.Conditions).To(HaveLen(1))
+		Expect(updated.Status.Conditions[0].Type).To(Equal(v3.LicenseKeyConditionValid))
+		Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+		Expect(updated.Status.Conditions[0].Reason).To(Equal(v3.LicenseKeyReasonExpiredLicense))
 	})
 
 	It("should fail to reconcile an invalid LicenseKey", func() {

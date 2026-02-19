@@ -92,15 +92,88 @@ func (c *LicenseStatusController) Reconcile(p *v3.LicenseKey) error {
 		return fmt.Errorf("failed to decode license key: %w", err)
 	}
 
-	p.Status = v3.LicenseKeyStatus{
-		Expiry:   metav1.Time{Time: claims.Expiry.Time()},
-		MaxNodes: *claims.Nodes,
-		Package:  helpers.ConvertToPackageType(claims.Features),
-		Features: helpers.ExpandFeatureNames(claims.Features),
+	// First, update the status fields based on license claims.
+	status := claims.Validate()
+	switch status {
+	case licensing.Valid, licensing.InGracePeriod, licensing.Expired:
+		// To be extra permissive, we treat all of these cases as valid licenses so far as status fields are
+		// concerned. We'll set a condition indicating the actual license status for visibility.
+		p.Status = v3.LicenseKeyStatus{
+			Expiry:      metav1.Time{Time: claims.Expiry.Time()},
+			GracePeriod: fmt.Sprintf("%dd", claims.GracePeriod),
+			MaxNodes:    *claims.Nodes,
+			Package:     helpers.ConvertToPackageType(claims.Features),
+			Features:    helpers.ExpandFeatureNames(claims.Features),
+		}
+	default:
+		// For any other status, we treat the license as invalid and update the status conditions accordingly.
+		setLicenseKeyCondition(p, metav1.Condition{
+			Type:    v3.LicenseKeyConditionValid,
+			Status:  metav1.ConditionFalse,
+			Reason:  v3.LicenseKeyReasonInvalidLicense,
+			Message: fmt.Sprintf("License key is %s", status.String()),
+		})
 	}
+
+	// Now, update the conditions to indicate the specific license status (valid, in grace period, expired, etc.) for visibility.
+	switch status {
+	case licensing.Valid:
+		setLicenseKeyCondition(p, metav1.Condition{
+			Type:    v3.LicenseKeyConditionValid,
+			Status:  metav1.ConditionTrue,
+			Reason:  v3.LicenseKeyReasonValidLicense,
+			Message: fmt.Sprintf("License key is valid and expires on %s", claims.Expiry.Time().String()),
+		})
+	case licensing.InGracePeriod:
+		setLicenseKeyCondition(p, metav1.Condition{
+			Type:    v3.LicenseKeyConditionValid,
+			Status:  metav1.ConditionTrue,
+			Reason:  v3.LicenseKeyReasonExpiredLicense,
+			Message: "License key is in grace period",
+		})
+	case licensing.Expired:
+		setLicenseKeyCondition(p, metav1.Condition{
+			Type:    v3.LicenseKeyConditionValid,
+			Status:  metav1.ConditionFalse,
+			Reason:  v3.LicenseKeyReasonExpiredLicense,
+			Message: fmt.Sprintf("License key is expired (expired on %s)", claims.Expiry.Time().String()),
+		})
+	default:
+		setLicenseKeyCondition(p, metav1.Condition{
+			Type:    v3.LicenseKeyConditionValid,
+			Status:  metav1.ConditionFalse,
+			Reason:  v3.LicenseKeyReasonInvalidLicense,
+			Message: fmt.Sprintf("License key is expired (expired on %s)", claims.Expiry.Time().String()),
+		})
+	}
+
 	_, err = c.cli.ProjectcalicoV3().LicenseKeys().UpdateStatus(context.Background(), p, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update license key status: %w", err)
 	}
 	return nil
+}
+
+// setLicenseKeyCondition sets the specified condition (settings the transition time to now if needed) and returns true
+// if the condition was updated or added, and false if the condition was already set to the specified values.
+func setLicenseKeyCondition(p *v3.LicenseKey, condition metav1.Condition) bool {
+	for i, c := range p.Status.Conditions {
+		if c.Type == condition.Type {
+			// Condition already exists - check if it needs to be updated.
+			if c.Status != condition.Status || c.Reason != condition.Reason || c.Message != condition.Message {
+				// Update the existing condition.
+				p.Status.Conditions[i].Status = condition.Status
+				p.Status.Conditions[i].Reason = condition.Reason
+				p.Status.Conditions[i].Message = condition.Message
+				p.Status.Conditions[i].LastTransitionTime = metav1.Now()
+				return true
+			}
+			// Condition is already set to the desired values - no update needed.
+			return false
+		}
+	}
+	// Condition does not exist - add it.
+	condition.LastTransitionTime = metav1.Now()
+	p.Status.Conditions = append(p.Status.Conditions, condition)
+	return true
 }
