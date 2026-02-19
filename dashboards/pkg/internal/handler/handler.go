@@ -151,6 +151,8 @@ func withQueryRequest() handleradapters.ReqMapper[client.QueryRequest] {
 			return req, true
 		},
 		func(op *openapi3.Operation, specOps *handleradapters.SpecOps) {
+			// Delegate to WithReqBody's Document method to register the QueryRequest schema.
+			handleradapters.WithReqBody[client.QueryRequest]().Document(op, specOps)
 		},
 	)
 }

@@ -10,11 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/logging"
+	"github.com/tigera/tds-apiserver/lib/slices"
 
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
+	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/query/result"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func TestLinseedCollectionClientFlows(t *testing.T) {
@@ -25,6 +29,10 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 
 	mockClient := lsclient.NewMockClient(tenantID)
 	subject := newLinseedCollectionClientFlows(logger, mockClient)
+
+	collectionsMap := slices.AssociateBy(collections.Collections(nil), func(c collections.Collection) collections.CollectionName {
+		return c.Name()
+	})
 
 	t.Run("params", func(t *testing.T) {
 		now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
@@ -129,6 +137,36 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 							{Field: "start_time", Descending: true},
 						},
 					},
+				},
+			},
+			{
+				name: "with policy matches",
+				params: func() *queryParams {
+					qp, _ := newQueryParams(0, 0, "start_time", []string{"fake-cluster"}, nil)
+					qp.linseedQueryParams.TimeRange = &lmav1.TimeRange{
+						From: time.Date(2023, 1, 2, 3, 4, 5, 0, time.UTC),
+						To:   time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
+						Now:  &now,
+					}
+					policyTypeField, _ := collectionsMap[collections.CollectionNameFlows].Field(collections.FieldNamePolicyType)
+					_ = qp.setCriteria(filters.Criteria{
+						filters.NewEquals(policyTypeField, "staged", false),
+						filters.NewEquals(policyTypeField, "enforced", false),
+					}, now)
+					return qp
+				}(),
+				expected: &lsv1.FlowLogParams{
+					QueryParams: expectedQueryParams(&now),
+					LogSelectionParams: lsv1.LogSelectionParams{
+						Selector: "",
+					},
+					QuerySortParams: lsv1.QuerySortParams{
+						Sort: []lsv1.SearchRequestSortBy{
+							{Field: "start_time", Descending: true},
+						},
+					},
+					EnforcedPolicyMatches: []lsv1.PolicyMatch{{Staged: false}},
+					PendingPolicyMatches:  []lsv1.PolicyMatch{{Staged: true}},
 				},
 			},
 		}
