@@ -239,8 +239,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			log.SetLevel(origLogLevel)
 		})
 
-		It("It should be able to allocate a single address quickly - blocksize 32", func() {
-			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 32")
+		It("should be able to allocate a single address quickly - blocksize 32", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 32")
 			AddReportEntry(experiment.Name, experiment)
 
 			duration := experiment.MeasureDuration("runtime", func() {
@@ -259,8 +259,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		It("It should be able to allocate a single address quickly - blocksize 26", func() {
-			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 26")
+		It("should be able to allocate a single address quickly - blocksize 26", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 26")
 			AddReportEntry(experiment.Name, experiment)
 
 			duration := experiment.MeasureDuration("runtime", func() {
@@ -279,8 +279,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		It("It should be able to allocate a single address quickly - blocksize 20", func() {
-			experiment := gmeasure.NewExperiment("It should be able to allocate a single address quickly - blocksize 20")
+		It("should be able to allocate a single address quickly - blocksize 20", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 20")
 			AddReportEntry(experiment.Name, experiment)
 
 			duration := experiment.MeasureDuration("runtime", func() {
@@ -299,8 +299,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
 		})
 
-		It("It should be able to allocate a lot of addresses quickly", func() {
-			experiment := gmeasure.NewExperiment("It should be able to allocate a lot of addresses quickly")
+		It("should be able to allocate a lot of addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("allocate many addresses")
 			AddReportEntry(experiment.Name, experiment)
 
 			duration := experiment.MeasureDuration("runtime", func() {
@@ -385,7 +385,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			}
 
 			It("time to allocate first IP per node across 1000 nodes", func() {
-				experiment := gmeasure.NewExperiment("time to allocate first IP per node across 1000 nodes")
+				experiment := gmeasure.NewExperiment("allocate first IP per node across 1000 nodes")
 				AddReportEntry(experiment.Name, experiment)
 
 				experiment.MeasureDuration("runtime", func() {
@@ -394,7 +394,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			})
 
 			It("time to allocate second IP per node across 1000 nodes", func() {
-				experiment := gmeasure.NewExperiment("time to allocate second IP per node across 1000 nodes")
+				experiment := gmeasure.NewExperiment("allocate second IP per node across 1000 nodes")
 				AddReportEntry(experiment.Name, experiment)
 
 				allocOneIPPerNode() // Pre-create one IPAM block per node.
@@ -404,8 +404,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			})
 		})
 
-		It("It should be able to allocate and release addresses quickly", func() {
-			experiment := gmeasure.NewExperiment("It should be able to allocate and release addresses quickly")
+		It("should be able to allocate and release addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("allocate and release addresses")
 			AddReportEntry(experiment.Name, experiment)
 
 			duration := experiment.MeasureDuration("runtime", func() {
