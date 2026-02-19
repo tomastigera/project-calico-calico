@@ -3,8 +3,6 @@
 package prometheus
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,40 +13,6 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/rules"
 )
-
-func TestRuleAggregator(t *testing.T) {
-	RegisterTestingT(t)
-
-	// Create a PolicyRulesAggregator
-	pa := NewPolicyRulesAggregator(retentionTime, "testHost")
-
-	enforcedIngressRule1 := calc.NewRuleID(v3.KindNetworkPolicy, "tier1", "tier.policy1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionPass)
-	enforcedIngressRule3 := calc.NewRuleID(v3.KindNetworkPolicy, "tier4", "tier.policy3", "ns4", 0, rules.RuleDirIngress, rules.RuleActionAllow)
-	stagedIngressRule1 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier2", "tier.policy1", "ns3", 0, rules.RuleDirIngress, rules.RuleActionPass)
-	stagedIngressRule2 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier3", "tier.policy2", "ns5", 0, rules.RuleDirIngress, rules.RuleActionAllow)
-
-	mu := metric.Update{
-		UpdateType:     metric.UpdateTypeReport,
-		Tuple:          tuple1,
-		RuleIDs:        []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2, enforcedIngressRule3},
-		PendingRuleIDs: []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2},
-		HasDenyRule:    false,
-		IsConnection:   false,
-		InMetric: metric.Value{
-			DeltaPackets: 1,
-			DeltaBytes:   20,
-		},
-	}
-
-	By("Updating the aggregator with a set of enforced and staged rules")
-	pa.OnUpdate(mu)
-
-	Expect(pa.retainedRuleAggMetrics).To(HaveLen(4))
-	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule1}))
-	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule3}))
-	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule1}))
-	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule2}))
-}
 
 var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 	var pa *PolicyRulesAggregator
@@ -153,6 +117,35 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		pa.CheckRetainedMetrics(mt.getMockTime())
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{})
+	})
+
+	It("should correctly aggregate enforced and staged rules", func() {
+		enforcedIngressRule1 := calc.NewRuleID(v3.KindNetworkPolicy, "tier1", "tier.policy1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionPass)
+		enforcedIngressRule3 := calc.NewRuleID(v3.KindNetworkPolicy, "tier4", "tier.policy3", "ns4", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+		stagedIngressRule1 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier2", "tier.policy1", "ns3", 0, rules.RuleDirIngress, rules.RuleActionPass)
+		stagedIngressRule2 := calc.NewRuleID(v3.KindStagedNetworkPolicy, "tier3", "tier.policy2", "ns5", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+
+		mu := metric.Update{
+			UpdateType:     metric.UpdateTypeReport,
+			Tuple:          tuple1,
+			RuleIDs:        []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2, enforcedIngressRule3},
+			PendingRuleIDs: []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2},
+			HasDenyRule:    false,
+			IsConnection:   false,
+			InMetric: metric.Value{
+				DeltaPackets: 1,
+				DeltaBytes:   20,
+			},
+		}
+
+		By("Updating the aggregator with a set of enforced and staged rules")
+		pa.OnUpdate(mu)
+
+		Expect(pa.retainedRuleAggMetrics).To(HaveLen(4))
+		Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule1}))
+		Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule3}))
+		Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule1}))
+		Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule2}))
 	})
 })
 
