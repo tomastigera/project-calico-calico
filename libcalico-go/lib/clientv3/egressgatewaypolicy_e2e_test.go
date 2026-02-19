@@ -25,11 +25,13 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 	name1 := "egressgatewaypolicy-1"
 	name2 := "egressgatewaypolicy-2"
 
+	preferNone := apiv3.GatewayPreferenceNone
 	ruleLocal := apiv3.EgressGatewayRule{
 		Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
 			CIDR: "192.168.0.0/16",
 		},
-		Description: "local network",
+		Description:       "local network",
+		GatewayPreference: &preferNone,
 	}
 	ruleOnPrem := apiv3.EgressGatewayRule{
 		Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
@@ -41,6 +43,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 			NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
 			MaxNextHops:       3,
 		},
+		GatewayPreference: &preferNone,
 	}
 	ruleInternet := apiv3.EgressGatewayRule{
 		Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
@@ -51,6 +54,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 			Selector:          "egress-code == 'blue'",
 			NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
 		},
+		GatewayPreference: &preferNone,
 	}
 	spec1 := apiv3.EgressGatewayPolicySpec{}
 	spec1.Rules = []apiv3.EgressGatewayRule{ruleLocal, ruleOnPrem}
