@@ -470,19 +470,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("should use Host IP when ippool natOutgoing is true", func() {
+								// Check that originally traffic is SNATed to the gateway pod's IP
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
+								cc.CheckConnectivity()
+
 								// Enable natOutgoing on the egress IP pool.
 								ippool, err := client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
 								Expect(err).NotTo(HaveOccurred())
 								ippool.Spec.NATOutgoing = true
 								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
 								Expect(err).NotTo(HaveOccurred())
-								DeferCleanup(func() {
-									ippool, err := client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
-									Expect(err).NotTo(HaveOccurred())
-									ippool.Spec.NATOutgoing = false
-									_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
-									Expect(err).NotTo(HaveOccurred())
-								})
 
 								// The traffic should be NATed to the IP of the node hosting the gateway pod.
 								gwNodeIP := tc.Felixes[0].IP
@@ -490,8 +488,21 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									gwNodeIP = tc.Felixes[1].IP
 								}
 
+								// Check connectivity which should be SNATed to the Host IP.
 								cc.ResetExpectations()
 								cc.ExpectSNAT(egwClient, gwNodeIP, extWorkload, 4321)
+								cc.CheckConnectivity()
+
+								// Revert natOutgoing back to false.
+								ippool, err = client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+								ippool.Spec.NATOutgoing = false
+								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+
+								// Traffic should now be SNATed to the gateway pod's IP again.
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
 								cc.CheckConnectivity()
 							})
 						})
