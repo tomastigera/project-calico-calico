@@ -28,8 +28,6 @@ SRC_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go') \
 	$(shell find ../libcalico-go -name '*.go') \
 	$(shell find ../pkg/nonclusterhost -name '*.go')
 
-TEST_CONTAINER_NAME ?= calico/test
-
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
@@ -139,6 +137,7 @@ ST_OPTIONS?=
 .PHONY: st
 ## Run the STs in a container
 st: bin/calicoctl-linux-$(ARCH) version-helper
+	$(MAKE) -C ../node test_image
 	$(MAKE) run-etcd
 	$(MAKE) run-kubernetes-control-plane
 	# Use the host, PID and network namespaces from the host.
@@ -154,7 +153,7 @@ st: bin/calicoctl-linux-$(ARCH) version-helper
 		   -v $(SECRETS_PATH):/secrets \
 		   -v /var/run/docker.sock:/var/run/docker.sock \
 		   $(TEST_CONTAINER_NAME) \
-		   sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
+		   sh -c 'pytest $(ST_TO_RUN) -sv --junit-xml="/code/report/nosetests.xml" $(ST_OPTIONS)'
 	$(MAKE) stop-etcd
 	$(MAKE) stop-kubernetes-control-plane
 
