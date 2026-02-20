@@ -102,7 +102,7 @@ func newBPFTestEpMgr(
 // countSubPrograms counts the number of sub-programs that would be loaded for a given AttachType.
 // This uses the GetApplicableSubProgs API from the hook package.
 func countSubPrograms(at hook.AttachType) int {
-	applicableProgs := hook.GetApplicableSubProgs(at, false)
+	applicableProgs := hook.GetApplicableSubProgs(at, false, true)
 	return len(applicableProgs)
 }
 
@@ -139,6 +139,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 			BPFPolicyDebugEnabled:   true,
 			BPFIpv6Enabled:          ipv6Enabled,
 			BPFAttachType:           "TCX",
+			BPFDNSPolicyMode:        v3.BPFDNSPolicyModeInline,
 		},
 		bpfmaps,
 		regexp.MustCompile("^workloadep[0123]"),
@@ -610,6 +611,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				},
 				BPFExtToServiceConnmark: 0,
 				BPFPolicyDebugEnabled:   true,
+				BPFDNSPolicyMode:        v3.BPFDNSPolicyModeInline,
 			},
 			bpfmaps,
 			regexp.MustCompile("^workloadep[123]"),
@@ -744,6 +746,7 @@ func runAttachTest(t *testing.T, ipv6Enabled bool) {
 				},
 				BPFExtToServiceConnmark: 0,
 				BPFPolicyDebugEnabled:   true,
+				BPFDNSPolicyMode:        v3.BPFDNSPolicyModeInline,
 			},
 			bpfmaps,
 			regexp.MustCompile("^workloadep[123]"),

@@ -3842,8 +3842,8 @@ func (m *bpfEndpointManager) ensureQdisc(iface string) (bool, error) {
 	return tc.EnsureQdisc(iface)
 }
 
-func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap) (hook.Layout, error) {
-	layout, err := pm.LoadObj(at, string(m.bpfAttachType))
+func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap, dnsInline bool) (hook.Layout, error) {
+	layout, err := pm.LoadObj(at, string(m.bpfAttachType), dnsInline)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load obj for %#v: %w", at, err)
 	}
@@ -3853,7 +3853,7 @@ func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap)
 	}
 
 	at.LogLevel = "off"
-	layoutNoDebug, err := pm.LoadObj(at, string(m.bpfAttachType))
+	layoutNoDebug, err := pm.LoadObj(at, string(m.bpfAttachType), dnsInline)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load non-debug obj for %#v: %w", at, err)
 	}
@@ -3878,12 +3878,12 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		policyIdx := aptc.PolicyIdxV4
 		ap.Log().Debugf("ensureProgramLoaded %d", ipFamily)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if aptc.HookLayoutV6, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
+			if aptc.HookLayoutV6, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap), aptc.DNSInlineProcessing); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 			policyIdx = aptc.PolicyIdxV6
 		} else {
-			if aptc.HookLayoutV4, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
+			if aptc.HookLayoutV4, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap), aptc.DNSInlineProcessing); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 		}
@@ -3911,11 +3911,11 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		at.Family = int(ipFamily)
 		pm := m.commonMaps.XDPProgramsMap.(*hook.ProgramsMap)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if apxdp.HookLayoutV6, err = pm.LoadObj(at, ""); err != nil {
+			if apxdp.HookLayoutV6, err = pm.LoadObj(at, "", false); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		} else {
-			if apxdp.HookLayoutV4, err = pm.LoadObj(at, ""); err != nil {
+			if apxdp.HookLayoutV4, err = pm.LoadObj(at, "", false); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		}
