@@ -468,6 +468,32 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
 								cc.CheckConnectivity()
 							})
+
+							It("should use Host IP when ippool natOutgoing is true", func() {
+								// Enable natOutgoing on the egress IP pool.
+								ippool, err := client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+								ippool.Spec.NATOutgoing = true
+								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+								DeferCleanup(func() {
+									ippool, err := client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
+									Expect(err).NotTo(HaveOccurred())
+									ippool.Spec.NATOutgoing = false
+									_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
+									Expect(err).NotTo(HaveOccurred())
+								})
+
+								// The traffic should be NATed to the IP of the node hosting the gateway pod.
+								gwNodeIP := tc.Felixes[0].IP
+								if !sameNode {
+									gwNodeIP = tc.Felixes[1].IP
+								}
+
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gwNodeIP, extWorkload, 4321)
+								cc.CheckConnectivity()
+							})
 						})
 					}
 				}
