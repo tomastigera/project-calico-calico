@@ -1,12 +1,13 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera Inc. All rights reserved.
 package main
 
 import (
+	"context"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 )
 
 const (
@@ -17,27 +18,26 @@ const (
 )
 
 // Setup AWS session to cloudwatch logs service, returns session handler.
-func AwsSetupLogSession() *cloudwatchlogs.CloudWatchLogs {
-	cwSession := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigDisable,
-	}))
+func AwsSetupLogSession(ctx context.Context) (*cloudwatchlogs.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	cwLogs := cloudwatchlogs.New(cwSession)
-
-	return cwLogs
+	return cloudwatchlogs.NewFromConfig(cfg), nil
 }
 
 // Using AWS session handler, cloudwatch logs specifics and a timestamp, return a log token.
-func AwsGetStateFileWithToken(logs *cloudwatchlogs.CloudWatchLogs, group, prefix string, startTime int64) (map[string]string, error) {
+func AwsGetStateFileWithToken(ctx context.Context, logs *cloudwatchlogs.Client, group, prefix string, startTime int64) (map[string]string, error) {
 	results := make(map[string]string)
 
-	streams, err := getLogStreams(logs, group, prefix)
+	streams, err := getLogStreams(ctx, logs, group, prefix)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, stream := range streams {
-		token, err := getToken(logs, group, *stream, startTime)
+		token, err := getToken(ctx, logs, group, *stream, startTime)
 		if err != nil {
 			return nil, err
 		}
@@ -51,11 +51,11 @@ func AwsGetStateFileWithToken(logs *cloudwatchlogs.CloudWatchLogs, group, prefix
 }
 
 // Wrapper over cloudwatchlogs description, this function returns a slice of log-stream name using log-group name and stream prefix.
-func getLogStreams(logs *cloudwatchlogs.CloudWatchLogs, groupName, streamPrefix string) ([]*string, error) {
+func getLogStreams(ctx context.Context, logs *cloudwatchlogs.Client, groupName, streamPrefix string) ([]*string, error) {
 	var streams []*string
 
 	// Logstream name is dynamic for each EKS deployment. We use LogStreamName prefix to gather the actual stream name.
-	resp, err := logs.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+	resp, err := logs.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName:        aws.String(groupName),
 		LogStreamNamePrefix: aws.String(streamPrefix),
 	})
@@ -70,9 +70,9 @@ func getLogStreams(logs *cloudwatchlogs.CloudWatchLogs, groupName, streamPrefix 
 }
 
 // Get cloudwatchlogs token pointing to the log stream forward.
-func getToken(logs *cloudwatchlogs.CloudWatchLogs, group, stream string, startTime int64) (string, error) {
-	resp, err := logs.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
-		Limit:         aws.Int64(1),
+func getToken(ctx context.Context, logs *cloudwatchlogs.Client, group, stream string, startTime int64) (string, error) {
+	resp, err := logs.GetLogEvents(ctx, &cloudwatchlogs.GetLogEventsInput{
+		Limit:         aws.Int32(1),
 		LogGroupName:  aws.String(group),
 		LogStreamName: aws.String(stream),
 		StartTime:     aws.Int64(startTime),

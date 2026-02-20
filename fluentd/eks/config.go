@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera Inc. All rights reserved.
 package main
 
 import (

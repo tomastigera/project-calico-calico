@@ -1,7 +1,8 @@
-// Copyright 2019-2025 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera Inc. All rights reserved.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -29,7 +30,12 @@ func main() {
 		log.WithError(err).Fatal("Error setting linseed client.")
 	}
 
-	logs := AwsSetupLogSession()
+	ctx := context.Background()
+
+	logs, err := AwsSetupLogSession(ctx)
+	if err != nil {
+		log.WithError(err).Fatal("Error setting up AWS session.")
+	}
 
 	// Get start-time from ES via linseed and get the token based on that
 	startTime, err := GetStartTime(config, linseed)
@@ -37,7 +43,7 @@ func main() {
 		log.WithError(err).Fatal("Error getting start-time from elastic via linseed.")
 	}
 
-	stateFileTokenMap, err := AwsGetStateFileWithToken(logs, config.EKSCloudwatchLogGroup, config.EKSCloudwatchLogStreamPrefix, startTime)
+	stateFileTokenMap, err := AwsGetStateFileWithToken(ctx, logs, config.EKSCloudwatchLogGroup, config.EKSCloudwatchLogStreamPrefix, startTime)
 	if err != nil {
 		log.WithError(err).Fatal("Error getting token for given start-time.")
 	}
