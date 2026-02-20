@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +37,20 @@ import (
 const (
 	envAdvertiseClusterIPs       = "CALICO_ADVERTISE_CLUSTER_IPS"
 	advertiseClusterIPAnnotation = "projectcalico.org/AdvertiseClusterIP"
+	endpointSliceServiceIndex    = "svcKey"
 )
+
+func endpointSliceServiceIndexFunc(obj interface{}) ([]string, error) {
+	ep, ok := obj.(*discoveryv1.EndpointSlice)
+	if !ok {
+		return nil, nil
+	}
+	svcName, ok := ep.Labels[discoveryv1.LabelServiceName]
+	if !ok || svcName == "" {
+		return nil, nil
+	}
+	return []string{ep.Namespace + "/" + svcName}, nil
+}
 
 // routeGenerator defines the data fields
 // necessary for monitoring the services/endpoints resources for
@@ -108,7 +121,7 @@ func NewRouteGenerator(c *client) (rg *routeGenerator, err error) {
 		ObjectType:    &discoveryv1.EndpointSlice{},
 		ResyncPeriod:  0,
 		Handler:       epHandler,
-		Indexers:      cache.Indexers{},
+		Indexers:      cache.Indexers{endpointSliceServiceIndex: endpointSliceServiceIndexFunc},
 	})
 
 	return
@@ -178,24 +191,27 @@ func (rg *routeGenerator) getServiceForEndpoints(ep *discoveryv1.EndpointSlice) 
 
 // getEndpointsForService retrieves the corresponding ep for the given svc
 func (rg *routeGenerator) getEndpointsForService(svc *v1.Service) ([]*discoveryv1.EndpointSlice, string) {
-	var eps []*discoveryv1.EndpointSlice
-	for _, obj := range rg.epIndexer.List() {
-		ep, ok := obj.(*discoveryv1.EndpointSlice)
-		if !ok {
-			log.Warn("getEndpointsForService: failed to assert type to endpointslice, passing")
-			continue
-		}
-		if svcName, ok := ep.Labels[discoveryv1.LabelServiceName]; ok && svcName == svc.Name && ep.Namespace == svc.Namespace {
-			eps = append(eps, ep)
-		}
-	}
-
 	key, err := cache.MetaNamespaceKeyFunc(svc)
 	if err != nil {
 		log.WithField("svc", svc.Name).WithError(err).Warn("getEndpointsForService: error on retrieving key for service, passing")
 		return nil, ""
 	}
 
+	objs, err := rg.epIndexer.(cache.Indexer).ByIndex(endpointSliceServiceIndex, key)
+	if err != nil {
+		log.WithField("key", key).WithError(err).Error("getEndpointsForService: error reading endpointslice index")
+		return nil, key
+	}
+
+	var eps []*discoveryv1.EndpointSlice
+	for _, obj := range objs {
+		ep, ok := obj.(*discoveryv1.EndpointSlice)
+		if !ok {
+			log.Warn("getEndpointsForService: failed to assert type to endpointslice, passing")
+			continue
+		}
+		eps = append(eps, ep)
+	}
 	return eps, key
 }
 
