@@ -482,7 +482,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
 								Expect(err).NotTo(HaveOccurred())
 
-								// The traffic should be NATed to the IP of the node hosting the gateway pod.
+								// The traffic should be SNATed to the IP of the node hosting the gateway pod.
 								gwNodeIP := tc.Felixes[0].IP
 								if !sameNode {
 									gwNodeIP = tc.Felixes[1].IP
