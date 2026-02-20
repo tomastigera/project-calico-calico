@@ -12,7 +12,7 @@ CALICO_BASE_VER=ubi10-1771532994
 
 # Version of Kubernetes to use for tests, rancher/kubectl, and kubectl binary release in
 # confd and kube-controllers.
-K8S_VERSION=v1.34.3
+K8S_VERSION=v1.34.4
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
