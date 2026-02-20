@@ -37,7 +37,7 @@ type dlc struct {
 
 func (d dlc) GetFeatureStatus(feature string) bool {
 	switch d.status {
-	case lclient.Valid, lclient.InGracePeriod:
+	case lclient.Valid, lclient.InGracePeriod, lclient.Expired:
 		return d.features[feature]
 	}
 	return false
@@ -60,6 +60,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 			"PrometheusReporterEnabled":  "true",
 			"DropActionOverride":         "ACCEPT",
 			"FlowLogsFileEnabled":        "true",
+			"L7LogsFileEnabled":          "true",
 			"EgressIPSupport":            "EnabledPerNamespace",
 		}, config.DatastoreGlobal)
 		Expect(err).NotTo(HaveOccurred())
@@ -69,6 +70,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.PrometheusReporterEnabled).To(BeTrue())
 		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+		Expect(cfg.L7LogsFileEnabled).To(BeTrue())
 		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
 	})
 
@@ -77,9 +79,11 @@ var _ = Describe("FelixDaemon license checks", func() {
 			status: lclient.NoLicenseLoaded,
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
@@ -95,6 +99,8 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should leave IPSec settings unchanged if IPSec license is valid", func() {
@@ -109,6 +115,8 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should leave Prometheus setting unchanged if PrometheusMetrics license is valid", func() {
@@ -119,9 +127,12 @@ var _ = Describe("FelixDaemon license checks", func() {
 			},
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeTrue())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should leave DropActionOverride setting unchanged if DropActionOverride license is valid", func() {
@@ -132,9 +143,12 @@ var _ = Describe("FelixDaemon license checks", func() {
 			},
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should leave FileOutputFlowLogs setting unchanged if FileOutputFlowLogs license is valid", func() {
@@ -145,9 +159,28 @@ var _ = Describe("FelixDaemon license checks", func() {
 			},
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
+	})
+
+	It("Should leave L7LogsFileEnabled setting unchanged if FileOutputL7Logs license is valid", func() {
+		removeUnlicensedFeaturesFromConfig(cfg, dlc{
+			status: lclient.Valid,
+			features: map[string]bool{
+				features.FileOutputL7Logs: true,
+			},
+		})
+		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
+		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
+		Expect(cfg.DropActionOverride).To(Equal("DROP"))
+		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeTrue())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should leave EgressIPSupport setting unchanged if EgressIPSupport license is valid", func() {
@@ -158,10 +191,37 @@ var _ = Describe("FelixDaemon license checks", func() {
 			},
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
+	})
+
+	It("Should keep dataplane features, disable logging features, when license is expired", func() {
+		removeUnlicensedFeaturesFromConfig(cfg, dlc{
+			status: lclient.Expired,
+			// Simulate the relaxed ValidateFeature: features are still reported
+			// as available even though the license is expired.
+			features: map[string]bool{
+				features.IPSec:               true,
+				features.PrometheusMetrics:   true,
+				features.DropActionOverride:  true,
+				features.FileOutputFlowLogs:  true,
+				features.FileOutputL7Logs:    true,
+				features.EgressAccessControl: true,
+			},
+		})
+		// Dataplane features keep their settings on expiry.
+		Expect(cfg.IPSecMode).To(Equal("PSK"))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeTrue())
+		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
+		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
+		// Logging/metrics features are disabled on expiry.
+		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
+		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
 	})
 
 	It("Should update EgressIPSupport setting if EgressIPSupport license is disabled", func() {
@@ -172,9 +232,11 @@ var _ = Describe("FelixDaemon license checks", func() {
 			},
 		})
 		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.L7LogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 })
