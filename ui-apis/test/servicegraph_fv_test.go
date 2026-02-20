@@ -630,7 +630,9 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			// This means we have no scale determinations for any namespaces.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
-			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
+
+			// Namespaced count calculations are canceled and the cache shouldn't be ready yet. We expect no scale determinations to be made.
+			namespaceStatsExpectations := []uiapisv1.NamespaceStatistics{
 				{
 					Namespace:    "low-scale-frontend-a",
 					HighVolume:   nil,
@@ -661,28 +663,56 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 					HighVolume:   nil,
 					Approximated: nil,
 				},
-				{
-					Namespace:    "very-high-flow-logs-backend",
-					HighVolume:   nil,
-					Approximated: nil,
-				},
-				{
-					Namespace:    "very-high-flow-logs-frontend-a",
-					HighVolume:   nil,
-					Approximated: nil,
-				},
-				{
-					Namespace:    "very-high-flow-logs-frontend-b",
-					HighVolume:   nil,
-					Approximated: nil,
-				},
 				// Expect that namespaces without flows, like default, still have no scale determination.
 				{
 					Namespace:    "default",
 					HighVolume:   nil,
 					Approximated: nil,
 				},
-			}))
+			}
+			if len(statsResp.DeveloperStatistics.NamespaceCounts.NumFlowLogs) == 0 {
+				// We expect no flow log namespace counts, as we canceled the request.
+				// Since no namespace counts exist and the cache isn't ready, we expect no scale determinations to be made.
+				namespaceStatsExpectations = append(namespaceStatsExpectations, []uiapisv1.NamespaceStatistics{
+					{
+						Namespace:    "very-high-flow-logs-backend",
+						HighVolume:   nil,
+						Approximated: nil,
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-a",
+						HighVolume:   nil,
+						Approximated: nil,
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-b",
+						HighVolume:   nil,
+						Approximated: nil,
+					},
+				}...)
+			} else {
+				// Even though the flow log counts request was canceled, it's still possible through timing that the operation completed before the cancellation is processed.
+				// In that case, we'll know enough for the very-high-flow-logs namespace group to render a decision on high volume: flow logs are high, so we know the volume is high.
+				namespaceStatsExpectations = append(namespaceStatsExpectations, []uiapisv1.NamespaceStatistics{
+					{
+						Namespace:    "very-high-flow-logs-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-a",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-b",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+				}...)
+			}
+			Expect(statsResp.NamespacesStatistics).To(ContainElements(namespaceStatsExpectations))
+
 			Expect(statsResp.NamespacesStatistics).To(HaveLen(len(existingNamespaces.Items) + 9))
 			// Global scale determination is high, so we do not compute the graph edges for the frontend.
 			Expect(statsResp.TopologyStatistics.NumEdges).To(BeNil())
@@ -721,44 +751,10 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			// With flow logs very high, we expect namespaced flow log computation and L3 flow log computation to be canceled.
 			Expect(statsResp.DeveloperStatistics.Cancellations.NamespacedFlowLogCounts).To(Equal(true))
 			Expect(statsResp.DeveloperStatistics.Cancellations.L3FlowCounts).To(Equal(true))
-			Expect(statsResp.NamespacesStatistics).To(ContainElements([]uiapisv1.NamespaceStatistics{
-				// In the 2-day window, the namespaces for the very-high-flow-logs namespace group all cross the threshold for high flow logs.
-				// Since all namespace counts were canceled, we expect the determinations to be approximated.
-				{
-					Namespace:    "very-high-flow-logs-backend",
-					HighVolume:   util.BoolPtr(true),
-					Approximated: util.BoolPtr(true),
-				},
-				{
-					Namespace:    "very-high-flow-logs-frontend-a",
-					HighVolume:   util.BoolPtr(true),
-					Approximated: util.BoolPtr(true),
-				},
-				{
-					Namespace:    "very-high-flow-logs-frontend-b",
-					HighVolume:   util.BoolPtr(true),
-					Approximated: util.BoolPtr(true),
-				},
-				// The high-l3-flow namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
-				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says the backend namespace has high volume,
-				// and that the frontend namespaces have low volume, as described earlier.
-				{
-					Namespace:    "high-l3-flows-backend",
-					HighVolume:   util.BoolPtr(true),
-					Approximated: util.BoolPtr(true),
-				},
-				{
-					Namespace:    "high-l3-flows-frontend-a",
-					HighVolume:   util.BoolPtr(false),
-					Approximated: util.BoolPtr(true),
-				},
-				{
-					Namespace:    "high-l3-flows-frontend-b",
-					HighVolume:   util.BoolPtr(false),
-					Approximated: util.BoolPtr(true),
-				},
+
+			namespaceStatsExpectations = []uiapisv1.NamespaceStatistics{
 				// The low-scale namespaces all have low flow log counts, meaning their scale determination depends on the L3 flow counts.
-				// Since L3 flow counts were cancelled, we expect the cache to provide us with an approximation that says all namespaces have low volume.
+				// Since L3 flow counts were canceled, we expect the cache to provide us with an approximation that says all namespaces have low volume.
 				{
 					Namespace:    "low-scale-frontend-a",
 					HighVolume:   util.BoolPtr(false),
@@ -780,7 +776,51 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 					HighVolume:   nil,
 					Approximated: nil,
 				},
-			}))
+			}
+
+			if len(statsResp.DeveloperStatistics.NamespaceCounts.NumFlowLogs) == 0 {
+				// We expect no flow log namespace counts, as we canceled the request.
+				// In the 2-day window, the namespaces for the very-high-flow-logs namespace group all cross the threshold for high flow logs.
+				// Since all namespace counts were canceled, we expect the determinations to be approximated.
+				namespaceStatsExpectations = append(namespaceStatsExpectations, []uiapisv1.NamespaceStatistics{
+					{
+						Namespace:    "very-high-flow-logs-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-a",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-b",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(true),
+					},
+				}...)
+			} else {
+				// Even though the flow log counts request was canceled, it's still possible through timing that the operation completed before the cancellation is processed.
+				// In that case, we'll know enough for the very-high-flow-logs namespace group to render a decision on high volume without approximation: flow logs are high, so we know the volume is high.
+				namespaceStatsExpectations = append(namespaceStatsExpectations, []uiapisv1.NamespaceStatistics{
+					{
+						Namespace:    "very-high-flow-logs-backend",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-a",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+					{
+						Namespace:    "very-high-flow-logs-frontend-b",
+						HighVolume:   util.BoolPtr(true),
+						Approximated: util.BoolPtr(false),
+					},
+				}...)
+			}
+			Expect(statsResp.NamespacesStatistics).To(ContainElements(namespaceStatsExpectations))
 		})
 
 		Context("cache-specific tests", func() {
