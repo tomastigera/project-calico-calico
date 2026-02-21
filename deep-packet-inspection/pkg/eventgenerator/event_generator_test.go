@@ -260,20 +260,20 @@ var _ = Describe("File Parser", func() {
 		event1.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event1.SourceIP, srcPort, *event1.DestIP, destPort, event1.Host)
 
 		event2 := lsv1.Event{
-			Time:          lsv1.NewEventTimestamp(1630343977),
-			Type:          "deep_packet_inspection",
-			Description:   "Deep Packet Inspection found a matching snort rule(s) for some packets in your network",
-			Severity:      100,
-			Origin:        "dpi.dpi-ns/dpi-name",
-			AttackVector:  "Network",
-			MitreTactic:   "n/a",
-			MitreIDs:      &[]string{"n/a"},
-			Mitigations:   &[]string{"n/a"},
-			SourceIP:      &srcIP,
-			DestIP:        &destIP,
-			DestNamespace: dpiNs,
-			Host:          cfg.NodeName,
-			Record:        lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+			Time:         lsv1.NewEventTimestamp(1630343977),
+			Type:         "deep_packet_inspection",
+			Description:  "Deep Packet Inspection found a matching snort rule(s) for some packets in your network",
+			Severity:     100,
+			Origin:       "dpi.dpi-ns/dpi-name",
+			AttackVector: "Network",
+			MitreTactic:  "n/a",
+			MitreIDs:     &[]string{"n/a"},
+			Mitigations:  &[]string{"n/a"},
+			SourceIP:     &srcIP,
+			SourcePort:   &srcPort,
+			DestIP:       &destIP,
+			Host:         cfg.NodeName,
+			Record:       lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
 		event2.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event2.SourceIP, srcPort, *event2.DestIP, destPort, event2.Host)
 
@@ -304,6 +304,7 @@ var _ = Describe("File Parser", func() {
 				},
 			})
 		r.GenerateEventsForWEP(wepKey)
+		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(1))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -324,6 +325,7 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path, orgFile, expectedFile)
 
 		r.GenerateEventsForWEP(wepKey)
+		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(2))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)

@@ -96,7 +96,7 @@ FV_PACKAGE=pkg/syncer
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r -skipPackage=$(FV_PACKAGE) pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r --skip-package=$(FV_PACKAGE) pkg/*'
 
 
 ###############################################################################
