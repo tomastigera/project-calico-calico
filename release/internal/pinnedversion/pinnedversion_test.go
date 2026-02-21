@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ func TestImageComponents(t *testing.T) {
 			"cni-windows":               {Version: "v3.31.0", Image: "cni-windows"},
 			"node-windows":              {Version: "v3.31.0", Image: "node-windows"},
 			"guardian":                  {Version: "v3.31.0", Image: "guardian"},
+			"webhooks":                  {Version: "v3.31.0", Image: "webhooks"},
 			"whisker":                   {Version: "v3.31.0", Image: "whisker"},
 			"whisker-backend":           {Version: "v3.31.0", Image: "whisker-backend"},
 		}
@@ -108,6 +109,7 @@ func TestImageComponents(t *testing.T) {
 			"cni-windows":               {Version: "v3.31.0", Image: "cni-windows"},
 			"node-windows":              {Version: "v3.31.0", Image: "node-windows"},
 			"guardian":                  {Version: "v3.31.0", Image: "guardian"},
+			"webhooks":                  {Version: "v3.31.0", Image: "webhooks"},
 			"whisker":                   {Version: "v3.31.0", Image: "whisker"},
 			"whisker-backend":           {Version: "v3.31.0", Image: "whisker-backend"},
 			"tigera/operator":           {Version: "v1.40.0-v3.31.0", Image: "tigera/operator", Registry: "docker.io"},

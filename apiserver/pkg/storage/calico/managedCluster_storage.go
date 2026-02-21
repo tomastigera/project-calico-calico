@@ -1,18 +1,13 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2026 Tigera, Inc. All rights reserved.
 
 package calico
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"fmt"
 	"reflect"
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -25,10 +20,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/projectcalico/calico/licensing/client/features"
 )
-
-// AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
-// managed cluster certificate that is allowed to initiate connections.
-const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
 
 // NewManagedClusterStorage creates a new libcalico-based storage.Interface implementation for ManagedClusters
 func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
@@ -59,16 +50,6 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			return res, nil
 		}
 
-		var caCert *x509.Certificate
-		var caKey *rsa.PrivateKey
-
-		// Populate the installation manifest in the response
-		// - If the operatorNamespace is not set in the ManagedCluster resource, default to tigera-operator.
-		operatorNs := res.Spec.OperatorNamespace
-		if operatorNs == "" {
-			operatorNs = "tigera-operator"
-		}
-
 		// Determine which CA key / cert to use for signing the managed cluster's guardian certificate.
 		// By default, we use the cluster-scoped one provided by the caller. In multi-tenant mode, will instead use
 		// the per-tenant secret.
@@ -77,40 +58,17 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			namespace = res.Namespace
 		}
 
-		// Query the CA secret from the tenant's namespace or from calico-system. Note that we use the same certificate as both the CA for signing guardian
-		// certificates, as well the Voltron tunnel server certificate.
-		secret, err := resources.K8sClient.CoreV1().Secrets(namespace).Get(ctx, resources.TunnelSecretName, metav1.GetOptions{})
+		fingerprint, manifest, err := helpers.PrepareManagedCluster(ctx, resources.K8sClient, res, resources.TunnelSecretName, namespace, resources.ManagementClusterAddr, resources.ManagementClusterCAType)
 		if err != nil {
-			logrus.Errorf("Cannot get CA secret (%s) in namespace %s due to %s", resources.TunnelSecretName, namespace, err)
+			logrus.Errorf("Failed to prepare managed cluster: %s", err)
 			return nil, err
 		}
 
-		// Parse the certificate data into an x509 certificate.
-		caCert, caKey, err = helpers.DecodeCertAndKey(secret.Data["tls.crt"], secret.Data["tls.key"])
-		if err != nil {
-			logrus.Errorf("Cannot parse CA certificate due to %s", err)
-			return nil, err
-		}
-		logrus.Debugf("Using CA certificate with CN=%s", caCert.Subject.CommonName)
-
-		// Generate x509 certificate and private key for the managed cluster
-		certificate, privKey, err := helpers.Generate(caCert, caKey, res.Name)
-		if err != nil {
-			logrus.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
-			return nil, cerrors.ErrorValidation{
-				ErroredFields: []cerrors.ErroredField{{
-					Name:   "Metadata.Name",
-					Reason: "Failed to generate client credentials",
-					Value:  res.Name,
-				}},
-			}
-		}
 		// Store the hash of the certificate as an annotation
-		fingerprint := fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
 		if res.Annotations == nil {
 			res.Annotations = make(map[string]string)
 		}
-		res.Annotations[AnnotationActiveCertificateFingerprint] = fingerprint
+		res.Annotations[helpers.AnnotationActiveCertificateFingerprint] = fingerprint
 
 		// Create the managed cluster resource
 		out, err := c.ManagedClusters().Create(ctx, res, oso)
@@ -118,7 +76,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			return nil, err
 		}
 
-		out.Spec.InstallationManifest = helpers.InstallationManifest(caCert, certificate, privKey, resources.ManagementClusterAddr, resources.ManagementClusterCAType, operatorNs)
+		out.Spec.InstallationManifest = manifest
 		return out, nil
 	}
 

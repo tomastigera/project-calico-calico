@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package rbac
 
 import (
@@ -993,5 +993,4 @@ func ignoreDiscoveryFailureErrors(res []*metav1.APIResourceList, err error) ([]*
 	} else {
 		return res, err
 	}
-
 }

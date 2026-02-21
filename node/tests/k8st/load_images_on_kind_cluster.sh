@@ -13,7 +13,8 @@ images=(
     node-driver-registrar
     pod2daemon
     kube-controllers
-    
+    webhook
+
     egress-gateway
     calico-queryserver
     prometheus-operator

@@ -378,7 +378,8 @@ K8ST_IMAGE_TARS=calico-node.tar \
 	node-driver-registrar.tar \
 	calicoctl.tar \
 	kube-controllers.tar \
-	operator.tar
+	operator.tar \
+	webhook.tar
 
 # Add in enterprise-only images.
 ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar egress-gateway.tar prometheus-operator.tar config-reloader.tar prometheus.tar prometheus-service.tar alertmanager.tar fluentd.tar policy-rec.tar eck.tar manager.tar voltron.tar ui-apis.tar kibana.tar elastic.tar es-gw.tar linseed.tar idc.tar webhooks-processor.tar dashboards-installer.tar es-metrics.tar manager.tar
@@ -618,6 +619,11 @@ goldmane.tar: ../go.mod $(shell find ../goldmane -name '*.go')
 	make -C ../goldmane image
 	docker tag calico/goldmane:latest-$(ARCH) calico/goldmane:$(TEST_BUILD_TAG)
 	docker save --output $@ calico/goldmane:$(TEST_BUILD_TAG)
+
+webhook.tar: ../go.mod $(shell find ../webhooks -name '*.go') $(shell find ../libcalico-go -name '*.go')
+	make -C ../webhooks image
+	docker tag tigera/webhooks:latest-$(ARCH) tigera/webhooks:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/webhooks:$(TEST_BUILD_TAG)
 
 whisker.tar: ../go.mod $(shell find ../whisker)
 	make -C ../whisker image

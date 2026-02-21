@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -3758,11 +3758,18 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 			{
 				APIGroup: "",
 				Resource: "namespaces",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "get", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			}, {
 				APIGroup: "",
 				Resource: "pods",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "delete", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "patch", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			},
 		},
 	}); err != nil {
