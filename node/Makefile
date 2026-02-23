@@ -79,10 +79,6 @@ BIRD_DIND_IMAGE ?= calico/bird-dind:$(BIRD_VERSION)-$(ARCH)
 FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.xz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 
-# Versions and locations of dependencies used in tests.
-TEST_CONTAINER_NAME_VER?=latest
-TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
-
 TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc' ! -name '*.tmp' )
 
 # Variables controlling the image
