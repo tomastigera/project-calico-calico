@@ -243,7 +243,7 @@ var _ = Describe("Test the IPPool update processor", func() {
 			Key: v1PoolKeyCidr1,
 			Value: &model.IPPool{
 				CIDR:           v1PoolKeyCidr1.CIDR,
-				IPIPMode:       encap.Undefined,
+				IPIPMode:       encap.Never,
 				Masquerade:     false,
 				IPAM:           true,
 				Disabled:       false,

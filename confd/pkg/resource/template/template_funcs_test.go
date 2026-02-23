@@ -11,7 +11,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/confd/pkg/backends"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
