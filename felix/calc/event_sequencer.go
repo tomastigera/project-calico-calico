@@ -587,8 +587,6 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
 
-			protoEp := ModelWorkloadEndpointToProto(wlep, endpointUpdate.computedData, endpointUpdate.peerData, tiers)
-
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,
