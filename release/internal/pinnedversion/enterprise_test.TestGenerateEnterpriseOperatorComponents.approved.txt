@@ -198,6 +198,9 @@ components:
   waf-http-filter:
     version: v3.22.0
     image: waf-http-filter
+  webhooks:
+    version: v3.22.0
+    image: webhooks
   webhooks-processor:
     version: v3.22.0
     image: webhooks-processor
