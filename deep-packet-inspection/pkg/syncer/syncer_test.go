@@ -18,7 +18,7 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dispatcher"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	calicolib "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
@@ -139,9 +139,9 @@ var _ = Describe("Syncer", func() {
 
 		By("creating WEP before starting syncerCallbacks")
 		ctxPatchCNI := k8sresources.ContextWithPatchMode(ctx1, k8sresources.PatchModeCNI)
-		_, err := calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
+		_, err := calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &internalapi.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", nodename)},
-			Spec: calicolib.WorkloadEndpointSpec{
+			Spec: internalapi.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
 				Node:          nodename,
 				ContainerID:   "container1",
@@ -247,9 +247,9 @@ var _ = Describe("Syncer", func() {
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(1))
 
 		By("creating WEP and checking updates are received by dispatcher")
-		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
+		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &internalapi.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod2-eth0", nodename)},
-			Spec: calicolib.WorkloadEndpointSpec{
+			Spec: internalapi.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
 				Node:          nodename,
 				ContainerID:   "container2",
@@ -277,9 +277,9 @@ var _ = Describe("Syncer", func() {
 
 		By("creating WEP for non-local node and checking updates are not sent to syncerCallbacks")
 		tempNode := "tempnode"
-		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
+		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &internalapi.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", tempNode)},
-			Spec: calicolib.WorkloadEndpointSpec{
+			Spec: internalapi.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
 				Node:          tempNode,
 				ContainerID:   "container1",

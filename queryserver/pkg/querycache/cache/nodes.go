@@ -4,7 +4,7 @@ package cache
 import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -72,9 +72,9 @@ func (c *nodeCache) TotalNodesWithNoHostEndpoints() int {
 }
 
 func (c *nodeCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
-	dispatcher.RegisterHandler(libapi.KindWorkloadEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(internalapi.KindWorkloadEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(apiv3.KindHostEndpoint, c.onUpdate)
-	dispatcher.RegisterHandler(libapi.KindNode, c.onUpdate)
+	dispatcher.RegisterHandler(internalapi.KindNode, c.onUpdate)
 }
 
 func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
@@ -84,10 +84,10 @@ func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 	switch uv3.UpdateType {
 	case bapi.UpdateTypeKVNew:
 		switch rk.Kind {
-		case libapi.KindNode:
+		case internalapi.KindNode:
 			nd = c.getOrCreateNodeData(rk.Name)
 			nd.resource = uv3.Value.(api.Resource)
-		case libapi.KindWorkloadEndpoint:
+		case internalapi.KindWorkloadEndpoint:
 			nd = c.getOrCreateNodeData(c.getNodeFromWEPName(rk.Name))
 			c.updateEndpointsCounts(nd, 1, 0)
 		case apiv3.KindHostEndpoint:
@@ -102,7 +102,7 @@ func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 		}
 	case bapi.UpdateTypeKVUpdated:
 		switch rk.Kind {
-		case libapi.KindNode:
+		case internalapi.KindNode:
 			nd = c.nodes[rk.Name]
 			nd.resource = uv3.Value.(api.Resource)
 		case apiv3.KindHostEndpoint:
@@ -125,10 +125,10 @@ func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 		}
 	case bapi.UpdateTypeKVDeleted:
 		switch rk.Kind {
-		case libapi.KindNode:
+		case internalapi.KindNode:
 			nd = c.nodes[rk.Name]
 			nd.resource = nil
-		case libapi.KindWorkloadEndpoint:
+		case internalapi.KindWorkloadEndpoint:
 			nd = c.nodes[c.getNodeFromWEPName(rk.Name)]
 			c.updateEndpointsCounts(nd, -1, 0)
 		case apiv3.KindHostEndpoint:

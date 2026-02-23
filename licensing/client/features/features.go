@@ -5,7 +5,7 @@ package features
 import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 )
 
 const (
@@ -76,7 +76,7 @@ var OpenSourceAPIs = set{
 	api.NewStagedKubernetesNetworkPolicy().GetObjectKind().GroupVersionKind().String(): true,
 	api.NewStagedNetworkPolicy().GetObjectKind().GroupVersionKind().String():           true,
 	api.NewTier().GetObjectKind().GroupVersionKind().String():                          true,
-	libapi.NewNode().GetObjectKind().GroupVersionKind().String():                       true,
+	internalapi.NewNode().GetObjectKind().GroupVersionKind().String():                  true,
 }
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names

@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -347,7 +347,7 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 		Expect(err).NotTo(HaveOccurred())
 		var numWeps, numHeps int
 		for _, i := range output.Items {
-			if i.Kind == libapi.KindWorkloadEndpoint {
+			if i.Kind == internalapi.KindWorkloadEndpoint {
 				numWeps++
 			} else {
 				numHeps++

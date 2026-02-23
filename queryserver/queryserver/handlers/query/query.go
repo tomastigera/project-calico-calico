@@ -19,7 +19,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -595,7 +595,7 @@ func getEndpointKeyFromCombinedName(combined string) (model.Key, bool) {
 		}, true
 	case 2:
 		return model.ResourceKey{
-			Kind:      libapi.KindWorkloadEndpoint,
+			Kind:      internalapi.KindWorkloadEndpoint,
 			Namespace: parts[0],
 			Name:      parts[1],
 		}, true
@@ -609,7 +609,7 @@ func getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
 		return nil, false
 	}
 	return model.ResourceKey{
-		Kind: libapi.KindNode,
+		Kind: internalapi.KindNode,
 		Name: parts[0],
 	}, true
 }

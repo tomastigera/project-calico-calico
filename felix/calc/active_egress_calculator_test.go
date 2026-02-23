@@ -10,7 +10,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/proto"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -1573,9 +1573,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 	It("ignores unexpected update", func() {
 		aec.OnUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "a"},
-				Value: &libapiv3.Node{
-					Spec: libapiv3.NodeSpec{},
+				Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "a"},
+				Value: &internalapi.Node{
+					Spec: internalapi.NodeSpec{},
 				},
 			},
 			UpdateType: api.UpdateTypeKVUpdated,

@@ -21,7 +21,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -259,8 +259,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
-	var savedBGPSpec libapi.NodeBGPSpec
-	var node *libapi.Node
+	var savedBGPSpec internalapi.NodeBGPSpec
+	var node *internalapi.Node
 
 	restoreBGPSpec := func() {
 		felixPID := tc.Felixes[0].GetFelixPID()

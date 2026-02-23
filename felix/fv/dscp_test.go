@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -226,12 +226,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		Expect(err).NotTo(HaveOccurred())
 
 		By("setting the initial DSCP values")
-		ep1_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp20,
 		}
 		ep1_1.UpdateInInfra(infra)
 
-		ep2_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep2_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp40,
 		}
 		ep2_2.UpdateInInfra(infra)
@@ -251,12 +251,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		cc.CheckConnectivity()
 
 		By("updating DSCP values on some workloads")
-		ep2_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep2_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp0,
 		}
 		ep2_1.UpdateInInfra(infra)
 
-		ep1_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp40,
 		}
 		ep1_2.UpdateInInfra(infra)
@@ -276,12 +276,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		cc.CheckConnectivity()
 
 		By("updating DSCP values on other workloads")
-		ep1_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp32,
 		}
 		ep1_1.UpdateInInfra(infra)
 
-		ep1_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp20,
 		}
 		ep1_2.UpdateInInfra(infra)
@@ -301,12 +301,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		cc.CheckConnectivity()
 
 		By("reverting the DSCP values")
-		ep1_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp20,
 		}
 		ep1_1.UpdateInInfra(infra)
 
-		ep1_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscp40,
 		}
 		ep1_2.UpdateInInfra(infra)
@@ -354,10 +354,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		cc.CheckConnectivity()
 
 		By("resetting DSCP value on some workloads")
-		ep2_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{}
+		ep2_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{}
 		ep2_1.UpdateInInfra(infra)
 
-		ep1_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{}
+		ep1_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{}
 		ep1_2.UpdateInInfra(infra)
 
 		if !BPFMode() {
@@ -404,7 +404,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 		for dscpStr, dscpVal := range numorstring.AllDSCPValues {
 			// Use a workload on host2 since it's configured as dual stack.
 			dscp := numorstring.DSCPFromString(dscpStr)
-			ep1_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+			ep1_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 				DSCP: &dscp,
 			}
 			ep1_2.UpdateInInfra(infra)
@@ -450,12 +450,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ dscp tests", []apiconfig.Da
 			verifyQoSPolicies(tc.Felixes[1], nil, nil)
 		}
 
-		ep1_1.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep1_1.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscpAF11,
 		}
 		ep1_1.UpdateInInfra(infra)
 
-		ep2_2.WorkloadEndpoint.Spec.QoSControls = &api.QoSControls{
+		ep2_2.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 			DSCP: &dscpEF,
 		}
 		ep2_2.UpdateInInfra(infra)

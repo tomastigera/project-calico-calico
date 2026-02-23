@@ -23,8 +23,7 @@ import (
 	k8sapi "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -66,13 +65,13 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure we got the correct values.
-		bgpIpv4Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv4Address
-		ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
-		asn := n.Value.(*libapiv3.Node).Spec.BGP.ASNumber
-		nodeInterfaces := n.Value.(*libapiv3.Node).Spec.Interfaces
+		bgpIpv4Address := n.Value.(*internalapi.Node).Spec.BGP.IPv4Address
+		ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
+		asn := n.Value.(*internalapi.Node).Spec.BGP.ASNumber
+		nodeInterfaces := n.Value.(*internalapi.Node).Spec.Interfaces
 
 		ip := net.ParseIP("172.17.17.10")
-		parsedInterfaces := []libapiv3.NodeInterface{
+		parsedInterfaces := []internalapi.NodeInterface{
 			{
 				Name:      "eth1",
 				Addresses: []string{"172.31.11.4"},
@@ -122,7 +121,7 @@ var _ = Describe("Test Node conversion", func() {
 
 		n, err := K8sNodeToCalico(&node, false)
 		Expect(err).NotTo(HaveOccurred())
-		rrClusterID := n.Value.(*libapiv3.Node).Spec.BGP.RouteReflectorClusterID
+		rrClusterID := n.Value.(*internalapi.Node).Spec.BGP.RouteReflectorClusterID
 		Expect(rrClusterID).To(Equal(""))
 	})
 
@@ -159,7 +158,7 @@ var _ = Describe("Test Node conversion", func() {
 
 		n, err := K8sNodeToCalico(&node, false)
 		Expect(err).NotTo(HaveOccurred())
-		rrClusterID := n.Value.(*libapiv3.Node).Spec.BGP.RouteReflectorClusterID
+		rrClusterID := n.Value.(*internalapi.Node).Spec.BGP.RouteReflectorClusterID
 		Expect(rrClusterID).To(Equal(""))
 	})
 
@@ -199,10 +198,10 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure we got the correct values.
-		bgpIpv4Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv4Address
-		ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
-		asn := n.Value.(*libapiv3.Node).Spec.BGP.ASNumber
-		rrClusterID := n.Value.(*libapiv3.Node).Spec.BGP.RouteReflectorClusterID
+		bgpIpv4Address := n.Value.(*internalapi.Node).Spec.BGP.IPv4Address
+		ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
+		asn := n.Value.(*internalapi.Node).Spec.BGP.ASNumber
+		rrClusterID := n.Value.(*internalapi.Node).Spec.BGP.RouteReflectorClusterID
 
 		ip := net.ParseIP("172.17.17.10")
 
@@ -247,8 +246,8 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure we got the correct values.
-		bgpIpv6Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv6Address
-		ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
+		bgpIpv6Address := n.Value.(*internalapi.Node).Spec.BGP.IPv6Address
+		ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
 
 		ip := net.ParseIP("fd10::10")
 
@@ -270,7 +269,7 @@ var _ = Describe("Test Node conversion", func() {
 
 		n, err := K8sNodeToCalico(&node, false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(n.Value.(*libapiv3.Node).Spec.BGP).To(BeNil())
+		Expect(n.Value.(*internalapi.Node).Spec.BGP).To(BeNil())
 	})
 
 	It("should parse a k8s Node with ProviderID to CalicoNode with OrchestratorRef", func() {
@@ -287,15 +286,15 @@ var _ = Describe("Test Node conversion", func() {
 			},
 			Status: k8sapi.NodeStatus{
 				Addresses: []k8sapi.NodeAddress{
-					k8sapi.NodeAddress{
+					{
 						Type:    k8sapi.NodeInternalIP,
 						Address: "172.17.17.10",
 					},
-					k8sapi.NodeAddress{
+					{
 						Type:    k8sapi.NodeExternalIP,
 						Address: "192.168.1.100",
 					},
-					k8sapi.NodeAddress{
+					{
 						Type:    k8sapi.NodeHostName,
 						Address: "172-17-17-10",
 					},
@@ -310,7 +309,7 @@ var _ = Describe("Test Node conversion", func() {
 		n, err := K8sNodeToCalico(&node, false)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(n.Value.(*apiv3.Node).Spec.OrchRefs).To(Equal([]apiv3.OrchRef{
+		Expect(n.Value.(*internalapi.Node).Spec.OrchRefs).To(Equal([]internalapi.OrchRef{
 			{Orchestrator: "k8s", NodeName: "TestNode"},
 			{Orchestrator: "aws", NodeName: "/us-west-1/i-12345678abcdef01"},
 		}))
@@ -329,7 +328,7 @@ var _ = Describe("Test Node conversion", func() {
 			Spec: k8sapi.NodeSpec{},
 		}
 
-		calicoNode := libapiv3.NewNode()
+		calicoNode := internalapi.NewNode()
 
 		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
 		Expect(err).NotTo(HaveOccurred())
@@ -360,22 +359,22 @@ var _ = Describe("Test Node conversion", func() {
 		asn, _ := numorstring.ASNumberFromString("2456")
 
 		By("Merging calico node config into the k8s node")
-		calicoNode := libapiv3.NewNode()
+		calicoNode := internalapi.NewNode()
 		calicoNode.Name = "TestNode"
 		calicoNode.ResourceVersion = "1234"
 		calicoNode.Labels = cl
 		calicoNode.Annotations = ca
-		calicoNode.Spec = libapiv3.NodeSpec{
-			BGP: &libapiv3.NodeBGPSpec{
+		calicoNode.Spec = internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address:             "172.17.17.10/24",
 				IPv6Address:             "aa:bb:cc::ffff/120",
 				ASNumber:                &asn,
 				RouteReflectorClusterID: "245.0.0.3",
 			},
-			OrchRefs: []libapiv3.OrchRef{
+			OrchRefs: []internalapi.OrchRef{
 				{NodeName: k8sNode.Name, Orchestrator: "k8s"},
 			},
-			Interfaces: []libapiv3.NodeInterface{
+			Interfaces: []internalapi.NodeInterface{
 				{
 					Name:      "eth1",
 					Addresses: []string{"172.31.11.4"},
@@ -410,9 +409,9 @@ var _ = Describe("Test Node conversion", func() {
 		calicoNodeWithMergedLabels := calicoNode.DeepCopy()
 		calicoNodeWithMergedLabels.Annotations[nodeK8sLabelAnnotation] = "{\"net.beta.kubernetes.io/role\":\"control-plane\"}"
 		calicoNodeWithMergedLabels.Labels["net.beta.kubernetes.io/role"] = "control-plane"
-		calicoNodeWithMergedLabels.Spec.Addresses = []libapiv3.NodeAddress{
-			{Address: "172.17.17.10/24", Type: libapiv3.CalicoNodeIP},
-			{Address: "aa:bb:cc::ffff/120", Type: libapiv3.CalicoNodeIP},
+		calicoNodeWithMergedLabels.Spec.Addresses = []internalapi.NodeAddress{
+			{Address: "172.17.17.10/24", Type: internalapi.CalicoNodeIP},
+			{Address: "aa:bb:cc::ffff/120", Type: internalapi.CalicoNodeIP},
 		}
 		Expect(newCalicoNode.Value).To(Equal(calicoNodeWithMergedLabels))
 	})
@@ -438,11 +437,11 @@ var _ = Describe("Test Node conversion", func() {
 		}
 
 		By("Merging calico node config into the k8s node")
-		calicoNode := libapiv3.NewNode()
+		calicoNode := internalapi.NewNode()
 		calicoNode.Name = "TestNode"
 		calicoNode.ResourceVersion = "1234"
 		calicoNode.Labels = cl
-		calicoNode.Spec.OrchRefs = []libapiv3.OrchRef{{NodeName: "TestNode", Orchestrator: "k8s"}}
+		calicoNode.Spec.OrchRefs = []internalapi.OrchRef{{NodeName: "TestNode", Orchestrator: "k8s"}}
 
 		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
 		Expect(err).NotTo(HaveOccurred())
@@ -477,7 +476,7 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("restoreCalicoLabels should error if annotations are malformed", func() {
-		calicoNode := libapiv3.NewNode()
+		calicoNode := internalapi.NewNode()
 		calicoNode.Annotations = map[string]string{}
 		calicoNode.Annotations[nodeK8sLabelAnnotation] = "Garbage"
 		_, err := restoreCalicoLabels(calicoNode)
@@ -531,9 +530,9 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure we got the correct values.
-		bgpIpv4Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv4Address
-		ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
-		asn := n.Value.(*libapiv3.Node).Spec.BGP.ASNumber
+		bgpIpv4Address := n.Value.(*internalapi.Node).Spec.BGP.IPv4Address
+		ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
+		asn := n.Value.(*internalapi.Node).Spec.BGP.ASNumber
 
 		ip := net.ParseIP("172.17.17.10")
 
@@ -562,10 +561,10 @@ var _ = Describe("Test Node conversion", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Ensure we got the correct values.
-			bgpIpv4Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv4Address
-			ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
-			wg := n.Value.(*libapiv3.Node).Spec.Wireguard
-			asn := n.Value.(*libapiv3.Node).Spec.BGP.ASNumber
+			bgpIpv4Address := n.Value.(*internalapi.Node).Spec.BGP.IPv4Address
+			ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
+			wg := n.Value.(*internalapi.Node).Spec.Wireguard
+			asn := n.Value.(*internalapi.Node).Spec.BGP.ASNumber
 			ip := net.ParseIP("172.17.17.10")
 
 			Expect(bgpIpv4Address).To(Equal(ip.String()))
@@ -594,10 +593,10 @@ var _ = Describe("Test Node conversion", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Ensure we got the correct values.
-			bgpIpv4Address := n.Value.(*libapiv3.Node).Spec.BGP.IPv4Address
-			ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
-			wg := n.Value.(*libapiv3.Node).Spec.Wireguard
-			asn := n.Value.(*libapiv3.Node).Spec.BGP.ASNumber
+			bgpIpv4Address := n.Value.(*internalapi.Node).Spec.BGP.IPv4Address
+			ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
+			wg := n.Value.(*internalapi.Node).Spec.Wireguard
+			asn := n.Value.(*internalapi.Node).Spec.BGP.ASNumber
 			ip := net.ParseIP("172.17.17.10")
 
 			Expect(bgpIpv4Address).To(Equal(ip.String()))
@@ -624,7 +623,7 @@ var _ = Describe("Test Node conversion", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Ensure we got the correct values.
-			ipInIpAddr := n.Value.(*libapiv3.Node).Spec.BGP.IPv4IPIPTunnelAddr
+			ipInIpAddr := n.Value.(*internalapi.Node).Spec.BGP.IPv4IPIPTunnelAddr
 			Expect(ipInIpAddr).To(Equal(""))
 		})
 	})
@@ -666,12 +665,12 @@ var _ = Describe("Test Node conversion", func() {
 		n, err := K8sNodeToCalico(&node, false)
 		Expect(err).NotTo(HaveOccurred())
 
-		addrs := n.Value.(*libapiv3.Node).Spec.Addresses
-		Expect(addrs).To(ConsistOf([]libapiv3.NodeAddress{
-			{Address: "fd10::10", Type: libapiv3.CalicoNodeIP},
-			{Address: "172.17.17.10", Type: libapiv3.CalicoNodeIP}, // from BGP
-			{Address: "172.17.17.10", Type: libapiv3.InternalIP},   // from k8s InternalIP
-			{Address: "192.168.1.100", Type: libapiv3.ExternalIP},
+		addrs := n.Value.(*internalapi.Node).Spec.Addresses
+		Expect(addrs).To(ConsistOf([]internalapi.NodeAddress{
+			{Address: "fd10::10", Type: internalapi.CalicoNodeIP},
+			{Address: "172.17.17.10", Type: internalapi.CalicoNodeIP}, // from BGP
+			{Address: "172.17.17.10", Type: internalapi.InternalIP},   // from k8s InternalIP
+			{Address: "192.168.1.100", Type: internalapi.ExternalIP},
 		}))
 	})
 })

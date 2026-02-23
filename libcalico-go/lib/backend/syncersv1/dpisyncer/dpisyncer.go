@@ -17,7 +17,7 @@ package dpisyncer
 import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -31,7 +31,7 @@ func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
 			ListInterface: model.ResourceListOptions{Kind: apiv3.KindDeepPacketInspection},
 		},
 		{
-			ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
+			ListInterface:   model.ResourceListOptions{Kind: internalapi.KindWorkloadEndpoint},
 			UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		},
 	}

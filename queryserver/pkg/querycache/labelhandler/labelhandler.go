@@ -8,7 +8,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
@@ -84,7 +84,7 @@ type ruleSelectorId string
 
 func (c *labelHandler) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
 	dispatcher.RegisterHandler(v3.KindProfile, c.onUpdate)
-	dispatcher.RegisterHandler(apiv3.KindWorkloadEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(internalapi.KindWorkloadEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindHostEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
@@ -204,7 +204,7 @@ func (c *labelHandler) onUpdate(update dispatcherv1v3.Update) {
 		c.onUpdateStagedPolicy(update)
 	case v3.KindStagedKubernetesNetworkPolicy:
 		c.onUpdateStagedPolicy(update)
-	case apiv3.KindWorkloadEndpoint:
+	case internalapi.KindWorkloadEndpoint:
 		c.onUpdateWorkloadEndpoint(update)
 	case v3.KindHostEndpoint:
 		c.onUpdateHostEndpoint(update)

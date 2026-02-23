@@ -35,7 +35,7 @@ import (
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/util"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -90,7 +90,7 @@ Description:
 	if err != nil {
 		return fmt.Errorf("error creating clients: %w", err)
 	}
-	//bc := client.(accessor).Backend()
+	// bc := client.(accessor).Backend()
 
 	// Get a kube-client. If this is a kdd cluster, we can pull this from the backend.
 	// Otherwise, we need to build one ourselves.
@@ -145,7 +145,7 @@ func NewIPAMChecker(k8sClient kubernetes.Interface,
 		allocations:       map[string][]*Allocation{},
 		allocationsByNode: map[string][]*Allocation{},
 		allocationsByPod:  map[string][]*Allocation{},
-		activeNodes:       map[string]apiv3.Node{},
+		activeNodes:       map[string]internalapi.Node{},
 
 		inUseIPs:     map[string][]ownerRecord{},
 		inUseHandles: set.New[string](),
@@ -168,7 +168,7 @@ type IPAMChecker struct {
 	allocationsByPod  map[string][]*Allocation
 	leakedHandles     []HandleInfo
 	inUseIPs          map[string][]ownerRecord
-	activeNodes       map[string]apiv3.Node
+	activeNodes       map[string]internalapi.Node
 	inUseHandles      set.Set[string]
 
 	clusterType         string
@@ -509,7 +509,7 @@ func (c *IPAMChecker) checkIPAM(ctx context.Context) error {
 	return nil
 }
 
-func getWEPIPs(w apiv3.WorkloadEndpoint) ([]string, error) {
+func getWEPIPs(w internalapi.WorkloadEndpoint) ([]string, error) {
 	var ips []string
 	for _, a := range w.Spec.IPNetworks {
 		ip, err := normaliseIP(a)
@@ -636,7 +636,7 @@ func (c *IPAMChecker) recordInUseIP(ip string, referrer any, friendlyName string
 	}
 }
 
-func (c *IPAMChecker) recordActiveNode(node apiv3.Node) {
+func (c *IPAMChecker) recordActiveNode(node internalapi.Node) {
 	c.activeNodes[node.Name] = node
 }
 
@@ -644,7 +644,7 @@ func (c *IPAMChecker) recordInUseHandle(handle string) {
 	c.inUseHandles.Add(handle)
 }
 
-func getNodeIPs(n apiv3.Node) ([]string, error) {
+func getNodeIPs(n internalapi.Node) ([]string, error) {
 	var ips []string
 	if n.Spec.IPv4VXLANTunnelAddr != "" {
 		ip, err := normaliseIP(n.Spec.IPv4VXLANTunnelAddr)

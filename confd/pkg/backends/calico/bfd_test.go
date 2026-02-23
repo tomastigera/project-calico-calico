@@ -6,7 +6,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -129,7 +129,7 @@ var _ = Describe("BFD resolver", func() {
 
 	It("should skip updates for other nodes", func() {
 		kvp := model.KVPair{
-			Key: model.ResourceKey{Name: "test-bfd", Kind: libapiv3.KindNode},
+			Key: model.ResourceKey{Name: "test-bfd", Kind: internalapi.KindNode},
 		}
 		relevant := bfdResolver.OnUpdate(api.Update{KVPair: kvp})
 		Expect(relevant).To(BeFalse())
@@ -137,7 +137,7 @@ var _ = Describe("BFD resolver", func() {
 
 	It("should not skip updates for the local node", func() {
 		kvp := model.KVPair{
-			Key: model.ResourceKey{Name: testNode, Kind: libapiv3.KindNode},
+			Key: model.ResourceKey{Name: testNode, Kind: internalapi.KindNode},
 		}
 		relevant := bfdResolver.OnUpdate(api.Update{KVPair: kvp})
 		Expect(relevant).To(BeTrue())

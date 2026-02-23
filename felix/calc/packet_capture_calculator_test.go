@@ -8,7 +8,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/calc/capture"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -587,8 +587,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 			// update for a resource type that is not tracked
 			{
 				KVPair: model.KVPair{
-					Key:   model.ResourceKey{Kind: libapiv3.KindNode},
-					Value: libapiv3.Node{},
+					Key:   model.ResourceKey{Kind: internalapi.KindNode},
+					Value: internalapi.Node{},
 				},
 				UpdateType: api.UpdateTypeKVNew,
 			},

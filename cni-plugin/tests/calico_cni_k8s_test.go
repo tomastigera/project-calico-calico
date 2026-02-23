@@ -39,7 +39,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	apiconfig "github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -291,7 +291,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -455,7 +455,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 					"projectcalico.org/serviceaccount": "default",
 				}))
-				Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+				Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 					Pod:                testPodName,
 					InterfaceName:      interfaceName,
 					IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -467,7 +467,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Workload:           "",
 					ContainerID:        containerID,
 					Orchestrator:       api.OrchestratorKubernetes,
-					Ports: []libapi.WorkloadEndpointPort{{
+					Ports: []internalapi.WorkloadEndpointPort{{
 						Name:     "anamedport",
 						Protocol: numorstring.ProtocolFromString("TCP"),
 						Port:     555,
@@ -1962,7 +1962,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Assert that the endpoint contains the appropriate DNAT
 			podIP := contAddresses[0].IP
 			Expect(endpoints.Items[0].Spec.IPNATs).Should(HaveLen(1))
-			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]libapi.IPNAT{{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
+			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]internalapi.IPNAT{{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
 
 			// Delete the container.
 			_, err = testutils.DeleteContainer(string(confBytes), contNs.Path(), testPodName, testutils.K8S_TEST_NS)
@@ -2088,7 +2088,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -2275,7 +2275,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -2409,7 +2409,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",
@@ -2419,7 +2419,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Node:               testNodeName,
 				Endpoint:           "eth0",
 				Workload:           "",
-				IPNATs: []libapi.IPNAT{
+				IPNATs: []internalapi.IPNAT{
 					{
 						InternalIP: podIPv4.String(),
 						ExternalIP: "1.1.1.1",
@@ -2712,7 +2712,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var netconf string
 		var clientset *kubernetes.Clientset
 		var workloadName, containerID string
-		var endpointSpec libapi.WorkloadEndpointSpec
+		var endpointSpec internalapi.WorkloadEndpointSpec
 		var contNs ns.NetNS
 		var result *cniv1.Result
 
@@ -3187,7 +3187,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": saName,
 				"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 			}))
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -3199,7 +3199,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []libapi.WorkloadEndpointPort{{
+				Ports: []internalapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
@@ -3340,7 +3340,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(endpoints.Items[0].GenerateName).Should(Equal(generateName))
 
 			// Let's just check that the Spec is good too.
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",
@@ -3352,7 +3352,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []libapi.WorkloadEndpointPort{{
+				Ports: []internalapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,

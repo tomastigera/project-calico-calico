@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -134,10 +134,10 @@ var (
 	order3 = 3.0
 	order4 = 4.0
 
-	node1 = &libapi.Node{
+	node1 = &internalapi.Node{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindNode,
+			Kind:       internalapi.KindNode,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "rack.1-server.1",
@@ -146,22 +146,22 @@ var (
 				"server": "1",
 			},
 		},
-		Spec: libapi.NodeSpec{
-			BGP: &libapi.NodeBGPSpec{
+		Spec: internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address: "1.2.3.1/24",
 				IPv6Address: "aabb:ccdd:ee11:2233:3344:4455:6677:8891/120",
 			},
-			Addresses: []libapi.NodeAddress{
+			Addresses: []internalapi.NodeAddress{
 				{Address: "1.2.3.1/24"},
 				{Address: "aabb:ccdd:ee11:2233:3344:4455:6677:8891/120"},
 			},
 		},
 	}
 
-	node2 = &libapi.Node{
+	node2 = &internalapi.Node{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindNode,
+			Kind:       internalapi.KindNode,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "rack.1-server.2",
@@ -170,22 +170,22 @@ var (
 				"server": "1",
 			},
 		},
-		Spec: libapi.NodeSpec{
-			BGP: &libapi.NodeBGPSpec{
+		Spec: internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address: "1.2.3.2/24",
 				IPv6Address: "aabb:ccdd:ee11:2233:3344:4455:6677:8892/120",
 			},
-			Addresses: []libapi.NodeAddress{
+			Addresses: []internalapi.NodeAddress{
 				{Address: "1.2.3.1/24"},
 				{Address: "aabb:ccdd:ee11:2233:3344:4455:6677:8891/120"},
 			},
 		},
 	}
 
-	node3 = &libapi.Node{
+	node3 = &internalapi.Node{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindNode,
+			Kind:       internalapi.KindNode,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "rack.2-server.1",
@@ -194,22 +194,22 @@ var (
 				"server": "1",
 			},
 		},
-		Spec: libapi.NodeSpec{
-			BGP: &libapi.NodeBGPSpec{
+		Spec: internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address: "1.2.4.1/24",
 				IPv6Address: "aabb:ccdd::88a1/120",
 			},
-			Addresses: []libapi.NodeAddress{
+			Addresses: []internalapi.NodeAddress{
 				{Address: "1.2.3.1/24"},
 				{Address: "aabb:ccdd:ee11:2233:3344:4455:6677:8891/120"},
 			},
 		},
 	}
 
-	node4 = &libapi.Node{
+	node4 = &internalapi.Node{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindNode,
+			Kind:       internalapi.KindNode,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "master-node.0001",
@@ -217,13 +217,13 @@ var (
 				"rack": "099",
 			},
 		},
-		Spec: libapi.NodeSpec{},
+		Spec: internalapi.NodeSpec{},
 	}
 
-	wep1_n1_ns1 = &libapi.WorkloadEndpoint{
+	wep1_n1_ns1 = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.1-k8s-pod1--aaa-eth0",
@@ -233,7 +233,7 @@ var (
 				"name":   "wep1_n1_ns1",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.1",
 			Profiles:      []string{"profile-rack-001"},
 			Workload:      "",
@@ -246,10 +246,10 @@ var (
 		},
 	}
 
-	wep1_n1_ns1_updated_profile = &libapi.WorkloadEndpoint{
+	wep1_n1_ns1_updated_profile = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.1-k8s-pod1--aaa-eth0",
@@ -259,7 +259,7 @@ var (
 				"name":   "wep1_n1_ns1",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.1",
 			Profiles:      []string{"profile-rack-099"},
 			Workload:      "",
@@ -272,10 +272,10 @@ var (
 		},
 	}
 
-	wep2_n1_ns1_filtered_out = &libapi.WorkloadEndpoint{
+	wep2_n1_ns1_filtered_out = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.1-k8s-pod1--abc-eth0",
@@ -286,7 +286,7 @@ var (
 				"name":   "wep2_n1_ns1_filtered_out",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.1",
 			Workload:      "",
 			Orchestrator:  "k8s",
@@ -299,10 +299,10 @@ var (
 		},
 	}
 
-	wep2_n1_ns1_filtered_in = &libapi.WorkloadEndpoint{
+	wep2_n1_ns1_filtered_in = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.1-k8s-pod1--abc-eth0",
@@ -313,7 +313,7 @@ var (
 				"name":   "wep2_n1_ns1_filtered_out",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.1",
 			Workload:      "",
 			Orchestrator:  "k8s",
@@ -326,10 +326,10 @@ var (
 		},
 	}
 
-	wep3_n1_ns2 = &libapi.WorkloadEndpoint{
+	wep3_n1_ns2 = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.1-k8s-pod2--acd-eth0",
@@ -340,7 +340,7 @@ var (
 				"name":   "wep3_n1_ns2",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.1",
 			Workload:      "",
 			Orchestrator:  "k8s",
@@ -352,10 +352,10 @@ var (
 		},
 	}
 
-	wep4_n2_ns1 = &libapi.WorkloadEndpoint{
+	wep4_n2_ns1 = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.1--server.2-openstack-aabbccdd-eth01234",
@@ -366,7 +366,7 @@ var (
 				"name":   "wep4_n2_ns1",
 			},
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.1-server.2",
 			Workload:      "aabbccdd",
 			Orchestrator:  "openstack",
@@ -378,16 +378,16 @@ var (
 		},
 	}
 
-	wep5_n3_ns2_unlabelled = &libapi.WorkloadEndpoint{
+	wep5_n3_ns2_unlabelled = &internalapi.WorkloadEndpoint{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
-			Kind:       libapi.KindWorkloadEndpoint,
+			Kind:       internalapi.KindWorkloadEndpoint,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rack.2--server.1-cni-badcafe1-foobarbaz",
 			Namespace: "namespace-2",
 		},
-		Spec: libapi.WorkloadEndpointSpec{
+		Spec: internalapi.WorkloadEndpointSpec{
 			Node:          "rack.2-server.1",
 			Workload:      "",
 			Orchestrator:  "cni",
@@ -1709,7 +1709,7 @@ func qcNode(r api.Resource, numHEP, numWEP int) client.Node {
 	}
 
 	switch nr := r.(type) {
-	case *libapi.Node:
+	case *internalapi.Node:
 		n.Name = nr.Name
 		if nr.Spec.BGP != nil {
 			if nr.Spec.BGP.IPv4Address != "" {
@@ -1725,7 +1725,7 @@ func qcNode(r api.Resource, numHEP, numWEP int) client.Node {
 				n.Addresses = append(n.Addresses, nodeAddress.Address)
 			}
 		}
-	case *libapi.WorkloadEndpoint:
+	case *internalapi.WorkloadEndpoint:
 		n.Name = nr.Spec.Node
 	case *apiv3.HostEndpoint:
 		n.Name = nr.Spec.Node
@@ -1744,7 +1744,7 @@ func qcEndpoint(r api.Resource, numGNP, numNP int) client.Endpoint {
 	}
 
 	switch er := r.(type) {
-	case *libapi.WorkloadEndpoint:
+	case *internalapi.WorkloadEndpoint:
 		// Copy labels to add implicit labels.
 		labels := map[string]string{}
 		maps.Copy(labels, r.GetObjectMeta().GetLabels())

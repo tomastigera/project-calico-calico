@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v3
+package internalapi
 
 import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

@@ -7,7 +7,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
@@ -1079,7 +1079,7 @@ func policyTestQueryData() []testQueryData {
 			},
 			client.QueryPoliciesReq{
 				Endpoint: model.ResourceKey{
-					Kind:      v3.KindWorkloadEndpoint,
+					Kind:      internalapi.KindWorkloadEndpoint,
 					Namespace: "this-does-not-exist",
 					Name:      "neither-does-this",
 				},
@@ -1101,7 +1101,7 @@ func policyTestQueryData() []testQueryData {
 			// resource name.
 			client.QueryPoliciesReq{
 				Endpoint: model.ResourceKey{
-					Kind:      v3.KindWorkloadEndpoint,
+					Kind:      internalapi.KindWorkloadEndpoint,
 					Name:      "this/is",
 					Namespace: "not.valid",
 				},

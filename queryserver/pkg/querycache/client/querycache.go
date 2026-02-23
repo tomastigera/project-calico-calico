@@ -16,7 +16,7 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -401,7 +401,7 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 	}
 
 	switch rt := res.(type) {
-	case *libapi.WorkloadEndpoint:
+	case *internalapi.WorkloadEndpoint:
 		e.Workload = rt.Spec.Workload
 		e.Orchestrator = rt.Spec.Orchestrator
 		e.Pod = rt.Spec.Pod
@@ -760,7 +760,7 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 
 	r := n.GetResource()
 	if r != nil {
-		if nr, ok := r.(*libapi.Node); ok {
+		if nr, ok := r.(*internalapi.Node); ok {
 			node.Addresses = getNodeIPAddresses(nr)
 			if nr.Spec.BGP != nil {
 				if len(nr.Spec.BGP.IPv4Address) > 0 {
@@ -776,7 +776,7 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 }
 
 // getNodeIPAddresses returns the ip addresses defined in nr as a list of strings,  Empty list if nr.Addresses contains no addresses
-func getNodeIPAddresses(nr *libapi.Node) []string {
+func getNodeIPAddresses(nr *internalapi.Node) []string {
 	var addressStrings []string
 	if len(nr.Spec.Addresses) > 0 {
 		for _, nodeAddress := range nr.Spec.Addresses {
@@ -1142,7 +1142,7 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		},
 		{
 			// We need to convert the WEP to get the corrected labels for the labelhandler.
-			Kind:      libapi.KindWorkloadEndpoint,
+			Kind:      internalapi.KindWorkloadEndpoint,
 			Converter: cq.wepConverter,
 		},
 		{
@@ -1153,7 +1153,7 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		},
 		{
 			// We don't need these to be converted.
-			Kind: libapi.KindNode,
+			Kind: internalapi.KindNode,
 		},
 		{
 			Kind: v3.KindGlobalNetworkSet,

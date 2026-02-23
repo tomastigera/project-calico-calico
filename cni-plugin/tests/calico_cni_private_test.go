@@ -19,7 +19,7 @@ import (
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -43,7 +43,7 @@ var _ = Describe("CalicoCni Private", func() {
 		testutils.WipeDatastore()
 		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
 		var err error
-		n := api.NewNode()
+		n := internalapi.NewNode()
 		n.Name, err = names.Hostname()
 		Expect(err).NotTo(HaveOccurred())
 		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
@@ -142,7 +142,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 		testutils.WipeDatastore()
 		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
 		var err error
-		n := api.NewNode()
+		n := internalapi.NewNode()
 		n.Name, err = names.Hostname()
 		Expect(err).NotTo(HaveOccurred())
 		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})

@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
@@ -44,14 +44,14 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 	namespace2 := "namespace-2"
 	name1 := "node--1-k8s-abcdef-eth0"
 	name2 := "node--2-cni-a232323a-eth0"
-	spec1_1 := libapiv3.WorkloadEndpointSpec{
+	spec1_1 := internalapi.WorkloadEndpointSpec{
 		Node:          "node-1",
 		Orchestrator:  "k8s",
 		Pod:           "abcdef",
 		ContainerID:   "a12345a",
 		Endpoint:      "eth0",
 		InterfaceName: "cali09123",
-		Ports: []libapiv3.WorkloadEndpointPort{
+		Ports: []internalapi.WorkloadEndpointPort{
 			{
 				Port:     1234,
 				Name:     "foobar",
@@ -64,14 +64,14 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			},
 		},
 	}
-	spec1_2 := libapiv3.WorkloadEndpointSpec{
+	spec1_2 := internalapi.WorkloadEndpointSpec{
 		Node:          "node-1",
 		Orchestrator:  "k8s",
 		Pod:           "abcdef",
 		ContainerID:   "a12345a",
 		Endpoint:      "eth0",
 		InterfaceName: "foobar",
-		Ports: []libapiv3.WorkloadEndpointPort{
+		Ports: []internalapi.WorkloadEndpointPort{
 			{
 				Port:     5678,
 				Name:     "bazzbiff",
@@ -79,14 +79,14 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			},
 		},
 	}
-	spec2_1 := libapiv3.WorkloadEndpointSpec{
+	spec2_1 := internalapi.WorkloadEndpointSpec{
 		Node:          "node-2",
 		Orchestrator:  "cni",
 		Endpoint:      "eth0",
 		ContainerID:   "a232323a",
 		InterfaceName: "cali09122",
 	}
-	spec2_2 := libapiv3.WorkloadEndpointSpec{
+	spec2_2 := internalapi.WorkloadEndpointSpec{
 		Node:          "node-2",
 		Orchestrator:  "cni",
 		Endpoint:      "eth0",
@@ -95,7 +95,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 	}
 
 	DescribeTable("WorkloadEndpoint e2e CRUD tests",
-		func(namespace1, namespace2, name1, name2 string, spec1_1, spec1_2, spec2_1 libapiv3.WorkloadEndpointSpec) {
+		func(namespace1, namespace2, name1, name2 string, spec1_1, spec1_2, spec2_1 internalapi.WorkloadEndpointSpec) {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -104,7 +104,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			be.Clean()
 
 			By("Updating the WorkloadEndpoint before it is created")
-			_, outError := c.WorkloadEndpoints().Update(ctx, &libapiv3.WorkloadEndpoint{
+			_, outError := c.WorkloadEndpoints().Update(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1_1,
 			}, options.SetOptions{})
@@ -117,7 +117,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: WorkloadEndpoint(" + namespace1 + "/" + name1 + ") with error:"))
 
 			By("Attempting to create a new WorkloadEndpoint with name1/spec1_1 and a non-empty ResourceVersion")
-			_, outError = c.WorkloadEndpoints().Create(ctx, &libapiv3.WorkloadEndpoint{
+			_, outError = c.WorkloadEndpoints().Create(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "12345", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1_1,
 			}, options.SetOptions{})
@@ -125,7 +125,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(outError.Error()).To(Equal("error with field Metadata.ResourceVersion = '12345' (field must not be set for a Create request)"))
 
 			By("Creating a new WorkloadEndpoint with namespace1/name1/spec1_1 - name gets assigned automatically")
-			wepToCreate := &libapiv3.WorkloadEndpoint{
+			wepToCreate := &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1},
 				Spec:       spec1_1,
 			}
@@ -133,7 +133,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			res1, outError := c.WorkloadEndpoints().Create(ctx, wepToCreate, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(wepToCreate).To(Equal(wepToCreateCopy), "Create() unexpectedly modified input")
-			Expect(res1).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1))
+			Expect(res1).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1))
 			Expect(res1.Labels[apiv3.LabelOrchestrator]).To(Equal(res1.Spec.Orchestrator))
 			Expect(res1.Labels[apiv3.LabelNamespace]).To(Equal(res1.Namespace))
 
@@ -141,7 +141,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			rv1_1 := res1.ResourceVersion
 
 			By("Attempting to create the same WorkloadEndpoint with name1 but with spec1_2")
-			_, outError = c.WorkloadEndpoints().Create(ctx, &libapiv3.WorkloadEndpoint{
+			_, outError = c.WorkloadEndpoints().Create(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
 				Spec:       spec1_2,
 			}, options.SetOptions{})
@@ -151,7 +151,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Getting WorkloadEndpoint (name1) and comparing the output against spec1_1")
 			res, outError := c.WorkloadEndpoints().Get(ctx, namespace1, name1, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1))
+			Expect(res).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1))
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 			Expect(res.Labels[apiv3.LabelOrchestrator]).To(Equal(res.Spec.Orchestrator))
 			Expect(res.Labels[apiv3.LabelNamespace]).To(Equal(res.Namespace))
@@ -165,38 +165,38 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			outList, outError := c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: namespace1})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1),
 			))
 			Expect(outList.Items[0].Labels[apiv3.LabelOrchestrator]).To(Equal(outList.Items[0].Spec.Orchestrator))
 			Expect(outList.Items[0].Labels[apiv3.LabelNamespace]).To(Equal(outList.Items[0].Namespace))
 
 			By("Creating a new WorkloadEndpoint with name2/spec2_1")
-			res2, outError := c.WorkloadEndpoints().Create(ctx, &libapiv3.WorkloadEndpoint{
+			res2, outError := c.WorkloadEndpoints().Create(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Name: name2, Namespace: namespace2},
 				Spec:       spec2_1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res2).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace2, name2, spec2_1))
+			Expect(res2).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace2, name2, spec2_1))
 
 			By("Getting WorkloadEndpoint (name2) and comparing the output against spec1_2")
 			res, outError = c.WorkloadEndpoints().Get(ctx, namespace2, name2, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace2, name2, spec2_1))
+			Expect(res).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace2, name2, spec2_1))
 			Expect(res.ResourceVersion).To(Equal(res2.ResourceVersion))
 
 			By("Listing all the WorkloadEndpoints using an empty namespace (all-namespaces), expecting a two results with name1/spec1_1 and name2/spec1_2")
 			outList, outError = c.WorkloadEndpoints().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1),
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace2, name2, spec2_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace2, name2, spec2_1),
 			))
 
 			By("Listing all the WorkloadEndpoints in namespace2, expecting a one results with name2/spec2_1")
 			outList, outError = c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: namespace2})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace2, name2, spec2_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace2, name2, spec2_1),
 			))
 
 			By("Updating WorkloadEndpoint name1 with spec1_2")
@@ -206,12 +206,12 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res1).To(Equal(res1Copy), "Update() unexpectedly modified input")
 			res1 = res1Out
-			Expect(res1).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_2))
+			Expect(res1).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_2))
 			Expect(res1.Labels[apiv3.LabelOrchestrator]).To(Equal(res1.Spec.Orchestrator))
 			Expect(res1.Labels[apiv3.LabelNamespace]).To(Equal(res1.Namespace))
 
 			By("Attempting to update the WorkloadEndpoint without a Creation Timestamp")
-			res, outError = c.WorkloadEndpoints().Update(ctx, &libapiv3.WorkloadEndpoint{
+			res, outError = c.WorkloadEndpoints().Update(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1_1,
 			}, options.SetOptions{})
@@ -220,7 +220,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(outError.Error()).To(Equal("error with field Metadata.CreationTimestamp = '0001-01-01 00:00:00 +0000 UTC' (field must be set for an Update request)"))
 
 			By("Attempting to update the WorkloadEndpoint without a UID")
-			res, outError = c.WorkloadEndpoints().Update(ctx, &libapiv3.WorkloadEndpoint{
+			res, outError = c.WorkloadEndpoints().Update(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now()},
 				Spec:       spec1_1,
 			}, options.SetOptions{})
@@ -248,28 +248,28 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Getting WorkloadEndpoint (name1) with the original resource version and comparing the output against spec1_1")
 			res, outError = c.WorkloadEndpoints().Get(ctx, namespace1, name1, options.GetOptions{ResourceVersion: rv1_1})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1))
+			Expect(res).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1))
 			Expect(res.ResourceVersion).To(Equal(rv1_1))
 
 			By("Getting WorkloadEndpoint (name1) with the updated resource version and comparing the output against spec1_2")
 			res, outError = c.WorkloadEndpoints().Get(ctx, namespace1, name1, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_2))
+			Expect(res).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			By("Listing WorkloadEndpoints with the original resource version and checking for a single result with name1/spec1_1")
 			outList, outError = c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: namespace1, ResourceVersion: rv1_1})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_1),
 			))
 
 			By("Listing WorkloadEndpoints (all namespaces) with the latest resource version and checking for two results with name1/spec1_2 and name2/spec1_2")
 			outList, outError = c.WorkloadEndpoints().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_2),
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, namespace2, name2, spec2_1),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_2),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, namespace2, name2, spec2_1),
 			))
 
 			By("Deleting WorkloadEndpoint (name1) with the old resource version")
@@ -280,7 +280,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Deleting WorkloadEndpoint (name1) with the new resource version")
 			dres, outError := c.WorkloadEndpoints().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(libapiv3.KindWorkloadEndpoint, namespace1, name1, spec1_2))
+			Expect(dres).To(MatchResource(internalapi.KindWorkloadEndpoint, namespace1, name1, spec1_2))
 			Expect(dres.Labels[apiv3.LabelOrchestrator]).To(Equal(dres.Spec.Orchestrator))
 			Expect(dres.Labels[apiv3.LabelNamespace]).To(Equal(dres.Namespace))
 
@@ -296,7 +296,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: WorkloadEndpoint(" + namespace2 + "/" + name2 + ") with error:"))
 
 			By("Creating WorkloadEndpoint name2 with a 2s TTL and waiting for the entry to be deleted")
-			_, outError = c.WorkloadEndpoints().Create(ctx, &libapiv3.WorkloadEndpoint{
+			_, outError = c.WorkloadEndpoints().Create(ctx, &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace2, Name: name2},
 				Spec:       spec2_1,
 			}, options.SetOptions{TTL: 2 * time.Second})
@@ -351,7 +351,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Configuring a WorkloadEndpoint namespace1/name1/spec1_1 and storing the response")
 			outRes1, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
 					Spec:       spec1_1,
 				},
@@ -363,7 +363,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Configuring a WorkloadEndpoint namespace2/name2/spec2_1 and storing the response")
 			outRes2, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace2, Name: name2},
 					Spec:       spec2_1,
 				},
@@ -382,7 +382,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking for two events, create res2 and delete re1")
-			testWatcher1.ExpectEvents(libapiv3.KindWorkloadEndpoint, []watch.Event{
+			testWatcher1.ExpectEvents(internalapi.KindWorkloadEndpoint, []watch.Event{
 				{
 					Type:   watch.Added,
 					Object: outRes2,
@@ -403,14 +403,14 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Modifying res2")
 			outRes3, err := c.WorkloadEndpoints().Update(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: outRes2.ObjectMeta,
 					Spec:       spec2_2,
 				},
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher2.ExpectEvents(libapiv3.KindWorkloadEndpoint, []watch.Event{
+			testWatcher2.ExpectEvents(internalapi.KindWorkloadEndpoint, []watch.Event{
 				{
 					Type:   watch.Added,
 					Object: outRes1,
@@ -438,7 +438,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()
-				testWatcher2_1.ExpectEvents(libapiv3.KindWorkloadEndpoint, []watch.Event{
+				testWatcher2_1.ExpectEvents(internalapi.KindWorkloadEndpoint, []watch.Event{
 					{
 						Type:   watch.Added,
 						Object: outRes1,
@@ -456,7 +456,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher3 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher3.Stop()
-			testWatcher3.ExpectEvents(libapiv3.KindWorkloadEndpoint, []watch.Event{
+			testWatcher3.ExpectEvents(internalapi.KindWorkloadEndpoint, []watch.Event{
 				{
 					Type:   watch.Added,
 					Object: outRes3,
@@ -469,7 +469,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()
-			testWatcher4.ExpectEvents(libapiv3.KindWorkloadEndpoint, []watch.Event{
+			testWatcher4.ExpectEvents(internalapi.KindWorkloadEndpoint, []watch.Event{
 				{
 					Type:   watch.Added,
 					Object: outRes1,
@@ -495,9 +495,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Creating two WorkloadEndpoint with same namespace, node, orchestrator and overlapping Pod")
 			outRes1, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace1", Name: "node--1-k8s-pod-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "k8s",
 						Pod:           "pod",
@@ -511,9 +511,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 
 			outRes2, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace1", Name: "node--1-k8s-pod--1-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "k8s",
 						Pod:           "pod-1",
@@ -528,9 +528,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Creating a workload in a different namespace, but with a largely overlapping name")
 			outRes3, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace2", Name: "node--1-k8s-pod--2-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "k8s",
 						Pod:           "pod-2",
@@ -546,38 +546,38 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			outList, err := c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: "namespace1", Name: "node--1-k8s-pod-eth0"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
 			))
 
 			By("Doing a short prefix get to retrieve both workload endpoints in namespace1")
 			outList, err = c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: "namespace1", Name: "node--1-k8s-pod-", Prefix: true})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
 			))
 
 			By("Doing a longer prefix get to retrieve one workload endpoints in namespace1")
 			outList, err = c.WorkloadEndpoints().List(ctx, options.ListOptions{Namespace: "namespace1", Name: "node--1-k8s-pod--1", Prefix: true})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
 			))
 
 			By("Doing a short prefix get with wildcarded namespace to retrieve all workload endpoints")
 			outList, err = c.WorkloadEndpoints().List(ctx, options.ListOptions{Name: "node--1-k8s-pod-", Prefix: true})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace2", "node--1-k8s-pod--2-eth0", outRes3.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod--1-eth0", outRes2.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace1", "node--1-k8s-pod-eth0", outRes1.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace2", "node--1-k8s-pod--2-eth0", outRes3.Spec),
 			))
 
 			By("Doing a long prefix get with wildcarded names to retrieve the workload endpoint in namespace2")
 			outList, err = c.WorkloadEndpoints().List(ctx, options.ListOptions{Name: "node--1-k8s-pod--2", Prefix: true})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(libapiv3.KindWorkloadEndpoint, "namespace2", "node--1-k8s-pod--2-eth0", outRes3.Spec),
+				testutils.Resource(internalapi.KindWorkloadEndpoint, "namespace2", "node--1-k8s-pod--2-eth0", outRes3.Spec),
 			))
 
 			By("Deleting all endpoints")
@@ -602,9 +602,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Creating a workload endpoint with missing ContainerID for CNI")
 			_, err = c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace1", Name: "node--1-cni-container-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "cni",
 						Pod:           "pod",
@@ -619,9 +619,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Creating a workload endpoint with missing Workload for arbitrary orchestrator")
 			_, err = c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace1", Name: "node--1-cni-container-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "other",
 						Pod:           "pod",
@@ -637,9 +637,9 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			By("Creating a workload endpoint with correct name and indices for k8s")
 			wep, err := c.WorkloadEndpoints().Create(
 				ctx,
-				&libapiv3.WorkloadEndpoint{
+				&internalapi.WorkloadEndpoint{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "namespace1", Name: "node--1-k8s-pod-eth0"},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Node:          "node-1",
 						Orchestrator:  "k8s",
 						Pod:           "pod",
@@ -721,7 +721,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 
 			By("Updating the workload endpoint with Egress status at Revision X")
 			wepWithEgressStatus := wepRevX.DeepCopy()
-			wepWithEgressStatus.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+			wepWithEgressStatus.Status.EgressGateway = &internalapi.EgressGatewayStatus{
 				MaintenanceGatewayIP: "10.10.10.0",
 				MaintenanceStarted:   &now,
 				MaintenanceFinished:  &inOneMin,
@@ -746,7 +746,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 
 			By("Updating the workload endpoint with Egress status at Revision X")
 			wepWithChangedEgressStatus := wepRevX.DeepCopy()
-			wepWithChangedEgressStatus.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+			wepWithChangedEgressStatus.Status.EgressGateway = &internalapi.EgressGatewayStatus{
 				MaintenanceGatewayIP: "10.10.10.1",
 				MaintenanceStarted:   &inTwoMins,
 				MaintenanceFinished:  &inThreeMins,

@@ -21,7 +21,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 )
 
 type CloudDetector interface {
-	GetOrchRef() (api.OrchRef, error)
+	GetOrchRef() (internalapi.OrchRef, error)
 }
 
 type aws struct{}
@@ -38,7 +38,7 @@ type aws struct{}
 var CloudDetectors = map[string]CloudDetector{"aws": aws{}}
 
 // GetCloudOrchRef attempts to determine the cloud and instance ID for the node.
-func GetCloudOrchRef() (api.OrchRef, error) {
+func GetCloudOrchRef() (internalapi.OrchRef, error) {
 	for c, d := range CloudDetectors {
 		ref, err := d.GetOrchRef()
 		if err == nil {
@@ -46,33 +46,33 @@ func GetCloudOrchRef() (api.OrchRef, error) {
 		}
 		log.WithError(err).WithField("cloud", c).Info("failed to get instance ID")
 	}
-	return api.OrchRef{}, errors.New("no cloud metadata found")
+	return internalapi.OrchRef{}, errors.New("no cloud metadata found")
 }
 
 // GetOrchRef attempts to query the EC2 metadata service to determine the instance ID.
-func (a aws) GetOrchRef() (api.OrchRef, error) {
+func (a aws) GetOrchRef() (internalapi.OrchRef, error) {
 	timeout := time.Duration(250 * time.Millisecond)
 	client := http.Client{Timeout: timeout}
 
 	resp, err := client.Get(awsInstanceIDURL)
 	if err != nil {
 		log.WithField("URL", awsInstanceIDURL).Infof("Unable to get AWS instance ID")
-		return api.OrchRef{}, err
+		return internalapi.OrchRef{}, err
 	}
 	instance, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error("Error while reading instance response body")
-		return api.OrchRef{}, err
+		return internalapi.OrchRef{}, err
 	}
 	resp, err = client.Get(awsZoneURL)
 	if err != nil {
 		log.WithField("URL", awsZoneURL).Infof("Unable to get AWS zone")
-		return api.OrchRef{}, err
+		return internalapi.OrchRef{}, err
 	}
 	zone, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error("Error while reading zone response body")
-		return api.OrchRef{}, err
+		return internalapi.OrchRef{}, err
 	}
-	return api.OrchRef{Orchestrator: "aws", NodeName: "/" + string(zone) + "/" + string(instance)}, nil
+	return internalapi.OrchRef{Orchestrator: "aws", NodeName: "/" + string(zone) + "/" + string(instance)}, nil
 }

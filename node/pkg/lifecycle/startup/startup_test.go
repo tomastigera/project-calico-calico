@@ -38,7 +38,7 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/rawcrdclient"
@@ -58,8 +58,8 @@ func fakeExitFunction(ec int) {
 	exitCode = ec
 }
 
-// makeNode creates an libapi.Node with some BGPSpec info populated.
-func makeNode(ipv4 string, ipv6 string) *libapiv3.Node {
+// makeNode creates an internalapi.Node with some BGPSpec info populated.
+func makeNode(ipv4 string, ipv6 string) *internalapi.Node {
 	ip4, ip4net, _ := net.ParseCIDR(ipv4)
 	ip4net.IP = ip4.IP
 
@@ -73,9 +73,9 @@ func makeNode(ipv4 string, ipv6 string) *libapiv3.Node {
 		ip6Addr = ip6net.String()
 	}
 
-	n := &libapiv3.Node{
-		Spec: libapiv3.NodeSpec{
-			BGP: &libapiv3.NodeBGPSpec{
+	n := &internalapi.Node{
+		Spec: internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address: ip4net.String(),
 				IPv6Address: ip6Addr,
 			},
@@ -139,9 +139,9 @@ var _ = DescribeTable("Node IP detection failure cases",
 		c, err := client.New(*cfg)
 		Expect(err).NotTo(HaveOccurred())
 
-		node := libapiv3.Node{}
+		node := internalapi.Node{}
 		if networkingBackend != "none" && rrCId != "" {
-			node.Spec.BGP = &libapiv3.NodeBGPSpec{RouteReflectorClusterID: rrCId}
+			node.Spec.BGP = &internalapi.NodeBGPSpec{RouteReflectorClusterID: rrCId}
 		}
 
 		updated := configureAndCheckIPAddressSubnets(context.Background(), c, &node, &v1.Node{})
@@ -462,7 +462,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		var n *libapiv3.Node
+		var n *internalapi.Node
 		By("getting the Node", func() {
 			n, err = c.Nodes().Get(ctx, node.Name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -977,8 +977,8 @@ var _ = Describe("FV tests against a real etcd", func() {
 		})
 
 		Describe("Test OrchRef configuration", func() {
-			DescribeTable("Should configure the OrchRef with the proper env var set", func(envs []EnvItem, expected libapiv3.OrchRef, isEqual bool) {
-				node := &libapiv3.Node{}
+			DescribeTable("Should configure the OrchRef with the proper env var set", func(envs []EnvItem, expected internalapi.OrchRef, isEqual bool) {
+				node := &internalapi.Node{}
 
 				for _, env := range envs {
 					defer temporarilySetEnv(env.key, env.value)()
@@ -994,13 +994,13 @@ var _ = Describe("FV tests against a real etcd", func() {
 				}
 			},
 
-				Entry("valid single k8s env var", []EnvItem{{"CALICO_K8S_NODE_REF", "node1"}}, libapiv3.OrchRef{NodeName: "node1", Orchestrator: "k8s"}, true), // nolint: vet
+				Entry("valid single k8s env var", []EnvItem{{"CALICO_K8S_NODE_REF", "node1"}}, internalapi.OrchRef{NodeName: "node1", Orchestrator: "k8s"}, true), // nolint: vet
 			)
 
 			It("Should not configure any OrchRefs when no valid env vars are passed", func() {
 				defer temporarilySetEnv("CALICO_UNKNOWN_NODE_REF", "node1")()
 
-				node := &libapiv3.Node{}
+				node := &internalapi.Node{}
 				Expect(configureNodeRef(node)).To(Equal(false))
 
 				Expect(node.Spec.OrchRefs).To(HaveLen(0))
@@ -1009,8 +1009,8 @@ var _ = Describe("FV tests against a real etcd", func() {
 			It("Should not set an OrchRef if it is already set", func() {
 				defer temporarilySetEnv("CALICO_K8S_NODE_REF", "node1")()
 
-				node := &libapiv3.Node{}
-				node.Spec.OrchRefs = append(node.Spec.OrchRefs, libapiv3.OrchRef{NodeName: "node1", Orchestrator: "k8s"}) // nolint: vet
+				node := &internalapi.Node{}
+				node.Spec.OrchRefs = append(node.Spec.OrchRefs, internalapi.OrchRef{NodeName: "node1", Orchestrator: "k8s"}) // nolint: vet
 				Expect(configureNodeRef(node)).To(Equal(true))
 
 				Expect(node.Spec.OrchRefs).To(HaveLen(1))
@@ -1073,7 +1073,7 @@ var _ = Describe("NetworkUnavailable condition", func() {
 
 var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
 	DescribeTable("Test variations on how IPs are detected.",
-		func(node *libapiv3.Node, items []EnvItem, expected bool) {
+		func(node *internalapi.Node, items []EnvItem, expected bool) {
 			for _, item := range items {
 				defer temporarilySetEnv(item.key, item.value)()
 			}
@@ -1088,12 +1088,12 @@ var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
 			Expect(err).NotTo(HaveOccurred())
 		},
 
-		Entry("Test with no \"IP\" env var set", &libapiv3.Node{}, []EnvItem{{"IP", ""}}, true),
-		Entry("Test with \"IP\" env var set to IP", &libapiv3.Node{}, []EnvItem{{"IP", "192.168.1.10/24"}}, true),
+		Entry("Test with no \"IP\" env var set", &internalapi.Node{}, []EnvItem{{"IP", ""}}, true),
+		Entry("Test with \"IP\" env var set to IP", &internalapi.Node{}, []EnvItem{{"IP", "192.168.1.10/24"}}, true),
 		Entry("Test with \"IP\" env var set to IP and BGP spec populated with same IP", makeNode("192.168.1.10/24", ""), []EnvItem{{"IP", "192.168.1.10/24"}}, false),
 		Entry("Test with \"IP\" env var set to IP and BGP spec populated with different IP", makeNode("192.168.1.10/24", ""), []EnvItem{{"IP", "192.168.1.11/24"}}, true),
-		Entry("Test with no \"IP6\" env var set", &libapiv3.Node{}, []EnvItem{{"IP6", ""}}, true),
-		Entry("Test with \"IP6\" env var set to IP", &libapiv3.Node{}, []EnvItem{{"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"}}, true),
+		Entry("Test with no \"IP6\" env var set", &internalapi.Node{}, []EnvItem{{"IP6", ""}}, true),
+		Entry("Test with \"IP6\" env var set to IP", &internalapi.Node{}, []EnvItem{{"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"}}, true),
 		Entry("Test with \"IP6\" env var set to IP and BGP spec populated with same IP", makeNode("192.168.1.10/24", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"), []EnvItem{{"IP", "192.168.1.10/24"}, {"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"}}, false),
 		Entry("Test with \"IP6\" env var set to IP and BGP spec populated with different IP", makeNode("192.168.1.10/24", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"), []EnvItem{{"IP", "192.168.1.10/24"}, {"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7349/32"}}, true),
 	)
@@ -1101,7 +1101,7 @@ var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
 
 var _ = Describe("UT for autodetection method k8s-internal-ip", func() {
 	DescribeTable("Test variations on k8s-internal-ip",
-		func(node *libapiv3.Node, k8sNode *v1.Node, items []EnvItem, expected bool) {
+		func(node *internalapi.Node, k8sNode *v1.Node, items []EnvItem, expected bool) {
 			for _, item := range items {
 				defer temporarilySetEnv(item.key, item.value)()
 			}
@@ -1120,9 +1120,9 @@ var _ = Describe("UT for autodetection method k8s-internal-ip", func() {
 			_ = os.Unsetenv("IP_AUTODETECTION_METHOD")
 		},
 
-		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = nil", &libapiv3.Node{}, nil, []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, false),
-		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = valid addr", &libapiv3.Node{}, makeK8sNode("192.168.1.10", "2001:db8:85a3:8d3:1319:8a2e:370:7348"), []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, true),
-		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = addr mismatch", &libapiv3.Node{}, makeK8sNode("192.168.1.1", "2001:db8:85a3:8d3:1319:8a2e:370:7349"), []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, false),
+		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = nil", &internalapi.Node{}, nil, []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, false),
+		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = valid addr", &internalapi.Node{}, makeK8sNode("192.168.1.10", "2001:db8:85a3:8d3:1319:8a2e:370:7348"), []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, true),
+		Entry("Test with \"IP\" env = autodetect ,IP_AUTODETECTION_METHOD = k8s-internal-ip. k8snode = addr mismatch", &internalapi.Node{}, makeK8sNode("192.168.1.1", "2001:db8:85a3:8d3:1319:8a2e:370:7349"), []EnvItem{{"IP", "autodetect"}, {"IP_AUTODETECTION_METHOD", "kubernetes-internal-ip"}}, false),
 	)
 })
 
@@ -1148,7 +1148,7 @@ var _ = Describe("UT for CIDR returned by IP address autodetection k8s-internal-
 
 var _ = Describe("UT for node interface autodetection", func() {
 	DescribeTable("Test interface is correctly set on Node",
-		func(node *libapiv3.Node, k8sNode *v1.Node, items []EnvItem) {
+		func(node *internalapi.Node, k8sNode *v1.Node, items []EnvItem) {
 			for _, item := range items {
 				defer temporarilySetEnv(item.key, item.value)()
 			}
@@ -1162,7 +1162,7 @@ var _ = Describe("UT for node interface autodetection", func() {
 			_, err := configureIPsAndSubnets(node, k8sNode, mockGetInterface)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(node.Spec.Interfaces).To(Equal([]libapiv3.NodeInterface{{
+			Expect(node.Spec.Interfaces).To(Equal([]internalapi.NodeInterface{{
 				Name:      "eth1",
 				Addresses: []string{"192.168.1.10", "2001:db8:85a3:8d3:1319:8a2e:370:7348"},
 			}}))
@@ -1170,7 +1170,7 @@ var _ = Describe("UT for node interface autodetection", func() {
 			_ = os.Unsetenv("IP")
 		},
 
-		Entry("Test with \"IP\" env = autodetect. k8snode = nil", &libapiv3.Node{}, nil, []EnvItem{{"IP", "autodetect"}}),
+		Entry("Test with \"IP\" env = autodetect. k8snode = nil", &internalapi.Node{}, nil, []EnvItem{{"IP", "autodetect"}}),
 	)
 })
 
@@ -1237,7 +1237,7 @@ var _ = Describe("FV tests against K8s API server.", func() {
 		errors := []error{}
 		for _, node := range nodes.Items {
 			wg.Add(1)
-			go func(n libapiv3.Node) {
+			go func(n internalapi.Node) {
 				defer wg.Done()
 				err = ensureDefaultConfig(ctx, cfg, c, &n, OSTypeLinux, kubeadmConfig, rancherState)
 				if err != nil {
@@ -1272,7 +1272,7 @@ var _ = Describe("FV tests against K8s API server.", func() {
 
 		// 4) Verify the previously unlabeled BA is now labeled. We need to try both API groups.
 		var labels map[string]string
-		list := libapiv3.BlockAffinityList{}
+		list := internalapi.BlockAffinityList{}
 		err := crdClient.List(ctx, &list)
 		if runtime.IsNotRegisteredError(err) {
 			// try the other API group.
@@ -1364,26 +1364,26 @@ var _ = Describe("UT for GenerateIPv6ULAPrefix", func() {
 })
 
 var _ = Describe("UT for cloud orchestrator refs", func() {
-	var node libapiv3.Node
+	var node internalapi.Node
 	var oldDetectors map[string]autodetection.CloudDetector
 
 	BeforeEach(func() {
 		oldDetectors = autodetection.CloudDetectors
-		node.Spec.OrchRefs = []libapiv3.OrchRef{{Orchestrator: "k8s", NodeName: "testnode"}}
+		node.Spec.OrchRefs = []internalapi.OrchRef{{Orchestrator: "k8s", NodeName: "testnode"}}
 	})
 
 	Context("when cloud detector succeeds", func() {
 		BeforeEach(func() {
 			autodetection.CloudDetectors = map[string]autodetection.CloudDetector{
 				"test": testDetector{
-					ref: libapiv3.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
+					ref: internalapi.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
 				},
 			}
 			Expect(configureCloudOrchRef(&node)).To(Equal(true))
 		})
 
 		It("should add the OrchRef", func() {
-			Expect(node.Spec.OrchRefs).To(Equal([]libapiv3.OrchRef{
+			Expect(node.Spec.OrchRefs).To(Equal([]internalapi.OrchRef{
 				{Orchestrator: "k8s", NodeName: "testnode"},
 				{Orchestrator: "cloudo", NodeName: "cloudo-001"},
 			}))
@@ -1401,7 +1401,7 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 		})
 
 		It("should leave OrchRef unchanged", func() {
-			Expect(node.Spec.OrchRefs).To(Equal([]libapiv3.OrchRef{
+			Expect(node.Spec.OrchRefs).To(Equal([]internalapi.OrchRef{
 				{Orchestrator: "k8s", NodeName: "testnode"},
 			}))
 		})
@@ -1413,11 +1413,11 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 })
 
 type testDetector struct {
-	ref libapiv3.OrchRef
+	ref internalapi.OrchRef
 	err error
 }
 
-func (td testDetector) GetOrchRef() (libapiv3.OrchRef, error) {
+func (td testDetector) GetOrchRef() (internalapi.OrchRef, error) {
 	return td.ref, td.err
 }
 
@@ -1528,7 +1528,7 @@ var _ = Describe("UT for IP and IP6", func() {
 
 var _ = Describe("BGP layout tests", func() {
 
-	var node, nodeCopy *libapiv3.Node
+	var node, nodeCopy *internalapi.Node
 
 	BeforeEach(func() {
 		node = makeNode("1.2.3.4/32", "fdf5::1.2.3.4/128")
@@ -1565,10 +1565,10 @@ var _ = Describe("BGP layout tests", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		noChange := func(node *libapiv3.Node) bool { return false }
+		noChange := func(node *internalapi.Node) bool { return false }
 
 		DescribeTable("with EarlyNetworkConfiguration",
-			func(enc string, expectError bool, expectNodeChange func(*libapiv3.Node) bool) {
+			func(enc string, expectError bool, expectNodeChange func(*internalapi.Node) bool) {
 				// Write EarlyNetworkConfiguration to file.
 				file, err := os.Create(encFileName)
 				Expect(err).NotTo(HaveOccurred())
@@ -1647,7 +1647,7 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *libapiv3.Node) bool {
+`, false, func(node *internalapi.Node) bool {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}
@@ -1685,7 +1685,7 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *libapiv3.Node) bool {
+`, false, func(node *internalapi.Node) bool {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}

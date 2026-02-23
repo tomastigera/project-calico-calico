@@ -34,7 +34,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libcalicoapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -457,7 +457,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								cc.CheckConnectivity()
 
 								dscp32 := numorstring.DSCPFromInt(32) // 0x20
-								egwClient.WorkloadEndpoint.Spec.QoSControls = &libcalicoapi.QoSControls{
+								egwClient.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 									DSCP: &dscp32,
 								}
 								egwClient.UpdateInInfra(infra)

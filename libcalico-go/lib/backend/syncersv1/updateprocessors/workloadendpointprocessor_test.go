@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -51,12 +51,12 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 	iface2 := "iface2"
 
 	v3WorkloadEndpointKey1 := model.ResourceKey{
-		Kind:      libapiv3.KindWorkloadEndpoint,
+		Kind:      internalapi.KindWorkloadEndpoint,
 		Name:      name1,
 		Namespace: ns1,
 	}
 	v3WorkloadEndpointKey2 := model.ResourceKey{
-		Kind:      libapiv3.KindWorkloadEndpoint,
+		Kind:      internalapi.KindWorkloadEndpoint,
 		Name:      name2,
 		Namespace: ns2,
 	}
@@ -82,7 +82,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -122,7 +122,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		}))
 
 		By("adding another WorkloadEndpoint with a full configuration")
-		res = libapiv3.NewWorkloadEndpoint()
+		res = internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns2
 		res.Labels = map[string]string{
 			"testLabel":                      "label",
@@ -143,7 +143,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		_, ipn, err = cnet.ParseCIDROrIP("10.100.10.1")
 		Expect(err).NotTo(HaveOccurred())
 		expectedIPv4Net = *(ipn.Network())
-		res.Spec.IPNATs = []libapiv3.IPNAT{
+		res.Spec.IPNATs = []internalapi.IPNAT{
 			{
 				InternalIP: "10.100.1.1",
 				ExternalIP: "10.1.10.1",
@@ -154,7 +154,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		expectedIPv4Gateway, _, err := cnet.ParseCIDROrIP("10.10.10.1")
 		res.Spec.IPv6Gateway = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 		expectedIPv6Gateway, _, err := cnet.ParseCIDROrIP("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
-		res.Spec.Ports = []libapiv3.WorkloadEndpointPort{
+		res.Spec.Ports = []internalapi.WorkloadEndpointPort{
 			{
 				Name:     "portname",
 				Protocol: numorstring.ProtocolFromInt(uint8(30)),
@@ -283,7 +283,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -333,7 +333,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -386,7 +386,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -431,7 +431,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("trying to convert with the wrong key type.")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Name = name1
 		res.Namespace = ns1
 
@@ -461,9 +461,9 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		}))
 
 		By("trying to convert without enough information to create a v1 key.")
-		eres := libapiv3.NewWorkloadEndpoint()
+		eres := internalapi.NewWorkloadEndpoint()
 		v3WorkloadEndpointKey1 := model.ResourceKey{
-			Kind: libapiv3.KindWorkloadEndpoint,
+			Kind: internalapi.KindWorkloadEndpoint,
 			Name: name1,
 		}
 
@@ -479,7 +479,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with no IPNetworks")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -508,7 +508,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with bad AllowSpoofedSourcePrefixes")
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -545,7 +545,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 
 		nsLabel := conversion.NamespaceLabelPrefix + "ns1"
 		saLabel := conversion.ServiceAccountLabelPrefix + "sa1"
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -590,7 +590,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 	It("should add a label representing the serviceaccount name", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -635,7 +635,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 	It("should convert a WEP with QoSControls configured", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
-		res := libapiv3.NewWorkloadEndpoint()
+		res := internalapi.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -647,7 +647,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		res.Spec.Endpoint = eid1
 		res.Spec.InterfaceName = iface1
 		res.Spec.IPNetworks = []string{"10.100.10.1"}
-		res.Spec.QoSControls = &libapiv3.QoSControls{
+		res.Spec.QoSControls = &internalapi.QoSControls{
 			IngressBandwidth:      1000000,
 			EgressBandwidth:       2000000,
 			IngressBurst:          3000000,

@@ -24,14 +24,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var (
-	matchWorkloadEndpoint = regexp.MustCompile("^/?calico/v1/host/([^/]+)/workload/([^/]+)/([^/]+)/endpoint/([^/]+)$")
-)
+var matchWorkloadEndpoint = regexp.MustCompile("^/?calico/v1/host/([^/]+)/workload/([^/]+)/([^/]+)/endpoint/([^/]+)$")
 
 type WorkloadEndpointKey struct {
 	Hostname       string `json:"-"`
@@ -235,4 +233,4 @@ type ApplicationLayer struct {
 	WAFConfigMap string `json:"waf_config_map"`
 }
 
-type QoSControls = v3.QoSControls
+type QoSControls = internalapi.QoSControls

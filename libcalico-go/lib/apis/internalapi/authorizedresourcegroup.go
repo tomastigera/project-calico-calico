@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package v3
+package internalapi
 
 type AuthorizedResourceGroup struct {
 	// The tier. This is only valid for tiered policies, and tiers.

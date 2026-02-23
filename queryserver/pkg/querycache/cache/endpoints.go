@@ -8,7 +8,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -139,7 +139,7 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		delete(ec.endpoints, uv3.Key)
 	}
 
-	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint {
+	if uv3.Key.(model.ResourceKey).Kind == internalapi.KindWorkloadEndpoint {
 		c.maybeDeleteEndpointCacheByNamespace(ec, uv3.Key.(model.ResourceKey).Namespace)
 	}
 }
@@ -197,7 +197,7 @@ func (c *endpointsCache) GetEndpoints(keys []model.Key) []api.Endpoint {
 }
 
 func (c *endpointsCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
-	dispatcher.RegisterHandler(libapi.KindWorkloadEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(internalapi.KindWorkloadEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(apiv3.KindHostEndpoint, c.onUpdate)
 }
 
@@ -275,7 +275,7 @@ func (c *endpointCache) updateHasLabelsCounts(before, after bool) {
 
 func (c *endpointCache) updateFailedEndpoints(uv3 *bapi.Update) {
 	// We only consider failed WEPs (Pods) for now. HEPs failures are not monitored yet.
-	if wep, ok := uv3.Value.(*libapi.WorkloadEndpoint); ok {
+	if wep, ok := uv3.Value.(*internalapi.WorkloadEndpoint); ok {
 		if wep.Status.Phase == string(corev1.PodFailed) {
 			c.failedEndpoints.Add(uv3.Key)
 		} else {
@@ -317,7 +317,7 @@ func (c *endpointsCache) getAllEndpoints() []*endpointData {
 func (c *endpointsCache) getEndpointCache(epKey model.Key, create bool) *endpointCache {
 	if rKey, ok := epKey.(model.ResourceKey); ok {
 		switch rKey.Kind {
-		case libapi.KindWorkloadEndpoint:
+		case internalapi.KindWorkloadEndpoint:
 			workloadEndpoints := c.workloadEndpointsByNamespace[rKey.Namespace]
 			if workloadEndpoints == nil && create {
 				workloadEndpoints = newEndpointCache()
@@ -350,7 +350,7 @@ func (e *endpointData) GetResource() api.Resource {
 
 func (e *endpointData) GetNode() string {
 	switch r := e.resource.(type) {
-	case *libapi.WorkloadEndpoint:
+	case *internalapi.WorkloadEndpoint:
 		return r.Spec.Node
 	case *apiv3.HostEndpoint:
 		return r.Spec.Node
@@ -369,7 +369,7 @@ func (e *endpointData) IsProtected() bool {
 // inherited through a profile.
 func (e *endpointData) IsLabelled() bool {
 	switch e.resource.GetObjectKind().GroupVersionKind().Kind {
-	case libapi.KindWorkloadEndpoint:
+	case internalapi.KindWorkloadEndpoint:
 		// WEPs automatically have a namespace and orchestrator label added to them.
 		return len(e.resource.GetObjectMeta().GetLabels()) > 2
 	case apiv3.KindHostEndpoint:

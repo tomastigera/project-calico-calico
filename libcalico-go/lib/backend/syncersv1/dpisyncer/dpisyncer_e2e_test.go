@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
@@ -137,9 +137,9 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 				metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			wepObj := &libapiv3.WorkloadEndpoint{
+			wepObj := &internalapi.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "node1-k8s-pod1-eth0"},
-				Spec: libapiv3.WorkloadEndpointSpec{
+				Spec: internalapi.WorkloadEndpointSpec{
 					Orchestrator:  "k8s",
 					Node:          "node1",
 					ContainerID:   "container1",

@@ -40,7 +40,7 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -90,12 +90,12 @@ var (
 )
 
 var (
-	node1 = &libapiv3.Node{
+	node1 = &internalapi.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "node1",
 		},
-		Spec: libapiv3.NodeSpec{
-			Addresses: []libapiv3.NodeAddress{
+		Spec: internalapi.NodeSpec{
+			Addresses: []internalapi.NodeAddress{
 				{
 					Address: "192.168.55.55",
 				},
@@ -857,7 +857,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -917,7 +917,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -978,7 +978,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -1011,7 +1011,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1048,7 +1048,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1085,7 +1085,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1123,7 +1123,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1527,7 +1527,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		nodes := map[string]*libapiv3.Node{
+		nodes := map[string]*internalapi.Node{
 			"node1": node1,
 		}
 		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
@@ -2394,7 +2394,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		nodes := map[string]*libapiv3.Node{
+		nodes := map[string]*internalapi.Node{
 			"node1": node1,
 		}
 
@@ -2914,7 +2914,7 @@ func newMockLookupsCache(
 	nm map[[64]byte]*calc.RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
-	nodes map[string]*libapiv3.Node,
+	nodes map[string]*internalapi.Node,
 	genCache map[model.PolicyKey]int64,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()

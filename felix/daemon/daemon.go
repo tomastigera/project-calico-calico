@@ -49,7 +49,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/statusrep"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
@@ -1120,7 +1120,7 @@ func loadConfigFromDatastore(
 	}
 	err = getAndMergeConfig(
 		ctx, client, hostConfig,
-		libapiv3.KindNode, hostname,
+		internalapi.KindNode, hostname,
 		updateprocessors.NewFelixNodeUpdateProcessor(cfg.Spec.K8sUsePodCIDR),
 		&ready,
 	)
@@ -1488,7 +1488,7 @@ func (fc *DataplaneConnector) reconcileEgressPodStatusUpdate(namespace, name, ga
 		if workload.Status.EgressGateway == nil {
 			startTime := metav1.NewTime(time.Time{})
 			finishTime := metav1.NewTime(time.Time{})
-			workload.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+			workload.Status.EgressGateway = &internalapi.EgressGatewayStatus{
 				MaintenanceGatewayIP: "",
 				MaintenanceStarted:   &startTime,
 				MaintenanceFinished:  &finishTime,

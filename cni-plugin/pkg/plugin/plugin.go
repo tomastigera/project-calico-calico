@@ -46,7 +46,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/calico/cni-plugin/pkg/k8s"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -277,7 +277,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 		})
 	}
 
-	var endpoint *libapi.WorkloadEndpoint
+	var endpoint *internalapi.WorkloadEndpoint
 	endpoint, err = getWorkloadEndpoint(ctx, calicoClient, wepIDs, logger)
 	if err != nil {
 		return
@@ -389,7 +389,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 			}
 
 			// 2) Create the endpoint object
-			endpoint = libapi.NewWorkloadEndpoint()
+			endpoint = internalapi.NewWorkloadEndpoint()
 			endpoint.Name = wepIDs.WEPName
 			endpoint.Namespace = wepIDs.Namespace
 			endpoint.Spec.Endpoint = wepIDs.Endpoint
@@ -530,7 +530,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 }
 
 // getWorkloadEndpoint finds and returns the workload endpoint. The wepIDs passed in may be updated if necessary.
-func getWorkloadEndpoint(ctx context.Context, calicoClient clientv3.Interface, wepIDs *utils.WEPIdentifiers, logger *logrus.Entry) (*libapi.WorkloadEndpoint, error) {
+func getWorkloadEndpoint(ctx context.Context, calicoClient clientv3.Interface, wepIDs *utils.WEPIdentifiers, logger *logrus.Entry) (*internalapi.WorkloadEndpoint, error) {
 	switch conversion.MultiInterfaceMode() {
 	case "multus":
 		// Calculate the WorkloadEndpoint name from the WEP specific identifiers for the given orchestrator.

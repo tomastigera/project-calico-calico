@@ -20,15 +20,15 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var _ = Describe("BlockAffinity labels and selectors", func() {
 	Context("EnsureBlockAffinityLabels", func() {
 		It("should initialize labels and set hostname hash, affinity type, and IPv4 version", func() {
-			ba := &libapiv3.BlockAffinity{
-				Spec: libapiv3.BlockAffinitySpec{
+			ba := &internalapi.BlockAffinity{
+				Spec: internalapi.BlockAffinitySpec{
 					Node: "node-a",
 					Type: model.IPAMAffinityTypeHost,
 					CIDR: "10.0.0.0/24",
@@ -46,8 +46,8 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 		})
 
 		It("should preserve existing custom labels while overwriting Calico-managed ones", func() {
-			ba := &libapiv3.BlockAffinity{
-				Spec: libapiv3.BlockAffinitySpec{
+			ba := &internalapi.BlockAffinity{
+				Spec: internalapi.BlockAffinitySpec{
 					Node: "node-b",
 					Type: model.IPAMAffinityTypeVirtual,
 					CIDR: "2001:db8::/64",
@@ -65,8 +65,8 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 		})
 
 		It("should generate different non-empty hostname hashes for different nodes", func() {
-			a := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-a", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/26"}}
-			b := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-b", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.1.0/26"}}
+			a := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-a", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/26"}}
+			b := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-b", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.1.0/26"}}
 
 			model.EnsureBlockAffinityLabels(a)
 			model.EnsureBlockAffinityLabels(b)
@@ -90,12 +90,12 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 			sel := model.CalculateBlockAffinityLabelSelector(opts)
 			Expect(sel).ToNot(BeNil())
 
-			ba := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-a", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			ba := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-a", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(ba)
 			Expect(sel.Matches(k8slabels.Set(ba.Labels))).To(BeTrue())
 
 			// Different host should not match.
-			other := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-b", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			other := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-b", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(other)
 			Expect(sel.Matches(k8slabels.Set(other.Labels))).To(BeFalse())
 		})
@@ -105,11 +105,11 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 			sel := model.CalculateBlockAffinityLabelSelector(opts)
 			Expect(sel).ToNot(BeNil())
 
-			v := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeVirtual, CIDR: "10.0.0.0/24"}}
+			v := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeVirtual, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(v)
 			Expect(sel.Matches(k8slabels.Set(v.Labels))).To(BeTrue())
 
-			h := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			h := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(h)
 			Expect(sel.Matches(k8slabels.Set(h.Labels))).To(BeFalse())
 		})
@@ -119,11 +119,11 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 			sel := model.CalculateBlockAffinityLabelSelector(opts)
 			Expect(sel).ToNot(BeNil())
 
-			v6 := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "2001:db8::/64"}}
+			v6 := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "2001:db8::/64"}}
 			model.EnsureBlockAffinityLabels(v6)
 			Expect(sel.Matches(k8slabels.Set(v6.Labels))).To(BeTrue())
 
-			v4b := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			v4b := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "n", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(v4b)
 			Expect(sel.Matches(k8slabels.Set(v4b.Labels))).To(BeFalse())
 		})
@@ -133,19 +133,19 @@ var _ = Describe("BlockAffinity labels and selectors", func() {
 			sel := model.CalculateBlockAffinityLabelSelector(opts)
 			Expect(sel).ToNot(BeNil())
 
-			match := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			match := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(match)
 			Expect(sel.Matches(k8slabels.Set(match.Labels))).To(BeTrue())
 
-			wrongHost := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-y", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
+			wrongHost := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-y", Type: model.IPAMAffinityTypeHost, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(wrongHost)
 			Expect(sel.Matches(k8slabels.Set(wrongHost.Labels))).To(BeFalse())
 
-			wrongType := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeVirtual, CIDR: "10.0.0.0/24"}}
+			wrongType := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeVirtual, CIDR: "10.0.0.0/24"}}
 			model.EnsureBlockAffinityLabels(wrongType)
 			Expect(sel.Matches(k8slabels.Set(wrongType.Labels))).To(BeFalse())
 
-			wrongIPVer := &libapiv3.BlockAffinity{Spec: libapiv3.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeHost, CIDR: "2001:db8::/64"}}
+			wrongIPVer := &internalapi.BlockAffinity{Spec: internalapi.BlockAffinitySpec{Node: "node-x", Type: model.IPAMAffinityTypeHost, CIDR: "2001:db8::/64"}}
 			model.EnsureBlockAffinityLabels(wrongIPVer)
 			Expect(sel.Matches(k8slabels.Set(wrongIPVer.Labels))).To(BeFalse())
 		})

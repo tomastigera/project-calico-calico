@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	libcaliconet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -624,10 +624,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 		By("adding a node and a service")
 		updates = []api.Update{{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
-				Value: &libapiv3.Node{
-					Spec: libapiv3.NodeSpec{
-						BGP: &libapiv3.NodeBGPSpec{
+				Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node1"},
+				Value: &internalapi.Node{
+					Spec: internalapi.NodeSpec{
+						BGP: &internalapi.NodeBGPSpec{
 							IPv4Address: nodeIPStr,
 						},
 					},
@@ -667,10 +667,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("updating the node and adding a new node")
 			updates = []api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
-					Value: &libapiv3.Node{
-						Spec: libapiv3.NodeSpec{
-							BGP: &libapiv3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node1"},
+					Value: &internalapi.Node{
+						Spec: internalapi.NodeSpec{
+							BGP: &internalapi.NodeBGPSpec{
 								IPv4Address: nodeIPStr,
 							},
 							IPv4VXLANTunnelAddr: nodeIPStr,
@@ -681,15 +681,15 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			}, {
 				// 2nd node has duplicate main IP and also has other interface IPs assigned
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node2"},
-					Value: &libapiv3.Node{
-						Spec: libapiv3.NodeSpec{
-							BGP: &libapiv3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node2"},
+					Value: &internalapi.Node{
+						Spec: internalapi.NodeSpec{
+							BGP: &internalapi.NodeBGPSpec{
 								IPv4Address:        nodeIPStr,
 								IPv4IPIPTunnelAddr: nodeIP2Str,
 							},
 							IPv4VXLANTunnelAddr: nodeIP3Str,
-							Wireguard: &libapiv3.NodeWireguardSpec{
+							Wireguard: &internalapi.NodeWireguardSpec{
 								InterfaceIPv4Address: nodeIP4Str,
 							},
 						},
@@ -728,15 +728,15 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 2")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node2"},
-					Value: &libapiv3.Node{
-						Spec: libapiv3.NodeSpec{
-							BGP: &libapiv3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node2"},
+					Value: &internalapi.Node{
+						Spec: internalapi.NodeSpec{
+							BGP: &internalapi.NodeBGPSpec{
 								IPv4Address:        nodeIP2Str,
 								IPv4IPIPTunnelAddr: nodeIP2Str,
 							},
 							IPv4VXLANTunnelAddr: nodeIP3Str,
-							Wireguard: &libapiv3.NodeWireguardSpec{
+							Wireguard: &internalapi.NodeWireguardSpec{
 								InterfaceIPv4Address: nodeIP4Str,
 							},
 						},
@@ -755,10 +755,10 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 1 to remove the main IP")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
-					Value: &libapiv3.Node{
-						Spec: libapiv3.NodeSpec{
-							BGP: &libapiv3.NodeBGPSpec{
+					Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node1"},
+					Value: &internalapi.Node{
+						Spec: internalapi.NodeSpec{
+							BGP: &internalapi.NodeBGPSpec{
 								IPv4IPIPTunnelAddr: nodeIPStr,
 							},
 						},
@@ -774,9 +774,9 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 			By("Reconfiguring node 1 to remove the remaining IP")
 			elc.OnResourceUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "node1"},
-					Value: &libapiv3.Node{
-						Spec: libapiv3.NodeSpec{},
+					Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "node1"},
+					Value: &internalapi.Node{
+						Spec: internalapi.NodeSpec{},
 					},
 				},
 				UpdateType: api.UpdateTypeKVUpdated,

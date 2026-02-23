@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -34,20 +34,20 @@ var _ = Describe("Querycache endpoints cache tests", func() {
 
 		key1 = model.KVPair{
 			Key: model.KeyFromDefaultPath("/calico/resources/v3/projectcalico.org/workloadendpoints/ns-1/node--1-k8s-name--1-eth0"),
-			Value: &libapi.WorkloadEndpoint{
+			Value: &internalapi.WorkloadEndpoint{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: apiv3.GroupVersionCurrent,
-					Kind:       libapi.KindWorkloadEndpoint,
+					Kind:       internalapi.KindWorkloadEndpoint,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "node--1-k8s-name--1-eth0",
 					Namespace: "ns-1",
 					Labels:    map[string]string{},
 				},
-				Spec: libapi.WorkloadEndpointSpec{
+				Spec: internalapi.WorkloadEndpointSpec{
 					Node: "node-1",
 				},
-				Status: libapi.WorkloadEndpointStatus{
+				Status: internalapi.WorkloadEndpointStatus{
 					Phase: string(corev1.PodRunning),
 				},
 			},
@@ -55,20 +55,20 @@ var _ = Describe("Querycache endpoints cache tests", func() {
 
 		key2 = model.KVPair{
 			Key: model.KeyFromDefaultPath("/calico/resources/v3/projectcalico.org/workloadendpoints/ns-2/node--2-k8s-name--2-eth0"),
-			Value: &libapi.WorkloadEndpoint{
+			Value: &internalapi.WorkloadEndpoint{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: apiv3.GroupVersionCurrent,
-					Kind:       libapi.KindWorkloadEndpoint,
+					Kind:       internalapi.KindWorkloadEndpoint,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "node--2-k8s-name--2-eth0",
 					Namespace: "ns-2",
 					Labels:    map[string]string{},
 				},
-				Spec: libapi.WorkloadEndpointSpec{
+				Spec: internalapi.WorkloadEndpointSpec{
 					Node: "node-2",
 				},
-				Status: libapi.WorkloadEndpointStatus{
+				Status: internalapi.WorkloadEndpointStatus{
 					Phase: string(corev1.PodRunning),
 				},
 			},
@@ -94,7 +94,7 @@ var _ = Describe("Querycache endpoints cache tests", func() {
 			epc.onUpdate(newEvent2)
 
 			// update one WEP phase to be failed
-			key1.Value.(*libapi.WorkloadEndpoint).Status.Phase = string(corev1.PodFailed)
+			key1.Value.(*internalapi.WorkloadEndpoint).Status.Phase = string(corev1.PodFailed)
 			updateEvent := dispatcherv1v3.Update{
 				UpdateV3: &bapi.Update{
 					KVPair:     key1,
@@ -152,7 +152,7 @@ var _ = Describe("Querycache endpoints cache tests", func() {
 			}))
 
 			// delete a WEP with phase equals Failed
-			key1.Value.(*libapi.WorkloadEndpoint).Status.Phase = string(corev1.PodFailed)
+			key1.Value.(*internalapi.WorkloadEndpoint).Status.Phase = string(corev1.PodFailed)
 			deleteEvent := dispatcherv1v3.Update{
 				UpdateV3: &bapi.Update{
 					KVPair:     key1,

@@ -40,7 +40,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	"github.com/projectcalico/calico/cni-plugin/pkg/wait"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
 	calicoclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -78,7 +78,7 @@ func podToInterface(pod *corev1.Pod, ifaceName string) (*k8sconversion.PodInterf
 // CmdAddK8s performs the "ADD" operation on a kubernetes pod
 // Having kubernetes code in its own file avoids polluting the mainline code. It's expected that the kubernetes case will
 // more special casing than the mainline code.
-func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epIDs utils.WEPIdentifiers, calicoClient calicoclient.Interface, endpoint *libapi.WorkloadEndpoint) (*cniv1.Result, error) {
+func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epIDs utils.WEPIdentifiers, calicoClient calicoclient.Interface, endpoint *internalapi.WorkloadEndpoint) (*cniv1.Result, error) {
 	var err error
 	var result *cniv1.Result
 
@@ -234,7 +234,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	labels := make(map[string]string)
 	annot := make(map[string]string)
 
-	var ports []libapi.WorkloadEndpointPort
+	var ports []internalapi.WorkloadEndpointPort
 	var profiles []string
 	var generateName string
 	var serviceAccount string
@@ -457,7 +457,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// Configure the endpoint (creating if required).
 	if endpoint == nil {
 		logger.Debug("Initializing new WorkloadEndpoint resource")
-		endpoint = libapi.NewWorkloadEndpoint()
+		endpoint = internalapi.NewWorkloadEndpoint()
 	}
 	endpoint.Name = epIDs.WEPName
 	endpoint.Namespace = epIDs.Namespace
@@ -576,12 +576,12 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 
 			for _, ip := range ips {
 				if strings.Contains(ip, ":") {
-					endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, libapi.IPNAT{
+					endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, internalapi.IPNAT{
 						InternalIP: podnetV6.IP.String(),
 						ExternalIP: ip,
 					})
 				} else {
-					endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, libapi.IPNAT{
+					endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, internalapi.IPNAT{
 						InternalIP: podnetV4.IP.String(),
 						ExternalIP: ip,
 					})
@@ -595,7 +595,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// Pod resource. (In Enterprise) Felix also modifies the pod through a patch and setting this avoids patching the
 	// same fields as Felix so that we can't clobber Felix's updates.
 	ctxPatchCNI := k8sresources.ContextWithPatchMode(ctx, k8sresources.PatchModeCNI)
-	var endpointOut *libapi.WorkloadEndpoint
+	var endpointOut *internalapi.WorkloadEndpoint
 	if endpointOut, err = utils.CreateOrUpdate(ctxPatchCNI, calicoClient, endpoint, podInterface.IsDefault); err != nil {
 		logger.WithError(err).Error("Error creating/updating endpoint in datastore.")
 		releaseIPAM()
@@ -1020,7 +1020,7 @@ func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotation
 	return ns.Annotations, nil
 }
 
-func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []libapi.WorkloadEndpointPort, profiles []string, generateName, serviceAccount string, awsIPRequired bool, err error) {
+func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []internalapi.WorkloadEndpointPort, profiles []string, generateName, serviceAccount string, awsIPRequired bool, err error) {
 	logrus.Debugf("pod info %+v", pod)
 
 	c := k8sconversion.NewConverter()
@@ -1029,10 +1029,10 @@ func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, ann
 		return nil, nil, nil, nil, "", "", false, err
 	}
 
-	var wep *libapi.WorkloadEndpoint
+	var wep *internalapi.WorkloadEndpoint
 	for _, kvp := range kvps {
-		if kvp.Value.(*libapi.WorkloadEndpoint).Spec.Endpoint == iface {
-			wep = kvp.Value.(*libapi.WorkloadEndpoint)
+		if kvp.Value.(*internalapi.WorkloadEndpoint).Spec.Endpoint == iface {
+			wep = kvp.Value.(*internalapi.WorkloadEndpoint)
 		}
 	}
 
@@ -1041,7 +1041,7 @@ func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, ann
 	// and PodToWorkloadEndpoints can't figure out what the real default interface name is until after the CNI plugin
 	// has created the WorkloadEndpoints.
 	if wep == nil {
-		wep = kvps[0].Value.(*libapi.WorkloadEndpoint)
+		wep = kvps[0].Value.(*internalapi.WorkloadEndpoint)
 	}
 
 	ports = wep.Spec.Ports
