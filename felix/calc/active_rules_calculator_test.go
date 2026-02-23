@@ -63,6 +63,8 @@ func (n *noopRuleScanner) OnPolicyActive(model.PolicyKey, *model.Policy)        
 func (n *noopRuleScanner) OnPolicyInactive(model.PolicyKey)                           {}
 func (n *noopRuleScanner) OnProfileActive(model.ProfileRulesKey, *model.ProfileRules) {}
 func (n *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey)                    {}
+func (n *noopRuleScanner) OnTierActive(model.TierKey, *model.Tier)                    {}
+func (n *noopRuleScanner) OnTierInactive(model.TierKey)                               {}
 
 func createARC() (*ActiveRulesCalculator, *testPolicyMatchListener) {
 	arc := NewActiveRulesCalculator()
