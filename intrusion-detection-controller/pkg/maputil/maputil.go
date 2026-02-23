@@ -9,12 +9,12 @@ import (
 )
 
 // Copy returns a copy of the given map.
-func Copy(src map[string]interface{}) (map[string]interface{}, error) {
+func Copy(src map[string]any) (map[string]any, error) {
 	jsonString, err := json.Marshal(src)
 	if err != nil {
 		return nil, err
 	}
-	dst := make(map[string]interface{})
+	dst := make(map[string]any)
 	err = json.Unmarshal(jsonString, &dst)
 	if err != nil {
 		return nil, err

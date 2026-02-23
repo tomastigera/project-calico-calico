@@ -17,6 +17,7 @@ package proxy_test
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -626,7 +627,7 @@ var _ = Describe("BPF Syncer", func() {
 			val, ok := svcs.m[nat.NewNATKey(net.IPv4(10, 0, 0, 2), 2222, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))]
 			Expect(ok).To(BeTrue())
 			count := val.Count()
-			for i := uint32(0); i < count; i++ {
+			for i := range count {
 				Expect(eps.m).To(HaveKey(nat.NewNATBackendKey(val.ID(), i)))
 			}
 
@@ -650,7 +651,7 @@ var _ = Describe("BPF Syncer", func() {
 			val, ok = svcs.m[nat.NewNATKey(net.IPv4(10, 0, 0, 2), 2222, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))]
 			Expect(ok).To(BeTrue())
 			Expect(val.Count()).To(Equal(uint32(0)))
-			for i := uint32(0); i < count; i++ {
+			for i := range count {
 				Expect(eps.m).NotTo(HaveKey(nat.NewNATBackendKey(val.ID(), i)))
 			}
 		}))
@@ -1442,13 +1443,14 @@ func (m *mockNATMap) Update(k, v []byte) error {
 }
 
 func (m *mockNATMap) String() string {
-	out := "{"
+	var out strings.Builder
+	out.WriteString("{")
 	for k, v := range m.m {
-		out += fmt.Sprintf("\n\tkey: %v : value: %v", k, v)
+		out.WriteString(fmt.Sprintf("\n\tkey: %v : value: %v", k, v))
 	}
-	out += "\n}"
+	out.WriteString("\n}")
 
-	return out
+	return out.String()
 }
 
 func (m *mockNATMap) Get(k []byte) ([]byte, error) {
@@ -1570,13 +1572,14 @@ func (m *mockNATBackendMap) Delete(k []byte) error {
 }
 
 func (m *mockNATBackendMap) String() string {
-	out := "{"
+	var out strings.Builder
+	out.WriteString("{")
 	for k, v := range m.m {
-		out += fmt.Sprintf("\n\tkey: %v : value: %v", k, v)
+		out.WriteString(fmt.Sprintf("\n\tkey: %v : value: %v", k, v))
 	}
-	out += "\n}"
+	out.WriteString("\n}")
 
-	return out
+	return out.String()
 }
 
 type mockMaglevMap struct {

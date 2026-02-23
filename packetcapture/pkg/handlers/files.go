@@ -308,7 +308,7 @@ func retryFor(ctx context.Context, numberOfRetries int, waitBetweenRetries, time
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeOut)
 	defer cancel()
 	var err error
-	for i := 0; i < numberOfRetries; i++ {
+	for range numberOfRetries {
 		select {
 		case <-ctxWithTimeout.Done():
 			return ctxWithTimeout.Err()

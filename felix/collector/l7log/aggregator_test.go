@@ -172,7 +172,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 		})
 
 		It("Should only buffer 5 logs", func() {
-			for i := 0; i < 15; i++ {
+			for i := range 15 {
 				src := [16]byte{127, 0, 0, byte(i)}
 				dst := [16]byte{127, 0, 0, byte(5 + i)}
 
@@ -204,7 +204,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 
 		It("Should buffer logs and overflow logs up to 5 logs", func() {
 			// Create 3 full logs
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				src := [16]byte{127, 0, 0, byte(i)}
 				dst := [16]byte{127, 0, 0, byte(5 + i)}
 				err := la.FeedUpdate(
@@ -214,7 +214,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 			// Create 5 overflow logs
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				src := [16]byte{127, 0, 0, byte(3 + i)}
 				dst := [16]byte{127, 0, 0, byte(8 + i)}
 				err := la.FeedUpdate(
@@ -244,7 +244,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 
 		It("Should buffer 5 logs with full logs taking priority over overflow logs", func() {
 			// Create 10 overflow logs
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				src := [16]byte{127, 0, 0, byte(5 + i)}
 				dst := [16]byte{127, 0, 0, byte(10 + i)}
 				err := la.FeedUpdate(
@@ -252,7 +252,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 			// Create 5 full logs
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				src := [16]byte{127, 0, 0, byte(i)}
 				dst := [16]byte{127, 0, 0, byte(5 + i)}
 				err := la.FeedUpdate(

@@ -188,27 +188,27 @@ func TestDNSRData_MarshalJSON(t *testing.T) {
 		{
 			"SOA",
 			DNSRData{nil, dnsSOA},
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSSOA)), false,
+			fmt.Appendf(nil, "\"%s\"", decodedDNSSOA), false,
 		},
 		{
 			"SRV",
 			DNSRData{nil, dnsSRV},
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSSRV)), false,
+			fmt.Appendf(nil, "\"%s\"", decodedDNSSRV), false,
 		},
 		{
 			"MX",
 			DNSRData{nil, dnsMX},
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSMX)), false,
+			fmt.Appendf(nil, "\"%s\"", decodedDNSMX), false,
 		},
 		{
 			"RRSIG",
 			DNSRData{nil, dnsRRSIG},
-			[]byte(fmt.Sprintf("\"%s\"", decodedRRSIG)), false,
+			fmt.Appendf(nil, "\"%s\"", decodedRRSIG), false,
 		},
 		{
 			"DNSKEY",
 			DNSRData{nil, dnsDNSKEY},
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSKEY)), false,
+			fmt.Appendf(nil, "\"%s\"", decodedDNSKEY), false,
 		},
 		{
 			"IP",
@@ -259,31 +259,31 @@ func TestDNSRData_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			"SOA",
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSSOA)),
+			fmt.Appendf(nil, "\"%s\"", decodedDNSSOA),
 			DNSRData{[]byte(decodedDNSSOA), dnsSOA},
 			false,
 		},
 		{
 			"SRV",
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSSRV)),
+			fmt.Appendf(nil, "\"%s\"", decodedDNSSRV),
 			DNSRData{[]byte(decodedDNSSRV), dnsSRV},
 			false,
 		},
 		{
 			"MX",
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSMX)),
+			fmt.Appendf(nil, "\"%s\"", decodedDNSMX),
 			DNSRData{[]byte(decodedDNSMX), dnsMX},
 			false,
 		},
 		{
 			"RRSIG",
-			[]byte(fmt.Sprintf("\"%s\"", decodedRRSIG)),
+			fmt.Appendf(nil, "\"%s\"", decodedRRSIG),
 			DNSRData{[]byte(decodedRRSIG), dnsRRSIG},
 			false,
 		},
 		{
 			"DNSKEY",
-			[]byte(fmt.Sprintf("\"%s\"", decodedDNSKEY)),
+			fmt.Appendf(nil, "\"%s\"", decodedDNSKEY),
 			DNSRData{[]byte(decodedDNSKEY), dnsDNSKEY},
 			false,
 		},

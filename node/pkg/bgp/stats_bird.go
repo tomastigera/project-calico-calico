@@ -353,8 +353,8 @@ func parseRoutes(line string, prc *PeerRouteCounts) bool {
 		return false
 	}
 
-	routePairs := strings.Split(groups[1], ",")
-	for _, p := range routePairs {
+	routePairs := strings.SplitSeq(groups[1], ",")
+	for p := range routePairs {
 		trimmed := strings.TrimSpace(p)
 		values := strings.Split(trimmed, " ")
 		switch values[1] {

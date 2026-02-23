@@ -34,7 +34,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-type EventHandler func(message interface{})
+type EventHandler func(message any)
 
 type configInterface interface {
 	UpdateFrom(map[string]string, config.Source) (changed bool, err error)
@@ -51,7 +51,7 @@ type EndpointComputedData interface {
 
 // EndpointUpdate contains information about updates applied to the endpoint.
 type endpointUpdate struct {
-	endpoint     interface{}
+	endpoint     any
 	peerData     *EndpointBGPPeer
 	computedData []EndpointComputedData
 	tierInfo     []TierInfo

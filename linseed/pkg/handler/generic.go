@@ -491,26 +491,26 @@ func NewRWDHandler[T any, P RequestParams, B BulkRequestParams](c CreateFn[B], l
 }
 
 func transformPoliciesAggregation(v []byte) []byte {
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(v, &m); err != nil {
 		logrus.WithError(err).Warn("Failed to unmarshal aggregation for policy transformation")
 		return v
 	}
 
 	changed := false
-	var walk func(m map[string]interface{})
-	walk = func(node map[string]interface{}) {
+	var walk func(m map[string]any)
+	walk = func(node map[string]any) {
 		// Check for sub-aggregations
 		for _, key := range []string{"aggs", "aggregations"} {
-			if sub, ok := node[key].(map[string]interface{}); ok {
+			if sub, ok := node[key].(map[string]any); ok {
 				for name, subAgg := range sub {
-					if subAggMap, ok := subAgg.(map[string]interface{}); ok {
+					if subAggMap, ok := subAgg.(map[string]any); ok {
 						if name == "policies" {
 							if _, hasNested := subAggMap["nested"]; hasNested {
 								delete(subAggMap, "nested")
 								// Use a match_all filter to mimic the "wrapper bucket" behavior of nested agg
 								// without actually enforcing nested scope.
-								subAggMap["filter"] = map[string]interface{}{"match_all": map[string]interface{}{}}
+								subAggMap["filter"] = map[string]any{"match_all": map[string]any{}}
 								changed = true
 							}
 						}
@@ -541,7 +541,7 @@ func transformPoliciesAggregation(v []byte) []byte {
 			"scripted_metric",
 			"bucket_script",
 		} {
-			if agg, ok := node[aggType].(map[string]interface{}); ok {
+			if agg, ok := node[aggType].(map[string]any); ok {
 				if field, ok := agg["field"].(string); ok {
 					if field == "policies.all_policies" {
 						agg["field"] = "policies.enforced_policies"

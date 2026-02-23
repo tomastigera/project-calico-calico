@@ -154,9 +154,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 		close(processExited)
 	}()
 
-	doneWG.Add(1)
-	go func() {
-		defer doneWG.Done()
+	doneWG.Go(func() {
 		log.Info("Started charon shutdown management goroutine.")
 
 		select {
@@ -178,7 +176,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 			log.Error("Charon exited unexpectedly.  Reporting the failure.")
 			charon.childExitedCallback()
 		}
-	}()
+	})
 
 	return nil
 }
@@ -379,7 +377,7 @@ func (charon *CharonIKEDaemon) discardClient() {
 func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c VICIClient) error) error {
 	debug := log.GetLevel() >= log.DebugLevel
 	var err error
-	for attempt := 0; attempt < defaultRetryCount; attempt++ {
+	for range defaultRetryCount {
 		if debug {
 			log.WithField("operation", opName).Debug("Attempting VICI operation")
 		}

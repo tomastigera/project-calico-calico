@@ -48,10 +48,7 @@ type PrometheusReporter struct {
 func NewReporter(registry *prometheus.Registry, port int, retentionTime time.Duration, certFile, keyFile, caFile string) *PrometheusReporter {
 	// Set the ticker interval appropriately, we should be checking at least half of the retention time,
 	// or the hard-coded check interval (whichever is smaller).
-	tickerInterval := retentionTime / 2
-	if checkInterval < tickerInterval {
-		tickerInterval = checkInterval
-	}
+	tickerInterval := min(checkInterval, retentionTime/2)
 
 	return &PrometheusReporter{
 		port:            port,

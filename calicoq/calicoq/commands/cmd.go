@@ -4,6 +4,7 @@ package commands
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 
@@ -25,7 +26,7 @@ func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 		configFile: configFile,
 		dispatcher: disp,
 		done:       make(chan bool),
-		matches:    make(map[interface{}][]string),
+		matches:    make(map[any][]string),
 		rcc:        NewRemoteClusterHandler(),
 		lock:       sync.Mutex{},
 	}
@@ -101,14 +102,12 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 // added before Start()ing.
 // Returns a map from endpoint key (model.Host/WorkloadEndpointKey) to a list of strings containing the
 // names of the selectors that matched them.
-func (cbs *EvalCmd) GetMatches() map[interface{}][]string {
+func (cbs *EvalCmd) GetMatches() map[any][]string {
 	<-cbs.done
 	cbs.lock.Lock()
 	// Copy the matches so they don't get updated while the caller is iterating through them
-	matchesCopy := make(map[interface{}][]string)
-	for k, v := range cbs.matches {
-		matchesCopy[k] = v
-	}
+	matchesCopy := make(map[any][]string)
+	maps.Copy(matchesCopy, cbs.matches)
 	defer cbs.lock.Unlock()
 	return matchesCopy
 }
@@ -118,7 +117,7 @@ type EvalCmd struct {
 	configFile    string
 	dispatcher    *dispatcher.Dispatcher
 	index         *labelindex.InheritIndex
-	matches       map[interface{}][]string
+	matches       map[any][]string
 	lock          sync.Mutex // Protect index and matches
 
 	// Remote cluster handler is used to output errors associated with failures to connect to a configured
@@ -181,7 +180,7 @@ func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
 	}
 }
 
-func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
+func (cbs *EvalCmd) onMatchStarted(selId, epId any) {
 	if pols, ok := cbs.matches[epId]; ok {
 		cbs.matches[epId] = append(pols, selId.(string))
 	} else {
@@ -189,6 +188,6 @@ func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
 	}
 }
 
-func (cbs *EvalCmd) onMatchStopped(selId, epId interface{}) {
+func (cbs *EvalCmd) onMatchStopped(selId, epId any) {
 	log.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
 }

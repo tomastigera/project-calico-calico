@@ -26,7 +26,7 @@ func TestCompareBenchmarksStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, benchmarksMap["properties"].(map[string]interface{}), excludeBenchmarkFields))
+		require.True(t, utils.CheckFieldsInJSON(t, m, benchmarksMap["properties"].(map[string]any), excludeBenchmarkFields))
 	})
 	t.Run("Check for benchmarks api and template not matches", func(t *testing.T) {
 		benchmarksMap := testutils.MustUnmarshalToMap(t, BenchmarksMappings)
@@ -40,6 +40,6 @@ func TestCompareBenchmarksStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, benchmarksMap["properties"].(map[string]interface{}), excludeBenchmarkFields))
+		require.False(t, utils.CheckFieldsInJSON(t, m, benchmarksMap["properties"].(map[string]any), excludeBenchmarkFields))
 	})
 }

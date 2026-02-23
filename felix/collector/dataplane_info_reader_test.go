@@ -13,7 +13,7 @@ import (
 func TestRun(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	infoC := make(chan interface{})
+	infoC := make(chan any)
 	dpr := NewDataplaneInfoReader(infoC)
 
 	// Start the reader

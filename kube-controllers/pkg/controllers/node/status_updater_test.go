@@ -107,7 +107,7 @@ var _ = Describe("DPI status on node create or delete", func() {
 					return nodeList
 				},
 				reconcilerPeriod: 30 * time.Second,
-				syncChan:         make(chan interface{}),
+				syncChan:         make(chan any),
 			}
 		}
 

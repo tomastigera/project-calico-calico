@@ -13,8 +13,7 @@ import (
 
 func BenchmarkDikastesExtAuthz(b *testing.B) {
 	log.SetLevel(log.PanicLevel)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := b.Context()
 
 	// define test data
 	updates, checks := basicDikastesExtAuthzData(b)

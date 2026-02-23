@@ -25,7 +25,7 @@ func (r *testWAFEventReporter) Start() error {
 	return nil
 }
 
-func (r *testWAFEventReporter) Report(logs interface{}) error {
+func (r *testWAFEventReporter) Report(logs any) error {
 	log.Info("In dispatch")
 	r.logs <- logs.([]*v1.WAFLog)
 	return nil
@@ -572,7 +572,7 @@ var _ = ginkgo.Describe("WAFEvent Reporter with FileReporter (race condition tes
 		const numGoroutines = 100
 		done := make(chan bool, numGoroutines)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				err := reporter.Report(testReport)
 				Expect(err).NotTo(HaveOccurred())
@@ -581,7 +581,7 @@ var _ = ginkgo.Describe("WAFEvent Reporter with FileReporter (race condition tes
 		}
 
 		// Wait for all goroutines to complete
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			<-done
 		}
 

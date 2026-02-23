@@ -128,7 +128,7 @@ func TestFV_BGP(t *testing.T) {
 
 		// Create 5 BGP logs.
 		logTime := time.Unix(0, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.BGPLog{
 				{
 					LogTime: logTime.Add(time.Duration(i) * time.Second).Format(v1.BGPLogTimeFormat),
@@ -145,7 +145,7 @@ func TestFV_BGP(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.BGPLogParams{
 				QueryParams: v1.QueryParams{
@@ -215,7 +215,7 @@ func TestFV_BGP(t *testing.T) {
 		// Create > 10K bgp logs.
 		logTime := time.Unix(100, 0).UTC()
 		var logs []v1.BGPLog
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			bgpLog := v1.BGPLog{
 				LogTime: logTime.Add(time.Duration(i) * time.Second).Format(v1.BGPLogTimeFormat),
 				Host:    fmt.Sprintf("%d", i),

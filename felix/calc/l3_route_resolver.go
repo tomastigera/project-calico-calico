@@ -150,7 +150,7 @@ func (i l3rrNodeInfo) Equal(b l3rrNodeInfo) bool {
 		l := len(i.Addresses)
 		for ia, a := range i.Addresses {
 			found := false
-			for j := 0; j < l; j++ {
+			for j := range l {
 				if a == b.Addresses[(ia+j)%l] {
 					found = true
 					break
@@ -634,7 +634,7 @@ func (c *L3RouteResolver) markAllNodeRoutesDirty(nodeName string) {
 }
 
 func (c *L3RouteResolver) visitAllRoutes(trie *ip.CIDRTrie, v func(route nodenameRoute)) {
-	trie.Visit(func(cidr ip.CIDR, data interface{}) bool {
+	trie.Visit(func(cidr ip.CIDR, data any) bool {
 		c.maybeReportLive()
 
 		// Construct a nodenameRoute to pass to the visiting function.
@@ -1151,7 +1151,7 @@ func (r *RouteTrie) UpdatePool(cidr ip.CIDR, cluster string, poolType proto.IPPo
 func (r *RouteTrie) markChildrenDirty(cidr ip.CIDR) {
 	// TODO: avoid full scan to mark children dirty
 	trie := r.trieForCIDR(cidr)
-	trie.Visit(func(c ip.CIDR, data interface{}) bool {
+	trie.Visit(func(c ip.CIDR, data any) bool {
 		r.OnAlive()
 		if cidr.Contains(c.Addr()) {
 			r.MarkCIDRDirty(c)

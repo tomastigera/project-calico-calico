@@ -96,11 +96,11 @@ var _ = ginkgo.Describe("WAFEvent Log Reporter Performance", func() {
 		start := time.Now()
 
 		// report the 100k events
-		for i := 0; i < 25000; i++ {
+		for range 25000 {
 			err := r.Report(r0)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
-		for i := 0; i < 75000; i++ {
+		for range 75000 {
 			err := r.Report(r1)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}

@@ -907,7 +907,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 	})
 })
 
-func mustMarshal(v interface{}) string {
+func mustMarshal(v any) string {
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
 		panic(err)

@@ -60,7 +60,7 @@ var _ = Describe("StagedNetworkPolicyReconciler", func() {
 		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil).Maybe()
 
 		// Define the list of items handled by the policy recommendation cache.
-		listFunc := func() (map[string]interface{}, error) {
+		listFunc := func() (map[string]any, error) {
 			snps, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(ctx, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
 			})
@@ -68,7 +68,7 @@ var _ = Describe("StagedNetworkPolicyReconciler", func() {
 				return nil, err
 			}
 
-			snpMap := make(map[string]interface{})
+			snpMap := make(map[string]any)
 			for _, snp := range snps.Items {
 				snpMap[snp.Namespace] = snp
 			}
@@ -79,7 +79,7 @@ var _ = Describe("StagedNetworkPolicyReconciler", func() {
 		// Create a cache to store recommendations in.
 		cacheArgs := rcache.ResourceCacheArgs{
 			ListFunc:    listFunc,
-			ObjectType:  reflect.TypeOf(v3.StagedNetworkPolicy{}),
+			ObjectType:  reflect.TypeFor[v3.StagedNetworkPolicy](),
 			LogTypeDesc: kindRecommendations,
 			ReconcilerConfig: rcache.ReconcilerConfig{
 				DisableUpdateOnChange: true,

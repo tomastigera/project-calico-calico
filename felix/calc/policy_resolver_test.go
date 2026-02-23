@@ -59,7 +59,7 @@ func createPolicyResolver() (*PolicyResolver, *policyResolverRecorder) {
 
 type policyResolverUpdate struct {
 	Key          model.Key
-	Endpoint     interface{}
+	Endpoint     any
 	Tiers        []TierInfo
 	ComputedData []EndpointComputedData
 }

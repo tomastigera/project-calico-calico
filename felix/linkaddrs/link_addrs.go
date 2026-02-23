@@ -16,6 +16,7 @@ package linkaddrs
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -390,11 +391,5 @@ func (la *LinkAddrsManager) removeIPOnInterface(nl netlinkshim.Interface, link n
 }
 
 func (la *LinkAddrsManager) addrInIgnoreList(c ip.Addr) bool {
-	for _, c0 := range la.wlAddressIgnoreList {
-		if c == c0 {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(la.wlAddressIgnoreList, c)
 }

@@ -310,9 +310,7 @@ func (w *Workload) Start(cleanupProvider CleanupProvider) error {
 	stderrReader := bufio.NewReader(w.errPipe)
 
 	var errDone sync.WaitGroup
-	errDone.Add(1)
-	go func() {
-		defer errDone.Done()
+	errDone.Go(func() {
 		for {
 			line, err := stderrReader.ReadString('\n')
 			if err != nil {
@@ -321,7 +319,7 @@ func (w *Workload) Start(cleanupProvider CleanupProvider) error {
 			}
 			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "%v[stderr] %v", w.Name, line)
 		}
-	}()
+	})
 
 	pid, err := stdoutReader.ReadString('\n')
 	if err != nil {
@@ -745,8 +743,8 @@ func (w *Workload) ToMatcher(explicitPort ...uint16) *connectivity.Matcher {
 const nsprefix = "/var/run/netns/"
 
 func (w *Workload) netns() string {
-	if strings.HasPrefix(w.namespacePath, nsprefix) {
-		return strings.TrimPrefix(w.namespacePath, nsprefix)
+	if after, ok := strings.CutPrefix(w.namespacePath, nsprefix); ok {
+		return after
 	}
 
 	return ""
@@ -913,7 +911,7 @@ func (w *Workload) InterfaceIndex() int {
 func (w *Workload) RenameInterface(from, to string) {
 	var err error
 	sleep := 100 * time.Millisecond
-	for try := 0; try < 40; try++ {
+	for range 40 {
 		// Can fail with EBUSY.
 		err = w.C.ExecMayFail("ip", "link", "set", from, "name", to)
 		if err == nil {

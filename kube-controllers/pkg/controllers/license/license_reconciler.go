@@ -35,7 +35,7 @@ func NewLicenseReconciler(managedCalicoCLI tigeraapi.Interface, managementCalico
 // that is created with the management cluster (this can also be the default license if configured accordingly), default
 // license created within the managed cluster
 func (c *reconciler) Reconcile(name types.NamespacedName) error {
-	reqLogger := log.WithFields(map[string]interface{}{
+	reqLogger := log.WithFields(map[string]any{
 		"cluster": c.clusterName,
 		"key":     name,
 	})

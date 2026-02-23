@@ -581,11 +581,11 @@ configRetry:
 	var policySyncServer *policysync.Server
 	var policySyncProcessor *policysync.Processor
 	var policySyncAPIBinder binder.Binder
-	calcGraphClientChannels := []chan<- interface{}{dpConnector.ToDataplane}
+	calcGraphClientChannels := []chan<- any{dpConnector.ToDataplane}
 	if configParams.IsLeader() && configParams.PolicySyncPathPrefix != "" {
 		log.WithField("policySyncPathPrefix", configParams.PolicySyncPathPrefix).Info(
 			"Policy sync API enabled.  Creating the policy sync server.")
-		toPolicySync := make(chan interface{})
+		toPolicySync := make(chan any)
 		policySyncUIDAllocator := policysync.NewUIDAllocator()
 		policySyncProcessor = policysync.NewProcessor(configParams, toPolicySync)
 		policySyncServer = policysync.NewServer(
@@ -615,7 +615,7 @@ configRetry:
 	if dpStatsCollector != nil {
 		if apiv3.FlowLogsPolicyEvaluationModeType(configParams.FlowLogsPolicyEvaluationMode) == apiv3.FlowLogsPolicyEvaluationModeContinuous {
 			// Fork the calculation graph for dataplane updates that will be sent to the Collector.
-			toCollectorDataplaneSync := make(chan interface{})
+			toCollectorDataplaneSync := make(chan any)
 			// The DataplaneInfoReader wraps and sends the dataplane updates to the Collector.
 			dpir := collector.NewDataplaneInfoReader(toCollectorDataplaneSync)
 			dpStatsCollector.SetDataplaneInfoReader(dpir)
@@ -1193,7 +1193,7 @@ type DataplaneConnector struct {
 	config     *config.Config
 
 	configUpdChan        chan<- map[string]string
-	ToDataplane          chan interface{}
+	ToDataplane          chan any
 	InSync               chan bool
 	failureReportChan    chan<- string
 	dataplane            dp.DataplaneDriver
@@ -1204,9 +1204,9 @@ type DataplaneConnector struct {
 
 	// Input channel for msgs from the dataplane.
 	// Msgs popped off this channel are dispatched to all StatusUpdatesFromDataplaneConsumers.
-	statusUpdatesFromDataplane           chan interface{}
-	statusUpdatesFromDataplaneDispatcher *dispatcher.BlockingDispatcher[interface{}]
-	statusUpdatesFromDataplaneConsumers  []chan interface{}
+	statusUpdatesFromDataplane           chan any
+	statusUpdatesFromDataplaneDispatcher *dispatcher.BlockingDispatcher[any]
+	statusUpdatesFromDataplaneConsumers  []chan any
 
 	firstStatusReportSent bool
 
@@ -1235,8 +1235,8 @@ func newConnector(configParams *config.Config,
 		configUpdChan:                       configUpdChan,
 		datastore:                           datastore,
 		datastorev3:                         datastorev3,
-		ToDataplane:                         make(chan interface{}),
-		statusUpdatesFromDataplane:          make(chan interface{}),
+		ToDataplane:                         make(chan any),
+		statusUpdatesFromDataplane:          make(chan any),
 		statusUpdatesFromDataplaneConsumers: nil,
 		InSync:                              make(chan bool, 1),
 		failureReportChan:                   failureReportChan,
@@ -1248,7 +1248,7 @@ func newConnector(configParams *config.Config,
 		rateLimitedLogger:                   lclogutils.NewRateLimitedLogger(lclogutils.OptInterval(15 * time.Second)),
 	}
 
-	fromDataplaneDispatcher, err := dispatcher.NewBlockingDispatcher[interface{}](felixConn.statusUpdatesFromDataplane)
+	fromDataplaneDispatcher, err := dispatcher.NewBlockingDispatcher[any](felixConn.statusUpdatesFromDataplane)
 	if err != nil {
 		log.WithError(err).Panic("Failed to create dispatcher for status updates from dataplane")
 	}
@@ -1260,8 +1260,8 @@ func newConnector(configParams *config.Config,
 // NewFromDataplaneConsumer creates a channel which receives status updates from the dataplane.
 // Each call creates a new consumer channel, and each consumer is dispatched dataplane msgs in series.
 // So, it's important that all created chans are continuously drained to avoid deadlocking.
-func (fc *DataplaneConnector) NewFromDataplaneConsumer() <-chan interface{} {
-	fromDataplaneC := make(chan interface{}, 10)
+func (fc *DataplaneConnector) NewFromDataplaneConsumer() <-chan any {
+	fromDataplaneC := make(chan any, 10)
 	fc.statusUpdatesFromDataplaneConsumers = append(fc.statusUpdatesFromDataplaneConsumers, fromDataplaneC)
 	return fromDataplaneC
 }
@@ -1367,7 +1367,7 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 
 func (fc *DataplaneConnector) reconcileWireguardStatUpdate(dpPubKey string, ipVersion proto.IPVersion) error {
 	// In case of a recoverable failure (ErrorResourceUpdateConflict), retry update 3 times.
-	for iter := 0; iter < 3; iter++ {
+	for range 3 {
 		// Read node resource from datastore and compare it with the publicKey from dataplane.
 		getCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 
@@ -1467,7 +1467,7 @@ func (fc *DataplaneConnector) handleWireguardStatUpdateFromDataplane() {
 
 func (fc *DataplaneConnector) reconcileEgressPodStatusUpdate(namespace, name, gatewayIP string, started, finished time.Time) error {
 	// In case of a recoverable failure (ErrorResourceUpdateConflict), retry update 3 times.
-	for iter := 0; iter < 3; iter++ {
+	for range 3 {
 		// Read workload resource from datastore and compare it with the deletionTimestamp from dataplane.
 		getCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		workload, err := fc.datastorev3.WorkloadEndpoints().Get(getCtx, namespace, name, options.GetOptions{})

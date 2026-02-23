@@ -12,7 +12,7 @@ import (
 )
 
 var _ = DescribeTable("AlertException Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")

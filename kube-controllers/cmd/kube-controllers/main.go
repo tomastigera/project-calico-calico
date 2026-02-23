@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"strings"
@@ -108,9 +109,7 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		r2.Header[k] = append([]string(nil), s...)
 	}
 
-	for key, values := range ha.headers {
-		r2.Header[key] = values
-	}
+	maps.Copy(r2.Header, ha.headers)
 
 	return ha.rt.RoundTrip(r2)
 }
@@ -432,10 +431,7 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 
 		// If we encountered errors, retry again with a longer timeout.
 		if !s.GetReadiness() {
-			timeout = 2 * timeout
-			if timeout > maxTimeout {
-				timeout = maxTimeout
-			}
+			timeout = min(2*timeout, maxTimeout)
 			log.Infof("Health check is not ready, retrying in 2 seconds with new timeout: %s", timeout)
 			time.Sleep(2 * time.Second)
 			continue

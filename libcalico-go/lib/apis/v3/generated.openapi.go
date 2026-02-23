@@ -134,7 +134,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeer(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -175,7 +175,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerList(ref common.ReferenceCallback) c
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -274,7 +274,7 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref common.ReferenceCallbac
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -584,7 +584,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpoint(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -625,7 +625,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointList(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -856,7 +856,7 @@ func schema_libcalico_go_lib_apis_v1_IPPool(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -897,7 +897,7 @@ func schema_libcalico_go_lib_apis_v1_IPPoolList(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1062,7 +1062,7 @@ func schema_libcalico_go_lib_apis_v1_Node(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1137,7 +1137,7 @@ func schema_libcalico_go_lib_apis_v1_NodeList(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1264,7 +1264,7 @@ func schema_libcalico_go_lib_apis_v1_Policy(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1305,7 +1305,7 @@ func schema_libcalico_go_lib_apis_v1_PolicyList(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1479,7 +1479,7 @@ func schema_libcalico_go_lib_apis_v1_Profile(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1520,7 +1520,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileList(ref common.ReferenceCallback) c
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1691,7 +1691,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
-				Required: []string{"action"},
+				Required: []string{"action", "source", "destination"},
 			},
 		},
 		Dependencies: []string{
@@ -1725,7 +1725,7 @@ func schema_libcalico_go_lib_apis_v1_Tier(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1766,7 +1766,7 @@ func schema_libcalico_go_lib_apis_v1_TierList(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{
@@ -1847,7 +1847,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"TypeMetadata"},
+				Required: []string{"TypeMetadata", "metadata", "spec"},
 			},
 		},
 		Dependencies: []string{
@@ -1888,7 +1888,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"TypeMetadata", "items"},
+				Required: []string{"TypeMetadata", "metadata", "items"},
 			},
 		},
 		Dependencies: []string{

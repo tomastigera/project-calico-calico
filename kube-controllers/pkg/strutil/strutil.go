@@ -2,12 +2,8 @@
 
 package strutil
 
-func InList(str string, list []string) bool {
-	for _, entry := range list {
-		if entry == str {
-			return true
-		}
-	}
+import "slices"
 
-	return false
+func InList(str string, list []string) bool {
+	return slices.Contains(list, str)
 }

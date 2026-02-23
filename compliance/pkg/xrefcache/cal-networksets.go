@@ -75,7 +75,7 @@ func (v *versionedCalicoGlobalNetworkSet) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedNetworkSetResource interface.
-func (v *versionedCalicoGlobalNetworkSet) GetCalicoV1() interface{} {
+func (v *versionedCalicoGlobalNetworkSet) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -106,7 +106,7 @@ func (v *versionedCalicoNetworkSet) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkSet) GetCalicoV1() interface{} {
+func (v *versionedCalicoNetworkSet) GetCalicoV1() any {
 	return v.v1
 }
 

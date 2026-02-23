@@ -18,8 +18,8 @@ func NewRemoteClusterConfigurationClient(r rest.Interface, group BackingAPIGroup
 	return &customResourceClient{
 		restClient:      r,
 		resource:        RemoteClusterConfigurationResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.RemoteClusterConfiguration{}),
-		k8sListType:     reflect.TypeOf(apiv3.RemoteClusterConfigurationList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.RemoteClusterConfiguration](),
+		k8sListType:     reflect.TypeFor[apiv3.RemoteClusterConfigurationList](),
 		kind:            apiv3.KindRemoteClusterConfiguration,
 		apiGroup:        group,
 	}

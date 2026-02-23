@@ -710,10 +710,10 @@ func TestProcessCommunityRules_StandardCommunity(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Community advertisements with standard 2-part community
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "10.0.0.0/8",
-			"communities": []interface{}{"65000:100"},
+			"communities": []any{"65000:100"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -740,10 +740,10 @@ func TestProcessCommunityRules_LargeCommunity(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Community advertisements with large 3-part community
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "172.16.0.0/12",
-			"communities": []interface{}{"65000:100:200"},
+			"communities": []any{"65000:100:200"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -770,10 +770,10 @@ func TestProcessCommunityRules_MultipleCommunities(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Multiple communities for a single CIDR
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "10.0.0.0/8",
-			"communities": []interface{}{"65000:100", "65000:200", "65001:50:100"},
+			"communities": []any{"65000:100", "65000:200", "65001:50:100"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -801,14 +801,14 @@ func TestProcessCommunityRules_MultipleCIDRs(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Multiple advertisements with different CIDRs
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "10.0.0.0/8",
-			"communities": []interface{}{"65000:100"},
+			"communities": []any{"65000:100"},
 		},
 		{
 			"cidr":        "192.168.0.0/16",
-			"communities": []interface{}{"65000:200"},
+			"communities": []any{"65000:200"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -834,10 +834,10 @@ func TestProcessCommunityRules_IPv6(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// IPv6 prefix advertisement
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "fd00::/8",
-			"communities": []interface{}{"65000:100"},
+			"communities": []any{"65000:100"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -862,18 +862,18 @@ func TestProcessCommunityRules_NodeSpecific(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Node-specific should take precedence over global
-	nodeAdv := []map[string]interface{}{
+	nodeAdv := []map[string]any{
 		{
 			"cidr":        "10.0.0.0/8",
-			"communities": []interface{}{"65001:100"}, // Node-specific
+			"communities": []any{"65001:100"}, // Node-specific
 		},
 	}
 	nodeAdvJSON, _ := json.Marshal(nodeAdv)
 
-	globalAdv := []map[string]interface{}{
+	globalAdv := []map[string]any{
 		{
 			"cidr":        "172.16.0.0/12",
-			"communities": []interface{}{"65000:200"}, // Global (should be ignored)
+			"communities": []any{"65000:200"}, // Global (should be ignored)
 		},
 	}
 	globalAdvJSON, _ := json.Marshal(globalAdv)
@@ -901,10 +901,10 @@ func TestProcessCommunityRules_GlobalFallback(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Only global defined, no node-specific
-	globalAdv := []map[string]interface{}{
+	globalAdv := []map[string]any{
 		{
 			"cidr":        "172.16.0.0/12",
-			"communities": []interface{}{"65000:200"},
+			"communities": []any{"65000:200"},
 		},
 	}
 	globalAdvJSON, _ := json.Marshal(globalAdv)
@@ -947,10 +947,10 @@ func TestProcessCommunityRules_EmptyCommunities(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Advertisement with empty communities array
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr":        "10.0.0.0/8",
-			"communities": []interface{}{},
+			"communities": []any{},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -975,10 +975,10 @@ func TestProcessCommunityRules_InvalidCommunityFormat(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Community with invalid format (not 2 or 3 parts)
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr": "10.0.0.0/8",
-			"communities": []interface{}{
+			"communities": []any{
 				"65000",     // Invalid: only 1 part
 				"65000:100", // Valid: 2 parts
 				"a:b:c:d",   // Invalid: 4 parts
@@ -1009,9 +1009,9 @@ func TestProcessCommunityRules_MissingCIDR(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Advertisement without CIDR field
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
-			"communities": []interface{}{"65000:100"},
+			"communities": []any{"65000:100"},
 		},
 	}
 	advJSON, _ := json.Marshal(advertisements)
@@ -1036,7 +1036,7 @@ func TestProcessCommunityRules_MissingCommunities(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Advertisement without communities field
-	advertisements := []map[string]interface{}{
+	advertisements := []map[string]any{
 		{
 			"cidr": "10.0.0.0/8",
 		},
@@ -1068,7 +1068,7 @@ func TestProcessMeshPeers_BasicMesh(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Create mesh configuration
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1113,7 +1113,7 @@ func TestProcessMeshPeers_IPv6(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1146,7 +1146,7 @@ func TestProcessMeshPeers_MeshDisabled(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": false,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1176,7 +1176,7 @@ func TestProcessMeshPeers_RouteReflector(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1206,7 +1206,7 @@ func TestProcessMeshPeers_SkipRouteReflectorPeers(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1239,7 +1239,7 @@ func TestProcessMeshPeers_PassiveMode(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1282,7 +1282,7 @@ func TestProcessMeshPeers_WithPasswordAndRestartTime(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
@@ -1315,7 +1315,7 @@ func TestProcessGlobalPeers_BasicPeer(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":     "192.168.1.100",
 		"as_num": "65000",
 	}
@@ -1348,7 +1348,7 @@ func TestProcessGlobalPeers_IPv6Peer(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":          "2001:db8::100",
 		"as_num":      "65000",
 		"source_addr": "UseNodeIP", // Required to set SourceAddr
@@ -1382,7 +1382,7 @@ func TestProcessGlobalPeers_WithPassword(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":       "192.168.1.100",
 		"as_num":   "65000",
 		"password": "bgp-secret",
@@ -1414,7 +1414,7 @@ func TestProcessGlobalPeers_WithTTLSecurity(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":           "192.168.1.100",
 		"as_num":       "65000",
 		"ttl_security": float64(64),
@@ -1446,7 +1446,7 @@ func TestProcessNodePeers_BasicPeer(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":     "172.16.0.100",
 		"as_num": "65001",
 	}
@@ -1479,7 +1479,7 @@ func TestProcessNodePeers_IPv6Peer(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":     "fe80::100",
 		"as_num": "65001",
 	}
@@ -1512,7 +1512,7 @@ func TestProcessNodePeers_LocalBGPPeer(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Local BGP peers use the regular peer_v4 path with local_bgp_peer: true
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":             "192.168.1.50", // Local workload IP
 		"as_num":         "64512",
 		"local_bgp_peer": true, // This marks it as a local BGP peer
@@ -1544,18 +1544,18 @@ func TestProcessPeers_CombinedMeshGlobalNode(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, _ := json.Marshal(meshConfig)
 
-	globalPeerData := map[string]interface{}{
+	globalPeerData := map[string]any{
 		"ip":     "192.168.1.100",
 		"as_num": "65000",
 	}
 	globalPeerJSON, _ := json.Marshal(globalPeerData)
 
-	nodePeerData := map[string]interface{}{
+	nodePeerData := map[string]any{
 		"ip":     "172.16.0.100",
 		"as_num": "65001",
 	}
@@ -1640,7 +1640,7 @@ func TestProcessPeers_NextHopModes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerData := map[string]interface{}{
+			peerData := map[string]any{
 				"ip":     "192.168.1.100",
 				"as_num": tt.peerAS,
 			}
@@ -1680,7 +1680,7 @@ func TestProcessPeers_RouteReflectorClient(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":            "192.168.1.100",
 		"as_num":        "64512",     // Same AS for iBGP
 		"rr_cluster_id": "cluster-2", // Different cluster ID
@@ -1714,7 +1714,7 @@ func TestProcessPeers_LocalAS(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":                 "192.168.1.100",
 		"as_num":             "65000",
 		"local_as_num":       "64000",
@@ -1749,10 +1749,10 @@ func TestProcessPeers_LocalAS(t *testing.T) {
 
 func TestBuildImportFilter_WithBGPFilter(t *testing.T) {
 	// Create a BGP filter resource with import rules
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{
 					"action":        "Accept",
 					"matchOperator": "In",
 					"cidr":          "10.0.0.0/8",
@@ -1777,19 +1777,19 @@ func TestBuildImportFilter_WithBGPFilter(t *testing.T) {
 }
 
 func TestBuildImportFilter_WithMultipleBGPFilters(t *testing.T) {
-	filter1 := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+	filter1 := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{"action": "Accept"},
 			},
 		},
 	}
 	filter1JSON, _ := json.Marshal(filter1)
 
-	filter2 := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{"action": "Reject"},
+	filter2 := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{"action": "Reject"},
 			},
 		},
 	}
@@ -1810,10 +1810,10 @@ func TestBuildImportFilter_WithMultipleBGPFilters(t *testing.T) {
 }
 
 func TestBuildImportFilter_IPv6Filter(t *testing.T) {
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV6": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV6": []any{
+				map[string]any{
 					"action": "Accept",
 					"cidr":   "fd00::/8",
 				},
@@ -1836,10 +1836,10 @@ func TestBuildImportFilter_IPv6Filter(t *testing.T) {
 
 func TestBuildImportFilter_FilterWithNoImportRules(t *testing.T) {
 	// Filter has export rules but no import rules
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"exportV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"exportV4": []any{
+				map[string]any{"action": "Accept"},
 			},
 		},
 	}
@@ -1875,10 +1875,10 @@ func TestBuildImportFilter_FilterNotFound(t *testing.T) {
 }
 
 func TestBuildExportFilter_WithBGPFilter(t *testing.T) {
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"exportV4": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"exportV4": []any{
+				map[string]any{
 					"action": "Accept",
 					"cidr":   "10.0.0.0/8",
 				},
@@ -1903,10 +1903,10 @@ func TestBuildExportFilter_WithBGPFilter(t *testing.T) {
 }
 
 func TestBuildExportFilter_IPv6Filter(t *testing.T) {
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"exportV6": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"exportV6": []any{
+				map[string]any{
 					"action": "Accept",
 				},
 			},
@@ -1928,10 +1928,10 @@ func TestBuildExportFilter_IPv6Filter(t *testing.T) {
 
 func TestBuildExportFilter_FilterWithNoExportRules(t *testing.T) {
 	// Filter has import rules but no export rules
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{"action": "Accept"},
 			},
 		},
 	}
@@ -1957,16 +1957,16 @@ func TestProcessGlobalPeers_WithBGPFilter(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Create BGP filter resource with both import and export rules
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{
 					"action": "Accept",
 					"cidr":   "10.0.0.0/8",
 				},
 			},
-			"exportV4": []interface{}{
-				map[string]interface{}{
+			"exportV4": []any{
+				map[string]any{
 					"action": "Reject",
 					"cidr":   "192.168.0.0/16",
 				},
@@ -1975,10 +1975,10 @@ func TestProcessGlobalPeers_WithBGPFilter(t *testing.T) {
 	}
 	bgpFilterJSON, _ := json.Marshal(bgpFilter)
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":      "192.168.1.100",
 		"as_num":  "65000",
-		"filters": []interface{}{"test-filter"},
+		"filters": []any{"test-filter"},
 	}
 	peerDataJSON, _ := json.Marshal(peerData)
 
@@ -2016,16 +2016,16 @@ func TestProcessGlobalPeers_WithBGPFilter_IPv6(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Create BGP filter resource with IPv6 rules
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV6": []interface{}{
-				map[string]interface{}{
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV6": []any{
+				map[string]any{
 					"action": "Accept",
 					"cidr":   "fd00::/8",
 				},
 			},
-			"exportV6": []interface{}{
-				map[string]interface{}{
+			"exportV6": []any{
+				map[string]any{
 					"action": "Accept",
 				},
 			},
@@ -2033,10 +2033,10 @@ func TestProcessGlobalPeers_WithBGPFilter_IPv6(t *testing.T) {
 	}
 	bgpFilterJSON, _ := json.Marshal(bgpFilter)
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":      "2001:db8::100",
 		"as_num":  "65000",
-		"filters": []interface{}{"ipv6-bgp-filter"},
+		"filters": []any{"ipv6-bgp-filter"},
 	}
 	peerDataJSON, _ := json.Marshal(peerData)
 
@@ -2074,19 +2074,19 @@ func TestProcessGlobalPeers_WithLongFilterName(t *testing.T) {
 	// Create a BGP filter with a very long name that needs truncation
 	longFilterName := "this-is-a-very-long-bgp-filter-name-that-exceeds-bird-symbol-limit"
 
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{"action": "Accept"},
 			},
 		},
 	}
 	bgpFilterJSON, _ := json.Marshal(bgpFilter)
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":      "192.168.1.100",
 		"as_num":  "65000",
-		"filters": []interface{}{longFilterName},
+		"filters": []any{longFilterName},
 	}
 	peerDataJSON, _ := json.Marshal(peerData)
 
@@ -2126,22 +2126,22 @@ func TestProcessNodePeers_WithBGPFilter(t *testing.T) {
 	defer func() { NodeName = originalNodeName }()
 
 	// Create BGP filter resource
-	bgpFilter := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"importV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+	bgpFilter := map[string]any{
+		"spec": map[string]any{
+			"importV4": []any{
+				map[string]any{"action": "Accept"},
 			},
-			"exportV4": []interface{}{
-				map[string]interface{}{"action": "Accept"},
+			"exportV4": []any{
+				map[string]any{"action": "Accept"},
 			},
 		},
 	}
 	bgpFilterJSON, _ := json.Marshal(bgpFilter)
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":      "172.16.0.100",
 		"as_num":  "65001",
-		"filters": []interface{}{"node-peer-filter"},
+		"filters": []any{"node-peer-filter"},
 	}
 	peerDataJSON, _ := json.Marshal(peerData)
 
@@ -2283,17 +2283,17 @@ func TestPopulateNodeConfig_PeerDebugMode(t *testing.T) {
 }
 
 func TestProcessBFDConfig_Success(t *testing.T) {
-	bfdConfig := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"interfaces": []interface{}{
-				map[string]interface{}{
+	bfdConfig := map[string]any{
+		"spec": map[string]any{
+			"interfaces": []any{
+				map[string]any{
 					"matchPattern":        "eth*",
 					"minimumRecvInterval": "10ms",
 					"minimumSendInterval": "100ms",
 					"idleSendInterval":    "1m",
 					"multiplier":          5,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"matchPattern":        "ens*",
 					"minimumRecvInterval": "20ms",
 					"minimumSendInterval": "200ms",
@@ -2346,10 +2346,10 @@ func TestProcessBFDConfig_NoConfig(t *testing.T) {
 
 func TestProcessBFDConfig_NilIntervals(t *testing.T) {
 	// Test that nil intervals default to "0ms"
-	bfdConfig := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"interfaces": []interface{}{
-				map[string]interface{}{
+	bfdConfig := map[string]any{
+		"spec": map[string]any{
+			"interfaces": []any{
+				map[string]any{
 					"matchPattern": "eth0",
 					// All intervals are nil/missing
 					"multiplier": 5,
@@ -2380,7 +2380,7 @@ func TestBuildPeerFromData_DirectlyConnected(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":                 "192.168.1.100",
 		"as_num":             "65000",
 		"directly_connected": true,
@@ -2422,7 +2422,7 @@ func TestBuildPeerFromData_GatewayMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerData := map[string]interface{}{
+			peerData := map[string]any{
 				"ip":           "192.168.1.100",
 				"as_num":       "65000",
 				"gateway_mode": tt.gatewayMode,
@@ -2456,7 +2456,7 @@ func TestBuildPeerFromData_EnableBFD(t *testing.T) {
 	NodeName = "node-1"
 	defer func() { NodeName = originalNodeName }()
 
-	peerData := map[string]interface{}{
+	peerData := map[string]any{
 		"ip":         "192.168.1.100",
 		"as_num":     "65000",
 		"enable_bfd": true,
@@ -2521,7 +2521,7 @@ func TestBuildPeerFromData_LongLivedGracefulRestart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerData := map[string]interface{}{
+			peerData := map[string]any{
 				"ip":     "192.168.1.100",
 				"as_num": "65000",
 			}
@@ -2583,7 +2583,7 @@ func TestBuildPeerFromData_ExternalNetwork(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerData := map[string]interface{}{
+			peerData := map[string]any{
 				"ip":               "192.168.1.100",
 				"as_num":           "65000",
 				"external_network": "test-net",
@@ -2598,8 +2598,8 @@ func TestBuildPeerFromData_ExternalNetwork(t *testing.T) {
 
 			if tt.externalNetworkExists {
 				// Add the external network to the cache
-				externalNetworkData := map[string]interface{}{
-					"metadata": map[string]interface{}{
+				externalNetworkData := map[string]any{
+					"metadata": map[string]any{
 						"name": "test-net",
 					},
 				}
@@ -2653,7 +2653,7 @@ func TestConfigCache_ConcurrentReadWrite(t *testing.T) {
 	configCacheMutex.Unlock()
 
 	// Enable mesh for more realistic scenario
-	meshConfig := map[string]interface{}{
+	meshConfig := map[string]any{
 		"enabled": true,
 	}
 	meshConfigJSON, err := json.Marshal(meshConfig)
@@ -2683,7 +2683,7 @@ func TestConfigCache_ConcurrentReadWrite(t *testing.T) {
 
 	// Simulate concurrent template rendering - this mimics what happens
 	// in processor.go when monitorPrefix spawns goroutines for each template
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()

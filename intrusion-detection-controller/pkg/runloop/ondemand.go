@@ -7,17 +7,17 @@ import (
 	"sync"
 )
 
-type RunFunc func(context.Context, func(context.Context, interface{}))
+type RunFunc func(context.Context, func(context.Context, any))
 
-type EnqueueFunc func(interface{})
+type EnqueueFunc func(any)
 
 func OnDemand() (RunFunc, EnqueueFunc) {
 	var done bool
-	var next interface{}
+	var next any
 	var lock sync.Mutex
 	cond := sync.NewCond(&lock)
 
-	run := func(ctx context.Context, f func(context.Context, interface{})) {
+	run := func(ctx context.Context, f func(context.Context, any)) {
 		go func() {
 			<-ctx.Done()
 			lock.Lock()
@@ -43,7 +43,7 @@ func OnDemand() (RunFunc, EnqueueFunc) {
 			}
 		}
 	}
-	enqueue := func(x interface{}) {
+	enqueue := func(x any) {
 		lock.Lock()
 		next = x
 		cond.Signal()

@@ -484,8 +484,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(searchResults.Aggregations).To(HaveKey("flog_buckets"))
 
 			m := searchResults.Aggregations["flog_buckets"]
-			Expect(m).To(BeAssignableToTypeOf(map[string]interface{}{}))
-			b := m.(map[string]interface{})
+			Expect(m).To(BeAssignableToTypeOf(map[string]any{}))
+			b := m.(map[string]any)
 			Expect(b).To(HaveKey("buckets"))
 			Expect(b["buckets"]).To(HaveLen(3))
 
@@ -572,7 +572,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			// Create a mock list pager to get results from Linseed.
 			// listFn mocks out results from Linseed.
 			listFn := func(ctx context.Context, p lapiv1.Params) (*lapiv1.List[lapiv1.L3Flow], error) {
-				afterKey := map[string]interface{}{"": ""}
+				afterKey := map[string]any{"": ""}
 				r := lapiv1.List[lapiv1.L3Flow]{
 					Items: []lapiv1.L3Flow{resp.Items[i]},
 				}
@@ -708,8 +708,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			convertedResults := searchResults.(*pip.FlowLogResults)
 
 			// Since bucket ordering can be different just check for the length
-			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]interface{})
-			buckets := flogBuckets["buckets"].([]map[string]interface{})
+			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]any)
+			buckets := flogBuckets["buckets"].([]map[string]any)
 			Expect(len(buckets)).To(BeNumerically("==", 2))
 		})
 
@@ -752,8 +752,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
 			convertedResults.Took = 3
-			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]interface{})
-			buckets := flogBuckets["buckets"].([]map[string]interface{})
+			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]any)
+			buckets := flogBuckets["buckets"].([]map[string]any)
 			Expect(len(buckets)).To(BeNumerically("==", 0))
 		})
 

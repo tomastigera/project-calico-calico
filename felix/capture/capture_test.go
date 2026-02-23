@@ -86,7 +86,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 1
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -137,7 +137,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 10
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -159,7 +159,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		wg.Add(numberOfPackets)
 		go func() {
 
-			for i := 0; i < numberOfPackets; i++ {
+			for range numberOfPackets {
 				packet := dummyPacket()
 
 				packets <- packet
@@ -195,7 +195,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var err error
 		var numberOfPackets = 3
 		var maxSize = capture.GlobalHeaderLen + (dummyPacketDataSize() + capture.PacketInfoLen)
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -217,7 +217,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		// Write 10 packets
 		wg.Add(numberOfPackets)
 		go func() {
-			for i := 0; i < numberOfPackets; i++ {
+			for range numberOfPackets {
 				packet := dummyPacket()
 
 				packets <- packet
@@ -257,7 +257,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -279,8 +279,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}()
 
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			packet := dummyPacket()
 
 			// Write 1 packet and invoke time rotation
@@ -295,8 +294,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			// Write 1 packet to flush data being written to current pcap file
 			packets <- packet
 
-			wg.Done()
-		}()
+		})
 
 		// Wait for all the packets to be written to file
 		wg.Wait()
@@ -330,7 +328,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var maxAge = 1
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -376,7 +374,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var packets = make(chan gopacket.Packet)
 		defer close(packets)
 		pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName,
-			make(chan interface{}, 100),
+			make(chan any, 100),
 			capture.WithRotationSeconds(maxAge),
 			capture.WithMaxSizeBytes(maxSize),
 			capture.WithTicker(ticker),
@@ -395,7 +393,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		go func() {
 			packet := dummyPacket()
 
-			for i := 0; i < half; i++ {
+			for range half {
 				packets <- packet
 				wg.Done()
 			}
@@ -436,7 +434,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var maxSize = capture.GlobalHeaderLen + half*(dummyPacketDataSize()+capture.PacketInfoLen)
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -463,7 +461,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		go func() {
 			packet := dummyPacket()
 
-			for i := 0; i < half; i++ {
+			for range half {
 				packets <- packet
 				wg.Done()
 			}
@@ -504,7 +502,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var numberOfPackets = 10
 		var maxSize = capture.GlobalHeaderLen + (dummyPacketDataSize() + capture.PacketInfoLen)
 		var maxFiles = 2
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -530,7 +528,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		// We set the max size to one packet and want to keep only 3 files
 		wg.Add(numberOfPackets)
 		go func() {
-			for i := 0; i < numberOfPackets; i++ {
+			for range numberOfPackets {
 				packet := dummyPacket()
 
 				packets <- packet
@@ -550,7 +548,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		// Assert that three updates were sent
 		var update = make([]*proto.PacketCaptureStatusUpdate, 11)
-		for i := 0; i < numberOfPackets; i++ {
+		for i := range numberOfPackets {
 			Eventually(updates).Should(Receive(&update[i]))
 		}
 
@@ -571,7 +569,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	It("Start a capture after it has been stopped", func() {
 
 		var err error
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -639,7 +637,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 	It("Close capture after write channel has been stopped", func() {
 		var err error
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -682,20 +680,18 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 
 		// Initialise a new capture
-		var pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName, make(chan interface{}, 100))
+		var pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName, make(chan any, 100))
 
 		// Capture listens to incoming packets
 		var packets = make(chan gopacket.Packet)
 		defer close(packets)
 
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			defer GinkgoRecover()
 
 			err = pcap.Write(packets)
 			Expect(err).NotTo(HaveOccurred())
-			wg.Done()
-		}()
+		})
 
 		packet := dummyPacket()
 
@@ -719,7 +715,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 1
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Write a pcap file in order to simulate a previous capture
@@ -784,7 +780,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 	It("Clean files when calling clean", func() {
 		var err error
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -830,7 +826,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 1
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -885,7 +881,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	})
 
 	It("Moves to Finished when endTime is in the past", func() {
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Write a pcap file in order to simulate a previous capture
@@ -918,7 +914,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	})
 
 	It("Moves to Scheduled when startTime is defined", func() {
-		var updates = make(chan interface{}, 100)
+		var updates = make(chan any, 100)
 		defer close(updates)
 
 		// Write a pcap file in order to simulate a previous capture

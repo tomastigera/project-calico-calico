@@ -194,7 +194,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 
 		// Create 5 Feeds.
 		createdAtTime := time.Unix(0, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			feed := []v1.DomainNameSetThreatFeed{
 				{
 					ID: strconv.Itoa(i),
@@ -213,7 +213,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.DomainNameSetThreatFeedParams{
 				QueryParams: v1.QueryParams{
@@ -287,7 +287,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		// Create > 10K threat feeds.
 		createdAtTime := time.Unix(0, 0).UTC()
 		var feeds []v1.DomainNameSetThreatFeed
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			feeds = append(feeds, v1.DomainNameSetThreatFeed{
 				ID: strconv.Itoa(i),
 				Data: &v1.DomainNameSetThreatFeedData{

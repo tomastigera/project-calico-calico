@@ -293,7 +293,6 @@ var _ = Describe("Test CC TenantID Claim", func() {
 		{name: "should reject a user with incorrect claim value", tenantIDsClaim: []any{"someOtherTenantID"}},
 		{name: "should reject a user with incorrect claim type", tenantIDsClaim: ccRequiredTenantID /* `string`, not `[]any` */},
 	} {
-		test := test // beware loop variable capture
 
 		It(test.name, func() {
 

@@ -19,13 +19,11 @@ var _ = Describe("extractSNI", func() {
 		})
 
 		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if err := cli.Handshake(); err != nil {
 				log.Error(err)
 			}
-		}()
+		})
 		extractedServerName, bytesRead, err := extractSNI(dst)
 
 		Expect(err).ShouldNot(HaveOccurred())
@@ -37,12 +35,10 @@ var _ = Describe("extractSNI", func() {
 		src, dst := net.Pipe()
 
 		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := src.Write([]byte("ting\r\n"))
 			Expect(err).ShouldNot(HaveOccurred())
-		}()
+		})
 		extractedServerName, bytesRead, err := extractSNI(dst)
 
 		Expect(err).Should(BeAssignableToTypeOf(tls.RecordHeaderError{}))

@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"context"
 	"testing"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -45,8 +44,7 @@ func (p *disabledProvider) Check(*policystore.PolicyStore, *authz.CheckRequest) 
 }
 
 func TestServerCheckerProvidersNone(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	psm := policystore.NewPolicyStoreManager()
 	dpStats := statscache.New()
@@ -64,8 +62,7 @@ func TestServerCheckerProvidersNone(t *testing.T) {
 }
 
 func TestServerCheckerProvidersAllOK(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	psm := policystore.NewPolicyStoreManager()
 	dpStats := statscache.New()
@@ -86,8 +83,7 @@ func TestServerCheckerProvidersAllOK(t *testing.T) {
 }
 
 func TestServerCheckerProvidersAllDeny(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	psm := policystore.NewPolicyStoreManager()
 	dpStats := statscache.New()
@@ -108,8 +104,7 @@ func TestServerCheckerProvidersAllDeny(t *testing.T) {
 }
 
 func TestServerCheckerProvidersAllowWithDisabled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// It should be ok for one disabled and one ok, no matter the order
 	for _, providers := range [][]CheckProvider{
@@ -136,8 +131,7 @@ func TestServerCheckerProvidersAllowWithDisabled(t *testing.T) {
 }
 
 func TestServerCheckerProvidersDenyWithDisabled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// It should be ok for one disabled and one ok, no matter the order
 	for _, providers := range [][]CheckProvider{
@@ -164,8 +158,7 @@ func TestServerCheckerProvidersDenyWithDisabled(t *testing.T) {
 }
 
 func TestServerCheckerProvidersFiftyFifty(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	psm := policystore.NewPolicyStoreManager()
 	dpStats := statscache.New()

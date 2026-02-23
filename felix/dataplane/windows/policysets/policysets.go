@@ -66,7 +66,7 @@ func NewPolicySets(hns HNSAPI, ipsetCaches []IPSetCache, reader StaticRulesReade
 
 // AddOrReplacePolicySet is responsible for the creation (or replacement) of a Policy set
 // and it is capable of processing either Profiles or Policies from the datastore.
-func (s *PolicySets) AddOrReplacePolicySet(id types.IDMaker, policy interface{}) {
+func (s *PolicySets) AddOrReplacePolicySet(id types.IDMaker, policy any) {
 	log.WithField("setID", id).Info("Processing add/replace of Policy set")
 
 	// Process the policy/profile from the datastore and convert it into
@@ -669,11 +669,7 @@ func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.P
 		splits = append(splits, []*proto.PortRange{})
 	}
 	for i := 0; i < len(ports); i += chunkSize {
-		last := i + chunkSize
-
-		if last > len(ports) {
-			last = len(ports)
-		}
+		last := min(i+chunkSize, len(ports))
 
 		splits = append(splits, ports[i:last])
 	}
@@ -686,11 +682,7 @@ func SplitIPList(ipAddrs []string, chunkSize int) (splits [][]string) {
 		splits = append(splits, []string{})
 	}
 	for i := 0; i < len(ipAddrs); i += chunkSize {
-		last := i + chunkSize
-
-		if last > len(ipAddrs) {
-			last = len(ipAddrs)
-		}
+		last := min(i+chunkSize, len(ipAddrs))
 
 		splits = append(splits, ipAddrs[i:last])
 	}

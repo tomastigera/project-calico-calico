@@ -21,7 +21,7 @@ import (
 
 // ArgStringOrBlank returns the requested argument as a string, or as a blank
 // string if the argument is not present.
-func ArgStringOrBlank(args map[string]interface{}, argName string) string {
+func ArgStringOrBlank(args map[string]any, argName string) string {
 	if args[argName] != nil {
 		return args[argName].(string)
 	}
@@ -30,7 +30,7 @@ func ArgStringOrBlank(args map[string]interface{}, argName string) string {
 
 // ArgStringsOrBlank returns the requested argument as a []string, or as a
 // []string{""} if the argument is not present.
-func ArgStringsOrBlank(args map[string]interface{}, argName string) []string {
+func ArgStringsOrBlank(args map[string]any, argName string) []string {
 	val := args[argName].([]string)
 	if len(val) > 0 {
 		return val
@@ -40,7 +40,7 @@ func ArgStringsOrBlank(args map[string]interface{}, argName string) []string {
 
 // ArgBoolOrFalse returns the requested argument as a boolean, or as false
 // if the argument is not present.
-func ArgBoolOrFalse(args map[string]interface{}, argName string) bool {
+func ArgBoolOrFalse(args map[string]any, argName string) bool {
 	if args[argName] != nil {
 		return args[argName].(bool)
 	}
@@ -48,7 +48,7 @@ func ArgBoolOrFalse(args map[string]interface{}, argName string) bool {
 }
 
 // ArgString returns the requested argument as a string or an error
-func ArgString(args map[string]interface{}, argName string) (string, error) {
+func ArgString(args map[string]any, argName string) (string, error) {
 	if args[argName] != nil {
 		var param = args[argName]
 		switch v := param.(type) {

@@ -138,7 +138,7 @@ var _ = Describe("File Parser", func() {
 	It("should stop tailing alert file on reaching EOF if snort is no longer running", func() {
 		numberOfCalls := 14
 		var mockResults []rest.MockResult
-		for i := 0; i < numberOfCalls; i++ {
+		for range numberOfCalls {
 			mockResults = append(mockResults, rest.MockResult{
 				Body: lsv1.BulkResponse{
 					Total:     1,
@@ -382,7 +382,7 @@ var _ = Describe("File Parser", func() {
 	It("should process all previous leftover files during startup", func() {
 		numberOfCalls := 20
 		var mockResults []rest.MockResult
-		for i := 0; i < numberOfCalls; i++ {
+		for range numberOfCalls {
 			mockResults = append(mockResults, rest.MockResult{
 				Body: lsv1.BulkResponse{
 					Total:     1,

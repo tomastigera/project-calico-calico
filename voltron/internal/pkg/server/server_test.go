@@ -1508,21 +1508,15 @@ func createAndStartServer(fakeClient ctrlclient.WithWatch, config *rest.Config, 
 	Expect(err).NotTo(HaveOccurred())
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = srv.ServeHTTPS(lisHTTPS, "", "")
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		_ = srv.ServeInternalHTTPS(lisInternalHTTPS, "", "")
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		_ = srv.ServeTunnelsTLS(lisTun)
-	}()
+	})
 
 	go func() {
 		_ = srv.WatchK8s()

@@ -65,7 +65,7 @@ func EvalSelectorPrintJSON(output OutputList) {
 	}
 }
 
-func EvalSelectorPrintObjects(sel string, matches map[interface{}][]string) OutputList {
+func EvalSelectorPrintObjects(sel string, matches map[any][]string) OutputList {
 	output := OutputList{
 		Description: fmt.Sprintf("Endpoints matching selector %v", sel),
 	}

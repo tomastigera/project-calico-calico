@@ -411,7 +411,7 @@ func calculateHostSideVethName(namespace, podName string, interfaceIndex int) st
 	// A SHA1 is always 20 bytes long, and so is sufficient for generating the
 	// veth name and mac addr.
 	h := sha1.New()
-	h.Write([]byte(fmt.Sprintf("%s.%s", namespace, podName)))
+	h.Write(fmt.Appendf(nil, "%s.%s", namespace, podName))
 
 	var containerID string
 	var containerSuffixLen int

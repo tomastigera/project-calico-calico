@@ -2006,7 +2006,7 @@ func TestElasticResponses(t *testing.T) {
 		name string
 
 		// Response from elastic to be returned by the mock server.
-		response interface{}
+		response any
 
 		// Expected error
 		err bool
@@ -2179,7 +2179,7 @@ func populateFlowData(t *testing.T, ctx context.Context, b *backendutils.FlowLog
 func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, info bapi.ClusterInfo, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// We want a variety of label keys and values,
 		// so base this one off of the loop variable.
 		// Note: We use a nested terms aggregation to get labels, which has an
@@ -2578,7 +2578,7 @@ func TestL3FlowCount(t *testing.T) {
 			Tenant:  backendutils.RandomTenantName(),
 		}
 
-		for i := int64(0); i < totalCount; i++ {
+		for i := range totalCount {
 			bld := backendutils.NewFlowLogBuilder()
 			bld.WithType("wep").
 				WithSourceNamespace(fmt.Sprintf("namespace-%d", i)).
@@ -2628,7 +2628,7 @@ func TestL3FlowCount(t *testing.T) {
 			require.False(t, response.GlobalCountTruncated)
 			require.NotNil(t, response.NamespacedCounts)
 			require.Len(t, response.NamespacedCounts, int(expectedCount+1)) // n source namespaces + kube-system
-			for i := int64(0); i < expectedCount; i++ {
+			for i := range expectedCount {
 				require.Equal(t, int64(1), response.NamespacedCounts[fmt.Sprintf("namespace-%d", i)])
 			}
 			require.Equal(t, expectedCount, response.NamespacedCounts["kube-system"])
@@ -2856,7 +2856,7 @@ func TestConvertPoliciesCompatibility(t *testing.T) {
 
 		for _, term := range requiredTerms {
 			if _, exists := terms[term]; !exists {
-				terms[term] = &lmaelastic.AggregatedTerm{Buckets: map[interface{}]int64{}}
+				terms[term] = &lmaelastic.AggregatedTerm{Buckets: map[any]int64{}}
 			}
 		}
 
@@ -2872,7 +2872,7 @@ func TestConvertPoliciesCompatibility(t *testing.T) {
 	}
 
 	t.Run("should fallback to enforced_policies when all_policies is empty", func(t *testing.T) {
-		enforcedBuckets := make(map[interface{}]int64)
+		enforcedBuckets := make(map[any]int64)
 		enforcedBuckets["0|default|test-policy|allow|0"] = 10
 
 		aggTerms := map[string]*lmaelastic.AggregatedTerm{
@@ -2890,10 +2890,10 @@ func TestConvertPoliciesCompatibility(t *testing.T) {
 	})
 
 	t.Run("should use all_policies when present", func(t *testing.T) {
-		allPolicyBuckets := make(map[interface{}]int64)
+		allPolicyBuckets := make(map[any]int64)
 		allPolicyBuckets["0|default|all-policy|allow|0"] = 10
 
-		enforcedBuckets := make(map[interface{}]int64)
+		enforcedBuckets := make(map[any]int64)
 		enforcedBuckets["0|default|enforced-policy|allow|0"] = 10
 
 		aggTerms := map[string]*lmaelastic.AggregatedTerm{

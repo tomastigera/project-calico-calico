@@ -203,7 +203,7 @@ func TestController_AddFail(t *testing.T) {
 	gns := util.NewGlobalNetworkSet("test")
 	//
 	client := &calico.MockGlobalNetworkSetInterface{}
-	for i := 0; i < DefaultClientRetries+1; i++ {
+	for range DefaultClientRetries + 1 {
 		client.CreateError = append(client.CreateError, errors.New("test"))
 	}
 	uut := NewController(client)

@@ -29,7 +29,7 @@ import (
 
 var esAdminName = "any"
 var esAdminPassword = "any"
-var token = base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", esAdminName, esAdminPassword)))
+var token = base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", esAdminName, esAdminPassword))
 var esUser = elasticsearch.User{
 	Username: "anyUser",
 }

@@ -120,20 +120,16 @@ func (s *Server) Start() error {
 	}
 	if s.servercfg.TLSCert != "" && s.servercfg.TLSKey != "" {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTPS server")
-		s.wg.Add(1)
-		go func() {
+		s.wg.Go(func() {
 			log.Warningf("%v", s.server.ListenAndServeTLS(s.servercfg.TLSCert, s.servercfg.TLSKey))
 			<-s.stopCh
-			s.wg.Done()
-		}()
+		})
 	} else {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTP server")
-		s.wg.Add(1)
-		go func() {
+		s.wg.Go(func() {
 			log.Warning(s.server.ListenAndServe())
 			<-s.stopCh
-			s.wg.Done()
-		}()
+		})
 	}
 
 	return nil

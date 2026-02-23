@@ -46,7 +46,7 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		func(
 			namespace1, namespace2 *corev1.Namespace,
 			endpointName, endpointNamespace, policyTier string, policyOrder *float64,
-			matchingFlows []flowWithError, expectedPolicies interface{}) {
+			matchingFlows []flowWithError, expectedPolicies any) {
 
 			// Define the kubernetes interface
 			mockLmaK8sClientSet = &lmak8s.MockClientSet{}

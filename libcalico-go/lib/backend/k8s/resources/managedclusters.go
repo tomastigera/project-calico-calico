@@ -20,8 +20,8 @@ func NewManagedClusterClient(r rest.Interface, group BackingAPIGroup, cfg *apico
 	return &customResourceClient{
 		restClient:      r,
 		resource:        ManagedClusterResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.ManagedCluster{}),
-		k8sListType:     reflect.TypeOf(apiv3.ManagedClusterList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.ManagedCluster](),
+		k8sListType:     reflect.TypeFor[apiv3.ManagedClusterList](),
 		namespaced:      cfg.MultiTenantEnabled,
 		kind:            apiv3.KindManagedCluster,
 		apiGroup:        group,

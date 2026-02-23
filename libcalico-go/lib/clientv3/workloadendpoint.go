@@ -17,6 +17,7 @@ package clientv3
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -251,9 +252,7 @@ func (r workloadEndpoints) assignOrValidateName(res *libapiv3.WorkloadEndpoint) 
 // not user configurable.
 func (r workloadEndpoints) updateLabelsForStorage(res *libapiv3.WorkloadEndpoint) {
 	labelsCopy := make(map[string]string, len(res.GetLabels())+2)
-	for k, v := range res.GetLabels() {
-		labelsCopy[k] = v
-	}
+	maps.Copy(labelsCopy, res.GetLabels())
 	labelsCopy[apiv3.LabelNamespace] = res.Namespace
 	labelsCopy[apiv3.LabelOrchestrator] = res.Spec.Orchestrator
 	res.SetLabels(labelsCopy)

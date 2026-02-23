@@ -226,7 +226,7 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 
 				// Validate (for multiple flushes) that report cleanup occurs after each flush
 				oldReportIDSet, oldestReportID := getReportIDSetAndOldestReportID(reportDatas)
-				for i := 0; i < 5; i++ {
+				for range 5 {
 					var newReportIDSet map[string]bool
 					var oldestReportIDInNewSet string
 					// The retention period is set such that we should expect a report to be deleted every time a

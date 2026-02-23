@@ -607,18 +607,18 @@ var (
 var _ = Describe("Federated Endpoints Controller tests", func() {
 
 	var fsc *federatedServicesController
-	var eps map[string]interface{}
+	var eps map[string]any
 
 	BeforeEach(func() {
-		eps = make(map[string]interface{})
-		listFunc := func() (map[string]interface{}, error) {
+		eps = make(map[string]any)
+		listFunc := func() (map[string]any, error) {
 			return eps, nil
 		}
 
 		// Create a Cache to store federated Endpoints in.
 		cacheArgs := rcache.ResourceCacheArgs{
 			ListFunc:    listFunc,
-			ObjectType:  reflect.TypeOf(v1.Endpoints{}), //nolint:staticcheck
+			ObjectType:  reflect.TypeFor[v1.Endpoints](), //nolint:staticcheck
 			LogTypeDesc: "FederatedEndpoints",
 		}
 

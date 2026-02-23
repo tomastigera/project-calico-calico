@@ -55,13 +55,13 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 	It("should generate a valid Kubeconfig for non-cluster hosts", func() {
 		// Create the NonClusterHost resource
 		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "operator.tigera.io/v1",
 				"kind":       "NonClusterHost",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "tigera-secure",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"endpoint": "https://some.endpoint:1234",
 				},
 			},
@@ -133,7 +133,7 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 		Expect(ok).To(BeTrue())
 
 		claims := jwt.RegisteredClaims{}
-		tkn, err := jwt.ParseWithClaims(authInfo.Token, &claims, func(token *jwt.Token) (interface{}, error) {
+		tkn, err := jwt.ParseWithClaims(authInfo.Token, &claims, func(token *jwt.Token) (any, error) {
 			block, _ := pem.Decode(certsBuf.Bytes())
 			Expect(block).NotTo(BeNil())
 			Expect(block.Type).To(Equal("CERTIFICATE"))
@@ -156,13 +156,13 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 	It("should generate a valid Kubeconfig for non-cluster hosts and read certificate from file", func() {
 		// Create the NonClusterHost resource
 		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "operator.tigera.io/v1",
 				"kind":       "NonClusterHost",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "tigera-secure",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"endpoint": "https://some.endpoint:1234",
 				},
 			},
@@ -246,7 +246,7 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 		Expect(ok).To(BeTrue())
 
 		claims := jwt.RegisteredClaims{}
-		tkn, err := jwt.ParseWithClaims(authInfo.Token, &claims, func(token *jwt.Token) (interface{}, error) {
+		tkn, err := jwt.ParseWithClaims(authInfo.Token, &claims, func(token *jwt.Token) (any, error) {
 			block, _ := pem.Decode(certsBuf.Bytes())
 			Expect(block).NotTo(BeNil())
 			Expect(block.Type).To(Equal("CERTIFICATE"))
@@ -318,13 +318,13 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 	It("should return error when tigera-ca-private secret is missing", func() {
 		// Create the NonClusterHost resource
 		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "operator.tigera.io/v1",
 				"kind":       "NonClusterHost",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "tigera-secure",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"endpoint": "https://some.endpoint:1234",
 				},
 			},
@@ -357,13 +357,13 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 	It("should return error when service account is missing", func() {
 		// Create the NonClusterHost resource
 		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "operator.tigera.io/v1",
 				"kind":       "NonClusterHost",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "tigera-secure",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"endpoint": "https://some.endpoint:1234",
 				},
 			},

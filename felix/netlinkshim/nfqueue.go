@@ -49,7 +49,7 @@ func (nfc *realNfQueue) DebugKillConnection() error {
 			current = current.Elem()
 		}
 
-		if current.Kind() == reflect.Ptr {
+		if current.Kind() == reflect.Pointer {
 			current = current.Elem()
 		}
 

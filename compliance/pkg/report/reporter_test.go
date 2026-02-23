@@ -117,7 +117,7 @@ func (f *fakeLogDispatcher) Initialize() error {
 	return nil
 }
 
-func (f *fakeLogDispatcher) Dispatch(data interface{}) error {
+func (f *fakeLogDispatcher) Dispatch(data any) error {
 	return nil
 }
 

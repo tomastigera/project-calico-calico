@@ -186,7 +186,7 @@ func (e *eventRecorder) Event(object runtime.Object, eventtype, reason, message 
 	}
 }
 
-func (e *eventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *eventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...any) {
 	message := fmt.Sprintf(messageFmt, args...)
 	if eventtype == v1.EventTypeWarning {
 		log.Warnf("[EVENT] %s: %s: %s: %s", eventtype, reason, getSummaryName(object), message)
@@ -195,11 +195,11 @@ func (e *eventRecorder) Eventf(object runtime.Object, eventtype, reason, message
 	}
 }
 
-func (e *eventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *eventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...any) {
 	e.Eventf(object, eventtype, reason, messageFmt, args...)
 }
 
-func (e *eventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *eventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...any) {
 	e.Eventf(object, eventtype, reason, messageFmt, args...)
 }
 

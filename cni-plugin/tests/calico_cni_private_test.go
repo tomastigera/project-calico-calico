@@ -227,7 +227,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 				}
 			}()
 
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				// Now create a K8s pod.
 				name := fmt.Sprintf("run-%d-%d", i, rand.Uint32())
 				pod, err := clientset.CoreV1().Pods(testNS).Create(context.Background(), &v1.Pod{

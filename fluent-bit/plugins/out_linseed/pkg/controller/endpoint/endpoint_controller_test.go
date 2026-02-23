@@ -108,13 +108,13 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 			Expect(ec.dynamicFactory).NotTo(BeNil())
 
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"endpoint": "https://5.6.7.8:9012",
 					},
 				},
@@ -128,13 +128,13 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 			Expect(ec.Endpoint()).To(Equal("https://5.6.7.8:9012"))
 
 			obj2 := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"endpoint": "https://3.4.5.6:7890",
 					},
 				},

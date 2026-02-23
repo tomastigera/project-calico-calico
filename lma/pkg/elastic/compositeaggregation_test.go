@@ -409,7 +409,7 @@ var (
 var _ = Describe("Test unmarshaling of sample ES response", func() {
 	It("handles search returning an error", func() {
 		By("Creating an ES client with a mocked out search results")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonFirst, errors.New("foobar")})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonFirst, errors.New("foobar")})
 
 		By("Creating a composite agg query")
 		// Set max buckets to 1 so that we do more than one query.
@@ -464,7 +464,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 
 	It("handles search returning no buckets with an after_key", func() {
 		By("Creating an ES client with a mocked out search results, second query errors")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonNoBuckets})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonNoBuckets})
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
@@ -492,7 +492,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 
 	It("handles search returning no buckets with timedout flag set", func() {
 		By("Creating an ES client with a mocked out search results")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonTimedout})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonTimedout})
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
@@ -521,7 +521,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 
 	It("handles search returning buckets with no after key", func() {
 		By("Creating an ES client with a mocked out search results")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonNoAfterKey})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonNoAfterKey})
 
 		By("Creating a composite agg query")
 		// Set max buckets to query to be 1 so that we would normally query again - except there is no after key.
@@ -574,7 +574,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 
 	It("handles search in two blocks returning buckets, and all helper methods work", func() {
 		By("Creating an ES client with a mocked out search results")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonFirst, sampleEsResponseJsonNoAfterKey})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonFirst, sampleEsResponseJsonNoAfterKey})
 
 		By("Creating a composite agg query")
 		// Set max buckets to ensure we do a second search.
@@ -746,7 +746,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 
 	It("handles converting back into json", func() {
 		By("Creating an ES client with a mocked out search results")
-		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonTestMarshal})
+		client := pelastic.NewMockSearchClient([]any{sampleEsResponseJsonTestMarshal})
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
@@ -793,11 +793,11 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		converted := pelastic.CompositeAggregationBucketsToMap(results, q)
 		flog_buckets, ok := converted["flog_buckets"]
 		Expect(ok).To(BeTrue())
-		flog_buckets_map, ok := flog_buckets.(map[string]interface{})
+		flog_buckets_map, ok := flog_buckets.(map[string]any)
 		Expect(ok).To(BeTrue())
 		buckets, ok := flog_buckets_map["buckets"]
 		Expect(ok).To(BeTrue())
-		buckets_slice, _ := buckets.([]map[string]interface{})
+		buckets_slice, _ := buckets.([]map[string]any)
 		Expect(buckets_slice).To(HaveLen(1))
 		bucket := buckets_slice[0]
 

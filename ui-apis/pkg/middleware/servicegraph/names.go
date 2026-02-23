@@ -52,9 +52,7 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 	wg := sync.WaitGroup{}
 
 	var errHosts, errNodes error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		// If the user has specified a set of host aggregation selectors then query the Node resource and determine
 		// which selectors match which nodes. The nodes (hosts) matching a selector will be put in a hosts buckets
@@ -80,11 +78,9 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 			hh.hostNameToAggrName[node.Name] = "*"
 			hh.aggrNameToHostnames["*"] = append(hh.aggrNameToHostnames["*"], node.Name)
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		// Get the HostEndpoints to determine a HostEndpoint -> Host name mapping. We use this to correlate events
 		// related to HostEndpoint resources with the host or hosts node types.
@@ -97,7 +93,7 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 			log.Debugf("Hostendpoint to host name mapping: %s -> %s", hep.Name, hep.Spec.Node)
 			hh.hepToHostname[hep.Name] = hep.Spec.Node
 		}
-	}()
+	})
 
 	wg.Wait()
 

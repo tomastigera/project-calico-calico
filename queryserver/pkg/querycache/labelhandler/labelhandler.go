@@ -310,18 +310,18 @@ func (c *labelHandler) onDeletePolicy(key model.ResourceKey) {
 }
 
 // registerSelector registers a selector with the InheritIndex helper.
-func (c *labelHandler) registerSelector(selectorId interface{}, selector *selector.Selector) {
+func (c *labelHandler) registerSelector(selectorId any, selector *selector.Selector) {
 	c.index.UpdateSelector(selectorId, selector)
 }
 
 // unregisterSelector unregisters a selector with the InheritIndex helper.
-func (c *labelHandler) unregisterSelector(selectorId interface{}) {
+func (c *labelHandler) unregisterSelector(selectorId any) {
 	c.index.DeleteSelector(selectorId)
 }
 
 // onMatchStarted is called from the InheritIndex helper when a selector-endpoint match has
 // started.
-func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
+func (c *labelHandler) onMatchStarted(selId, epId any) {
 	switch s := selId.(type) {
 	case policyQueryId:
 		switch epId.(type) {
@@ -374,7 +374,7 @@ func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
 
 // onMatchStopped is called from the InheritIndex helper when a selector-endpoint match has
 // stopped.
-func (c *labelHandler) onMatchStopped(selId, epId interface{}) {
+func (c *labelHandler) onMatchStopped(selId, epId any) {
 	switch s := selId.(type) {
 	case policyQueryId:
 		// noop required - this occurs when the query is deleted.

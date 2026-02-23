@@ -65,7 +65,7 @@ Gbs6cLS+CkglnRCvTeWtkqf7SawqfH4eKPu6k6xO1yuL2ylbFp0=
 -----END RSA PRIVATE KEY-----
 `
 
-func loadKeys() (interface{}, interface{}, error) {
+func loadKeys() (any, any, error) {
 	block, _ := pem.Decode([]byte(pubRSA))
 	if block == nil {
 		return nil, nil, errors.New("no block in public key")
@@ -192,9 +192,7 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	defer close(resChan)
 
 	// Writer sends the msg
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		buf := msg
 
@@ -206,7 +204,7 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 			}
 			buf = buf[n:]
 		}
-	}()
+	})
 
 	// Reader reads the message
 	wg.Add(1)

@@ -1211,7 +1211,7 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			namespaces := make([]string, numNamespaces)
 			flows := make([]lsv1.FlowLog, numNamespaces)
 
-			for i := 0; i < numNamespaces; i++ {
+			for i := range numNamespaces {
 				nsName := fmt.Sprintf("ns-%05d", i)
 				namespaces[i] = nsName
 
@@ -2140,10 +2140,10 @@ func createBulkOptimizeIndexTemplate(esClient *elastic.Client) func() {
 	ctx := context.Background()
 
 	_, err := esClient.IndexPutTemplate("fv-bulk-optimize").
-		BodyJson(map[string]interface{}{
+		BodyJson(map[string]any{
 			"index_patterns": []string{"tigera_secure_ee_flows*"},
 			"order":          1000,
-			"settings": map[string]interface{}{
+			"settings": map[string]any{
 				"index.number_of_shards": 4,
 			},
 		}).Do(ctx)

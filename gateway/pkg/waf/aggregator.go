@@ -136,7 +136,7 @@ func (a *Aggregator) aggregateFields(agg *v1.WAFLog, log *v1.WAFLog) {
 			if aggField.Int() != logField.Int() {
 				aggField.SetInt(0)
 			}
-		case reflect.Ptr:
+		case reflect.Pointer:
 			if aggField.IsNil() && logField.IsNil() {
 				return
 			}

@@ -35,7 +35,7 @@ func NewPolicyRecommendationScopeStatusStorage(opts Options) (registry.DryRunnab
 		client:          c,
 		codec:           opts.RESTOptions.StorageConfig.Codec,
 		versioner:       APIObjectVersioner{},
-		aapiType:        reflect.TypeOf(v3.PolicyRecommendationScope{}),
+		aapiType:        reflect.TypeFor[v3.PolicyRecommendationScope](),
 		isNamespaced:    false,
 		update:          updateFn,
 		get:             getFn,

@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -277,7 +278,7 @@ func (idx *StatusIndexer) GetStats() map[string]int {
 
 // Gateway event handlers
 
-func (idx *StatusIndexer) handleGatewayAdd(obj interface{}) {
+func (idx *StatusIndexer) handleGatewayAdd(obj any) {
 	gateway := obj.(*gwv1.Gateway)
 	status := extractGatewayStatus(gateway)
 
@@ -293,7 +294,7 @@ func (idx *StatusIndexer) handleGatewayAdd(obj interface{}) {
 		zap.Bool("programmed", status.Programmed))
 }
 
-func (idx *StatusIndexer) handleGatewayUpdate(oldObj, newObj interface{}) {
+func (idx *StatusIndexer) handleGatewayUpdate(oldObj, newObj any) {
 	gateway := newObj.(*gwv1.Gateway)
 	status := extractGatewayStatus(gateway)
 
@@ -308,7 +309,7 @@ func (idx *StatusIndexer) handleGatewayUpdate(oldObj, newObj interface{}) {
 		zap.Bool("programmed", status.Programmed))
 }
 
-func (idx *StatusIndexer) handleGatewayDelete(obj interface{}) {
+func (idx *StatusIndexer) handleGatewayDelete(obj any) {
 	gateway := obj.(*gwv1.Gateway)
 
 	idx.mu.Lock()
@@ -323,7 +324,7 @@ func (idx *StatusIndexer) handleGatewayDelete(obj interface{}) {
 
 // HTTPRoute event handlers
 
-func (idx *StatusIndexer) handleHTTPRouteAdd(obj interface{}) {
+func (idx *StatusIndexer) handleHTTPRouteAdd(obj any) {
 	route := obj.(*gwv1.HTTPRoute)
 	status := extractHTTPRouteStatus(route)
 
@@ -341,7 +342,7 @@ func (idx *StatusIndexer) handleHTTPRouteAdd(obj interface{}) {
 		zap.Int("parents", len(status.ParentRefs)))
 }
 
-func (idx *StatusIndexer) handleHTTPRouteUpdate(oldObj, newObj interface{}) {
+func (idx *StatusIndexer) handleHTTPRouteUpdate(oldObj, newObj any) {
 	route := newObj.(*gwv1.HTTPRoute)
 	status := extractHTTPRouteStatus(route)
 
@@ -357,7 +358,7 @@ func (idx *StatusIndexer) handleHTTPRouteUpdate(oldObj, newObj interface{}) {
 	idx.logger.Debug("Updated HTTPRoute index", zap.String("key", key))
 }
 
-func (idx *StatusIndexer) handleHTTPRouteDelete(obj interface{}) {
+func (idx *StatusIndexer) handleHTTPRouteDelete(obj any) {
 	route := obj.(*gwv1.HTTPRoute)
 
 	idx.mu.Lock()
@@ -374,7 +375,7 @@ func (idx *StatusIndexer) handleHTTPRouteDelete(obj interface{}) {
 
 // GRPCRoute event handlers
 
-func (idx *StatusIndexer) handleGRPCRouteAdd(obj interface{}) {
+func (idx *StatusIndexer) handleGRPCRouteAdd(obj any) {
 	route := obj.(*gwv1.GRPCRoute)
 	status := extractGRPCRouteStatus(route)
 
@@ -392,7 +393,7 @@ func (idx *StatusIndexer) handleGRPCRouteAdd(obj interface{}) {
 		zap.Int("parents", len(status.ParentRefs)))
 }
 
-func (idx *StatusIndexer) handleGRPCRouteUpdate(oldObj, newObj interface{}) {
+func (idx *StatusIndexer) handleGRPCRouteUpdate(oldObj, newObj any) {
 	route := newObj.(*gwv1.GRPCRoute)
 	status := extractGRPCRouteStatus(route)
 
@@ -408,7 +409,7 @@ func (idx *StatusIndexer) handleGRPCRouteUpdate(oldObj, newObj interface{}) {
 	idx.logger.Debug("Updated GRPCRoute index", zap.String("key", key))
 }
 
-func (idx *StatusIndexer) handleGRPCRouteDelete(obj interface{}) {
+func (idx *StatusIndexer) handleGRPCRouteDelete(obj any) {
 	route := obj.(*gwv1.GRPCRoute)
 
 	idx.mu.Lock()
@@ -456,13 +457,7 @@ func (idx *StatusIndexer) updateGatewayRouteIndex(routeNamespace, routeName stri
 		}
 
 		// Add route if not already present
-		found := false
-		for _, r := range routes {
-			if r == routeKey {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(routes, routeKey)
 		if !found {
 			routes = append(routes, routeKey)
 			idx.gatewayToRoutes[gatewayKey] = routes

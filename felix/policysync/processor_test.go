@@ -55,7 +55,7 @@ func init() {
 var _ = Describe("Processor", func() {
 	var configParams *config.Config
 	var uut *policysync.Processor
-	var updates chan interface{}
+	var updates chan any
 	var updateServiceAccount func(name, namespace string)
 	var removeServiceAccount func(name, namespace string)
 	var updateNamespace func(name string)
@@ -66,7 +66,7 @@ var _ = Describe("Processor", func() {
 	var leave func(jm policysync.JoinMetadata)
 
 	BeforeEach(func() {
-		updates = make(chan interface{})
+		updates = make(chan any)
 		configParams = &config.Config{
 			DropActionOverride: "LogAndDrop",
 		}
@@ -160,7 +160,7 @@ var _ = Describe("Processor", func() {
 
 					BeforeEach(func() {
 						output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
-						for i := 0; i < 3; i++ {
+						for i := range 3 {
 							msg := <-output
 							accounts[i] = types.ProtoToServiceAccountID(
 								msg.GetServiceAccountUpdate().GetId(),
@@ -225,7 +225,7 @@ var _ = Describe("Processor", func() {
 				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						d := types.WorkloadEndpointIDToProto(testId(w))
 						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
@@ -289,7 +289,7 @@ var _ = Describe("Processor", func() {
 						SubscriptionType:           "per-pod-policies",
 					}, {}}
 
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						output[i], _ = join(sr[i], w, uint64(i))
 
@@ -352,7 +352,7 @@ var _ = Describe("Processor", func() {
 
 					BeforeEach(func() {
 						output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
-						for i := 0; i < 3; i++ {
+						for i := range 3 {
 							msg := <-output
 							accounts[i] = types.ProtoToNamespaceID(
 								msg.GetNamespaceUpdate().GetId(),
@@ -406,7 +406,7 @@ var _ = Describe("Processor", func() {
 				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						d := types.WorkloadEndpointIDToProto(testId(w))
 						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
@@ -1026,7 +1026,7 @@ var _ = Describe("Processor", func() {
 						Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepu)).To(BeTrue())
 					}
 
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						wepID[i] = testId(w)
 						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
@@ -1451,7 +1451,7 @@ var _ = Describe("Processor", func() {
 
 					BeforeEach(func() {
 						output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
-						for i := 0; i < 3; i++ {
+						for i := range 3 {
 							msg := <-output
 							routes[i] = msg.GetRouteUpdate()
 						}
@@ -1542,7 +1542,7 @@ var _ = Describe("Processor", func() {
 				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
 						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
@@ -1606,7 +1606,7 @@ var _ = Describe("Processor", func() {
 						SubscriptionType:           "per-pod-policies",
 					}, {}}
 
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						w := fmt.Sprintf("test%d", i)
 						output[i], _ = join(sr[i], w, uint64(i))
 
@@ -1714,12 +1714,12 @@ var _ = Describe("Processor", func() {
 		Describe("InSync processing", func() {
 			It("should send InSync on all open outputs", func() {
 				var c [2]chan *proto.ToDataplane
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					c[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, fmt.Sprintf("test%d", i), uint64(i))
 				}
 				is := &proto.InSync{}
 				updates <- is
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					g := <-c[i]
 					Expect(googleproto.Equal(g.GetInSync(), is)).To(BeTrue())
 				}
@@ -1730,7 +1730,7 @@ var _ = Describe("Processor", func() {
 
 var _ = DescribeTable("Config negotiation tests",
 	func(req *proto.SyncRequest, configParams config.Config, expected map[string]string) {
-		updates := make(chan interface{})
+		updates := make(chan any)
 		uut := policysync.NewProcessor(&configParams, updates)
 		uut.Start()
 		join := func(sr *proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata) {
@@ -1820,7 +1820,7 @@ func updateIpSet(id string, num int) *proto.IPSetUpdate {
 		Type:    proto.IPSetUpdate_IP_AND_PORT,
 		Members: []string{},
 	}
-	for i := 0; i < num; i++ {
+	for i := range num {
 		msg.Members = append(msg.Members, makeIPAndPort(i))
 	}
 	return msg
@@ -1837,7 +1837,7 @@ func deltaUpdateIpSet(id string, add, del int) *proto.IPSetDeltaUpdate {
 	msg := &proto.IPSetDeltaUpdate{
 		Id: id,
 	}
-	for i := 0; i < add; i++ {
+	for i := range add {
 		msg.AddedMembers = append(msg.AddedMembers, makeIPAndPort(i))
 	}
 	for i := add; i < add+del; i++ {
@@ -1912,16 +1912,16 @@ func (t testCreds) Clone() credentials.TransportCredentials {
 
 func (t testCreds) OverrideServerName(string) error { return nil }
 
-func HavePayload(expected interface{}) gomegatypes.GomegaMatcher {
+func HavePayload(expected any) gomegatypes.GomegaMatcher {
 	return &payloadMatcher{equal: Equal(expected)}
 }
 
 type payloadMatcher struct {
 	equal   gomegatypes.GomegaMatcher
-	payload interface{}
+	payload any
 }
 
-func (p *payloadMatcher) Match(actual interface{}) (success bool, err error) {
+func (p *payloadMatcher) Match(actual any) (success bool, err error) {
 	td, ok := actual.(*proto.ToDataplane)
 	if !ok {
 		return false, fmt.Errorf("HasPayload expects a *proto.ToDataplane, got %v", reflect.TypeOf(actual))
@@ -1930,10 +1930,10 @@ func (p *payloadMatcher) Match(actual interface{}) (success bool, err error) {
 	return p.equal.Match(p.payload)
 }
 
-func (p *payloadMatcher) FailureMessage(actual interface{}) (message string) {
+func (p *payloadMatcher) FailureMessage(actual any) (message string) {
 	return p.equal.FailureMessage(p.payload)
 }
 
-func (p *payloadMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (p *payloadMatcher) NegatedFailureMessage(actual any) (message string) {
 	return p.equal.NegatedFailureMessage(p.payload)
 }

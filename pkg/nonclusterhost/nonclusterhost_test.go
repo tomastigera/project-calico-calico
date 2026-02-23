@@ -36,13 +36,13 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 	Context("Read NonClusterHost resource", func() {
 		It("should extract fieldName from NonClusterHost custom resource", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"some-field": "some-value",
 					},
 				},
@@ -65,10 +65,10 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 
 		It("should return error when spec is missing from NonClusterHost custom resource", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
 				},
@@ -84,13 +84,13 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 
 		It("should return error when field is missing from NonClusterHost custom resource", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"invalid-field": "https://5.6.7.8:9012",
 					},
 				},
@@ -106,13 +106,13 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 
 		It("should return error when validation failed", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"some-field": "some-value",
 					},
 				},

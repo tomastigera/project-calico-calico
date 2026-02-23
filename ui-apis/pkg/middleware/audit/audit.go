@@ -76,7 +76,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request, excludeDryRuns bool) (
 	if params.Page > 0 {
 		// Ideally, clients don't know the syntax of the after key, but
 		// for paged lists we currently need this.
-		params.SetAfterKey(map[string]interface{}{
+		params.SetAfterKey(map[string]any{
 			"startFrom": params.Page * params.MaxPageSize,
 		})
 	}

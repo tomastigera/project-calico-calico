@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -438,8 +439,8 @@ func getLabels(r *http.Request) map[string]string {
 	parms := r.URL.Query()
 	labels := make(map[string]string)
 	for k, pvs := range parms {
-		if strings.HasPrefix(k, QueryLabelPrefix) {
-			labels[strings.TrimPrefix(k, QueryLabelPrefix)] = pvs[0]
+		if after, ok := strings.CutPrefix(k, QueryLabelPrefix); ok {
+			labels[after] = pvs[0]
 		}
 	}
 	return labels
@@ -486,10 +487,8 @@ func getNetworkSets(r *http.Request) ([]model.Key, error) {
 
 func getNameAndNamespaceFromCombinedName(combined string) ([]string, bool) {
 	parts := strings.Split(combined, "/")
-	for _, part := range parts {
-		if part == "" {
-			return nil, false
-		}
+	if slices.Contains(parts, "") {
+		return nil, false
 	}
 	if len(parts) != 1 && len(parts) != 2 {
 		return nil, false
@@ -657,7 +656,7 @@ func getPolicyFieldSelector(r *http.Request) map[string]bool {
 	return nil
 }
 
-func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}, exact bool) {
+func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req any, exact bool) {
 	resp, err := q.qi.RunQuery(context.Background(), req)
 	if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok && exact {
 		// This is an exact get and the resource does not exist. Return a 404 not found.

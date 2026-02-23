@@ -100,7 +100,7 @@ func (s *serviceConverter) isServiceToBeExcluded(service *corev1.Service) bool {
 }
 
 // Convert takes a Kubernetes Service and returns a Calico api.NetworkSet representation.
-func (s *serviceConverter) Convert(k8sObj interface{}) (interface{}, error) {
+func (s *serviceConverter) Convert(k8sObj any) (any, error) {
 	service, ok := k8sObj.(*corev1.Service)
 
 	if !ok {
@@ -133,7 +133,7 @@ func (s *serviceConverter) Convert(k8sObj interface{}) (interface{}, error) {
 }
 
 // GetKey gets a K8s Services an returns the 'namespace/name' for the Calico NetworkSet as its key.
-func (s *serviceConverter) GetKey(obj interface{}) string {
+func (s *serviceConverter) GetKey(obj any) string {
 	k8sResource := obj.(*corev1.Service)
 	if len(k8sResource.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
 		return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, hashName(k8sResource.Name))
@@ -223,7 +223,7 @@ func NewEndpointConverter() Converter {
 }
 
 // Convert takes a Kubernetes Endpoint and returns a Calico api.NetworkSet representation if corresponding NetworkSet already exists.
-func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
+func (s *endpointConverter) Convert(k8sObj any) (any, error) {
 	ep, ok := k8sObj.(*corev1.Endpoints) //nolint:staticcheck
 
 	if !ok {
@@ -250,7 +250,7 @@ func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
 }
 
 // GetKey gets a K8s Endpoint an returns the 'namespace/name' for the Calico NetworkSet as its key.
-func (s *endpointConverter) GetKey(obj interface{}) string {
+func (s *endpointConverter) GetKey(obj any) string {
 	k8sResource := obj.(*corev1.Endpoints) //nolint:staticcheck
 	if len(k8sResource.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
 		return fmt.Sprintf("%s/%s%s", k8sResource.Namespace, NetworkSetNamePrefix, hashName(k8sResource.Name))

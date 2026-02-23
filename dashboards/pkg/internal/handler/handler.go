@@ -37,7 +37,7 @@ func NewHandler(
 ) (handleradapters.RootRegistry, error) {
 
 	router := httprouter.New()
-	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
+	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err any) {
 		logger.WarnC(
 			r.Context(),
 			"a panic occurred in the http handler",

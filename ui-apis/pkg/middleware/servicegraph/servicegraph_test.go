@@ -33,7 +33,7 @@ const (
 	timeStrTo   = "2021-05-30T21:38:10Z"
 )
 
-func toJson(obj interface{}) string {
+func toJson(obj any) string {
 	b, err := json.MarshalIndent(obj, "      ", "  ")
 	ExpectWithOffset(2, err).NotTo(HaveOccurred())
 	return "      " + string(b)

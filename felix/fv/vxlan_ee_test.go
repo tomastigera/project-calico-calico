@@ -202,7 +202,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ Cluster mesh VXLA
 					Skip("Skipping due to known issue with tunnel IPs not being programmed in WEP mode")
 				}
 
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					f := cs.local.felixes[i]
 					cc.ExpectSome(f, cs.local.w[0])
 					cc.ExpectSome(f, cs.local.w[1])

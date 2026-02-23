@@ -26,7 +26,7 @@ func TestCompareRuntimeReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), excludeRuntimeReportsField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]any), excludeRuntimeReportsField))
 	})
 	t.Run("Check for RuntimeReport api and template not matches", func(t *testing.T) {
 		runtimeMap := testutils.MustUnmarshalToMap(t, RuntimeReportsMappings)
@@ -39,6 +39,6 @@ func TestCompareRuntimeReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), excludeRuntimeReportsField))
+		require.False(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]any), excludeRuntimeReportsField))
 	})
 }

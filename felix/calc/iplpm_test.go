@@ -449,7 +449,7 @@ var _ = Describe("Collector Integration Tests", func() {
 
 		It("should maintain performance with namespace-aware lookups", func() {
 			// Add multiple NetworkSets across namespaces
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				key := model.NetworkSetKey{
 					Name: fmt.Sprintf("namespace%d/test-netset", i),
 				}
@@ -467,7 +467,7 @@ var _ = Describe("Collector Integration Tests", func() {
 
 			// Performance test: many lookups should complete quickly
 			start := time.Now()
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				namespace := fmt.Sprintf("namespace%d", i%10)
 				testIPLoop := [16]byte{}
 				loopIP := mustParseIP(fmt.Sprintf("10.%d.1.1", i%10)).IP
@@ -522,7 +522,7 @@ var _ = Describe("IpTrie Tie-Breaking Functionality", func() {
 			}
 
 			// Test multiple insertion orders
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				it := NewIpTrie()
 
 				// Insert in different orders

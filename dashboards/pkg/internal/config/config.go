@@ -143,7 +143,7 @@ func (c Config) String() string {
 
 func (m *stringSliceMapConfig) Decode(value string) error {
 	*m = make(map[string][]string)
-	for _, v := range strings.Split(value, ";") {
+	for v := range strings.SplitSeq(value, ";") {
 		kvpair := strings.Split(v, ":")
 		if len(kvpair) != 2 {
 			return fmt.Errorf("invalid key/value config pair: %s", v)

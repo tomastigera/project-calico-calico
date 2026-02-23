@@ -154,7 +154,7 @@ func (w *reportWriter) writeDatastoreReport(datastoreReport *usagev1.LicenseUsag
 }
 
 func (w *reportWriter) performAPIServerOperationWithRetries(opName string, op func() error) error {
-	for attempt := 0; attempt < apiServerOperationAttempts; attempt++ {
+	for attempt := range apiServerOperationAttempts {
 		err := op()
 		if err != nil {
 			log.WithError(err).Debugf("Inner attempt %d (of %d) to %s usage report to datastore failed", attempt, apiServerOperationAttempts, opName)

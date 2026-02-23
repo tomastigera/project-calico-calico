@@ -30,8 +30,8 @@ func NewSecurityEventWebhookClient(r rest.Interface, group BackingAPIGroup) K8sR
 	return &customResourceClient{
 		restClient:      r,
 		resource:        SecurityEventWebhookResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.SecurityEventWebhook{}),
-		k8sListType:     reflect.TypeOf(apiv3.SecurityEventWebhookList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.SecurityEventWebhook](),
+		k8sListType:     reflect.TypeFor[apiv3.SecurityEventWebhookList](),
 		kind:            apiv3.KindSecurityEventWebhook,
 		apiGroup:        group,
 	}

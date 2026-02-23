@@ -19,14 +19,14 @@ func TestNextStartFromAfterKey(t *testing.T) {
 		numHits       int
 		prevStartFrom int
 		totalHits     int64
-		want          map[string]interface{}
+		want          map[string]any
 	}{
 		{
 			name:      "should return a starting point for the second page",
 			params:    &v1.AuditLogParams{QueryParams: v1.QueryParams{MaxPageSize: pageSize}},
 			numHits:   pageSize,
 			totalHits: maxTotalHits,
-			want:      map[string]interface{}{"startFrom": pageSize},
+			want:      map[string]any{"startFrom": pageSize},
 		},
 		{
 			name:          "should return a starting point for the third page",
@@ -34,7 +34,7 @@ func TestNextStartFromAfterKey(t *testing.T) {
 			numHits:       pageSize,
 			prevStartFrom: pageSize,
 			totalHits:     maxTotalHits,
-			want:          map[string]interface{}{"startFrom": 2 * pageSize},
+			want:          map[string]any{"startFrom": 2 * pageSize},
 		},
 
 		{

@@ -35,13 +35,13 @@ var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
 
 		It("should extract and validate typhaEndpoint from NonClusterHost custom resource", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"some-field":    "some-value",
 						"typhaEndpoint": "1.2.3.4:5678",
 					},
@@ -63,13 +63,13 @@ var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
 
 		It("should resolve host to IP address", func() {
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "operator.tigera.io/v1",
 					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "tigera-secure",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"some-field":    "some-value",
 						"typhaEndpoint": "localhost:5678",
 					},
@@ -92,13 +92,13 @@ var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
 		DescribeTable("should return error when typhaEndpoint is invalid",
 			func(endpoint string) {
 				obj := &unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "operator.tigera.io/v1",
 						"kind":       "NonClusterHost",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name": "tigera-secure",
 						},
-						"spec": map[string]interface{}{
+						"spec": map[string]any{
 							"some-field":    "some-value",
 							"typhaEndpoint": endpoint,
 						},

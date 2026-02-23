@@ -3,6 +3,7 @@ package engine
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -388,13 +389,7 @@ func (er *engineRules) addFlowToPublicNetworkRules(direction calicores.Direction
 
 // containsDomain returns true if the array contains the domain.
 func containsDomain(arr []string, val string) bool {
-	for _, v := range arr {
-		if v == val {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(arr, val)
 }
 
 // containsPort returns true if the array contains the port.

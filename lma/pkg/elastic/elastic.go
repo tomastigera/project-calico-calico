@@ -30,15 +30,15 @@ const (
 )
 
 type IndexTemplate struct {
-	IndexPatterns []string               `json:"index_patterns,omitempty"`
-	Settings      map[string]interface{} `json:"settings,omitempty"`
-	Mappings      map[string]interface{} `json:"mappings,omitempty"`
+	IndexPatterns []string       `json:"index_patterns,omitempty"`
+	Settings      map[string]any `json:"settings,omitempty"`
+	Mappings      map[string]any `json:"mappings,omitempty"`
 }
 
 type IndexSettings struct {
 	Replicas  string    `json:"number_of_replicas,omitempty"`
 	Shards    string    `json:"number_of_shards,omitempty"`
-	LifeCycle LifeCycle `json:"lifecycle,omitempty"`
+	LifeCycle LifeCycle `json:"lifecycle"`
 }
 
 type LifeCycle struct {
@@ -147,7 +147,7 @@ func New(
 
 	var err error
 	var c *elastic.Client
-	for i := 0; i < retries; i++ {
+	for i := range retries {
 		log.Info("Connecting to Elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
 			log.Info("Successfully connected to Elastic")
@@ -178,7 +178,7 @@ func (c *client) ClusterIndex(index, postfix string) string {
 
 // IndexTemplate populates and returns IndexTemplate object
 func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycleEnabled bool) (IndexTemplate, error) {
-	var indexSettings map[string]interface{}
+	var indexSettings map[string]any
 	if lifecycleEnabled {
 		c.indexSettings.LifeCycle = LifeCycle{Name: fmt.Sprintf("%s_policy", indexPrefix), RolloverAlias: indexAlias}
 	}
@@ -194,7 +194,7 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 	//     }
 	//   }
 	// }
-	s, err := json.Marshal(map[string]interface{}{
+	s, err := json.Marshal(map[string]any{
 		"index": c.indexSettings,
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 	}
 
 	// Convert mapping to map[string]interface{}
-	var indexMappings map[string]interface{}
+	var indexMappings map[string]any
 	if err := json.Unmarshal([]byte(mapping), &indexMappings); err != nil {
 		return IndexTemplate{}, err
 	}
@@ -217,7 +217,7 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 	}, nil
 }
 
-func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[string]interface{}) error {
+func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[string]any) error {
 	ctx := context.Background()
 
 	if resp, err := c.GetMapping().Index(index).Do(ctx); err != nil {
@@ -234,13 +234,13 @@ func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[strin
 		//           "type" : "keyword"
 		//          },
 		//        ...
-		v, ok := resp[index].(map[string]interface{})
+		v, ok := resp[index].(map[string]any)
 		if !ok {
 			log.Warnf("failed find key=%s from %s index mapping response. index mapping update will be skipped", index, index)
 			return nil
 		}
 
-		mapping, ok := v["mappings"].(map[string]interface{})
+		mapping, ok := v["mappings"].(map[string]any)
 		if !ok {
 			log.Warnf("failed find key=mappings from %s index mapping response. index mapping update will be skipped", index)
 			return nil
@@ -292,7 +292,7 @@ func (m mockComplianceClient) Do(ctx context.Context, s *elastic.SearchService) 
 }
 
 // NewMockSearchClient creates a mock client used for testing search results.
-func NewMockSearchClient(results []interface{}) Client {
+func NewMockSearchClient(results []any) Client {
 	idx := 0
 
 	doFunc := func(_ context.Context, _ *elastic.SearchService) (*elastic.SearchResult, error) {

@@ -3,6 +3,8 @@
 package calc
 
 import (
+	"maps"
+
 	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 
@@ -212,9 +214,7 @@ func (lc *LookupsCache) SetMockData(
 	for k, v := range svcs {
 		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
-	for k, v := range gc {
-		lc.polCache.generationCache[k] = v
-	}
+	maps.Copy(lc.polCache.generationCache, gc)
 }
 
 func (lc *LookupsCache) GetGeneration(key model.PolicyKey) int64 {

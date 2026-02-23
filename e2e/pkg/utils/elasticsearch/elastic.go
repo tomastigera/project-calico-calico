@@ -495,10 +495,9 @@ func SearchInESWithoutOrder(esclient *elastic.Client, query *elastic.BoolQuery, 
 }
 
 func GetFlowlogsFromESSearchResult(res *elastic.SearchResult) []FlowLog {
-	var flog FlowLog
 	var flowlogs []FlowLog
 
-	for _, item := range res.Each(reflect.TypeOf(flog)) {
+	for _, item := range res.Each(reflect.TypeFor[FlowLog]()) {
 		if f, ok := item.(FlowLog); ok {
 			logrus.Debugf("Flowlog: %#v\n", f)
 			flowlogs = append(flowlogs, f)

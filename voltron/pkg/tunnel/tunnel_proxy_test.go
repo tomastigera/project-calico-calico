@@ -55,11 +55,9 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 			Scheme: "http",
 			Host:   "localhost:3128",
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = httpProxyServer.ListenAndServe()
-		}()
+		})
 
 		// Wait for the server to be ready.
 		Eventually(func() error {
@@ -126,11 +124,9 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 			Scheme: "https",
 			Host:   "localhost:3129",
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = httpsProxyServer.ListenAndServeTLS("", "")
-		}()
+		})
 
 		// Wait for the server to be ready.
 		Eventually(func() error {

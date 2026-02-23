@@ -18,8 +18,8 @@ func NewEgressPolicyClient(r rest.Interface, group BackingAPIGroup) K8sResourceC
 	return &customResourceClient{
 		restClient:      r,
 		resource:        EgressGatewayPolicyResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.EgressGatewayPolicy{}),
-		k8sListType:     reflect.TypeOf(apiv3.EgressGatewayPolicyList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.EgressGatewayPolicy](),
+		k8sListType:     reflect.TypeFor[apiv3.EgressGatewayPolicyList](),
 		kind:            apiv3.KindEgressGatewayPolicy,
 		apiGroup:        group,
 	}

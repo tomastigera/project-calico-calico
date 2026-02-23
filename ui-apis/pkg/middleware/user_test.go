@@ -252,7 +252,7 @@ var _ = Describe("ElasticBasicUser", func() {
 
 func authHeader(issuer string, username string, groups []string) string {
 	hdrhdr := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3ODM2YzRiMjdmN2M3ZmVjMjk1MTk0NTFkNDc5MmUyNjQ4M2RmYWUifQ" // rs256 header
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"iss":            issuer,
 		"sub":            sub,
 		"aud":            "tigera-manager",

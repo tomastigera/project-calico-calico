@@ -30,7 +30,7 @@ func (d *testReporter) Start() error {
 	return nil
 }
 
-func (d *testReporter) Report(logSlice interface{}) error {
+func (d *testReporter) Report(logSlice any) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

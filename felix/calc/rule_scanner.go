@@ -220,7 +220,7 @@ func (rs *RuleScanner) OnPolicyInactive(key model.PolicyKey) {
 }
 
 func (rs *RuleScanner) updateRules(
-	key interface{},
+	key any,
 	inbound, outbound []model.Rule,
 	untracked, preDNAT bool,
 	origNamespace string,

@@ -367,17 +367,17 @@ var _ = Describe("Policy conversion tests", func() {
 // policies in a Gomega assertion.
 // TODO(doublek): This is based on the matcher defined in policy recommendation testing.
 // Needs to be commonized at some point.
-func MatchPolicy(expected interface{}) *policyMatcher {
+func MatchPolicy(expected any) *policyMatcher {
 	log.Debugf("Creating policy matcher")
 	return &policyMatcher{expected: expected}
 }
 
 // policyMatcher implements the GomegaMatcher interface to match policies.
 type policyMatcher struct {
-	expected interface{}
+	expected any
 }
 
-func (pm *policyMatcher) Match(actual interface{}) (success bool, err error) {
+func (pm *policyMatcher) Match(actual any) (success bool, err error) {
 	// We expect to only handle pointer to TSEE NetworkPolicy for now.
 	// TODO(doublek): Support for other policy resources should be added here.
 	switch actualPolicy := actual.(type) {
@@ -461,12 +461,12 @@ func matchEntityRule(actual, expected apiv3.EntityRule) bool {
 	return match
 }
 
-func (pm *policyMatcher) FailureMessage(actual interface{}) (message string) {
+func (pm *policyMatcher) FailureMessage(actual any) (message string) {
 	message = fmt.Sprintf("Expected\n\t%#v\nto match\n\t%#v", actual, pm.expected)
 	return
 }
 
-func (pm *policyMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (pm *policyMatcher) NegatedFailureMessage(actual any) (message string) {
 	message = fmt.Sprintf("Expected\n\t%#v\nnot to match\n\t%#v", actual, pm.expected)
 	return
 }

@@ -25,7 +25,7 @@ type MockDispatcher struct {
 	Started      bool
 }
 
-func (m *MockDispatcher) Report(u interface{}) error {
+func (m *MockDispatcher) Report(u any) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.ReportedLogs = append(m.ReportedLogs, u)

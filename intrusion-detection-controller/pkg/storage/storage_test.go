@@ -4,7 +4,6 @@ package storage
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -43,8 +42,7 @@ func Test_GetIPSet(t *testing.T) {
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	lsc.SetResults(rest.MockResult{
 		Body: expectedIPSet(g, "test_files/1.1.json"),
@@ -81,8 +79,7 @@ func Test_GetIPSetModified(t *testing.T) {
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	lsc.SetResults(rest.MockResult{
 		Body: expectedIPSet(g, "test_files/2.1.json"),
@@ -159,8 +156,7 @@ func Test_QueryIPSet(t *testing.T) {
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	oneMinuteAgo = time.Now().Add(-1 * time.Minute)
 	toBeUpdated := &apiv3.GlobalThreatFeed{}
@@ -171,7 +167,7 @@ func Test_QueryIPSet(t *testing.T) {
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
-	vals := make([]interface{}, 0)
+	vals := make([]any, 0)
 	for itr.Next() {
 		c++
 		_, val := itr.Value()
@@ -232,8 +228,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
 	toBeUpdated := &apiv3.GlobalThreatFeed{}
@@ -248,7 +243,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
-	vals := make([]interface{}, 0)
+	vals := make([]any, 0)
 	for itr.Next() {
 		c++
 		_, val := itr.Value()
@@ -287,8 +282,7 @@ func Test_QueryIPSet_Big(t *testing.T) {
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test_big"
@@ -321,8 +315,7 @@ func Test_ListSets(t *testing.T) {
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	lsc.SetResults(rest.MockResult{
 		Body: v1.List[v1.IPSetThreatFeed]{
@@ -374,8 +367,7 @@ func Test_Put_Set(t *testing.T) {
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	lsc.SetResults(rest.MockResult{
 		Body: v1.BulkResponse{
@@ -410,7 +402,7 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	output := splitIPSet(input)
 
 	g.Expect(len(output)).Should(Equal(mul + 1))
-	for i := 0; i < mul; i++ {
+	for i := range mul {
 		g.Expect(len(output[i])).Should(Equal(MaxClauseCount))
 		for idx, v := range output[i] {
 			g.Expect(v).Should(Equal(fmt.Sprintf("%d", i*MaxClauseCount+idx)))
@@ -435,8 +427,7 @@ func Test_Delete_Set(t *testing.T) {
 
 	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	lsc.SetResults(rest.MockResult{
 		Body: v1.BulkResponse{

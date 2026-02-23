@@ -331,7 +331,7 @@ func main() {
 			vni := "4097"
 			vxlanPort := "4790"
 			mac := "a2:2a"
-			for _, byteStr := range strings.Split(ipv4Addr, ".") {
+			for byteStr := range strings.SplitSeq(ipv4Addr, ".") {
 				b, err := strconv.Atoi(byteStr)
 				panicIfError(err)
 				mac += fmt.Sprintf(":%02x", b)

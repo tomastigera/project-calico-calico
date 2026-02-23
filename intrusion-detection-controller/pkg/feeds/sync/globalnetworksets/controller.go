@@ -96,19 +96,19 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 		ObjectType:    &v3.GlobalNetworkSet{},
 		ResyncPeriod:  DefaultResyncPeriod,
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
+			AddFunc: func(obj any) {
 				key, err := cache.MetaNamespaceKeyFunc(obj)
 				if err == nil {
 					queue.Add(key)
 				}
 			},
-			UpdateFunc: func(old interface{}, new interface{}) {
+			UpdateFunc: func(old any, new any) {
 				key, err := cache.MetaNamespaceKeyFunc(new)
 				if err == nil {
 					queue.Add(key)
 				}
 			},
-			DeleteFunc: func(obj interface{}) {
+			DeleteFunc: func(obj any) {
 				// IndexerInformer uses a delta queue, therefore for deletes we have to use this
 				// key function.
 				key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)

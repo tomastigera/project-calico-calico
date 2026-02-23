@@ -430,7 +430,7 @@ func (s *DomainInfoStore) Start() {
 }
 
 // Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.
-func (s *DomainInfoStore) OnUpdate(msg interface{}) {
+func (s *DomainInfoStore) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *proto.ConfigUpdate:
 		felixConfig := fc.FromConfigUpdate(msg)

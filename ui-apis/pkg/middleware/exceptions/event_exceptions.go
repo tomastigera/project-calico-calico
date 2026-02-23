@@ -172,7 +172,7 @@ func (q *QueryExceptionData) Namespace() (ns string) {
 // As a side effect of the current implementation in the query package is that
 // keys used in sets are not validated. A selector like "type = my_new_alert" will fail
 // validation but "type IN {'my_new_alert'}" will not.
-func extractQueryExceptionData(o interface{}, d *QueryExceptionData) {
+func extractQueryExceptionData(o any, d *QueryExceptionData) {
 	switch v := o.(type) {
 	case *query.Query:
 		extractQueryExceptionData(v.Left, d)

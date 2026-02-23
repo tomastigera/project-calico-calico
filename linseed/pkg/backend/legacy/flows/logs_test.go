@@ -6,6 +6,7 @@ import (
 	"context"
 	gojson "encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func TestFlowLogBasic(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		params := &v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
-				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+				AfterKey: map[string]any{"startFrom": "badvalue"},
 			},
 		}
 		results, err := flb.List(ctx, clusterInfo, params)
@@ -806,11 +807,8 @@ func TestFlowLogFiltering(t *testing.T) {
 						allClusters := []string{cluster1, cluster2, cluster3}
 						count := 0
 						for _, item := range r.Items {
-							for _, c := range allClusters {
-								if item.Cluster == c {
-									count++
-									break
-								}
+							if slices.Contains(allClusters, item.Cluster) {
+								count++
 							}
 						}
 						require.Equal(t, numExpected(testcase)*3, count)
@@ -1687,7 +1685,7 @@ func TestFlowLogCount(t *testing.T) {
 
 		// Create logs at: 12:00, 12:05, 12:10, 12:15, 12:20, 12:25, 12:30
 		logs := []v1.FlowLog{}
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			timestamp := timeFromHourMin(12, i*5)
 			logs = append(logs, v1.FlowLog{
 				StartTime:       timestamp.Unix(),

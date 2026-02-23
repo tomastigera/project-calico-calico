@@ -58,13 +58,11 @@ func (r *BPFProcessInfoCache) Start() error {
 	if r.processPathCache != nil {
 		r.processPathCache.Start()
 	}
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
+	r.wg.Go(func() {
 		if r.eventProcessInfo != nil || r.eventTcpStatsInfo != nil {
 			r.run()
 		}
-	}()
+	})
 
 	return nil
 }

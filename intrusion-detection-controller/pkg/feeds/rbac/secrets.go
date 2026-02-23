@@ -28,7 +28,7 @@ var (
 		"tigera-",
 	}
 
-	secretDenied = map[string]interface{}{
+	secretDenied = map[string]any{
 		"webhook-server-secret": nil,
 	}
 

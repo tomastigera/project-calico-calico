@@ -55,17 +55,17 @@ func TestFlowLogs_Aggregate_PoliciesTransformation(t *testing.T) {
 				return false
 			}
 
-			var wrapperMap map[string]interface{}
+			var wrapperMap map[string]any
 			if err := json.Unmarshal(wrapperRaw, &wrapperMap); err != nil {
 				t.Logf("Failed to unmarshal wrapper aggregation: %v", err)
 				return false
 			}
 
 			// Helper to look up nested keys in map[string]interface{}
-			getNested := func(m map[string]interface{}, keys ...string) (interface{}, bool) {
-				var current interface{} = m
+			getNested := func(m map[string]any, keys ...string) (any, bool) {
+				var current any = m
 				for _, key := range keys {
-					currentMap, ok := current.(map[string]interface{})
+					currentMap, ok := current.(map[string]any)
 					if !ok {
 						return nil, false
 					}
@@ -87,7 +87,7 @@ func TestFlowLogs_Aggregate_PoliciesTransformation(t *testing.T) {
 				t.Logf("Expected nested 'policies' aggregation not found")
 				return false
 			}
-			policiesMap, ok := policies.(map[string]interface{})
+			policiesMap, ok := policies.(map[string]any)
 			if !ok {
 				t.Logf("Expected 'policies' aggregation to be an object, got: %T", policies)
 				return false

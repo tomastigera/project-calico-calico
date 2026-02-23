@@ -67,7 +67,7 @@ func ipByteToIPStringSlice(ip IP) []string {
 // labelByteToLabels converts the label bitmask to a set of labels with keys named label<bit> and an enpty string value.
 func labelByteToLabels(l TestLabel) map[string]string {
 	labels := make(map[string]string)
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if l&(1<<i) != 0 {
 			labels[fmt.Sprintf("label%d", i+1)] = ""
 		}
@@ -84,7 +84,7 @@ func selectorByteToSelector(s Selector) string {
 		return ""
 	}
 	sels := []string{}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sels = append(sels, fmt.Sprintf("has(label%d)", i+1))
 		}
@@ -102,7 +102,7 @@ func selectorByteToNamespaceSelector(s Selector) string {
 		return ""
 	}
 	sels := []string{}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sels = append(sels, fmt.Sprintf("has(pcns.label%d)", i+1))
 		}
@@ -120,7 +120,7 @@ func selectorByteToK8sSelector(s Selector) *metav1.LabelSelector {
 	if s == SelectAll {
 		return sel
 	}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sel.MatchExpressions = append(sel.MatchExpressions, metav1.LabelSelectorRequirement{
 				Key:      fmt.Sprintf("label%d", i+1),

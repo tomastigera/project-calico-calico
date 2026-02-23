@@ -401,7 +401,7 @@ func createMockHealthListeners(n int) (hs []*healthHandler, cancel func(), err e
 			c()
 		}
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		h, cancelFn, err := newMockHealthListener(fmt.Sprintf("127.0.0.%d", i+1))
 		if err != nil {
 			cancel()

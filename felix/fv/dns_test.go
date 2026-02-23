@@ -39,7 +39,7 @@ func GetLocalNameservers() (nameservers []string) {
 		// Find out what Docker puts in a container's /etc/resolv.conf.
 		resolvConf, err := utils.GetCommandOutput("docker", "run", "--rm", utils.Config.FelixImage, "cat", "/etc/resolv.conf")
 		Expect(err).NotTo(HaveOccurred())
-		for _, resolvConfLine := range strings.Split(resolvConf, "\n") {
+		for resolvConfLine := range strings.SplitSeq(resolvConf, "\n") {
 			if strings.HasPrefix(resolvConfLine, nameserverPrefix) {
 				localNameservers = append(localNameservers, strings.TrimSpace(resolvConfLine[len(nameserverPrefix):]))
 			}
@@ -62,7 +62,7 @@ func getDNSLogs(logFile string) ([]string, error) {
 		return nil, err
 	}
 	var logs []string
-	for _, log := range strings.Split(string(logBytes), "\n") {
+	for log := range strings.SplitSeq(string(logBytes), "\n") {
 		// Filter out empty strings returned by strings.Split.
 		if log != "" {
 			logs = append(logs, log)
@@ -501,7 +501,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 							if err != nil {
 								return err
 							}
-							for _, line := range strings.Split(out, "\n") {
+							for line := range strings.SplitSeq(out, "\n") {
 								if strings.Contains(line, "jump filter-cali-log-dns") {
 									if strings.Contains(line, "new") {
 										foundReq = true
@@ -521,7 +521,7 @@ func defineDNSPolicyTests(getInfra infrastructure.InfraFactory, zeroLatency, set
 								return err
 							}
 
-							for _, line := range strings.Split(out, "\n") {
+							for line := range strings.SplitSeq(out, "\n") {
 								if strings.Contains(line, "-j cali-log-dns") {
 									if strings.Contains(line, "NEW") {
 										foundReq = true

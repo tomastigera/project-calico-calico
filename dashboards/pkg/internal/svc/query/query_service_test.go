@@ -1397,7 +1397,7 @@ func TestQueryService(t *testing.T) {
 
 								groupResults := make([]bucketItems, 2)
 
-								for i := 0; i < 1000; i++ {
+								for i := range 1000 {
 									strIndex := strconv.FormatInt(int64(i), 10)
 									groupResults[0].Buckets = append(groupResults[0].Buckets, bucketItem{"key_as_string": "gbi-0-" + strIndex})
 									groupResults[1].Buckets = append(groupResults[1].Buckets, bucketItem{"key_as_string": "gbi-1-" + strIndex})
@@ -1729,7 +1729,7 @@ func documentToFlowLogID(d client.QueryResponseDocument) string {
 	return d["id"].(string)
 }
 
-func jsonMarshal(t *testing.T, v interface{}) []byte {
+func jsonMarshal(t *testing.T, v any) []byte {
 	t.Helper()
 
 	bytes, err := json.Marshal(v)

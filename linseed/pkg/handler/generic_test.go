@@ -295,14 +295,14 @@ func TestTransformPoliciesAggregation(t *testing.T) {
 			}
 
 			// Compact expected for comparison
-			var expectedObj map[string]interface{}
+			var expectedObj map[string]any
 			_ = json.Unmarshal([]byte(tt.expected), &expectedObj)
 			expectedNormalized, _ := json.Marshal(expectedObj)
 
 			outputBytes := transformPoliciesAggregation(inputBytes)
 
 			// Normalize output
-			var outputObj map[string]interface{}
+			var outputObj map[string]any
 			err := json.Unmarshal(outputBytes, &outputObj)
 			assert.NoError(t, err)
 			outputNormalized, _ := json.Marshal(outputObj)

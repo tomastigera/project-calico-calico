@@ -390,7 +390,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					oldWireguardSpec      *libapiv3.NodeWireguardSpec
 					oldWireguardPublicKey string
 				)
-				for i := 0; i < 5; i++ {
+				for range 5 {
 					// This can fail due to an update conflict, so we allow a few retries.
 					node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
 					Expect(err).NotTo(HaveOccurred())
@@ -430,7 +430,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				}
 				Expect(err).NotTo(HaveOccurred())
 				addCleanup(func() {
-					for i := 0; i < 5; i++ {
+					for range 5 {
 						// This can fail due to an update conflict, so we allow a few retries.
 						node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
 						Expect(err).NotTo(HaveOccurred())
@@ -1041,7 +1041,7 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 		}
 		if update.Value != nil {
 			val := reflect.ValueOf(update.Value)
-			if val.Kind() == reflect.Ptr {
+			if val.Kind() == reflect.Pointer {
 				elem := val.Elem()
 				if elem.Kind() == reflect.Struct {
 					err := validatorFunc(elem.Interface())

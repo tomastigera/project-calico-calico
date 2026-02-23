@@ -30,8 +30,8 @@ func NewGlobalThreatFeedClient(r rest.Interface, group BackingAPIGroup) K8sResou
 	return &customResourceClient{
 		restClient:      r,
 		resource:        GlobalThreatFeedResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.GlobalThreatFeed{}),
-		k8sListType:     reflect.TypeOf(apiv3.GlobalThreatFeedList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.GlobalThreatFeed](),
+		k8sListType:     reflect.TypeFor[apiv3.GlobalThreatFeedList](),
 		kind:            apiv3.KindGlobalThreatFeed,
 		apiGroup:        group,
 	}

@@ -55,7 +55,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy", []apiconfig.Da
 
 	gen1000XYZMappings := func() string {
 		fileContent := ""
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			fileContent = fileContent + fmt.Sprintf(`{"LHS":"xyz.com","RHS":"10.10.%v.%v","Expiry":"3019-04-16T00:12:13Z","Type":"ip"}
 `,
 				(i/254)+1,
@@ -93,7 +93,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ DNS Policy", []apiconfig.Da
 				return err
 			}
 			numMembers := 0
-			for _, line := range strings.Split(ipsetsOutput, "\n") {
+			for line := range strings.SplitSeq(ipsetsOutput, "\n") {
 				if strings.HasPrefix(line, "IP set ") {
 					// New IP set.
 					numMembers = 0

@@ -248,7 +248,7 @@ func TestFV_AuditEE(t *testing.T) {
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
 		var logs []v1.AuditLog
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			auditLog := v1.AuditLog{
 				Event: audit.Event{
 					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
@@ -299,7 +299,7 @@ func TestFV_AuditEE(t *testing.T) {
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
 		var logs []v1.AuditLog
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			auditLog := v1.AuditLog{
 				Event: audit.Event{
 					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
@@ -349,7 +349,7 @@ func TestFV_AuditEE(t *testing.T) {
 		totalItems := 5
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -368,7 +368,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.AuditLogParams{
 				QueryParams: v1.QueryParams{
@@ -444,7 +444,7 @@ func TestFV_AuditEE(t *testing.T) {
 
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -463,7 +463,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.AuditLogParams{
 				QueryParams: v1.QueryParams{

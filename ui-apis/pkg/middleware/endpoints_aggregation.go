@@ -370,7 +370,7 @@ func buildFlowLogParamsForDeniedTrafficSearch(ctx context.Context, authReview Au
 
 	fp.SetMaxPageSize(pageSize)
 	if pageNumber != 0 {
-		fp.SetAfterKey(map[string]interface{}{
+		fp.SetAfterKey(map[string]any{
 			"startFrom": pageNumber * (fp.GetMaxPageSize()),
 		})
 	}
@@ -395,7 +395,7 @@ func deniedEndpointsRegex(ctx context.Context, endpointsAggregationRequest *Endp
 	var endpointsSet = make(map[string]bool)
 	pageNumber := 0
 	pageSize := 1000
-	var afterKey map[string]interface{}
+	var afterKey map[string]any
 	deniedFlowLogsParams, err := buildFlowLogParamsForDeniedTrafficSearch(ctx, authreview, endpointsAggregationRequest, pageNumber, pageSize)
 	if err != nil {
 		logrus.WithError(err).Error("call to buildFlowLogParamsForDeniedTrafficSearch failed.")

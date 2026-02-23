@@ -27,7 +27,7 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, eventMap["properties"].(map[string]interface{}), excludeEventField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, eventMap["properties"].(map[string]any), excludeEventField))
 	})
 	t.Run("Check for Event api and template not matches", func(t *testing.T) {
 		eventMap := testutils.MustUnmarshalToMap(t, EventsMappings)
@@ -40,6 +40,6 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, eventMap["properties"].(map[string]interface{}), excludeEventField))
+		require.False(t, utils.CheckFieldsInJSON(t, m, eventMap["properties"].(map[string]any), excludeEventField))
 	})
 }

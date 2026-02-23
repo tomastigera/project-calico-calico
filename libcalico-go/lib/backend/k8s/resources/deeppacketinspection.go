@@ -18,8 +18,8 @@ func NewDeepPacketInspectionClient(r rest.Interface, group BackingAPIGroup) K8sR
 	return &customResourceClient{
 		restClient:      r,
 		resource:        DeepPacketInspectionResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.DeepPacketInspection{}),
-		k8sListType:     reflect.TypeOf(apiv3.DeepPacketInspectionList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.DeepPacketInspection](),
+		k8sListType:     reflect.TypeFor[apiv3.DeepPacketInspectionList](),
 		kind:            apiv3.KindDeepPacketInspection,
 		namespaced:      true,
 		apiGroup:        group,

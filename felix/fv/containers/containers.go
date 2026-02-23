@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -557,7 +558,7 @@ func (c *Container) GetPIDs(processName string) []int {
 		return nil
 	}
 	var pids []int
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if line == "" {
 			continue
 		}
@@ -582,7 +583,7 @@ func (c *Container) GetProcInfo(processName string) []ProcInfo {
 		return nil
 	}
 	var pids []ProcInfo
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		log.WithField("line", line).Debug("Parsing ps line")
 		matches := psRegexp.FindStringSubmatch(line)
 		if len(matches) == 0 {
@@ -819,7 +820,7 @@ func (c *Container) IPSetSizes() map[string]int {
 	currentName := ""
 	membersSeen := false
 	log.WithField("ipsets", ipsetsOutput).Info("IP sets state")
-	for _, line := range strings.Split(ipsetsOutput, "\n") {
+	for line := range strings.SplitSeq(ipsetsOutput, "\n") {
 		log.WithField("line", line).Debug("Parsing line")
 		if strings.HasPrefix(line, "Name:") {
 			currentName = strings.Split(line, " ")[1]
@@ -869,19 +870,19 @@ func (c *Container) NumNFTSetMembers(ipVersion int, setName string) int {
 	}
 
 	type nftResp struct {
-		Nftables []map[string]interface{} `json:"nftables"`
+		Nftables []map[string]any `json:"nftables"`
 	}
 	var resp nftResp
 	Expect(json.Unmarshal([]byte(out), &resp)).NotTo(HaveOccurred(), fmt.Sprintf("Failed to unmarshal JSON: %s", out))
 	for _, obj := range resp.Nftables {
 		if obj["set"] != nil {
-			setObj, ok := obj["set"].(map[string]interface{})
+			setObj, ok := obj["set"].(map[string]any)
 			Expect(ok).To(BeTrue(), fmt.Sprintf("Failed to parse set: %v", obj))
 			if _, ok := setObj["elem"]; !ok {
 				// No elements.
 				return 0
 			}
-			elems, ok := setObj["elem"].([]interface{})
+			elems, ok := setObj["elem"].([]any)
 			Expect(ok).To(BeTrue(), fmt.Sprintf("Failed to parse elem: %v", setObj))
 			return len(elems)
 		}
@@ -914,7 +915,7 @@ func (c *Container) nftablesSetNamesForVersion(ver string) []string {
 	out, err := c.ExecOutput("nft", "list", "sets", ver)
 	Expect(err).NotTo(HaveOccurred(), out)
 	var names []string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "set ") {
 			// set <name> {
@@ -984,7 +985,7 @@ func (c *Container) BPFRoutes() string {
 func (c *Container) BPFNumRemoteHostRoutes() int {
 	routes := c.BPFRoutes()
 	count := 0
-	for _, line := range strings.Split(routes, "\n") {
+	for line := range strings.SplitSeq(routes, "\n") {
 		if strings.Contains(line, "tunneled") {
 			// Skip tunnels.
 			continue
@@ -1064,13 +1065,7 @@ func (c *Container) BPFNATHasBackendForService(svcIP string, svcPort, proto int,
 	ipv6 := net.ParseIP(ip).To4() == nil
 	nat := c.BPFNATDump(ipv6)
 	if natBack, ok := nat[front]; ok {
-		found := false
-		for _, b := range natBack {
-			if b == back {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(natBack, back)
 		if !found {
 			return false
 		}

@@ -79,11 +79,11 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 						assert.NoError(t, err)
 
 						// Verify query structure: Bool -> Should -> [Nested Bool Query]
-						sourceMap, ok := source.(map[string]interface{})
+						sourceMap, ok := source.(map[string]any)
 						assert.True(t, ok, "Query source should be a map")
-						boolMap, ok := sourceMap["bool"].(map[string]interface{})
+						boolMap, ok := sourceMap["bool"].(map[string]any)
 						assert.True(t, ok, "Top level query should be a bool query")
-						shouldSlice, ok := boolMap["should"].([]interface{})
+						shouldSlice, ok := boolMap["should"].([]any)
 						assert.True(t, ok, "Bool query should have 'should' clause")
 						assert.NotEmpty(t, shouldSlice)
 						assert.EqualValues(t, "1", boolMap["minimum_should_match"], "Top level bool query should have minimum_should_match=1")
@@ -91,10 +91,10 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 						// Check for nested bool query with expected fields
 						foundNested := false
 						for _, clause := range shouldSlice {
-							if clauseMap, ok := clause.(map[string]interface{}); ok {
-								if subBool, ok := clauseMap["bool"].(map[string]interface{}); ok {
+							if clauseMap, ok := clause.(map[string]any); ok {
+								if subBool, ok := clauseMap["bool"].(map[string]any); ok {
 									// This sub-query should contain should clauses for polices fields
-									if subShould, ok := subBool["should"].([]interface{}); ok {
+									if subShould, ok := subBool["should"].([]any); ok {
 										foundNested = true
 										assert.EqualValues(t, "1", subBool["minimum_should_match"], "Nested bool query should have minimum_should_match=1")
 										subJSON, _ := json.Marshal(subShould)

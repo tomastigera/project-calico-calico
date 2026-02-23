@@ -19,7 +19,7 @@ func New(value string) DocIndex {
 	d := &docIndex{
 		index: value,
 	}
-	for _, part := range strings.Split(value, ".") {
+	for part := range strings.SplitSeq(value, ".") {
 		d.parts = append(d.parts, newIntOrString(part))
 	}
 	return d

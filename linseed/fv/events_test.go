@@ -271,7 +271,7 @@ func TestFV_Events(t *testing.T) {
 
 		// Create 5 events.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			events := []v1.Event{
 				{
 					Time: v1.NewEventTimestamp(logTime.Unix() + int64(i)), // Make sure events are ordered.
@@ -288,7 +288,7 @@ func TestFV_Events(t *testing.T) {
 		require.NoError(t, err)
 
 		// Read them back one at a time.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.EventParams{
 				QueryParams: v1.QueryParams{
@@ -355,7 +355,7 @@ func TestFV_Events(t *testing.T) {
 		logTime := time.Now().UTC()
 		var events []v1.Event
 		// add events with timestamp format
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			events = append(events, v1.Event{
 				ID:   strconv.Itoa(i + 1),
 				Time: v1.NewEventTimestamp(logTime.Add(time.Duration(i+1) * time.Second).Unix()), // Make sure events are ordered.

@@ -2023,7 +2023,7 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 	})
 })
 
-func mustMarshal(v interface{}) string {
+func mustMarshal(v any) string {
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
 		panic(err)
@@ -2060,9 +2060,7 @@ func testWatchWorkloadEndpoints(pods []*k8sapi.Pod, expectedWEPs []*libapiv3.Wor
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		defer GinkgoRecover()
 		i := 0
 
@@ -2080,7 +2078,7 @@ func testWatchWorkloadEndpoints(pods []*k8sapi.Pod, expectedWEPs []*libapiv3.Wor
 				Fail(fmt.Sprintf("expected exactly %d events before timer expired, received %d", len(expectedWEPs), i))
 			}
 		}
-	}()
+	})
 
 	for _, pod := range pods {
 		_, err = k8sClient.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})

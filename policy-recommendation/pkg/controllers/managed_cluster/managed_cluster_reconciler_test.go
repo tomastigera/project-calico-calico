@@ -120,15 +120,12 @@ var _ = Describe("ManagedClusterReconciler", func() {
 		Expect(r.managedClusters["managed-cluster-3"]).NotTo(BeNil())
 
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			err := r.Reconcile(types.NamespacedName{Name: "managed-cluster-3"})
 			Expect(err).To(BeNil())
-			wg.Done()
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-4").Return(mockClientSet, nil)
 			err := r.client.Create(context.Background(), &v3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -138,8 +135,7 @@ var _ = Describe("ManagedClusterReconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			err = r.Reconcile(types.NamespacedName{Name: "managed-cluster-4"})
 			Expect(err).To(BeNil())
-			wg.Done()
-		}()
+		})
 		wg.Wait()
 
 		Eventually(stopChan, 1000*time.Second).Should(BeClosed())

@@ -30,8 +30,8 @@ func NewExternalNetworkClient(r rest.Interface, group BackingAPIGroup) K8sResour
 	return &customResourceClient{
 		restClient:      r,
 		resource:        ExternalNetworkResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.ExternalNetwork{}),
-		k8sListType:     reflect.TypeOf(apiv3.ExternalNetworkList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.ExternalNetwork](),
+		k8sListType:     reflect.TypeFor[apiv3.ExternalNetworkList](),
 		kind:            apiv3.KindExternalNetwork,
 		apiGroup:        group,
 	}

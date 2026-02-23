@@ -61,7 +61,7 @@ func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []st
 	return &captureManager
 }
 
-func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
+func (c *captureManager) OnUpdate(protoBufMsg any) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		// store workload endpoint id to a workload endpoint

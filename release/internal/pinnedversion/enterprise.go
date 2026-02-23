@@ -151,9 +151,7 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 		components[name] = component
 	}
 	if includeOperator {
-		for name, component := range p.operatorComponents() {
-			components[name] = component
-		}
+		maps.Copy(components, p.operatorComponents())
 	}
 	return components
 }

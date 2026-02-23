@@ -158,8 +158,7 @@ func TestQuery(t *testing.T) {
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &storage.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
@@ -211,8 +210,7 @@ func TestQueryHTTPError(t *testing.T) {
 
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -254,8 +252,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -292,8 +289,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -325,8 +321,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 func TestNewHTTPPullerWithNilPull(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	f := testGlobalThreatFeed.DeepCopy()
 	f.Spec.Pull = nil
@@ -341,8 +336,7 @@ func TestNewHTTPPullerWithNilPull(t *testing.T) {
 func TestGetStartupDelay(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -358,8 +352,7 @@ func TestGetStartupDelay(t *testing.T) {
 func TestGetStartupDelayWithZeroLastSyncTime(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -373,8 +366,7 @@ func TestGetStartupDelayWithZeroLastSyncTime(t *testing.T) {
 func TestGetStartupDelayWithOlderLastSyncTime(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -390,8 +382,7 @@ func TestGetStartupDelayWithOlderLastSyncTime(t *testing.T) {
 func TestGetStartupDelayWithRecentLastSyncTime(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync2.NewMockIPSetController()
@@ -673,8 +664,7 @@ func TestSetFeed(t *testing.T) {
 func TestSyncGNSFromDB(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	feed := testGlobalThreatFeed.DeepCopy()
 	ipSet := &storage.MockSets{
@@ -696,8 +686,7 @@ func TestSyncGNSFromDB(t *testing.T) {
 func TestSyncGNSFromDBElasticError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	feed := testGlobalThreatFeed.DeepCopy()
 	ipSet := &storage.MockSets{
@@ -717,8 +706,7 @@ func TestSyncGNSFromDBElasticError(t *testing.T) {
 func TestSyncGNSFromDBNoGNS(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	feed := testGlobalThreatFeed.DeepCopy()
 	feed.Spec.GlobalNetworkSet = nil

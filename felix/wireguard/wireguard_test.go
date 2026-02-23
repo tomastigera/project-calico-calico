@@ -19,6 +19,7 @@ package wireguard_test
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"syscall"
 	"time"
@@ -1226,9 +1227,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 
 							// Take a copy of the current peer configuration for one of the tests.
 							wgPeers = make(map[wgtypes.Key]wgtypes.Peer)
-							for k, p := range link.WireguardPeers {
-								wgPeers[k] = p
-							}
+							maps.Copy(wgPeers, link.WireguardPeers)
 
 							wg.EndpointWireguardUpdate(peer2, key_peer1, nil)
 							rtDataplane.ResetDeltas()
@@ -1240,9 +1239,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 
 							// Take a copy of the current peer configuration for one of the tests.
 							wgPeersV6 = make(map[wgtypes.Key]wgtypes.Peer)
-							for k, p := range linkV6.WireguardPeers {
-								wgPeersV6[k] = p
-							}
+							maps.Copy(wgPeersV6, linkV6.WireguardPeers)
 
 							wgV6.EndpointWireguardUpdate(peer2, keyV6_peer1, nil)
 							rtDataplaneV6.ResetDeltas()

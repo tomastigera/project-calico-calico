@@ -248,7 +248,7 @@ func (cli *client) CreateUser(user User) error {
 		}
 	}
 
-	j, err := json.Marshal(map[string]interface{}{
+	j, err := json.Marshal(map[string]any{
 		"password":  user.Password,
 		"roles":     user.RoleNames(),
 		"full_name": user.FullName,
@@ -320,7 +320,7 @@ func (cli *client) UpdateUser(user User) error {
 		}
 	}
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"roles": user.RoleNames(),
 	}
 
@@ -427,7 +427,7 @@ func (cli *client) GetUsers() ([]User, error) {
 
 // SetUserPassword sets the password on an existing user.
 func (cli *client) SetUserPassword(user User) error {
-	j, err := json.Marshal(map[string]interface{}{
+	j, err := json.Marshal(map[string]any{
 		"password": user.Password,
 	})
 	if err != nil {

@@ -108,7 +108,7 @@ func newDNSNameRDataFromGoPacketRR(rr layers.DNSResourceRecord) (v1.DNSName, v1.
 	return name, rdata
 }
 
-func getRRDecoded(rr layers.DNSResourceRecord) interface{} {
+func getRRDecoded(rr layers.DNSResourceRecord) any {
 	switch rr.Type {
 	case layers.DNSTypeA, layers.DNSTypeAAAA:
 		return rr.IP

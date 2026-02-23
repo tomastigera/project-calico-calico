@@ -465,7 +465,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				By("Configuring the RemoteClusterConfiguration referencing secret")
 				rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
 				rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
-					Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
+					Kind:      reflect.TypeFor[kapiv1.Secret]().String(),
 					Namespace: "namespace-1",
 					Name:      rccSecretName,
 				}

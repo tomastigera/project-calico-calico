@@ -97,7 +97,7 @@ func (ls *labelSelector) DeleteSelector(res apiv3.ResourceID) {
 
 // onMatchStarted is called from the InheritIndex helper when a selector-endpoint match has
 // started.
-func (c *labelSelector) onMatchStarted(selId, labelsId interface{}) {
+func (c *labelSelector) onMatchStarted(selId, labelsId any) {
 	selRes := selId.(apiv3.ResourceID)
 	labelsRes := labelsId.(apiv3.ResourceID)
 
@@ -110,7 +110,7 @@ func (c *labelSelector) onMatchStarted(selId, labelsId interface{}) {
 
 // onMatchStopped is called from the InheritIndex helper when a selector-endpoint match has
 // stopped.
-func (c *labelSelector) onMatchStopped(selId, labelsId interface{}) {
+func (c *labelSelector) onMatchStopped(selId, labelsId any) {
 	selRes := selId.(apiv3.ResourceID)
 	labelsRes := labelsId.(apiv3.ResourceID)
 

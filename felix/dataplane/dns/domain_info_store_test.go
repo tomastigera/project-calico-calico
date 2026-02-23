@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -414,12 +415,9 @@ var _ = Describe("Domain Info Store", func() {
 						log.Debug("Updates ready to handle")
 						domainStore.HandleUpdates()
 						monitorMutex.Lock()
-						for _, signalDomain := range handler.domainsChanged {
-							if signalDomain == domain {
-								expectedSeen = true
-								expectedDomainIPs = domainStore.GetDomainIPs(domain)
-								break
-							}
+						if slices.Contains(handler.domainsChanged, domain) {
+							expectedSeen = true
+							expectedDomainIPs = domainStore.GetDomainIPs(domain)
 						}
 						monitorMutex.Unlock()
 					default:
@@ -1159,7 +1157,7 @@ var _ = Describe("Domain Info Store", func() {
 		saveTimerC := make(chan time.Time)
 		gcTimerC := make(chan time.Time)
 		latencyTimerC := make(chan time.Time)
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			pkt := make([]byte, 78)
 			n, err := rand.Read(pkt)
 			Expect(err).NotTo(HaveOccurred())

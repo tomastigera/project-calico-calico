@@ -3,6 +3,7 @@ package fv
 
 import (
 	"context"
+	"maps"
 
 	"github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -1746,9 +1747,7 @@ func qcEndpoint(r api.Resource, numGNP, numNP int) client.Endpoint {
 	case *libapi.WorkloadEndpoint:
 		// Copy labels to add implicit labels.
 		labels := map[string]string{}
-		for k, v := range r.GetObjectMeta().GetLabels() {
-			labels[k] = v
-		}
+		maps.Copy(labels, r.GetObjectMeta().GetLabels())
 		labels["projectcalico.org/namespace"] = er.Namespace
 		labels["projectcalico.org/orchestrator"] = er.Spec.Orchestrator
 		e.Labels = labels
@@ -1784,7 +1783,7 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 			return nil
 		}
 		rules := make([]client.RuleDirection, num)
-		for i := 0; i < num; i++ {
+		for i := range num {
 			rules[i] = client.RuleDirection{
 				Source: client.RuleEntity{
 					NumWorkloadEndpoints: totWEP,
@@ -1880,7 +1879,7 @@ func createResources(
 	// because deleting some resources (e.g. nodes) may delete other associated resources that we were not
 	// intending to delete.  We require two iterations, the first to delete non-tiers, the second to delete
 	// tiers (because they can only be deleted once the associated policies are also deleted).
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		for key, res := range configured {
 			if _, ok := unhandled[key]; ok {
 				// This resource is in our unhandled map so we'll be creating or updating it

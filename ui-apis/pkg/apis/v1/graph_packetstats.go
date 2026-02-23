@@ -3,6 +3,7 @@ package v1
 
 import (
 	"encoding/json"
+	"maps"
 	"math"
 	"sort"
 
@@ -298,9 +299,7 @@ type GraphDNSResponseCodes map[string]GraphDNSResponseCode
 
 func (c GraphDNSResponseCodes) Copy() GraphDNSResponseCodes {
 	pcopy := make(GraphDNSResponseCodes)
-	for n, grc := range c {
-		pcopy[n] = grc
-	}
+	maps.Copy(pcopy, c)
 	return pcopy
 }
 

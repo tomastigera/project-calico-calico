@@ -41,7 +41,7 @@ func ApplicationHandler(
 			return
 		}
 
-		var resp interface{}
+		var resp any
 		switch applicationType {
 		case ApplicationTypeService:
 			resp, err = processServiceRequest(params, authReview, lsclient, r)

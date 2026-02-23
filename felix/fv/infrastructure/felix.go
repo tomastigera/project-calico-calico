@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path"
@@ -268,9 +269,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		envVars["DELAY_FELIX_START"] = "true"
 	}
 
-	for k, v := range options.ExtraEnvVars {
-		envVars[k] = v
-	}
+	maps.Copy(envVars, options.ExtraEnvVars)
 
 	if options.WithPrometheusPortTLS {
 		EnsureTLSCredentials()
@@ -288,13 +287,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	}
 
 	// Add in the volumes.
-	for k, v := range options.ExtraVolumes {
-		volumes[k] = v
-	}
+	maps.Copy(volumes, options.ExtraVolumes)
 	if id < len(options.PerNodeOptions) {
-		for k, v := range options.PerNodeOptions[id].ExtraVolumes {
-			volumes[k] = v
-		}
+		maps.Copy(volumes, options.PerNodeOptions[id].ExtraVolumes)
 	}
 	for k, v := range volumes {
 		args = append(args, "-v", fmt.Sprintf("%s:%s", k, v))
@@ -663,8 +658,8 @@ func (f *Felix) BPFIfState(family int) map[string]BPFIfState {
 
 	states := make(map[string]BPFIfState)
 
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(out, "\n")
+	for line := range lines {
 		match := bpfIfStateRegexp.FindStringSubmatch(line)
 		if len(match) == 0 {
 			continue
@@ -757,7 +752,7 @@ func (f *Felix) BPFNumPolProgramsByEntryPoint(entryPointIdx int, ingressOrEgress
 		jmpMapName = jump.IngressMapParameters.VersionedName()
 	}
 	pinnedMap := "/sys/fs/bpf/tc/globals/" + jmpMapName
-	for i := 0; i < jump.MaxSubPrograms; i++ {
+	for i := range jump.MaxSubPrograms {
 		k := polprog.SubProgramJumpIdx(entryPointIdx, i, jump.TCMaxEntryPoints)
 		out, err := f.ExecOutput(
 			"bpftool", "map", "lookup",
@@ -787,8 +782,8 @@ func (f *Felix) IPTablesChains(table string) map[string][]string {
 	out := map[string][]string{}
 	raw, err := f.ExecOutput("iptables-save", "-t", table)
 	Expect(err).NotTo(HaveOccurred())
-	lines := strings.Split(raw, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(raw, "\n")
+	for line := range lines {
 		if strings.HasPrefix(line, "#") {
 			// Line is a comment, ignore.
 			continue

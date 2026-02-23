@@ -190,7 +190,7 @@ func createAuditEventChannel(events ...*api.AuditEventResult) <-chan *api.AuditE
 	return auditChan
 }
 
-func newAuditEvent(verb v1.Verb, stage audit.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) *api.AuditEventResult {
+func newAuditEvent(verb v1.Verb, stage audit.Stage, objRef resources.Resource, respObj any, timestamp time.Time, resVer string) *api.AuditEventResult {
 	// Get the resource helper.
 	tm := resources.GetTypeMeta(objRef)
 	rh := resources.GetResourceHelperByTypeMeta(tm)

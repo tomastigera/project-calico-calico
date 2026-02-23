@@ -4,6 +4,7 @@ package globalnetworksets
 
 import (
 	"context"
+	"maps"
 	"sync"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -58,9 +59,7 @@ func (c *MockGlobalNetworkSetController) Local() map[string]*v3.GlobalNetworkSet
 	out := make(map[string]*v3.GlobalNetworkSet)
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.local {
-		out[k] = s
-	}
+	maps.Copy(out, c.local)
 	return out
 }
 
@@ -68,9 +67,7 @@ func (c *MockGlobalNetworkSetController) NotGCable() map[string]struct{} {
 	out := make(map[string]struct{})
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.noGC {
-		out[k] = s
-	}
+	maps.Copy(out, c.noGC)
 	return out
 }
 
@@ -78,8 +75,6 @@ func (c *MockGlobalNetworkSetController) FailFuncs() map[string]func(error) {
 	out := make(map[string]func(error))
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.failFuncs {
-		out[k] = s
-	}
+	maps.Copy(out, c.failFuncs)
 	return out
 }

@@ -52,8 +52,8 @@ import (
 )
 
 var (
-	resourceKeyType  = reflect.TypeOf(model.ResourceKey{})
-	resourceListType = reflect.TypeOf(model.ResourceListOptions{})
+	resourceKeyType  = reflect.TypeFor[model.ResourceKey]()
+	resourceListType = reflect.TypeFor[model.ResourceListOptions]()
 )
 
 type KubeClient struct {
@@ -114,122 +114,122 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	// These resources are backed by Calico custom resource definitions (CRDs). Whether they are
 	// backed by projectcalico.org/v3 or crd.projectcalico.org/v1 is configurable.
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindIPPool,
 		resources.NewIPPoolClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindIPReservation,
 		resources.NewIPReservationClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalNetworkPolicy,
 		resources.NewGlobalNetworkPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindStagedGlobalNetworkPolicy,
 		resources.NewStagedGlobalNetworkPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalNetworkSet,
 		resources.NewGlobalNetworkSetClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindNetworkPolicy,
 		resources.NewNetworkPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindStagedNetworkPolicy,
 		resources.NewStagedNetworkPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		resources.NewStagedKubernetesNetworkPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindNetworkSet,
 		resources.NewNetworkSetClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindTier,
 		resources.NewTierClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindBGPPeer,
 		resources.NewBGPPeerClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindBGPConfiguration,
 		resources.NewBGPConfigClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindFelixConfiguration,
 		resources.NewFelixConfigClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindClusterInformation,
 		resources.NewClusterInfoClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		libapiv3.KindNode,
 		resources.NewNodeClient(cs, ca.K8sUsePodCIDR),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindHostEndpoint,
 		resources.NewHostEndpointClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindKubeControllersConfiguration,
 		resources.NewKubeControllersConfigClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindCalicoNodeStatus,
 		resources.NewCalicoNodeStatusClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindBlockAffinity,
 		resources.NewBlockAffinityClientV3(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindBGPFilter,
 		resources.NewBGPFilterClient(restClient, group),
 	)
@@ -240,8 +240,8 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	// We always register the v3 client, but also register the v1 client for the
 	// older IPAM code below if it's in use.
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindIPAMConfiguration,
 		resources.NewIPAMConfigClientV3(restClient, group),
 	)
@@ -249,56 +249,56 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	// These resources are backed directly by core Kubernetes APIs, and do not
 	// use CRDs.
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesEndpointSlice,
 		resources.NewKubernetesEndpointSliceClient(cs),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		libapiv3.KindWorkloadEndpoint,
 		resources.NewWorkloadEndpointClient(cs),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		libapiv3.KindNode,
 		resources.NewNodeClient(cs, ca.K8sUsePodCIDR),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindProfile,
 		resources.NewProfileClient(cs),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesNetworkPolicy,
 		resources.NewKubernetesNetworkPolicyClient(cs),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesService,
 		resources.NewServiceClient(cs),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesClusterNetworkPolicy,
 		resources.NewKubernetesClusterNetworkPolicyClient(cnpClient),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesAdminNetworkPolicy,
 		resources.NewKubernetesAdminNetworkPolicyClient(k8sAdminPolicyClient),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesBaselineAdminNetworkPolicy,
 		resources.NewKubernetesBaselineAdminNetworkPolicyClient(k8sAdminPolicyClient),
 	)
@@ -310,13 +310,13 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		// lib/ipam uses different types for these resources, so register them separately
 		// from the v3 resources already registered above.
 		c.registerResourceClient(
-			reflect.TypeOf(model.BlockAffinityKey{}),
-			reflect.TypeOf(model.BlockAffinityListOptions{}),
+			reflect.TypeFor[model.BlockAffinityKey](),
+			reflect.TypeFor[model.BlockAffinityListOptions](),
 			libapiv3.KindBlockAffinity,
 			resources.NewBlockAffinityClientV1(restClient, group),
 		)
 		c.registerResourceClient(
-			reflect.TypeOf(model.IPAMConfigKey{}),
+			reflect.TypeFor[model.IPAMConfigKey](),
 			nil,
 			libapiv3.KindIPAMConfig,
 			resources.NewIPAMConfigClientV1(restClient, group),
@@ -325,14 +325,14 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		// These do not get registered as part of the v3 API, and are only
 		// accessed from the lib/ipam code.
 		c.registerResourceClient(
-			reflect.TypeOf(model.BlockKey{}),
-			reflect.TypeOf(model.BlockListOptions{}),
+			reflect.TypeFor[model.BlockKey](),
+			reflect.TypeFor[model.BlockListOptions](),
 			libapiv3.KindIPAMBlock,
 			resources.NewIPAMBlockClient(restClient, group),
 		)
 		c.registerResourceClient(
-			reflect.TypeOf(model.IPAMHandleKey{}),
-			reflect.TypeOf(model.IPAMHandleListOptions{}),
+			reflect.TypeFor[model.IPAMHandleKey](),
+			reflect.TypeFor[model.IPAMHandleListOptions](),
 			libapiv3.KindIPAMHandle,
 			resources.NewIPAMHandleClient(restClient, group),
 		)
@@ -346,110 +346,110 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 
 func registerEnterpriseResources(c *KubeClient, cfg *apiconfig.CalicoAPIConfigSpec, restClient rest.Interface, group resources.BackingAPIGroup) {
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindPolicyRecommendationScope,
 		resources.NewPolicyRecommendationScopeClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindUISettings,
 		resources.NewUISettingsClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindUISettingsGroup,
 		resources.NewUISettingsGroupClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindLicenseKey,
 		resources.NewLicenseKeyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindAlertException,
 		resources.NewAlertExceptionClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalAlert,
 		resources.NewGlobalAlertClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalAlertTemplate,
 		resources.NewGlobalAlertTemplateClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalThreatFeed,
 		resources.NewGlobalThreatFeedClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindRemoteClusterConfiguration,
 		resources.NewRemoteClusterConfigurationClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalReport,
 		resources.NewGlobalReportClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindGlobalReportType,
 		resources.NewGlobalReportTypeClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindManagedCluster,
 		resources.NewManagedClusterClient(restClient, group, cfg),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindPacketCapture,
 		resources.NewPacketCaptureClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindDeepPacketInspection,
 		resources.NewDeepPacketInspectionClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindExternalNetwork,
 		resources.NewExternalNetworkClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindEgressGatewayPolicy,
 		resources.NewEgressPolicyClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindSecurityEventWebhook,
 		resources.NewSecurityEventWebhookClient(restClient, group),
 	)
 	c.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindBFDConfiguration,
 		resources.NewBFDConfigClient(restClient, group),
 	)
@@ -575,8 +575,8 @@ func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
 	}
 
 	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		apiv3.KindK8sEndpoints,
 		resources.NewEndpointsClient(cs),
 	)
@@ -585,8 +585,8 @@ func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
 	// This is because in etcd mode, we still need to monitor services on remote clusters. In KDD mode,
 	// we use the Calico client directly (because remote clusters and this client don't exist in OSS Calico).
 	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
+		reflect.TypeFor[model.ResourceKey](),
+		reflect.TypeFor[model.ResourceListOptions](),
 		model.KindKubernetesService,
 		resources.NewServiceClient(cs),
 	)

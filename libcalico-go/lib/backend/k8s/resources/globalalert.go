@@ -30,8 +30,8 @@ func NewGlobalAlertClient(r rest.Interface, group BackingAPIGroup) K8sResourceCl
 	return &customResourceClient{
 		restClient:      r,
 		resource:        GlobalAlertResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.GlobalAlert{}),
-		k8sListType:     reflect.TypeOf(apiv3.GlobalAlertList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.GlobalAlert](),
+		k8sListType:     reflect.TypeFor[apiv3.GlobalAlertList](),
 		kind:            apiv3.KindGlobalAlert,
 		apiGroup:        group,
 	}

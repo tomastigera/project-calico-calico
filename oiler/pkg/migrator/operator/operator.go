@@ -28,7 +28,7 @@ type TimeInterval struct {
 	// field searchFrom key that will have generated_time and shard_doc
 	// values to be used as search_after. It can also contain pit key
 	// to store point in time to be used in the next query.
-	Cursor map[string]interface{}
+	Cursor map[string]any
 	// Start represents the value for generated_time to be used
 	// in the read query as the left side of the interval.
 	Start *time.Time
@@ -83,8 +83,8 @@ func (it *TimeInterval) generatedTimeFromCursor() (*time.Time, error) {
 	// ASC by generated_rime and shard_doc. (This value is implicit as we perform
 	// queries with PIT and the document id is used by default)
 	searchFromVals := it.Cursor["searchFrom"]
-	if len(searchFromVals.([]interface{})) > 0 {
-		searchFromVal := searchFromVals.([]interface{})[0]
+	if len(searchFromVals.([]any)) > 0 {
+		searchFromVal := searchFromVals.([]any)[0]
 		switch searchFromVal := searchFromVal.(type) {
 		case float64:
 			// Values for generated_time are stored as floating number
@@ -100,7 +100,7 @@ func (it *TimeInterval) generatedTimeFromCursor() (*time.Time, error) {
 // then we need to continue to read the next page. First page has an empty cursor, but no read data. Last
 // page has an empty cursor, but we have read data (lastGeneratedTime is set to the generated_time field
 // retrieved from the last document in the page)
-func Next(cursor map[string]interface{}, lastGeneratedTime *time.Time, current *time.Time) *TimeInterval {
+func Next(cursor map[string]any, lastGeneratedTime *time.Time, current *time.Time) *TimeInterval {
 	if len(cursor) == 0 {
 		if lastGeneratedTime == nil {
 			// We need to perform the query again for the same interval as no new data has been written

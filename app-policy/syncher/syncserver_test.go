@@ -104,8 +104,7 @@ func TestSyncRestart(t *testing.T) {
 	psm := newMockPolicyStoreManager()
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
-	cCtx, cCancel := context.WithCancel(context.Background())
-	defer cCancel()
+	cCtx := t.Context()
 	if err := uut.Start(cCtx); err != nil {
 		t.Fatal(err)
 	}
@@ -205,8 +204,7 @@ func TestSyncServerCancelBeforeInSync(t *testing.T) {
 }
 
 func TestDPStatsAfterConnection(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	RegisterTestingT(t)
 
@@ -328,8 +326,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 }
 
 func TestDPStatsBeforeConnection(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	RegisterTestingT(t)
 
@@ -375,8 +372,7 @@ func TestDPStatsBeforeConnection(t *testing.T) {
 
 func TestDPStatsReportReturnsError(t *testing.T) {
 	log.SetLevel(log.TraceLevel)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	RegisterTestingT(t)
 

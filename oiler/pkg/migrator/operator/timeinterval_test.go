@@ -12,7 +12,7 @@ import (
 
 func TestNext(t *testing.T) {
 	type args struct {
-		cursor            map[string]interface{}
+		cursor            map[string]any
 		lastGeneratedTime *time.Time
 		current           *time.Time
 	}
@@ -24,11 +24,11 @@ func TestNext(t *testing.T) {
 		{
 			name: "Paginate through data",
 			args: args{
-				cursor:            map[string]interface{}{"search_after": []string{"1", "2"}},
+				cursor:            map[string]any{"search_after": []string{"1", "2"}},
 				lastGeneratedTime: ptrTime(time.Unix(1, 0).UTC()),
 				current:           nil,
 			},
-			want: &operator.TimeInterval{Cursor: map[string]interface{}{"search_after": []string{"1", "2"}}, Start: nil},
+			want: &operator.TimeInterval{Cursor: map[string]any{"search_after": []string{"1", "2"}}, Start: nil},
 		},
 		{
 			name: "Move to next interval",
@@ -51,11 +51,11 @@ func TestNext(t *testing.T) {
 		{
 			name: "Paginate through current interval",
 			args: args{
-				cursor:            map[string]interface{}{"search_after": []string{"1", "2"}},
+				cursor:            map[string]any{"search_after": []string{"1", "2"}},
 				lastGeneratedTime: ptrTime(time.Unix(2, 0).UTC()),
 				current:           ptrTime(time.Unix(1, 0).UTC()),
 			},
-			want: &operator.TimeInterval{Cursor: map[string]interface{}{"search_after": []string{"1", "2"}}, Start: ptrTime(time.Unix(1, 0).UTC())},
+			want: &operator.TimeInterval{Cursor: map[string]any{"search_after": []string{"1", "2"}}, Start: ptrTime(time.Unix(1, 0).UTC())},
 		},
 	}
 	for _, tt := range tests {
@@ -70,24 +70,24 @@ func TestNext(t *testing.T) {
 func TestTimeInterval_LastGeneratedTime(t *testing.T) {
 	tests := []struct {
 		name   string
-		Cursor map[string]interface{}
+		Cursor map[string]any
 		Start  *time.Time
 		want   time.Time
 	}{
 		{
 			name:   "Last generated time from pagination",
-			Cursor: map[string]interface{}{"searchFrom": []interface{}{1.7e+2, 2}},
+			Cursor: map[string]any{"searchFrom": []any{1.7e+2, 2}},
 			want:   time.UnixMilli(170).UTC(),
 		},
 		{
 			name:   "Last generated time from pagination with start",
-			Cursor: map[string]interface{}{"searchFrom": []interface{}{"", ""}},
+			Cursor: map[string]any{"searchFrom": []any{"", ""}},
 			Start:  ptrTime(time.Unix(1, 0).UTC()),
 			want:   time.Unix(1, 0).UTC(),
 		},
 		{
 			name:   "Malformed",
-			Cursor: map[string]interface{}{"searchFrom": []interface{}{"", ""}},
+			Cursor: map[string]any{"searchFrom": []any{"", ""}},
 			want:   time.Time{},
 		},
 		{

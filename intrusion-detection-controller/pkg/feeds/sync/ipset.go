@@ -19,7 +19,7 @@ func NewIPSetController(ipSet storage.IPSet) controller.Controller {
 	return controller.NewController(ipSetData{ipSet}, cacher.LinseedSyncFailed)
 }
 
-func (d ipSetData) Put(ctx context.Context, name string, value interface{}) error {
+func (d ipSetData) Put(ctx context.Context, name string, value any) error {
 	return d.ipSet.PutIPSet(ctx, name, value.(storage.IPSetSpec))
 }
 

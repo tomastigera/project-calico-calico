@@ -144,7 +144,7 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 	}
 }
 
-func (c *endpointsCache) onPodDelete(obj interface{}) {
+func (c *endpointsCache) onPodDelete(obj any) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		log.Debug("can't assert obj to *corev1.Pod")

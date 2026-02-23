@@ -43,13 +43,13 @@ func TestMigrator_Run(t *testing.T) {
 		fakePrimary.AddReadCommand(
 			fake.ReadCommand{Data: &v1.List[fake.AnyLog]{Items: []fake.AnyLog{{}}},
 				Next: &operator.TimeInterval{
-					Cursor: map[string]interface{}{"searchFrom": []interface{}{"1", "2"}},
+					Cursor: map[string]any{"searchFrom": []any{"1", "2"}},
 					Start:  nil,
 				},
 			},
 			fake.ReadCommand{Data: &v1.List[fake.AnyLog]{Items: []fake.AnyLog{{}}},
 				Next: &operator.TimeInterval{
-					Cursor: map[string]interface{}{"searchFrom": []interface{}{"3", "4"}},
+					Cursor: map[string]any{"searchFrom": []any{"3", "4"}},
 					Start:  nil,
 				},
 			},
@@ -81,13 +81,13 @@ func TestMigrator_Run(t *testing.T) {
 			defer cancel()
 
 			var received []operator.TimeInterval
-			for i := 0; i < 4; i++ {
+			for range 4 {
 				received = append(received, <-backups)
 			}
 			require.Equal(t, received, []operator.TimeInterval{
 				{},
-				{Cursor: map[string]interface{}{"searchFrom": []interface{}{"1", "2"}}},
-				{Cursor: map[string]interface{}{"searchFrom": []interface{}{"3", "4"}}},
+				{Cursor: map[string]any{"searchFrom": []any{"1", "2"}}},
+				{Cursor: map[string]any{"searchFrom": []any{"3", "4"}}},
 				{Start: ptrTime(time.Unix(1, 0).UTC())},
 			})
 		}()
@@ -139,7 +139,7 @@ func TestMigrator_Run(t *testing.T) {
 			defer cancel()
 
 			var received []operator.TimeInterval
-			for i := 0; i < 4; i++ {
+			for range 4 {
 				received = append(received, <-backups)
 			}
 			require.Equal(t, received, []operator.TimeInterval{

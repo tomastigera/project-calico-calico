@@ -13,49 +13,49 @@ import (
 
 // SelectorAndLabelCache caches Selector and Labels and keeps a mapping between them.
 type SelectorAndLabelCache interface {
-	UpdateSelector(dpiKey interface{}, sel *selector.Selector)
-	UpdateLabels(wepKey interface{}, labels uniquelabels.Map)
-	DeleteSelector(wepKey interface{})
-	DeleteLabel(dpiKey interface{})
+	UpdateSelector(dpiKey any, sel *selector.Selector)
+	UpdateLabels(wepKey any, labels uniquelabels.Map)
+	DeleteSelector(wepKey any)
+	DeleteLabel(dpiKey any)
 }
 
-type MatchCallback func(dpiKey, wepKey interface{})
+type MatchCallback func(dpiKey, wepKey any)
 
 type selectorAndLabelCache struct {
 	// wepKeyToLabel has WEP key and its labels
-	wepKeyToLabel map[interface{}]uniquelabels.Map
+	wepKeyToLabel map[any]uniquelabels.Map
 	// dpiKeyToSelector has DPI key and its selector
-	dpiKeyToSelector map[interface{}]*selector.Selector
+	dpiKeyToSelector map[any]*selector.Selector
 
 	// Current matches
-	wepKeysByDPIKey map[interface{}]set.Set[interface{}]
-	dpiKeysByWEPKey map[interface{}]set.Set[interface{}]
+	wepKeysByDPIKey map[any]set.Set[any]
+	dpiKeysByWEPKey map[any]set.Set[any]
 
 	// Callback functions
 	OnMatchStarted MatchCallback
 	OnMatchStopped MatchCallback
 
-	dirtyWEPKeys set.Set[interface{}]
+	dirtyWEPKeys set.Set[any]
 }
 
 func NewSelectorAndLabelCache(onMatchStarted, onMatchStopped MatchCallback) SelectorAndLabelCache {
 	return &selectorAndLabelCache{
-		wepKeyToLabel:    make(map[interface{}]uniquelabels.Map),
-		dpiKeyToSelector: make(map[interface{}]*selector.Selector),
-		dpiKeysByWEPKey:  map[interface{}]set.Set[interface{}]{},
-		wepKeysByDPIKey:  map[interface{}]set.Set[interface{}]{},
+		wepKeyToLabel:    make(map[any]uniquelabels.Map),
+		dpiKeyToSelector: make(map[any]*selector.Selector),
+		dpiKeysByWEPKey:  map[any]set.Set[any]{},
+		wepKeysByDPIKey:  map[any]set.Set[any]{},
 
 		// Callback functions
 		OnMatchStarted: onMatchStarted,
 		OnMatchStopped: onMatchStopped,
 
-		dirtyWEPKeys: set.New[interface{}](),
+		dirtyWEPKeys: set.New[any](),
 	}
 }
 
 // UpdateLabels takes WEP key and WEP labels as input, if WEP has new/updated labels
 // for each matching selector either calls OnMatchStarted or OnMatchStopped callback function.
-func (cache *selectorAndLabelCache) UpdateLabels(wepKey interface{}, labels uniquelabels.Map) {
+func (cache *selectorAndLabelCache) UpdateLabels(wepKey any, labels uniquelabels.Map) {
 	log.Debugf("Updating labels for %v", wepKey)
 	oldItm, ok := cache.wepKeyToLabel[wepKey]
 	if ok {
@@ -70,7 +70,7 @@ func (cache *selectorAndLabelCache) UpdateLabels(wepKey interface{}, labels uniq
 }
 
 // DeleteLabel deletes the cached label with given id.
-func (cache *selectorAndLabelCache) DeleteLabel(wepKey interface{}) {
+func (cache *selectorAndLabelCache) DeleteLabel(wepKey any) {
 	log.Debugf("Deleting labels for %v", wepKey)
 	delete(cache.wepKeyToLabel, wepKey)
 	cache.dirtyWEPKeys.Add(wepKey)
@@ -79,7 +79,7 @@ func (cache *selectorAndLabelCache) DeleteLabel(wepKey interface{}) {
 
 // UpdateSelector takes DPI key and selector as input, if DPI selector is updated
 // for each affected selector and labels either calls OnMatchStarted or OnMatchStopped callback function.
-func (cache *selectorAndLabelCache) UpdateSelector(dpiKey interface{}, sel *selector.Selector) {
+func (cache *selectorAndLabelCache) UpdateSelector(dpiKey any, sel *selector.Selector) {
 	log.Debugf("Updating selector for %v", dpiKey)
 	if sel == nil {
 		log.WithField("DPI", dpiKey).Error("Selector should not be nil")
@@ -98,7 +98,7 @@ func (cache *selectorAndLabelCache) UpdateSelector(dpiKey interface{}, sel *sele
 
 // DeleteSelector for each cached label associated with the give WEP key (aka id)
 // update the cache and also call the OnMatchStopped callback function.
-func (cache *selectorAndLabelCache) DeleteSelector(dpiKey interface{}) {
+func (cache *selectorAndLabelCache) DeleteSelector(dpiKey any) {
 	log.Debugf("Deleting selector for %v", dpiKey)
 	matchSet := cache.wepKeysByDPIKey[dpiKey]
 	if matchSet != nil {
@@ -141,14 +141,14 @@ func (cache *selectorAndLabelCache) flushUpdates() {
 //	 	-  if the label was previously part of selector (aka in wepKeysByDPIKey[dpiKey]),
 //	        update both the wepKeysByDPIKey and dpiKeysByWEPKey
 //	 	- else do nothing
-func (cache *selectorAndLabelCache) scanAllLabels(dpiKey interface{}, sel *selector.Selector) {
+func (cache *selectorAndLabelCache) scanAllLabels(dpiKey any, sel *selector.Selector) {
 	log.Debugf("Scanning all (%v) labels against selector of %v", len(cache.wepKeyToLabel), dpiKey)
 	for wepKey, labels := range cache.wepKeyToLabel {
 		cache.updateMatches(dpiKey, sel, wepKey, labels)
 	}
 }
 
-func (cache *selectorAndLabelCache) scanAllSelectors(wepKey interface{}) {
+func (cache *selectorAndLabelCache) scanAllSelectors(wepKey any) {
 	log.Debugf("Scanning all (%v) selectors against labels in %v", len(cache.dpiKeyToSelector), wepKey)
 	labels := cache.wepKeyToLabel[wepKey]
 	for dpiKey, sel := range cache.dpiKeyToSelector {
@@ -156,7 +156,7 @@ func (cache *selectorAndLabelCache) scanAllSelectors(wepKey interface{}) {
 	}
 }
 
-func (cache *selectorAndLabelCache) updateMatches(dpiKey interface{}, sel *selector.Selector, wepKey interface{}, labels parser.Labels) {
+func (cache *selectorAndLabelCache) updateMatches(dpiKey any, sel *selector.Selector, wepKey any, labels parser.Labels) {
 	nowMatches := sel.EvaluateLabels(labels)
 	if nowMatches {
 		cache.storeMatch(dpiKey, wepKey)
@@ -165,10 +165,10 @@ func (cache *selectorAndLabelCache) updateMatches(dpiKey interface{}, sel *selec
 	}
 }
 
-func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
+func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey any) {
 	wepKeys := cache.wepKeysByDPIKey[dpiKey]
 	if wepKeys == nil {
-		wepKeys = set.New[interface{}]()
+		wepKeys = set.New[any]()
 		cache.wepKeysByDPIKey[dpiKey] = wepKeys
 	}
 	previouslyMatched := wepKeys.Contains(wepKey)
@@ -179,7 +179,7 @@ func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 
 		dpiKeys, ok := cache.dpiKeysByWEPKey[wepKey]
 		if !ok {
-			dpiKeys = set.New[interface{}]()
+			dpiKeys = set.New[any]()
 			cache.dpiKeysByWEPKey[wepKey] = dpiKeys
 		}
 		dpiKeys.Add(dpiKey)
@@ -189,7 +189,7 @@ func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 	}
 }
 
-func (cache *selectorAndLabelCache) deleteMatch(dpiKey, wepKey interface{}) {
+func (cache *selectorAndLabelCache) deleteMatch(dpiKey, wepKey any) {
 	wepKeys := cache.wepKeysByDPIKey[dpiKey]
 	if wepKeys == nil {
 		return

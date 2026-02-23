@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -343,7 +344,7 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 	defer close(secretChan)
 
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				// Populate the deleteChan to remove the managed cluster entry from informerStopChans and permissionMap.
 				managedClusterChan <- &tokenEvent{
@@ -352,7 +353,7 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 				}
 			}
 		},
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
 				mcObj := &tokenEvent{
 					mc:                      mc,
@@ -361,7 +362,7 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 				managedClusterChan <- mcObj
 			}
 		},
-		UpdateFunc: func(_, obj interface{}) {
+		UpdateFunc: func(_, obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				mcObj := &tokenEvent{
 					mc: mc,
@@ -390,8 +391,8 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 	secretFactory := informers.NewSharedInformerFactory(c.managementK8sClient, 0)
 	secretInformer := secretFactory.Core().V1().Secrets().Informer()
 	secretHandler := cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {}, // TODO: Clean up deleted secrets in the managed cluster
-		AddFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {}, // TODO: Clean up deleted secrets in the managed cluster
+		AddFunc: func(obj any) {
 			if s, ok := obj.(*corev1.Secret); ok {
 				for _, secret := range c.secretsToCopy {
 					if s.Name == secret.Name && s.Namespace == secret.Namespace {
@@ -401,7 +402,7 @@ func (c *controller) Run(stopCh <-chan struct{}) error {
 				}
 			}
 		},
-		UpdateFunc: func(_, obj interface{}) {
+		UpdateFunc: func(_, obj any) {
 			if s, ok := obj.(*corev1.Secret); ok {
 				for _, secret := range c.secretsToCopy {
 					if s.Name == secret.Name && s.Namespace == secret.Namespace {
@@ -700,10 +701,7 @@ func (r *retryCalculator) duration(key string) (bool, time.Duration) {
 
 	if d, ok := r.outstandingRetries[key]; ok {
 		// Double the duration, up to a maximum of 1 minute.
-		d = d * 2
-		if d > 1*time.Minute {
-			d = 1 * time.Minute
-		}
+		d = min(d*2, 1*time.Minute)
 		r.outstandingRetries[key] = d
 		return true, d
 	} else {
@@ -897,7 +895,7 @@ func (c *controller) needsUpdate(log *logrus.Entry, cs kubernetes.Interface, mcN
 	} else {
 		// Validate the token to make sure it was signed by us.
 		tokenBytes := []byte(cm.Data["token"])
-		_, err = jwt.ParseWithClaims(string(tokenBytes), &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		_, err = jwt.ParseWithClaims(string(tokenBytes), &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 			return c.privateKey.Public(), nil
 		})
 		if err != nil {
@@ -1024,7 +1022,7 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 	namespaceFactory := informers.NewSharedInformerFactory(managedClient, 0)
 	namespaceInformer := namespaceFactory.Core().V1().Namespaces().Informer()
 	namespaceHandler := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if ns, ok := obj.(*corev1.Namespace); ok {
 				if c.isRelevantNamespace(ns.Name) {
 					// Populate the reconcileChan channel to copy the tokens when a namespace is created in the managed cluster.
@@ -1042,8 +1040,8 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 				}
 			}
 		},
-		UpdateFunc: func(_, obj interface{}) {},
-		DeleteFunc: func(obj interface{}) {},
+		UpdateFunc: func(_, obj any) {},
+		DeleteFunc: func(obj any) {},
 	}
 
 	_, err = namespaceInformer.AddEventHandler(namespaceHandler)
@@ -1055,12 +1053,7 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 }
 
 func (c *controller) isRelevantNamespace(namespace string) bool {
-	for _, ns := range c.linseedTokenTargetNamespaces {
-		if ns == namespace {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.linseedTokenTargetNamespaces, namespace)
 }
 
 func (c *controller) supportNamespaceWatches(mc *v3.ManagedCluster) (bool, error) {

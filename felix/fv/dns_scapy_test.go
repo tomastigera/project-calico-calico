@@ -1084,7 +1084,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Precise DNS logging", []api
 		}
 	}
 
-	testDNSExchange := func(client, server interface{}) {
+	testDNSExchange := func(client, server any) {
 		var (
 			clientContainer, serverContainer *containers.Container
 			clientIP, serverIP               string

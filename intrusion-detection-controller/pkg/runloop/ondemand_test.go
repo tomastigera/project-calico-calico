@@ -32,7 +32,7 @@ func TestOnDemand(t *testing.T) {
 	var last int
 	var wg sync.WaitGroup
 	go func() {
-		run(ctx, func(ctx context.Context, i interface{}) {
+		run(ctx, func(ctx context.Context, i any) {
 			last = i.(int)
 			g.Expect(last).ShouldNot(Equal(2))
 			lock.Lock()

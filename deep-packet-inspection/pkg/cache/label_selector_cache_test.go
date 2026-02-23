@@ -45,12 +45,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 
 	Context("UpdateSelector", func() {
 		It("Adds the selector to the cache", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey1))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey1))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 			}
 			c = cache.NewSelectorAndLabelCache(OnMatchStarted, OnMatchStopped)
@@ -67,12 +67,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 		})
 
 		It("Updates the existing cached selector", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
@@ -97,12 +97,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 		})
 
 		It("Handles multiple WEP that matches the selector", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeElementOf([]model.WorkloadEndpointKey{wepKey1, wepKey2}))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeElementOf([]model.WorkloadEndpointKey{wepKey1, wepKey2}))
@@ -132,12 +132,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 
 	Context("UpdateLabels", func() {
 		It("Adds the label to the cache", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey1))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey1))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 			}
 			c = cache.NewSelectorAndLabelCache(OnMatchStarted, OnMatchStopped)
@@ -154,12 +154,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 		})
 
 		It("Updates the existing cached labels", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
@@ -184,12 +184,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 		})
 
 		It("Handles multiple DPI that matches the label", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeElementOf([]model.Key{dpiKey1, dpiKey2}))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeElementOf([]model.Key{dpiKey1, dpiKey2}))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
@@ -221,12 +221,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 
 	Context("DeleteSelector", func() {
 		It("Deletes the selector from cache", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
@@ -253,12 +253,12 @@ var _ = Describe("SelectorAndLabelCache", func() {
 
 	Context("DeleteLabel", func() {
 		It("Deletes the label from cache", func() {
-			OnMatchStarted := func(dpiKey, wepKey interface{}) {
+			OnMatchStarted := func(dpiKey, wepKey any) {
 				onMatchStartedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))
 			}
-			OnMatchStopped := func(dpiKey, wepKey interface{}) {
+			OnMatchStopped := func(dpiKey, wepKey any) {
 				onMatchStoppedCount++
 				Expect(dpiKey).Should(BeEquivalentTo(dpiKey2))
 				Expect(wepKey).Should(BeEquivalentTo(wepKey2))

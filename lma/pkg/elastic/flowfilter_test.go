@@ -195,7 +195,7 @@ var _ = Describe("FlowFilter", func() {
 
 	DescribeTable(
 		"ModifyFlow",
-		func(flow *elastic.CompositeAggregationBucket, mockFunc func(mockFlowHelper *rbac.MockFlowHelper), expectedPolicyBuckets map[interface{}]int64) {
+		func(flow *elastic.CompositeAggregationBucket, mockFunc func(mockFlowHelper *rbac.MockFlowHelper), expectedPolicyBuckets map[any]int64) {
 			mockFlowHelper := new(rbac.MockFlowHelper)
 			mockFunc(mockFlowHelper)
 
@@ -210,7 +210,7 @@ var _ = Describe("FlowFilter", func() {
 			&elastic.CompositeAggregationBucket{
 				AggregatedTerms: map[string]*elastic.AggregatedTerm{
 					"policies": {
-						Buckets: map[interface{}]int64{
+						Buckets: map[any]int64{
 							"0|tier1|tier1.np1|pass":                     1000,
 							"1|tier1|tier1.staged:np1|allow":             1000,
 							"2|tier2|ns1/tier2.np1|pass":                 1000,
@@ -224,7 +224,7 @@ var _ = Describe("FlowFilter", func() {
 			func(mockFlowHelper *rbac.MockFlowHelper) {
 				mockFlowHelper.On("CanListPolicy", mock.Anything).Return(true, nil)
 			},
-			map[interface{}]int64{
+			map[any]int64{
 				"0|tier1|gnp:tier1.np1|pass|-":      1000,
 				"1|tier1|sgnp:tier1.np1|allow|-":    1000,
 				"2|tier2|np:ns1/tier2.np1|pass|-":   1000,
@@ -237,7 +237,7 @@ var _ = Describe("FlowFilter", func() {
 			&elastic.CompositeAggregationBucket{
 				AggregatedTerms: map[string]*elastic.AggregatedTerm{
 					"policies": {
-						Buckets: map[interface{}]int64{
+						Buckets: map[any]int64{
 							"0|tier1|tier1.np1|pass|0":                     1000,
 							"1|tier1|staged:tier1.np1|allow|1":             1000,
 							"2|tier2|ns1/tier2.np1|pass|0":                 1000,
@@ -256,7 +256,7 @@ var _ = Describe("FlowFilter", func() {
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(true, nil)
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
 			},
-			map[interface{}]int64{
+			map[any]int64{
 				"0|*|*|pass|*":                   1000,
 				"1|default|sknp:ns1/np1|allow|0": 1000,
 				"2|default|knp:ns1/np1|allow|1":  1000,
@@ -266,7 +266,7 @@ var _ = Describe("FlowFilter", func() {
 			&elastic.CompositeAggregationBucket{
 				AggregatedTerms: map[string]*elastic.AggregatedTerm{
 					"policies": {
-						Buckets: map[interface{}]int64{
+						Buckets: map[any]int64{
 							"0|tier1|tier1.np1|allow|0":                     1000,
 							"1|tier1|tier1.np1|deny|-1":                     1000,
 							"2|tier1|tier1.np1|pass":                        1000,
@@ -299,7 +299,7 @@ var _ = Describe("FlowFilter", func() {
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("11|default|ns1/staged:knp.default.np1|allow", 1000)).Return(false, nil)
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("12|default|ns1/knp.default.np1|allow|-", 1000)).Return(true, nil)
 			},
-			map[interface{}]int64{
+			map[any]int64{
 				"6|tier2|snp:ns1/tier2.np1|allow|-": 1000,
 				"8|tier3|np:ns2/tier3.np3|allow|1":  1000,
 				"11|default|knp:ns1/np1|allow|-":    1000,
@@ -318,7 +318,7 @@ var _ = Describe("FlowFilter", func() {
 			&elastic.CompositeAggregationBucket{
 				AggregatedTerms: map[string]*elastic.AggregatedTerm{
 					"policies": {
-						Buckets: map[interface{}]int64{
+						Buckets: map[any]int64{
 							"0|tier1|tier1.np1|pass|0":                     1000,
 							"1|tier1|staged:tier1.np1|allow|1":             1000,
 							"2|tier2|ns1/tier2.np1|pass|0":                 1000,
@@ -337,7 +337,7 @@ var _ = Describe("FlowFilter", func() {
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(false, nil)
 				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
 			},
-			map[interface{}]int64{
+			map[any]int64{
 				"0|tier1|gnp:tier1.np1|pass|0":    1000,
 				"1|tier2|np:ns1/tier2.np1|pass|0": 1000,
 				"2|default|knp:ns1/np1|allow|1":   1000,

@@ -73,7 +73,7 @@ var _ = Describe("RecommendationController", func() {
 		listRecommendations := func(ret int) ([]v3.StagedNetworkPolicy, error) {
 			var err error
 			var snps *v3.StagedNetworkPolicyList
-			for i := 0; i < ret; i++ {
+			for range ret {
 				snps, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(ctx, metav1.ListOptions{
 					LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
 				})
@@ -90,13 +90,13 @@ var _ = Describe("RecommendationController", func() {
 			return snps.Items, nil
 		}
 		// Define the list of items handled by the policy recommendation cache.
-		listFunc := func() (map[string]interface{}, error) {
+		listFunc := func() (map[string]any, error) {
 			snps, err := listRecommendations(retries)
 			if err != nil {
 				return nil, err
 			}
 
-			snpMap := make(map[string]interface{})
+			snpMap := make(map[string]any)
 			for _, snp := range snps {
 				snpMap[snp.Namespace] = snp
 			}
@@ -107,7 +107,7 @@ var _ = Describe("RecommendationController", func() {
 		// Create a cache to store recommendations in.
 		cacheArgs := rcache.ResourceCacheArgs{
 			ListFunc:    listFunc,
-			ObjectType:  reflect.TypeOf(v3.StagedNetworkPolicy{}),
+			ObjectType:  reflect.TypeFor[v3.StagedNetworkPolicy](),
 			LogTypeDesc: kindRecommendations,
 			ReconcilerConfig: rcache.ReconcilerConfig{
 				DisableUpdateOnChange: true,
@@ -518,7 +518,7 @@ var _ = Describe("RecommendationController", func() {
 
 			Context("when number of requeues is less than retries", func() {
 				BeforeEach(func() {
-					for i := 0; i < retries-1; i++ {
+					for range retries - 1 {
 						controller.cache.GetQueue().AddRateLimited(key)
 					}
 				})
@@ -531,7 +531,7 @@ var _ = Describe("RecommendationController", func() {
 
 			Context("when number of requeues is equal to retries", func() {
 				BeforeEach(func() {
-					for i := 0; i < retries; i++ {
+					for range retries {
 						controller.cache.GetQueue().AddRateLimited(key)
 					}
 				})

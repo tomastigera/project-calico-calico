@@ -102,11 +102,11 @@ func StartFrom(opts v1.Params) (int, error) {
 }
 
 // searchFrom parses the given parameters to determine which log to start from in the ES query for deep pagination
-func searchFrom(opts v1.Params) ([]interface{}, error) {
+func searchFrom(opts v1.Params) ([]any, error) {
 	if ak := opts.GetAfterKey(); ak != nil {
 		if val, ok := ak["searchFrom"]; ok {
 			switch v := val.(type) {
-			case []interface{}:
+			case []any:
 				logrus.WithField("val", val).Trace("Handling array searchFrom")
 				return v, nil
 			default:
@@ -134,8 +134,8 @@ func pointInTime(opts v1.Params) (*string, error) {
 
 // NextStartFromAfterKey generates an AfterKey to use for log queries that use startFrom to pass
 // the document index from which to start the next page of results.
-func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int, totalHits int64) map[string]interface{} {
-	var ak map[string]interface{}
+func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int, totalHits int64) map[string]any {
+	var ak map[string]any
 
 	// Calculate the next starting point using the value received in the request
 	// and the current hits returned on the query
@@ -147,7 +147,7 @@ func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int, totalHits
 	} else {
 		// There are more hits, return an afterKey the client can use for pagination.
 		// We add the number of hits to the start from provided on the request, if any.
-		ak = map[string]interface{}{
+		ak = map[string]any{
 			"startFrom": nextStartFrom,
 		}
 	}
@@ -245,8 +245,8 @@ func ConfigureCurrentPage(query *elastic.SearchService, opts v1.Params, index st
 }
 
 // NextAfterKey will craft the AfterKey parameter present on the response based on the type of pagination used
-func NextAfterKey(opts v1.Params, prevStartFrom int, pitID string, results *elastic.SearchResult, deepPagination bool) map[string]interface{} {
-	var afterKey map[string]interface{}
+func NextAfterKey(opts v1.Params, prevStartFrom int, pitID string, results *elastic.SearchResult, deepPagination bool) map[string]any {
+	var afterKey map[string]any
 	// For requests over the index.max_result_window size cutoff, ES does not support the use of from parameter when
 	// performing pagination. Instead, we must use search_after and create a point-in-time to iterate via documents.
 	// This is more expensive, so for smaller requests we default to from.
@@ -259,7 +259,7 @@ func NextAfterKey(opts v1.Params, prevStartFrom int, pitID string, results *elas
 		if len(results.Hits.Hits) > 0 {
 			sort := results.Hits.Hits[len(results.Hits.Hits)-1].Sort
 			if sort != nil {
-				afterKey = map[string]interface{}{
+				afterKey = map[string]any{
 					"searchFrom": sort,
 				}
 				afterKey["pit"] = pitID

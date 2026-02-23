@@ -17,6 +17,7 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"regexp"
 	"strconv"
@@ -589,9 +590,7 @@ func ensureRightIFStateFlags(felix *infrastructure.Felix, ready uint32, hostIfTy
 		"eth0": hostIfType | ready,
 	}
 
-	for k, v := range additionalInterfaces {
-		expectedIfacesToFlags[k] = v
-	}
+	maps.Copy(expectedIfacesToFlags, additionalInterfaces)
 
 	for _, w := range felix.Workloads {
 		if w.Runs() {

@@ -12,7 +12,7 @@ import (
 
 var (
 	matchRemoteClusterStatus = regexp.MustCompile("^/?calico/felix/v1/remotecluster/([^/]+)$")
-	typeRemoteClusterStatus  = reflect.TypeOf(RemoteClusterStatus{})
+	typeRemoteClusterStatus  = reflect.TypeFor[RemoteClusterStatus]()
 )
 
 // The RemoteClusterStatus is an ephemeral type that is returned by the Felix syncer. It is used to indicate

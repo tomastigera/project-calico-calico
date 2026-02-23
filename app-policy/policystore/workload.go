@@ -34,7 +34,7 @@ func newWorkloadEndpointUpdateHandler() *workloadUpdateHandler {
 	}
 }
 
-func (wuh *workloadUpdateHandler) onResourceUpdate(upd interface{}, cb apppolicytypes.IPToEndpointsIndex) {
+func (wuh *workloadUpdateHandler) onResourceUpdate(upd any, cb apppolicytypes.IPToEndpointsIndex) {
 	switch v := upd.(type) {
 	case *proto.WorkloadEndpointRemove:
 		wuh.onWorkloadEndpointRemove(v, cb)

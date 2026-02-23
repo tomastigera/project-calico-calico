@@ -405,10 +405,10 @@ func (f *fakeJWT) Claims() jwt.Claims {
 	return f.claims
 }
 
-func (f *fakeJWT) Validate(_ interface{}, _ crypto.SigningMethod, _ ...*jwt.Validator) error {
+func (f *fakeJWT) Validate(_ any, _ crypto.SigningMethod, _ ...*jwt.Validator) error {
 	panic("implement me")
 }
 
-func (f *fakeJWT) Serialize(_ interface{}) ([]byte, error) {
+func (f *fakeJWT) Serialize(_ any) ([]byte, error) {
 	panic("implement me")
 }

@@ -16,6 +16,7 @@ package mock
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"sync"
 
@@ -245,9 +246,7 @@ func (d *MockDataplane) EndpointEgressData() map[string]map[calc.EndpointCompute
 			continue
 		}
 		localCopy[k] = map[calc.EndpointComputedDataKind]calc.EndpointComputedData{}
-		for mk, mv := range v {
-			localCopy[k][mk] = mv
-		}
+		maps.Copy(localCopy[k], v)
 	}
 	return localCopy
 }
@@ -257,9 +256,7 @@ func (d *MockDataplane) ServiceAccounts() map[types.ServiceAccountID]*proto.Serv
 	defer d.Unlock()
 
 	cpy := make(map[types.ServiceAccountID]*proto.ServiceAccountUpdate)
-	for k, v := range d.serviceAccounts {
-		cpy[k] = v
-	}
+	maps.Copy(cpy, d.serviceAccounts)
 	return cpy
 }
 
@@ -268,9 +265,7 @@ func (d *MockDataplane) Namespaces() map[types.NamespaceID]*proto.NamespaceUpdat
 	defer d.Unlock()
 
 	cpy := make(map[types.NamespaceID]*proto.NamespaceUpdate)
-	for k, v := range d.namespaces {
-		cpy[k] = v
-	}
+	maps.Copy(cpy, d.namespaces)
 	return cpy
 }
 
@@ -309,9 +304,7 @@ func (d *MockDataplane) Config() map[string]string {
 		return nil
 	}
 	localCopy := map[string]string{}
-	for k, v := range d.config {
-		localCopy[k] = v
-	}
+	maps.Copy(localCopy, d.config)
 	return localCopy
 }
 
@@ -344,7 +337,7 @@ func NewMockDataplane() *MockDataplane {
 	return s
 }
 
-func (d *MockDataplane) OnEvent(event interface{}) {
+func (d *MockDataplane) OnEvent(event any) {
 	d.Lock()
 	defer d.Unlock()
 
@@ -353,7 +346,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	evType := reflect.TypeOf(event).String()
 	fmt.Fprintf(ginkgo.GinkgoWriter, "       <- Event: %v %v\n", evType, event)
 	Expect(event).NotTo(BeNil())
-	Expect(reflect.TypeOf(event).Kind()).To(Equal(reflect.Ptr))
+	Expect(reflect.TypeOf(event).Kind()).To(Equal(reflect.Pointer))
 
 	/*
 		// Test wrapping the message for the external dataplane

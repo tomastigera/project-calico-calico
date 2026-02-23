@@ -200,10 +200,7 @@ func (su *statusUpdaterImpl) run(ctx context.Context) {
 						su.connectionStatuses[name].retryTime.Format(time.RFC3339))
 					// The update failed again, increase the backoff (unless it is already at 30). Do this after setting
 					// the retryTime for the update.
-					b = 2 * b
-					if b > su.config.maxBackoff {
-						b = su.config.maxBackoff
-					}
+					b = min(2*b, su.config.maxBackoff)
 					su.connectionStatuses[name].backoff = b
 
 				case updateStateNotFound:

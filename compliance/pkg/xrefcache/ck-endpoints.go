@@ -141,7 +141,7 @@ func (v *versionedK8sPod) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) GetCalicoV1() interface{} {
+func (v *versionedK8sPod) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -248,7 +248,7 @@ func (v *versionedCalicoHostEndpoint) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) GetCalicoV1() interface{} {
+func (v *versionedCalicoHostEndpoint) GetCalicoV1() any {
 	return v.v1
 }
 

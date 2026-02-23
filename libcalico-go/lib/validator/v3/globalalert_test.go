@@ -34,7 +34,7 @@ var _ = DescribeTable("GlobalAlert extractVariablesFromTemplate",
 )
 
 var _ = DescribeTable("GlobalAlert Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")
@@ -881,7 +881,7 @@ var _ = DescribeTable("GlobalAlert Validator",
 )
 
 var _ = DescribeTable("GlobalAlertTemplate Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")

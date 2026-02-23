@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/participle"
 )
 
-type JsonObject map[string]interface{}
+type JsonObject map[string]any
 
 var (
 	parser = participle.MustBuild(&Query{})

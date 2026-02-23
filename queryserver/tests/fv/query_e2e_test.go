@@ -113,9 +113,9 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 	)
 })
 
-func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
+func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() any {
 	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
-	return func() interface{} {
+	return func() any {
 		By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
 		qurl, httpMethod := calculateQueryUrl(addr, tqd.query)
 		qbody := calculateQueryBody(tqd.query)
@@ -176,7 +176,7 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 	}
 }
 
-func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTPMethod) {
+func calculateQueryUrl(addr string, query any) (string, authhandler.HTTPMethod) {
 	var parms []string
 	u := "http://" + addr + "/"
 	httpMethod := authhandler.MethodGET
@@ -231,7 +231,7 @@ func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTP
 	return u + "?" + strings.Join(parms, "&"), httpMethod
 }
 
-func calculateQueryBody(query interface{}) io.Reader {
+func calculateQueryBody(query any) io.Reader {
 	switch qt := query.(type) {
 	case client.QueryEndpointsReq:
 		var policy []string

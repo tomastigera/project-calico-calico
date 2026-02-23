@@ -170,7 +170,7 @@ type cachedQuery struct {
 
 // RunQuery is a callback from the SyncerQuerySerializer to run a query.  It is guaranteed
 // not to be called at the same time as OnUpdates and OnStatusUpdated.
-func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{}, error) {
+func (c *cachedQuery) RunQuery(cxt context.Context, req any) (any, error) {
 	switch qreq := req.(type) {
 	case QueryClusterReq:
 		return c.runQuerySummary(cxt, qreq)
@@ -595,7 +595,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 
 	if fieldSelector != nil {
 		updatedPolicy := new(Policy)
-		policyFields := reflect.TypeOf(policy)
+		policyFields := reflect.TypeFor[Policy]()
 		policyValues := reflect.ValueOf(policy)
 
 		updatedPolicyFields := reflect.ValueOf(updatedPolicy).Elem()
@@ -606,12 +606,12 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 
 			if fieldSelector[strings.ToLower(policyFieldName)] {
 				updatePolicyField := updatedPolicyFields.FieldByName(policyFields.Field(i).Name)
-				switch reflect.TypeOf(fieldValue) {
-				case reflect.TypeOf(reflect.Int):
+				switch reflect.TypeFor[reflect.Value]() {
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.SetInt(fieldValue.Int())
-				case reflect.TypeOf(reflect.String):
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.Set(fieldValue)
-				case reflect.TypeOf(reflect.Slice):
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.SetBytes(fieldValue.Bytes())
 				default:
 					updatePolicyField.Set(fieldValue)
@@ -1082,12 +1082,9 @@ func getPageFromToIdx(p *Page, numItems int) (int, int, error) {
 
 	// Calculate the from and to indexes from our page number and per page.
 	fromIdx := p.PageNum * perPage
-	toIdx := fromIdx + perPage
-
-	// Ensure the toIdx does not exceed the length of the slice, capping at numItems if it does.
-	if toIdx > numItems {
-		toIdx = numItems
-	}
+	toIdx := min(
+		// Ensure the toIdx does not exceed the length of the slice, capping at numItems if it does.
+		fromIdx+perPage, numItems)
 
 	return fromIdx, toIdx, nil
 }

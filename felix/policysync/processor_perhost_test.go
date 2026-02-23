@@ -32,7 +32,7 @@ func newPerHostMockClient(name, subscriptionType string, uidAllocator *policysyn
 	return &perHostMockClient{name: name, subscriptionType: subscriptionType, uidAllocator: uidAllocator}
 }
 
-func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{}) {
+func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan any) {
 	sr := &proto.SyncRequest{
 		SubscriptionType: cl.subscriptionType,
 	}
@@ -81,7 +81,7 @@ func (cl *perHostMockClient) readObservations(readFn func([]*proto.ToDataplane))
 	readFn(cl.observations)
 }
 
-func (cl *perHostMockClient) leave(ctx context.Context, toUpdates chan interface{}) {
+func (cl *perHostMockClient) leave(ctx context.Context, toUpdates chan any) {
 	defer cl.onLeaveCancel()
 	lr := policysync.LeaveRequest{JoinMetadata: cl.meta}
 	toUpdates <- lr
@@ -104,13 +104,12 @@ func profileUpdate(name string) *proto.ActiveProfileUpdate {
 }
 
 func TestProcessorWithHostmodeClients(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	const subscriptionType = "per-host-policies"
 	uidAllocator := policysync.NewUIDAllocator()
 
-	updates := make(chan interface{})
+	updates := make(chan any)
 	configParams := &config.Config{
 		DropActionOverride: "LogAndDrop",
 	}

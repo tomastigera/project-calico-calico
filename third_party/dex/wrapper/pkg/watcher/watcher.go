@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -159,12 +160,7 @@ func (w *Watcher) updateCache(base string) error {
 }
 
 func isWatchedFilename(filename string) bool {
-	for _, f := range types.WatchedFilenames {
-		if filename == f {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(types.WatchedFilenames, filename)
 }
 
 // Close releases underlying watcher resources.

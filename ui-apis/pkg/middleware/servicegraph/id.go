@@ -4,6 +4,7 @@ package servicegraph
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -365,7 +366,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 	}
 	var previousType v1.GraphNodeType
 	var isServiceGroup bool
-	for _, component := range strings.Split(string(id), ";") {
+	for component := range strings.SplitSeq(string(id), ";") {
 		parts := strings.Split(component, "/")
 		thisType := v1.GraphNodeType(parts[0])
 
@@ -474,11 +475,8 @@ func validateParentChildRelationship(parent, child v1.GraphNodeType, id v1.Graph
 	}
 
 	var allowed bool
-	for _, allowedParentType := range allowedParentTypes[child] {
-		if allowedParentType == parent {
-			allowed = true
-			break
-		}
+	if slices.Contains(allowedParentTypes[child], parent) {
+		allowed = true
 	}
 
 	if !allowed {
@@ -510,7 +508,7 @@ func ParseNamespacesFromGraphNodeID(id v1.GraphNodeID) ([]string, error) {
 	var globalResourceFound bool
 	var serviceGroupFound bool
 	var previousType v1.GraphNodeType
-	for _, component := range strings.Split(string(id), ";") {
+	for component := range strings.SplitSeq(string(id), ";") {
 		parts := strings.Split(component, "/")
 		thisType := v1.GraphNodeType(parts[0])
 

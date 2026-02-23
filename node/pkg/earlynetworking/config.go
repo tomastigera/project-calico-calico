@@ -18,15 +18,15 @@ const (
 type EarlyNetworkConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 	// Specification of the EarlyNetworkConfiguration.
-	Spec EarlyNetworkConfigurationSpec `json:"spec,omitempty"`
+	Spec EarlyNetworkConfigurationSpec `json:"spec"`
 }
 
 type EarlyNetworkConfigurationSpec struct {
 	Nodes    []ConfigNode
 	Platform string
-	Legacy   LegacyConfig `yaml:"legacy,omitempty" json:"legacy,omitempty"`
+	Legacy   LegacyConfig `yaml:"legacy,omitempty" json:"legacy"`
 }
 
 const (

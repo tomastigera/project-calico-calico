@@ -57,7 +57,7 @@ func (d *DexWrapper) BuildDexRuntimeConfig() error {
 		return fmt.Errorf("reading base config: %w", err)
 	}
 
-	var cfg map[string]interface{}
+	var cfg map[string]any
 	if err := yaml.Unmarshal(base, &cfg); err != nil {
 		return fmt.Errorf("parsing base config: %w", err)
 	}
@@ -102,14 +102,14 @@ func readFileContent(path, varName string) (content string, ok bool) {
 
 // applyConnectorFields sets connector fields on cfg.connectors[*].config without OS/file interactions.
 // It is a pure function suitable for unit testing.
-func applyConnectorFields(cfg, connectorFields map[string]interface{}) {
+func applyConnectorFields(cfg, connectorFields map[string]any) {
 	m := cfg
-	conns, ok := m["connectors"].([]map[string]interface{})
+	conns, ok := m["connectors"].([]map[string]any)
 	if !ok {
 		return
 	}
 	for _, cm := range conns {
-		conf, ok := cm["config"].(map[string]interface{})
+		conf, ok := cm["config"].(map[string]any)
 		if !ok {
 			continue
 		}
@@ -126,9 +126,9 @@ func applyConnectorFields(cfg, connectorFields map[string]interface{}) {
 }
 
 // parseExtraConnectorFields collects extra connector fields based on environment and files under watch dir.
-func (d *DexWrapper) parseExtraConnectorFields() map[string]interface{} {
+func (d *DexWrapper) parseExtraConnectorFields() map[string]any {
 	admin := os.Getenv(types.EnvAdminEmail)
-	extraCfg := map[string]interface{}{}
+	extraCfg := map[string]any{}
 	if admin != "" {
 		extraCfg[types.ConnectorFieldAdminEmail] = admin
 	}

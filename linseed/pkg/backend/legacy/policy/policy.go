@@ -279,7 +279,7 @@ func (b *policyBackend) List(ctx context.Context, i bapi.ClusterInfo, params *v1
 }
 
 // afterKey computes the pagination key for deep pagination support.
-func (b *policyBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.PolicyActivityParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *policyBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.PolicyActivityParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	useDeepPagination := b.migrationMode
 	if !useDeepPagination {
 		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
@@ -396,7 +396,7 @@ func (b *policyBackend) expireOldEntries(ttl time.Duration) {
 	cutoff := time.Now().Add(-ttl)
 	count := 0
 
-	b.policyActivityCache.Range(func(key, value interface{}) bool {
+	b.policyActivityCache.Range(func(key, value any) bool {
 		lastSeen, ok := value.(time.Time)
 
 		// If data is invalid or older than our TTL, delete it.

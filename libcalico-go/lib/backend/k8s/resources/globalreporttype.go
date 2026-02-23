@@ -30,8 +30,8 @@ func NewGlobalReportTypeClient(r rest.Interface, group BackingAPIGroup) K8sResou
 	return &customResourceClient{
 		restClient:      r,
 		resource:        GlobalReportTypeResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.GlobalReportType{}),
-		k8sListType:     reflect.TypeOf(apiv3.GlobalReportTypeList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.GlobalReportType](),
+		k8sListType:     reflect.TypeFor[apiv3.GlobalReportTypeList](),
 		kind:            apiv3.KindGlobalReportType,
 		apiGroup:        group,
 	}

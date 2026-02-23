@@ -63,8 +63,7 @@ func (m *mockHealthAgg) ReportedSummaries() []*health.HealthReport {
 }
 
 func TestStartBackgroundHTTPProbe_URLValidation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	m := &mockHealthAgg{}
 
 	// invalid URL with bad percent-escape should cause parse error

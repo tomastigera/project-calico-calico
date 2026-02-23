@@ -65,7 +65,7 @@ func (v *versionedK8sServiceAccount) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedServiceAccountResource interface.
-func (v *versionedK8sServiceAccount) GetCalicoV1() interface{} {
+func (v *versionedK8sServiceAccount) GetCalicoV1() any {
 	return v.v1
 }
 

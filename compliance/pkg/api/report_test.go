@@ -246,7 +246,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("storing >DefaultPageSize unique reportTypeName/reportName combination with repeats")
 		var unique []api.ReportTypeAndName
 		// Add DefaultPageSize * 2 unique combinations (and add 2 reports of each)
-		for ii := 0; ii < api.DefaultPageSize*2; ii++ {
+		for ii := range api.DefaultPageSize * 2 {
 			tn := fmt.Sprintf("type%d", ii)
 			rn := fmt.Sprintf("report%d", ii)
 			_ = addReport(tn, rn, ii*100)

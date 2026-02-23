@@ -413,8 +413,8 @@ type UpdateBatchResolver interface {
 // depend on them. For example, it is important that the datastore layer sends an IP set
 // create event before it sends a rule that references that IP set.
 type InternalDataplane struct {
-	toDataplane             chan interface{}
-	fromDataplane           chan interface{}
+	toDataplane             chan any
+	fromDataplane           chan any
 	sendDataplaneInSyncOnce sync.Once
 
 	mainRouteTables []routetable.SyncerInterface
@@ -650,8 +650,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp := &InternalDataplane{
-		toDataplane:                 make(chan interface{}, msgPeekLimit),
-		fromDataplane:               make(chan interface{}, 100),
+		toDataplane:                 make(chan any, msgPeekLimit),
+		fromDataplane:               make(chan any, 100),
 		ruleRenderer:                ruleRenderer,
 		ifaceMonitor:                ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
 		ifaceUpdates:                make(chan any, 100),
@@ -946,7 +946,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.AWSSecondaryIPSupport != "Disabled" {
 		// Since the egress gateway machinery claims all remaining indexes below, claim enough for all possible
 		// AWS secondary NICs now.
-		for i := 0; i < aws.SecondaryInterfaceCap; i++ {
+		for range aws.SecondaryInterfaceCap {
 			rti, err := config.RouteTableManager.GrabIndex()
 			if err != nil {
 				logrus.WithError(err).Panic("Failed to allocate route table index for AWS subnet manager.")
@@ -2077,7 +2077,7 @@ func writeMTUFile(mtu int) error {
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
 	logrus.Debugf("Writing %d to "+filename, mtu)
-	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
+	if err := os.WriteFile(filename, fmt.Appendf(nil, "%d", mtu), 0o644); err != nil {
 		logrus.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}
@@ -2259,7 +2259,7 @@ type Manager interface {
 	// send updates to the IPSets and generictables.Table objects (which will queue the updates
 	// until the main loop instructs them to act) or (for efficiency) may wait until
 	// a call to CompleteDeferredWork() to flush updates to the dataplane.
-	OnUpdate(protoBufMsg interface{})
+	OnUpdate(protoBufMsg any)
 	// Called before the main loop flushes updates to the dataplane to allow for batched
 	// work to be completed.
 	CompleteDeferredWork() error
@@ -2491,12 +2491,12 @@ func NewIfaceAddrsUpdate(name string, ips ...string) any {
 	}
 }
 
-func (d *InternalDataplane) SendMessage(msg interface{}) error {
+func (d *InternalDataplane) SendMessage(msg any) error {
 	d.toDataplane <- msg
 	return nil
 }
 
-func (d *InternalDataplane) RecvMessage() (interface{}, error) {
+func (d *InternalDataplane) RecvMessage() (any, error) {
 	return <-d.fromDataplane, nil
 }
 
@@ -2923,7 +2923,7 @@ func (d *InternalDataplane) shutdownXDPCompletely() error {
 	maxTries := 10
 	waitInterval := 100 * time.Millisecond
 	var err error
-	for i := 0; i < maxTries; i++ {
+	for i := range maxTries {
 		err = d.xdpState.WipeXDP()
 		if err == nil {
 			d.xdpState = nil
@@ -3092,7 +3092,7 @@ func newRefreshTicker(name string, interval time.Duration) <-chan time.Time {
 
 // onDatastoreMessage is called when we get a message from the calculation graph
 // it opportunistically processes a match of messages from its channel.
-func (d *InternalDataplane) onDatastoreMessage(msg interface{}) {
+func (d *InternalDataplane) onDatastoreMessage(msg any) {
 	d.datastoreBatchSize = 1
 
 	// Process the message we received, then opportunistically process any other
@@ -3104,7 +3104,7 @@ func (d *InternalDataplane) onDatastoreMessage(msg interface{}) {
 	summaryBatchSize.Observe(float64(d.datastoreBatchSize))
 }
 
-func (d *InternalDataplane) processMsgFromCalcGraph(msg interface{}) {
+func (d *InternalDataplane) processMsgFromCalcGraph(msg any) {
 	if logrus.IsLevelEnabled(logrus.InfoLevel) {
 		logrus.Infof("Received %T update from calculation graph. msg=%s", msg, proto.MsgStringer{Msg: msg}.String())
 	}
@@ -3200,7 +3200,7 @@ func (d *InternalDataplane) processIfaceAddrsUpdate(ifaceAddrsUpdate *ifaceAddrs
 }
 
 func drainChan[T any](c <-chan T, f func(T)) {
-	for i := 0; i < msgPeekLimit; i++ {
+	for range msgPeekLimit {
 		select {
 		case v := <-c:
 			f(v)
@@ -3261,7 +3261,7 @@ func (d *InternalDataplane) configureKernel() {
 	}
 }
 
-func (d *InternalDataplane) recordMsgStat(msg interface{}) {
+func (d *InternalDataplane) recordMsgStat(msg any) {
 	typeName := reflect.ValueOf(msg).Elem().Type().Name()
 	countMessages.WithLabelValues(typeName).Inc()
 }
@@ -3361,11 +3361,9 @@ func (d *InternalDataplane) apply() {
 
 	// Next, create/update IP sets.  We defer deletions of IP sets until after we update tables.
 	var ipSetsWG sync.WaitGroup
-	ipSetsWG.Add(1)
-	go func() {
-		defer ipSetsWG.Done()
+	ipSetsWG.Go(func() {
 		d.applyIPSetsAndNotifyDomainInfoStore()
-	}()
+	})
 
 	// Update any VXLAN FDB entries.
 	for _, fdb := range d.vxlanFDBs {
@@ -3428,11 +3426,9 @@ func (d *InternalDataplane) apply() {
 	// being updated.
 	ipSetsWG.Wait()
 	ipSetsStopCh := make(chan struct{})
-	ipSetsWG.Add(1)
-	go func() {
-		defer ipSetsWG.Done()
+	ipSetsWG.Go(func() {
 		d.loopUpdatingDataplaneForDomainInfoUpdates(ipSetsStopCh)
-	}()
+	})
 
 	// Update tables, this should sever any references to now-unused IP sets.
 	var reschedDelayMutex sync.Mutex
@@ -3563,7 +3559,7 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 
 func (d *InternalDataplane) applyXDPActions() error {
 	var err error = nil
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		err = d.xdpState.ResyncIfNeeded(d.ipsetsSourceV4)
 		if err != nil {
 			return err

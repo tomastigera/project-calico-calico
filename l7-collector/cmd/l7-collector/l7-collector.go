@@ -91,21 +91,17 @@ func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collect
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		log.Info("Starting log collection...")
 		collector.ReadLogs(ctx)
 		cancel()
-		wg.Done()
-	}()
+	})
 
 	// Start the DataplaneStats reporting go routine.
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		client.SendStats(ctx, collector)
 		cancel()
-		wg.Done()
-	}()
+	})
 
 	// Wait for the go routine to complete before exiting
 	wg.Wait()

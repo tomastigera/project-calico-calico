@@ -75,7 +75,7 @@ type GraphSelectorConstructor struct {
 
 	// Valid if operator is ==, != or IN.  Value is an interface to allow string, numerical and slice values.
 	key   string
-	value interface{}
+	value any
 }
 
 func (s *GraphSelectorConstructor) SelectorString() *string {
@@ -183,7 +183,7 @@ func (s *GraphSelectorConstructor) selectorString(nested bool) string {
 	return sb.String()
 }
 
-func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface{}) *GraphSelectorConstructor {
+func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...any) *GraphSelectorConstructor {
 	gs := &GraphSelectorConstructor{
 		operator: op,
 	}

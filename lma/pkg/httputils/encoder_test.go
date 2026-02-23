@@ -66,10 +66,10 @@ const (
 
 // testparams is used for testing decoding.
 type testparams struct {
-	ClusterName string      `json:"cluster" validate:"omitempty"`
-	Selector    string      `json:"selector" validate:"omitempty"`
-	PageSize    int         `json:"page_size" validate:"gte=0,lte=1000"`
-	SearchAfter interface{} `json:"search_after" validate:"omitempty"`
+	ClusterName string `json:"cluster" validate:"omitempty"`
+	Selector    string `json:"selector" validate:"omitempty"`
+	PageSize    int    `json:"page_size" validate:"gte=0,lte=1000"`
+	SearchAfter any    `json:"search_after" validate:"omitempty"`
 }
 
 var _ = Describe("Test /httputils/encoder", func() {
@@ -109,9 +109,9 @@ var _ = Describe("Test /httputils/encoder", func() {
 		It("Should return an error if the json is badly formed in the request body", func() {
 			data :=
 				struct {
-					ClusterName     string      `json:"cluster"`
-					InvalidPageSize string      `json:"page_size"`
-					SarchAfter      interface{} `json:"search_after"`
+					ClusterName     string `json:"cluster"`
+					InvalidPageSize string `json:"page_size"`
+					SarchAfter      any    `json:"search_after"`
 				}{}
 			umerr := json.Unmarshal([]byte(invalidValueRequestBody), &data)
 			Expect(umerr).ShouldNot(HaveOccurred())
@@ -134,9 +134,9 @@ var _ = Describe("Test /httputils/encoder", func() {
 		It("Should return an error if there is an unknown field in the request body", func() {
 			data :=
 				struct {
-					ClusterName string      `json:"invalid_cluster_key"`
-					PageSize    int         `json:"page_size"`
-					SarchAfter  interface{} `json:"search_after"`
+					ClusterName string `json:"invalid_cluster_key"`
+					PageSize    int    `json:"page_size"`
+					SarchAfter  any    `json:"search_after"`
 				}{}
 			umerr := json.Unmarshal([]byte(unknownFieldRequestBody), &data)
 			Expect(umerr).ShouldNot(HaveOccurred())
@@ -183,7 +183,7 @@ var _ = Describe("Test /httputils/encoder", func() {
 			data.Field1 = "val_field1"
 			data.Field2 = 5
 			data.Field3 = make([]string, field3Size)
-			for i := 0; i < field3Size; i++ {
+			for i := range field3Size {
 				data.Field3[i] = fmt.Sprintf("val_field3_%d", i)
 			}
 

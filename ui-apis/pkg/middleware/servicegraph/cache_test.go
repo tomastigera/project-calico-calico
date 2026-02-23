@@ -396,7 +396,7 @@ var _ = Describe("Service graph cache tests", func() {
 
 			By("Querying a single entry and checking it doesn't age out while being queried.")
 			timeRanges := make(map[int64]int)
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
 					ServiceGraphRequest: &v1.ServiceGraphRequest{
 						TimeRange: tr1,
@@ -422,7 +422,7 @@ var _ = Describe("Service graph cache tests", func() {
 			Eventually(cache.GetCacheSize, "2s").Should(Equal(1))
 
 			By("Requesting more than the max number of relative times")
-			for i := 0; i < 50; i++ {
+			for i := range 50 {
 				tri := &lmav1.TimeRange{
 					From: now3.Add(time.Duration(-i*6) * time.Minute),
 					To:   now3.Add(time.Duration(-i*5) * time.Minute),

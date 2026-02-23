@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -320,9 +321,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 		},
 		RBACAuthorizer: cfg.authorizer,
 	}
-	for k, v := range cfg.authenticators {
-		jAuth.authenticators[k] = v
-	}
+	maps.Copy(jAuth.authenticators, cfg.authenticators)
 
 	return jAuth, nil
 }

@@ -207,7 +207,7 @@ func newVXLANManagerWithShims(
 	return m
 }
 
-func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
+func (m *vxlanManager) OnUpdate(protoBufMsg any) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.RouteUpdate:
 		m.routeMgr.OnUpdate(msg)

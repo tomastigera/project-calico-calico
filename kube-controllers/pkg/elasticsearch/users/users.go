@@ -5,6 +5,7 @@
 package users
 
 import (
+	"maps"
 	"regexp"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
@@ -261,12 +262,8 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 
 	if management {
 		privateManagementUsers, publicManagementUsers := managementOnlyElasticsearchUsers(clusterName)
-		for k, v := range privateManagementUsers {
-			privateUsers[k] = v
-		}
-		for k, v := range publicManagementUsers {
-			publicUsers[k] = v
-		}
+		maps.Copy(privateUsers, privateManagementUsers)
+		maps.Copy(publicUsers, publicManagementUsers)
 	}
 	return privateUsers, publicUsers
 }

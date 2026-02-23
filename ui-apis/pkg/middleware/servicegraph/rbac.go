@@ -77,26 +77,18 @@ func NewRBACFilter(ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory 
 		}
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForLogs(ctx, csFactory, user, cluster)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		l7Permitted, l7Err = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "l7"), nil)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		dnsPermitted, dnsErr = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "dns"), nil)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		alertsPermitted, alertsErr = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "events"), nil)
-	}()
+	})
 	wg.Wait()
 
 	if verbsErr != nil {

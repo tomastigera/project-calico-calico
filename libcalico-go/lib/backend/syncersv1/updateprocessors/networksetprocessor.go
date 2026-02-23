@@ -16,6 +16,7 @@ package updateprocessors
 
 import (
 	"errors"
+	"maps"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -49,7 +50,7 @@ func convertNetworkSetV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 	}, nil
 }
 
-func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
+func convertNetworkSetV2ToV1Value(val any) (any, error) {
 	v3res, ok := val.(*apiv3.NetworkSet)
 	if !ok {
 		return nil, errors.New("value is not a valid NetworkSet resource value")
@@ -70,9 +71,7 @@ func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
 	// Add in the Calico namespace label for storage purposes. Add in the Kind and Name label for
 	// policy recommendation purposes
 	labelsWithCalicoNamespace := make(map[string]string, len(v3res.GetLabels()))
-	for k, v := range v3res.GetLabels() {
-		labelsWithCalicoNamespace[k] = v
-	}
+	maps.Copy(labelsWithCalicoNamespace, v3res.GetLabels())
 	labelsWithCalicoNamespace[apiv3.LabelNamespace] = v3res.Namespace
 
 	if !netsetlabels.ValidateNetworkSetLabels(v3res.Name, labelsWithCalicoNamespace) {

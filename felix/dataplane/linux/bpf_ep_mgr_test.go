@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	maps0 "maps"
 	"net"
 	"regexp"
 	"strconv"
@@ -557,7 +558,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 	}
 
-	genHEPUpdate := func(heps ...interface{}) func() {
+	genHEPUpdate := func(heps ...any) func() {
 		return func() {
 			hostIfaceToEp := make(map[string]*proto.HostEndpoint)
 			for i := 0; i < len(heps); i += 2 {
@@ -1780,13 +1781,13 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 	Describe("ifstate(ipv6 disabled)", func() {
 		It("should clean up jump map entries for missing interfaces", func() {
-			for i := 0; i < 9; i++ {
+			for i := range 9 {
 				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
 			}
 
@@ -1853,7 +1854,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.bpfLogLevel = "debug"
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
-			for i := 0; i < 4; i++ {
+			for i := range 4 {
 				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
@@ -2114,7 +2115,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 		It("check bpf endpoint count after pod churn", func() {
 			start := bpfEpMgr.getNumEPs()
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				name := fmt.Sprintf("cali%d", i)
 				genIfaceUpdate(name, ifacemonitor.StateUp, 1000+i)()
 				genWLUpdate(name)()
@@ -2253,13 +2254,13 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.bpfLogLevel = "debug"
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
-			for i := 0; i < 13; i++ {
+			for i := range 13 {
 				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 			}
-			for i := 0; i < 9; i++ {
+			for i := range 9 {
 				_ = xdpJumpMap.Update(jump.Key(i), jump.Value(uint32(2000+i)))
 			}
 
@@ -2326,7 +2327,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.bpfLogLevel = "debug"
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
-			for i := 0; i < 6; i++ {
+			for i := range 6 {
 				_ = jumpMapIng.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMapIng.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
 				_ = jumpMapEgr.Update(jump.Key(i), jump.Value(uint32(1000+i)))
@@ -2788,12 +2789,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			jumpCopyContentsIng := make(map[string]string, len(jumpMapIng.Contents))
 			jumpCopyContentsEgr := make(map[string]string, len(jumpMapEgr.Contents))
-			for k, v := range jumpMapIng.Contents {
-				jumpCopyContentsIng[k] = v
-			}
-			for k, v := range jumpMapEgr.Contents {
-				jumpCopyContentsEgr[k] = v
-			}
+			maps0.Copy(jumpCopyContentsIng, jumpMapIng.Contents)
+			maps0.Copy(jumpCopyContentsEgr, jumpMapEgr.Contents)
 
 			genPolicy("default", "anotherpolicy")()
 			genWLUpdate("cali12345", &proto.PolicyID{Name: "anotherpolicy", Kind: v3.KindNetworkPolicy})()
@@ -2825,12 +2822,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			jumpCopyContentsIng = make(map[string]string, len(jumpMapIng.Contents))
 			jumpCopyContentsEgr = make(map[string]string, len(jumpMapEgr.Contents))
-			for k, v := range jumpMapIng.Contents {
-				jumpCopyContentsIng[k] = v
-			}
-			for k, v := range jumpMapEgr.Contents {
-				jumpCopyContentsEgr[k] = v
-			}
+			maps0.Copy(jumpCopyContentsIng, jumpMapIng.Contents)
+			maps0.Copy(jumpCopyContentsEgr, jumpMapEgr.Contents)
 
 			dp = newMockDataplane()
 			mockDP = &mockProgMapDP{
@@ -2891,7 +2884,7 @@ var _ = Describe("jumpMapAlloc tests", func() {
 	})
 
 	It("should give initial values in order", func() {
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			idx, err := jma.Get("test")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(idx).To(Equal(i))

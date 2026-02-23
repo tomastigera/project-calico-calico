@@ -11,7 +11,7 @@ import (
 )
 
 var _ = DescribeTable("GlobalThreatFeed Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")

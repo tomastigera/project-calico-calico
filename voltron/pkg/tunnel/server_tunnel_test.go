@@ -58,13 +58,11 @@ func TestServerSideTunnel(t *testing.T) {
 			)
 
 			var srvT tunnel.Tunnel
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				var err error
 				srvT, err = srv.AcceptTunnel()
 				Expect(err).ShouldNot(HaveOccurred())
-			}()
+			})
 
 			certPem := test.PemEncodeCert(clnCert)
 			cert, err := tls.X509KeyPair(certPem, []byte(test.PrivateRSA))
@@ -117,11 +115,9 @@ func TestServerSideTunnel(t *testing.T) {
 				var wg sync.WaitGroup
 
 				rwRun := func(r io.Reader, w io.Writer, msg string) {
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
+					wg.Go(func() {
 						_, _ = test.DataFlow(r, w, []byte(msg))
-					}()
+					})
 				}
 
 				rwRun(srvS, clnS, "clnS says hi to srvS")

@@ -26,7 +26,7 @@ var _ = Describe("File", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 	It("Should delete older files on interval", func() {
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			_, err := os.Create(fmt.Sprintf("%s/alert_fast.txt.180000000%d", path, i))
 			Expect(err).ShouldNot(HaveOccurred())
 		}
@@ -50,7 +50,7 @@ var _ = Describe("File", func() {
 		Expect(os.IsNotExist(err)).Should(BeTrue())
 
 		By("verifying that maximum allowed files are not deleted")
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			_, err := os.Stat(fmt.Sprintf("%s/alert_fast.txt.180000000%d", path, i))
 			Expect(err).ShouldNot(HaveOccurred())
 		}
