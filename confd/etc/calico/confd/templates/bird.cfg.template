@@ -1,5 +1,4 @@
 {{- $config := getBGPConfig 4 . -}}
-{{- $node_name := getenv "NODENAME" -}}
 
 function apply_communities ()
 {
@@ -39,7 +38,7 @@ include "bird_aggr.cfg";
 include "bird_ipam.cfg";
 
 # ------------- External Networks -------------
-{{- $node_peers_key := printf "/bgp/v1/host/%s/peer_v4" $node_name }}
+{{- $node_peers_key := printf "/bgp/v1/host/%s/peer_v4" $config.NodeName }}
 {{- range $line := externalNetworkBIRDConfig $config.NodeIP (gets "/resources/v3/projectcalico.org/externalnetworks/*") (gets "/bgp/v1/global/peer_v4/*") (gets (printf "%s/*" $node_peers_key)) }}
 {{ $line }}
 {{- end }}
