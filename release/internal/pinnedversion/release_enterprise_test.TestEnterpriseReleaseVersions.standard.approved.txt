@@ -160,6 +160,8 @@
       version: v3.22.0-1.0
     waf-http-filter:
       version: v3.22.0-1.0
+    webhooks:
+      version: v3.22.0-1.0
     webhooks-processor:
       version: v3.22.0-1.0
   helmRelease: "0"

@@ -78,6 +78,7 @@ var (
 		"prometheus-service",
 		"queryserver",
 		"voltron",
+		"webhooks",
 		"webhooks-processor",
 		"third_party/alertmanager",
 		"third_party/dex",
