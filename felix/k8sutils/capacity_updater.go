@@ -187,13 +187,13 @@ func (u *CapacityUpdater) handleCapacityChange(caps aws.SecondaryIfaceCapacities
 		"secondaryIPCap": caps.MaxCalicoSecondaryIPs,
 		"nodeName":       u.nodeName,
 	}).Info("Updating node capacity.")
-	var capResource interface{}
+	var capResource any
 	if caps.MaxCalicoSecondaryIPs > 0 {
 		capResource = fmt.Sprint(caps.MaxCalicoSecondaryIPs)
 	}
-	patch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"capacity": map[string]interface{}{
+	patch := map[string]any{
+		"status": map[string]any{
+			"capacity": map[string]any{
 				ResourceSecondaryIPv4: capResource,
 			},
 		},

@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -56,7 +55,7 @@ var _ = Describe("PacketCapture Manager", func() {
 	}
 
 	DescribeTable("Buffers packet captures until interfaces are up",
-		func(updateBatches [][]interface{}, expectedAdditions []output, expectedRemovals []output, expectedRemovalsAndClean []output) {
+		func(updateBatches [][]any, expectedAdditions []output, expectedRemovals []output, expectedRemovalsAndClean []output) {
 			var mockedCaptures = myMockedCaptures{}
 
 			// Mock Add to return the expectedAdditions output
@@ -98,7 +97,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			mockedCaptures.AssertNumberOfCalls(GinkgoT(), "Remove", len(expectedRemovals))
 			mockedCaptures.AssertExpectations(GinkgoT())
 		},
-		Entry("1 capture after endpoints and interfaces are up", [][]interface{}{
+		Entry("1 capture after endpoints and interfaces are up", [][]any{
 			{
 				// interface update will be processed in a single batch
 				&ifaceStateUpdate{
@@ -143,7 +142,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				wasPreviouslyAdded:     false,
 			},
 		}, []output{}, []output{}),
-		Entry("1 capture before interfaces and endpoints are up", [][]interface{}{
+		Entry("1 capture before interfaces and endpoints are up", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -188,7 +187,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				wasPreviouslyAdded:     false,
 			},
 		}, []output{}, []output{}),
-		Entry("1 capture before endpoints and interfaces are up", [][]interface{}{
+		Entry("1 capture before endpoints and interfaces are up", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -241,7 +240,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           fmt.Errorf("cannot start twice"),
 			},
 		}, []output{}, []output{}),
-		Entry("multiple captures for different endpoints", [][]interface{}{
+		Entry("multiple captures for different endpoints", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -328,7 +327,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				wasPreviouslyAdded:     false,
 			},
 		}, []output{}, []output{}),
-		Entry("overlapping captures for the same endpoint", [][]interface{}{
+		Entry("overlapping captures for the same endpoint", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -395,7 +394,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				wasPreviouslyAdded:     false,
 			},
 		}, []output{}, []output{}),
-		Entry("start/stop for the same endpoint", [][]interface{}{
+		Entry("start/stop for the same endpoint", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -460,7 +459,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err: nil,
 			},
 		}),
-		Entry("matches only cali interfaces", [][]interface{}{
+		Entry("matches only cali interfaces", [][]any{
 			{
 				// all updates will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -515,7 +514,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           fmt.Errorf("cannot start twice"),
 			},
 		}, []output{}, []output{}),
-		Entry("interface down stops a capture", [][]interface{}{
+		Entry("interface down stops a capture", [][]any{
 			{
 				// wep update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -576,7 +575,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           nil,
 			},
 		}, []output{}),
-		Entry("interface deleted stops a capture", [][]interface{}{
+		Entry("interface deleted stops a capture", [][]any{
 			{
 				// wep update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -637,7 +636,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           nil,
 			},
 		}, []output{}),
-		Entry("start after an interface went down", [][]interface{}{
+		Entry("start after an interface went down", [][]any{
 			{
 				// wep update will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -713,7 +712,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           nil,
 			},
 		}, []output{}),
-		Entry("start/stop for the same endpoint in the same batch does not produce output", [][]interface{}{
+		Entry("start/stop for the same endpoint in the same batch does not produce output", [][]any{
 			{
 				// all updates will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -750,7 +749,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				},
 			},
 		}, []output{}, []output{}, []output{}),
-		Entry("interface up/down in the same batch does not produce output", [][]interface{}{
+		Entry("interface up/down in the same batch does not produce output", [][]any{
 			{
 				// all updates will be processed in a single batch
 				&proto.PacketCaptureUpdate{
@@ -782,7 +781,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				},
 			},
 		}, []output{}, []output{}, []output{}),
-		Entry("1 capture update after the capture started", [][]interface{}{
+		Entry("1 capture update after the capture started", [][]any{
 			{
 				// capture update will be processed in a single batch
 				&proto.PacketCaptureUpdate{

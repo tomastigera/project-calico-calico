@@ -109,20 +109,20 @@ badRequest:
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-var defaultVolumes = []map[string]interface{}{
-	{"name": "envoy-config", "emptyDir": map[string]interface{}{}},
-	{"name": "dikastes-sock", "hostPath": map[string]interface{}{"path": "/var/run/dikastes", "type": "Directory"}},
-	{"name": "l7-collector-sock", "hostPath": map[string]interface{}{"path": "/var/run/l7-collector", "type": "Directory"}},
+var defaultVolumes = []map[string]any{
+	{"name": "envoy-config", "emptyDir": map[string]any{}},
+	{"name": "dikastes-sock", "hostPath": map[string]any{"path": "/var/run/dikastes", "type": "Directory"}},
+	{"name": "l7-collector-sock", "hostPath": map[string]any{"path": "/var/run/l7-collector", "type": "Directory"}},
 }
 
-func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]interface{} {
-	return []map[string]interface{}{
+func generateDikastesInitContainer(image string, args []string, dataplane string) []map[string]any {
+	return []map[string]any{
 		{
 			"name":    "tigera-dikastes-init",
 			"image":   image,
 			"command": []string{"/dikastes", "init-sidecar"},
 			"args":    args,
-			"env": []map[string]interface{}{
+			"env": []map[string]any{
 				{
 					"name":  "ENVOY_CONFIG_PATH",
 					"value": "/etc/tigera/envoy.yaml",
@@ -136,20 +136,20 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 					"value": dataplane,
 				},
 			},
-			"volumeMounts": []map[string]interface{}{
+			"volumeMounts": []map[string]any{
 				{
 					"name":      "envoy-config",
 					"mountPath": "/etc/tigera",
 				},
 			},
-			"securityContext": map[string]interface{}{
+			"securityContext": map[string]any{
 				"runAsGroup": 0,
 				"runAsUser":  0,
 				// needed for openshift or systems with SELinux Enabled
-				"seLinuxOptions": map[string]interface{}{
+				"seLinuxOptions": map[string]any{
 					"type": "spc_t",
 				},
-				"capabilities": map[string]interface{}{
+				"capabilities": map[string]any{
 					"add": []string{"NET_ADMIN", "NET_RAW"},
 				},
 			},
@@ -157,40 +157,40 @@ func generateDikastesInitContainer(image string, args []string, dataplane string
 	}
 }
 
-func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[string]interface{}, error) {
-	res := map[string]interface{}{
+func generateEnvoyContainer(image string, attrs map[string]any) ([]map[string]any, error) {
+	res := map[string]any{
 		"name":          "tigera-envoy",
 		"image":         image,
 		"command":       []string{"envoy", "-c", "/etc/tigera/envoy.yaml"},
 		"restartPolicy": "Always",
-		"ports": []map[string]interface{}{
+		"ports": []map[string]any{
 			{
 				"containerPort": 16001,
 			},
 		},
-		"env": []map[string]interface{}{
+		"env": []map[string]any{
 			{
 				"name":  "TIGERA_TPROXY",
 				"value": "Disabled",
 			},
 		},
-		"startupProbe": map[string]interface{}{
-			"tcpSocket": map[string]interface{}{
+		"startupProbe": map[string]any{
+			"tcpSocket": map[string]any{
 				"port": 16001,
 			},
 		},
-		"securityContext": map[string]interface{}{
+		"securityContext": map[string]any{
 			"runAsGroup": 0,
 			"runAsUser":  0,
 			// needed for openshift or systems with SELinux Enabled
-			"seLinuxOptions": map[string]interface{}{
+			"seLinuxOptions": map[string]any{
 				"type": "spc_t",
 			},
-			"capabilities": map[string]interface{}{
+			"capabilities": map[string]any{
 				"add": []string{"NET_RAW"},
 			},
 		},
-		"volumeMounts": []map[string]interface{}{
+		"volumeMounts": []map[string]any{
 			{
 				"name":      "envoy-config",
 				"mountPath": "/etc/tigera",
@@ -210,7 +210,7 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 		return nil, err
 	}
 
-	return []map[string]interface{}{res}, nil
+	return []map[string]any{res}, nil
 }
 
 type sidecarCfg struct {
@@ -223,22 +223,22 @@ type sidecarCfg struct {
 	envoyResources string
 }
 
-func (cfg *sidecarCfg) volumes() (res []map[string]interface{}) {
+func (cfg *sidecarCfg) volumes() (res []map[string]any) {
 	res = append(res, defaultVolumes...)
 
 	if cfg.logging || cfg.policy {
-		res = append(res, map[string]interface{}{
+		res = append(res, map[string]any{
 			"name": "felix-sync",
-			"csi": map[string]interface{}{
+			"csi": map[string]any{
 				"driver": "csi.tigera.io",
 			},
 		})
 	}
 
 	if cfg.waf {
-		res = append(res, map[string]interface{}{
+		res = append(res, map[string]any{
 			"name": "tigera-waf-logfiles",
-			"hostPath": map[string]interface{}{
+			"hostPath": map[string]any{
 				"path": "/var/log/calico/waf",
 				"type": "DirectoryOrCreate",
 			},
@@ -264,10 +264,10 @@ func (cfg *sidecarCfg) dikastesInitArgs() []string {
 	return args
 }
 
-func (cfg *sidecarCfg) envoyOptionalAttributes() (map[string]interface{}, error) {
-	res := map[string]interface{}{}
+func (cfg *sidecarCfg) envoyOptionalAttributes() (map[string]any, error) {
+	res := map[string]any{}
 	if cfg.envoyResources != "" {
-		var envres interface{}
+		var envres any
 		err := json.Unmarshal([]byte(cfg.envoyResources), &envres)
 		if err != nil {
 			return nil, err
@@ -326,7 +326,7 @@ func relocateRunAsNonRoot(p *corev1.Pod) []patchOp {
 			res = append(res, patchOp{
 				Op:    "add",
 				Path:  fmt.Sprintf("/spec/containers/%d/securityContext", i),
-				Value: map[string]interface{}{"runAsNonRoot": true},
+				Value: map[string]any{"runAsNonRoot": true},
 			})
 		}
 	}
@@ -369,9 +369,9 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 }
 
 type patchOp struct {
-	Op    string      `json:"op"`
-	Path  string      `json:"path"`
-	Value interface{} `json:"value"`
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value any    `json:"value"`
 }
 
 type patchOps []patchOp

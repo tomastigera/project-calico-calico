@@ -172,11 +172,7 @@ func getStageNetworkPoliciesPage(
 	}
 
 	startIndex := page * maxItems
-	endIndex := startIndex + maxItems
-
-	if endIndex > count {
-		endIndex = count
-	}
+	endIndex := min(startIndex+maxItems, count)
 
 	if startIndex >= count {
 		return []v3.StagedNetworkPolicy{}, count, nil

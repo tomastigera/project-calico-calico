@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	var resp *http.Response
 	var err error
 	retryInterval := 500 * time.Millisecond
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		resp, err = c.Get(clientconfig.Host + "/healthz")
 		if err != nil || http.StatusOK != resp.StatusCode {
 			success = false
@@ -338,14 +338,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = policyClient.Delete(ctx, defaultTierPolicyName, metav1.DeleteOptions{})
 	if err != nil {
@@ -535,14 +533,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = policyClient.Delete(ctx, defaultTierPolicyName, metav1.DeleteOptions{})
 	if err != nil {
@@ -719,7 +715,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -731,7 +727,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	}()
 
 	// Create two PolicyRecScopes
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.PolicyRecommendationScope{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.PolicyRecommendationScopeSpec{
@@ -1305,14 +1301,12 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = networkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -1530,7 +1524,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1542,7 +1536,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	}()
 
 	// Create two AlertExceptions
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ae := &v3.AlertException{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ae%d", i)},
 			Spec: v3.AlertExceptionSpec{
@@ -1653,7 +1647,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1665,7 +1659,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	}()
 
 	// Create two SecurityEventWebhooks
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.SecurityEventWebhook{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.SecurityEventWebhookSpec{
@@ -1824,7 +1818,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1836,7 +1830,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two GlobalAlerts
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.GlobalAlert{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.GlobalAlertSpec{
@@ -1956,7 +1950,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1968,7 +1962,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	}()
 
 	// Create two GlobalAlertTemplates
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.GlobalAlertTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.GlobalAlertSpec{
@@ -2205,7 +2199,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2217,7 +2211,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}()
 
 	// Create two GlobalThreatFeeds
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gtf := &v3.GlobalThreatFeed{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
 			Spec: v3.GlobalThreatFeedSpec{
@@ -2239,7 +2233,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}
 
 	// Delete two GlobalThreatFeeds
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gtf := fmt.Sprintf("gtf%d", i)
 		err = globalThreatFeedClient.Delete(ctx, gtf, metav1.DeleteOptions{})
 		if err != nil {
@@ -2352,7 +2346,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2364,7 +2358,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two HostEndpoints
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		hep := createTestHostEndpoint(fmt.Sprintf("hep%d", i), "192.168.0.1", "test-node")
 		_, err = hostEndpointClient.Create(ctx, hep, metav1.CreateOptions{})
 		if err != nil {
@@ -2580,7 +2574,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2592,7 +2586,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two GlobalReports
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gr := &v3.GlobalReport{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
 			Spec:       v3.ReportSpec{ReportType: "inventory"},
@@ -2706,7 +2700,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2718,7 +2712,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	}()
 
 	// Create two GlobalReports
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		grt := &v3.GlobalReportType{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("grt%d", i)},
 			Spec: v3.ReportTypeSpec{
@@ -3267,7 +3261,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -3512,7 +3506,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -3524,7 +3518,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}()
 
 	// Create two ManagedClusters
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		mc := &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("mc%d", i)},
 		}
@@ -3758,11 +3752,18 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 			{
 				APIGroup: "",
 				Resource: "namespaces",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "get", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			}, {
 				APIGroup: "",
 				Resource: "pods",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "delete", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "patch", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			},
 		},
 	}); err != nil {
@@ -3881,14 +3882,12 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = packetCaptureClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -3986,14 +3985,12 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = deepPacketInspectionClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -4773,7 +4770,7 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", bgpFilter, bgpFilterNew)
 	}
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		if bgpFilterNew.Spec.ExportV4[i] != bgpFilter.Spec.ExportV4[i] {
 			return fmt.Errorf("didn't get the correct object back from the server. Incorrect ExportV4: \n%+v\n%+v",
 				bgpFilter.Spec.ExportV4, bgpFilterNew.Spec.ExportV4)

@@ -19,15 +19,14 @@ import (
 	"net"
 
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8sapi "k8s.io/api/core/v1"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
@@ -601,14 +600,14 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 				})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				var weps []*libapiv3.WorkloadEndpoint
+				var weps []*internalapi.WorkloadEndpoint
 				for _, kvp := range kvps {
-					weps = append(weps, kvp.Value.(*libapiv3.WorkloadEndpoint))
+					weps = append(weps, kvp.Value.(*internalapi.WorkloadEndpoint))
 				}
 
-				Expect(weps).Should(Equal([]*libapiv3.WorkloadEndpoint{{
+				Expect(weps).Should(Equal([]*internalapi.WorkloadEndpoint{{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       libapiv3.KindWorkloadEndpoint,
+						Kind:       internalapi.KindWorkloadEndpoint,
 						APIVersion: apiv3.GroupVersionCurrent,
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -622,7 +621,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							apiv3.LabelNetworkInterface: "eth0",
 						},
 					},
-					Spec: libapiv3.WorkloadEndpointSpec{
+					Spec: internalapi.WorkloadEndpointSpec{
 						Orchestrator:  "k8s",
 						Node:          "test-node",
 						Pod:           "simplePod",
@@ -662,14 +661,14 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 
 					Expect(err).ShouldNot(HaveOccurred())
 
-					var weps []*libapiv3.WorkloadEndpoint
+					var weps []*internalapi.WorkloadEndpoint
 					for _, kvp := range kvps {
-						weps = append(weps, kvp.Value.(*libapiv3.WorkloadEndpoint))
+						weps = append(weps, kvp.Value.(*internalapi.WorkloadEndpoint))
 					}
 
-					Expect(weps).Should(Equal([]*libapiv3.WorkloadEndpoint{{
+					Expect(weps).Should(Equal([]*internalapi.WorkloadEndpoint{{
 						TypeMeta: metav1.TypeMeta{
-							Kind:       libapiv3.KindWorkloadEndpoint,
+							Kind:       internalapi.KindWorkloadEndpoint,
 							APIVersion: apiv3.GroupVersionCurrent,
 						},
 						ObjectMeta: metav1.ObjectMeta{
@@ -693,7 +692,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 								}),
 							},
 						},
-						Spec: libapiv3.WorkloadEndpointSpec{
+						Spec: internalapi.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",
 							Node:          "test-node",
 							Pod:           "simplePod",
@@ -748,15 +747,15 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 
 					Expect(err).ShouldNot(HaveOccurred())
 
-					var weps []*libapiv3.WorkloadEndpoint
+					var weps []*internalapi.WorkloadEndpoint
 					for _, kvp := range kvps {
-						weps = append(weps, kvp.Value.(*libapiv3.WorkloadEndpoint))
+						weps = append(weps, kvp.Value.(*internalapi.WorkloadEndpoint))
 					}
 
-					Expect(weps).Should(Equal([]*libapiv3.WorkloadEndpoint{
+					Expect(weps).Should(Equal([]*internalapi.WorkloadEndpoint{
 						{
 							TypeMeta: metav1.TypeMeta{
-								Kind:       libapiv3.KindWorkloadEndpoint,
+								Kind:       internalapi.KindWorkloadEndpoint,
 								APIVersion: apiv3.GroupVersionCurrent,
 							},
 							ObjectMeta: metav1.ObjectMeta{
@@ -793,7 +792,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									}),
 								},
 							},
-							Spec: libapiv3.WorkloadEndpointSpec{
+							Spec: internalapi.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
 								Node:          "test-node",
 								Pod:           "simplePod",
@@ -805,7 +804,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 						},
 						{
 							TypeMeta: metav1.TypeMeta{
-								Kind:       libapiv3.KindWorkloadEndpoint,
+								Kind:       internalapi.KindWorkloadEndpoint,
 								APIVersion: apiv3.GroupVersionCurrent,
 							},
 							ObjectMeta: metav1.ObjectMeta{
@@ -842,7 +841,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									}),
 								},
 							},
-							Spec: libapiv3.WorkloadEndpointSpec{
+							Spec: internalapi.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
 								Node:          "test-node",
 								Pod:           "simplePod",
@@ -854,7 +853,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 						},
 						{
 							TypeMeta: metav1.TypeMeta{
-								Kind:       libapiv3.KindWorkloadEndpoint,
+								Kind:       internalapi.KindWorkloadEndpoint,
 								APIVersion: apiv3.GroupVersionCurrent,
 							},
 							ObjectMeta: metav1.ObjectMeta{
@@ -891,7 +890,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									}),
 								},
 							},
-							Spec: libapiv3.WorkloadEndpointSpec{
+							Spec: internalapi.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
 								Node:          "test-node",
 								Pod:           "simplePod",
@@ -908,7 +907,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 	})
 })
 
-func mustMarshal(v interface{}) string {
+func mustMarshal(v any) string {
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
 		panic(err)

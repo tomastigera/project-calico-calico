@@ -1,7 +1,6 @@
 package fv_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -262,8 +261,7 @@ func TestDikastesSuite(t *testing.T) {
 }
 
 func TestDikastesBasicAuthz(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// define test data
 	updates, checks := basicDikastesExtAuthzData(t)

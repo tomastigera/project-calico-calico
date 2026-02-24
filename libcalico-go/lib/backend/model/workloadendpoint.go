@@ -24,14 +24,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var (
-	matchWorkloadEndpoint = regexp.MustCompile("^/?calico/v1/host/([^/]+)/workload/([^/]+)/([^/]+)/endpoint/([^/]+)$")
-)
+var matchWorkloadEndpoint = regexp.MustCompile("^/?calico/v1/host/([^/]+)/workload/([^/]+)/([^/]+)/endpoint/([^/]+)$")
 
 type WorkloadEndpointKey struct {
 	Hostname       string `json:"-"`
@@ -84,7 +82,7 @@ func (key WorkloadEndpointKey) defaultDeleteParentPaths() ([]string, error) {
 }
 
 func (key WorkloadEndpointKey) valueType() (reflect.Type, error) {
-	return reflect.TypeOf(WorkloadEndpoint{}), nil
+	return reflect.TypeFor[WorkloadEndpoint](), nil
 }
 
 func (key WorkloadEndpointKey) parseValue(rawData []byte) (any, error) {
@@ -182,7 +180,7 @@ type WorkloadEndpoint struct {
 	IPv6Nets                   []net.IPNet       `json:"ipv6_nets"`
 	IPv4NAT                    []IPNAT           `json:"ipv4_nat,omitempty"`
 	IPv6NAT                    []IPNAT           `json:"ipv6_nat,omitempty"`
-	Labels                     uniquelabels.Map  `json:"labels,omitempty"`
+	Labels                     uniquelabels.Map  `json:"labels"`
 	IPv4Gateway                *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
 	IPv6Gateway                *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
 	Ports                      []EndpointPort    `json:"ports,omitempty" validate:"dive"`
@@ -195,7 +193,7 @@ type WorkloadEndpoint struct {
 	EgressSelector             string            `json:"egress_selector,omitempty"`
 	EgressMaxNextHops          int               `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
 	EgressGatewayPolicy        string            `json:"egress_gateway_policy,omitempty"`
-	DeletionTimestamp          time.Time         `json:"deletion_timestamp,omitempty"`
+	DeletionTimestamp          time.Time         `json:"deletion_timestamp"`
 	DeletionGracePeriodSeconds int64             `json:"deletion_grace_period_seconds,omitempty"`
 	AWSElasticIPs              []string          `json:"aws_elastic_ips,omitempty"`
 	ExternalNetworkNames       []string          `json:"external_network_names,omitempty"`
@@ -235,4 +233,4 @@ type ApplicationLayer struct {
 	WAFConfigMap string `json:"waf_config_map"`
 }
 
-type QoSControls = v3.QoSControls
+type QoSControls = internalapi.QoSControls

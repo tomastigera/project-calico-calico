@@ -80,7 +80,7 @@ func main() {
 }
 
 func tryConnect(hostName, dnsServer string) error {
-	for try := 0; try < 4; try++ {
+	for range 4 {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 
 		var resolver *net.Resolver

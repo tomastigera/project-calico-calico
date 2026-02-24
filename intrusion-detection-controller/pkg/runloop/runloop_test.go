@@ -85,19 +85,17 @@ func TestRunLoopRecvChannel(t *testing.T) {
 	total := 0
 	var err error
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
-		defer wg.Done()
-		err = RunLoopRecvChannel(ctx, func(x interface{}) {
+	wg.Go(func() {
+		err = RunLoopRecvChannel(ctx, func(x any) {
 			c++
 			total += x.(int)
 		}, ch)
-	}()
+	})
 
 	max := 10
 
-	for i := 0; i < max; i++ {
+	for i := range max {
 		ch <- i
 	}
 	close(ch)

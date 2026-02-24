@@ -132,4 +132,4 @@ fv: package
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean ut static-checks fv
+ci: clean static-checks ut fv

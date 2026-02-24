@@ -120,7 +120,7 @@ func (v *versionedCalicoNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedCalicoNetworkPolicy) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -172,7 +172,7 @@ func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule 
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -225,7 +225,7 @@ func (v *versionedK8sNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedK8sNetworkPolicy) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -278,7 +278,7 @@ func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule 
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -332,7 +332,7 @@ func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3EgressRules() []v3
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -387,7 +387,7 @@ func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3EgressRules() 
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1() interface{} {
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1() any {
 	return v.npV1
 }
 

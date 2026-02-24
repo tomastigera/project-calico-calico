@@ -95,7 +95,7 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 
 	// Extract the policies from the bucket.
 	term := flow.AggregatedTerms[FlowAggregatedTermsNamePolicies]
-	newBuckets := make(map[interface{}]int64)
+	newBuckets := make(map[any]int64)
 	policies := GetFlowPoliciesFromAggTerm(term)
 
 	// Sort the policies so that we can obfuscate and group multiple obfuscated entries together.

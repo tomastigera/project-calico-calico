@@ -488,7 +488,7 @@ func validateIngressRules(policy v3.StagedNetworkPolicy, expectedRules []rule) e
 // Simplified mock interface implementation
 type simpleMockT struct{}
 
-func (m simpleMockT) Cleanup(func())                            {}
-func (m simpleMockT) Logf(format string, args ...interface{})   {}
-func (m simpleMockT) Errorf(format string, args ...interface{}) {}
-func (m simpleMockT) FailNow()                                  {}
+func (m simpleMockT) Cleanup(func())                    {}
+func (m simpleMockT) Logf(format string, args ...any)   {}
+func (m simpleMockT) Errorf(format string, args ...any) {}
+func (m simpleMockT) FailNow()                          {}

@@ -17,6 +17,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"sync"
@@ -89,14 +90,14 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 	sc.endpointConverter = converter.NewEndpointConverter()
 
 	// GetKey returns the 'namespace/name' for the given Calico NetworkSet as its key.
-	getKey := func(obj interface{}) string {
+	getKey := func(obj any) string {
 		networkset := obj.(api.NetworkSet)
 		return fmt.Sprintf("%s/%s", networkset.Namespace, networkset.Name)
 	}
 
 	// Function returns map of networksetName:networkset stored by networkset controller
 	// in datastore.
-	listFunc := func() (map[string]interface{}, error) {
+	listFunc := func() (map[string]any, error) {
 		// Get all policies from datastore
 		calicoPolicies, err := c.NetworkSets().List(ctx, options.ListOptions{})
 		if err != nil {
@@ -104,7 +105,7 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 		}
 
 		// Filter in only objects that are written by networkset controller.
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		for _, networkset := range calicoPolicies.Items {
 			if strings.HasPrefix(networkset.Name, converter.NetworkSetNamePrefix) {
 				// Update the networkset's ObjectMeta/Spec so that it simply contains needed fields.
@@ -121,7 +122,7 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 
 	cacheArgs := rcache.ResourceCacheArgs{
 		ListFunc:   listFunc,
-		ObjectType: reflect.TypeOf(api.NetworkSet{}),
+		ObjectType: reflect.TypeFor[api.NetworkSet](),
 	}
 	sc.resourceCache = rcache.NewResourceCache(cacheArgs)
 
@@ -219,16 +220,12 @@ func (c *serviceController) convertToNetworkSet(nsFromSvc, nsFromEp *api.Network
 
 	if len(nsFromSvc.Labels) > 0 {
 		networkSet.Labels = make(map[string]string)
-		for k, v := range nsFromSvc.Labels {
-			networkSet.Labels[k] = v
-		}
+		maps.Copy(networkSet.Labels, nsFromSvc.Labels)
 	}
 
 	if len(nsFromSvc.Annotations) > 0 {
 		networkSet.Annotations = make(map[string]string)
-		for k, v := range nsFromSvc.Annotations {
-			networkSet.Annotations[k] = v
-		}
+		maps.Copy(networkSet.Annotations, nsFromSvc.Annotations)
 	}
 
 	if len(nsFromEp.Spec.Nets) > 0 {
@@ -470,7 +467,7 @@ func (c *serviceController) handleErr(err error, key string) {
 }
 
 // onSvcAdd is called when a k8s service is created
-func (c *serviceController) onSvcAdd(obj interface{}) {
+func (c *serviceController) onSvcAdd(obj any) {
 	svc, ok := obj.(*v1.Service)
 	if !ok {
 		log.Warn("failed to assert type to service, passing")
@@ -481,7 +478,7 @@ func (c *serviceController) onSvcAdd(obj interface{}) {
 }
 
 // onSvcUpdate is called when a k8s service is updated
-func (c *serviceController) onSvcUpdate(_, obj interface{}) {
+func (c *serviceController) onSvcUpdate(_, obj any) {
 	svc, ok := obj.(*v1.Service)
 	if !ok {
 		log.Warn("onSvcUpdate: failed to assert type to service, passing")
@@ -492,7 +489,7 @@ func (c *serviceController) onSvcUpdate(_, obj interface{}) {
 }
 
 // onSvcUpdate is called when a k8s service is deleted
-func (c *serviceController) onSvcDelete(obj interface{}) {
+func (c *serviceController) onSvcDelete(obj any) {
 	svc, ok := obj.(*v1.Service)
 	if !ok {
 		log.Warn("failed to assert type to service, passing")
@@ -503,7 +500,7 @@ func (c *serviceController) onSvcDelete(obj interface{}) {
 }
 
 // onEndpointsAdd is called when a k8s endpoint is created
-func (c *serviceController) onEndpointsAdd(obj interface{}) {
+func (c *serviceController) onEndpointsAdd(obj any) {
 	ep, ok := obj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
@@ -514,7 +511,7 @@ func (c *serviceController) onEndpointsAdd(obj interface{}) {
 }
 
 // onEndpointsUpdates is called when a k8s endpoint is updated
-func (c *serviceController) onEndpointsUpdate(oldObj, currentObj interface{}) {
+func (c *serviceController) onEndpointsUpdate(oldObj, currentObj any) {
 	current, ok := currentObj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
@@ -536,7 +533,7 @@ func (c *serviceController) onEndpointsUpdate(oldObj, currentObj interface{}) {
 }
 
 // onEPDelete is called when a k8s endpoint is deleted
-func (c *serviceController) onEPDelete(obj interface{}) {
+func (c *serviceController) onEPDelete(obj any) {
 	ep, ok := obj.(*v1.Endpoints) //nolint:staticcheck
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")

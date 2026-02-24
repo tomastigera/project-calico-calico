@@ -1,10 +1,10 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 package authorizationreview_test
 
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -85,7 +85,6 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 				},
 			},
 		}))
-
 	})
 
 	It("return empty authorization review when user is neither passed in the context, nor in the spec", func() {
@@ -145,7 +144,7 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 				Verbs: []v3.AuthorizedResourceVerb{
 					{
 						Verb:           "get",
-						ResourceGroups: nil,
+						ResourceGroups: []v3.AuthorizedResourceGroup{},
 					},
 				},
 			},
@@ -191,7 +190,8 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 				Resource: "namespaces",
 				Verbs: []v3.AuthorizedResourceVerb{
 					{
-						Verb: "get",
+						Verb:           "get",
+						ResourceGroups: []v3.AuthorizedResourceGroup{},
 					},
 				},
 			},

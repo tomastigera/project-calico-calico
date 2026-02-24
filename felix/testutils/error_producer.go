@@ -59,7 +59,7 @@ func (e *errorProducer) QueueSpecificError(queueName string, err error) {
 
 // QueueNErrors adds n errors to the sequence of errors with the given name.
 func (e *errorProducer) QueueNErrors(queueName string, n int) {
-	for i := 0; i < n; i++ {
+	for range n {
 		e.queue[queueName] = append(e.queue[queueName], e.newErr(queueName))
 	}
 }

@@ -26,7 +26,7 @@ import (
 func StartExternalWorkloads(infra CleanupProvider, workloadBaseName string, workloadNumber int) []*containers.Container {
 	workloads := make([]*containers.Container, workloadNumber)
 
-	for i := 0; i < workloadNumber; i++ {
+	for i := range workloadNumber {
 		workloads[i] = containers.Run(
 			workloadBaseName,
 			containers.RunOpts{

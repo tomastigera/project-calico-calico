@@ -5,13 +5,13 @@ package managedcluster
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestConfig(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("./report/managedcluster_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Managed cluster controller Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "./report/managedcluster_suite.xml"
+	ginkgo.RunSpecs(t, "Managed cluster controller Suite", suiteConfig, reporterConfig)
 }

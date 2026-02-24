@@ -63,7 +63,7 @@ func (v *versionedK8sNamespace) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedNamespaceResource interface.
-func (v *versionedK8sNamespace) GetCalicoV1() interface{} {
+func (v *versionedK8sNamespace) GetCalicoV1() any {
 	return v.v1
 }
 

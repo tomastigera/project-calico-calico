@@ -10,7 +10,7 @@ else
 fi
 
 echo "Removing old coverprofiles..."
-find . -name "*.coverprofile" -type f -delete
+find . -name "coverprofile.out" -type f -delete
 
 if [ -z $WHAT ]
 then
@@ -31,18 +31,18 @@ test ! -z "$go_dirs"
 # Run tests in random order find tests recursively (-r).
 echo WHAT: $WHAT
 echo SKIP: $SKIP
-ginkgo -cover -coverpkg=${go_dirs} -r --skipPackage $SKIP $WHAT
+ginkgo --cover --coverpkg=${go_dirs} -r --skip-package $SKIP $WHAT
 
 echo
 echo '+==============+'
 echo '| All coverage |'
 echo '+==============+'
 echo
-find . -iname '*.coverprofile' | xargs -I _ go tool cover -func=_
+find . -iname 'coverprofile.out' | xargs -I _ go tool cover -func=_
 
 echo
 echo '+==================+'
 echo '| Missing coverage |'
 echo '+==================+'
 echo
-find . -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
+find . -iname 'coverprofile.out' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'

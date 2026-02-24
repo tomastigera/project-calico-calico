@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -252,7 +252,7 @@ var _ = Describe("ElasticBasicUser", func() {
 
 func authHeader(issuer string, username string, groups []string) string {
 	hdrhdr := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3ODM2YzRiMjdmN2M3ZmVjMjk1MTk0NTFkNDc5MmUyNjQ4M2RmYWUifQ" // rs256 header
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"iss":            issuer,
 		"sub":            sub,
 		"aud":            "tigera-manager",

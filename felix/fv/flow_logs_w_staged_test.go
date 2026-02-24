@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -224,7 +224,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		Expect(err).NotTo(HaveOccurred())
 
 		// (s)knp3.1->sknp3.9 egress: (N2-1)
-		for i := 0; i < 9; i++ {
+		for i := range 9 {
 			sknp := api.NewStagedKubernetesNetworkPolicy()
 			sknp.Name = fmt.Sprintf("knp3-%d", i+1)
 			sknp.Namespace = "default"
@@ -745,7 +745,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			if bpfEnabled {
 				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_2.InterfaceName, "all", "--asm")
@@ -1126,6 +1126,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		// Configured tier pass.
 		confugureTier2Pass()
 
+		// Wait for at least one flow log flush so the deny-pending flows from the first batch of
+		// connections are written to the log file before the second batch generates metric updates
+		// with pass-pending. With AggrBySourcePort aggregation all connections share a single
+		// FlowSpec, and pending policies use replace semantics, so without this wait the deny
+		// entry can be overwritten before it is ever flushed.
+		time.Sleep(6 * time.Second)
+
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
@@ -1420,7 +1427,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			if bpfEnabled {
 				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")

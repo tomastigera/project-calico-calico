@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -214,7 +214,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 					})
 
 					JustAfterEach(func() {
-						if CurrentGinkgoTestDescription().Failed {
+						if CurrentSpecReport().Failed() {
 							externalClient.Exec("ip", "r")
 							externalClient.Exec("ip", "l")
 							externalClient.Exec("ip", "a")
@@ -879,7 +879,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 					Skip("Skipping due to known issue with tunnel IPs not being programmed in WEP mode")
 				}
 
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					f := felixes[i]
 					cc.ExpectSome(f, w[i])          // Host to local workload.
 					cc.ExpectSome(f, w[(i+1)%3])    // Host to next node's workload
@@ -937,7 +937,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ cluster routing using Felix
 					Skip("Skipping due to known issue with tunnel IPs not being programmed in WEP mode")
 				}
 
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					f := felixes[i]
 					cc.ExpectSome(f, w[0])
 					cc.ExpectSome(f, w[1])

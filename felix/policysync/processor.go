@@ -37,8 +37,8 @@ import (
 const MaxMembersPerMessage = 82200
 
 type Processor struct {
-	Updates             <-chan interface{}
-	JoinUpdates         chan interface{}
+	Updates             <-chan any
+	JoinUpdates         chan any
 	perHostPolicyAgents map[uint64]chan<- *proto.ToDataplane
 	workloadsByID       map[types.WorkloadEndpointID]*proto.WorkloadEndpointUpdate
 	endpointsByID       map[types.WorkloadEndpointID]*EndpointInfo
@@ -131,12 +131,12 @@ type LeaveRequest struct {
 	SubscriptionType SubscriptionType
 }
 
-func NewProcessor(config *config.Config, updates <-chan interface{}) *Processor {
+func NewProcessor(config *config.Config, updates <-chan any) *Processor {
 	proc := &Processor{
 		// Updates from the calculation graph.
 		Updates: updates,
 		// JoinUpdates from the new servers that have started.
-		JoinUpdates:         make(chan interface{}, 10),
+		JoinUpdates:         make(chan any, 10),
 		perHostPolicyAgents: make(map[uint64]chan<- *proto.ToDataplane, 1024),
 		workloadsByID:       make(map[types.WorkloadEndpointID]*proto.WorkloadEndpointUpdate),
 		endpointsByID:       make(map[types.WorkloadEndpointID]*EndpointInfo),
@@ -273,7 +273,7 @@ func (p *Processor) handleLeave(leaveReq LeaveRequest) {
 	ei.currentJoinUID = 0
 }
 
-func (p *Processor) handleDataplane(update interface{}) {
+func (p *Processor) handleDataplane(update any) {
 	log.WithFields(log.Fields{"update": update, "type": reflect.TypeOf(update)}).Debug("Dataplane update")
 	switch update := update.(type) {
 	case *proto.InSync:
@@ -332,7 +332,7 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 	}
 }
 
-func (p *Processor) sendToAllPerHostAgents(update interface{}) {
+func (p *Processor) sendToAllPerHostAgents(update any) {
 	for i, c := range p.perHostPolicyAgents {
 		log.Debugf("sending %T update to per-host agent (%d)", update, i)
 		sendMsg(c, update, SubscriptionTypePerHostPolicies)
@@ -1112,10 +1112,7 @@ func splitMembers(members []string) [][]string {
 	}
 
 	for remains > 0 {
-		numThis := MaxMembersPerMessage
-		if remains < numThis {
-			numThis = remains
-		}
+		numThis := min(remains, MaxMembersPerMessage)
 		end := first + numThis
 		sliceThis := members[first:end]
 		out = append(out, sliceThis)
@@ -1125,7 +1122,7 @@ func splitMembers(members []string) [][]string {
 	return out
 }
 
-func sendMsg(output chan<- *proto.ToDataplane, payload interface{}, subscription SubscriptionType) {
+func sendMsg(output chan<- *proto.ToDataplane, payload any, subscription SubscriptionType) {
 	switch subscription {
 	case SubscriptionTypePerPodPolicies, SubscriptionTypePerHostPolicies:
 		switch payload := payload.(type) {
@@ -1179,6 +1176,6 @@ func sendMsg(output chan<- *proto.ToDataplane, payload interface{}, subscription
 	}
 }
 
-func (ei *EndpointInfo) sendMsg(payload interface{}) {
+func (ei *EndpointInfo) sendMsg(payload any) {
 	sendMsg(ei.output, payload, ei.subscription)
 }

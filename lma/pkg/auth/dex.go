@@ -227,7 +227,7 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 		return nil, http.StatusUnauthorized, err
 	}
 
-	var claims map[string]interface{}
+	var claims map[string]any
 	if err := idTkn.Claims(&claims); err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
@@ -249,7 +249,7 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 	groups := []string{}
 
 	if claims[d.groupsClaim] != nil {
-		groupsClaims, ok := claims[d.groupsClaim].([]interface{})
+		groupsClaims, ok := claims[d.groupsClaim].([]any)
 		if !ok {
 			return nil, http.StatusBadRequest, errors.New("unexpected type for groups claim")
 		}

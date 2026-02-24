@@ -13,7 +13,7 @@ import (
 // dataplaneInfoReader reads dataplane information.
 type dataplaneInfoReader struct {
 	dataplaneInfoC chan *proto.ToDataplane
-	infoC          chan interface{}
+	infoC          chan any
 	seqNo          uint64
 
 	stopC    chan struct{}
@@ -22,7 +22,7 @@ type dataplaneInfoReader struct {
 }
 
 // NewDataplaneInfoReader returns a new DataplaneInfoReader
-func NewDataplaneInfoReader(c chan interface{}) *dataplaneInfoReader {
+func NewDataplaneInfoReader(c chan any) *dataplaneInfoReader {
 	return &dataplaneInfoReader{
 		stopC:          make(chan struct{}),
 		dataplaneInfoC: make(chan *proto.ToDataplane, 1000),
@@ -33,11 +33,9 @@ func NewDataplaneInfoReader(c chan interface{}) *dataplaneInfoReader {
 // Start starts the reader.
 func (r *dataplaneInfoReader) Start() error {
 	log.Info("Start dataplane info reader")
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
+	r.wg.Go(func() {
 		r.run()
-	}()
+	})
 
 	return nil
 }

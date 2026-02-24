@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +19,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -438,8 +439,8 @@ func getLabels(r *http.Request) map[string]string {
 	parms := r.URL.Query()
 	labels := make(map[string]string)
 	for k, pvs := range parms {
-		if strings.HasPrefix(k, QueryLabelPrefix) {
-			labels[strings.TrimPrefix(k, QueryLabelPrefix)] = pvs[0]
+		if after, ok := strings.CutPrefix(k, QueryLabelPrefix); ok {
+			labels[after] = pvs[0]
 		}
 	}
 	return labels
@@ -486,10 +487,8 @@ func getNetworkSets(r *http.Request) ([]model.Key, error) {
 
 func getNameAndNamespaceFromCombinedName(combined string) ([]string, bool) {
 	parts := strings.Split(combined, "/")
-	for _, part := range parts {
-		if part == "" {
-			return nil, false
-		}
+	if slices.Contains(parts, "") {
+		return nil, false
 	}
 	if len(parts) != 1 && len(parts) != 2 {
 		return nil, false
@@ -596,7 +595,7 @@ func getEndpointKeyFromCombinedName(combined string) (model.Key, bool) {
 		}, true
 	case 2:
 		return model.ResourceKey{
-			Kind:      libapi.KindWorkloadEndpoint,
+			Kind:      internalapi.KindWorkloadEndpoint,
 			Namespace: parts[0],
 			Name:      parts[1],
 		}, true
@@ -610,7 +609,7 @@ func getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
 		return nil, false
 	}
 	return model.ResourceKey{
-		Kind: libapi.KindNode,
+		Kind: internalapi.KindNode,
 		Name: parts[0],
 	}, true
 }
@@ -657,7 +656,7 @@ func getPolicyFieldSelector(r *http.Request) map[string]bool {
 	return nil
 }
 
-func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}, exact bool) {
+func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req any, exact bool) {
 	resp, err := q.qi.RunQuery(context.Background(), req)
 	if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok && exact {
 		// This is an exact get and the resource does not exist. Return a 404 not found.

@@ -1,10 +1,9 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2026 Tigera, Inc. All rights reserved.
 
 package authorizationreview
 
 import (
 	"context"
-	"sort"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,27 +56,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 	}
 
 	// Expand the request into a set of ResourceVerbs as input to the RBAC calculator.
-	rvs := []rbac.ResourceVerbs{}
-	for _, ra := range in.Spec.ResourceAttributes {
-		if len(ra.Verbs) == 0 || len(ra.Resources) == 0 {
-			continue
-		}
-
-		verbs := make([]rbac.Verb, len(ra.Verbs))
-		for i := range ra.Verbs {
-			verbs[i] = rbac.Verb(ra.Verbs[i])
-		}
-
-		for _, r := range ra.Resources {
-			rvs = append(rvs, rbac.ResourceVerbs{
-				ResourceType: rbac.ResourceType{
-					APIGroup: ra.APIGroup,
-					Resource: r,
-				},
-				Verbs: verbs,
-			})
-		}
-	}
+	rvs := rbac.RequestToResourceVerbs(in.Spec.ResourceAttributes)
 
 	// Calculate the set of permissions.
 	results, err := r.calculator.CalculatePermissions(userInfo, rvs)
@@ -85,72 +64,8 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 		return nil, err
 	}
 
-	// Transfer the results to the status. Sort the results to ensure deterministic data. Start by ordering the
-	// resource type info.
-	rts := make([]rbac.ResourceType, 0, len(results))
-	for rt := range results {
-		rts = append(rts, rt)
-	}
-	sort.Slice(rts, func(i, j int) bool {
-		if rts[i].APIGroup < rts[j].APIGroup {
-			return true
-		} else if rts[i].APIGroup > rts[j].APIGroup {
-			return false
-		}
-		return rts[i].Resource < rts[j].Resource
-	})
-
-	// Grab the results for each resource type.
-	for _, rt := range rts {
-		vms := results[rt]
-
-		res := v3.AuthorizedResourceVerbs{
-			APIGroup: rt.APIGroup,
-			Resource: rt.Resource,
-		}
-
-		// Order the verbs.
-		verbs := make([]string, 0, len(vms))
-		for v := range vms {
-			verbs = append(verbs, string(v))
-		}
-		sort.Strings(verbs)
-
-		for _, v := range verbs {
-			// Grab the authorization matches for the verb and order them before adding to the status.
-			ms := vms[rbac.Verb(v)]
-			var rgs []v3.AuthorizedResourceGroup
-
-			sort.Slice(ms, func(i, j int) bool {
-				if ms[i].Namespace < ms[j].Namespace {
-					return true
-				} else if ms[i].Namespace > ms[j].Namespace {
-					return false
-				}
-				if ms[i].Tier < ms[j].Tier {
-					return true
-				} else if ms[i].Tier > ms[j].Tier {
-					return false
-				}
-				return ms[i].UISettingsGroup < ms[j].UISettingsGroup
-			})
-
-			for _, m := range ms {
-				rgs = append(rgs, v3.AuthorizedResourceGroup{
-					Tier:            m.Tier,
-					Namespace:       m.Namespace,
-					UISettingsGroup: m.UISettingsGroup,
-					ManagedCluster:  m.ManagedCluster,
-				})
-			}
-			res.Verbs = append(res.Verbs, v3.AuthorizedResourceVerb{
-				Verb:           string(v),
-				ResourceGroups: rgs,
-			})
-		}
-
-		out.Status.AuthorizedResourceVerbs = append(out.Status.AuthorizedResourceVerbs, res)
-	}
+	// Transfer the results to the status.
+	out.Status = rbac.PermissionsToStatus(results)
 
 	return out, nil
 }

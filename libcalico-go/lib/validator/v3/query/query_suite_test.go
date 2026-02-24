@@ -5,16 +5,16 @@ package query
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
 func TestQueryValidator(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../../report/v3_query_validator_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "v3 Query Validator Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/v3_query_validator_suite.xml"
+	ginkgo.RunSpecs(t, "v3 Query Validator Suite", suiteConfig, reporterConfig)
 }

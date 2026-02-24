@@ -24,7 +24,7 @@ func NewStatusUpdateController(calicoClient client.Interface, nodeCache func() [
 		calicoClient:     calicoClient,
 		nodeCacheFn:      nodeCache,
 		reconcilerPeriod: time.Minute * 30,
-		syncChan:         make(chan interface{}),
+		syncChan:         make(chan any),
 	}
 }
 
@@ -32,7 +32,7 @@ type statusUpdateController struct {
 	calicoClient     client.Interface
 	nodeCacheFn      func() []string
 	reconcilerPeriod time.Duration
-	syncChan         chan interface{}
+	syncChan         chan any
 }
 
 func (c *statusUpdateController) Start(stop chan struct{}) {

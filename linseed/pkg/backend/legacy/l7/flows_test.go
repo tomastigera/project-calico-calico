@@ -232,7 +232,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	numFlows := 10
 
 	batch := []v1.L7Log{}
-	for i := 0; i < numFlows; i++ {
+	for i := range numFlows {
 		f := generator(i)
 
 		// Increment fields on the expected flow based on the flow log that was

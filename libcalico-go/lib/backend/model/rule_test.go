@@ -17,7 +17,7 @@ package model_test
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -120,7 +120,6 @@ var ruleStringTests = []ruleTest{
 
 var _ = Describe("Rule", func() {
 	for _, test := range ruleStringTests {
-		test := test // For closure
 		Describe(fmt.Sprintf("%#v", test.rule), func() {
 			It("should stringify as "+test.expectedOutput, func() {
 				Expect(fmt.Sprintf("%s", test.rule)).To(Equal(test.expectedOutput))

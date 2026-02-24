@@ -66,7 +66,7 @@ type rotatingPcapFile struct {
 	maxFiles        int
 	done            chan struct{}
 	isDone          bool
-	statusUpdates   chan interface{}
+	statusUpdates   chan any
 	bpfFilter       string
 	startTime       time.Time
 	endTime         time.Time
@@ -146,7 +146,7 @@ func WithEndTime(endTime time.Time) Option {
 // A PacketCapture can be scheduled to start and/or stop at certain times defined by the user. In this case values are
 // not provided, it will start as soon as the PacketCapture resource is configured and continue until the resource is
 // deleted
-func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName string, statusUpdates chan interface{}, opts ...Option) *rotatingPcapFile {
+func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName string, statusUpdates chan any, opts ...Option) *rotatingPcapFile {
 
 	const (
 		defaultMaxSizeBytes    = 10 * 1000 * 1000

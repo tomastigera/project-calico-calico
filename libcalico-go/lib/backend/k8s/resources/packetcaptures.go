@@ -18,8 +18,8 @@ func NewPacketCaptureClient(r rest.Interface, group BackingAPIGroup) K8sResource
 	return &customResourceClient{
 		restClient:      r,
 		resource:        PacketCaptureResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.PacketCapture{}),
-		k8sListType:     reflect.TypeOf(apiv3.PacketCaptureList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.PacketCapture](),
+		k8sListType:     reflect.TypeFor[apiv3.PacketCaptureList](),
 		namespaced:      true,
 		kind:            apiv3.KindPacketCapture,
 		apiGroup:        group,

@@ -92,7 +92,7 @@ func (handler *esBasicUserHandler) addOIDCUserToConfigMap(ctx context.Context, o
 		return err
 	}
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"data": map[string]string{
 			oidcUser.Base64EncodedSubjectID(): userGroupsStr,
 		},

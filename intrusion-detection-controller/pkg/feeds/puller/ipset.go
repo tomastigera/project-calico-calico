@@ -5,6 +5,7 @@ package puller
 import (
 	"context"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"regexp"
@@ -36,7 +37,7 @@ type ipSetHandler struct {
 	gtfParser       parser
 }
 
-func (i ipSetHandler) snapshot(r io.Reader) (interface{}, error) {
+func (i ipSetHandler) snapshot(r io.Reader) (any, error) {
 	var snapshot storage.IPSetSpec
 	var once sync.Once
 
@@ -94,11 +95,11 @@ func (i ipSetHandler) lastModified(ctx context.Context, name string) (time.Time,
 	return i.database.GetIPSetModified(ctx, name)
 }
 
-func (i ipSetHandler) updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+func (i ipSetHandler) updateDataStore(ctx context.Context, name string, snapshot any, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	i.ipSetController.Add(ctx, name, snapshot.(storage.IPSetSpec), f, feedCacher)
 }
 
-func (h ipSetHandler) getIPSet(ctx context.Context) (interface{}, error) {
+func (h ipSetHandler) getIPSet(ctx context.Context) (any, error) {
 	return h.database.GetIPSet(ctx, h.name)
 }
 
@@ -118,18 +119,16 @@ func (h ipSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalTh
 	}
 }
 
-func (h *ipSetHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet {
+func (h *ipSetHandler) makeGNS(snapshot any) *calico.GlobalNetworkSet {
 	nets := snapshot.(storage.IPSetSpec)
 	gns := util.NewGlobalNetworkSet(h.name)
 	gns.Labels = make(map[string]string)
-	for k, v := range h.gnsLabels {
-		gns.Labels[k] = v
-	}
+	maps.Copy(gns.Labels, h.gnsLabels)
 	gns.Spec.Nets = append([]string{}, nets...)
 	return gns
 }
 
-func (h ipSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
+func (h ipSetHandler) handleSnapshot(ctx context.Context, snapshot any, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
 	if h.gnsEnabled {
 		g := h.makeGNS(snapshot)
 		h.gnsController.Add(g, f, feedCacher)
@@ -159,9 +158,7 @@ func NewIPSetHTTPPuller(
 	if f.Spec.GlobalNetworkSet != nil {
 		ip.gnsEnabled = true
 		ip.gnsLabels = make(map[string]string)
-		for k, v := range f.Spec.GlobalNetworkSet.Labels {
-			ip.gnsLabels[k] = v
-		}
+		maps.Copy(ip.gnsLabels, f.Spec.GlobalNetworkSet.Labels)
 	}
 
 	p := NewHttpPuller(configMapClient, secretsClient, client, f.DeepCopy(), true, ip)

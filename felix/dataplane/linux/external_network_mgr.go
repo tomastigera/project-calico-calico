@@ -91,7 +91,7 @@ func newExternalNetworkManagerWithShims(
 	}
 }
 
-func (m *externalNetworkManager) OnUpdate(msg interface{}) {
+func (m *externalNetworkManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		logrus.WithField("msg", msg).Debug("workload endpoint update")

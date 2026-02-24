@@ -43,14 +43,12 @@ func (h *httpTerminationHandler) RunHTTPServer(addr string, port string) (*http.
 	httpServerMux.Handle("/terminate", h)
 	httpServer := &http.Server{Addr: httpServerSockAddr, Handler: httpServerMux}
 	httpServerWg := &sync.WaitGroup{}
-	httpServerWg.Add(1)
 
-	go func() {
-		defer httpServerWg.Done()
+	httpServerWg.Go(func() {
 		log.Infof("starting HTTP server on %v", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("HTTP server closed unexpectedly: %v", err)
 		}
-	}()
+	})
 	return httpServer, httpServerWg, nil
 }

@@ -104,7 +104,7 @@ type withExtras struct {
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *eventsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Event) interface{} {
+func (b *eventsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Event) any {
 	l.Cluster = i.Cluster
 
 	// We don't want to include the ID in the document ever.
@@ -257,7 +257,7 @@ func (b *eventsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.E
 	}, nil
 }
 
-func (b *eventsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.EventParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *eventsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.EventParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

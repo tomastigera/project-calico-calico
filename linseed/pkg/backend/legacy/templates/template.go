@@ -13,9 +13,9 @@ import (
 
 // Template is the internal representation of an Elastic template
 type Template struct {
-	IndexPatterns []string               `json:"index_patterns,omitempty"`
-	Settings      map[string]interface{} `json:"settings,omitempty"`
-	Mappings      map[string]interface{} `json:"mappings,omitempty"`
+	IndexPatterns []string       `json:"index_patterns,omitempty"`
+	Settings      map[string]any `json:"settings,omitempty"`
+	Mappings      map[string]any `json:"mappings,omitempty"`
 }
 
 // TemplateConfig is the configuration used to create a template
@@ -116,7 +116,7 @@ func (c *TemplateConfig) BootstrapIndexName() string {
 	return c.Index.BootstrapIndexName(c.info)
 }
 
-func (c *TemplateConfig) settings() map[string]interface{} {
+func (c *TemplateConfig) settings() map[string]any {
 	// DNS logs requires additional settings to
 	// number of shards and replicas
 	indexSettings := c.initIndexSettings()
@@ -125,7 +125,7 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 
 	lifeCycleEnabled := c.hasLifecycleEnabled()
 	if lifeCycleEnabled {
-		lifeCycle := make(map[string]interface{})
+		lifeCycle := make(map[string]any)
 		// ILM policy is created by the operator and only referenced by the template
 		lifeCycle["name"] = c.Index.ILMPolicyName()
 		lifeCycle["rollover_alias"] = c.Index.Alias(c.info)
@@ -138,10 +138,10 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 // initIndexSettings will unmarshal other indexSettings for the index
 // (that do not cover number of shards and replicas) if they have been
 // defined in SettingsLookup or an empty map otherwise
-func (c *TemplateConfig) initIndexSettings() map[string]interface{} {
+func (c *TemplateConfig) initIndexSettings() map[string]any {
 	settingsName, ok := SettingsLookup[c.Index.DataType()]
 	if !ok {
-		return make(map[string]interface{})
+		return make(map[string]any)
 	}
 
 	indexSettings, err := unmarshal(settingsName)
@@ -167,7 +167,7 @@ func (c *TemplateConfig) Template() (*Template, error) {
 
 	// For single-index templates, the mappings must include keywords for tenant.
 	if c.Index.IsSingleIndex() {
-		properties := indexMappings["properties"].(map[string]interface{})
+		properties := indexMappings["properties"].(map[string]any)
 		properties["tenant"] = map[string]string{"type": "keyword"}
 	}
 
@@ -187,8 +187,8 @@ func (c *TemplateConfig) hasLifecycleEnabled() bool {
 	return enabled
 }
 
-func unmarshal(source string) (map[string]interface{}, error) {
-	var value map[string]interface{}
+func unmarshal(source string) (map[string]any, error) {
+	var value map[string]any
 	if err := json.Unmarshal([]byte(source), &value); err != nil {
 		return nil, err
 	}

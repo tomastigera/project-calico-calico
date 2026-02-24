@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"os/signal"
 	"strings"
@@ -151,9 +152,7 @@ func main() {
 			}
 
 			// Merge FortiManager and FortiGate clients into single map
-			for dev, client := range fortiMClients {
-				fortiGClients[dev] = client
-			}
+			maps.Copy(fortiGClients, fortiMClients)
 
 			if len(fortiGClients) >= 1 {
 				log.Debug("Starting FortiGate N/S controller")

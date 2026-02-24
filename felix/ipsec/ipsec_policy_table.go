@@ -229,7 +229,7 @@ func (p *PolicyTable) Apply() {
 		retryDelay *= 2
 	}
 	var err error
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := range 10 {
 		if attempt > 0 {
 			log.Info("Retrying after an IPsec binding update failure...")
 		}
@@ -537,7 +537,7 @@ func (p *PolicyTable) closeNL() {
 func (p *PolicyTable) nl() NetlinkXFRMIface {
 	if p.nlHndl == nil {
 		var err error
-		for attempt := 0; attempt < 3; attempt++ {
+		for range 3 {
 			p.nlHndl, err = p.nlHandleFactory()
 			if err == nil {
 				break

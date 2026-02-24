@@ -66,7 +66,7 @@ type domainsetWithExtras struct {
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
-func (b *domainNameSetThreatFeedBackend) prepareForWrite(i bapi.ClusterInfo, l *v1.DomainNameSetThreatFeedData) interface{} {
+func (b *domainNameSetThreatFeedBackend) prepareForWrite(i bapi.ClusterInfo, l *v1.DomainNameSetThreatFeedData) any {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -172,7 +172,7 @@ func (b *domainNameSetThreatFeedBackend) List(ctx context.Context, i bapi.Cluste
 	}, nil
 }
 
-func (b *domainNameSetThreatFeedBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.DomainNameSetThreatFeedParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *domainNameSetThreatFeedBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.DomainNameSetThreatFeedParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

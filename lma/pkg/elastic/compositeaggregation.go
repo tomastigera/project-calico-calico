@@ -28,7 +28,7 @@ type AggCompositeSourceInfo struct {
 
 	// For scripted source.
 	ScriptName   string
-	ScriptParams map[string]interface{}
+	ScriptParams map[string]any
 
 	// Sort order
 	Order string
@@ -367,12 +367,12 @@ func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.Aggregatio
 		}
 
 		if t.MultiTermBuckets == nil {
-			t.MultiTermBuckets = make(map[string]map[interface{}]int64)
+			t.MultiTermBuckets = make(map[string]map[any]int64)
 		}
 
-		termBuckets := make(map[interface{}]int64)
+		termBuckets := make(map[any]int64)
 		// Reset legacy buckets to ensure "last one wins" behavior for legacy field
-		t.Buckets = make(map[interface{}]int64)
+		t.Buckets = make(map[any]int64)
 
 		for _, b := range buckets.Buckets {
 			termBuckets[b.Key] = b.DocCount
@@ -515,11 +515,11 @@ func (cout *CompositeAggregationBucket) Aggregate(cin *CompositeAggregationBucke
 
 		if len(vin.MultiTermBuckets) > 0 {
 			if vout.MultiTermBuckets == nil {
-				vout.MultiTermBuckets = make(map[string]map[interface{}]int64)
+				vout.MultiTermBuckets = make(map[string]map[any]int64)
 			}
 			for term, buckets := range vin.MultiTermBuckets {
 				if vout.MultiTermBuckets[term] == nil {
-					vout.MultiTermBuckets[term] = make(map[interface{}]int64)
+					vout.MultiTermBuckets[term] = make(map[any]int64)
 				}
 				for k, v := range buckets {
 					vout.MultiTermBuckets[term][k] += v
@@ -545,7 +545,7 @@ func (cout *CompositeAggregationBucket) SetAggregatedTermsFromStringSlice(name s
 		terms = NewAggregatedTerm(cout.DocCount)
 		cout.AggregatedTerms[name] = terms
 	} else {
-		terms.Buckets = make(map[interface{}]int64)
+		terms.Buckets = make(map[any]int64)
 	}
 	for _, val := range vals {
 		terms.Buckets[val] = terms.DocCount
@@ -571,7 +571,7 @@ func (c CompositeAggregationKey) SameBucket(other CompositeAggregationKey) bool 
 // using it for self-consistency checks when comparing sets of keys.
 type CompositeAggregationSourceValue struct {
 	Name  string
-	Value interface{}
+	Value any
 }
 
 // String returns the value as a string. If the value is not a string, an empty string will be returned.
@@ -590,7 +590,7 @@ func (c CompositeAggregationSourceValue) Float64() float64 {
 func NewAggregatedTerm(dc int64) *AggregatedTerm {
 	return &AggregatedTerm{
 		DocCount: dc,
-		Buckets:  make(map[interface{}]int64),
+		Buckets:  make(map[any]int64),
 	}
 }
 
@@ -640,11 +640,11 @@ type AggregatedTerm struct {
 	//                }
 	//              ]
 	//            }
-	Buckets map[interface{}]int64
+	Buckets map[any]int64
 
 	// MultiTermBuckets contains the buckets for multiple terms under the same nested aggregation.
 	// The key is the term name.
-	MultiTermBuckets map[string]map[interface{}]int64
+	MultiTermBuckets map[string]map[any]int64
 }
 
 // TimedOutError is returned when the response indicates a timeout.
@@ -683,8 +683,8 @@ func PagedSearch[T any](ctx context.Context,
 	query *CompositeAggregationQuery,
 	log *log.Entry,
 	convert func(*log.Entry, *CompositeAggregationBucket) *T,
-	resultsAfter map[string]interface{},
-) ([]T, map[string]interface{}, error) {
+	resultsAfter map[string]any,
+) ([]T, map[string]any, error) {
 	// Query the document index. We aren't interested in the actual search results but rather only the aggregated
 	// results.
 	searchQuery := c.Backend().Search().
@@ -763,7 +763,7 @@ func PagedCount(ctx context.Context,
 	maxCount *int64,
 	process func(*log.Entry, *CompositeAggregationBucket),
 ) (int64, bool, error) {
-	var afterKey map[string]interface{}
+	var afterKey map[string]any
 	var count int64
 	var truncated bool
 	var err error
@@ -821,9 +821,9 @@ func searchCompositeAggregationsHelper(
 			Query(query.Query)
 
 		// If a start after key was supplied then convert to the appropriate format for the client.
-		var resultsAfter map[string]interface{}
+		var resultsAfter map[string]any
 		if startAfterKey != nil {
-			resultsAfter = make(map[string]interface{})
+			resultsAfter = make(map[string]any)
 			for _, k := range startAfterKey {
 				resultsAfter[k.Name] = k.Value
 			}
@@ -909,20 +909,20 @@ func searchCompositeAggregationsHelper(
 func CompositeAggregationBucketsToMap(
 	buckets []*CompositeAggregationBucket,
 	query *CompositeAggregationQuery,
-) map[string]interface{} {
+) map[string]any {
 	// Determine the mapping from Name to Term for the nested term aggregations.
 	nameTermMappings := make(map[string]string)
 	for i := range query.AggNestedTermInfos {
 		nameTermMappings[query.AggNestedTermInfos[i].Name] = query.AggNestedTermInfos[i].Term
 	}
 
-	bucketMaps := make([]map[string]interface{}, len(buckets))
+	bucketMaps := make([]map[string]any, len(buckets))
 	for i, bucket := range buckets {
 		bucketMaps[i] = compositeAggregationBucketToMap(bucket, nameTermMappings)
 	}
 
-	return map[string]interface{}{
-		query.Name: map[string]interface{}{
+	return map[string]any{
+		query.Name: map[string]any{
 			"buckets": bucketMaps,
 		},
 	}
@@ -932,37 +932,37 @@ func CompositeAggregationBucketsToMap(
 func compositeAggregationBucketToMap(
 	bucket *CompositeAggregationBucket,
 	nameTermMappings map[string]string,
-) map[string]interface{} {
+) map[string]any {
 	// Calculate the key.
-	key := make(map[string]interface{})
+	key := make(map[string]any)
 	for _, cak := range bucket.CompositeAggregationKey {
 		key[cak.Name] = cak.Value
 	}
 
 	// Create the bucket map.
-	bucketMap := map[string]interface{}{
+	bucketMap := map[string]any{
 		"doc_count": bucket.DocCount,
 		"key":       key,
 	}
 
 	// Add in the aggregated sums, max, min and means.
 	for name, value := range bucket.AggregatedSums {
-		bucketMap[name] = map[string]interface{}{
+		bucketMap[name] = map[string]any{
 			"value": value,
 		}
 	}
 	for name, value := range bucket.AggregatedMax {
-		bucketMap[name] = map[string]interface{}{
+		bucketMap[name] = map[string]any{
 			"value": value,
 		}
 	}
 	for name, value := range bucket.AggregatedMin {
-		bucketMap[name] = map[string]interface{}{
+		bucketMap[name] = map[string]any{
 			"value": value,
 		}
 	}
 	for name, value := range bucket.AggregatedMean {
-		bucketMap[name] = map[string]interface{}{
+		bucketMap[name] = map[string]any{
 			"value": value,
 		}
 	}
@@ -970,19 +970,19 @@ func compositeAggregationBucketToMap(
 	// Add in the aggregated terms.
 	for name, value := range bucket.AggregatedTerms {
 		if len(value.MultiTermBuckets) > 0 {
-			nestedMap := map[string]interface{}{
+			nestedMap := map[string]any{
 				"doc_count": value.DocCount,
 			}
 			for term, buckets := range value.MultiTermBuckets {
 				termBuckets := make(sortedTermBucketMaps, 0, len(buckets))
 				for key, count := range buckets {
-					termBuckets = append(termBuckets, map[string]interface{}{
+					termBuckets = append(termBuckets, map[string]any{
 						"doc_count": count,
 						"key":       key,
 					})
 				}
 				sort.Sort(sort.Reverse(termBuckets))
-				nestedMap[term] = map[string]interface{}{
+				nestedMap[term] = map[string]any{
 					"buckets": termBuckets,
 				}
 			}
@@ -990,7 +990,7 @@ func compositeAggregationBucketToMap(
 		} else {
 			termBuckets := make(sortedTermBucketMaps, 0, len(value.Buckets))
 			for key, count := range value.Buckets {
-				termBuckets = append(termBuckets, map[string]interface{}{
+				termBuckets = append(termBuckets, map[string]any{
 					"doc_count": count,
 					"key":       key,
 				})
@@ -1000,9 +1000,9 @@ func compositeAggregationBucketToMap(
 			// TODO(rlb): We should also sort on the natural order of the key, but we don't yet have a use case.
 			sort.Sort(sort.Reverse(termBuckets))
 
-			bucketMap[name] = map[string]interface{}{
+			bucketMap[name] = map[string]any{
 				"doc_count": value.DocCount,
-				nameTermMappings[name]: map[string]interface{}{
+				nameTermMappings[name]: map[string]any{
 					"buckets": termBuckets,
 				},
 			}
@@ -1015,14 +1015,14 @@ func compositeAggregationBucketToMap(
 // CompositeAggregationResults encapsulates a single set of composite aggregation results. It is used for remarshaling
 // the data into json.
 type CompositeAggregationResults struct {
-	Took         int64                  `json:"took"` // milliseconds
-	TimedOut     bool                   `json:"timed_out"`
-	Aggregations map[string]interface{} `json:"aggregations"`
+	Took         int64          `json:"took"` // milliseconds
+	TimedOut     bool           `json:"timed_out"`
+	Aggregations map[string]any `json:"aggregations"`
 }
 
 // sortedTermBucketMaps is used to sort the nested term buckets when we marshal the data from an internal map structure
 // to an ordered slice.
-type sortedTermBucketMaps []map[string]interface{}
+type sortedTermBucketMaps []map[string]any
 
 func (s sortedTermBucketMaps) Len() int {
 	return len(s)

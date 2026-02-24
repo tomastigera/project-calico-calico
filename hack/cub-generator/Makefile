@@ -38,7 +38,7 @@ GINKGO_FOCUS?=.*
 ## Run the fast set of unit tests in a container.
 ut:
 	$(DOCKER_RUN) --privileged $(CALICO_BUILD) \
-		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r -focus="$(GINKGO_FOCUS)" $(WHAT)'
+		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --focus="$(GINKGO_FOCUS)" $(WHAT)'
 
 .PHONY:fv
 fv:
@@ -51,5 +51,4 @@ st:
 # CI
 ###############################################################################
 .PHONY: ci
-## Run what CI runs
-ci: clean build test static-checks
+ci: clean static-checks build test

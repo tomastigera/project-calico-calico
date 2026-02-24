@@ -30,8 +30,8 @@ func NewBFDConfigClient(r rest.Interface, group BackingAPIGroup) K8sResourceClie
 	return &customResourceClient{
 		restClient:      r,
 		resource:        BFDConfigResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.BFDConfiguration{}),
-		k8sListType:     reflect.TypeOf(apiv3.BFDConfigurationList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.BFDConfiguration](),
+		k8sListType:     reflect.TypeFor[apiv3.BFDConfigurationList](),
 		kind:            apiv3.KindBFDConfiguration,
 		apiGroup:        group,
 	}

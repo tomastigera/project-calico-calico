@@ -103,9 +103,9 @@ type DNSName struct {
 }
 
 type dnsNameEncoded struct {
-	Name  string      `json:"name"`
-	Class interface{} `json:"class"`
-	Type  interface{} `json:"type"`
+	Name  string `json:"name"`
+	Class any    `json:"class"`
+	Type  any    `json:"type"`
 }
 
 func (d DNSName) MarshalJSON() ([]byte, error) {
@@ -193,8 +193,8 @@ func (d *DNSResponseCode) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if strings.HasPrefix(item, "#") {
-		code, err := strconv.Atoi(strings.TrimPrefix(item, "#"))
+	if after, ok := strings.CutPrefix(item, "#"); ok {
+		code, err := strconv.Atoi(after)
 		if err != nil {
 			return fmt.Errorf("failed to recognize DNS response code %s", item)
 		}
@@ -308,7 +308,7 @@ func (d *DNSClass) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func convertToDNSClass(val interface{}) (DNSClass, error) {
+func convertToDNSClass(val any) (DNSClass, error) {
 	switch v := val.(type) {
 	case string:
 		return toDNSClass(v), nil
@@ -322,8 +322,8 @@ func convertToDNSClass(val interface{}) (DNSClass, error) {
 }
 
 func toDNSClass(val string) DNSClass {
-	if strings.HasPrefix(val, "#") {
-		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
+	if after, ok := strings.CutPrefix(val, "#"); ok {
+		code, err := strconv.Atoi(after)
 		if err != nil {
 			logrus.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
 			return DNSClass(0)
@@ -383,8 +383,8 @@ func (d *DNSType) UnmarshalJSON(data []byte) error {
 }
 
 func toDNSType(val string) DNSType {
-	if strings.HasPrefix(val, "#") {
-		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
+	if after, ok := strings.CutPrefix(val, "#"); ok {
+		code, err := strconv.Atoi(after)
 		if err != nil {
 			logrus.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
 			return DNSType(0)
@@ -567,7 +567,7 @@ func (d DNSRDatas) Swap(i, j int) {
 
 type DNSRData struct {
 	Raw     []byte
-	Decoded interface{}
+	Decoded any
 }
 
 func (a *DNSRData) Less(b DNSRData) bool {

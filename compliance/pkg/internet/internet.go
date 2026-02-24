@@ -1,7 +1,11 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package internet
 
-import "github.com/projectcalico/calico/libcalico-go/lib/net"
+import (
+	"slices"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+)
 
 var (
 	private = []net.IPNet{
@@ -30,10 +34,5 @@ func NetPointersContainInternetAddr(nets []*net.IPNet) bool {
 }
 
 func NetsContainInternetAddr(nets []net.IPNet) bool {
-	for i := range nets {
-		if NetContainsInternetAddr(nets[i]) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(nets, NetContainsInternetAddr)
 }

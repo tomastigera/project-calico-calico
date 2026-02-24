@@ -20,8 +20,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -1085,7 +1084,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Precise DNS logging", []api
 		}
 	}
 
-	testDNSExchange := func(client, server interface{}) {
+	testDNSExchange := func(client, server any) {
 		var (
 			clientContainer, serverContainer *containers.Container
 			clientIP, serverIP               string

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -74,7 +74,7 @@ func (d *testL7Reporter) Start() error {
 	return nil
 }
 
-func (d *testL7Reporter) Report(logSlice interface{}) error {
+func (d *testL7Reporter) Report(logSlice any) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

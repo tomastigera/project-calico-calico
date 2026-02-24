@@ -15,7 +15,7 @@
 package calc_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -215,7 +215,7 @@ func (p *passthruCallbackRecorder) OnRemoteIPPoolRemove(string, model.IPPoolKey)
 }
 
 func labelsKV(name string, labels map[string]string) model.KVPair {
-	var value interface{}
+	var value any
 	if labels != nil {
 		value = &v3.Profile{
 			Spec: v3.ProfileSpec{

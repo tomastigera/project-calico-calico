@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-collections/collections/stack"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
@@ -2077,7 +2077,7 @@ type ipSetMemberMatcher struct {
 	expected gateway
 }
 
-func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
+func (m *ipSetMemberMatcher) Match(actual any) (bool, error) {
 	member, ok := actual.(gateway)
 	if !ok {
 		memberPtr, ok := actual.(*gateway)
@@ -2097,11 +2097,11 @@ func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
 
 }
 
-func (m *ipSetMemberMatcher) FailureMessage(actual interface{}) string {
+func (m *ipSetMemberMatcher) FailureMessage(actual any) string {
 	return fmt.Sprintf("Expected %v to match gateway: %v", actual.(gateway), m.expected)
 }
 
-func (m *ipSetMemberMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *ipSetMemberMatcher) NegatedFailureMessage(actual any) string {
 	return fmt.Sprintf("Expected %v to not match gateway: %v", actual.(gateway), m.expected)
 }
 
@@ -2163,7 +2163,7 @@ type statusCallbackEntryMatcher struct {
 	expected statusCallbackEntry
 }
 
-func (m *statusCallbackEntryMatcher) Match(actual interface{}) (bool, error) {
+func (m *statusCallbackEntryMatcher) Match(actual any) (bool, error) {
 	e, ok := actual.(statusCallbackEntry)
 	if !ok {
 		return false, fmt.Errorf("statusCallbackEntryMatcher must be passed a statusCallbackEntry. Got\n%s", format.Object(actual, 1))
@@ -2178,11 +2178,11 @@ func (m *statusCallbackEntryMatcher) Match(actual interface{}) (bool, error) {
 
 }
 
-func (m *statusCallbackEntryMatcher) FailureMessage(actual interface{}) string {
+func (m *statusCallbackEntryMatcher) FailureMessage(actual any) string {
 	return fmt.Sprintf("Expected %v to match statusCallbackEntry: %v", actual.(statusCallbackEntry), m.expected)
 }
 
-func (m *statusCallbackEntryMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *statusCallbackEntryMatcher) NegatedFailureMessage(actual any) string {
 	return fmt.Sprintf("Expected %v to not match statusCallbackEntry: %v", actual.(statusCallbackEntry), m.expected)
 }
 

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -1520,7 +1520,6 @@ var _ = Describe("Static", func() {
 		})
 		for _, ipVersion := range []uint8{4, 6} {
 			// Capture current value of ipVersion.
-			ipVersion := ipVersion
 			ipSetThisHost := fmt.Sprintf("cali%d0this-host", ipVersion)
 
 			portRanges1 := []*proto.PortRange{

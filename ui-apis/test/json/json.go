@@ -2,9 +2,9 @@ package calicojson
 
 import "encoding/json"
 
-type Map map[string]interface{}
+type Map map[string]any
 
-func MustMarshal(obj interface{}) []byte {
+func MustMarshal(obj any) []byte {
 	jsonBytes, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -13,7 +13,7 @@ func MustMarshal(obj interface{}) []byte {
 	return jsonBytes
 }
 
-func MustUnmarshalToStandObject(obj interface{}) interface{} {
+func MustUnmarshalToStandObject(obj any) any {
 	var jsonBytes []byte
 
 	switch obj := obj.(type) {
@@ -25,7 +25,7 @@ func MustUnmarshalToStandObject(obj interface{}) interface{} {
 		jsonBytes = MustMarshal(obj)
 	}
 
-	stdObj := map[string]interface{}{}
+	stdObj := map[string]any{}
 	if err := json.Unmarshal(jsonBytes, &stdObj); err != nil {
 		panic(err)
 	}

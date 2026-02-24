@@ -131,7 +131,7 @@ st:
 # Run CI cycle - build, test, etc.
 #############################################
 ## Run all CI steps for build and test, likely other targets.
-ci: clean image ut fv static-checks
+ci: clean static-checks image ut fv
 
 #############################################
 # Deploy images to registry

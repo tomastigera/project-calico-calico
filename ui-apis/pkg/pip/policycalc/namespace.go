@@ -1,6 +1,7 @@
 package policycalc
 
 import (
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -79,11 +80,9 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 		}
 
 		// If the Endpoint namespace is one of the matched selectors then this matches.
-		for i := range namespaces {
-			if namespaces[i] == ep.Namespace {
-				log.Debugf("Namespace selector: %s", MatchTypeTrue)
-				return MatchTypeTrue
-			}
+		if slices.Contains(namespaces, ep.Namespace) {
+			log.Debugf("Namespace selector: %s", MatchTypeTrue)
+			return MatchTypeTrue
 		}
 		log.Debugf("Namespace selector: %s", MatchTypeFalse)
 		return MatchTypeFalse
@@ -173,11 +172,9 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 		}
 
 		// Check the matching service account names for the endpoints namespace. As soon as we find a match we can exit.
-		for _, n := range saNamesPerNamespace[ep.Namespace] {
-			if n == *ep.ServiceAccount {
-				log.Debugf("ServiceAccountMatch: %s (matched by selector)", MatchTypeTrue)
-				return MatchTypeTrue
-			}
+		if slices.Contains(saNamesPerNamespace[ep.Namespace], *ep.ServiceAccount) {
+			log.Debugf("ServiceAccountMatch: %s (matched by selector)", MatchTypeTrue)
+			return MatchTypeTrue
 		}
 
 		// No matching service account name found for the endpoints namespace.

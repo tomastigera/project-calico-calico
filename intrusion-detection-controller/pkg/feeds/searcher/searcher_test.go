@@ -72,8 +72,7 @@ func TestCacheEvents(t *testing.T) {
 		uut.cachedEvents.Add(&e)
 	}
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 	uut.doSearch(ctx, feedCacher)
 
 	g.Expect(eventsDB.Events).Should(ConsistOf([]v1.Event{e3}), "1 Event should be in DB")

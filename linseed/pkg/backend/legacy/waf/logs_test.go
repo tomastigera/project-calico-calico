@@ -222,7 +222,7 @@ func TestWAFLogBasic(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		params := &v1.WAFLogParams{
 			QueryParams: v1.QueryParams{
-				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+				AfterKey: map[string]any{"startFrom": "badvalue"},
 			},
 		}
 		results, err := b.List(ctx, clusterInfo, params)

@@ -32,7 +32,7 @@ func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*v1.ReportData,
 func (c *MockReportRetriever) RetrieveArchivedReportSummaries() ([]*v1.ReportData, error) {
 	rl := make([]*v1.ReportData, 5)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		rd := apiv3.ReportData{}
 		rd.ReportName = fmt.Sprintf("Report%d", i)
 		rd.ReportSpec = apiv3.ReportSpec{ReportType: "inventory"}

@@ -7,11 +7,12 @@ package collector
 import (
 	"fmt"
 	net2 "net"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	googleproto "google.golang.org/protobuf/proto"
@@ -39,7 +40,7 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -89,12 +90,12 @@ var (
 )
 
 var (
-	node1 = &libapiv3.Node{
+	node1 = &internalapi.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "node1",
 		},
-		Spec: libapiv3.NodeSpec{
-			Addresses: []libapiv3.NodeAddress{
+		Spec: internalapi.NodeSpec{
+			Addresses: []internalapi.NodeAddress{
 				{
 					Address: "192.168.55.55",
 				},
@@ -856,7 +857,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -916,7 +917,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -977,7 +978,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nodeIp1:   nodeEd1,
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
-			nodeMap := map[string]*libapiv3.Node{
+			nodeMap := map[string]*internalapi.Node{
 				"node1": node1,
 			}
 
@@ -1010,7 +1011,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1047,7 +1048,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1084,7 +1085,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1122,7 +1123,7 @@ var _ = Describe("NFLOG Datasource", func() {
 					nodeIp1:   nodeEd1,
 				}
 				nflogMap := map[[64]byte]*calc.RuleID{}
-				nodeMap := map[string]*libapiv3.Node{
+				nodeMap := map[string]*internalapi.Node{
 					"node1": node1,
 				}
 
@@ -1526,7 +1527,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		nodes := map[string]*libapiv3.Node{
+		nodes := map[string]*internalapi.Node{
 			"node1": node1,
 		}
 		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
@@ -2393,7 +2394,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		nodes := map[string]*libapiv3.Node{
+		nodes := map[string]*internalapi.Node{
 			"node1": node1,
 		}
 
@@ -2913,7 +2914,7 @@ func newMockLookupsCache(
 	nm map[[64]byte]*calc.RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
-	nodes map[string]*libapiv3.Node,
+	nodes map[string]*internalapi.Node,
 	genCache map[model.PolicyKey]int64,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
@@ -3199,7 +3200,7 @@ func (r *mockWAFEventReporter) Start() error {
 	return nil
 }
 
-func (r *mockWAFEventReporter) Report(event interface{}) error {
+func (r *mockWAFEventReporter) Report(event any) error {
 	r.updates = append(r.updates, event.(*wafevents.Report))
 	return nil
 }
@@ -4012,7 +4013,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 			// Create multiple NetworkSets for performance testing
 			nsMap := make(map[model.NetworkSetKey]*model.NetworkSet)
 
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				networkSet := &model.NetworkSet{
 					Nets: []net.IPNet{
 						utils.MustParseNet(fmt.Sprintf("10.%d.0.0/16", i)),
@@ -4035,7 +4036,7 @@ var _ = Describe("Collector Namespace-Aware NetworkSet Lookups", func() {
 
 			// Performance test: multiple namespace lookups should complete quickly
 			start := time.Now()
-			for i := 0; i < 50; i++ {
+			for i := range 50 {
 				namespace := fmt.Sprintf("namespace-%d", i%5)
 				testIPLoop := ipToBytes(fmt.Sprintf("10.%d.1.1", i%10))
 
@@ -5060,11 +5061,7 @@ func (m *mockEgressDomainCache) GetTopLevelDomainsForIP(clientIP string, ip [16]
 func (m *mockEgressDomainCache) IterWatchedDomainsForIP(clientIP string, ip [16]byte, fn func(domain string) bool) {
 	if clientDomains, ok := m.domains[clientIP]; ok {
 		if domains, ok := clientDomains[ip]; ok {
-			for _, domain := range domains {
-				if fn(domain) {
-					break
-				}
-			}
+			_ = slices.ContainsFunc(domains, fn)
 		}
 	}
 }
@@ -5141,14 +5138,14 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 	var rids []*calc.RuleID
 	MaxEntries := 10000
-	for i := 0; i < MaxEntries; i++ {
+	for range MaxEntries {
 		rid := defTierPolicy1AllowIngressRuleID
 		rids = append(rids, rid)
 	}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		for i := 0; i < MaxEntries; i++ {
+		for i := range MaxEntries {
 			data := NewData(tuples[i], localEd1, remoteEd1, nil, 100)
 			c.applyNflogStatUpdate(data, rids[i], 0, 1, 2, false)
 		}
@@ -5782,10 +5779,8 @@ func (m *mockDomainCache) IterWatchedDomainsForIP(clientIP string, ip [16]byte, 
 	if m == nil {
 		return
 	}
-	for _, d := range m.domains[ip] {
-		if cb(d) {
-			return
-		}
+	if slices.ContainsFunc(m.domains[ip], cb) {
+		return
 	}
 }
 

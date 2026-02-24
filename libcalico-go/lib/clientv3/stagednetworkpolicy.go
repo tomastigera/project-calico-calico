@@ -19,6 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/defaults"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -57,30 +58,22 @@ func (r stagedNetworkPolicies) Create(ctx context.Context, res *apiv3.StagedNetw
 		resCopy := *res
 		res = &resCopy
 	}
-	if res.Spec.StagedAction != apiv3.StagedActionDelete {
-		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
-	} else {
-		res.Spec.Types = []apiv3.PolicyType(nil)
+	// Run defaulting logic.
+	if _, err := defaults.Default(res); err != nil {
+		return nil, err
+	}
+	if res.Spec.StagedAction == apiv3.StagedActionDelete {
+		res.Spec.Types = nil
 	}
 
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
 
-	// Add tier labels to policy for lookup.
-	if tier != "default" {
-		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
-	}
-
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindStagedNetworkPolicy, res)
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.StagedNetworkPolicy), err
 	}
-
-	// Add the tier labels if necessary
-	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
 
 	return nil, err
 }
@@ -95,31 +88,22 @@ func (r stagedNetworkPolicies) Update(ctx context.Context, res *apiv3.StagedNetw
 		res = &resCopy
 	}
 
-	if res.Spec.StagedAction != apiv3.StagedActionDelete {
-		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
-	} else {
-		res.Spec.Types = []apiv3.PolicyType(nil)
+	// Run defaulting logic.
+	if _, err := defaults.Default(res); err != nil {
+		return nil, err
+	}
+	if res.Spec.StagedAction == apiv3.StagedActionDelete {
+		res.Spec.Types = nil
 	}
 
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
 
-	// Add tier labels to policy for lookup.
-	tier := names.TierOrDefault(res.Spec.Tier)
-	if tier != "default" {
-		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
-	}
-
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindStagedNetworkPolicy, res)
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.StagedNetworkPolicy), err
 	}
-
-	// Add the tier labels if necessary
-	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
 
 	return nil, err
 }

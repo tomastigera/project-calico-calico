@@ -20,7 +20,7 @@ import (
 // JsonObject is used to define a JSON object as a map representation
 // This structure is kept in order to maintain compatibility with
 // the extraction of an Event from all data types
-type JsonObject map[string]interface{}
+type JsonObject map[string]any
 
 func (obj JsonObject) Convert() (map[string]gojson.RawMessage, error) {
 	jsonMap := make(map[string]gojson.RawMessage)

@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gmeasure"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/sync/errgroup"
@@ -36,7 +36,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
@@ -207,21 +207,21 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 			// Create many pools
 			pool26 = nil
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				cidr := fmt.Sprintf("10.%d.0.0/16", i)
 				pa.pools[cidr] = pool{enabled: true, blockSize: 26}
 				pool26 = append(pool26, cnet.MustParseCIDR(cidr))
 			}
 
 			pool32 = nil
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				cidr := fmt.Sprintf("11.%d.0.0/16", i)
 				pa.pools[cidr] = pool{enabled: true, blockSize: 32}
 				pool32 = append(pool32, cnet.MustParseCIDR(cidr))
 			}
 
 			pool20 = nil
-			for i := 0; i < 50; i++ {
+			for i := range 50 {
 				cidr := fmt.Sprintf("12.%d.0.0/16", i)
 				pa.pools[cidr] = pool{enabled: true, blockSize: 20}
 				pool20 = append(pool20, cnet.MustParseCIDR(cidr))
@@ -239,8 +239,11 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			log.SetLevel(origLogLevel)
 		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 32", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("should be able to allocate a single address quickly - blocksize 32", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 32")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -253,11 +256,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
-		}, 100)
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
+		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 26", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("should be able to allocate a single address quickly - blocksize 26", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 26")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -270,11 +276,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
-		}, 100)
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
+		})
 
-		Measure("It should be able to allocate a single address quickly - blocksize 20", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("should be able to allocate a single address quickly - blocksize 20", func() {
+			experiment := gmeasure.NewExperiment("allocate single address - blocksize 20")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -287,11 +296,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
-		}, 100)
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
+		})
 
-		Measure("It should be able to allocate a lot of addresses quickly", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("should be able to allocate a lot of addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("allocate many addresses")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -304,14 +316,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(v4ia.IPs)).To(Equal(64))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
-		}, 20)
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
+		})
 
 		Context("with 1000 nodes", func() {
 			BeforeEach(func() {
 				var eg errgroup.Group
 				eg.SetLimit(runtime.NumCPU())
-				for i := 0; i < 1000; i++ {
+				for i := range 1000 {
 					eg.Go(func() error {
 						defer GinkgoRecover()
 						applyNode(bc, kc, fmt.Sprintf("%s-%d", hostname, i), map[string]string{"foo": "bar"})
@@ -325,7 +337,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				// Clean up the nodes.
 				var eg errgroup.Group
 				eg.SetLimit(runtime.NumCPU())
-				for i := 0; i < 1000; i++ {
+				for i := range 1000 {
 					eg.Go(func() error {
 						defer GinkgoRecover()
 						deleteNode(bc, kc, fmt.Sprintf("%s-%d", hostname, i))
@@ -339,10 +351,10 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			allocOneIPPerNode := func() {
 				var eg errgroup.Group
 				eg.SetLimit(runtime.NumCPU())
-				for i := 0; i < 1000; i++ {
+				for i := range 1000 {
 					eg.Go(func() error {
 						defer GinkgoRecover()
-						for j := 0; j < 1; j++ {
+						for range 1 {
 							// Build a new backend client. We use a different client for each iteration of the test
 							// so that the k8s QPS /burst limits don't carry across "hosts". This is more realistic.
 							bc, err = backend.NewClient(config)
@@ -372,22 +384,31 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(eg.Wait()).To(Succeed())
 			}
 
-			Measure("time to allocate first IP per node across 1000 nodes", func(b Benchmarker) {
-				b.Time("runtime", func() {
-					allocOneIPPerNode()
-				})
-			}, 1)
+			It("time to allocate first IP per node across 1000 nodes", func() {
+				experiment := gmeasure.NewExperiment("allocate first IP per node across 1000 nodes")
+				AddReportEntry(experiment.Name, experiment)
 
-			Measure("time to allocate second IP per node across 1000 nodes", func(b Benchmarker) {
-				allocOneIPPerNode() // Pre-create one IPAM block per node.
-				b.Time("runtime", func() {
+				experiment.MeasureDuration("runtime", func() {
 					allocOneIPPerNode()
 				})
-			}, 1)
+			})
+
+			It("time to allocate second IP per node across 1000 nodes", func() {
+				experiment := gmeasure.NewExperiment("allocate second IP per node across 1000 nodes")
+				AddReportEntry(experiment.Name, experiment)
+
+				allocOneIPPerNode() // Pre-create one IPAM block per node.
+				experiment.MeasureDuration("runtime", func() {
+					allocOneIPPerNode()
+				})
+			})
 		})
 
-		Measure("It should be able to allocate and release addresses quickly", func(b Benchmarker) {
-			runtime := b.Time("runtime", func() {
+		It("should be able to allocate and release addresses quickly", func() {
+			experiment := gmeasure.NewExperiment("allocate and release addresses")
+			AddReportEntry(experiment.Name, experiment)
+
+			duration := experiment.MeasureDuration("runtime", func() {
 				// Build a new backend client. We use a different client for each iteration of the test
 				// so that the k8s QPS /burst limits don't carry across tests. This is more realistic.
 				bc, err = backend.NewClient(config)
@@ -408,8 +429,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(len(rel)).To(Equal(1))
 			})
 
-			Expect(runtime.Seconds()).Should(BeNumerically("<", 5))
-		}, 20)
+			Expect(duration.Seconds()).Should(BeNumerically("<", 5))
+		})
 	})
 
 	Describe("ReleaseIPs test", func() {
@@ -430,7 +451,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			// Run this test several times so that we can assert the logic works with a multitude of different sequence numbers, and
 			// that the sequence number is actually incremented properly.
 			var expectedSeqNum uint64
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				// Allocate an IP address.
 				v4, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{Num4: 1, Num6: 0, Hostname: hostname, HandleID: &handle, IntendedUse: v3.IPPoolAllowedUseTunnel})
 				Expect(err).NotTo(HaveOccurred())
@@ -649,7 +670,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			for _, node := range []string{"node1", "node2", "node3", "node4"} {
 				// 4 nodes
 				applyNode(bc, kc, node, map[string]string{"foo": "bar", "name": node})
-				for i := 0; i < 6; i++ {
+				for range 6 {
 					// 6 addresses of each family per-node.
 					v4ia, v6ia, err := ic.AutoAssign(context.Background(), AutoAssignArgs{Num4: 1, Num6: 1, Hostname: node, IntendedUse: v3.IPPoolAllowedUseWorkload})
 					Expect(err).NotTo(HaveOccurred())
@@ -1131,7 +1152,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			// Allocate several blocks to the node. The pool is a /30, so 4 addresses
 			// per each block.
 			handle := "test-handle"
-			for i := 0; i < 12; i++ {
+			for range 12 {
 				v4ia, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{Num4: 1, Hostname: hostname, HandleID: &handle, IntendedUse: v3.IPPoolAllowedUseWorkload})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(v4ia).ToNot(BeNil())
@@ -1172,7 +1193,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			// Allocate several blocks to the node. The pool is a /30, so 4 addresses
 			// per each block.
 			handle := "test-handle"
-			for i := 0; i < 12; i++ {
+			for range 12 {
 				v4ia, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{Num4: 1, Hostname: hostname, HandleID: &handle, IntendedUse: v3.IPPoolAllowedUseWorkload})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(v4ia).ToNot(BeNil())
@@ -1581,7 +1602,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			applyPoolWithBlockSize("10.0.0.0/28", true, `foo == "bar"`, 30)
 
 			// We should be able to assign 8 addresses to node0, fully using its two blocks.
-			for i := 0; i < 8; i++ {
+			for range 8 {
 				v4ia, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{
 					IntendedUse: v3.IPPoolAllowedUseWorkload,
 					Num4:        1,
@@ -3578,7 +3599,7 @@ var _ = DescribeTable("determinePools tests IPV4",
 		ic := NewIPAMClient(nil, ipPools, &fakeReservations{})
 
 		// Create a node object for the test.
-		node := libapiv3.Node{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}}
+		node := internalapi.Node{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}}
 
 		// Prep input data
 		reqPools := []cnet.IPNet{}
@@ -3647,7 +3668,7 @@ var _ = DescribeTable("determinePools tests IPV6",
 		ic := NewIPAMClient(nil, ipPools, &fakeReservations{})
 
 		// Create a node object for the test.
-		node := libapiv3.Node{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}}
+		node := internalapi.Node{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}}
 
 		// Prep input data
 		reqPools := []cnet.IPNet{}
@@ -3794,10 +3815,10 @@ func tryApplyNode(c bapi.Client, kc *kubernetes.Clientset, host string, labels m
 	} else {
 		// Otherwise, create it in Calico.
 		_, err := c.Apply(context.Background(), &model.KVPair{
-			Key: model.ResourceKey{Name: host, Kind: libapiv3.KindNode},
-			Value: libapiv3.Node{
+			Key: model.ResourceKey{Name: host, Kind: internalapi.KindNode},
+			Value: internalapi.Node{
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
-				Spec: libapiv3.NodeSpec{OrchRefs: []libapiv3.OrchRef{
+				Spec: internalapi.NodeSpec{OrchRefs: []internalapi.OrchRef{
 					{Orchestrator: "k8s", NodeName: host},
 				}},
 			},
@@ -3816,7 +3837,7 @@ func deleteNode(c bapi.Client, kc *kubernetes.Clientset, host string) {
 			Fail(fmt.Sprintf("Error deleting node %s: %v", host, err))
 		}
 	} else {
-		_, err := c.Delete(context.Background(), &model.ResourceKey{Name: host, Kind: libapiv3.KindNode}, "")
+		_, err := c.Delete(context.Background(), &model.ResourceKey{Name: host, Kind: internalapi.KindNode}, "")
 		if err != nil {
 			if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
 				Fail(fmt.Sprintf("Error deleting node %s: %v", host, err))
@@ -3943,7 +3964,7 @@ var _ = Describe("determinePools with namespace selector", func() {
 				blockSize:         26,
 			}
 
-			node := libapiv3.Node{
+			node := internalapi.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: nodeLabels,
 				},
@@ -4084,7 +4105,7 @@ var _ = Describe("determinePools with namespace selector", func() {
 			blockSize:         26,
 		}
 
-		node := libapiv3.Node{
+		node := internalapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{},
 			},
@@ -4126,7 +4147,7 @@ var _ = Describe("determinePools with namespace selector", func() {
 			blockSize:         26,
 		}
 
-		node := libapiv3.Node{
+		node := internalapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{},
 			},
@@ -4160,7 +4181,7 @@ var _ = Describe("determinePools with namespace selector", func() {
 			blockSize:         26,
 		}
 
-		node := libapiv3.Node{
+		node := internalapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{},
 			},

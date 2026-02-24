@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	k8suser "k8s.io/apiserver/pkg/authentication/user"

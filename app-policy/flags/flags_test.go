@@ -17,8 +17,8 @@ func TestFlagDefaults(t *testing.T) {
 
 	// Check the flags are set correctly.
 	for _, v := range []struct {
-		loaded   interface{}
-		expected interface{}
+		loaded   any
+		expected any
 	}{
 		{config.ListenNetwork, "unix"},
 		{config.ListenAddress, "/var/run/dikastes/dikastes.sock"},
@@ -47,8 +47,8 @@ func TestAcceptLegacyArgs(t *testing.T) {
 
 	// Check the flags are set correctly.
 	for _, v := range []struct {
-		loaded   interface{}
-		expected interface{}
+		loaded   any
+		expected any
 	}{
 		{config.ListenNetwork, "unix"},
 		{config.ListenAddress, "/var/run/dikastes/dikastes.sock"},
@@ -91,8 +91,8 @@ func TestStringArrayArgs(t *testing.T) {
 
 	// Check the flags are set correctly.
 	for _, v := range []struct {
-		loaded   interface{}
-		expected interface{}
+		loaded   any
+		expected any
 	}{
 		{
 			config.WAFDirectives.Value(),
@@ -126,8 +126,8 @@ func TestBoolArgs(t *testing.T) {
 
 	// Check the flags are set correctly.
 	for _, v := range []struct {
-		loaded   interface{}
-		expected interface{}
+		loaded   any
+		expected any
 	}{
 		{config.PerHostWAFEnabled, true},
 	} {

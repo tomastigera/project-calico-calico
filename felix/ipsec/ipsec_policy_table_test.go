@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -282,7 +282,6 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 	})
 
 	for _, failureType := range []string{"newNetlinkHandle", "XfrmPolicyList", "XfrmPolicyUpdate", "XfrmPolicyDel"} {
-		failureType := failureType // Create a fresh copy for each loop.
 		Describe("with some "+failureType+" errors queued up", func() {
 			BeforeEach(func() {
 				mockDataplane.Errors.QueueError(failureType)
@@ -306,7 +305,7 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 				polTable.SetRule(caliSel1, &caliPol1)
 				polTable.Apply()
 
-				for i := 0; i < 20; i++ {
+				for range 20 {
 					mockDataplane.Errors.QueueError(failureType)
 				}
 				if failureType == "newNetlinkHandle" {
@@ -490,7 +489,7 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			// Useful on failure.
 			polTable.DumpStateToLog()
 		}
@@ -580,7 +579,7 @@ var _ = Describe("IpsecPolicyTable with IPsec disabled", func() {
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			// Useful on failure.
 			polTable.DumpStateToLog()
 		}

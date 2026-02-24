@@ -2,11 +2,11 @@
 package client
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 )
@@ -28,10 +28,10 @@ var (
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		apiv3.KindTier,
-		v3.KindWorkloadEndpoint,
+		internalapi.KindWorkloadEndpoint,
 		apiv3.KindHostEndpoint,
 		apiv3.KindProfile,
-		v3.KindNode,
+		internalapi.KindNode,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 	}
@@ -71,14 +71,14 @@ var _ = Describe("Tests QueryNodeReq", func() {
 		})
 
 		It("Populates Node.Addresses with NodeSpec.Addresses when they are received from API", func() {
-			localNodeAddresses := []v3.NodeAddress{
+			localNodeAddresses := []internalapi.NodeAddress{
 				{Address: LocalIPV4Address},
 				{Address: LocalIPV6Address},
 			}
 
 			getResource = func() api.Resource {
-				n := v3.NewNode()
-				n.Spec = v3.NodeSpec{
+				n := internalapi.NewNode()
+				n.Spec = internalapi.NodeSpec{
 					Addresses: localNodeAddresses,
 				}
 				return n
@@ -93,9 +93,9 @@ var _ = Describe("Tests QueryNodeReq", func() {
 
 		It("Populates Node.BGPIPAddresses with NodeSpec.BGPIAddresses when they are received from API", func() {
 			getResource = func() api.Resource {
-				n := v3.NewNode()
-				n.Spec = v3.NodeSpec{
-					BGP: &v3.NodeBGPSpec{
+				n := internalapi.NewNode()
+				n.Spec = internalapi.NodeSpec{
+					BGP: &internalapi.NodeBGPSpec{
 						IPv4Address: LocalIPV4Address,
 						IPv6Address: LocalIPV6Address,
 					},

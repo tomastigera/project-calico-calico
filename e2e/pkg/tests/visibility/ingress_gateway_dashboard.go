@@ -235,7 +235,7 @@ var _ = describe.CalicoDescribe(
 				By("Generating L7 traffic through the gateway")
 				gwTarget := conncheck.NewTarget(clusterIP, conncheck.TypeClusterIP, conncheck.HTTP,
 					conncheck.WithHTTP("GET", "/backend/test", nil))
-				for i := 0; i < 10; i++ {
+				for i := range 10 {
 					_, err := connTester.Connect(clientPod, gwTarget)
 					if err != nil {
 						logrus.WithError(err).Warnf("HTTP request attempt %d failed", i)

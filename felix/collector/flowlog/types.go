@@ -1061,10 +1061,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 
 			spaceInNatOutGoingPortArray := f.natOutgoingPortLimit - len(aggregatedNatOutgoingPorts)
 			if spaceInNatOutGoingPortArray > 0 {
-				numIncludedPorts := len(natOutGoingPorts)
-				if spaceInNatOutGoingPortArray < len(natOutGoingPorts) {
-					numIncludedPorts = spaceInNatOutGoingPortArray
-				}
+				numIncludedPorts := min(spaceInNatOutGoingPortArray, len(natOutGoingPorts))
 				aggregatedNatOutgoingPorts = append(aggregatedNatOutgoingPorts, natOutGoingPorts[0:numIncludedPorts]...)
 			}
 		} else {
@@ -1254,8 +1251,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		f.FlowEnforcedPolicySet = make(FlowPolicySet)
 	} else if len(parts[26]) > 1 {
 		f.FlowEnforcedPolicySet = make(FlowPolicySet)
-		polParts := strings.Split(parts[26][1:len(parts[26])-1], ",")
-		for _, p := range polParts {
+		polParts := strings.SplitSeq(parts[26][1:len(parts[26])-1], ",")
+		for p := range polParts {
 			f.FlowEnforcedPolicySet[p] = emptyValue
 		}
 	}
@@ -1265,8 +1262,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		f.FlowExtras = FlowExtras{}
 	} else if len(parts[27]) > 1 {
 		ips := []net.IP{}
-		exParts := strings.Split(parts[27][1:len(parts[27])-1], ",")
-		for _, ipStr := range exParts {
+		exParts := strings.SplitSeq(parts[27][1:len(parts[27])-1], ",")
+		for ipStr := range exParts {
 			ip := net.ParseIP(ipStr)
 			if ip == nil {
 				continue

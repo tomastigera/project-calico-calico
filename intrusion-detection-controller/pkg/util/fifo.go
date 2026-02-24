@@ -31,7 +31,7 @@ func NewPingableFifo() (*cache.DeltaFIFO, cache.Store) {
 	return fifo, clientState
 }
 
-func PingableKeyFunc(obj interface{}) (string, error) {
+func PingableKeyFunc(obj any) (string, error) {
 	_, ok := obj.(Ping)
 	if ok {
 		return pingKey, nil

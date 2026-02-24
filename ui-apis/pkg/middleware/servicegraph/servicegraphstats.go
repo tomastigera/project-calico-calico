@@ -534,7 +534,7 @@ func (s *serviceGraphStats) refreshCachedStats(cluster string) {
 	start := time.Now()
 	var cs *cachedStats
 	var err error
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := range 3 {
 		cs, err = s.getCachedStats(context.Background(), cluster, &lmav1.TimeRange{
 			From: time.Now().Add(-s.config.GraphStatsCacheDuration),
 			To:   time.Now(),
@@ -566,19 +566,19 @@ func (s *serviceGraphStats) deleteCachedStats(cluster string) {
 
 func (s *serviceGraphStats) establishManagedClusterWatches() {
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				log.Infof("Received managed cluster deletion for cluster=%s", mc.Name)
 				s.deleteCachedStats(mc.Name)
 			}
 		},
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				log.Infof("Received managed cluster add for cluster=%s", mc.Name)
 				s.refreshCachedStats(mc.Name)
 			}
 		},
-		UpdateFunc: func(_, obj interface{}) {
+		UpdateFunc: func(_, obj any) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
 				log.Infof("Received managed cluster update for cluster=%s", mc.Name)
 				s.refreshCachedStats(mc.Name)

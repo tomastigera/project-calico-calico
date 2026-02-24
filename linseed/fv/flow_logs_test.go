@@ -126,7 +126,7 @@ func TestFV_FlowLogs(t *testing.T) {
 
 		// Create 5 flow logs.
 		logTime := time.Now().UTC().Unix()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.FlowLog{
 				{
 					StartTime: logTime,
@@ -144,7 +144,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.FlowLogParams{
 				QueryParams: v1.QueryParams{
@@ -212,7 +212,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
 		var logs []v1.FlowLog
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs = append(logs, v1.FlowLog{
 				StartTime: logTime,
 				EndTime:   logTime + int64(i), // Make sure logs are ordered.
@@ -833,7 +833,7 @@ func TestFV_FlowLogsCount(t *testing.T) {
 		// Create > 10K logs to test deep pagination handling
 		logTime := time.Now().UTC().Unix()
 		var logs []v1.FlowLog
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs = append(logs, v1.FlowLog{
 				StartTime: logTime,
 				EndTime:   logTime + int64(i),

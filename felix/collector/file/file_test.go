@@ -48,7 +48,7 @@ func BenchmarkFileReporter_Report(b *testing.B) {
 
 func makeLogSlice(n int) []*flowlog.FlowLog {
 	s := make([]*flowlog.FlowLog, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 
 		ip1, _ := ip.ParseIPAs16Byte("10.65.0.0")
 		ip2, _ := ip.ParseIPAs16Byte("10.65.1.0")

@@ -57,7 +57,7 @@ rules:
       - list
       - watch
       - create
-  # We only allow update access to our own CRDs.
+  # Allow updating the crd.projectcalico.org CRDs.
   - apiGroups:
       - apiextensions.k8s.io
     resources:
@@ -65,11 +65,6 @@ rules:
     verbs:
       - update
     resourceNames:
-      - apiservers.operator.tigera.io
-      - gatewayapis.operator.tigera.io
-      - imagesets.operator.tigera.io
-      - installations.operator.tigera.io
-      - tigerastatuses.operator.tigera.io
       - bgpconfigurations.crd.projectcalico.org
       - bgpfilters.crd.projectcalico.org
       - bgppeers.crd.projectcalico.org
@@ -79,7 +74,6 @@ rules:
       - felixconfigurations.crd.projectcalico.org
       - globalnetworkpolicies.crd.projectcalico.org
       - globalnetworksets.crd.projectcalico.org
-      - goldmanes.operator.tigera.io
       - hostendpoints.crd.projectcalico.org
       - ipamblocks.crd.projectcalico.org
       - ipamconfigs.crd.projectcalico.org
@@ -90,12 +84,9 @@ rules:
       - networkpolicies.crd.projectcalico.org
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
-      - whiskers.operator.tigera.io
-      - istios.operator.tigera.io
         # Enterprise/Cloud Resources
       - alertexceptions.crd.projectcalico.org
       - bfdconfigurations.crd.projectcalico.org
-      - compliances.operator.tigera.io
       - deeppacketinspections.crd.projectcalico.org
       - egressgatewaypolicies.crd.projectcalico.org
       - externalnetworks.crd.projectcalico.org
@@ -115,7 +106,76 @@ rules:
       - stagednetworkpolicies.crd.projectcalico.org
       - uisettings.crd.projectcalico.org
       - uisettingsgroups.crd.projectcalico.org
-        # Enterprise Operator CRDs
+  # Allow updating the projectcalico.org/v3 CRDs.
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - update
+    resourceNames:
+      - bgpconfigurations.projectcalico.org
+      - bgpfilters.projectcalico.org
+      - bgppeers.projectcalico.org
+      - blockaffinities.projectcalico.org
+      - caliconodestatuses.projectcalico.org
+      - clusterinformations.projectcalico.org
+      - felixconfigurations.projectcalico.org
+      - globalnetworkpolicies.projectcalico.org
+      - stagedglobalnetworkpolicies.projectcalico.org
+      - globalnetworksets.projectcalico.org
+      - hostendpoints.projectcalico.org
+      - ipamblocks.projectcalico.org
+      - ipamconfigurations.projectcalico.org
+      - ipamhandles.projectcalico.org
+      - ippools.projectcalico.org
+      - ipreservations.projectcalico.org
+      - kubecontrollersconfigurations.projectcalico.org
+      - networkpolicies.projectcalico.org
+      - stagednetworkpolicies.projectcalico.org
+      - stagedkubernetesnetworkpolicies.projectcalico.org
+      - networksets.projectcalico.org
+      - tiers.projectcalico.org
+        # Enterprise/Cloud Resources
+      - alertexceptions.projectcalico.org
+      - bfdconfigurations.projectcalico.org
+      - deeppacketinspections.projectcalico.org
+      - egressgatewaypolicies.projectcalico.org
+      - externalnetworks.projectcalico.org
+      - globalalerts.projectcalico.org
+      - globalalerttemplates.projectcalico.org
+      - globalreports.projectcalico.org
+      - globalreporttypes.projectcalico.org
+      - globalthreatfeeds.projectcalico.org
+      - licensekeys.projectcalico.org
+      - managedclusters.projectcalico.org
+      - packetcaptures.projectcalico.org
+      - policyrecommendationscopes.projectcalico.org
+      - remoteclusterconfigurations.projectcalico.org
+      - securityeventwebhooks.projectcalico.org
+      - stagedglobalnetworkpolicies.projectcalico.org
+      - stagedkubernetesnetworkpolicies.projectcalico.org
+      - stagednetworkpolicies.projectcalico.org
+      - uisettings.projectcalico.org
+      - uisettingsgroups.projectcalico.org
+  # Allow updating the operator.tigera.io CRDs.
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - update
+    resourceNames:
+      - apiservers.operator.tigera.io
+      - gatewayapis.operator.tigera.io
+      - goldmanes.operator.tigera.io
+      - imagesets.operator.tigera.io
+      - installations.operator.tigera.io
+      - tigerastatuses.operator.tigera.io
+      - whiskers.operator.tigera.io
+      - istios.operator.tigera.io
+      # Enterprise/Cloud Resources
+      - compliances.operator.tigera.io
       - applicationlayers.operator.tigera.io
       - authentications.operator.tigera.io
       - egressgateways.operator.tigera.io
@@ -131,7 +191,17 @@ rules:
       - policyrecommendations.operator.tigera.io
       - tlspassthroughroutes.operator.tigera.io
       - tlsterminatedroutes.operator.tigera.io
-        # Elastic Resources
+        # Others
+      - licenseusagereports.usage.tigera.io
+
+  # Allow updating Elastic CRDs.
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - update
+    resourceNames:
       - agents.agent.k8s.elastic.co
       - apmservers.apm.k8s.elastic.co
       - beats.beat.k8s.elastic.co
@@ -142,9 +212,9 @@ rules:
       - kibanas.kibana.k8s.elastic.co
       - logstashes.logstash.k8s.elastic.co
       - stackconfigpolicies.stackconfigpolicy.k8s.elastic.co
-        # Others
-      - licenseusagereports.usage.tigera.io
-    # We need update and delete access for ANP/BANP CRDs to set owner refs when assuming control of pre-existing CRDs, for example on OCP.
+
+  # We need update and delete access for the ClusterNetworkPolicy CRD to set owner references
+  # when assuming control of pre-existing CRDs, for example on OCP.
   - apiGroups:
       - apiextensions.k8s.io
     resources:
@@ -534,6 +604,18 @@ rules:
     resources:
       - certificatesigningrequests
     verbs:
+      - list
+      - watch
+  # The operator needs permissions to create and update validating webhook configuration.
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - create
+      - update
+      - delete
+      - get
       - list
       - watch
   # Add the appropriate pod security policy permissions

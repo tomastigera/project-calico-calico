@@ -17,11 +17,12 @@ package clientv3
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -34,13 +35,13 @@ import (
 
 // WorkloadEndpointInterface has methods to work with WorkloadEndpoint resources.
 type WorkloadEndpointInterface interface {
-	Create(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error)
-	CreateNonDefault(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error)
-	Update(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error)
-	UpdateNonDefault(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error)
-	Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*libapiv3.WorkloadEndpoint, error)
-	Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*libapiv3.WorkloadEndpoint, error)
-	List(ctx context.Context, opts options.ListOptions) (*libapiv3.WorkloadEndpointList, error)
+	Create(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error)
+	CreateNonDefault(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error)
+	Update(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error)
+	UpdateNonDefault(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error)
+	Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*internalapi.WorkloadEndpoint, error)
+	Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*internalapi.WorkloadEndpoint, error)
+	List(ctx context.Context, opts options.ListOptions) (*internalapi.WorkloadEndpointList, error)
 	Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error)
 }
 
@@ -61,7 +62,7 @@ type workloadEndpoints struct {
 
 // create takes the representation of a WorkloadEndpoint and creates it using the given create function.  Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) create(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions, createFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) create(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions, createFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*internalapi.WorkloadEndpoint, error) {
 	if res != nil {
 		// Since we're about to default some fields, take a (shallow) copy of the input data
 		// before we do so.
@@ -74,9 +75,9 @@ func (r workloadEndpoints) create(ctx context.Context, res *libapiv3.WorkloadEnd
 		return nil, err
 	}
 	r.updateLabelsForStorage(res)
-	out, err := createResource(ctx, opts, libapiv3.KindWorkloadEndpoint, res, createFunc)
+	out, err := createResource(ctx, opts, internalapi.KindWorkloadEndpoint, res, createFunc)
 	if out != nil {
-		return out.(*libapiv3.WorkloadEndpoint), err
+		return out.(*internalapi.WorkloadEndpoint), err
 	}
 	return nil, err
 }
@@ -85,7 +86,7 @@ func (r workloadEndpoints) create(ctx context.Context, res *libapiv3.WorkloadEnd
 // mode, the default WorkloadEndpoints are "created" different from the additional ones. If the backend client is not a
 // k8s.KubeClient, or the WorkloadEndpoint K8sResourceClient does not implement the createNonDefaultInterface then this
 // function simple calls Create.
-func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error) {
 	var createFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
 	// Note on this type switching: We could have added CreateNonDefault to the api.Client interface, but that would mean
@@ -94,11 +95,11 @@ func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *libapiv3.W
 	// time of writing this it seems like the best alternative.
 	switch be := r.client.backend.(type) {
 	case *k8s.KubeClient:
-		rClient := be.GetResourceClientFromResourceKind(libapiv3.KindWorkloadEndpoint)
+		rClient := be.GetResourceClientFromResourceKind(internalapi.KindWorkloadEndpoint)
 		if rClient == nil {
 			log.Debug("Attempt to 'Create' using kubernetes backend is not supported.")
 			return nil, cerrors.ErrorOperationNotSupported{
-				Identifier: resourceToKVPair(opts, libapiv3.KindWorkloadEndpoint, res),
+				Identifier: resourceToKVPair(opts, internalapi.KindWorkloadEndpoint, res),
 				Operation:  "Create",
 			}
 		}
@@ -118,13 +119,13 @@ func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *libapiv3.W
 
 // Create takes the representation of a WorkloadEndpoint and creates it.  Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) Create(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) Create(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error) {
 	return r.create(ctx, res, opts, r.client.backend.Create)
 }
 
 // update takes the representation of a WorkloadEndpoint and updates it using the given update function. Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) update(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions, updateFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) update(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions, updateFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*internalapi.WorkloadEndpoint, error) {
 	if res != nil {
 		// Since we're about to default some fields, take a (shallow) copy of the input data
 		// before we do so.
@@ -137,9 +138,9 @@ func (r workloadEndpoints) update(ctx context.Context, res *libapiv3.WorkloadEnd
 		return nil, err
 	}
 	r.updateLabelsForStorage(res)
-	out, err := updateResource(ctx, opts, libapiv3.KindWorkloadEndpoint, res, updateFunc)
+	out, err := updateResource(ctx, opts, internalapi.KindWorkloadEndpoint, res, updateFunc)
 	if out != nil {
-		return out.(*libapiv3.WorkloadEndpoint), err
+		return out.(*internalapi.WorkloadEndpoint), err
 	}
 	return nil, err
 }
@@ -148,7 +149,7 @@ func (r workloadEndpoints) update(ctx context.Context, res *libapiv3.WorkloadEnd
 // mode, the default WorkloadEndpoints are "updated" different from the additional ones. If the backend client is not a
 // k8s.KubeClient, or the WorkloadEndpoint K8sResourceClient does not implement the updateNonDefaultInterface then this
 // function simple calls Update.
-func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error) {
 	var updateFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
 	// Note on this type switching: We could have added UpdateNonDefault to the api.Client interface, but that would mean
@@ -157,11 +158,11 @@ func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *libapiv3.W
 	// time of writing this it seems like the best alternative.
 	switch be := r.client.backend.(type) {
 	case *k8s.KubeClient:
-		rClient := be.GetResourceClientFromResourceKind(libapiv3.KindWorkloadEndpoint)
+		rClient := be.GetResourceClientFromResourceKind(internalapi.KindWorkloadEndpoint)
 		if rClient == nil {
 			log.Debug("Attempt to 'Update' using kubernetes backend is not supported.")
 			return nil, cerrors.ErrorOperationNotSupported{
-				Identifier: resourceToKVPair(opts, libapiv3.KindWorkloadEndpoint, res),
+				Identifier: resourceToKVPair(opts, internalapi.KindWorkloadEndpoint, res),
 				Operation:  "Update",
 			}
 		}
@@ -182,33 +183,33 @@ func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *libapiv3.W
 
 // Update takes the representation of a WorkloadEndpoint and updates it. Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) Update(ctx context.Context, res *libapiv3.WorkloadEndpoint, opts options.SetOptions) (*libapiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) Update(ctx context.Context, res *internalapi.WorkloadEndpoint, opts options.SetOptions) (*internalapi.WorkloadEndpoint, error) {
 	return r.update(ctx, res, opts, r.client.backend.Update)
 }
 
 // Delete takes name of the WorkloadEndpoint and deletes it. Returns an error if one occurs.
-func (r workloadEndpoints) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*libapiv3.WorkloadEndpoint, error) {
-	out, err := r.client.resources.Delete(ctx, opts, libapiv3.KindWorkloadEndpoint, namespace, name)
+func (r workloadEndpoints) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*internalapi.WorkloadEndpoint, error) {
+	out, err := r.client.resources.Delete(ctx, opts, internalapi.KindWorkloadEndpoint, namespace, name)
 	if out != nil {
-		return out.(*libapiv3.WorkloadEndpoint), err
+		return out.(*internalapi.WorkloadEndpoint), err
 	}
 	return nil, err
 }
 
 // Get takes name of the WorkloadEndpoint, and returns the corresponding WorkloadEndpoint object,
 // and an error if there is any.
-func (r workloadEndpoints) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*libapiv3.WorkloadEndpoint, error) {
-	out, err := r.client.resources.Get(ctx, opts, libapiv3.KindWorkloadEndpoint, namespace, name)
+func (r workloadEndpoints) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*internalapi.WorkloadEndpoint, error) {
+	out, err := r.client.resources.Get(ctx, opts, internalapi.KindWorkloadEndpoint, namespace, name)
 	if out != nil {
-		return out.(*libapiv3.WorkloadEndpoint), err
+		return out.(*internalapi.WorkloadEndpoint), err
 	}
 	return nil, err
 }
 
 // List returns the list of WorkloadEndpoint objects that match the supplied options.
-func (r workloadEndpoints) List(ctx context.Context, opts options.ListOptions) (*libapiv3.WorkloadEndpointList, error) {
-	res := &libapiv3.WorkloadEndpointList{}
-	if err := r.client.resources.List(ctx, opts, libapiv3.KindWorkloadEndpoint, libapiv3.KindWorkloadEndpointList, res); err != nil {
+func (r workloadEndpoints) List(ctx context.Context, opts options.ListOptions) (*internalapi.WorkloadEndpointList, error) {
+	res := &internalapi.WorkloadEndpointList{}
+	if err := r.client.resources.List(ctx, opts, internalapi.KindWorkloadEndpoint, internalapi.KindWorkloadEndpointList, res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -217,12 +218,12 @@ func (r workloadEndpoints) List(ctx context.Context, opts options.ListOptions) (
 // Watch returns a watch.Interface that watches the NetworkPolicies that match the
 // supplied options.
 func (r workloadEndpoints) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
-	return r.client.resources.Watch(ctx, opts, libapiv3.KindWorkloadEndpoint, nil)
+	return r.client.resources.Watch(ctx, opts, internalapi.KindWorkloadEndpoint, nil)
 }
 
 // assignOrValidateName either assigns the name calculated from the Spec fields, or validates
 // the name against the spec fields.
-func (r workloadEndpoints) assignOrValidateName(res *libapiv3.WorkloadEndpoint) error {
+func (r workloadEndpoints) assignOrValidateName(res *internalapi.WorkloadEndpoint) error {
 	// Validate the workload endpoint indices and the name match.
 	wepids := names.IdentifiersForV3WorkloadEndpoint(res)
 	expectedName, err := wepids.CalculateWorkloadEndpointName(false)
@@ -249,11 +250,9 @@ func (r workloadEndpoints) assignOrValidateName(res *libapiv3.WorkloadEndpoint) 
 // updateLabelsForStorage updates the set of labels that we persist.  It adds/overrides
 // the Namespace and Orchestrator labels which must be set to the correct values and are
 // not user configurable.
-func (r workloadEndpoints) updateLabelsForStorage(res *libapiv3.WorkloadEndpoint) {
+func (r workloadEndpoints) updateLabelsForStorage(res *internalapi.WorkloadEndpoint) {
 	labelsCopy := make(map[string]string, len(res.GetLabels())+2)
-	for k, v := range res.GetLabels() {
-		labelsCopy[k] = v
-	}
+	maps.Copy(labelsCopy, res.GetLabels())
 	labelsCopy[apiv3.LabelNamespace] = res.Namespace
 	labelsCopy[apiv3.LabelOrchestrator] = res.Spec.Orchestrator
 	res.SetLabels(labelsCopy)

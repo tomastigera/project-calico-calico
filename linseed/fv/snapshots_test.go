@@ -156,7 +156,7 @@ func TestFV_Snapshots(t *testing.T) {
 
 		// Create 5 Snapshots.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			snapshots := []v1.Snapshot{
 				{
 					ResourceList: list.TimestampedResourceList{
@@ -188,7 +188,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.SnapshotParams{
 				QueryParams: v1.QueryParams{
@@ -306,7 +306,7 @@ func TestFV_Snapshots(t *testing.T) {
 		// Create > 10K snapshots.
 		logTime := time.Unix(100, 0).UTC()
 		var snapshots []v1.Snapshot
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			snapshots = append(snapshots,
 				v1.Snapshot{
 					ID: strconv.Itoa(i),

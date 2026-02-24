@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -21,7 +21,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -75,7 +75,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			for _, felix := range tc.Felixes {
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")
@@ -259,8 +259,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
-	var savedBGPSpec libapi.NodeBGPSpec
-	var node *libapi.Node
+	var savedBGPSpec internalapi.NodeBGPSpec
+	var node *internalapi.Node
 
 	restoreBGPSpec := func() {
 		felixPID := tc.Felixes[0].GetFelixPID()
@@ -523,7 +523,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			for _, felix := range tc.Felixes {
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")
@@ -586,7 +586,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			for _, felix := range tc.Felixes {
 				felix.Exec("ip", "xfrm", "state")
 				felix.Exec("ip", "xfrm", "policy")

@@ -26,7 +26,7 @@ import (
 
 	"github.com/Microsoft/hcsshim"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -41,7 +41,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane/windows"
 	"github.com/projectcalico/calico/cni-plugin/pkg/k8s"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -85,7 +85,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	var ctx context.Context
 	var calicoClient client.Interface
 	var err error
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		log.Infof("CONTAINER_RUNTIME=%v", os.Getenv("CONTAINER_RUNTIME"))
 
 		// Clean-up Networks if left over in previous run
@@ -119,7 +119,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		if os.Getenv("DATASTORE_TYPE") != "kubernetes" {
 			// Since we're not running the startup script, we need to create a Calico Node, as required by our
 			// IPAM plugin.
-			caliNode := libapi.NewNode()
+			caliNode := internalapi.NewNode()
 			caliNode.Name = hostname
 			caliNode, err := calicoClient.Nodes().Create(context.Background(), caliNode, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Failed to create Calico Node resource")
@@ -368,7 +368,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(endpoints.Items[0].Spec.Endpoint).Should(Equal("eth0"))
 				Expect(endpoints.Items[0].Spec.ContainerID).Should(Equal(containerID))
 				Expect(endpoints.Items[0].Spec.Orchestrator).Should(Equal(api.OrchestratorKubernetes))
-				Expect(endpoints.Items[0].Spec.Ports).Should(Equal([]libapi.WorkloadEndpointPort{{
+				Expect(endpoints.Items[0].Spec.Ports).Should(Equal([]internalapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
@@ -1046,7 +1046,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var nc types.NetConf
 		var netconf string
 		var workloadName, containerID, name string
-		var endpointSpec libapi.WorkloadEndpointSpec
+		var endpointSpec internalapi.WorkloadEndpointSpec
 		var result *cniv1.Result
 
 		checkIPAMReservation := func() {

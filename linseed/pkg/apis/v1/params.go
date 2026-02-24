@@ -21,8 +21,8 @@ const DefaultTimeOut = 60 * time.Second
 type Params interface {
 	GetMaxPageSize() int
 	SetMaxPageSize(int)
-	SetAfterKey(map[string]interface{})
-	GetAfterKey() map[string]interface{}
+	SetAfterKey(map[string]any)
+	GetAfterKey() map[string]any
 	SetTimeout(*v1.Duration)
 	SetTimeRange(*lmav1.TimeRange)
 	GetTimeRange() *lmav1.TimeRange
@@ -62,7 +62,7 @@ type QueryParams struct {
 	// AfterKey is used for pagination. If set, the query will start from the given AfterKey.
 	// This is generally passed straight through to the datastore, and its type cannot be
 	// guaranteed.
-	AfterKey map[string]interface{} `json:"after_key"`
+	AfterKey map[string]any `json:"after_key"`
 
 	// AllClusters when true, no cluster filtering is performed
 	//
@@ -86,11 +86,11 @@ func (p *QueryParams) GetMaxPageSize() int {
 	return p.MaxPageSize
 }
 
-func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
+func (p *QueryParams) SetAfterKey(k map[string]any) {
 	p.AfterKey = k
 }
 
-func (p *QueryParams) GetAfterKey() map[string]interface{} {
+func (p *QueryParams) GetAfterKey() map[string]any {
 	return p.AfterKey
 }
 

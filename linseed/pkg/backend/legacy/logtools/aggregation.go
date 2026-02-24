@@ -11,8 +11,8 @@ type RawAggregation struct {
 	json.RawMessage
 }
 
-func (a RawAggregation) Source() (interface{}, error) {
-	src := map[string]interface{}{}
+func (a RawAggregation) Source() (any, error) {
+	src := map[string]any{}
 	err := json.Unmarshal(a.RawMessage, &src)
 	if err != nil {
 		return nil, err

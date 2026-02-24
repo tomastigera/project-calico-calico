@@ -58,7 +58,7 @@ type listPager[T any] struct {
 }
 
 func (p *listPager[T]) PageFunc(f ListFunc[T]) PageFunc[T] {
-	var afterKey map[string]interface{}
+	var afterKey map[string]any
 	if p.params.GetAfterKey() != nil {
 		afterKey = p.params.GetAfterKey()
 	}

@@ -105,7 +105,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 	errs := make(chan error, 5)
 	templs := make(chan *templates.Template, 5)
 	numRoutines := 10
-	for i := 0; i < numRoutines; i++ {
+	for range numRoutines {
 		go func() {
 			templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 			if err != nil {
@@ -116,7 +116,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < numRoutines; i++ {
+	for range numRoutines {
 		select {
 		case err := <-errs:
 			require.NoError(t, err, "error received from DefaultBootstrapper")
@@ -181,10 +181,10 @@ func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application
 	require.Contains(t, responseSettings, index)
 	require.NotEmpty(t, responseSettings[index].Settings)
 	require.Contains(t, responseSettings[index].Settings, "index")
-	settings, _ := responseSettings[index].Settings["index"].(map[string]interface{})
+	settings, _ := responseSettings[index].Settings["index"].(map[string]any)
 	// Check lifecycle section
 	require.Contains(t, settings, "lifecycle")
-	lifecycle, _ := settings["lifecycle"].(map[string]interface{})
+	lifecycle, _ := settings["lifecycle"].(map[string]any)
 	require.Contains(t, lifecycle, "name")
 	require.EqualValues(t, lifecycle["name"], fmt.Sprintf("%s_policy", indexPrefix))
 	require.EqualValues(t, lifecycle["rollover_alias"], fmt.Sprintf("%s.%s.", indexPrefix, cluster))
@@ -251,7 +251,7 @@ func TestBootstrapTemplateMultipleTimes(t *testing.T) {
 
 	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		_, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
 		checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
@@ -267,11 +267,11 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 
 	// Let's modify them to remove an entry - simulate an earlier version
 	logrus.Warn(templates.FlowLogMappings)
-	var mappings map[string]interface{}
+	var mappings map[string]any
 	err := json.Unmarshal([]byte(templates.FlowLogMappings), &mappings)
 	require.NoError(t, err)
 
-	properties, ok := mappings["properties"].(map[string]interface{})
+	properties, ok := mappings["properties"].(map[string]any)
 	require.True(t, ok)
 	require.Contains(t, properties, "dest_domains")
 	delete(properties, "dest_domains")
@@ -287,7 +287,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	// Simulate 10 restarts and make sure we end up with 1 index (no rollover)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)
@@ -306,13 +306,13 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 	require.NotNil(t, indexData)
 
 	indexMappings := indexData.Mappings
-	indexProperties, ok := indexMappings["properties"].(map[string]interface{})
+	indexProperties, ok := indexMappings["properties"].(map[string]any)
 	require.True(t, ok)
 	// We can retrieve a mapping
-	_, ok = indexProperties["dest_name"].(map[string]interface{})
+	_, ok = indexProperties["dest_name"].(map[string]any)
 	require.True(t, ok)
 	// But dest_domains is missing
-	_, ok = indexProperties["dest_domains"].(map[string]interface{})
+	_, ok = indexProperties["dest_domains"].(map[string]any)
 	require.False(t, ok)
 
 	// Let's update the mapping (to simulate a version change of Linseed)
@@ -320,7 +320,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 	templateConfig = templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	// Simulate 10 restarts and make sure we end up with 2 indices (rolled-over only once)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)

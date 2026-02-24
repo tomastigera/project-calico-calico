@@ -21,7 +21,7 @@ import (
 //   - Otherwise, it is parsed in RFC 3339 format and is returned as a Unix time, seconds since the epoch.
 //
 // If the query parameter is a string, then the time can be assumed to be a time relative to, and prior to "now".
-func ParseTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
+func ParseTime(now time.Time, tstr *string) (*time.Time, any, error) {
 	if tstr == nil || *tstr == "" {
 		return nil, nil, nil
 	}

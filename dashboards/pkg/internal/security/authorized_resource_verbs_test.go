@@ -198,13 +198,13 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 		}
 
 		ch := make(chan error, 10)
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			go func() {
 				ch <- arbCacheEntry.Revalidate(ctx, logger, "fake-resource", 5*time.Second, 10*time.Second)
 			}()
 		}
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			require.NoError(t, <-ch)
 			require.Equal(t, []v3.AuthorizedResourceVerbs{{
 				APIGroup: "projectcalico.org",

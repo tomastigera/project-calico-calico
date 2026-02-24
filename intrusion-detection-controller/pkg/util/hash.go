@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func ComputeSha256Hash(obj interface{}) string {
+func ComputeSha256Hash(obj any) string {
 	encoder := sha256.New()
 	if _, err := fmt.Fprintf(encoder, "%v", obj); err != nil {
 		return ""

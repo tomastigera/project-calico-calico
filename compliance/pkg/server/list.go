@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -138,7 +139,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 		// Convert the JSON string UI summary into an object that we'll embed directly under the UISummary
 		// field. To do this unmarshal the rendered string into a generic interface type.
-		var uiSummary interface{}
+		var uiSummary any
 		var formats []Format
 		if err = json.Unmarshal([]byte(v.UISummary), &uiSummary); err != nil {
 			log.WithError(err).Debug("UI summary is not JSON")
@@ -320,10 +321,5 @@ func getIntQueryParam(vals url.Values, queryParm string, def int) (int, error) {
 
 // stringSliceContains returns true if the string `val` is in the slice of strings `vals`.
 func stringSliceContains(val string, vals []string) bool {
-	for _, v := range vals {
-		if v == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(vals, val)
 }

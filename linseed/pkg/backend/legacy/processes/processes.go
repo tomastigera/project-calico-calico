@@ -100,14 +100,14 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	}
 
 	// Determine the AfterKey to return.
-	var ak map[string]interface{}
+	var ak map[string]any
 	if numHits := len(results.Hits.Hits); numHits < opts.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {
 		// There are more hits, return an afterKey the client can use for pagination.
 		// We add the number of hits to the start from provided on the request, if any.
-		ak = map[string]interface{}{
+		ak = map[string]any{
 			"startFrom": startFrom + len(results.Hits.Hits),
 		}
 	}

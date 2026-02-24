@@ -162,7 +162,7 @@ func main() {
 		{
 			Path:         cfg.PrometheusPath,
 			Dest:         cfg.PrometheusEndpoint,
-			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.PrometheusPath)),
+			PathRegexp:   fmt.Appendf(nil, "^%v/?", cfg.PrometheusPath),
 			PathReplace:  []byte("/"),
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.PrometheusCABundlePath,
@@ -170,7 +170,7 @@ func main() {
 		{
 			Path:         cfg.QueryserverPath,
 			Dest:         cfg.QueryserverEndpoint,
-			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.QueryserverPath)),
+			PathRegexp:   fmt.Appendf(nil, "^%v/?", cfg.QueryserverPath),
 			PathReplace:  []byte("/"),
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.QueryserverCABundlePath,
@@ -212,13 +212,11 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := cli.ServeTunnelHTTP(); err != nil {
 			log.WithError(err).Fatal("Serving the tunnel exited")
 		}
-	}()
+	})
 
 	if cfg.Listen {
 		log.Infof("Listening on %s:%s for connections to proxy to voltron", cfg.ListenHost, cfg.ListenPort)
@@ -228,14 +226,12 @@ func main() {
 			log.WithError(err).Fatalf("Failed to listen on %s:%s", cfg.ListenHost, cfg.ListenPort)
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			if err := cli.AcceptAndProxy(listener); err != nil {
 				log.WithError(err).Fatal("proxy tunnel exited with an error")
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

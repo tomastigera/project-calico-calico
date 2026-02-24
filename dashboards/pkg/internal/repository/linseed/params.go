@@ -19,13 +19,6 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-const (
-	policyTypeStagedSelector          = `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`
-	policyTypeStagedNegatedSelector   = `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`
-	policyTypeEnforcedSelector        = `"policies.enforced_policies" IN {"*|*|*|*|*"}`
-	policyTypeEnforcedNegatedSelector = `"policies.enforced_policies" NOTIN {"*|*|*|*|*"}`
-)
-
 var (
 	reMatchLabel     = regexp.MustCompile(`^[^=]+=[^=]+$`)
 	reEnclosedQuotes = regexp.MustCompile(`^"(.*?)"$`)
@@ -38,6 +31,9 @@ type queryParams struct {
 
 	domainMatches   map[lsv1.DomainMatchType][]string
 	requestedPeriod time.Duration
+
+	enforcedPolicyMatches []lsv1.PolicyMatch
+	pendingPolicyMatches  []lsv1.PolicyMatch
 }
 
 func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs []string, permissions []v3.AuthorizedResourceVerbs) (*queryParams, error) {
@@ -69,13 +65,78 @@ func newQueryParams(maxDocuments, pageNum int, sortFieldName string, clusterIDs 
 }
 
 func (p *queryParams) setCriteria(criteria filters.Criteria, now time.Time) error {
-	selectors, err := p.getSelectors(criteria, now)
+	// Extract policy type filters first. They populate separate PolicyMatch fields on the linseed
+	// request rather than selector strings, so they must be handled at the top level — they cannot
+	// be composed inside OR expressions.
+	remaining, err := p.extractPolicyTypeMatches(criteria)
+	if err != nil {
+		return err
+	}
+
+	selectors, err := p.getSelectors(remaining, now)
 	if err != nil {
 		return err
 	}
 
 	p.linseedLogSelectionParams.Selector = strings.Join(selectors, " AND ")
 	return nil
+}
+
+// extractPolicyTypeMatches removes policy type criteria from the top-level list, populates the
+// pendingPolicyMatches/enforcedPolicyMatches fields, and returns the remaining criteria. Policy type
+// values in CriterionIn are split out; if the CriterionIn contains non-policy-type values too,
+// it is kept (with only those values) in the returned criteria.
+func (p *queryParams) extractPolicyTypeMatches(criteria filters.Criteria) (filters.Criteria, error) {
+	var remaining filters.Criteria
+	for _, criterion := range criteria {
+		switch c := criterion.(type) {
+		case *filters.CriterionEquals:
+			if c.Field().Name() == collections.FieldNamePolicyType {
+				if err := p.addPolicyTypeMatch(c.Value().(string), c.Negate()); err != nil {
+					return nil, err
+				}
+				continue
+			}
+		case *filters.CriterionIn:
+			if c.Field().Name() == collections.FieldNamePolicyType {
+				for _, value := range c.Values() {
+					if err := p.addPolicyTypeMatch(value, c.Negate()); err != nil {
+						return nil, err
+					}
+				}
+				continue
+			}
+		}
+		remaining = append(remaining, criterion)
+	}
+	return remaining, nil
+}
+
+// addPolicyTypeMatch converts a policy type filter ("staged"/"enforced") into a linseed PolicyMatch
+// and appends it to the appropriate match list. Negation inverts the semantics: "not staged" becomes
+// an enforced match and vice versa.
+func (p *queryParams) addPolicyTypeMatch(value string, negate bool) error {
+	if negate {
+		switch value {
+		case collections.FieldPolicyStaged:
+			p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: false})
+			return nil
+		case collections.FieldPolicyEnforced:
+			p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: true})
+			return nil
+		}
+	}
+
+	switch value {
+	case collections.FieldPolicyStaged:
+		p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: true})
+		return nil
+	case collections.FieldPolicyEnforced:
+		p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: false})
+		return nil
+	}
+
+	return fmt.Errorf("invalid policy.type value: %s", value)
 }
 
 func (p *queryParams) getSelectors(criteria filters.Criteria, now time.Time) ([]string, error) {
@@ -141,7 +202,7 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 			}
 
 			if c.Field().Name() == collections.FieldNamePolicyType {
-				return getPolicyTypeSelector(value, c.Negate())
+				return "", fmt.Errorf("policy.type filter is only supported at the top level")
 			}
 		}
 		return selectorEquals(c)
@@ -204,20 +265,20 @@ func (p *queryParams) getSelector(criterion filters.Criterion, now time.Time) (s
 	case *filters.CriterionIn:
 		var selectors []string
 		for _, value := range c.Values() {
-			var selector string
-			var err error
-
 			if c.Field().Name() == collections.FieldNamePolicyType {
-				selector, err = getPolicyTypeSelector(value, c.Negate())
-			} else {
-				// TODO: this is only handling string values for now. If it will handle any, refactor selectorEquals
-				selector, err = selectorEqualsString(c, c.Field().Name(), value)
+				return "", fmt.Errorf("policy.type filter is only supported at the top level")
 			}
 
+			// TODO: this is only handling string values for now. If it will handle any, refactor selectorEquals
+			selector, err := selectorEqualsString(c, c.Field().Name(), value)
 			if err != nil {
 				return "", err
 			}
 			selectors = append(selectors, selector)
+		}
+
+		if len(selectors) == 0 {
+			return "", nil
 		}
 
 		if c.Negate() {
@@ -267,22 +328,6 @@ func (p *queryParams) setTimeRange(now, from, to time.Time, requestPeriod time.D
 		Now:   &now,
 		Field: timeField,
 	})
-}
-
-func getPolicyTypeSelector(value string, negate bool) (string, error) {
-	switch value {
-	case collections.FieldPolicyStaged:
-		if negate {
-			return policyTypeStagedNegatedSelector, nil
-		}
-		return policyTypeStagedSelector, nil
-	case collections.FieldPolicyEnforced:
-		if negate {
-			return policyTypeEnforcedNegatedSelector, nil
-		}
-		return policyTypeEnforcedSelector, nil
-	}
-	return "", nil
 }
 
 func selectorEquals(c *filters.CriterionEquals) (string, error) {

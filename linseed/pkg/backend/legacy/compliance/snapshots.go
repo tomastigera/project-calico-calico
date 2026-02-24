@@ -63,7 +63,7 @@ type snapshotsBackend struct {
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.TimestampedResourceList) (interface{}, error) {
+func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.TimestampedResourceList) (any, error) {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -119,7 +119,7 @@ func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v
 	}, nil
 }
 
-func (b *snapshotsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.SnapshotParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *snapshotsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.SnapshotParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

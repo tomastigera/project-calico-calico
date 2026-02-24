@@ -23,8 +23,8 @@ const (
 
 type TimeRange struct {
 	// The from->to time ranges parsed from the request.
-	From time.Time `json:"from,omitempty"`
-	To   time.Time `json:"to,omitempty"`
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 
 	// The time field to match against.  When this field is not specified, the chosen time field
 	// is as determined by the "query helper" for each index, on a per-index basis.
@@ -151,7 +151,7 @@ func (t TimeRange) Overlaps(from, to time.Time) bool {
 	return !(to.Before(t.From) || from.After(t.To))
 }
 
-func isstring(a interface{}) bool {
+func isstring(a any) bool {
 	_, ok := a.(string)
 	return ok
 }

@@ -23,7 +23,7 @@ type RetryFunction func() error
 type BackOffFunction func(time.Duration, uint) <-chan time.Time
 
 func RetryWithBackOff(retryFunc RetryFunction, backOffFunc BackOffFunction, duration time.Duration, times uint) (err error) {
-	for iteration := uint(0); iteration < times; iteration++ {
+	for iteration := range times {
 		if iteration > 0 {
 			<-backOffFunc(duration, iteration)
 		}

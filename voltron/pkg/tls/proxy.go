@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -230,12 +231,7 @@ func isLinseedServerName(serverName string) bool {
 		"tigera-linseed.tigera-elasticsearch.svc",
 		"tigera-linseed.tigera-elasticsearch.svc.cluster.local",
 	}
-	for _, host := range linseedHostMatches {
-		if serverName == host {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(linseedHostMatches, serverName)
 }
 
 func writeBytesToConn(bytes []byte, conn net.Conn) error {

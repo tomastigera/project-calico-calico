@@ -185,7 +185,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	batch := []v1.DNSLog{}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		ip := net.ParseIP("10.0.1.1")
 		f := v1.DNSLog{
 			StartTime:       reqTime,

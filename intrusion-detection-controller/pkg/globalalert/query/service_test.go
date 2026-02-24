@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -507,7 +507,7 @@ var _ = Describe("Service Test", func() {
 						},
 						MaxPageSize: 10000,
 						// TODO: ALINA - Need to check why this shows up in the mock client
-						AfterKey: map[string]interface{}{"startFrom": "10001"},
+						AfterKey: map[string]any{"startFrom": "10001"},
 					},
 					LogSelectionParams: lsv1.LogSelectionParams{
 						Selector: "action=allow",
@@ -520,7 +520,7 @@ var _ = Describe("Service Test", func() {
 							To:   time.Unix(0, 0).UTC(),
 						},
 						MaxPageSize: 10000,
-						AfterKey:    map[string]interface{}{"startFrom": "10001"},
+						AfterKey:    map[string]any{"startFrom": "10001"},
 					},
 					LogSelectionParams: lsv1.LogSelectionParams{
 						Selector: "action=allow",
@@ -1244,7 +1244,7 @@ var _ = Describe("Service Test", func() {
 	Context("on error", func() {
 		It("should store only recent errors", func() {
 			var errs []v3.ErrorCondition
-			for i := 0; i < 12; i++ {
+			for i := range 12 {
 				errs = appendError(errs, v3.ErrorCondition{Message: fmt.Sprintf("Error %v", i)})
 			}
 			Expect(len(errs)).Should(Equal(10))
@@ -1256,7 +1256,7 @@ var _ = Describe("Service Test", func() {
 
 func verifyEventWrites(requests []rest.MockRequest, expectedEvents []lsv1.Event) {
 	var actualEvents []lsv1.Event
-	var actualRecords []interface{}
+	var actualRecords []any
 	for _, request := range requests {
 		Expect(request.Result.Called).To(BeTrue())
 		rawBody := request.GetBody().([]byte)
@@ -1279,7 +1279,7 @@ func verifyEventWrites(requests []rest.MockRequest, expectedEvents []lsv1.Event)
 	}
 
 	// Extract records from expected events
-	var expectedRecords []interface{}
+	var expectedRecords []any
 	for idx, event := range expectedEvents {
 		expectedRecords = append(expectedRecords, event.Record)
 		event.Record = nil
@@ -1304,7 +1304,7 @@ func verifyQueries[T any](requests []rest.MockRequest, lookBack time.Duration, e
 	Expect(len(actual)).To(Equal(len(expected)))
 }
 
-func modifyTime(params interface{}, lookBack time.Duration) interface{} {
+func modifyTime(params any, lookBack time.Duration) any {
 	switch p := params.(type) {
 	case *lsv1.FlowLogParams:
 		p.TimeRange.From = time.Unix(0, 0).UTC().Add(-1 * lookBack)

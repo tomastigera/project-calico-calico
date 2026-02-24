@@ -112,6 +112,9 @@ check-release-cut-promotions:
 check-language:
 	./hack/check-language.sh
 
+check-ginkgo-v2:
+	./hack/check-ginkgo-v2.sh
+
 check-ocp-no-crds:
 	@echo "Checking for files in manifests/ocp with CustomResourceDefinitions"
 	@CRD_FILES_IN_OCP_DIR=$$(grep "^kind: CustomResourceDefinition" manifests/ocp/* -l || true); if [ ! -z "$$CRD_FILES_IN_OCP_DIR" ]; then echo "ERROR: manifests/ocp should not have any CustomResourceDefinitions, these files should be removed:"; echo "$$CRD_FILES_IN_OCP_DIR"; exit 1; fi
@@ -326,21 +329,20 @@ e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
 	$(MAKE) e2e-run-test
-	# Disabling k8s ANP conformance test since it's failing in Ubuntu22.04 and newer.
-	# It's been tracked in CORE-12206 task, and will be fixed seperately.
-	#$(MAKE) e2e-run-kcnp-test
+	# Disabling k8s CNP conformance test since its CRD it not installed by default.
+	#$(MAKE) e2e-run-cnp-test
 
 e2e-test-clusternetworkpolicy:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
-	$(MAKE) e2e-run-anp-test
+	$(MAKE) e2e-run-cnp-test
 
 ## Run the general e2e tests against a pre-existing kind cluster.
 e2e-run-test:
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS) -ginkgo.skip=$(E2E_SKIP)
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test --ginkgo.focus=$(E2E_FOCUS) --ginkgo.skip=$(E2E_SKIP)
 
 ## Run the ClusterNetworkPolicy specific e2e tests against a pre-existing kind cluster.
-e2e-run-kcnp-test:
+e2e-run-cnp-test:
 	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/clusternetworkpolicy/e2e.test \
 	  -exempt-features=$(K8S_NETPOL_UNSUPPORTED_FEATURES) \
 	  -supported-features=$(K8S_NETPOL_SUPPORTED_FEATURES)
@@ -386,7 +388,7 @@ create-release-branch: release/bin/release
 
 # Test the release code
 release-test:
-	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -cover -r release/pkg
+	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo --cover -r release/pkg
 
 # Merge OSS branch.
 # Expects the following arguments:

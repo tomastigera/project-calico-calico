@@ -65,7 +65,7 @@ type logWithExtras struct {
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
-func (b *wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) interface{} {
+func (b *wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) any {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -181,7 +181,7 @@ func (b *wafLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.W
 	}, nil
 }
 
-func (b *wafLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *wafLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

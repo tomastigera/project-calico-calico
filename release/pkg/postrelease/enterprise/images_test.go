@@ -23,7 +23,7 @@ func TestImagesPublished(t *testing.T) {
 	checkVersion(t, releaseVersion)
 	checkImages(t, images)
 
-	for _, image := range strings.Split(images, " ") {
+	for image := range strings.SplitSeq(images, " ") {
 		fqImage := fmt.Sprintf("%s/%s:%s", releaseRegistry, image, releaseVersion)
 		t.Run(fqImage, func(t *testing.T) {
 			if ok, err := registry.CheckImage(fqImage); err != nil {

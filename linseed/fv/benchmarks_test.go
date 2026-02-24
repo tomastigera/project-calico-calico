@@ -153,7 +153,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 		// Create 5 Benchmarks.
 		logTime := time.Unix(0, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			benchmarks := []v1.Benchmarks{
 				{
 					Timestamp: metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},
@@ -170,7 +170,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.BenchmarksParams{
 				QueryParams: v1.QueryParams{
@@ -250,7 +250,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		// Create > 10K benchmarks.
 		logTime := time.Unix(0, 0).UTC()
 		var benchmarks []v1.Benchmarks
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			benchmarks = append(benchmarks,
 				v1.Benchmarks{
 					Timestamp: metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},

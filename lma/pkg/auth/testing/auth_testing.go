@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/onsi/gomega"
 	authnv1 "k8s.io/api/authentication/v1"
@@ -29,7 +30,7 @@ const (
 func NewFakeJWT(issuer, name string) *FakeJWT {
 	jwt := &FakeJWT{
 		Header: DefaultJWTHeader,
-		PayloadMap: map[string]interface{}{
+		PayloadMap: map[string]any{
 			auth.ClaimNameIss:           issuer,
 			auth.ClaimNameSub:           name,
 			auth.ClaimNameEmail:         name,
@@ -54,7 +55,7 @@ func (f *FakeJWT) refresh() {
 	f.Payload = base64.RawURLEncoding.EncodeToString(payloadJSON)
 }
 
-func (f *FakeJWT) WithClaim(claimName string, claimValue interface{}) *FakeJWT {
+func (f *FakeJWT) WithClaim(claimName string, claimValue any) *FakeJWT {
 	f.PayloadMap[claimName] = claimValue
 	f.refresh()
 	return f
@@ -71,7 +72,7 @@ func NewFakeServiceAccountJWT() *FakeJWT {
 	}
 
 	payloadJSON, _ := json.Marshal(payload)
-	payloadMap := make(map[string]interface{})
+	payloadMap := make(map[string]any)
 	err := json.Unmarshal(payloadJSON, &payloadMap)
 	if err != nil {
 		panic(err) // should not be possible.
@@ -93,7 +94,7 @@ type FakeJWT struct {
 	JWT                   string
 	Header                string
 	Payload               string
-	PayloadMap            map[string]interface{}
+	PayloadMap            map[string]any
 	PayloadJSON           string
 	ServiceAccountPayload *ServiceAccountPayload
 	Signature             string
@@ -209,11 +210,8 @@ func SetSubjectAccessReviewsReactor(fakeK8sCli *fake.Clientset, namesapce string
 
 		allowed := false
 		specAttrs := *spec.ResourceAttributes
-		for _, permittedAttr := range permittedAttrs {
-			if permittedAttr == specAttrs {
-				allowed = true
-				break
-			}
+		if slices.Contains(permittedAttrs, specAttrs) {
+			allowed = true
 		}
 
 		status := authzv1.SubjectAccessReviewStatus{

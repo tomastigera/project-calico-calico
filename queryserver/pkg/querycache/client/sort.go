@@ -54,7 +54,7 @@ func convertIPv4ToInt64(ipString string) int64 {
 	}
 	var ipInt int64
 	var mask int
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		ipNumStr := ipNumStrs[i]
 		if strings.Contains(ipNumStr, "/") {
 			split := strings.Split(ipNumStr, "/")

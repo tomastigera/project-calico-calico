@@ -46,7 +46,7 @@ func NewPacketCaptureCalculator(callbacks packetCaptureCallbacks) *PacketCapture
 	return pcc
 }
 
-func (pcc *PacketCaptureCalculator) onMatchStarted(selID, labelId interface{}) {
+func (pcc *PacketCaptureCalculator) onMatchStarted(selID, labelId any) {
 	log.WithField("CAPTURE", selID).Infof("Start matching %v to packet capture", labelId)
 	var pc = pcc.allPacketCaptures[selID.(model.ResourceKey)]
 	var specification = pcc.extractSpecification(pc)
@@ -62,7 +62,7 @@ func (pcc *PacketCaptureCalculator) extractSpecification(pc *v3.PacketCapture) P
 	}
 }
 
-func (pcc *PacketCaptureCalculator) onMatchStopped(selID, labelId interface{}) {
+func (pcc *PacketCaptureCalculator) onMatchStopped(selID, labelId any) {
 	captureKey := selID.(model.ResourceKey)
 	log.WithField("CAPTURE", selID).Debugf("Stop matching %v to packet capture", labelId)
 	pcc.packetCapturesToWorkloadEndpoints.Discard(selID, labelId)
@@ -119,7 +119,7 @@ func (pcc *PacketCaptureCalculator) updatePacketCapture(capture *v3.PacketCaptur
 	// if other fields (than the selector) have been updated
 	// we need to propagate the update to the data plane
 	if pcc.hasOtherFieldsUpdated(previousValue, capture) {
-		pcc.packetCapturesToWorkloadEndpoints.Iter(key, func(wep interface{}) {
+		pcc.packetCapturesToWorkloadEndpoints.Iter(key, func(wep any) {
 			pcc.OnPacketCaptureActive(key, wep.(model.WorkloadEndpointKey), pcc.extractSpecification(capture))
 		})
 	}

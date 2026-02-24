@@ -5,6 +5,7 @@ package federatedservices
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 
@@ -125,9 +126,9 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 	}
 
 	// Function returns map of kubernetes services that are owned by the federated services controller.
-	listFunc := func() (map[string]interface{}, error) {
+	listFunc := func() (map[string]any, error) {
 		log.Debug("Listing federated endpoints from k8s datastore")
-		filteredEndpoint := make(map[string]interface{})
+		filteredEndpoint := make(map[string]any)
 
 		// Get all endpoints objects from Kubernetes datastore.
 		endpointsList, err := k8sClientset.CoreV1().Endpoints("").List(ctx, metav1.ListOptions{})
@@ -151,7 +152,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 	// Create a Cache to store federated Endpoints in.
 	cacheArgs := rcache.ResourceCacheArgs{
 		ListFunc:    listFunc,
-		ObjectType:  reflect.TypeOf(v1.Endpoints{}), //nolint:staticcheck
+		ObjectType:  reflect.TypeFor[v1.Endpoints](), //nolint:staticcheck
 		LogTypeDesc: "FederatedEndpoints",
 	}
 
@@ -288,9 +289,7 @@ func (c *federatedServicesController) syncToDatastore(key string) error {
 		// Update the annotations with those expected. We don't want to delete any existing annotations
 		// that may have been added by the operator.
 		currentEP.Subsets = requiredEP.Subsets
-		for k, v := range requiredEP.Annotations {
-			currentEP.Annotations[k] = v
-		}
+		maps.Copy(currentEP.Annotations, requiredEP.Annotations)
 
 		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Update(ctx, currentEP, metav1.UpdateOptions{}); err != nil {
 			clog.WithError(err).Infof("Error updating Endpoints in Kubernetes datastore: %#v", currentEP)
@@ -687,7 +686,7 @@ func (c *federatedServicesController) extractFederationConfig(s *v1.Service) (*f
 
 // onServiceMatchStarted is the label index callback to indicate a match between a federated service and
 // a backing service.
-func (c *federatedServicesController) onServiceMatchStarted(federatedId, backingId interface{}) {
+func (c *federatedServicesController) onServiceMatchStarted(federatedId, backingId any) {
 	log.WithFields(log.Fields{"federatedId": federatedId, "backingId": backingId}).Debug("Services matched")
 	fsid := federatedId.(serviceID)
 	bsid := backingId.(serviceID)
@@ -703,7 +702,7 @@ func (c *federatedServicesController) onServiceMatchStarted(federatedId, backing
 
 // onServiceMatchStopped is the label index callback to indicate a removed match between a federated service and
 // a backing service.
-func (c *federatedServicesController) onServiceMatchStopped(federatedId, backingId interface{}) {
+func (c *federatedServicesController) onServiceMatchStopped(federatedId, backingId any) {
 	log.WithFields(log.Fields{"federatedId": federatedId, "backingId": backingId}).Debug("Services un-matched")
 	fsid := federatedId.(serviceID)
 	bsid := backingId.(serviceID)

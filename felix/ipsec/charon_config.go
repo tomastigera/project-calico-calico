@@ -4,6 +4,7 @@ package ipsec
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"reflect"
@@ -127,7 +128,7 @@ func (t *ConfigTree) AddOneKV(key, value string) error {
 // This function will render each section and config items in an ordered pattern.
 // It is not mandatory but it makes UT and debug easier.
 func (c *ConfigTree) Render(startSection, linePrefix string) string {
-	var result string
+	var result strings.Builder
 
 	if startSection != "" {
 		// Add indent for all except start of the tree.
@@ -139,18 +140,18 @@ func (c *ConfigTree) Render(startSection, linePrefix string) string {
 			sectionHead := fmt.Sprintf("%s%s {\n", linePrefix, k)
 			sectionBody := v.Render(k, linePrefix)
 			sectionEnd := fmt.Sprintf("%s}\n", linePrefix)
-			result += sectionHead + sectionBody + sectionEnd
+			result.WriteString(sectionHead + sectionBody + sectionEnd)
 		}
 	}
 
 	for _, k := range getSortedKey(c.kv) {
 		v := c.kv[k]
-		result += fmt.Sprintf("%s%s = %s\n", linePrefix, k, v)
+		result.WriteString(fmt.Sprintf("%s%s = %s\n", linePrefix, k, v))
 	}
-	return result
+	return result.String()
 }
 
-func getSortedKey(m interface{}) (keyList []string) {
+func getSortedKey(m any) (keyList []string) {
 	if reflect.ValueOf(m).Kind() != reflect.Map {
 		return
 	}
@@ -190,9 +191,7 @@ func NewCharonConfig(rootDir, configFile string) *CharonConfig {
 // Add configuration kv pairs to current charon config.
 // The old value will be overwritten.
 func (c *CharonConfig) AddKVs(kv map[string]string) {
-	for k, v := range kv {
-		c.items[k] = v
-	}
+	maps.Copy(c.items, kv)
 }
 
 func (c *CharonConfig) renderToString() string {

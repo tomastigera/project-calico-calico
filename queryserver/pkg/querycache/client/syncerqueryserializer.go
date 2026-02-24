@@ -21,7 +21,7 @@ func NewSerializedSyncerQuery(sc api.SyncerCallbacks, qh QueryInterface) (api.Sy
 		query: make(chan queryReq),
 		// Give the updates channel a small amount of buffer so that we preferentially
 		// select updates over queries.
-		updates: make(chan interface{}, 10),
+		updates: make(chan any, 10),
 	}
 	go sqh.run()
 	return sqh, sqh
@@ -30,22 +30,22 @@ func NewSerializedSyncerQuery(sc api.SyncerCallbacks, qh QueryInterface) (api.Sy
 type syncerQuerySerializer struct {
 	sc      api.SyncerCallbacks
 	qh      QueryInterface
-	updates chan interface{}
+	updates chan any
 	query   chan queryReq
 }
 
 type queryReq struct {
 	ctx  context.Context
-	val  interface{}
+	val  any
 	resp chan queryResp
 }
 
 type queryResp struct {
-	val interface{}
+	val any
 	err error
 }
 
-func (uqf *syncerQuerySerializer) RunQuery(ctx context.Context, val interface{}) (interface{}, error) {
+func (uqf *syncerQuerySerializer) RunQuery(ctx context.Context, val any) (any, error) {
 	log.WithField("Request", reflect.TypeOf(val)).Info("Run query")
 	qrq := queryReq{
 		ctx:  ctx,

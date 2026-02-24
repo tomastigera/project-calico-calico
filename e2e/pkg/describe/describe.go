@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,18 +62,20 @@ func WithCategory(cat Category) any {
 //
 // If you are unsure which feature to use, please ask!
 var features = map[string]bool{
-	"NetworkPolicy":   true,
-	"Tiered-Policy":   true,
-	"IPPool":          true,
-	"AutoHEPs":        true,
-	"Host-Protection": true,
-	"HostPorts":       true,
-	"OwnerReferences": true,
-	"MTU":             true,
-	"Maglev":          true,
-	"BGPPeer":         true,
-	"IPIP":            true,
-	"Dashboards":      true,
+	"NetworkPolicy":       true,
+	"Tiered-Policy":       true,
+	"IPPool":              true,
+	"AutoHEPs":            true,
+	"Host-Protection":     true,
+	"HostPorts":           true,
+	"OwnerReferences":     true,
+	"MTU":                 true,
+	"Maglev":              true,
+	"BGPPeer":             true,
+	"IPIP":                true,
+	"Tiered-RBAC":         true,
+	"Dashboards":          true,
+	"AuthorizationReview": true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.

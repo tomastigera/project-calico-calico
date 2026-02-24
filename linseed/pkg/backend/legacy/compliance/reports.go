@@ -66,7 +66,7 @@ type reportWithExtras struct {
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *reportsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.ReportData) interface{} {
+func (b *reportsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.ReportData) any {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -115,7 +115,7 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	}, nil
 }
 
-func (b *reportsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.ReportDataParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *reportsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.ReportDataParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

@@ -3,10 +3,12 @@
 package calc
 
 import (
+	"maps"
+
 	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -186,7 +188,7 @@ func (lc *LookupsCache) SetMockData(
 	nm map[[64]byte]*RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
 	svcs map[model.ResourceKey]*kapiv1.Service,
-	nodes map[string]*v3.Node,
+	nodes map[string]*internalapi.Node,
 	gc map[model.PolicyKey]int64,
 ) {
 	for k, v := range nodes {
@@ -212,9 +214,7 @@ func (lc *LookupsCache) SetMockData(
 	for k, v := range svcs {
 		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
-	for k, v := range gc {
-		lc.polCache.generationCache[k] = v
-	}
+	maps.Copy(lc.polCache.generationCache, gc)
 }
 
 func (lc *LookupsCache) GetGeneration(key model.PolicyKey) int64 {

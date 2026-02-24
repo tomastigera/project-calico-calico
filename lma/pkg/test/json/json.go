@@ -2,9 +2,9 @@ package calicojson
 
 import "encoding/json"
 
-type Map map[string]interface{}
+type Map map[string]any
 
-func MustMarshal(obj interface{}) []byte {
+func MustMarshal(obj any) []byte {
 	jsonBytes, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -18,7 +18,7 @@ func MustMarshal(obj interface{}) []byte {
 // but the same representations of json using different types will not equal each other in a comparison. Using
 // MustUnmarshalToStandardObject on two objects representing the same json in different ways will result in the objects
 // having the same structure, and will therefore equal each other on comparisons.
-func MustUnmarshalToStandardObject(obj interface{}) interface{} {
+func MustUnmarshalToStandardObject(obj any) any {
 	var jsonBytes []byte
 
 	switch obj := obj.(type) {
@@ -30,7 +30,7 @@ func MustUnmarshalToStandardObject(obj interface{}) interface{} {
 		jsonBytes = MustMarshal(obj)
 	}
 
-	stdObj := map[string]interface{}{}
+	stdObj := map[string]any{}
 	if err := json.Unmarshal(jsonBytes, &stdObj); err != nil {
 		panic(err)
 	}

@@ -451,9 +451,9 @@ func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 
 	// Test concurrent reads
 	done := make(chan bool, 10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				indexer.GetGatewayStatus("test-ns", "test-gateway")
 				indexer.GetStats()
 				indexer.GetRoutesForGateway("test-ns", "test-gateway")
@@ -463,7 +463,7 @@ func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 

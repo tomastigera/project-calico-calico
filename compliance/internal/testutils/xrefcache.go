@@ -65,9 +65,9 @@ func ipByteToIPStringSlice(ip IP) []string {
 }
 
 // labelByteToLabels converts the label bitmask to a set of labels with keys named label<bit> and an enpty string value.
-func labelByteToLabels(l Label) map[string]string {
+func labelByteToLabels(l TestLabel) map[string]string {
 	labels := make(map[string]string)
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if l&(1<<i) != 0 {
 			labels[fmt.Sprintf("label%d", i+1)] = ""
 		}
@@ -84,7 +84,7 @@ func selectorByteToSelector(s Selector) string {
 		return ""
 	}
 	sels := []string{}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sels = append(sels, fmt.Sprintf("has(label%d)", i+1))
 		}
@@ -102,7 +102,7 @@ func selectorByteToNamespaceSelector(s Selector) string {
 		return ""
 	}
 	sels := []string{}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sels = append(sels, fmt.Sprintf("has(pcns.label%d)", i+1))
 		}
@@ -120,7 +120,7 @@ func selectorByteToK8sSelector(s Selector) *metav1.LabelSelector {
 	if s == SelectAll {
 		return sel
 	}
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		if s&(1<<i) != 0 {
 			sel.MatchExpressions = append(sel.MatchExpressions, metav1.LabelSelectorRequirement{
 				Key:      fmt.Sprintf("label%d", i+1),
@@ -176,7 +176,7 @@ func getPolicyResourceId(kind metav1.TypeMeta, tierIdx Name, nameIdx Name, names
 }
 
 // getObjectMeta returns a ObjectMeta for a given resource ID and set of labels.
-func getObjectMeta(r apiv3.ResourceID, labels Label) metav1.ObjectMeta {
+func getObjectMeta(r apiv3.ResourceID, labels TestLabel) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      r.Name,
 		Namespace: r.Namespace,
@@ -222,7 +222,7 @@ func (t *XrefCacheTester) GetHostEndpoint(nameIdx Name) *xrefcache.CacheEntryEnd
 	return e.(*xrefcache.CacheEntryEndpoint)
 }
 
-func (t *XrefCacheTester) SetHostEndpoint(nameIdx Name, labels Label, ips IP) {
+func (t *XrefCacheTester) SetHostEndpoint(nameIdx Name, labels TestLabel, ips IP) {
 	r := getResourceId(resources.TypeCalicoHostEndpoints, nameIdx, 0)
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
@@ -333,7 +333,7 @@ func (t *XrefCacheTester) GetGlobalNetworkSet(nameIdx Name) *xrefcache.CacheEntr
 	return e.(*xrefcache.CacheEntryNetworkSet)
 }
 
-func (t *XrefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels Label, nets Net) {
+func (t *XrefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels TestLabel, nets Net) {
 	r := getResourceId(resources.TypeCalicoGlobalNetworkSets, nameIdx, 0)
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
@@ -369,7 +369,7 @@ func (t *XrefCacheTester) GetNetworkSet(nameIdx Name, namespaceIdx Namespace) *x
 	return e.(*xrefcache.CacheEntryNetworkSet)
 }
 
-func (t *XrefCacheTester) SetNetworkSet(nameIdx Name, namespaceIdx Namespace, labels Label, nets Net) {
+func (t *XrefCacheTester) SetNetworkSet(nameIdx Name, namespaceIdx Namespace, labels TestLabel, nets Net) {
 	r := getResourceId(resources.TypeCalicoNetworkSets, nameIdx, namespaceIdx)
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
@@ -719,7 +719,7 @@ func (t *XrefCacheTester) GetPod(nameIdx Name, namespaceIdx Namespace) *xrefcach
 	return e.(*xrefcache.CacheEntryEndpoint)
 }
 
-func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels Label, ip IP, serviceAccount Name, opts PodOpt) resources.Resource {
+func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels TestLabel, ip IP, serviceAccount Name, opts PodOpt) resources.Resource {
 	r := getResourceId(resources.TypeK8sPods, nameIdx, namespaceIdx)
 	var sa string
 	if serviceAccount != 0 {
@@ -861,7 +861,7 @@ func (t *XrefCacheTester) GetServiceAccount(nameIdx Name, namespaceIdx Namespace
 	return e.(*xrefcache.CacheEntryServiceAccount)
 }
 
-func (t *XrefCacheTester) SetServiceAccount(nameIdx Name, namespaceIdx Namespace, labels Label) resources.Resource {
+func (t *XrefCacheTester) SetServiceAccount(nameIdx Name, namespaceIdx Namespace, labels TestLabel) resources.Resource {
 	r := getResourceId(resources.TypeK8sServiceAccounts, nameIdx, namespaceIdx)
 	res := &corev1.ServiceAccount{
 		TypeMeta:   r.TypeMeta,
@@ -896,7 +896,7 @@ func (t *XrefCacheTester) GetNamespace(namespaceIdx Namespace) *xrefcache.CacheE
 	return e.(*xrefcache.CacheEntryNamespace)
 }
 
-func (t *XrefCacheTester) SetNamespace(namespaceIdx Namespace, labels Label) resources.Resource {
+func (t *XrefCacheTester) SetNamespace(namespaceIdx Namespace, labels TestLabel) resources.Resource {
 	r := getResourceId(resources.TypeK8sNamespaces, 0, namespaceIdx)
 	res := &corev1.Namespace{
 		TypeMeta:   r.TypeMeta,

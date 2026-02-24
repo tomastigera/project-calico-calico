@@ -144,27 +144,27 @@ func ReadBody(w http.ResponseWriter, req *http.Request) ([]byte, error) {
 // Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-search.html
 type AsyncSearchRequest struct {
 	// docvalue_fields (Optional, array of strings and objects)
-	DocValueFields []interface{} `json:"doc_value_fields,omitempty"`
+	DocValueFields []any `json:"doc_value_fields,omitempty"`
 	// fields (Optional, array of strings and objects)
-	Fields []interface{} `json:"fields,omitempty"`
+	Fields []any `json:"fields,omitempty"`
 	// explain (Optional, Boolean)
 	Explain *bool `json:"explain,omitempty"`
 	// from (Optional, integer)
 	From *int `json:"from,omitempty"`
 	// indices_boost (Optional, array of objects)
-	IndicesBoost []interface{} `json:"indices_boost,omitempty"`
+	IndicesBoost []any `json:"indices_boost,omitempty"`
 	// min_score (Optional, float)
 	MinScore *float64 `json:"min_score,omitempty"`
 	// query (Optional, query object)
 	Query Query `json:"query,omitempty"`
 	// runtime_mappings (Optional, object of objects)
-	RuntimeMappings map[string]interface{} `json:"runtime_mappings,omitempty"`
+	RuntimeMappings map[string]any `json:"runtime_mappings,omitempty"`
 	// seq_no_primary_term (Optional, Boolean)
 	SequenceNoPrimaryTerm *bool `json:"seq_no_primary_term,omitempty"`
 	// size (Optional, integer)
 	Size *int `json:"size,omitempty"`
 	// _source (Optional)
-	Source interface{} `json:"_source,omitempty"`
+	Source any `json:"_source,omitempty"`
 	// stats (Optional, array of strings)
 	Stats []string `json:"stats,omitempty"`
 	// terminate_after (Optional, integer)
@@ -175,21 +175,21 @@ type AsyncSearchRequest struct {
 	Version *bool `json:"version,omitempty"`
 	// aggregations (Optional)
 	// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations.html
-	Aggregations map[string]interface{} `json:"aggs,omitempty"`
+	Aggregations map[string]any `json:"aggs,omitempty"`
 }
 
 // Query field pass on the async request
-type Query map[string]interface{}
+type Query map[string]any
 
 // Source will convert a query to an interface
 // We need to overwrite this function needed by oliver library
 // in order to perform converstion from interface{} to Query struct
-func (r Query) Source() (interface{}, error) {
+func (r Query) Source() (any, error) {
 	return r, nil
 }
 
-func toQuery(i interface{}) Query {
-	if r, ok := i.(map[string]interface{}); ok {
+func toQuery(i any) Query {
+	if r, ok := i.(map[string]any); ok {
 		return r
 	}
 	logrus.Warnf("Failed to parse query of type %t", i)

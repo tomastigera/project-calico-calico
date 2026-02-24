@@ -99,7 +99,7 @@ func TestL7Logs(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 			params := &v1.L7LogParams{
 				QueryParams: v1.QueryParams{
-					AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+					AfterKey: map[string]any{"startFrom": "badvalue"},
 				},
 			}
 			results, err := lb.List(ctx, clusterInfo, params)

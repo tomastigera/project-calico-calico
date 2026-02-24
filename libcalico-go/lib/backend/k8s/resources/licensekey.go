@@ -30,8 +30,8 @@ func NewLicenseKeyClient(r rest.Interface, group BackingAPIGroup) K8sResourceCli
 	return &customResourceClient{
 		restClient:      r,
 		resource:        LicenseKeyResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.LicenseKey{}),
-		k8sListType:     reflect.TypeOf(apiv3.LicenseKeyList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.LicenseKey](),
+		k8sListType:     reflect.TypeFor[apiv3.LicenseKeyList](),
 		kind:            apiv3.KindLicenseKey,
 		apiGroup:        group,
 	}

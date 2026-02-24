@@ -5,6 +5,7 @@ package sync
 
 import (
 	"context"
+	"maps"
 	"sync"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
@@ -28,7 +29,7 @@ func NewMockIPSetController() *MockIPSetController {
 	}
 }
 
-func (c *MockIPSetController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+func (c *MockIPSetController) Add(ctx context.Context, name string, set any, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(storage.IPSetSpec)
@@ -61,9 +62,7 @@ func (c *MockIPSetController) NotGCable() map[string]struct{} {
 	out := make(map[string]struct{})
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.noGC {
-		out[k] = s
-	}
+	maps.Copy(out, c.noGC)
 	return out
 }
 
@@ -71,9 +70,7 @@ func (c *MockIPSetController) Sets() map[string]storage.IPSetSpec {
 	out := make(map[string]storage.IPSetSpec)
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.sets {
-		out[k] = s
-	}
+	maps.Copy(out, c.sets)
 	return out
 }
 
@@ -94,7 +91,7 @@ func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 	}
 }
 
-func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set any, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(storage.DomainNameSetSpec)
@@ -127,9 +124,7 @@ func (c *MockDomainNameSetsController) NotGCable() map[string]struct{} {
 	out := make(map[string]struct{})
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.noGC {
-		out[k] = s
-	}
+	maps.Copy(out, c.noGC)
 	return out
 }
 
@@ -137,8 +132,6 @@ func (c *MockDomainNameSetsController) Sets() map[string]storage.DomainNameSetSp
 	out := make(map[string]storage.DomainNameSetSpec)
 	c.m.Lock()
 	defer c.m.Unlock()
-	for k, s := range c.sets {
-		out[k] = s
-	}
+	maps.Copy(out, c.sets)
 	return out
 }

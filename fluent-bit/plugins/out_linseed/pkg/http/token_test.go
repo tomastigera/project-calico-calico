@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -109,10 +109,6 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
-			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			mockClientSet.On("CoreV1").Return(fakeCoreV1)
 			tc.clientset = mockClientSet
 
 			tc.serviceAccountName = serviceAccount.GetName()

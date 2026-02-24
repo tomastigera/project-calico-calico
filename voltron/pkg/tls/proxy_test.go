@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -79,11 +79,9 @@ var _ = Describe("ListenAndProxy", func() {
 			conns := make(chan net.Conn, 1)
 			conns <- dst
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				Expect(p.ListenAndProxy(&mockListener{conns})).Should(Equal(errConnectionClosed))
-			}()
+			})
 
 			testDownstreamServer(listener, cert, requestString)
 			close(conns)
@@ -130,11 +128,9 @@ var _ = Describe("ListenAndProxy", func() {
 			conns := make(chan net.Conn, 1)
 			conns <- dst
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				Expect(p.ListenAndProxy(&mockListener{conns})).Should(Equal(errConnectionClosed))
-			}()
+			})
 
 			testDownstreamServer(listener, cert, requestString)
 			close(conns)
@@ -168,13 +164,11 @@ var _ = Describe("ListenAndProxy", func() {
 			testRequest := "test request\r\n"
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if _, err := cli.Write([]byte(testRequest)); err != nil {
 					log.Error(err)
 				}
-			}()
+			})
 
 			conns := make(chan net.Conn, 1)
 			conns <- dst
@@ -214,22 +208,18 @@ var _ = Describe("ListenAndProxy", func() {
 			testRequest := "test request\r\n"
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if _, err := cli.Write([]byte(testRequest)); err != nil {
 					log.Error(err)
 				}
-			}()
+			})
 
 			conns := make(chan net.Conn, 1)
 			conns <- dst
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				Expect(p.ListenAndProxy(&mockListener{conns})).Should(Equal(errConnectionClosed))
-			}()
+			})
 
 			testDownstreamServer(listener, cert, testRequest)
 			close(conns)
@@ -248,11 +238,9 @@ var _ = Describe("ListenAndProxy", func() {
 			conns <- dst
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				Expect(p.ListenAndProxy(&mockListener{conns})).Should(Equal(errConnectionClosed))
-			}()
+			})
 
 			wg.Add(1)
 			done := failAfter(1 * time.Second)

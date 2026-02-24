@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -204,12 +205,7 @@ func matchName(names []string, name string) bool {
 		log.Debug("No names on rule.")
 		return true
 	}
-	for _, n := range names {
-		if n == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, name)
 }
 
 // matchLabels checks if the selector matches the labels. It returns true if the selector matches,
@@ -352,12 +348,7 @@ func matchHTTPHeaderIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) boo
 	if !exists {
 		return false
 	}
-	for _, oneof := range r.Values {
-		if value == oneof {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Values, value)
 }
 
 func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {
@@ -365,12 +356,7 @@ func matchHTTPHeaderNotIn(r *proto.HTTPMatch_HeadersMatch, h map[string]string) 
 	if !exists {
 		return false
 	}
-	for _, oneof := range r.Values {
-		if value == oneof {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(r.Values, value)
 }
 
 func matchHTTPHeaderMatchesRegex(r *proto.HTTPMatch_HeadersMatch, h map[string]string) bool {

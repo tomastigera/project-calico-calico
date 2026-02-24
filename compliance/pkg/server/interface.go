@@ -65,7 +65,7 @@ type Report struct {
 	Type            string      `json:"type"`
 	StartTime       metav1.Time `json:"startTime"`
 	EndTime         metav1.Time `json:"endTime"`
-	UISummary       interface{} `json:"uiSummary"`
+	UISummary       any         `json:"uiSummary"`
 	DownloadURL     string      `json:"downloadUrl"`
 	DownloadFormats []Format    `json:"downloadFormats"`
 	GenerationTime  metav1.Time `json:"generationTime"`

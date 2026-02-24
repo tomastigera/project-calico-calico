@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -65,7 +66,7 @@ func (d *testFlowLogReporter) Start() error {
 	return nil
 }
 
-func (d *testFlowLogReporter) Report(logSlice interface{}) error {
+func (d *testFlowLogReporter) Report(logSlice any) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -109,15 +110,16 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		}
 
 		// Build a failure message showing expected vs found flow logs.
-		msg := "Expected flow logs not found in event stream.\n\nExpected:\n\n"
+		var msg strings.Builder
+		msg.WriteString("Expected flow logs not found in event stream.\n\nExpected:\n\n")
 		for _, fl := range fls {
-			msg += fmt.Sprintf("%+v\n", fl)
+			msg.WriteString(fmt.Sprintf("%+v\n", fl))
 		}
-		msg += "\nFound:\n\n"
+		msg.WriteString("\nFound:\n\n")
 		for _, flog := range flogs {
-			msg += fmt.Sprintf("%+v\n", flog)
+			msg.WriteString(fmt.Sprintf("%+v\n", flog))
 		}
-		Expect(count).Should(Equal(len(fls)), msg)
+		Expect(count).Should(Equal(len(fls)), msg.String())
 	}
 
 	calculatePacketStats := func(mus ...metric.Update) (epi, epo, ebi, ebo int) {
@@ -647,7 +649,7 @@ func (m *mockDispatcher) Start() error {
 	return nil
 }
 
-func (m *mockDispatcher) Report(logSlice interface{}) error {
+func (m *mockDispatcher) Report(logSlice any) error {
 	m.iteration++
 	log.Infof("Mocked dispatcher was called %d times ", m.iteration)
 	logs := logSlice.([]*FlowLog)
@@ -726,7 +728,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 
 			expectedLevel := 0
 			// Feed reporter with log with two iterations
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				err := reporter.Report(muNoConn1Rule1AllowUpdate)
 				Expect(err).NotTo(HaveOccurred())
@@ -782,7 +784,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			expectedLevel := 0
 			// Feed reporter with log with four iterations
 
-			for i := 0; i < 4; i++ {
+			for i := range 4 {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				Expect(reporter.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
@@ -870,7 +872,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 
 			// Feed reporter with log with five iterations
 
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				Expect(reporter.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())

@@ -17,13 +17,14 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"regexp"
 	"sync"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
@@ -307,12 +308,10 @@ func StartNNodeTopology(
 	// the same copy, while starting Felixes, we could hit a concurrent map read/write
 	// problem.
 	optsPerFelix := make([]TopologyOptions, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		optsPerFelix[i] = opts
 		optsPerFelix[i].ExtraEnvVars = map[string]string{}
-		for k, v := range opts.ExtraEnvVars {
-			optsPerFelix[i].ExtraEnvVars[k] = v
-		}
+		maps.Copy(optsPerFelix[i].ExtraEnvVars, opts.ExtraEnvVars)
 
 		// Different log prefix for each Felix.
 		optsPerFelix[i].ExtraEnvVars["BPF_LOG_PFX"] = fmt.Sprintf("%d-", i)
@@ -331,7 +330,7 @@ func StartNNodeTopology(
 	}
 
 	// Now start the Felixes.
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -346,7 +345,7 @@ func StartNNodeTopology(
 	_, IPv6CIDR, err := net.ParseCIDR(opts.IPv6PoolCIDR)
 	Expect(err).To(BeNil())
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		opts.ExtraEnvVars["BPF_LOG_PFX"] = ""
 		felix := tc.Felixes[i]
 		felix.TyphaIP = typhaIP
@@ -488,7 +487,7 @@ func StartNNodeTopology(
 	}
 
 	wg.Wait()
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		// If one of our parallel start-up goroutines fails, it will eventually
 		// fail the test but Ginkgo has no automatic way to abort the main goroutine.
 		ginkgo.Fail("StartNNodeTopology: failure on background goroutine.")

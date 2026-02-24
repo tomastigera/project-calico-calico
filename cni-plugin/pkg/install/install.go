@@ -299,7 +299,7 @@ func Install(version string) error {
 }
 
 func isValidJSON(s string) error {
-	var js map[string]interface{}
+	var js map[string]any
 	return json.Unmarshal([]byte(s), &js)
 }
 

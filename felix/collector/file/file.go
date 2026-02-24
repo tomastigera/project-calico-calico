@@ -55,7 +55,7 @@ func (f *FileReporter) Start() error {
 	return nil
 }
 
-func (f *FileReporter) Report(logSlice interface{}) (err error) {
+func (f *FileReporter) Report(logSlice any) (err error) {
 	enc := json.NewEncoder(f.logger)
 
 	defer func() {

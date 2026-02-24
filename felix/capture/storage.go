@@ -60,10 +60,10 @@ type activeCaptures struct {
 	maxSizeBytes    int
 	rotationSeconds int
 	maxFiles        int
-	statusUpdates   chan interface{}
+	statusUpdates   chan any
 }
 
-func NewActiveCaptures(config Config, statusUpdates chan interface{}) (ActiveCaptures, error) {
+func NewActiveCaptures(config Config, statusUpdates chan any) (ActiveCaptures, error) {
 	var err = os.MkdirAll(config.Directory, 0755)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (activeCaptures *activeCaptures) Add(key Key, spec Specification) error {
 	return nil
 }
 
-func markAsError(captureName, namespace, loggingID string, statusUpdates chan interface{}) {
+func markAsError(captureName, namespace, loggingID string, statusUpdates chan any) {
 	var update = &proto.PacketCaptureStatusUpdate{
 		Id:    &proto.PacketCaptureID{Name: captureName, Namespace: namespace},
 		State: proto.PacketCaptureStatusUpdate_ERROR,

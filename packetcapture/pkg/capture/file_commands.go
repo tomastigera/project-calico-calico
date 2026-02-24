@@ -83,7 +83,7 @@ func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command 
 			Stderr: &stderr,
 		})
 		if err != nil {
-			stderr.Write([]byte(fmt.Sprintf("Remote command failed with error=%s", err.Error())))
+			stderr.Write(fmt.Appendf(nil, "Remote command failed with error=%s", err.Error()))
 		}
 	}()
 

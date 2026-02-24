@@ -16,7 +16,7 @@ func ProcessTemplate(tmpl *template.Template, payload []byte) ([]byte, error) {
 
 	// Encode event as map[string]interface{} to keep the original keys in the JSON
 	// so that the template uses existing JSON keys
-	var eventsJson map[string]interface{}
+	var eventsJson map[string]any
 	err := json.Unmarshal(payload, &eventsJson)
 	if err != nil {
 		return payload, err

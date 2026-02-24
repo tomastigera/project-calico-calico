@@ -246,7 +246,7 @@ func TestAuditLog_NilPointerReceiver(t *testing.T) {
 	})
 }
 
-func marshal(source interface{}) []byte {
+func marshal(source any) []byte {
 	val, _ := json.Marshal(source)
 	return val
 }

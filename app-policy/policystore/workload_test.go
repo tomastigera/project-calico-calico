@@ -33,12 +33,12 @@ func (m *mockWorkloadCallbacks) Keys(k ip.Addr) []proto.WorkloadEndpointID {
 
 type workloadsTestCase struct {
 	comment  string
-	updates  []interface{}
+	updates  []any
 	mock     *mockWorkloadCallbacks
 	expected []string
 }
 
-func runTestCase(t *testing.T, comment string, updates []interface{}, expected []string) {
+func runTestCase(t *testing.T, comment string, updates []any, expected []string) {
 	tc := &workloadsTestCase{comment, updates, &mockWorkloadCallbacks{}, expected}
 	tc.runAssertions(t)
 }
@@ -78,7 +78,7 @@ func wepRemove(name string) *proto.WorkloadEndpointRemove {
 func TestWorkloads(t *testing.T) {
 	runTestCase(t,
 		"single workload endpoint update and remove",
-		[]interface{}{
+		[]any{
 			wepUpdate("some-pod-1", "10.0.0.1"),
 			wepRemove("some-pod-1"),
 		},
@@ -90,7 +90,7 @@ func TestWorkloads(t *testing.T) {
 
 	runTestCase(t,
 		"single workload endpoint multi-ips update and remove",
-		[]interface{}{
+		[]any{
 			wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32"),
 			wepRemove("some-pod-1"),
 		},
@@ -104,7 +104,7 @@ func TestWorkloads(t *testing.T) {
 
 	runTestCase(t,
 		"multi workload endpoint update and remove",
-		[]interface{}{
+		[]any{
 			wepUpdate("some-pod-1", "10.0.0.1/32"),
 			wepUpdate("some-pod-2", "10.0.0.2/32"),
 			wepUpdate("some-pod-2", "10.0.2.1"), // mixed update: doesn't have suffix!
@@ -124,7 +124,7 @@ func TestWorkloads(t *testing.T) {
 
 	runTestCase(t,
 		"single workload endpoint changing ips",
-		[]interface{}{
+		[]any{
 			wepUpdate("some-pod-1", "10.0.0.1", "10.0.0.2"),
 			wepUpdate("some-pod-1", "10.0.0.1"),
 			wepRemove("some-pod-1"),

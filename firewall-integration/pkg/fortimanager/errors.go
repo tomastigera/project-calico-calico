@@ -14,7 +14,7 @@ func (e ErrorConnectionInvalidSession) Error() string {
 // Error indicating an operation is not supported.
 type ErrorResourceDoesNotExist struct {
 	Err        error
-	Identifier interface{}
+	Identifier any
 }
 
 func (e ErrorResourceDoesNotExist) Error() string {
@@ -25,7 +25,7 @@ func (e ErrorResourceDoesNotExist) Error() string {
 // resource that already exists.
 type ErrorResourceAlreadyExists struct {
 	Err        error
-	Identifier interface{}
+	Identifier any
 }
 
 func (e ErrorResourceAlreadyExists) Error() string {
@@ -44,7 +44,7 @@ func (e ErrorConnectionUnauthorized) Error() string {
 // Error indicating a problem with Marshall/UnMarshall in FM client
 type ErrorClientMarshallingData struct {
 	Err        error
-	Identifier interface{}
+	Identifier any
 }
 
 func (e ErrorClientMarshallingData) Error() string {
@@ -54,7 +54,7 @@ func (e ErrorClientMarshallingData) Error() string {
 // Error indicating a problem with Marshall/UnMarshall in FM client
 type ErrorClientDeleteData struct {
 	Err        error
-	Identifier interface{}
+	Identifier any
 }
 
 func (e ErrorClientDeleteData) Error() string {
@@ -64,7 +64,7 @@ func (e ErrorClientDeleteData) Error() string {
 // Empty member address group created in FortiManager
 type ErrorEmptyMemberInAddrGrp struct {
 	Err        error
-	Identifier interface{}
+	Identifier any
 }
 
 func (e ErrorEmptyMemberInAddrGrp) Error() string {

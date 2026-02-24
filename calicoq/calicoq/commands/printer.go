@@ -59,7 +59,7 @@ func NewEndpointPrintFromEndpointDatum(epd endpointDatum) *EndpointPrint {
 	return NewEndpointPrintFromKey(epd.epID)
 }
 
-func NewEndpointPrintFromKey(key interface{}) *EndpointPrint {
+func NewEndpointPrintFromKey(key any) *EndpointPrint {
 	epp := &EndpointPrint{}
 	switch epID := key.(type) {
 	case model.WorkloadEndpointKey:
@@ -217,7 +217,7 @@ func NewRulePrintFromSelectorString(selector string) RulePrint {
 	return rp
 }
 
-func endpointName(key interface{}) string {
+func endpointName(key any) string {
 	var epName string
 	switch epID := key.(type) {
 	case model.WorkloadEndpointKey:

@@ -16,6 +16,7 @@ package updateprocessors
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -238,9 +239,7 @@ func RuleAPIV3ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 	if ar.Metadata != nil {
 		if ar.Metadata.Annotations != nil {
 			r.Metadata = &model.RuleMetadata{Annotations: make(map[string]string)}
-			for k, v := range ar.Metadata.Annotations {
-				r.Metadata.Annotations[k] = v
-			}
+			maps.Copy(r.Metadata.Annotations, ar.Metadata.Annotations)
 		}
 	}
 	return r

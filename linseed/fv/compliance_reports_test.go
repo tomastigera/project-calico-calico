@@ -134,7 +134,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 
 		// Create 5 Snapshots.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			reports := []v1.ReportData{
 				{
 					ReportData: &apiv3.ReportData{
@@ -156,7 +156,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.ReportDataParams{
 				QueryParams: v1.QueryParams{
@@ -236,7 +236,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		// Create > 10K reports.
 		logTime := time.Unix(100, 0).UTC()
 		var reports []v1.ReportData
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			reports = append(reports,
 				v1.ReportData{
 					ReportData: &apiv3.ReportData{

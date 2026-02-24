@@ -1,7 +1,6 @@
 package checker_test
 
 import (
-	"context"
 	"testing"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -14,8 +13,7 @@ import (
 )
 
 func TestCheckAuthScenarios(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	for _, scenario := range perHostCheckProviderScenarios() {
 		ps := policystore.NewPolicyStoreManager()

@@ -35,7 +35,7 @@ func NewGlobalThreatFeedStatusStorage(opts Options) (registry.DryRunnableStorage
 		client:          c,
 		codec:           opts.RESTOptions.StorageConfig.Codec,
 		versioner:       APIObjectVersioner{},
-		aapiType:        reflect.TypeOf(v3.GlobalThreatFeed{}),
+		aapiType:        reflect.TypeFor[v3.GlobalThreatFeed](),
 		isNamespaced:    false,
 		update:          updateFn,
 		get:             getFn,

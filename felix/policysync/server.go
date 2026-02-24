@@ -45,13 +45,13 @@ const OutputQueueLen = 100
 type Server struct {
 	proto.UnimplementedPolicySyncServer
 
-	JoinUpdates     chan<- interface{}
+	JoinUpdates     chan<- any
 	stats           chan<- *proto.DataplaneStats
 	wafEventHandler func(*proto.WAFEvent)
 	nextJoinUID     func() uint64
 }
 
-func NewServer(joins chan<- interface{}, collector collector.Collector, allocUID func() uint64) *Server {
+func NewServer(joins chan<- any, collector collector.Collector, allocUID func() uint64) *Server {
 	var stats chan<- *proto.DataplaneStats
 	var WafEventHandler func(*proto.WAFEvent)
 	if collector != nil {

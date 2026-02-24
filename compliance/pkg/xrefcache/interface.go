@@ -77,7 +77,7 @@ type VersionedResource interface {
 	resources.Resource
 	GetPrimary() resources.Resource
 	GetCalicoV3() resources.Resource
-	GetCalicoV1() interface{}
+	GetCalicoV1() any
 }
 
 // TierWithOrderedPolicies contains a tier reference along with references to the tiers ordered set of

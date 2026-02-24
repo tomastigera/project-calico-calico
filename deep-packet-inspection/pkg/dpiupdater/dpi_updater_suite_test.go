@@ -3,16 +3,16 @@ package dpiupdater_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
 func TestDpiStatusUpdater(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/dpiStatusUpdater_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "DPI Status Updater Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/dpiStatusUpdater_suite.xml"
+	ginkgo.RunSpecs(t, "DPI Status Updater Suite", suiteConfig, reporterConfig)
 }

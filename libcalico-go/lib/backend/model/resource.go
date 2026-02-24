@@ -26,7 +26,7 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/namespace"
 )
 
@@ -140,12 +140,12 @@ func init() {
 	registerResourceInfo[apiv3.SecurityEventWebhook](apiv3.KindSecurityEventWebhook, "securityeventwebhooks")
 	registerResourceInfo[apiv3.BFDConfiguration](apiv3.KindBFDConfiguration, "bfdconfigurations")
 
-	// Register libcalico-go/v3 resources.
-	registerResourceInfo[libapiv3.Node](libapiv3.KindNode, "nodes")
-	registerResourceInfo[libapiv3.WorkloadEndpoint](libapiv3.KindWorkloadEndpoint, "workloadendpoints")
-	registerResourceInfo[libapiv3.IPAMConfig](libapiv3.KindIPAMConfig, "ipamconfigs")
-	registerResourceInfo[libapiv3.BlockAffinity](libapiv3.KindBlockAffinity, "blockaffinities")
-	registerResourceInfo[libapiv3.IPAMBlock](libapiv3.KindIPAMBlock, "ipamblocks")
+	// Register internal API resources (from libcalico-go/lib/apis/internalapi).
+	registerResourceInfo[internalapi.Node](internalapi.KindNode, "nodes")
+	registerResourceInfo[internalapi.WorkloadEndpoint](internalapi.KindWorkloadEndpoint, "workloadendpoints")
+	registerResourceInfo[internalapi.IPAMConfig](internalapi.KindIPAMConfig, "ipamconfigs")
+	registerResourceInfo[internalapi.BlockAffinity](internalapi.KindBlockAffinity, "blockaffinities")
+	registerResourceInfo[internalapi.IPAMBlock](internalapi.KindIPAMBlock, "ipamblocks")
 
 	// Register Kubernetes resources.
 	registerResourceInfo[kapiv1.Service](KindKubernetesService, "kubernetesservice")

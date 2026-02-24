@@ -214,7 +214,7 @@ func (s *Step) getAuditV1(revision int, timestamp string) (string, error) {
 
 	logrus.WithFields(logrus.Fields{"verb": s.getAction(), "obRef": string(or)}).Debug("AuditV1 msg")
 
-	return Tprintf(auditV1Template, map[string]interface{}{
+	return Tprintf(auditV1Template, map[string]any{
 		"Verb":           s.getAction(),
 		"ResponseObject": string(j),
 		"ObjectRef":      string(or),
@@ -236,7 +236,7 @@ func (s *Step) getAuditV1Beta(revision int, timestamp string) (string, error) {
 
 	logrus.WithFields(logrus.Fields{"verb": s.getAction(), "obRef": string(or)}).Debug("AuditV1Beta msg")
 
-	return Tprintf(auditV1BetaTemplate, map[string]interface{}{
+	return Tprintf(auditV1BetaTemplate, map[string]any{
 		"Verb":           s.getAction(),
 		"ResponseObject": string(j),
 		"ObjectRef":      string(or),
@@ -295,7 +295,7 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 				s.updateResource(valueOf.MapIndex(key))
 			}
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		s.updateResource(reflect.Indirect(valueOf))
 
 	}
@@ -311,7 +311,7 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 }
 
 func (s *Step) resolveResourceTemplate(t string) string {
-	return Tprintf(t, map[string]interface{}{
+	return Tprintf(t, map[string]any{
 		"Namespace": s.namespace,
 		"ScaleId":   fmt.Sprintf("%d-%d", s.playInstance, s.playIteration),
 	})
@@ -319,7 +319,7 @@ func (s *Step) resolveResourceTemplate(t string) string {
 
 // Tprintf passed template string is formatted usign its operands and returns the resulting string.
 // Spaces are added between operands when neither is a string.
-func Tprintf(tmpl string, data map[string]interface{}) string {
+func Tprintf(tmpl string, data map[string]any) string {
 	t := template.Must(template.New("sql").Parse(tmpl))
 	buf := &bytes.Buffer{}
 	if err := t.Execute(buf, data); err != nil {

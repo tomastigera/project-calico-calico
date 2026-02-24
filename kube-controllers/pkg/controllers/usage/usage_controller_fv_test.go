@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	usagev1 "github.com/tigera/api/pkg/apis/usage.tigera.io/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,6 @@ import (
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	usagev1 "github.com/projectcalico/calico/libcalico-go/lib/apis/usage.tigera.io/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	licenseClient "github.com/projectcalico/calico/licensing/client"
@@ -75,24 +75,14 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 		k8sClient, err = testutils.GetK8sClient(kconfigfile)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Wait for the API server to be available.
-		listNamespaces := func() error {
-			_, err := k8sClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+		// Wait for the apiserver to be available.
+		Eventually(func() error {
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
-		}
-		Eventually(listNamespaces, 30*time.Second, 1*time.Second).Should(BeNil())
-		Consistently(listNamespaces, 10*time.Second, 1*time.Second).Should(BeNil())
+		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
-		// Apply the necessary CRDs. There can sometimes be a delay between starting
-		// the API server and when CRDs are apply-able, so retry here.
-		apply := func() error {
-			out, err := apiserver.ExecOutput("kubectl", "apply", "-f", "/crds/")
-			if err != nil {
-				return fmt.Errorf("%s: %s", err, out)
-			}
-			return nil
-		}
-		Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
+		// Apply CRDs.
+		testutils.ApplyCRDs(apiserver)
 
 		// Make a Calico client.
 		calicoClient = testutils.GetCalicoClient(apiconfig.Kubernetes, "", kconfigfile)
@@ -236,7 +226,7 @@ var _ = Describe("Calico usage controller FV tests (KDD mode)", func() {
 
 				// Validate (for multiple flushes) that report cleanup occurs after each flush
 				oldReportIDSet, oldestReportID := getReportIDSetAndOldestReportID(reportDatas)
-				for i := 0; i < 5; i++ {
+				for range 5 {
 					var newReportIDSet map[string]bool
 					var oldestReportIDInNewSet string
 					// The retention period is set such that we should expect a report to be deleted every time a

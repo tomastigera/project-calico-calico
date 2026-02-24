@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -65,7 +65,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise Metrics, etcd datast
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
 			cprc, _ := metrics.GetCNXMetrics(felix.IP, "cnx_policy_rule_connections")
@@ -930,7 +930,7 @@ var _ = infrastructure.DatastoreDescribe("Calico Enterprise stats with staged po
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
 			cprc, _ := metrics.GetCNXMetrics(felix.IP, "cnx_policy_rule_connections")

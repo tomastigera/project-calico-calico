@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"strings"
@@ -51,6 +52,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/flannelmigration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/ippool"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/namespace"
@@ -107,9 +109,7 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		r2.Header[k] = append([]string(nil), s...)
 	}
 
-	for key, values := range ha.headers {
-		r2.Header[key] = values
-	}
+	maps.Copy(r2.Header, ha.headers)
 
 	return ha.rt.RoundTrip(r2)
 }
@@ -270,7 +270,16 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, libcalicoClient, calicoClient, dataFeed, esClientBuilder)
+		controllerCtrl.InitControllers(
+			ctx,
+			runCfg,
+			k8sClientset,
+			libcalicoClient,
+			calicoClient,
+			dataFeed,
+			esClientBuilder,
+			cfg.KubeControllersConfigName == "default",
+		)
 	}
 
 	if cfg.DatastoreType == utils.Etcdv3 {
@@ -422,10 +431,7 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 
 		// If we encountered errors, retry again with a longer timeout.
 		if !s.GetReadiness() {
-			timeout = 2 * timeout
-			if timeout > maxTimeout {
-				timeout = maxTimeout
-			}
+			timeout = min(2*timeout, maxTimeout)
 			log.Infof("Health check is not ready, retrying in 2 seconds with new timeout: %s", timeout)
 			time.Sleep(2 * time.Second)
 			continue
@@ -616,6 +622,7 @@ func (cc *controllerControl) InitControllers(
 	v3c clientset.Interface,
 	dataFeed *utils.DataFeed,
 	esClientBuilder elasticsearch.ClientBuilder,
+	isDefaultInstance bool,
 ) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
@@ -632,6 +639,7 @@ func (cc *controllerControl) InitControllers(
 		calicoFactory := externalversions.NewSharedInformerFactory(v3c, 5*time.Minute)
 		poolInformer := calicoFactory.Projectcalico().V3().IPPools().Informer()
 		blockInformer := calicoFactory.Projectcalico().V3().IPAMBlocks().Informer()
+		licenseInformer := calicoFactory.Projectcalico().V3().LicenseKeys().Informer()
 
 		// Determine if we are running in v3 CRD mode, and enable controllers accordingly.
 		config, _ := apiconfig.LoadClientConfigFromEnvironment()
@@ -642,6 +650,11 @@ func (cc *controllerControl) InitControllers(
 			poolController := ippool.NewController(ctx, v3c, poolInformer, blockInformer, libcalicoClient.IPAM())
 			cc.controllerStates["IPPool"] = &controllerState{controller: poolController}
 			cc.registerInformers(poolInformer, blockInformer)
+
+			// Enable the license status controller, which validates and updates LicenseKey status fields.
+			licenseController := license.NewStatusController(ctx, v3c, licenseInformer)
+			cc.controllerStates["LicenseStatus"] = &controllerState{controller: licenseController}
+			cc.registerInformers(licenseInformer)
 		}
 	}
 
@@ -675,8 +688,9 @@ func (cc *controllerControl) InitControllers(
 		cc.registerInformers(serviceInformer, namespaceInformer)
 	}
 
-	if cfg.Controllers.Migration != nil && cfg.Controllers.Migration.PolicyNameMigrator == "Enabled" {
-		// Register the policy name migrator controller.
+	if cfg.Controllers.Migration != nil && cfg.Controllers.Migration.PolicyNameMigrator == "Enabled" && isDefaultInstance {
+		// Register the policy name migrator controller
+		// Never run this controller as part of es-kube-controllers, though.
 		policyMigrator := networkpolicy.NewMigratorController(ctx, k8sClientset, libcalicoClient, dataFeed)
 		cc.controllerStates["NetworkPolicyMigrator"] = &controllerState{controller: policyMigrator}
 	}

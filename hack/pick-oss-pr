@@ -119,7 +119,8 @@ fi
 
 current_commit_hash=$(git rev-parse --short HEAD)
 
-meta_block=$'## Automated Cherry-Pick PR\n\n'
+meta_block=$'<details>\n'
+meta_block+=$'<summary><b>Automated Cherry-Pick PR details</b></summary>\n\n'
 meta_block+=$'This pull request was automatically created by the '
 meta_block+=$'[cherry-pick script](https://github.com/tigera/calico-private/blob/'"${current_commit_hash}"'/hack/pick-oss-pr)'
 meta_block+=$' to synchronize the changes detailed below.\n\n'
@@ -127,7 +128,8 @@ meta_block+=$'- **Original PR ID**: '"${orig_prs_joined}"$'\n'
 meta_block+=$'- **Original Commit SHA**: '"${orig_shas_joined}"$'\n'
 meta_block+=$'- **Source Repo**: `'"${source_repo}"$'`\n'
 meta_block+=$'- **Target Repo**: `'"${target_repo}"$'`\n'
-meta_block+=$'- **Target Branch**: `'"${target_branch}"$'`\n\n'
+meta_block+=$'- **Target Branch**: `'"${target_branch}"$'`\n'
+meta_block+=$'</details>\n'
 
 # Export variables for use in cherry-pick-pull script
 META_BLOCK="${meta_block}"

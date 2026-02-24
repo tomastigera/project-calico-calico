@@ -120,7 +120,7 @@ func init() {
 type Cache struct {
 	config Config
 
-	inputC chan interface{}
+	inputC chan any
 
 	pendingStatus  api.SyncStatus
 	pendingUpdates []api.Update
@@ -199,7 +199,7 @@ func New(config Config) *Cache {
 
 	c := &Cache{
 		config:         config,
-		inputC:         make(chan interface{}, config.MaxBatchSize*2),
+		inputC:         make(chan any, config.MaxBatchSize*2),
 		breadcrumbCond: cond,
 		kvs:            kvs,
 		wakeUpTicker:   jitter.NewTicker(config.WakeUpInterval, config.WakeUpInterval/10),
@@ -289,7 +289,7 @@ func (c *Cache) loop(ctx context.Context, done chan struct{}) {
 func (c *Cache) fillBatchFromInputQueue(ctx context.Context) error {
 	somethingToSend := false
 	batchSize := 0
-	storePendingUpdate := func(obj interface{}) {
+	storePendingUpdate := func(obj any) {
 		somethingToSend = true
 		switch obj := obj.(type) {
 		case api.SyncStatus:

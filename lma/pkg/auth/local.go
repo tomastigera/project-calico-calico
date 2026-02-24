@@ -58,7 +58,7 @@ func (a *localAuthenticator) Authenticate(r *http.Request) (user.Info, int, erro
 		return nil, http.StatusUnauthorized, fmt.Errorf("token has an invalid signature")
 	}
 
-	parsedToken, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+	parsedToken, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 		return a.key, nil
 	})
 	if err != nil {

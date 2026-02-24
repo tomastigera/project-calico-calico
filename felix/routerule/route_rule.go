@@ -276,7 +276,6 @@ func (r *RouteRules) InitFromKernel() {
 
 	felixRules := make([]*Rule, 0)
 	for _, rule := range rules {
-		rule := rule
 		if r.IsValidTableIndex(rule.Table) {
 			rule.Family = r.netlinkFamily // feels hacky, but following what other parts of this module do
 			rr := FromNetlinkRule(&rule)  // '&rule' would be the same for all iterations here, so we index into rules list explicitly
@@ -318,7 +317,6 @@ func (r *RouteRules) Apply() error {
 	toRemove := set.New[*Rule]()
 	for _, nlRule := range nlRules {
 		// Give each loop a fresh copy of nlRule since we would need to use pointer later.
-		nlRule := nlRule
 		if r.IsValidTableIndex(nlRule.Table) {
 			// Table index of the rule is managed by us or accepted as desired.
 			// Be careful, do not use &nlRule below as it remain same value through iterations.

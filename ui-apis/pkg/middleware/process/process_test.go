@@ -11,7 +11,7 @@ import (
 	"net/http/httptest"
 	"sort"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

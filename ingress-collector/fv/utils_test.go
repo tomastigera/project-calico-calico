@@ -75,20 +75,16 @@ func (cth *CollectorTestHandler) CollectAndSend() {
 	wg := sync.WaitGroup{}
 
 	// Start the log ingestion go routine.
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		cth.collector.ReadLogs(cth.context)
 		cth.cancel()
-		wg.Done()
-	}()
+	})
 
 	// Start the DataplaneStats reporting go routine.
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		cth.client.SendStats(cth.context, cth.collector)
 		cth.cancel()
-		wg.Done()
-	}()
+	})
 
 	// Wait for the go routine to complete before exiting
 	wg.Wait()

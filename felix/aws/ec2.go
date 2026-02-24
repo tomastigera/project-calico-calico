@@ -255,7 +255,7 @@ func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *types.Instance
 	}
 
 	var out *ec2.DescribeInstancesOutput
-	for i := 0; i < retries; i++ {
+	for range retries {
 		out, err = c.EC2Svc.DescribeInstances(ctx, input)
 		if err != nil {
 			if retriable(err) {
@@ -412,7 +412,7 @@ func (c *EC2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types
 	}
 
 	var out *ec2.DescribeInstancesOutput
-	for i := 0; i < retries; i++ {
+	for range retries {
 		out, err = c.EC2Svc.DescribeInstances(ctx, input)
 		if err != nil {
 			if retriable(err) {
@@ -487,7 +487,7 @@ func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId s
 	}
 
 	var err error
-	for i := 0; i < retries; i++ {
+	for range retries {
 		_, err = c.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, input)
 		if err != nil {
 			if retriable(err) {

@@ -26,7 +26,7 @@ import (
 
 var (
 	matchLicenseKey = regexp.MustCompile("^/?calico/v1/licensekey/([^/]+)$")
-	typeLicenseKey  = reflect.TypeOf(LicenseKey{})
+	typeLicenseKey  = reflect.TypeFor[LicenseKey]()
 )
 
 type LicenseKeyKey struct {

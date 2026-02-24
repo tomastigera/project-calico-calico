@@ -5,8 +5,8 @@ package hashutils_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -16,6 +16,6 @@ func init() {
 }
 
 func TestHashutils(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hashutils Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "Hashutils Suite")
 }

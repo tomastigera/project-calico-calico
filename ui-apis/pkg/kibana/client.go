@@ -33,11 +33,11 @@ func NewClient(httpCli *http.Client, baseURL string) Client {
 // Login attempts to login the given user into Kibana, and returns the response from Kibana. If there is no error
 // and the response status is 200 OK then the user is logged in, otherwise the log in failed.
 func (cli *client) Login(currentURL, username, password string) (*http.Response, error) {
-	j, err := json.Marshal(map[string]interface{}{
+	j, err := json.Marshal(map[string]any{
 		"currentURL":   currentURL,
 		"providerName": "basic",
 		"providerType": "basic",
-		"params": map[string]interface{}{
+		"params": map[string]any{
 			"username": username,
 			"password": password,
 		},

@@ -18,8 +18,8 @@ func NewAlertExceptionClient(r rest.Interface, group BackingAPIGroup) K8sResourc
 	return &customResourceClient{
 		restClient:      r,
 		resource:        AlertExceptionResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.AlertException{}),
-		k8sListType:     reflect.TypeOf(apiv3.AlertExceptionList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.AlertException](),
+		k8sListType:     reflect.TypeFor[apiv3.AlertExceptionList](),
 		kind:            apiv3.KindAlertException,
 		apiGroup:        group,
 	}

@@ -89,7 +89,7 @@ type TyphaDaemon struct {
 	// Node counting.
 	nodeCounter *calc.NodeCounter
 
-	restartChan chan interface{}
+	restartChan chan any
 }
 
 type syncerPipeline struct {
@@ -126,7 +126,7 @@ func New() *TyphaDaemon {
 		ConfigureEarlyLogging: logutils.ConfigureEarlyLogging,
 		ConfigureLogging:      logutils.ConfigureLogging,
 		CachesBySyncerType:    map[syncproto.SyncerType]syncserver.BreadcrumbProvider{},
-		restartChan:           make(chan interface{}),
+		restartChan:           make(chan any),
 	}
 }
 

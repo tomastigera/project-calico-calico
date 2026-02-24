@@ -23,11 +23,11 @@ type MockRequest struct {
 	Result *MockResult
 }
 
-func (m *MockRequest) GetParams() interface{} {
+func (m *MockRequest) GetParams() any {
 	return m.realRequest.params
 }
 
-func (m *MockRequest) GetBody() interface{} {
+func (m *MockRequest) GetBody() any {
 	return m.realRequest.body
 }
 
@@ -79,7 +79,7 @@ func (m *MockRequest) Do(ctx context.Context) *Result {
 
 type MockResult struct {
 	Err        error
-	Body       interface{}
+	Body       any
 	StatusCode int
 
 	// Metadata about the call that was made. Will be populated

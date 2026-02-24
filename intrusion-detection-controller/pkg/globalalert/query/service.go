@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -304,9 +305,9 @@ func (e *service) executeCompositeQuery(ctx context.Context) {
 		if afterKey != nil {
 			composite, ok := compositeAggs["composite_aggs"]
 			if ok {
-				obj, ok := composite.(map[string]interface{})["composite"]
+				obj, ok := composite.(map[string]any)["composite"]
 				if ok {
-					obj.(map[string]interface{})["after"] = afterKey
+					obj.(map[string]any)["after"] = afterKey
 				}
 			}
 		}
@@ -346,9 +347,7 @@ func (e *service) executeCompositeQuery(ctx context.Context) {
 				}
 			}
 			// Add the bucket names into events document
-			for k, v := range b.Key {
-				record[k] = v
-			}
+			maps.Copy(record, b.Key)
 			events = append(events, e.convert(record))
 
 			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
@@ -505,9 +504,7 @@ func (e *service) executeVulnerabilityQuery(ctx context.Context) {
 	if lookBackRange, err := e.buildVulnerabilityLookBackRange(e.globalAlert); err != nil {
 		return
 	} else {
-		for k, v := range lookBackRange {
-			e.vulnerabilityQuery[k] = v
-		}
+		maps.Copy(e.vulnerabilityQuery, lookBackRange)
 	}
 
 	params := make(VulnerabilityQueryParameterMap)
@@ -708,7 +705,7 @@ func extractEventData(record JsonObject) lsv1.Event {
 	}
 
 	// translate Audit log fields to event top-level fields.
-	if val, ok := record["objectRef"].(map[string]interface{}); ok {
+	if val, ok := record["objectRef"].(map[string]any); ok {
 		if nestedVal, ok := val["name"].(string); ok {
 			e.SourceName = nestedVal
 		}
@@ -716,7 +713,7 @@ func extractEventData(record JsonObject) lsv1.Event {
 			e.SourceNamespace = nestedVal
 		}
 	}
-	if ips, ok := record["sourceIPs"].([]interface{}); ok && len(ips) > 0 {
+	if ips, ok := record["sourceIPs"].([]any); ok && len(ips) > 0 {
 		for _, ip := range ips {
 			if val, ok := ip.(string); ok {
 				e.SourceIP = &val
@@ -726,7 +723,7 @@ func extractEventData(record JsonObject) lsv1.Event {
 	}
 
 	// Allow for nested structures specifically for WAF logs.
-	if val, ok := record["source"].(map[string]interface{}); ok {
+	if val, ok := record["source"].(map[string]any); ok {
 		if nestedVal, ok := val["ip"].(string); ok {
 			e.SourceIP = &nestedVal
 		}
@@ -738,7 +735,7 @@ func extractEventData(record JsonObject) lsv1.Event {
 			e.SourcePort = &v
 		}
 	}
-	if val, ok := record["destination"].(map[string]interface{}); ok {
+	if val, ok := record["destination"].(map[string]any); ok {
 		if nestedVal, ok := val["ip"].(string); ok {
 			e.DestIP = &nestedVal
 		}

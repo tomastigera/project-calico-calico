@@ -27,7 +27,7 @@ import (
 
 var (
 	matchPolicy = regexp.MustCompile("^/?calico/v1/policy/([^/]+)/([^/]+)/([^/]+)$")
-	typePolicy  = reflect.TypeOf(Policy{})
+	typePolicy  = reflect.TypeFor[Policy]()
 )
 
 // KindIsStaged returns true if the the policy kind indicates that it is a staged policy.
@@ -187,10 +187,10 @@ func parseLegacyPolicyName(tier, name string) LegacyPolicyKey {
 	if strings.HasPrefix(policyName, "staged:") {
 		kind = apiv3.KindStagedGlobalNetworkPolicy
 		policyName = strings.TrimPrefix(policyName, "staged:")
-	} else if strings.HasPrefix(policyName, "kcnp.") {
+	} else if after, ok := strings.CutPrefix(policyName, "kcnp."); ok {
 		// TODO: Uncomment and use this when we support CNP.
 		// kind = KindKubernetesClusterNetworkPolicy
-		policyName = strings.TrimPrefix(policyName, "kcnp.")
+		policyName = after
 	}
 	return LegacyPolicyKey{
 		PolicyKey: PolicyKey{

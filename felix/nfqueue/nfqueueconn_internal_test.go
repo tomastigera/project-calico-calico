@@ -3,7 +3,7 @@
 package nfqueue
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -13,7 +13,7 @@ var _ = Describe("packetDataList handling", func() {
 
 	BeforeEach(func() {
 		list = &packetDataList{}
-		for i := uint32(0); i < 5; i++ {
+		for i := range uint32(5) {
 			pd := &packetData{
 				packetID: i,
 			}
@@ -26,7 +26,7 @@ var _ = Describe("packetDataList handling", func() {
 	When("packetData is added to the list", func() {
 		It("adds in the correct order going forward", func() {
 			d := list.first
-			for i := uint32(0); i < 5; i++ {
+			for i := range uint32(5) {
 				Expect(d).NotTo(BeNil())
 				Expect(d.packetID).To(Equal(i))
 				d = d.next
@@ -36,7 +36,7 @@ var _ = Describe("packetDataList handling", func() {
 
 		It("adds in the correct order going backwards", func() {
 			d := list.last
-			for i := uint32(0); i < 5; i++ {
+			for i := range uint32(5) {
 				Expect(d).NotTo(BeNil())
 				Expect(d.packetID).To(Equal(4 - i))
 				d = d.prev
@@ -64,7 +64,7 @@ var _ = Describe("packetDataList handling", func() {
 
 			// Check the list is complete apart from the middle entry.
 			d := list.first
-			for i := uint32(0); i < 5; i++ {
+			for i := range uint32(5) {
 				if i == 2 {
 					continue
 				}
@@ -86,7 +86,7 @@ var _ = Describe("packetDataList handling", func() {
 
 			// Check the list is complete apart from the middle entry.
 			d := list.last
-			for i := uint32(0); i < 5; i++ {
+			for i := range uint32(5) {
 				if i == 2 {
 					continue
 				}
@@ -112,7 +112,7 @@ var _ = Describe("packetDataList handling", func() {
 
 	When("all packetData is removed from the list from first to last", func() {
 		It("correctly updates the entries and the list", func() {
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				Expect(list.length).To(Equal(5 - i))
 				Expect(list.first).To(Equal(slice[i]))
 				Expect(list.last).To(Equal(slice[4]))
@@ -128,7 +128,7 @@ var _ = Describe("packetDataList handling", func() {
 
 	When("all packetData is removed from the list from last to first", func() {
 		It("correctly updates the entries and the list", func() {
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				Expect(list.length).To(Equal(5 - i))
 				Expect(list.first).To(Equal(slice[0]))
 				Expect(list.last).To(Equal(slice[4-i]))

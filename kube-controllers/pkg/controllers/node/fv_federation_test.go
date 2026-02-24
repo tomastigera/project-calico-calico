@@ -4,12 +4,10 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -259,13 +257,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localK8sClient, err = testutils.GetK8sClient(localKubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Create the appropriate local Calico client depending on whether this is an etcd or kdd test.
-		if isCalicoEtcdDatastore {
-			localCalicoClient = testutils.GetCalicoClient(apiconfig.EtcdV3, localEtcd.IP, localKubeconfig)
-		} else {
-			localCalicoClient = testutils.GetCalicoKubernetesClient(localKubeconfig)
-		}
-
 		// Create remote etcd and run the remote apiserver.
 		remoteEtcd = testutils.RunEtcd()
 		remoteApiserver = testutils.RunK8sApiserver(remoteEtcd.IP)
@@ -286,16 +277,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		}, eventuallyTimeout, eventuallyPoll).Should(BeNil())
 
 		if !isCalicoEtcdDatastore {
-			// Apply the necessary CRDs. There can somtimes be a delay between starting
-			// the API server and when CRDs are apply-able, so retry here.
-			apply := func() error {
-				out, err := localApiserver.ExecOutput("kubectl", "apply", "-f", "/crds/")
-				if err != nil {
-					return fmt.Errorf("%s: %s", err, out)
-				}
-				return nil
-			}
-			Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
+			testutils.ApplyCRDs(localApiserver)
+		}
+
+		// Create the appropriate local Calico client depending on whether this is an etcd or kdd test.
+		if isCalicoEtcdDatastore {
+			localCalicoClient = testutils.GetCalicoClient(apiconfig.EtcdV3, localEtcd.IP, localKubeconfig)
+		} else {
+			localCalicoClient = testutils.GetCalicoKubernetesClient(localKubeconfig)
 		}
 
 		// Run the federation controller on the local cluster.

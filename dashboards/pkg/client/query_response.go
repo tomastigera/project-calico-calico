@@ -222,7 +222,7 @@ func (q *QueryResponse) writeCSVRecord(csvWriter *csv.Writer, fields []string, c
 		value := columnValueMapper(f)
 		if valueStr, ok := value.(string); ok {
 			csvValue = valueStr
-		} else if valueSlice, ok := value.([]interface{}); ok {
+		} else if valueSlice, ok := value.([]any); ok {
 			var strs []string
 			for _, v := range valueSlice {
 				if s, ok := v.(string); ok {

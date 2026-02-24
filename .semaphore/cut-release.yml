@@ -175,6 +175,10 @@ promotions:
     pipeline_file: ../webhooks-processor/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Webhooks Release
+    pipeline_file: ../webhooks/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
 
   - name: Cut third-party Alertmanager Release
     pipeline_file: ../third_party/alertmanager/.semaphore/cut-release.yml

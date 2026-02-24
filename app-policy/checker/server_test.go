@@ -3,7 +3,6 @@
 package checker
 
 import (
-	"context"
 	"testing"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -19,8 +18,7 @@ import (
 
 func TestCheckStoreNoHTTP(t *testing.T) {
 	RegisterTestingT(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
@@ -55,8 +53,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 
 func TestCheckStoreHTTPAllowed(t *testing.T) {
 	RegisterTestingT(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
@@ -126,8 +123,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 
 func TestCheckStoreHTTPDenied(t *testing.T) {
 	RegisterTestingT(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()

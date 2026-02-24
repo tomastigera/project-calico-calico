@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -159,7 +159,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ Cluster mesh VXLA
 
 			JustAfterEach(func() {
 				for _, c := range cs.GetClusters() {
-					if CurrentGinkgoTestDescription().Failed {
+					if CurrentSpecReport().Failed() {
 						for _, felix := range c.felixes {
 							if NFTMode() {
 								logNFTDiags(felix)
@@ -202,7 +202,7 @@ var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ Cluster mesh VXLA
 					Skip("Skipping due to known issue with tunnel IPs not being programmed in WEP mode")
 				}
 
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					f := cs.local.felixes[i]
 					cc.ExpectSome(f, cs.local.w[0])
 					cc.ExpectSome(f, cs.local.w[1])

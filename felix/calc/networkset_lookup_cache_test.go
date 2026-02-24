@@ -5,8 +5,7 @@ package calc_test
 import (
 	"net"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/felix/calc"
@@ -497,7 +496,7 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 
 		// Test multiple times to ensure consistent ordering
 		var firstResult model.Key
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
 			Expect(match).ToNot(Equal(MatchNone))
 
@@ -541,7 +540,7 @@ var _ = Describe("NetworkSetLookupsCache namespace precedence tests", func() {
 
 		// Test multiple times to ensure consistent ordering
 		var firstResult model.Key
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			networkSet, match := ec.GetNetworkSetFromIPWithNamespace(testIP, "ns1")
 			Expect(match).ToNot(Equal(MatchNone))
 
@@ -1015,7 +1014,7 @@ var _ = Describe("NetworkSetLookupsCache lexicographic ordering tests", func() {
 
 			// Query multiple times and verify consistency
 			var firstResult model.Key
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				networkSet, match := ec.GetNetworkSetFromEgressDomainWithNamespace("consistent.test", "")
 				Expect(match).To(Equal(MatchGlobal))
 

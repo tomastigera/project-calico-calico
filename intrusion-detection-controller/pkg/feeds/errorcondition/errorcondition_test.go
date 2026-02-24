@@ -26,12 +26,12 @@ func TestErrorCondition_AddErrorOverMaxErrorLimit(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	globalThreatFeed := &v3.GlobalThreatFeed{}
-	for i := 0; i < MaxErrors+1; i++ {
+	for i := range MaxErrors + 1 {
 		AddError(&globalThreatFeed.Status, fmt.Sprintf("testErrType-%d", i), fmt.Errorf("testErrMessage-%d", i))
 	}
 
 	g.Expect(len(globalThreatFeed.Status.ErrorConditions)).Should(Equal(MaxErrors))
-	for i := 0; i < MaxErrors; i++ {
+	for i := range MaxErrors {
 		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Type).Should(Equal(fmt.Sprintf("testErrType-%d", i+1)))
 		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Message).Should(Equal(fmt.Sprintf("testErrMessage-%d", i+1)))
 	}

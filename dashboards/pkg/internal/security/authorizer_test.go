@@ -214,7 +214,7 @@ func TestAuthorizer(t *testing.T) {
 	t.Run("cache", func(t *testing.T) {
 		ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil)
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
 			require.True(t, authorized)

@@ -30,8 +30,8 @@ func NewPolicyRecommendationScopeClient(r rest.Interface, group BackingAPIGroup)
 	return &customResourceClient{
 		restClient:      r,
 		resource:        PolicyRecommendationScopeResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.PolicyRecommendationScope{}),
-		k8sListType:     reflect.TypeOf(apiv3.PolicyRecommendationScopeList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.PolicyRecommendationScope](),
+		k8sListType:     reflect.TypeFor[apiv3.PolicyRecommendationScopeList](),
 		namespaced:      false,
 		kind:            apiv3.KindPolicyRecommendationScope,
 		apiGroup:        group,

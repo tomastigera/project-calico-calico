@@ -798,7 +798,7 @@ func (nfx *nfQueueConnection) release() {
 // setVerdict attempts to set the verdict for the specified packet. It retries in the event of a failure.
 func (nfx *nfQueueConnection) setVerdict(id uint32, verdict int, failureMessages ...string) {
 	var err error
-	for i := 0; i < nfSetVerdictRepeatAttempts; i++ {
+	for range nfSetVerdictRepeatAttempts {
 		if err = nfx.nfq.SetVerdict(id, verdict); err == nil {
 			return
 		}
@@ -814,7 +814,7 @@ func (nfx *nfQueueConnection) setVerdict(id uint32, verdict int, failureMessages
 // failure.
 func (nfx *nfQueueConnection) setVerdictWithMark(id uint32, verdict int, mark int, failureMessages ...string) {
 	var err error
-	for i := 0; i < nfSetVerdictRepeatAttempts; i++ {
+	for range nfSetVerdictRepeatAttempts {
 		if err = nfx.nfq.SetVerdictWithMark(id, verdict, mark); err == nil {
 			return
 		}
@@ -829,7 +829,7 @@ func (nfx *nfQueueConnection) setVerdictWithMark(id uint32, verdict int, mark in
 // setVerdictBatch attempts to set the verdict for the specified batch of packets. It retries in the event of a failure.
 func (nfx *nfQueueConnection) setVerdictBatch(id uint32, verdict int, failureMessage string) {
 	var err error
-	for i := 0; i < nfSetVerdictRepeatAttempts; i++ {
+	for range nfSetVerdictRepeatAttempts {
 		if err = nfx.nfq.SetVerdictBatch(id, verdict); err == nil {
 			return
 		}

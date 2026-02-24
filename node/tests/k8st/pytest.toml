@@ -1,0 +1,9 @@
+[pytest]
+markers = [
+    "non_vanilla",
+    "dual_tor",
+    "egress_ip",
+    "egress_ip_no_overlay",
+    "egress_ip_ipip",
+    "egress_ip_vxlan",
+]

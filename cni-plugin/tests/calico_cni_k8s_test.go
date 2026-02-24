@@ -22,8 +22,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/mcuadros/go-version"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -40,7 +39,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	apiconfig "github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -292,7 +291,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -456,7 +455,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 					"projectcalico.org/serviceaccount": "default",
 				}))
-				Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+				Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 					Pod:                testPodName,
 					InterfaceName:      interfaceName,
 					IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -468,7 +467,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Workload:           "",
 					ContainerID:        containerID,
 					Orchestrator:       api.OrchestratorKubernetes,
-					Ports: []libapi.WorkloadEndpointPort{{
+					Ports: []internalapi.WorkloadEndpointPort{{
 						Name:     "anamedport",
 						Protocol: numorstring.ProtocolFromString("TCP"),
 						Port:     555,
@@ -1963,7 +1962,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Assert that the endpoint contains the appropriate DNAT
 			podIP := contAddresses[0].IP
 			Expect(endpoints.Items[0].Spec.IPNATs).Should(HaveLen(1))
-			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]libapi.IPNAT{{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
+			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]internalapi.IPNAT{{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
 
 			// Delete the container.
 			_, err = testutils.DeleteContainer(string(confBytes), contNs.Path(), testPodName, testutils.K8S_TEST_NS)
@@ -2089,7 +2088,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -2276,7 +2275,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -2410,7 +2409,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",
@@ -2420,7 +2419,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Node:               testNodeName,
 				Endpoint:           "eth0",
 				Workload:           "",
-				IPNATs: []libapi.IPNAT{
+				IPNATs: []internalapi.IPNAT{
 					{
 						InternalIP: podIPv4.String(),
 						ExternalIP: "1.1.1.1",
@@ -2713,7 +2712,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var netconf string
 		var clientset *kubernetes.Clientset
 		var workloadName, containerID string
-		var endpointSpec libapi.WorkloadEndpointSpec
+		var endpointSpec internalapi.WorkloadEndpointSpec
 		var contNs ns.NetNS
 		var result *cniv1.Result
 
@@ -3188,7 +3187,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": saName,
 				"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 			}))
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -3200,7 +3199,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []libapi.WorkloadEndpointPort{{
+				Ports: []internalapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
@@ -3341,7 +3340,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(endpoints.Items[0].GenerateName).Should(Equal(generateName))
 
 			// Let's just check that the Spec is good too.
-			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(internalapi.WorkloadEndpointSpec{
 				Pod:                testPodName,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",
@@ -3353,7 +3352,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []libapi.WorkloadEndpointPort{{
+				Ports: []internalapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
@@ -3865,18 +3864,19 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				_, err = testutils.DeleteContainer(netconf, contNs.Path(), testNodeName, testutils.K8S_TEST_NS)
 				Expect(err).ShouldNot(HaveOccurred())
-			}, TableEntry{
-				Description: "uses that annotation for the default interface",
-				Parameters:  []interface{}{"eth0", cnet.MustParseCIDR(extraPool)},
-			}, TableEntry{
-				Description: "ignores the annotation for additional interfaces",
-				Parameters:  []interface{}{"net1", cnet.MustParseCIDR(pool)},
-			})
+			},
+				Entry("uses that annotation for the default interface",
+					"eth0", cnet.MustParseCIDR(extraPool),
+				),
+				Entry("ignores the annotation for additional interfaces",
+					"net1", cnet.MustParseCIDR(pool),
+				),
+			)
 		})
 	})
 
 	Describe("testConnection tests", func() {
-		It("successfully connects to the datastore", func(done Done) {
+		It("successfully connects to the datastore", func() {
 			netconf := fmt.Sprintf(`
 			{
 			  "cniVersion": "%s",
@@ -3909,14 +3909,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			_, err = c.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
-			close(done)
-		}, 10)
+		})
 
 		// This test fails because etcd client doesn't respect our context
 		// timeout.  Works in open source so will have to investigate different
 		// versions of the client.
 		// Remove this "P" as part of https://tigera.atlassian.net/browse/OS-5705
-		PIt("reports it cannot connect to the datastore", func(done Done) {
+		PIt("reports it cannot connect to the datastore", func() {
 			// wrong port(s).
 			netconf := fmt.Sprintf(`
 			{
@@ -3951,8 +3950,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			_, err = c.CombinedOutput()
 			Expect(err).To(HaveOccurred())
-			close(done)
-		}, 10)
+		})
 	})
 
 	Describe("using hwAddr annotations to assign a fixed MAC address to a container veth", func() {

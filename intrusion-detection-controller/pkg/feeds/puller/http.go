@@ -52,9 +52,9 @@ type httpPuller struct {
 
 type setHandlerinterface interface {
 	lastModified(ctx context.Context, name string) (time.Time, error)
-	updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
-	snapshot(r io.Reader) (interface{}, error)
-	handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction)
+	updateDataStore(ctx context.Context, name string, snapshot any, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
+	snapshot(r io.Reader) (any, error)
+	handleSnapshot(ctx context.Context, snapshot any, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction)
 	syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher)
 }
 

@@ -18,8 +18,8 @@ func NewUISettingsClient(r rest.Interface, group BackingAPIGroup) K8sResourceCli
 	return &customResourceClient{
 		restClient:      r,
 		resource:        UISettingsResourceName,
-		k8sResourceType: reflect.TypeOf(apiv3.UISettings{}),
-		k8sListType:     reflect.TypeOf(apiv3.UISettingsList{}),
+		k8sResourceType: reflect.TypeFor[apiv3.UISettings](),
+		k8sListType:     reflect.TypeFor[apiv3.UISettingsList](),
 		kind:            apiv3.KindUISettings,
 		apiGroup:        group,
 	}

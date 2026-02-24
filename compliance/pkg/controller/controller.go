@@ -402,7 +402,7 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 	// Start with the succesful jobs.
 	numSuccessfulToDelete := len(rep.Status.LastSuccessfulReportJobs) - cc.cfg.MaxSuccessfulJobsHistory
 	if numSuccessfulToDelete > 0 {
-		for i := 0; i < numSuccessfulToDelete; i++ {
+		for i := range numSuccessfulToDelete {
 			jobsToDelete = append(jobsToDelete, rep.Status.LastSuccessfulReportJobs[i].ReportJob)
 		}
 		rep.Status.LastSuccessfulReportJobs = rep.Status.LastSuccessfulReportJobs[numSuccessfulToDelete:]
@@ -411,7 +411,7 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 	// Now the failed jobs.
 	numFailedToDelete := len(rep.Status.LastFailedReportJobs) - cc.cfg.MaxFailedJobsHistory
 	if numFailedToDelete > 0 {
-		for i := 0; i < numFailedToDelete; i++ {
+		for i := range numFailedToDelete {
 			jobsToDelete = append(jobsToDelete, rep.Status.LastFailedReportJobs[i].ReportJob)
 		}
 		rep.Status.LastFailedReportJobs = rep.Status.LastFailedReportJobs[numFailedToDelete:]

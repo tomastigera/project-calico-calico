@@ -78,6 +78,7 @@ gen-files .generate_files: lint-cache-dir clean-generated
 		--extra-peer-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
 		--output-file zz_generated.defaults.go \
 		"$(PACKAGE_NAME)/pkg/apis/projectcalico/v3"'
+
 	# Generate deep copies
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) deepcopy-gen \
@@ -86,6 +87,13 @@ gen-files .generate_files: lint-cache-dir clean-generated
 		--bounding-dirs $(PACKAGE_NAME) \
 		--output-file zz_generated.deepcopy.go \
 		"$(PACKAGE_NAME)/pkg/apis/projectcalico/v3"'
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+	   sh -c '$(GIT_CONFIG_SSH) deepcopy-gen \
+		--v 1 --logtostderr \
+		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
+		--bounding-dirs $(PACKAGE_NAME) \
+		--output-file zz_generated.deepcopy.go \
+		"$(PACKAGE_NAME)/pkg/apis/usage.tigera.io/v1"'
 
 	# generate all pkg/client contents
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -157,7 +165,7 @@ ut: kind-cluster-create
 		-e KUBECONFIG=/kubeconfig.yaml \
 		-v $(KIND_KUBECONFIG):/kubeconfig.yaml \
 		$(CALICO_BUILD) \
-		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r -focus="$(GINKGO_FOCUS)" $(WHAT)'
+		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --focus="$(GINKGO_FOCUS)" $(WHAT)'
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
@@ -174,4 +182,4 @@ check-generated-files: .generate_files
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files build ut static-checks
+ci: clean check-generated-files static-checks build ut

@@ -245,7 +245,7 @@ func TestCreateEvent(t *testing.T) {
 					From: time.Now().Add(-1 * time.Minute),
 					To:   time.Now().Add(1 * time.Minute),
 				},
-				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+				AfterKey: map[string]any{"startFrom": "badvalue"},
 			},
 		})
 		require.Error(t, err)
@@ -545,7 +545,7 @@ func TestSelectorMaxLength(t *testing.T) {
 		podNameTemplate := "test-my-very%s-very-long-name-%d-*"
 
 		exceptionSelectors := []string{}
-		for i := 0; i < numExceptions; i++ {
+		for i := range numExceptions {
 			ns := fmt.Sprintf(nsTemplate, padding, i)
 			podName := fmt.Sprintf(podNameTemplate, padding, i)
 			exceptionSelectors = append(exceptionSelectors, fmt.Sprintf("type = waf AND name = 'WAF Event' AND dest_namespace = '%s' AND dest_name IN { '%s' }", ns, podName))
@@ -1017,11 +1017,11 @@ func TestPagination(t *testing.T) {
 
 	listSize := 21
 	events := make([]v1.Event, 0, listSize)
-	for i := 0; i < listSize; i++ {
+	for range listSize {
 		events = append(events, event)
 	}
 
-	testSelector := func(t *testing.T, maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
+	testSelector := func(t *testing.T, maxPageSize int, numResults int, afterkey map[string]any, shouldSucceed bool, errmsg string) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the events in ES.
@@ -1066,7 +1066,7 @@ func TestPagination(t *testing.T) {
 	})
 
 	RunAllModes(t, "check afterkey is used to load the rest of the items", func(t *testing.T) {
-		testSelector(t, 0, 11, map[string]interface{}{"startFrom": 10}, true, "")
+		testSelector(t, 0, 11, map[string]any{"startFrom": 10}, true, "")
 	})
 
 	RunAllModes(t, "check negative max page size returns error", func(t *testing.T) {
@@ -1074,7 +1074,7 @@ func TestPagination(t *testing.T) {
 	})
 
 	RunAllModes(t, "check afterkey is used to load the rest of the items", func(t *testing.T) {
-		testSelector(t, 3, 3, map[string]interface{}{"startFrom": 10}, true, "")
+		testSelector(t, 3, 3, map[string]any{"startFrom": 10}, true, "")
 	})
 }
 
@@ -1092,7 +1092,7 @@ func TestSorting(t *testing.T) {
 		// Create array of events.
 		listSize := 2
 		events = make([]v1.Event, 0, listSize)
-		for i := 0; i < listSize; i++ {
+		for i := range listSize {
 			event := v1.Event{
 				Time:         v1.NewEventTimestamp(createTime[i].Unix()),
 				Description:  "Just a city event",

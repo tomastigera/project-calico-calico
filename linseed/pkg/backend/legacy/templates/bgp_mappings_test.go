@@ -26,7 +26,7 @@ func TestCompareBGPStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]interface{}), excludeBGPFields))
+		require.True(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]any), excludeBGPFields))
 	})
 	t.Run("Check for BGP api and template not matches", func(t *testing.T) {
 		bgpMap := testutils.MustUnmarshalToMap(t, BGPMappings)
@@ -39,6 +39,6 @@ func TestCompareBGPStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]interface{}), nil))
+		require.False(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]any), nil))
 	})
 }

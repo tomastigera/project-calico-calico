@@ -29,9 +29,9 @@ type EgressGatewayPolicy struct {
 
 func fillDefaults(res *apiv3.EgressGatewayPolicy) {
 	preferNone := apiv3.GatewayPreferenceNone
-	for _, rule := range res.Spec.Rules {
-		if rule.GatewayPreference == nil {
-			rule.GatewayPreference = &preferNone
+	for i := range res.Spec.Rules {
+		if res.Spec.Rules[i].GatewayPreference == nil {
+			res.Spec.Rules[i].GatewayPreference = &preferNone
 		}
 	}
 }

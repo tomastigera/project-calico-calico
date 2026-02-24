@@ -80,7 +80,7 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 	}
 
 	var sharedInformers = informers.NewManagedClusterInformer(defaultBundle, time.Second*5, cache.Indexers{})
-	var onAdd = func(obj interface{}) {
+	var onAdd = func(obj any) {
 		cluster, ok := obj.(*v3.ManagedCluster)
 		if !ok {
 			log.Debugf("Interface conversion failed for %v", obj)
@@ -94,7 +94,7 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 			}
 		}
 	}
-	var onDelete = func(obj interface{}) {
+	var onDelete = func(obj any) {
 		cluster, ok := obj.(*v3.ManagedCluster)
 		if !ok {
 			log.Debugf("Interface conversion failed for %v", obj)
@@ -104,7 +104,7 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 		cc.delete(cluster.Name)
 	}
 
-	var onUpdate = func(oldObj, newObj interface{}) {
+	var onUpdate = func(oldObj, newObj any) {
 		newCluster, ok := newObj.(*v3.ManagedCluster)
 		if !ok {
 			log.Debugf("Interface conversion failed for %v", newObj)

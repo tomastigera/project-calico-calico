@@ -15,8 +15,7 @@
 package updateprocessors_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -310,15 +309,19 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 
 // Define ClusterNetworkPolicies and the corresponding expected v1 KVPairs.
 //
-// kcnp1 is a k8s ClusterNetworkPolicy with a single Egress rule, which contains ports only,
+// kcnp1 is a k8s ClusterNetworkPolicy with a single Egress rule, which contains protocols only,
 // and no selectors.
 var (
 	kcnpOrder = float64(1000.0)
-	ports     = []clusternetpol.ClusterNetworkPolicyPort{{
-		PortNumber: &clusternetpol.Port{
-			Port: 80,
+	protos    = []clusternetpol.ClusterNetworkPolicyProtocol{
+		{
+			TCP: &clusternetpol.ClusterNetworkPolicyProtocolTCP{
+				DestinationPort: &clusternetpol.Port{
+					Number: 80,
+				},
+			},
 		},
-	}}
+	}
 	kcnp1 = clusternetpol.ClusterNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test.policy",
@@ -338,7 +341,7 @@ var (
 							Namespaces: &metav1.LabelSelector{},
 						},
 					},
-					Ports: &ports,
+					Protocols: protos,
 				},
 			},
 		},

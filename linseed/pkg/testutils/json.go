@@ -11,14 +11,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
-func MustUnmarshalToMap(t *testing.T, source string) map[string]interface{} {
-	var val map[string]interface{}
+func MustUnmarshalToMap(t *testing.T, source string) map[string]any {
+	var val map[string]any
 	err := json.Unmarshal([]byte(source), &val)
 	require.NoError(t, err)
 	return val
 }
 
-func Marshal(t *testing.T, response interface{}) string {
+func Marshal(t *testing.T, response any) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 

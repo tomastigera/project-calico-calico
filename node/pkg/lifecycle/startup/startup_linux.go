@@ -21,7 +21,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/node/pkg/lifecycle/startup/autodetection"
 	"github.com/projectcalico/calico/node/pkg/lifecycle/utils"
@@ -97,7 +97,7 @@ func ipv6Supported() bool {
 // configureCloudOrchRef attempts to connect to a cloud provider metadata service to discover
 // the instance ID and add this to the OrchRefs on the node.
 // Returns true if the node object needs to be updated.
-func configureCloudOrchRef(node *api.Node) bool {
+func configureCloudOrchRef(node *internalapi.Node) bool {
 	ref, err := autodetection.GetCloudOrchRef()
 	if err != nil {
 		return false

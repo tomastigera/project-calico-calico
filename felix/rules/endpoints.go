@@ -15,14 +15,15 @@
 package rules
 
 import (
+	"crypto/sha3"
 	"encoding/base64"
 	"fmt"
+	"hash"
 	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/hashutils"
@@ -959,7 +960,7 @@ func (g *PolicyGroup) UniqueID() string {
 		return g.cachedUID
 	}
 
-	hash := sha3.New224()
+	hash := hash.Hash(sha3.New224())
 	write := func(s string) {
 		_, err := hash.Write([]byte(s))
 		if err != nil {

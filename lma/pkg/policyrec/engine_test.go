@@ -4,8 +4,7 @@ package policyrec_test
 import (
 	"net/http"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
@@ -47,7 +46,7 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		func(
 			namespace1, namespace2 *corev1.Namespace,
 			endpointName, endpointNamespace, policyTier string, policyOrder *float64,
-			matchingFlows []flowWithError, expectedPolicies interface{}) {
+			matchingFlows []flowWithError, expectedPolicies any) {
 
 			// Define the kubernetes interface
 			mockLmaK8sClientSet = &lmak8s.MockClientSet{}

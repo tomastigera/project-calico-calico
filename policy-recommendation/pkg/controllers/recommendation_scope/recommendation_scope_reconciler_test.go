@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -51,8 +51,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 		mockNamespaced = types.NamespacedName{}
 
-		mockClientSet = lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet = &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
 	})
 
 	Describe("Reconcile", func() {

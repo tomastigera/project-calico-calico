@@ -106,7 +106,7 @@ clean:
 	       go/docs/calc.pdf \
 	       docs/*.pdf
 	find . -name "junit.xml" -type f -delete
-	find . -name "*.coverprofile" -type f -delete
+	find . -name "coverprofile.out" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
 	find . -name "*.pyc" -type f -delete
@@ -170,7 +170,7 @@ $(LIBBPF_A): $(LIBBPF_FILE_CREATED) $(shell find bpf-gpl/libbpf -type f -not -pa
 	$(MAKE) register ARCH=$(ARCH)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c "make -j 16 -C bpf-gpl/libbpf/src BUILD_STATIC_ONLY=1 OBJDIR=$(ARCH)"
 
-DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e $(ACK_GINKGO) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 
 bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
@@ -333,7 +333,7 @@ UT_PACKAGES_TO_SKIP?=fv,k8sfv,bpf/ut
 .PHONY: ut
 ut combined.coverprofile: $(SRC_FILES) $(LIBBPF_A) $(BPF_APACHE_O_FILES)
 	@echo Running Go UTs.
-	$(DOCKER_GO_BUILD_CGO) bash -c '$(GIT_CONFIG_SSH) ./utils/run-coverage -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
+	$(DOCKER_GO_BUILD_CGO) bash -c '$(GIT_CONFIG_SSH) ./utils/run-coverage -skip-package $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
 
 ###############################################################################
 # FV Tests
@@ -418,7 +418,6 @@ fv fv/latency.log fv/data-races.log: fv-prereqs
 fv-no-prereqs:
 	rm -f fv/data-races.log fv/latency.log
 	cd fv && \
-	  $(ACK_GINKGO) \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
 	  FV_TYPHAIMAGE=$(FV_TYPHAIMAGE) \
@@ -622,12 +621,12 @@ cd: image-all cd-common
 .PHONY: ut-no-cover
 ut-no-cover: $(SRC_FILES) $(LIBBPF_A) $(BPF_APACHE_O_FILES)
 	@echo Running Go UTs without coverage.
-	$(DOCKER_GO_BUILD_CGO) ginkgo -r -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
+	$(DOCKER_GO_BUILD_CGO) ginkgo -r --skip-package $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
 
 .PHONY: ut-watch
 ut-watch: $(SRC_FILES) $(LIBBPF_A) $(BPF_APACHE_O_FILES)
 	@echo Watching go UTs for changes...
-	$(DOCKER_GO_BUILD_CGO) ginkgo watch -r -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
+	$(DOCKER_GO_BUILD_CGO) ginkgo watch -r --skip-package $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
 
 .PHONY: bin/bpf.test
 bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
@@ -661,7 +660,6 @@ ut-bpf-no-prereqs:
 	$(DOCKER_RUN) \
 		--privileged \
 		-e RUN_AS_ROOT=true \
-		-e $(ACK_GINKGO) \
 		$(CALICO_BUILD) bash -o pipefail -c ' \
 		mount bpffs /sys/fs/bpf -t bpf && \
 		cd /go/src/$(PACKAGE_NAME)/bpf/ && \
@@ -669,7 +667,6 @@ ut-bpf-no-prereqs:
 		gotestsum --format $(GOTESTSUM_FORMAT) --junitfile ../report/felix_bpf.xml --raw-command -- go tool test2json -t -p $(PACKAGE_NAME)/bpf'
 	$(DOCKER_RUN_PRIV_NET) \
 		--privileged \
-		-e $(ACK_GINKGO) \
 		-e RUN_AS_ROOT=true \
 		-v `pwd`:/code \
 		-v `pwd`/bpf-gpl/bin:/usr/lib/calico/bpf \
@@ -683,7 +680,6 @@ ut-bpf-no-prereqs:
 bench-bpf:  $(LIBBPF_A) bin/bpf_ut.test bin/bpf.test build-bpf
 	$(DOCKER_RUN) \
 		--privileged \
-		-e $(ACK_GINKGO) \
 		-e RUN_AS_ROOT=true \
 		-v `pwd`:/code \
 		-v `pwd`/bpf-gpl/bin:/usr/lib/calico/bpf \

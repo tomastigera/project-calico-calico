@@ -34,7 +34,7 @@ type dnSetHandler struct {
 	gnsEnabled      bool
 }
 
-func (d dnSetHandler) snapshot(r io.Reader) (interface{}, error) {
+func (d dnSetHandler) snapshot(r io.Reader) (any, error) {
 	var snapshot storage.DomainNameSetSpec
 
 	// line handler
@@ -59,11 +59,11 @@ func (p dnSetHandler) lastModified(ctx context.Context, name string) (time.Time,
 	return p.database.GetDomainNameSetModified(ctx, name)
 }
 
-func (p dnSetHandler) updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+func (p dnSetHandler) updateDataStore(ctx context.Context, name string, snapshot any, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	p.dnSetController.Add(ctx, name, snapshot.(storage.DomainNameSetSpec), f, feedCacher)
 }
 
-func (d dnSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
+func (d dnSetHandler) handleSnapshot(ctx context.Context, snapshot any, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
 	if d.gnsEnabled {
 		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("[Global Threat Feeds] sync not supported for domain name set"))
 	} else {

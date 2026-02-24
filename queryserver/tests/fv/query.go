@@ -8,8 +8,8 @@ import (
 type testQueryData struct {
 	description string
 	resources   []resourcemgr.ResourceObject
-	query       interface{}
-	response    interface{}
+	query       any
+	response    any
 }
 
 type errorResponse struct {

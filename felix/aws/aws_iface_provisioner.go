@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -1029,7 +1030,6 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set[ip.Ad
 
 	var finalErr error
 	for eniID, ipsToRelease := range ipsToReleaseByENIID {
-		eniID := eniID
 		ctx, cancel := m.newContext()
 		_, err := m.ec2Client.EC2Svc.UnassignPrivateIpAddresses(ctx, &ec2.UnassignPrivateIpAddressesInput{
 			NetworkInterfaceId: &eniID,
@@ -1086,7 +1086,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string]
 	m.reportMainLoopLive()
 
 	var finalErr error
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		for eniID := range enisToRelease.All() {
 			// Worth trying this even if detach fails.  Possible the failure was caused by it already
 			// being detached.
@@ -1676,13 +1676,10 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *aws
 				"publicAddr":  eip,
 				"privateAddr": privIPAddr,
 			})
-			for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPAddr].ElasticIPs {
-				if wantedEIP == eip {
-					// EIP is assigned to a private IP that should have it, all good.
-					logCtx.Debug("Elastic IP is associated with matching private IP.")
-					wanted = true
-					break
-				}
+			if slices.Contains(m.ds.LocalAWSAddrsByDst[privIPAddr].ElasticIPs, eip) {
+				// EIP is assigned to a private IP that should have it, all good.
+				logCtx.Debug("Elastic IP is associated with matching private IP.")
+				wanted = true
 			}
 			if (m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload && !privIP.Primary) ||
 				(m.mode == v3.AWSSecondaryIPEnabled && privIP.Primary) {

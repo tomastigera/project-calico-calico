@@ -27,7 +27,7 @@ func TestCompareWAFStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]interface{}), excludeWAFLogsField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]any), excludeWAFLogsField))
 	})
 	t.Run("Check for WAF api and template not matches", func(t *testing.T) {
 		wafMap := testutils.MustUnmarshalToMap(t, WAFMappings)
@@ -41,6 +41,6 @@ func TestCompareWAFStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]interface{}), nil))
+		require.False(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]any), nil))
 	})
 }

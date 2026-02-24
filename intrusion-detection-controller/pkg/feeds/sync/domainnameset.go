@@ -19,7 +19,7 @@ func NewDomainNameSetController(sets storage.DomainNameSet) controller.Controlle
 	return controller.NewController(dnSetData{sets}, cacher.LinseedSyncFailed)
 }
 
-func (d dnSetData) Put(ctx context.Context, name string, value interface{}) error {
+func (d dnSetData) Put(ctx context.Context, name string, value any) error {
 	return d.dnSet.PutDomainNameSet(ctx, name, value.(storage.DomainNameSetSpec))
 }
 

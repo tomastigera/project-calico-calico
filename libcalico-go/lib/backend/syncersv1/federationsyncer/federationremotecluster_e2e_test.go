@@ -6,7 +6,7 @@ import (
 	"context"
 	"reflect"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -534,7 +534,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 		By("Configuring the RemoteClusterConfiguration for the remote")
 		rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster"}}
 		rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
-			Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
+			Kind:      reflect.TypeFor[kapiv1.Secret]().String(),
 			Namespace: "namespace-1",
 			Name:      "remote-cluster-config",
 		}

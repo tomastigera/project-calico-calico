@@ -89,7 +89,7 @@ func (w *worker) Close() {
 func (w *worker) resourceEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 	r := cache.ResourceEventHandlerFuncs{}
 
-	r.AddFunc = func(obj interface{}) {
+	r.AddFunc = func(obj any) {
 		key, err := cache.MetaNamespaceKeyFunc(obj)
 		if err == nil {
 			w.Add(key)
@@ -97,7 +97,7 @@ func (w *worker) resourceEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 		log.Debugf("Create event received for resource %s", key)
 	}
 
-	r.UpdateFunc = func(oldObj interface{}, newObj interface{}) {
+	r.UpdateFunc = func(oldObj any, newObj any) {
 		key, err := cache.MetaNamespaceKeyFunc(newObj)
 		if err == nil {
 			w.Add(key)
@@ -105,7 +105,7 @@ func (w *worker) resourceEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 		log.Debugf("Update event received for resource %s", key)
 	}
 
-	r.DeleteFunc = func(obj interface{}) {
+	r.DeleteFunc = func(obj any) {
 		key, err := cache.MetaNamespaceKeyFunc(obj)
 		if err == nil {
 			w.Add(key)

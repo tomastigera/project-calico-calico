@@ -1255,6 +1255,7 @@ metadata:
 spec:
   cidr: 192.168.0.0/16
   ipipMode: Never
+  vxlanMode: Never
   natOutgoing: true
 ---
 kind: IPPool

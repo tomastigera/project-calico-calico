@@ -19,8 +19,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -638,7 +637,7 @@ func checkWindowsValidIP(ip net.IP, blockSize uint) bool {
 	var ipBinary uint32
 	ipBinary = 0
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		ipBinary = ipBinary << 8
 
 		ipBinary = ipBinary | uint32(ipv4[i])

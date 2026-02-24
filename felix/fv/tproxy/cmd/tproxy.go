@@ -72,9 +72,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			down, err := listenerSvc.Accept()
 			if err != nil {
@@ -84,7 +82,7 @@ func main() {
 
 			go handleConnection(down, upMark)
 		}
-	}()
+	})
 
 	portNp, err := strconv.Atoi(args["<port-np>"].(string))
 	if err != nil {
@@ -109,9 +107,7 @@ func main() {
 
 	f.Close()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			down, err := listenerNp.Accept()
 			if err != nil {
@@ -121,7 +117,7 @@ func main() {
 
 			go handleConnection(down, masqMark|upMark)
 		}
-	}()
+	})
 
 	wg.Wait() // infinitely
 }
