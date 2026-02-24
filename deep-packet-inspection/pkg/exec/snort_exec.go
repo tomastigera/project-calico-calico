@@ -3,6 +3,7 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -87,7 +88,7 @@ func (s *snort) Stop() {
 	if s.cmd != nil && s.cmd.Process != nil {
 		// Shutdown snort normally by sending SIGTERM
 		err := s.cmd.Process.Signal(syscall.SIGTERM)
-		if err != nil && !strings.Contains(err.Error(), "process already finished") {
+		if err != nil && !errors.Is(err, os.ErrProcessDone) {
 			log.WithError(err).Errorf("failed to kill process snort")
 		}
 	}

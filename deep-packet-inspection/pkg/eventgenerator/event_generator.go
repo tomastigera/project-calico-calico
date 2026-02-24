@@ -5,8 +5,11 @@ package eventgenerator
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
@@ -43,15 +46,22 @@ var (
 )
 
 type EventGenerator interface {
-	// GenerateEventsForWEP reads, processes and sends the snort alerts in the files for the WEP
+	// GenerateEventsForWEP reads, processes and sends the snort alerts in the files for the WEP.
+	// If called again for the same WEP, the previous goroutines are cancelled before starting new ones.
 	GenerateEventsForWEP(wepKey model.WorkloadEndpointKey)
 
-	// StopGeneratingEventsForWEP waits for the current tail process to reach EOF on alert file and
-	// then stops tailing the file and deletes it.
+	// StopGeneratingEventsForWEP cancels the goroutines for the WEP, waits for them to exit,
+	// then deletes the alert file.
 	StopGeneratingEventsForWEP(wepKey model.WorkloadEndpointKey)
 
-	// Close waits for all the running tail processes to reach EOF on alert files and then deletes the files.
+	// Close cancels all running goroutines, waits for them to exit, then deletes the alert files.
 	Close()
+}
+
+// wepWorker tracks the goroutines handling a single WEP's alert files.
+type wepWorker struct {
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 type eventGenerator struct {
@@ -60,7 +70,8 @@ type eventGenerator struct {
 	wepCache       cache3.WEPCache
 	dpiUpdater     dpiupdater.DPIStatusUpdater
 	dpiKey         model.ResourceKey
-	filePathToTail sync.Map
+	mu             sync.Mutex
+	workers        map[string]*wepWorker
 }
 
 func NewEventGenerator(
@@ -73,10 +84,10 @@ func NewEventGenerator(
 	r := &eventGenerator{
 		cfg:            cfg,
 		alertForwarder: esForwarder,
-		filePathToTail: sync.Map{},
 		dpiUpdater:     dpiUpdater,
 		dpiKey:         dpiKey,
 		wepCache:       wepCache,
+		workers:        make(map[string]*wepWorker),
 	}
 	return r
 }
@@ -84,82 +95,129 @@ func NewEventGenerator(
 // GenerateEventsForWEP reads, processes and sends the snort alerts in the files for the WEP
 func (r *eventGenerator) GenerateEventsForWEP(wepKey model.WorkloadEndpointKey) {
 	log.WithFields(log.Fields{"DPI": r.dpiKey, "WEP": wepKey}).Debugf("Starting to generate events on alert files.")
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &wepWorker{cancel: cancel}
 	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
-	r.filePathToTail.Store(fileRelativePath, nil)
-	go r.readRotatedFiles(wepKey)
-	go r.tailFile(wepKey)
+
+	r.mu.Lock()
+	old := r.workers[fileRelativePath]
+	r.workers[fileRelativePath] = w
+	r.mu.Unlock()
+
+	// If there was a previous worker for the same WEP, cancel it and wait
+	// for its goroutines to exit before starting new ones.
+	if old != nil {
+		old.cancel()
+		old.wg.Wait()
+	}
+
+	w.wg.Add(2)
+	go func() { defer w.wg.Done(); r.readRotatedFiles(ctx, wepKey) }()
+	go func() { defer w.wg.Done(); r.tailFile(ctx, wepKey) }()
 }
 
-// StopGeneratingEventsForWEP waits for the current tail process to reach EOF on alert file and
-// then stops tailing the file and deletes it.
+// StopGeneratingEventsForWEP cancels the goroutines for the WEP, waits for them to exit,
+// then deletes the alert file.
 func (r *eventGenerator) StopGeneratingEventsForWEP(wepKey model.WorkloadEndpointKey) {
 	log.WithFields(log.Fields{"DPI": r.dpiKey, "WEP": wepKey}).Debugf("Stop generating events on alert files.")
 	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
-	fileAbsolutePath := fileutils.AlertFileAbsolutePath(r.dpiKey, wepKey, r.cfg.SnortAlertFileBasePath)
-	r.deleteFile(fileRelativePath, fileAbsolutePath)
+
+	r.mu.Lock()
+	w, ok := r.workers[fileRelativePath]
+	delete(r.workers, fileRelativePath)
+	r.mu.Unlock()
+
+	if ok {
+		w.cancel()
+		w.wg.Wait()
+	}
+	r.removeAlertFile(wepKey)
 }
 
-// Close waits for all the running tail processes to reach EOF on alert files and then deletes the files.
+// Close cancels all workers, waits for all goroutines to exit, then deletes the alert files.
 func (r *eventGenerator) Close() {
 	defer log.WithFields(log.Fields{"DPI": r.dpiKey}).Debugf("Stop generating events on alert files.")
-	r.filePathToTail.Range(func(key any, value any) bool {
-		r.deleteFile(key.(string), fmt.Sprintf("%s/%s", r.cfg.SnortAlertFileBasePath, key.(string)))
-		return true
-	})
+
+	r.mu.Lock()
+	snapshot := maps.Clone(r.workers)
+	r.workers = make(map[string]*wepWorker)
+	r.mu.Unlock()
+
+	for _, w := range snapshot {
+		w.cancel()
+	}
+	for _, w := range snapshot {
+		w.wg.Wait()
+	}
+	for fileRelativePath := range snapshot {
+		filePath := filepath.Join(r.cfg.SnortAlertFileBasePath, fileRelativePath, fileName)
+		if err := os.Remove(filePath); err != nil {
+			log.WithError(err).Errorf("Failed to delete file in %s", fileRelativePath)
+		}
+	}
 }
 
 // readRotatedFiles reads any previously rotated files, generates events using them
-func (r *eventGenerator) readRotatedFiles(wepKey model.WorkloadEndpointKey) {
+func (r *eventGenerator) readRotatedFiles(ctx context.Context, wepKey model.WorkloadEndpointKey) {
 	log.WithFields(log.Fields{"DPI": r.dpiKey, "WEP": wepKey}).Info("Reading and processing all rotated alert files.")
 	absolutePath := fileutils.AlertFileAbsolutePath(r.dpiKey, wepKey, r.cfg.SnortAlertFileBasePath)
 
-	files, err := filepath.Glob(fmt.Sprintf("%s/%s.*", absolutePath, fileName))
+	files, err := filepath.Glob(filepath.Join(absolutePath, fileName+".*"))
 	if err != nil {
 		log.WithError(err).Info("No previous alert files to process")
 		return
 	}
 
 	for _, fPath := range files {
-		if fPath == fileName {
-			// Ignore file that will be tailed.
-			continue
+		if ctx.Err() != nil {
+			return
 		}
+		r.processRotatedFile(ctx, fPath)
+	}
+}
 
-		f, err := os.Open(fPath)
-		if err != nil {
-			log.WithError(err).Errorf("Failed to open alert files from %s", fPath)
-			continue
+// processRotatedFile reads a single rotated alert file and forwards its events.
+func (r *eventGenerator) processRotatedFile(ctx context.Context, fPath string) {
+	f, err := os.Open(fPath)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to open alert files from %s", fPath)
+		return
+	}
+	defer func() { _ = f.Close() }()
+
+	reader := bufio.NewReader(f)
+	for {
+		if ctx.Err() != nil {
+			return
 		}
-		reader := bufio.NewReader(f)
-		for {
-			line, _, err := reader.ReadLine()
-			if err == io.EOF {
-				_ = f.Close()
-				if err := os.Remove(f.Name()); err != nil {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				log.WithError(err).Errorf("Failed to read alert file %s", fPath)
+			} else {
+				if err := os.Remove(f.Name()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 					log.WithError(err).Errorf("Failed to delete older alert files from %s", fPath)
 					r.dpiUpdater.UpdateStatusWithError(context.Background(), r.dpiKey, true,
 						fmt.Sprintf("failed to delete older alert files for %s with error '%s'", r.dpiKey, err.Error()))
 				}
-				break
 			}
-			lineStr := string(line[:])
-			if lineStr != "" {
-				r.alertForwarder.Forward(r.convertAlertToSecurityEvent(lineStr))
-			}
+			return
+		}
+		if lineStr := string(line); lineStr != "" {
+			r.alertForwarder.Forward(r.convertAlertToSecurityEvent(lineStr))
 		}
 	}
 }
 
 // tailFile tails the file to which snort process is actively writing to, generate events when snort writes a new line
 // into the alert file and sends it to Forwarder.
-func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
-	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
+func (r *eventGenerator) tailFile(ctx context.Context, wepKey model.WorkloadEndpointKey) {
 	fileAbsolutePath := fileutils.AlertFileAbsolutePath(r.dpiKey, wepKey, r.cfg.SnortAlertFileBasePath)
-	filePath := fmt.Sprintf("%s/%s", fileAbsolutePath, fileName)
-	// loop and restart tailing unless parent context is closed
-	// or if file path no longer exists in filePathToTail (meaning either WEP or DPI resource is not available).
+	filePath := filepath.Join(fileAbsolutePath, fileName)
+	// loop and restart tailing unless context is cancelled
+	// (meaning either WEP or DPI resource is not available).
 	for {
-		if _, ok := r.filePathToTail.Load(fileRelativePath); !ok {
+		if ctx.Err() != nil {
 			return
 		}
 
@@ -168,43 +226,56 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 			log.WithError(err).Error("Failed to tail file, will retry after interval.")
 			r.dpiUpdater.UpdateStatusWithError(context.Background(), r.dpiKey, true,
 				fmt.Sprintf("failed to tail file for %s and %s with error '%s'", r.dpiKey, wepKey, err.Error()))
-			<-time.After(tailRetryInterval)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(tailRetryInterval):
+			}
 			continue
 		}
 
 		log.Infof("Started tailing files for %s and %s.", r.dpiKey, wepKey)
-		r.filePathToTail.Store(fileRelativePath, t)
-		for line := range t.Lines {
-			r.alertForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
+		done := false
+		for !done {
+			select {
+			case <-ctx.Done():
+				done = true
+			case line, ok := <-t.Lines:
+				if !ok {
+					done = true
+					break
+				}
+				r.alertForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
+			}
+		}
+
+		_ = t.Stop()
+
+		if ctx.Err() != nil {
+			return
 		}
 
 		err = t.Wait()
 		if err != nil {
-			// If tailing was stopped due to EOF, it must be due to explicitly call made to stop tailing
-			// (meaning either WEP or DPI resource is not available).
-			if strings.Contains(err.Error(), "tail: stop at eof") {
-				return
-			}
 			log.WithError(err).Errorf("Failed to tail file, retrying")
 			r.dpiUpdater.UpdateStatusWithError(context.Background(), r.dpiKey, true,
 				fmt.Sprintf("failed to tail file for %s and %s with error '%s'", r.dpiKey, wepKey, err.Error()))
-			<-time.After(tailRetryInterval)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(tailRetryInterval):
+			}
 			continue
 		}
 		return
 	}
 }
 
-func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
-	if t, ok := r.filePathToTail.Load(fileRelativePath); ok && t != nil {
-		err := t.(*tail.Tail).StopAtEOF()
-		if err != nil && !strings.Contains(err.Error(), "tail: stop at eof") {
-			log.WithError(err).Errorf("Failed to stop tailing the alert file in %s", fileRelativePath)
-		}
-	}
-	r.filePathToTail.Delete(fileRelativePath)
-	err := os.Remove(fmt.Sprintf("%s/%s", fileAbsolutePath, fileName))
-	if err != nil {
+// removeAlertFile deletes the alert file for the given WEP.
+func (r *eventGenerator) removeAlertFile(wepKey model.WorkloadEndpointKey) {
+	fileAbsolutePath := fileutils.AlertFileAbsolutePath(r.dpiKey, wepKey, r.cfg.SnortAlertFileBasePath)
+	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
+	if err := os.Remove(filepath.Join(fileAbsolutePath, fileName)); err != nil {
 		log.WithError(err).Errorf("Failed to delete file in %s", fileRelativePath)
 	}
 }
@@ -267,7 +338,8 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event 
 	if len(s) >= 3 && s[len(s)-2] == "->" {
 		src := s[len(s)-3]
 		if srcIP, srcPort, err = net.SplitHostPort(src); err != nil {
-			if strings.Contains(err.Error(), "missing port in address") {
+			var addrErr *net.AddrError
+			if errors.As(err, &addrErr) && addrErr.Err == "missing port in address" {
 				srcIP = src
 			} else {
 				log.WithError(err).Errorf("Failed to parse source IP %s from snort alert", src)
@@ -283,7 +355,8 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event 
 
 		dst := s[len(s)-1]
 		if destIP, destPort, err = net.SplitHostPort(dst); err != nil {
-			if strings.Contains(err.Error(), "missing port in address") {
+			var addrErr *net.AddrError
+			if errors.As(err, &addrErr) && addrErr.Err == "missing port in address" {
 				destIP = dst
 			} else {
 				log.WithError(err).Errorf("Failed to parse destination IP %s from snort alert", dst)
@@ -301,8 +374,12 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event 
 		log.WithError(err).Errorf("Failed to parse source and destination IP from snort alert: %s", alertText)
 	}
 
-	_, event.SourceName, event.SourceNamespace = r.wepCache.Get(*event.SourceIP)
-	_, event.DestName, event.DestNamespace = r.wepCache.Get(*event.DestIP)
+	if event.SourceIP != nil {
+		_, event.SourceName, event.SourceNamespace = r.wepCache.Get(*event.SourceIP)
+	}
+	if event.DestIP != nil {
+		_, event.DestName, event.DestNamespace = r.wepCache.Get(*event.DestIP)
+	}
 
 	// Construct a unique document ID for the ElasticSearch document built.
 	// Use _ as a separator as it's allowed in URLs, but not in any of the components of this ID

@@ -108,14 +108,13 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 		}
 	case bapi.UpdateTypeKVDeleted:
 		if wepKey, ok := wepKVPair.Key.(model.WorkloadEndpointKey); ok {
-			oldWEPData, ok := r.wepKeyToWEPData.Load(wepKey)
-			if ok {
+			if oldWEPData, ok := r.wepKeyToWEPData.Load(wepKey); ok {
 				if oldWEPData.(wepData).ipList != nil {
 					for item := range oldWEPData.(wepData).ipList.All() {
 						r.ipToWEPKey.Delete(item)
 					}
 				}
-				r.ipToWEPKey.Delete(wepKey)
+				r.wepKeyToWEPData.Delete(wepKey)
 			}
 		}
 	}

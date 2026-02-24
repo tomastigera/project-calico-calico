@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -110,7 +111,10 @@ var _ = Describe("File Parser", func() {
 			Record:        lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
 		event.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
-		mockForwarder.On("Forward", event).Return(nil).Times(1)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", event).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil).Times(1)
 
 		// GenerateEventsForWEP should parse file and call elastic service.
 		wepCache := cache2.NewWEPCache()
@@ -122,7 +126,7 @@ var _ = Describe("File Parser", func() {
 		})
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -202,7 +206,10 @@ var _ = Describe("File Parser", func() {
 			Record:        lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
 		event.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
-		mockForwarder.On("Forward", event).Return(nil).Times(1)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", event).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil).Times(1)
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
@@ -216,7 +223,7 @@ var _ = Describe("File Parser", func() {
 				},
 			})
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -277,20 +284,23 @@ var _ = Describe("File Parser", func() {
 		}
 		event2.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event2.SourceIP, srcPort, *event2.DestIP, destPort, event2.Host)
 
-		numberOfCallsToSend := 0
+		var numberOfCallsToSend atomic.Int32
 		mockForwarder.On("Forward", mock.Anything).Run(
 			func(args mock.Arguments) {
 				defer GinkgoRecover()
 
-				numberOfCallsToSend++
-				logrus.Infof("Calling %d", numberOfCallsToSend)
-				switch numberOfCallsToSend {
+				n := numberOfCallsToSend.Add(1)
+				logrus.Infof("Calling %d", n)
+				switch n {
 				case 1:
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event1))
 				case 2:
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event2))
 				}
 			}).Return(nil, false, nil).Times(2)
+
+		// Allow UpdateStatusWithError calls from tail goroutine error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
@@ -304,7 +314,7 @@ var _ = Describe("File Parser", func() {
 				},
 			})
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return numberOfCallsToSend.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -325,7 +335,7 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path, orgFile, expectedFile)
 
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(2))
+		Eventually(func() int32 { return numberOfCallsToSend.Load() }, 5*time.Second).Should(Equal(int32(2)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -353,13 +363,16 @@ var _ = Describe("File Parser", func() {
 			EndpointID:     "eth0",
 		}
 
-		mockForwarder.On("Forward", mock.Anything, mock.Anything, mock.Anything).Return(nil, false, nil).Times(2)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", mock.Anything, mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil, false, nil).Times(2)
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
 		r.GenerateEventsForWEP(wepKey2)
 
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(2))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(2)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.Close()
