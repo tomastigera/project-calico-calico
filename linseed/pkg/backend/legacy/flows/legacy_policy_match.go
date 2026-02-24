@@ -27,7 +27,7 @@ func allPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 	// (enforced/pending_policies), we search in all relevant fields.
 	b.Should(elastic.NewWildcardQuery("policies.all_policies", matchString))
 
-	if m.Staged {
+	if m.Staged != nil && *m.Staged {
 		b.Should(elastic.NewWildcardQuery("policies.pending_policies", matchString))
 	} else {
 		b.Should(elastic.NewWildcardQuery("policies.enforced_policies", matchString))
@@ -76,7 +76,7 @@ func CompileLegacyStringMatch(m v1.PolicyMatch) (string, error) {
 	if m.Namespace != nil {
 		namespace = *m.Namespace
 	}
-	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged)
+	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged != nil && *m.Staged)
 	if err != nil {
 		return "", err
 	}

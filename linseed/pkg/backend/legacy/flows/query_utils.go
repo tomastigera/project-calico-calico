@@ -66,7 +66,7 @@ func allPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	// (enforced/pending_policies), we search in all relevant fields.
 	b.Should(elastic.NewWildcardQuery("policies.all_policies", matchString))
 
-	if m.Staged {
+	if m.Staged != nil && *m.Staged {
 		b.Should(elastic.NewWildcardQuery("policies.pending_policies", matchString))
 	} else {
 		b.Should(elastic.NewWildcardQuery("policies.enforced_policies", matchString))
@@ -125,7 +125,7 @@ func CompileStringMatch(m v1.PolicyMatch) (string, error) {
 }
 
 func getKindMatch(m v1.PolicyMatch) string {
-	if m.Type == "" && m.Tier != calc.ProfileTierStr && !m.Staged && m.Namespace == nil {
+	if m.Type == "" && m.Tier != calc.ProfileTierStr && (m.Staged == nil || !*m.Staged) && m.Namespace == nil {
 		// No type, tier, staged, or namespace specified; match all kinds.
 		return "*"
 	}
@@ -133,7 +133,7 @@ func getKindMatch(m v1.PolicyMatch) string {
 	// Handle any explicitly set types first.
 	switch m.Type {
 	case v1.KNP:
-		if m.Staged {
+		if m.Staged != nil && *m.Staged {
 			return types.ShortKindStagedKubernetesNetworkPolicy
 		}
 		return types.ShortKindKubernetesNetworkPolicy
@@ -155,7 +155,7 @@ func getKindMatch(m v1.PolicyMatch) string {
 	if m.Namespace != nil {
 		ns = *m.Namespace
 	}
-	kind := v1.KindFromHints(false, false, m.Staged, ns)
+	kind := v1.KindFromHints(false, false, m.Staged != nil && *m.Staged, ns)
 
 	// Convert the kind to its short form as used in flow logs.
 	return types.PolicyID{Kind: kind}.KindShortName()

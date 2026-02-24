@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -49,7 +50,7 @@ func TestAllPolicyQueryLegacy(t *testing.T) {
 		// Define a policy match with Staged=true
 		pm := v1.PolicyMatch{
 			Tier:   "default",
-			Staged: true,
+			Staged: ptr.To(true),
 		}
 
 		// Generate the query

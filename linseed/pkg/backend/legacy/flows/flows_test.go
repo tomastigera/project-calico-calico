@@ -16,6 +16,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -891,7 +892,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1100,7 +1101,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1296,7 +1297,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1492,7 +1493,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged:    true,
+						Staged:    ptr.To(true),
 						Type:      "knp",
 						Namespace: testutils.StringPtr("default"),
 					},
@@ -1506,7 +1507,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1759,7 +1760,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Tier:   "allow-tigera",
-						Staged: true,
+						Staged: ptr.To(true),
 					},
 				},
 			},
@@ -1771,7 +1772,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Namespace: testutils.StringPtr("namespace"),
-						Staged:    true,
+						Staged:    ptr.To(true),
 						Tier:      "tier",
 					},
 				},
@@ -1784,7 +1785,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Name:   testutils.StringPtr("allow-tigera.staged-cluster-dns"),
-						Staged: true,
+						Staged: ptr.To(true),
 					},
 				},
 			},

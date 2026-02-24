@@ -12,6 +12,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -858,7 +859,7 @@ func TestLegacyPolicyStrings(t *testing.T) {
 					{
 						Name:   testutils.StringPtr("custom-tier2.gnp"),
 						Tier:   "custom-tier2",
-						Staged: true,
+						Staged: ptr.To(true),
 					},
 				},
 			},
@@ -875,7 +876,7 @@ func TestLegacyPolicyStrings(t *testing.T) {
 						Name:      testutils.StringPtr("custom-tier2.policy2"),
 						Namespace: testutils.StringPtr("default"),
 						Tier:      "custom-tier2",
-						Staged:    true,
+						Staged:    ptr.To(true),
 					},
 				},
 			},

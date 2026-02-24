@@ -11,6 +11,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
@@ -165,8 +166,8 @@ func TestLinseedCollectionClientFlows(t *testing.T) {
 							{Field: "start_time", Descending: true},
 						},
 					},
-					EnforcedPolicyMatches: []lsv1.PolicyMatch{{Staged: false}},
-					PendingPolicyMatches:  []lsv1.PolicyMatch{{Staged: true}},
+					EnforcedPolicyMatches: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
+					PendingPolicyMatches:  []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 				},
 			},
 		}

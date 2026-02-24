@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
@@ -117,32 +118,32 @@ func TestParams(t *testing.T) {
 						name:              "staged",
 						filter:            filters.NewIn(policyTypeField, []string{"staged"}, false),
 						expectedSelector:  "",
-						expectedPendingPM: []lsv1.PolicyMatch{{Staged: true}},
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
 						name:               "staged negated",
 						filter:             filters.NewIn(policyTypeField, []string{"staged"}, true),
 						expectedSelector:   "",
-						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: false}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
 						name:               "enforced",
 						filter:             filters.NewIn(policyTypeField, []string{"enforced"}, false),
 						expectedSelector:   "",
-						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: false}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
 						name:              "enforced negated",
 						filter:            filters.NewIn(policyTypeField, []string{"enforced"}, true),
 						expectedSelector:  "",
-						expectedPendingPM: []lsv1.PolicyMatch{{Staged: true}},
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
 						name:               "staged and enforced",
 						filter:             filters.NewIn(policyTypeField, []string{"staged", "enforced"}, false),
 						expectedSelector:   "",
-						expectedPendingPM:  []lsv1.PolicyMatch{{Staged: true}},
-						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: false}},
+						expectedPendingPM:  []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 				}
 
@@ -379,25 +380,25 @@ func TestParams(t *testing.T) {
 						name:              "staged",
 						filter:            filters.NewEquals(policyTypeField, "staged", false),
 						expectedSelector:  "",
-						expectedPendingPM: []lsv1.PolicyMatch{{Staged: true}},
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
 						name:               "staged negated",
 						filter:             filters.NewEquals(policyTypeField, "staged", true),
 						expectedSelector:   "",
-						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: false}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
 						name:               "enforced",
 						filter:             filters.NewEquals(policyTypeField, "enforced", false),
 						expectedSelector:   "",
-						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: false}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
 						name:              "enforced negated",
 						filter:            filters.NewEquals(policyTypeField, "enforced", true),
 						expectedSelector:  "",
-						expectedPendingPM: []lsv1.PolicyMatch{{Staged: true}},
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 				}
 

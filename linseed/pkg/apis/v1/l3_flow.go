@@ -107,8 +107,9 @@ type PolicyMatch struct {
 	// Type of the policy: knp: KubernetesNetworkPolicy, anp: AdminNetworkPolicy
 	Type PolicyType `json:"type,omitempty" validate:"omitempty,oneof=knp kanp kbanp"`
 
-	// Staged is a boolean that indicates matching for staged policies.
-	Staged bool `json:"staged,omitempty"`
+	// Staged is a pointer to a boolean that indicates matching for staged policies.
+	// nil means "don't filter on staged", false means "match non-staged (enforced)", true means "match staged".
+	Staged *bool `json:"staged,omitempty"`
 
 	// Tier for the policy.
 	Tier string `json:"tier,omitempty" validate:"omitempty,excludesall=.:/"`

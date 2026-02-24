@@ -12,6 +12,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
@@ -119,20 +120,20 @@ func (p *queryParams) addPolicyTypeMatch(value string, negate bool) error {
 	if negate {
 		switch value {
 		case collections.FieldPolicyStaged:
-			p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: false})
+			p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: ptr.To(false)})
 			return nil
 		case collections.FieldPolicyEnforced:
-			p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: true})
+			p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: ptr.To(true)})
 			return nil
 		}
 	}
 
 	switch value {
 	case collections.FieldPolicyStaged:
-		p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: true})
+		p.pendingPolicyMatches = append(p.pendingPolicyMatches, lsv1.PolicyMatch{Staged: ptr.To(true)})
 		return nil
 	case collections.FieldPolicyEnforced:
-		p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: false})
+		p.enforcedPolicyMatches = append(p.enforcedPolicyMatches, lsv1.PolicyMatch{Staged: ptr.To(false)})
 		return nil
 	}
 
