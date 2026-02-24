@@ -18,6 +18,12 @@ const (
 	rubyFileSepSub = "-"
 )
 
+// cwLogsClient is the interface used by internal functions for testability.
+type cwLogsClient interface {
+	DescribeLogStreams(ctx context.Context, params *cloudwatchlogs.DescribeLogStreamsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
+	GetLogEvents(ctx context.Context, params *cloudwatchlogs.GetLogEventsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetLogEventsOutput, error)
+}
+
 // Setup AWS session to cloudwatch logs service, returns session handler.
 func AwsSetupLogSession(ctx context.Context) (*cloudwatchlogs.Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -29,7 +35,7 @@ func AwsSetupLogSession(ctx context.Context) (*cloudwatchlogs.Client, error) {
 }
 
 // Using AWS session handler, cloudwatch logs specifics and a timestamp, return a log token.
-func AwsGetStateFileWithToken(ctx context.Context, logs *cloudwatchlogs.Client, group, prefix string, startTime int64) (map[string]string, error) {
+func AwsGetStateFileWithToken(ctx context.Context, logs cwLogsClient, group, prefix string, startTime int64) (map[string]string, error) {
 	results := make(map[string]string)
 
 	streams, err := getLogStreams(ctx, logs, group, prefix)
@@ -52,7 +58,7 @@ func AwsGetStateFileWithToken(ctx context.Context, logs *cloudwatchlogs.Client, 
 }
 
 // Wrapper over cloudwatchlogs description, this function returns a slice of log-stream name using log-group name and stream prefix.
-func getLogStreams(ctx context.Context, logs *cloudwatchlogs.Client, groupName, streamPrefix string) ([]*string, error) {
+func getLogStreams(ctx context.Context, logs cwLogsClient, groupName, streamPrefix string) ([]*string, error) {
 	var streams []*string
 
 	// Logstream name is dynamic for each EKS deployment. We use LogStreamName prefix to gather the actual stream name.
@@ -65,13 +71,15 @@ func getLogStreams(ctx context.Context, logs *cloudwatchlogs.Client, groupName, 
 	}
 
 	for _, stream := range resp.LogStreams {
-		streams = append(streams, stream.LogStreamName)
+		if stream.LogStreamName != nil {
+			streams = append(streams, stream.LogStreamName)
+		}
 	}
 	return streams, nil
 }
 
 // Get cloudwatchlogs token pointing to the log stream forward.
-func getToken(ctx context.Context, logs *cloudwatchlogs.Client, group, stream string, startTime int64) (string, error) {
+func getToken(ctx context.Context, logs cwLogsClient, group, stream string, startTime int64) (string, error) {
 	resp, err := logs.GetLogEvents(ctx, &cloudwatchlogs.GetLogEventsInput{
 		Limit:         aws.Int32(1),
 		LogGroupName:  aws.String(group),
