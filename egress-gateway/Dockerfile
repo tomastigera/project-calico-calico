@@ -12,88 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG IPTABLES_VER=1.8.2-16
+# Use this build stage to install iptables-legacy from EPEL.
+FROM almalinux:9 AS almalinux
 
-# Use this build stage to build iptables rpm binaries.
-# We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
-# FIXME(jiawei): Update the base image to AlmaLinux 9.
-FROM almalinux:8 AS almalinux
+# Install iptables-legacy from EPEL (provides xtables-legacy-multi binary).
+RUN dnf upgrade -y && dnf install -y epel-release
 
-ARG IPTABLES_VER
-ARG CENTOS_MIRROR_BASE_URL=http://vault.centos.org/8.1.1911
-ARG LIBNFTNL_VER=1.1.1-4
-ARG LIBNFTNL_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/libnftnl-${LIBNFTNL_VER}.el8.src.rpm
-ARG IPTABLES_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/iptables-${IPTABLES_VER}.el8.src.rpm
-ARG TARGETARCH
+RUN dnf install -y \
+    iptables-legacy
 
-# Install build dependencies and security updates.
-RUN dnf install -y 'dnf-command(config-manager)' && \
-    # Enable PowerTools repo for '-devel' packages
-    dnf config-manager --set-enabled powertools && \
-    # Install required packages for building rpms. yum-utils is not required but it gives us yum-builddep to easily install build deps.
-    yum install -y rpm-build yum-utils make && \
-    # Ensure security updates are installed.
-    yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical
+RUN dnf clean all
 
-# In order to rebuild the iptables RPM, we first need to rebuild the libnftnl RPM because building
-# iptables requires libnftnl-devel but libnftnl-devel is not available on ubi or CentOS repos.
-# (Note: it's not in RHEL8.1 either https://bugzilla.redhat.com/show_bug.cgi?id=1711361).
-# Rebuilding libnftnl will give us libnftnl-devel too.
-RUN case "${TARGETARCH}" in \
-    amd64) export MACHINEARCH=x86_64 ;; \
-    arm64) export MACHINEARCH=aarch64 ;; \
-    *) export MACHINEARCH=${TARGETARCH} ;; \
-    esac && \
-    rpm -i ${LIBNFTNL_SOURCERPM_URL} && \
-    yum-builddep -y --spec /root/rpmbuild/SPECS/libnftnl.spec && \
-    rpmbuild -bb /root/rpmbuild/SPECS/libnftnl.spec && \
-    # Now install libnftnl and libnftnl-devel
-    rpm -Uv /root/rpmbuild/RPMS/${MACHINEARCH}/libnftnl-${LIBNFTNL_VER}.el8.${MACHINEARCH}.rpm && \
-    rpm -Uv /root/rpmbuild/RPMS/${MACHINEARCH}/libnftnl-devel-${LIBNFTNL_VER}.el8.${MACHINEARCH}.rpm && \
-    # Install source RPM for iptables and install its build dependencies.
-    rpm -i ${IPTABLES_SOURCERPM_URL} && \
-    yum-builddep -y --spec /root/rpmbuild/SPECS/iptables.spec
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS ubi
 
-# Patch the iptables build spec so that we keep the legacy iptables binaries.
-RUN sed -i '/drop all legacy tools/,/sbindir.*legacy/d' /root/rpmbuild/SPECS/iptables.spec
-
-# Patch the iptables build spec to drop the renaming of nft binaries. Instead of renaming binaries,
-# we will use alternatives to set the canonical iptables binaries.
-RUN sed -i '/rename nft versions to standard name/,/^done/d' /root/rpmbuild/SPECS/iptables.spec
-
-# Patch the iptables build spec so that legacy and nft iptables binaries are verified to be in the resulting rpm.
-RUN sed -i '/%files$/a \
-\%\{_sbindir\}\/xtables-legacy-multi \n\
-\%\{_sbindir\}\/ip6tables-legacy \n\
-\%\{_sbindir\}\/ip6tables-legacy-restore \n\
-\%\{_sbindir\}\/ip6tables-legacy-save \n\
-\%\{_sbindir\}\/iptables-legacy \n\
-\%\{_sbindir\}\/iptables-legacy-restore \n\
-\%\{_sbindir\}\/iptables-legacy-save \n\
-\%\{_sbindir\}\/ip6tables-nft\n\
-\%\{_sbindir\}\/ip6tables-nft-restore\n\
-\%\{_sbindir\}\/ip6tables-nft-save\n\
-\%\{_sbindir\}\/iptables-nft\n\
-\%\{_sbindir\}\/iptables-nft-restore\n\
-\%\{_sbindir\}\/iptables-nft-save\n\
-' /root/rpmbuild/SPECS/iptables.spec
-
-# Finally rebuild iptables.
-RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
-
-# FIXME(jiawei): Update the base image to UBI 9.
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest AS ubi
-
-ARG IPTABLES_VER
 ARG TARGETARCH
 
 # Update base packages to pick up security updates.
-RUN microdnf upgrade
+RUN microdnf upgrade -y
 
-# Copy in our rpms
-COPY --from=almalinux /root/rpmbuild/RPMS/ /tmp/rpms/
-
-RUN microdnf install \
+RUN microdnf install -y \
     # Don't install copious docs.
     --setopt=tsflags=nodocs \
     # Needed for iptables
@@ -117,25 +54,29 @@ RUN microdnf install \
 # we're using AlmaLinux repos for missing packages.
 COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
 
-RUN microdnf --enablerepo=baseos install \
-    iproute-tc \
-    nftables \
+RUN microdnf --enablerepo=appstream install -y \
     # Needed for conntrack
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
     conntrack-tools
 
-# Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
-# version '1.8.8-6.el8' conflicts with iptables-libs (pulled in by the iputils package) '1.8.5-11.el8_9'.
-RUN case "${TARGETARCH}" in \
-    amd64) export MACHINEARCH=x86_64 ;; \
-    arm64) export MACHINEARCH=aarch64 ;; \
-    *) export MACHINEARCH=${TARGETARCH} ;; \
-    esac && \
-    rpm --force -i /tmp/rpms/${MACHINEARCH}/iptables-libs-${IPTABLES_VER}.el8.${MACHINEARCH}.rpm && \
-    rpm -i /tmp/rpms/${MACHINEARCH}/iptables-${IPTABLES_VER}.el8.${MACHINEARCH}.rpm && \
-    # Set alternatives
-    alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
-    alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
+RUN microdnf --enablerepo=baseos install -y \
+    iproute-tc \
+    iptables-nft \
+    nftables
+
+COPY --from=almalinux /usr/sbin/xtables-legacy-multi /usr/sbin/xtables-legacy-multi
+
+# Set symbolic links for legacy iptables binaries
+RUN set -eux; \
+    for bin in iptables-legacy iptables-legacy-restore iptables-legacy-save ip6tables-legacy ip6tables-legacy-restore ip6tables-legacy-save; do \
+        ln -sf /usr/sbin/xtables-legacy-multi /usr/sbin/${bin} || true; \
+    done
+
+# Set alternatives
+RUN alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
+    alternatives --set iptables /usr/sbin/iptables-legacy && \
+    alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1 && \
+    alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
 RUN microdnf clean all
 
